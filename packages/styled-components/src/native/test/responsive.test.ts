@@ -292,4 +292,53 @@ describe('matchMedia', () => {
       expect(matchMedia('(all)', env())).toBe(true);
     });
   });
+
+  describe('createTheme sentinel arms in feature values', () => {
+    beforeEach(() => resetResponsiveCache());
+
+    it('min-width with sentinel value uses fallback', () => {
+      // `@media (min-width: ${t.bp.md}px)` → after fill the parser sees
+      // `(min-width: \0sc:bp.md:768px)`. We resolve to the createTheme
+      // fallback because the live theme isn't reachable from the parsed
+      // Query AST; breakpoints are theme-stable so this is correct.
+      const sentinel = '\0sc:bp.md:768px';
+      expect(matchMedia(`(min-width: ${sentinel})`, env({ width: 800 }))).toBe(true);
+      expect(matchMedia(`(min-width: ${sentinel})`, env({ width: 400 }))).toBe(false);
+    });
+
+    it('max-width with sentinel value uses fallback', () => {
+      const sentinel = '\0sc:bp.lg:1024px';
+      expect(matchMedia(`(max-width: ${sentinel})`, env({ width: 1000 }))).toBe(true);
+      expect(matchMedia(`(max-width: ${sentinel})`, env({ width: 1200 }))).toBe(false);
+    });
+
+    it('orientation with sentinel ident value uses fallback', () => {
+      const sentinel = '\0sc:layout.preferred:portrait';
+      expect(matchMedia(`(orientation: ${sentinel})`, env({ width: 300, height: 600 }))).toBe(true);
+    });
+
+    it('prefers-color-scheme with sentinel ident value uses fallback', () => {
+      const sentinel = '\0sc:scheme:dark';
+      expect(matchMedia(`(prefers-color-scheme: ${sentinel})`, env({ colorScheme: 'dark' }))).toBe(
+        true
+      );
+      expect(matchMedia(`(prefers-color-scheme: ${sentinel})`, env({ colorScheme: 'light' }))).toBe(
+        false
+      );
+    });
+
+    it('aspect-ratio with sentinel value uses fallback', () => {
+      const sentinel = '\0sc:ratios.wide:16/9';
+      // env aspect-ratio = 1600/900 ≈ 1.778, target ≈ 1.778
+      expect(matchMedia(`(aspect-ratio: ${sentinel})`, env({ width: 1600, height: 900 }))).toBe(
+        true
+      );
+    });
+
+    it('range-syntax with sentinel value uses fallback', () => {
+      const sentinel = '\0sc:bp.md:768px';
+      expect(matchMedia(`(width >= ${sentinel})`, env({ width: 800 }))).toBe(true);
+      expect(matchMedia(`(width >= ${sentinel})`, env({ width: 600 }))).toBe(false);
+    });
+  });
 });

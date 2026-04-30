@@ -27,12 +27,15 @@ import type {
 } from '../types';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
+import escape from '../utils/escape';
+import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import shallowEqual from '../utils/shallowEqual';
 import type { NativeStyles, ConditionalStyle, PseudoState } from './compileNative';
+import { SPECIAL_CASE_PROPS } from './compileNative';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
 const hasOwn = Object.prototype.hasOwnProperty;
@@ -87,6 +90,104 @@ function buildPropsForElement(
     }
   }
   return out;
+}
+
+/**
+ * The bottom of a `styled(styled(...))` chain — either a host string,
+ * a component constructor, or nothing. Special-case dev warnings narrow
+ * against this shape rather than `any`.
+ */
+type LeafTarget = string | { displayName?: string; name?: string } | null | undefined;
+
+/**
+ * Walk down through styled-component wrappers to the innermost native (or
+ * unknown) leaf. Used to type-check special-case CSS like `line-clamp` —
+ * which only does something on `Text` / `TextInput` — even when the user
+ * has wrapped Text once or twice with `styled(Text)\`...\``.
+ */
+function resolveLeafTarget(target: unknown): LeafTarget {
+  let cur: unknown = target;
+  while (cur && isStyledComponent(cur)) {
+    cur = (cur as unknown as IStyledStatics<'native', BaseObject>).target;
+  }
+  return cur as LeafTarget;
+}
+
+function leafName(leaf: LeafTarget): string | undefined {
+  if (typeof leaf === 'string') return leaf;
+  if (leaf == null) return undefined;
+  // RN core components are functions (typeof === 'function'), user wrappers
+  // can be classes (typeof === 'object' or 'function'). Both expose
+  // `displayName` / `name` as enumerable on the constructor.
+  return leaf.displayName || leaf.name;
+}
+
+function targetMatchesValidOn(target: unknown, validOn: ReadonlyArray<string>): boolean {
+  const name = leafName(resolveLeafTarget(target));
+  if (name === undefined) return false;
+  for (let i = 0; i < validOn.length; i++) if (name === validOn[i]) return true;
+  return false;
+}
+
+const specialCaseWarned = new WeakSet<object>();
+
+/**
+ * Single owner of the trailing prop-finalization sequence shared by
+ * useStaticImpl / useFastImpl / useImpl. Builds the forwarded prop bag,
+ * attaches the assembled style, lifts compiled special-case keys onto
+ * the bag (e.g. `numberOfLines` from `line-clamp`), and forwards the ref.
+ */
+function finalizeElementProps(
+  source: Record<string, any>,
+  elementToBeCreated: NativeTarget,
+  shouldForwardProp: ((prop: string, el: NativeTarget) => boolean) | undefined,
+  style: any,
+  specialCases: Dict<any> | undefined,
+  forwardedRef: Ref<any>,
+  forwardedComponent: IStyledComponent<'native', any>
+): Dict<any> {
+  const elementProps = buildPropsForElement(source, elementToBeCreated, shouldForwardProp);
+  elementProps.style = style;
+  applySpecialCases(elementProps, specialCases, elementToBeCreated, forwardedComponent);
+  if (forwardedRef) elementProps.ref = forwardedRef;
+  return elementProps;
+}
+
+/**
+ * Spread compiled special-case props (e.g. `numberOfLines` from `line-clamp`)
+ * onto element props with USER PROPS WINNING — mirrors how user `style`
+ * overrides compiled styles. Emits a one-time dev warning when the rendered
+ * element type doesn't read the prop (e.g. `line-clamp` on a `View`).
+ */
+function applySpecialCases(
+  elementProps: Dict<any>,
+  specialCases: Dict<any> | undefined,
+  effectiveTarget: unknown,
+  warningKey: object
+): void {
+  if (!specialCases) return;
+  for (const k in specialCases) {
+    if (!(k in elementProps)) {
+      elementProps[k] = specialCases[k];
+    }
+    if (process.env.NODE_ENV !== 'production') {
+      const meta = SPECIAL_CASE_PROPS[k];
+      if (meta && !targetMatchesValidOn(effectiveTarget, meta.validOn)) {
+        if (!specialCaseWarned.has(warningKey)) {
+          specialCaseWarned.add(warningKey);
+          const name = leafName(resolveLeafTarget(effectiveTarget)) ?? 'this component';
+          const validList = meta.validOn.map(n => `<${n}>`).join(' or ');
+          // eslint-disable-next-line no-console
+          console.warn(
+            `\`${meta.source}\` only works on ${validList} in React Native, ` +
+              `but it's being applied to <${name}>. ` +
+              `\`${meta.source}\` maps to React Native's \`${k}\` prop, which ` +
+              `${validList} reads — other components will ignore it.`
+          );
+        }
+      }
+    }
+  }
 }
 
 const EMPTY_INSETS = Object.freeze({ top: 0, right: 0, bottom: 0, left: 0 });
@@ -147,19 +248,24 @@ function matchConditionals(
   conditional: ConditionalStyle[],
   env: MediaQueryEnv,
   containerCtx: { named: Readonly<Record<string, { width: number; height: number }>> },
-  props: Record<string, unknown>
+  props: Record<string, unknown>,
+  resolveEnv: ResolveEnv
 ): object[] {
   const out: object[] = [];
   for (let i = 0; i < conditional.length; i++) {
     const entry = conditional[i];
     if (entry.type === 'pseudo' || entry.pseudo) continue;
     if (entry.type === 'attr') {
-      if (attrMatches(entry, props)) out.push(entry.styles);
+      if (attrMatches(entry, props)) out.push(resolveBucket(entry, resolveEnv));
       continue;
     }
-    if (conditionMatches(entry, env, containerCtx)) out.push(entry.styles);
+    if (conditionMatches(entry, env, containerCtx)) out.push(resolveBucket(entry, resolveEnv));
   }
   return out;
+}
+
+function resolveBucket(entry: ConditionalStyle, env: ResolveEnv): object {
+  return entry.resolvers ? applyResolvers(entry.styles, entry.resolvers, env) : entry.styles;
 }
 
 // Boolean coercion lets `aria-pressed={true}` and `aria-pressed="true"` both hit.
@@ -192,17 +298,19 @@ function pseudoStylesForState(
   conditional: ConditionalStyle[],
   state: { pressed?: boolean; hovered?: boolean; focused?: boolean; disabled?: boolean },
   env: MediaQueryEnv,
-  containerCtx: { named: Readonly<Record<string, { width: number; height: number }>> }
+  containerCtx: { named: Readonly<Record<string, { width: number; height: number }>> },
+  resolveEnv: ResolveEnv
 ): object[] {
   const out: object[] = [];
   for (let i = 0; i < conditional.length; i++) {
     const entry = conditional[i];
     if (entry.type === 'pseudo') {
-      if (pseudoActive(entry.condition as PseudoState, state)) out.push(entry.styles);
+      if (pseudoActive(entry.condition as PseudoState, state))
+        out.push(resolveBucket(entry, resolveEnv));
       continue;
     }
     if (entry.pseudo && pseudoActive(entry.pseudo, state)) {
-      if (conditionMatches(entry, env, containerCtx)) out.push(entry.styles);
+      if (conditionMatches(entry, env, containerCtx)) out.push(resolveBucket(entry, resolveEnv));
     }
   }
   return out;
@@ -266,11 +374,17 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   forwardedRef: Ref<any>
 ): React.ReactElement {
   const { nativeStyle, target } = forwardedComponent;
-  const base = nativeStyle.staticCompiled!.base;
+  const compiled = nativeStyle.staticCompiled!;
   const elementToBeCreated: NativeTarget = (props.as as NativeTarget) || target;
-  const elementProps = buildPropsForElement(props, elementToBeCreated, undefined);
-  elementProps.style = composeBase(base, props.style);
-  if (forwardedRef) elementProps.ref = forwardedRef;
+  const elementProps = finalizeElementProps(
+    props,
+    elementToBeCreated,
+    undefined,
+    composeBase(compiled.base, props.style),
+    compiled.specialCases,
+    forwardedRef,
+    forwardedComponent
+  );
   return createFastElement(elementToBeCreated, elementProps, props.$containerName);
 }
 
@@ -307,9 +421,15 @@ function useFastImpl<Props extends StyledComponentImplProps>(
 
   const composedStyle = composeBase(compiled.base, props.style);
   const elementToBeCreated: NativeTarget = (props.as as NativeTarget) || target;
-  const elementProps = buildPropsForElement(props, elementToBeCreated, undefined);
-  elementProps.style = composedStyle;
-  if (forwardedRef) elementProps.ref = forwardedRef;
+  const elementProps = finalizeElementProps(
+    props,
+    elementToBeCreated,
+    undefined,
+    composedStyle,
+    compiled.specialCases,
+    forwardedRef,
+    forwardedComponent
+  );
 
   let propsKeyCount = 0;
   for (const key in props) {
@@ -442,13 +562,15 @@ function useImpl<Props extends StyledComponentImplProps>(
 
   const containerName = (context as any).$containerName as string | undefined;
   const elementToBeCreated: NativeTarget = (context as any).as || props.as || target;
-  const elementProps = buildPropsForElement(context, elementToBeCreated, shouldForwardProp);
-
-  elementProps.style = finalStyle;
-
-  if (forwardedRef) {
-    elementProps.ref = forwardedRef;
-  }
+  const elementProps = finalizeElementProps(
+    context,
+    elementToBeCreated,
+    shouldForwardProp,
+    finalStyle,
+    compiled.specialCases,
+    forwardedRef,
+    forwardedComponent
+  );
 
   // Container publishing is rare; the vast majority of styled components
   // never set `$containerName`. Hoisting the publish-side hooks (useState
@@ -545,13 +667,14 @@ function assembleFinalStyle(
 ): any {
   const hasConditional = compiled.conditional.length > 0;
   const hasPseudoState = hasConditional && hasPseudo(compiled.conditional);
+  const resolveEnv = buildResolveEnv(env, containerCtx, theme);
 
   const activeConditional = hasConditional
-    ? matchConditionals(compiled.conditional, env, containerCtx, props)
+    ? matchConditionals(compiled.conditional, env, containerCtx, props, resolveEnv)
     : EMPTY_ARRAY;
 
   const base = compiled.resolvers
-    ? applyResolvers(compiled.base, compiled.resolvers, buildResolveEnv(env, containerCtx, theme))
+    ? applyResolvers(compiled.base, compiled.resolvers, resolveEnv)
     : compiled.base;
 
   if (hasPseudoState) {
@@ -560,7 +683,13 @@ function assembleFinalStyle(
       activeConditional.length > 0 ? [base as object].concat(activeConditional) : [base as object];
     return (state: any) => {
       const styles: any[] = preStateStyles.slice();
-      const matched = pseudoStylesForState(pseudoList, state || EMPTY_OBJECT, env, containerCtx);
+      const matched = pseudoStylesForState(
+        pseudoList,
+        state || EMPTY_OBJECT,
+        env,
+        containerCtx,
+        resolveEnv
+      );
       for (let i = 0; i < matched.length; i++) styles.push(matched[i]);
       if (isFunction(userStyle)) {
         const userResolved = userStyle(state);
@@ -604,6 +733,11 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
     const styledComponentTarget = target as IStyledComponent<'native', OuterProps>;
 
     const { displayName = generateDisplayName(target), attrs = EMPTY_ARRAY } = options;
+    const componentId =
+      options.componentId || generateComponentId(displayName + (options.parentComponentId || ''));
+    const styledComponentId = options.displayName
+      ? escape(options.displayName) + '-' + componentId
+      : componentId;
 
     // fold the underlying StyledComponent attrs up (implicit extend)
     const finalAttrs =
@@ -683,7 +817,7 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
     WrappedStyledComponent.displayName = displayName;
     WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
 
-    WrappedStyledComponent.styledComponentId = true;
+    WrappedStyledComponent.styledComponentId = styledComponentId;
 
     // fold the underlying StyledComponent target up since we folded the styles
     WrappedStyledComponent.target = isTargetStyledComp ? styledComponentTarget.target : target;

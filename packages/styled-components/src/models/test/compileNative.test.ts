@@ -5,6 +5,7 @@
  * in isolation from the render pipeline. Integration behavior lives in
  * `src/native/test/modern-css.test.tsx`.
  */
+import { resetWarningsForTest } from '../../native/transform/dev';
 import { toNativeStyles, NativeStyles, resetNativeStyleCache } from '../compileNative';
 
 const stubStyleSheet = {
@@ -20,6 +21,7 @@ describe('toNativeStyles', () => {
 
   beforeEach(() => {
     resetNativeStyleCache();
+    resetWarningsForTest();
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
@@ -221,7 +223,7 @@ describe('toNativeStyles', () => {
   });
 
   describe('@keyframes collection', () => {
-    it('collects keyframe frames as [stops, decl-pairs]', () => {
+    it('collects keyframe frames with transformed declarations keyed by camelCase prop', () => {
       const r = compile(`
         @keyframes fade {
           0% { opacity: 0; }
@@ -233,9 +235,9 @@ describe('toNativeStyles', () => {
         {
           name: 'fade',
           frames: [
-            { stops: ['0%'], decls: [['opacity', '0']] },
-            { stops: ['50%', '75%'], decls: [['opacity', '0.5']] },
-            { stops: ['100%'], decls: [['opacity', '1']] },
+            { stops: ['0%'], decls: { opacity: 0 } },
+            { stops: ['50%', '75%'], decls: { opacity: 0.5 } },
+            { stops: ['100%'], decls: { opacity: 1 } },
           ],
         },
       ]);
@@ -329,6 +331,28 @@ describe('toNativeStyles', () => {
       expect(warn).toHaveBeenCalled();
       warn.mockRestore();
     });
+
+    it('top-level comma form &:focus, &:focus-visible fans out the same way', () => {
+      const r = compile(`
+        &:focus, &:focus-visible {
+          opacity: 0.7;
+        }
+      `);
+      expect(r.conditional).toHaveLength(2);
+      expect(r.conditional[0]).toMatchObject({ type: 'pseudo', condition: 'focus' });
+      expect(r.conditional[1]).toMatchObject({ type: 'pseudo', condition: 'focus' });
+      expect(r.conditional[0].styles).toEqual(r.conditional[1].styles);
+    });
+
+    it('top-level comma fanout falls through when any selector is not a known pseudo', () => {
+      const r = compile(`
+        &:hover, .child {
+          opacity: 0.5;
+        }
+      `);
+      expect(r.conditional).toHaveLength(0);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Complex selectors'));
+    });
   });
 
   describe('@starting-style capture', () => {
@@ -346,6 +370,90 @@ describe('toNativeStyles', () => {
     it('omits the bucket when no @starting-style is present', () => {
       const r = compile(`opacity: 1;`);
       expect(r.startingStyle).toBeUndefined();
+    });
+  });
+
+  describe('@keyframes with dynamic values', () => {
+    it('extracts theme sentinels from @keyframes frame decls into per-frame resolvers', () => {
+      const r = compile(
+        '@keyframes fade { 0% { opacity: 0; } 100% { opacity: \0sc:opacity.end:1; } }'
+      );
+      expect(r.keyframes.length).toBe(1);
+      const kf = r.keyframes[0];
+      expect(kf.name).toBe('fade');
+      expect(kf.frames.length).toBe(2);
+      // 0% frame is fully static
+      expect(kf.frames[0].stops).toEqual(['0%']);
+      expect(kf.frames[0].decls).toEqual({ opacity: 0 });
+      expect(kf.frames[0].resolvers).toBeUndefined();
+      // 100% frame has a sentinel that landed in resolvers
+      expect(kf.frames[1].stops).toEqual(['100%']);
+      expect(kf.frames[1].decls).toEqual({});
+      expect(kf.frames[1].resolvers).toBeDefined();
+      expect(kf.frames[1].resolvers!.length).toBe(1);
+      expect(kf.frames[1].resolvers![0][0]).toBe('opacity');
+    });
+
+    it('extracts viewport-unit values from @keyframes frame decls into resolvers', () => {
+      const r = compile('@keyframes slide { 0% { width: 0; } 100% { width: 50vw; } }');
+      const kf = r.keyframes[0];
+      expect(kf.frames[1].decls).toEqual({});
+      expect(kf.frames[1].resolvers).toBeDefined();
+      expect(kf.frames[1].resolvers![0][0]).toBe('width');
+    });
+
+    it('keeps fully-static @keyframes frames unchanged', () => {
+      const r = compile('@keyframes pulse { 0% { opacity: 0.4; } 100% { opacity: 1; } }');
+      const kf = r.keyframes[0];
+      expect(kf.frames[0].decls).toEqual({ opacity: 0.4 });
+      expect(kf.frames[0].resolvers).toBeUndefined();
+      expect(kf.frames[1].decls).toEqual({ opacity: 1 });
+      expect(kf.frames[1].resolvers).toBeUndefined();
+    });
+  });
+
+  describe('@starting-style with dynamic values', () => {
+    it('extracts theme sentinels from @starting-style into resolvers', () => {
+      const r = compile('@starting-style { opacity: \0sc:opacity.start:0; }');
+      // The static portion of starting-style strips out resolver-bearing
+      // values; the resolvers go into startingStyleResolvers.
+      expect(r.startingStyle).toEqual({});
+      expect(r.startingStyleResolvers).toBeDefined();
+      expect(r.startingStyleResolvers!.length).toBe(1);
+      expect(r.startingStyleResolvers![0][0]).toBe('opacity');
+    });
+
+    it('keeps fully-static @starting-style declarations on the static side', () => {
+      const r = compile('@starting-style { opacity: 0; }');
+      expect(r.startingStyle).toEqual({ opacity: 0 });
+      expect(r.startingStyleResolvers).toBeUndefined();
+    });
+
+    it('extracts viewport-unit values from @starting-style into resolvers', () => {
+      const r = compile('@starting-style { width: 50vw; }');
+      expect(r.startingStyle).toEqual({});
+      expect(r.startingStyleResolvers).toBeDefined();
+      expect(r.startingStyleResolvers![0][0]).toBe('width');
+    });
+  });
+
+  describe('sentinel-leak detection (dev-time)', () => {
+    it('warns when a sentinel is concatenated with a leading number', () => {
+      // Simulates `${p => 47 + t.space.xl}px` after JS evaluation: the
+      // sentinel `\0sc:space.xl:55` got coerced to a string and glued to
+      // the `47` literal.
+      compile('padding-top: 47\0sc:space.xl:55px;');
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('createTheme token leaked'));
+    });
+
+    it('does NOT warn for clean single-sentinel values', () => {
+      compile('color: \0sc:colors.fg:#000;');
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('does NOT warn for properly-separated multi-sentinel values', () => {
+      compile('border: \0sc:borderWidth.hairline:1px solid \0sc:colors.ink:#000;');
+      expect(warnSpy).not.toHaveBeenCalled();
     });
   });
 });

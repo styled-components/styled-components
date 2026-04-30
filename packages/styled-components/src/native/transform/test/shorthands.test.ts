@@ -50,6 +50,46 @@ describe('margin / padding / border-* directional shorthands', () => {
     });
   });
 
+  it('padding: 4 env() values pass through to the resolver', () => {
+    expect(
+      transformDecl(
+        'padding',
+        'env(safe-area-inset-top, 12px) env(safe-area-inset-right, 16px) env(safe-area-inset-bottom, 12px) env(safe-area-inset-left, 16px)'
+      )
+    ).toEqual({
+      paddingTop: 'env(safe-area-inset-top, 12px)',
+      paddingRight: 'env(safe-area-inset-right, 16px)',
+      paddingBottom: 'env(safe-area-inset-bottom, 12px)',
+      paddingLeft: 'env(safe-area-inset-left, 16px)',
+    });
+  });
+
+  it('margin: theme sentinel passes through (resolved at render time)', () => {
+    expect(transformDecl('margin', '\0sc:space.md:16px')).toEqual({
+      margin: '\0sc:space.md:16px',
+    });
+  });
+
+  it('padding: math-fn arms pass through to the resolver', () => {
+    expect(
+      transformDecl(
+        'padding',
+        'calc(\0sc:space.md:16px + 4px) min(20px, 5vw) 8px max(\0sc:space.lg:24px, 16px)'
+      )
+    ).toEqual({
+      paddingTop: 'calc(\0sc:space.md:16px + 4px)',
+      paddingRight: 'min(20px, 5vw)',
+      paddingBottom: 8,
+      paddingLeft: 'max(\0sc:space.lg:24px, 16px)',
+    });
+  });
+
+  it('margin: clamp() with theme sentinel arm survives shorthand expansion', () => {
+    expect(transformDecl('margin', 'clamp(8px, \0sc:space.md:16px, 32px)')).toEqual({
+      margin: 'clamp(8px, \0sc:space.md:16px, 32px)',
+    });
+  });
+
   it('borderWidth: 4 values → per-side', () => {
     expect(transformDecl('borderWidth', '1px 2px 3px 4px')).toEqual({
       borderTopWidth: 1,
@@ -112,6 +152,14 @@ describe('border composite shorthand', () => {
       borderWidth: 1,
       borderStyle: 'dotted',
       borderColor: 'black',
+    });
+  });
+
+  it('width + style + theme sentinel color (resolved at render time)', () => {
+    expect(transformDecl('border', '1px solid \0sc:colors.border:#e3e3e8')).toEqual({
+      borderWidth: 1,
+      borderStyle: 'solid',
+      borderColor: '\0sc:colors.border:#e3e3e8',
     });
   });
 });
@@ -333,9 +381,9 @@ describe('bug fixes from CSSTN', () => {
     });
   });
 
-  it('backgroundImage: gradient passes through', () => {
+  it('backgroundImage: gradient passes through (renamed to RN experimental_)', () => {
     expect(transformDecl('backgroundImage', 'linear-gradient(90deg, red, blue)')).toEqual({
-      backgroundImage: 'linear-gradient(90deg, red, blue)',
+      experimental_backgroundImage: 'linear-gradient(90deg, red, blue)',
     });
   });
 });

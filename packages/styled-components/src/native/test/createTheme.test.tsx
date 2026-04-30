@@ -177,4 +177,65 @@ describe('createTheme — native parity', () => {
       })
     );
   });
+
+  it('preserves comma-bearing fallback (rgba color) when ThemeProvider is missing the path', () => {
+    // The sentinel terminator is whitespace / comma / slash, so a literal
+    // comma in the fallback used to truncate it. Escaping during createTheme
+    // and unescaping in the resolver lets composite-string leaves survive.
+    const theme = createTheme({
+      colors: { shadow: 'rgba(0,0,0,0.4)' },
+    });
+    const Box = styled(View)`
+      background-color: ${theme.colors.shadow};
+    `;
+    const tree = TestRenderer.create(<Box />);
+    expect(tree.root.findByType(View).props.style).toEqual(
+      expect.objectContaining({ backgroundColor: 'rgba(0,0,0,0.4)' })
+    );
+  });
+
+  it('preserves whitespace-bearing fallback (linear-gradient)', () => {
+    const theme = createTheme({
+      gradients: { brand: 'linear-gradient(to right, red, blue)' },
+    });
+    const Box = styled(View)`
+      background-image: ${theme.gradients.brand};
+    `;
+    const tree = TestRenderer.create(<Box />);
+    expect(tree.root.findByType(View).props.style).toEqual(
+      expect.objectContaining({
+        experimental_backgroundImage: 'linear-gradient(to right, red, blue)',
+      })
+    );
+  });
+
+  it('preserves slash-bearing fallback (composite border-radius style)', () => {
+    const theme = createTheme({
+      radius: { composite: '8px / 16px' },
+    });
+    const Box = styled(View)`
+      border-radius: ${theme.radius.composite};
+    `;
+    const tree = TestRenderer.create(<Box />);
+    expect(tree.root.findByType(View).props.style).toEqual(
+      expect.objectContaining({ borderRadius: '8px / 16px' })
+    );
+  });
+
+  it('ThemeProvider override of a composite leaf still wins over the escaped fallback', () => {
+    const theme = createTheme({
+      colors: { shadow: 'rgba(0,0,0,0.4)' },
+    });
+    const Box = styled(View)`
+      background-color: ${theme.colors.shadow};
+    `;
+    const tree = TestRenderer.create(
+      <ThemeProvider theme={{ colors: { shadow: 'rgba(255,0,0,0.5)' } }}>
+        <Box />
+      </ThemeProvider>
+    );
+    expect(tree.root.findByType(View).props.style).toEqual(
+      expect.objectContaining({ backgroundColor: 'rgba(255,0,0,0.5)' })
+    );
+  });
 });

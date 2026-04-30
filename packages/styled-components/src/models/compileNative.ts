@@ -1,5 +1,6 @@
 import { AtRuleNode, DeclNode, NodeKind, Node as ParserNode, Root, RuleNode } from '../parser/ast';
 import { transformDecl } from '../native/transform';
+import { warnIfSentinelLeak } from '../native/transform/dev';
 import { buildResolver, Resolver } from '../native/transform/polyfills/resolvers';
 import { parse } from '../parser/parser';
 import { Dict, StyleSheet } from '../types';
@@ -35,11 +36,28 @@ export interface ConditionalStyle {
   /** For type 'attr': the value to match (string compare with boolean coercion). */
   attrValue?: string;
   styles: Dict<any>;
+  /**
+   * Resolvers extracted from the bucket's styles (theme sentinels, viewport
+   * units, env(), light-dark(), etc.). Applied at render time when the
+   * bucket's condition matches.
+   */
+  resolvers?: Array<[string, Resolver]>;
 }
 
 export interface CompiledKeyframes {
   name: string;
-  frames: Array<{ stops: string[]; decls: Array<[string, string]> }>;
+  frames: Array<{
+    stops: string[];
+    /** Static (post-transformDecl) declarations; key is the camelCase RN prop. */
+    decls: Dict<any>;
+    /**
+     * Render-time resolvers extracted from this frame's declarations
+     * (theme sentinels, viewport / container units, env(), light-dark()).
+     * The animation adapter applies these against the active ResolveEnv
+     * before interpolating between frames.
+     */
+    resolvers?: Array<[string, Resolver]>;
+  }>;
 }
 
 export interface NativeStyles {
@@ -50,6 +68,14 @@ export interface NativeStyles {
   /** Keyframes collected for animation-adapter handoff (v7.1+). */
   keyframes: CompiledKeyframes[];
   /**
+   * Element-level "special case" props lifted out of the style object.
+   * Some RN components (Text, TextInput) read certain values as top-level
+   * props rather than style keys (e.g. `numberOfLines` from `line-clamp`).
+   * The render path spreads these onto the rendered element with user props
+   * winning.
+   */
+  specialCases?: Dict<any>;
+  /**
    * `@starting-style { … }` bodies collected for the animation adapter.
    * Represent the initial state a component animates FROM when it first
    * mounts (web: discrete-property transitions + `allow-discrete`;
@@ -57,6 +83,12 @@ export interface NativeStyles {
    * animation adapter is the consumer.
    */
   startingStyle?: Dict<any>;
+  /**
+   * Render-time resolvers attached to `startingStyle` declarations. Same
+   * shape as `resolvers`; the animation adapter applies these onto
+   * `startingStyle` before handing it to the first-render layer.
+   */
+  startingStyleResolvers?: Array<[string, Resolver]>;
   /**
    * Render-time resolvers for values that can't be resolved statically
    * (viewport units, container units, `light-dark()`, `env()`, theme
@@ -72,6 +104,22 @@ const KNOWN_PSEUDOS: Record<string, PseudoState> = {
   'focus-visible': 'focus',
   active: 'pressed',
   disabled: 'disabled',
+};
+
+/**
+ * Special-case metadata — keys that look like styles but are read as
+ * top-level props by specific React Native component types. The render
+ * path uses `validOn` (component `displayName`/`name`) for a dev-only
+ * warning when the surrounding styled component renders into an element
+ * that won't read the prop. `source` is the CSS property the user wrote.
+ */
+export interface SpecialCaseMeta {
+  validOn: ReadonlyArray<string>;
+  source: string;
+}
+
+export const SPECIAL_CASE_PROPS: Record<string, SpecialCaseMeta> = {
+  numberOfLines: { validOn: ['Text', 'TextInput', 'VirtualText'], source: 'line-clamp' },
 };
 
 // Keyed by raw CSS string; V8 caches a string's hash on first access so
@@ -131,20 +179,105 @@ export function astToNativeStyles(ast: Root, styleSheet: StyleSheet): NativeStyl
 
   walkRoot(ast, baseDecls, conditional, keyframes, startingDecls);
 
+  // Conditional buckets get their own resolver extraction so theme sentinels,
+  // env(), viewport / container units, and light-dark() inside `&:hover`,
+  // `@media`, `&[attr]` etc. resolve at render time the same as base styles.
+  for (let i = 0; i < conditional.length; i++) {
+    const entry = conditional[i];
+    const { base: resolvedStyles, resolvers: bucketResolvers } = extractResolvers(entry.styles);
+    entry.styles = stripSpecialCasesFromConditional(resolvedStyles, entry);
+    if (bucketResolvers.length > 0) entry.resolvers = bucketResolvers;
+  }
+
   const baseRaw = baseDecls.length > 0 ? pairsToObject(baseDecls) : {};
   const { base: resolvedBase, resolvers } = extractResolvers(baseRaw);
+  const specialCases = extractSpecialCases(resolvedBase);
   // Pass the resolved (static) portion through StyleSheet.create for
   // RN's shared-stylesheet registration. Dynamic values skip the sheet
   // (they're applied per-render and don't benefit from registration).
-  const base = baseDecls.length > 0 ? styleSheet.create({ generated: resolvedBase }).generated : {};
+  const hasBaseStyleDecls = hasOwnKeys(resolvedBase);
+  const base = hasBaseStyleDecls ? styleSheet.create({ generated: resolvedBase }).generated : {};
   const out: NativeStyles = { base, conditional, keyframes };
+  if (specialCases !== null) out.specialCases = specialCases;
   if (startingDecls.length > 0) {
-    out.startingStyle = pairsToObject(startingDecls);
+    // @starting-style decls are applied on the first render by the v7.1
+    // animation adapter. Run resolvers here so theme sentinels / env() /
+    // viewport units inside `@starting-style { … }` are render-time
+    // resolvable just like base + conditional buckets.
+    const startingRaw = pairsToObject(startingDecls);
+    const { base: resolvedStarting, resolvers: startingResolvers } = extractResolvers(startingRaw);
+    out.startingStyle = resolvedStarting;
+    if (startingResolvers.length > 0) out.startingStyleResolvers = startingResolvers;
   }
   if (resolvers.length > 0) {
     out.resolvers = resolvers;
   }
   return out;
+}
+
+/**
+ * Pull special-case keys out of the resolved base style object. Mutates
+ * `base` to remove the lifted keys; returns the lifted bag (or `null` if
+ * none). Called after `extractResolvers` so the values are static (no
+ * theme sentinels / env() — only the polyfills that emit primitives can
+ * produce these keys).
+ */
+function extractSpecialCases(base: Dict<any>): Dict<any> | null {
+  let lifted: Dict<any> | null = null;
+  for (const k in base) {
+    if (SPECIAL_CASE_PROPS[k] !== undefined) {
+      if (lifted === null) lifted = {};
+      lifted[k] = base[k];
+      delete base[k];
+    }
+  }
+  return lifted;
+}
+
+function describeCondition(entry: ConditionalStyle): string {
+  if (entry.type === 'pseudo') return ':' + entry.condition;
+  if (entry.type === 'attr') {
+    return entry.attrValue !== undefined
+      ? `[${entry.attribute}="${entry.attrValue}"]`
+      : `[${entry.attribute}]`;
+  }
+  // media / container / supports: type + prelude
+  return `@${entry.type} ${entry.condition}`;
+}
+
+/**
+ * Special-case props inside conditional rules (media query, container
+ * query, pseudo, attribute selector) aren't yet routed through the
+ * per-render prop merge — only top-level uses are. Drop them with a
+ * dev warning so the bucket's style payload stays correct and the user
+ * knows the construct silently no-ops.
+ */
+function stripSpecialCasesFromConditional(styles: Dict<any>, entry: ConditionalStyle): Dict<any> {
+  let out: Dict<any> | null = null;
+  for (const k in styles) {
+    if (SPECIAL_CASE_PROPS[k] !== undefined) {
+      if (process.env.NODE_ENV !== 'production') {
+        const meta = SPECIAL_CASE_PROPS[k];
+        // eslint-disable-next-line no-console
+        console.warn(
+          `\`${meta.source}\` is not supported inside \`${describeCondition(entry)}\` on ` +
+            `React Native. \`${meta.source}\` maps to React Native's \`${k}\` prop on ` +
+            `<${meta.validOn[0]}>, which can't change per condition. ` +
+            `Move \`${meta.source}\` to the top level of your styled component.`
+        );
+      }
+      if (out === null) out = { ...styles };
+      delete out[k];
+    }
+  }
+  return out ?? styles;
+}
+
+function hasOwnKeys(o: object): boolean {
+  for (const k in o) {
+    if (k.length >= 0) return true;
+  }
+  return false;
 }
 
 function extractResolvers(raw: Dict<any>): {
@@ -156,8 +289,14 @@ function extractResolvers(raw: Dict<any>): {
   for (const k in raw) {
     const v = raw[k];
     const r = buildResolver(v);
-    if (r !== null) resolvers.push([k, r]);
-    else base[k] = v;
+    if (r !== null) {
+      resolvers.push([k, r]);
+    } else {
+      if (process.env.NODE_ENV !== 'production') {
+        warnIfSentinelLeak(k, v);
+      }
+      base[k] = v;
+    }
   }
   return { base, resolvers };
 }
@@ -182,10 +321,23 @@ function walkRoot(
     } else if (kind === NodeKind.Keyframes) {
       keyframes.push({
         name: node.prelude,
-        frames: node.frames.map(frame => ({
-          stops: frame.stops,
-          decls: frame.children.map(d => [d.prop, d.value] as [string, string]),
-        })),
+        frames: node.frames.map(frame => {
+          // Mirror the base/conditional pipeline: flat decls → transformDecl
+          // (via pairsToObject) → extractResolvers. Lets `${t.colors.x}`
+          // and `env()` inside a keyframe's declarations resolve at
+          // render time when the v7.1 animation adapter applies them.
+          const flat: string[] = [];
+          for (let j = 0; j < frame.children.length; j++) {
+            const d = frame.children[j];
+            flat.push(d.prop, d.value);
+          }
+          const raw = flat.length > 0 ? pairsToObject(flat) : {};
+          const { base, resolvers } = extractResolvers(raw);
+          const out: { stops: string[]; decls: Dict<any>; resolvers?: Array<[string, Resolver]> } =
+            { stops: frame.stops, decls: base };
+          if (resolvers.length > 0) out.resolvers = resolvers;
+          return out;
+        }),
       });
     }
   }
@@ -206,14 +358,15 @@ function handleRootRule(node: RuleNode, conditional: ConditionalStyle[]): void {
 
   // Polyfill: &:is(:state1, :state2, …) and &:where(...) fan out into
   // N parallel pseudo buckets so `&:is(:hover, :focus)` produces the
-  // same styles regardless of which state is active.
-  const isWhereStates = detectIsWhereStates(node.selectors);
-  if (isWhereStates) {
+  // same styles regardless of which state is active. Top-level comma
+  // form (`&:focus, &:focus-visible`) gets the same treatment.
+  const fanOut = detectIsWhereStates(node.selectors) || detectMultiPseudo(node.selectors);
+  if (fanOut) {
     const decls = collectDecls(node.children);
     if (decls.length === 0) return;
     const styles = pairsToObject(decls);
-    for (let i = 0; i < isWhereStates.length; i++) {
-      conditional.push({ type: 'pseudo', condition: isWhereStates[i], styles });
+    for (let i = 0; i < fanOut.length; i++) {
+      conditional.push({ type: 'pseudo', condition: fanOut[i], styles });
     }
     return;
   }
@@ -358,15 +511,34 @@ function pushDecl(out: string[], node: DeclNode): void {
   out.push(node.prop, v);
 }
 
-function detectPseudo(selectors: string[]): PseudoState | null {
-  if (selectors.length !== 1) return null;
-  const sel = selectors[0];
+function detectPseudoSelector(sel: string): PseudoState | null {
   // Match `&:<pseudo>`; the only native-supported selector shape in v7.0.
   if (sel.length < 3 || sel.charCodeAt(0) !== $.AMPERSAND || sel.charCodeAt(1) !== $.COLON) {
     return null;
   }
   const name = sel.substring(2);
   return KNOWN_PSEUDOS[name] || null;
+}
+
+function detectPseudo(selectors: string[]): PseudoState | null {
+  if (selectors.length !== 1) return null;
+  return detectPseudoSelector(selectors[0]);
+}
+
+/**
+ * Top-level comma-separated pseudo selectors (`&:focus, &:focus-visible`) are
+ * sugar for `&:is(:focus, :focus-visible)`. Fan out when every comma-fragment
+ * is a known pseudo state.
+ */
+function detectMultiPseudo(selectors: string[]): PseudoState[] | null {
+  if (selectors.length < 2) return null;
+  const states: PseudoState[] = [];
+  for (let i = 0; i < selectors.length; i++) {
+    const s = detectPseudoSelector(selectors[i]);
+    if (s === null) return null;
+    states.push(s);
+  }
+  return states;
 }
 
 /**

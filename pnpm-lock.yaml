@@ -151,6 +151,12 @@ importers:
 
   packages/native-showcase:
     dependencies:
+      '@expo-google-fonts/figtree':
+        specifier: '*'
+        version: 0.4.1
+      '@expo-google-fonts/jetbrains-mono':
+        specifier: '*'
+        version: 0.4.1
       '@expo/metro-runtime':
         specifier: canary
         version: 56.0.0-canary-20260423-c31bd8e(@expo/dom-webview@56.0.0-canary-20260423-c31bd8e)(expo@56.0.0-canary-20260423-c31bd8e)(react-dom@19.2.3(react@19.2.3))(react-native@0.85.2(@babel/core@7.29.0)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/jest-preset@0.85.2(@babel/core@7.29.0)(react@19.2.3))(@react-native/metro-config@0.85.2(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.3))(react@19.2.3)
@@ -163,12 +169,18 @@ importers:
       expo-constants:
         specifier: canary
         version: 56.0.0-canary-20260423-c31bd8e(expo@56.0.0-canary-20260423-c31bd8e)(react-native@0.85.2(@babel/core@7.29.0)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/jest-preset@0.85.2(@babel/core@7.29.0)(react@19.2.3))(@react-native/metro-config@0.85.2(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.3))
+      expo-font:
+        specifier: canary
+        version: 56.0.0-canary-20260423-c31bd8e(expo@56.0.0-canary-20260423-c31bd8e)(react-native@0.85.2(@babel/core@7.29.0)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/jest-preset@0.85.2(@babel/core@7.29.0)(react@19.2.3))(@react-native/metro-config@0.85.2(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.3))(react@19.2.3)
       expo-linking:
         specifier: canary
         version: 56.0.0-canary-20260423-c31bd8e(expo@56.0.0-canary-20260423-c31bd8e)(react-native@0.85.2(@babel/core@7.29.0)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/jest-preset@0.85.2(@babel/core@7.29.0)(react@19.2.3))(@react-native/metro-config@0.85.2(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.3))(react@19.2.3)
       expo-router:
         specifier: canary
         version: 56.0.0-canary-20260423-c31bd8e(fce36d11ea0da774247388dbce505cc1)
+      expo-splash-screen:
+        specifier: canary
+        version: 56.0.0-canary-20260423-c31bd8e(expo@56.0.0-canary-20260423-c31bd8e)(typescript@5.9.3)
       expo-status-bar:
         specifier: canary
         version: 56.0.0-canary-20260423-c31bd8e(expo@56.0.0-canary-20260423-c31bd8e)(react-native@0.85.2(@babel/core@7.29.0)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/jest-preset@0.85.2(@babel/core@7.29.0)(react@19.2.3))(@react-native/metro-config@0.85.2(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.3))(react@19.2.3)
@@ -206,6 +218,9 @@ importers:
       '@types/react':
         specifier: '19'
         version: 19.2.14
+      pretty-format:
+        specifier: 29.7.0
+        version: 29.7.0
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
@@ -1264,6 +1279,12 @@ packages:
 
   '@emotion/weak-memoize@0.4.0':
     resolution: {integrity: sha512-snKqtPW01tN0ui7yu9rGv69aJXr/a/Ywvl11sUjNtEcRc+ng/mQriFL0wLXMef74iHa/EkftbDzU9F8iFbH+zg==}
+
+  '@expo-google-fonts/figtree@0.4.1':
+    resolution: {integrity: sha512-6IQQddGeR3yZBSwiIjy2kd1gA+5s2esF8JAFw6M1qqU4RUlj4Zxkw9J+gixAtZFgd+QIS875EPHqeYlpaRcCRw==}
+
+  '@expo-google-fonts/jetbrains-mono@0.4.1':
+    resolution: {integrity: sha512-CslACrtMOcRwoWXCO7OMEI+9w3fukWSoBtvNz46OqPoogEuuoY0tkDY1O8sFumk8t0pC6Cx0Xr95O0TOQhpkug==}
 
   '@expo-google-fonts/material-symbols@0.4.34':
     resolution: {integrity: sha512-PdwETUhvu1gHF1e8eIyEHnBJLq/dRNoTrT5yhsGUfGyRxH5pbm54dF3+QPknxwMKj0M1trN7PSelYz+yzlt3lA==}
@@ -3687,6 +3708,11 @@ packages:
   expo-server@56.0.0-canary-20260423-c31bd8e:
     resolution: {integrity: sha512-9JNUQK9ixvDgGfHAM+ih6Szv1kJqWuKy2mPAuogPnnk7Z2WGYJguTg46xGFeyUXVse5Vt+fMFghKziCv2AmG1Q==}
     engines: {node: '>=20.16.0'}
+
+  expo-splash-screen@56.0.0-canary-20260423-c31bd8e:
+    resolution: {integrity: sha512-jb/U0S02CeziQmyj8NZGytohSorWNu6XMrM/iZb5wo9D0Yidx1uh6ZrO+mMhhJ9IrstbYul/EfspRcLEesEJlg==}
+    peerDependencies:
+      expo: 56.0.0-canary-20260423-c31bd8e
 
   expo-status-bar@56.0.0-canary-20260423-c31bd8e:
     resolution: {integrity: sha512-jJf5iIqMhYn2iEHnWN9W6GAhZs4ZDl6Pe8OqNVErVSQHNWRihLvjOq358Kw7ZmMvKeiF6Mj9c5FDsgTkCia9VA==}
@@ -7479,6 +7505,10 @@ snapshots:
 
   '@emotion/weak-memoize@0.4.0': {}
 
+  '@expo-google-fonts/figtree@0.4.1': {}
+
+  '@expo-google-fonts/jetbrains-mono@0.4.1': {}
+
   '@expo-google-fonts/material-symbols@0.4.34': {}
 
   '@expo/cli@56.0.0-canary-20260423-c31bd8e(@expo/dom-webview@56.0.0-canary-20260423-c31bd8e)(@expo/metro-runtime@56.0.0-canary-20260423-c31bd8e)(expo-constants@56.0.0-canary-20260423-c31bd8e)(expo-font@56.0.0-canary-20260423-c31bd8e)(expo-router@56.0.0-canary-20260423-c31bd8e)(expo@56.0.0-canary-20260423-c31bd8e)(react-dom@19.2.3(react@19.2.3))(react-native@0.85.2(@babel/core@7.29.0)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/jest-preset@0.85.2(@babel/core@7.29.0)(react@19.2.3))(@react-native/metro-config@0.85.2(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.3))(react@19.2.3)(typescript@5.9.3)':
@@ -10299,6 +10329,16 @@ snapshots:
       - supports-color
 
   expo-server@56.0.0-canary-20260423-c31bd8e: {}
+
+  expo-splash-screen@56.0.0-canary-20260423-c31bd8e(expo@56.0.0-canary-20260423-c31bd8e)(typescript@5.9.3):
+    dependencies:
+      '@expo/config-plugins': 56.0.0-canary-20260423-c31bd8e
+      '@expo/image-utils': 0.8.14-canary-20260423-c31bd8e(typescript@5.9.3)
+      expo: 56.0.0-canary-20260423-c31bd8e(@babel/core@7.29.0)(@expo/dom-webview@56.0.0-canary-20260423-c31bd8e)(@expo/metro-runtime@56.0.0-canary-20260423-c31bd8e)(expo-router@56.0.0-canary-20260423-c31bd8e)(react-dom@19.2.3(react@19.2.3))(react-native-web@0.21.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-native-worklets@0.8.1(@babel/core@7.29.0)(@react-native/metro-config@0.85.2(@babel/core@7.29.0))(react-native@0.85.2(@babel/core@7.29.0)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/jest-preset@0.85.2(@babel/core@7.29.0)(react@19.2.3))(@react-native/metro-config@0.85.2(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.3))(react@19.2.3))(react-native@0.85.2(@babel/core@7.29.0)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/jest-preset@0.85.2(@babel/core@7.29.0)(react@19.2.3))(@react-native/metro-config@0.85.2(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.3))(react@19.2.3)(typescript@5.9.3)
+      xml2js: 0.6.0
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
 
   expo-status-bar@56.0.0-canary-20260423-c31bd8e(expo@56.0.0-canary-20260423-c31bd8e)(react-native@0.85.2(@babel/core@7.29.0)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/jest-preset@0.85.2(@babel/core@7.29.0)(react@19.2.3))(@react-native/metro-config@0.85.2(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.3))(react@19.2.3):
     dependencies:

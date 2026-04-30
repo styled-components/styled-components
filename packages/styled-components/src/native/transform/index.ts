@@ -75,14 +75,19 @@ import './shorthands.register';
 export function transformDecl(prop: string, rawValue: string): Dict<any> {
   const camel = camelize(prop);
 
-  if (PASSTHROUGH_PROPS.has(camel)) {
-    return { [camel]: rawValue };
+  const passthroughKey = PASSTHROUGH_PROPS.get(camel);
+  if (passthroughKey !== undefined) {
+    return { [passthroughKey]: rawValue };
   }
 
-  // Sentinel-bearing values (single createTheme token like `\0sc:…`)
-  // bypass shorthand expansion; they're atomic placeholders that the
-  // render-time resolver replaces with the concrete theme value.
-  if (rawValue.length > 0 && rawValue.charCodeAt(0) === 0) {
+  // Single-token sentinel values (e.g. `color: ${t.colors.fg}` produces
+  // exactly one `\0sc:…` atom) bypass shorthand expansion; they're atomic
+  // placeholders that the render-time resolver replaces with the concrete
+  // theme value. Multi-token values containing a sentinel as one component
+  // (e.g. `border: ${t.borderWidth.hairline}px solid ${t.colors.ink}`)
+  // must NOT bypass — they need shorthand expansion so each part lands on
+  // the right RN prop.
+  if (rawValue.length > 0 && rawValue.charCodeAt(0) === 0 && isSingleSentinel(rawValue)) {
     return { [camel]: rawValue };
   }
 
@@ -126,6 +131,22 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
 
   // Hot path for the common case (single color / numeric / ident).
   return { [camel]: coerceRawValue(camel, rawValue) };
+}
+
+/**
+ * True when the value is exactly one createTheme sentinel atom (no
+ * additional tokens). Sentinels terminate at whitespace, comma, or slash
+ * (per `findSentinelEnd` in the tokenizer); so a single-token sentinel
+ * has none of those characters.
+ */
+function isSingleSentinel(v: string): boolean {
+  for (let i = 1; i < v.length; i++) {
+    const c = v.charCodeAt(i);
+    if (c === 0x20 || c === 0x09 || c === 0x0a || c === 0x0d || c === 0x2c || c === 0x2f) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function mightBeMathFn(v: string): boolean {

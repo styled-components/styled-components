@@ -2,6 +2,7 @@ import type * as CSS from 'csstype';
 import type React from 'react';
 import type WebStyle from './models/WebStyle';
 import type { DefaultTheme } from './models/ThemeProvider';
+import type { Resolver } from './native/transform/polyfills/resolvers';
 import type createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 import type { SupportedHTMLElements } from './utils/domElements';
 
@@ -186,10 +187,11 @@ export interface IStyledStatics<
   foldedComponentIds: R extends 'web' ? string : never;
   nativeStyle: R extends 'native' ? InstanceType<INativeStyleConstructor<OuterProps>> : never;
   target: StyledTarget<R>;
-  // Web emits a real component id used for class chaining; native uses a
-  // boolean sentinel so `isStyledComponent`'s `'styledComponentId' in target`
-  // duck check works uniformly across runtimes.
-  styledComponentId: R extends 'web' ? string : true;
+  // Both runtimes emit a unique string id. Web uses it for class chaining;
+  // native uses it so `${StyledComp}` interpolations into a css template
+  // produce a unique selector token (otherwise multi-component rules would
+  // collide on a single sentinel value).
+  styledComponentId: string;
   warnTooManyClasses?:
     | (R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never)
     | undefined;
@@ -309,8 +311,10 @@ interface CompileOutput {
   }>;
   keyframes: Array<{
     name: string;
-    frames: Array<{ stops: string[]; decls: Array<[string, string]> }>;
+    frames: Array<{ stops: string[]; decls: Dict<any>; resolvers?: Array<[string, Resolver]> }>;
   }>;
+  /** Element-level props lifted from the style object (e.g. `numberOfLines`). */
+  specialCases?: Dict<any>;
 }
 
 export interface INativeStyle<Props extends BaseObject> {

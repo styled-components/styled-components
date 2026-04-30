@@ -115,7 +115,11 @@ function parseFeature(raw: string): Feature | null {
   if (colon === -1) return { kind: 'any' };
 
   const name = s.substring(0, colon).trim().toLowerCase();
-  const value = s.substring(colon + 1).trim();
+  const rawValue = s.substring(colon + 1).trim();
+  // Sentinels in @media feature values (`@media (min-width: ${t.bp.md}px)`)
+  // resolve to their fallback at parse time. See `unwrapSentinelFallback`
+  // for why fallback semantics are appropriate for media-query land.
+  const value = unwrapSentinelFallback(rawValue);
 
   switch (name) {
     case 'min-width':
@@ -153,15 +157,18 @@ function parseFeature(raw: string): Feature | null {
 
 function parseRatio(raw: string): number | null {
   // CSS Values L4 <ratio>: `<number> / <number>` or bare `<number>` (means `/1`).
-  const slash = raw.indexOf('/');
+  // Sentinel arms unwrap to their fallback first; `${t.ratios.wide}` then
+  // resolves to whatever ratio createTheme captured.
+  const r = unwrapSentinelFallback(raw);
+  const slash = r.indexOf('/');
   let num: number;
   let den: number;
   if (slash === -1) {
-    num = parseFloat(raw);
+    num = parseFloat(r);
     den = 1;
   } else {
-    num = parseFloat(raw.substring(0, slash).trim());
-    den = parseFloat(raw.substring(slash + 1).trim());
+    num = parseFloat(r.substring(0, slash).trim());
+    den = parseFloat(r.substring(slash + 1).trim());
   }
   if (!Number.isFinite(num) || !Number.isFinite(den)) return null;
   if (num <= 0 || den <= 0) return null;
@@ -252,9 +259,27 @@ function findDimension(tokens: string[]): Dimension | null {
 function parseLength(v: string): number {
   // Accepts `400px`, `400`, `25em` (1em assumed 16px). Unknown units return NaN
   // which will evaluate to false in comparisons; a safe silent fallback.
-  const num = parseFloat(v);
-  if (v.endsWith('em') || v.endsWith('rem')) return num * 16;
+  const u = unwrapSentinelFallback(v);
+  const num = parseFloat(u);
+  if (u.endsWith('em') || u.endsWith('rem')) return num * 16;
   return num;
+}
+
+/**
+ * `@media (min-width: ${t.bp.md}px)` produces queries containing
+ * sentinel atoms (`\0sc:bp.md:768px`) — the live theme isn't reachable
+ * from `parseMediaQuery` (it's called outside render context, and the
+ * parsed Query is cached by raw string). We unwrap the sentinel to its
+ * fallback so the breakpoint reflects the createTheme default; this is
+ * appropriate because breakpoints / scheme-keywords / aspect ratios are
+ * theme-stable in practice. Composite-string fallbacks would have been
+ * round-tripped through `escapeSentinelFallback` at createTheme time;
+ * media-query feature values are atomic so the fallback is plain.
+ */
+function unwrapSentinelFallback(v: string): string {
+  if (v.length === 0 || v.charCodeAt(0) !== 0) return v;
+  const lastColon = v.lastIndexOf(':');
+  return lastColon === -1 ? v : v.slice(lastColon + 1);
 }
 
 function splitTopLevel(s: string, sep: string): string[] {

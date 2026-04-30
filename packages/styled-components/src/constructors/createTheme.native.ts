@@ -1,3 +1,4 @@
+import { escapeSentinelFallback } from '../native/transform/polyfills/resolvers';
 import { walkTheme } from './createTheme.shared';
 import type { ThemeContract } from './createTheme.types';
 
@@ -26,7 +27,12 @@ export default function createTheme<T extends Record<string, any>>(
 
   const leaves: Record<string, any> = {};
   walkTheme(defaultTheme, '.', leaves, (fullPath, val) => {
-    return '\0' + prefix + ':' + fullPath + ':' + val;
+    // The sentinel terminator is whitespace / comma / slash; composite
+    // leaves like `'rgba(0,0,0,0.4)'` would be truncated mid-fallback
+    // without escaping. Round-tripped via `unescapeSentinelFallback` in
+    // the resolver pass.
+    const fallback = typeof val === 'string' ? escapeSentinelFallback(val) : val;
+    return '\0' + prefix + ':' + fullPath + ':' + fallback;
   });
 
   const vars: Record<string, any> = {};

@@ -134,6 +134,7 @@ export {
   NativeTarget,
   PolymorphicComponent,
   PolymorphicComponentProps,
+  RuleSet,
   Runtime,
   StyledObject,
   StyledOptions,

@@ -23,7 +23,10 @@ export function withoutSlashes(tokens: Token[]): Token[] {
 /**
  * Read the next "value" token that counts as a length-like unit for
  * directional shorthands (margin/padding/border*): LENGTH (inc. 0),
- * NUMBER (bare; stylis/cssTN behavior, emits as-is), PERCENT.
+ * NUMBER (bare; stylis/cssTN behavior, emits as-is), PERCENT, theme
+ * SENTINEL (resolved at render time), or a deferred CSS Function (`env`,
+ * `calc`, `min`, `max`, `clamp`, `light-dark`) that the runtime resolver
+ * pipeline picks up after shorthand expansion.
  * Returns the token or `null` on mismatch.
  */
 export function consumeDimensionLike(stream: TokenStream): Token | null {
@@ -33,10 +36,21 @@ export function consumeDimensionLike(stream: TokenStream): Token | null {
     t.kind === TokenKind.Length ||
     t.kind === TokenKind.Number ||
     t.kind === TokenKind.Percent ||
-    (t.kind === TokenKind.Ident && t.name === 'auto')
+    t.kind === TokenKind.Sentinel
   ) {
     stream.consume();
     return t;
+  }
+  if (t.kind === TokenKind.Ident && t.name === 'auto') {
+    stream.consume();
+    return t;
+  }
+  if (t.kind === TokenKind.Function) {
+    const name = t.name || '';
+    if (name === 'env' || name === 'calc' || name === 'min' || name === 'max' || name === 'clamp') {
+      stream.consume();
+      return t;
+    }
   }
   return null;
 }
@@ -79,6 +93,12 @@ export function consumeColor(stream: TokenStream): Token | null {
       stream.consume();
       return t;
     }
+  }
+  // Theme sentinels (`\0sc:colors.fg:#000`) are opaque color placeholders;
+  // the resolver pass converts them at render time.
+  if (t.kind === TokenKind.Sentinel) {
+    stream.consume();
+    return t;
   }
   return null;
 }
@@ -192,7 +212,14 @@ export function directionalColor(
 function acceptDimensionLike(t: Token): Token | null {
   const k = t.kind;
   if (k === TokenKind.Length || k === TokenKind.Number || k === TokenKind.Percent) return t;
+  if (k === TokenKind.Sentinel) return t;
   if (k === TokenKind.Ident && t.name === 'auto') return t;
+  if (k === TokenKind.Function) {
+    const name = t.name || '';
+    if (name === 'env' || name === 'calc' || name === 'min' || name === 'max' || name === 'clamp') {
+      return t;
+    }
+  }
   return null;
 }
 

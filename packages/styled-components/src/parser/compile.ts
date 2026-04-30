@@ -403,27 +403,123 @@ function resolveInterpolation(
 }
 
 /**
+ * Lazily-computed per-node flag: `true` when the node — or any descendant —
+ * depends on a runtime interpolation slot. `false` means the subtree is
+ * structurally fixed across renders, so `fillNode` can return the existing
+ * node by reference and skip the per-render clone of unchanged subtrees.
+ *
+ * Recomputed at most once per node; cached on a module-level `WeakMap` keyed
+ * by node identity. Auto-evicts when the AST is freed.
+ */
+const interpolatedCache = new WeakMap<Node, boolean>();
+
+function interpolated(node: Node): boolean {
+  const cached = interpolatedCache.get(node);
+  if (cached !== undefined) return cached;
+  let result = false;
+  switch (node.kind) {
+    case NodeKind.Decl:
+      result = node.prop.indexOf('\0I') !== -1 || node.value.indexOf('\0I') !== -1;
+      break;
+    case NodeKind.Rule: {
+      for (let i = 0; i < node.selectors.length; i++) {
+        if (node.selectors[i].indexOf('\0I') !== -1) {
+          result = true;
+          break;
+        }
+      }
+      if (!result) {
+        for (let i = 0; i < node.children.length; i++) {
+          if (interpolated(node.children[i])) {
+            result = true;
+            break;
+          }
+        }
+      }
+      break;
+    }
+    case NodeKind.AtRule: {
+      if (node.prelude.indexOf('\0I') !== -1) {
+        result = true;
+      } else if (node.children !== null) {
+        for (let i = 0; i < node.children.length; i++) {
+          if (interpolated(node.children[i])) {
+            result = true;
+            break;
+          }
+        }
+      }
+      break;
+    }
+    case NodeKind.Keyframes: {
+      if (node.prelude.indexOf('\0I') !== -1) {
+        result = true;
+      } else {
+        outer: for (let f = 0; f < node.frames.length; f++) {
+          const frame = node.frames[f];
+          for (let s = 0; s < frame.stops.length; s++) {
+            if (frame.stops[s].indexOf('\0I') !== -1) {
+              result = true;
+              break outer;
+            }
+          }
+          for (let d = 0; d < frame.children.length; d++) {
+            const decl = frame.children[d];
+            if (decl.prop.indexOf('\0I') !== -1 || decl.value.indexOf('\0I') !== -1) {
+              result = true;
+              break outer;
+            }
+          }
+        }
+      }
+      break;
+    }
+    case NodeKind.Interpolation:
+      result = true;
+      break;
+  }
+  interpolatedCache.set(node, result);
+  return result;
+}
+
+/**
  * Substitute `\0I<n>\0` sentinels in node strings and splice resolved
  * `InterpolationNode`s (fragments or parsed strings) as siblings. Returns
  * `null` to bail when block-level filled text carries unparseable structure.
+ *
+ * Identity-preserving: when no descendant of any input node depends on `filled`,
+ * returns `nodes` itself; per-node identity is preserved through `fillNode`.
  */
 export function fillAst(
   nodes: Root,
   filled: ReadonlyArray<string>,
   fragments?: ReadonlyArray<FastPathFragment | null> | null
 ): Root | null {
-  const out: Node[] = [];
+  let out: Node[] | null = null;
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
     const filledNode = fillNode(node, filled, fragments);
     if (filledNode === null) return null;
+
     if (Array.isArray(filledNode)) {
+      if (out === null) {
+        out = nodes.slice(0, i);
+      }
       for (let j = 0; j < filledNode.length; j++) out.push(filledNode[j]);
-    } else if (filledNode !== undefined) {
+    } else if (filledNode === undefined) {
+      if (out === null) {
+        out = nodes.slice(0, i);
+      }
+    } else if (filledNode !== node) {
+      if (out === null) {
+        out = nodes.slice(0, i);
+      }
+      out.push(filledNode);
+    } else if (out !== null) {
       out.push(filledNode);
     }
   }
-  return out;
+  return out === null ? nodes : out;
 }
 
 function fillNode(
@@ -431,6 +527,10 @@ function fillNode(
   filled: ReadonlyArray<string>,
   fragments: ReadonlyArray<FastPathFragment | null> | null | undefined
 ): Node | Node[] | undefined | null {
+  // Static subtree: no descendant reads `filled`, so the existing node serves
+  // unchanged. Skips substitute walks and per-render allocation.
+  if (!interpolated(node)) return node;
+
   switch (node.kind) {
     case NodeKind.Decl: {
       // Both prop and value carry `\0I<n>\0` for templates like
@@ -450,14 +550,26 @@ function fillNode(
       return decl;
     }
     case NodeKind.Rule: {
-      const selectors: string[] = new Array(node.selectors.length);
+      // Lazy clone: keep `node.selectors` when every substitute returns the
+      // same reference. Combined with the children identity check below, a
+      // Rule whose selectors are static and whose children are unchanged
+      // returns by reference — useful when interp lives deeper in the tree.
+      let selectors = node.selectors;
+      let selectorsChanged = false;
       for (let i = 0; i < node.selectors.length; i++) {
         const sel = substitute(node.selectors[i], filled);
         if (sel === null) return null;
-        selectors[i] = sel;
+        if (sel !== node.selectors[i]) {
+          if (!selectorsChanged) {
+            selectors = node.selectors.slice();
+            selectorsChanged = true;
+          }
+          selectors[i] = sel;
+        }
       }
       const children = fillAst(node.children, filled, fragments);
       if (children === null) return null;
+      if (!selectorsChanged && children === node.children) return node;
       const rule: RuleNode = { kind: NodeKind.Rule, selectors, children };
       return rule;
     }
@@ -466,6 +578,7 @@ function fillNode(
       if (prelude === null) return null;
       const children = node.children === null ? null : fillAst(node.children, filled, fragments);
       if (children === null && node.children !== null) return null;
+      if (prelude === node.prelude && children === node.children) return node;
       const at: AtRuleNode = { kind: NodeKind.AtRule, name: node.name, prelude, children };
       return at;
     }

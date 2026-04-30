@@ -204,6 +204,104 @@ describe('static color math', () => {
   });
 });
 
+describe('gamut mapping (CSS Color 4 §13)', () => {
+  // Convert a hex string back to OKLCh hue (degrees) so we can assert
+  // the input hue survived gamut mapping.
+  function hexToOklchHue(hex: string): number {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.slice(0, 2), 16) / 255;
+    const g = parseInt(h.slice(2, 4), 16) / 255;
+    const b = parseInt(h.slice(4, 6), 16) / 255;
+    const linearize = (v: number) =>
+      v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    const rL = linearize(r);
+    const gL = linearize(g);
+    const bL = linearize(b);
+    const lc = 0.4122214708 * rL + 0.5363325363 * gL + 0.0514459929 * bL;
+    const mc = 0.2119034982 * rL + 0.6806995451 * gL + 0.1073969566 * bL;
+    const sc = 0.0883024619 * rL + 0.2817188376 * gL + 0.6299787005 * bL;
+    const l_ = Math.cbrt(lc);
+    const m_ = Math.cbrt(mc);
+    const s_ = Math.cbrt(sc);
+    const aOk = 1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_;
+    const bOk = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_;
+    let deg = (Math.atan2(bOk, aOk) * 180) / Math.PI;
+    if (deg < 0) deg += 360;
+    return deg;
+  }
+
+  it('out-of-gamut oklch keeps hue (vivid green ≈ 130°)', () => {
+    // `oklch(0.7 0.4 130)` is a high-chroma green well outside sRGB.
+    // Naive per-channel clip rotates hue toward pure green (≈140°+).
+    // Gamut mapping keeps the original hue ±2°.
+    const tok = tokenize('oklch(0.7 0.4 130)')[0];
+    const hex = staticColorFunctionToHex(tok)!;
+    const hue = hexToOklchHue(hex);
+    expect(Math.abs(hue - 130)).toBeLessThan(2);
+  });
+
+  it('out-of-gamut oklch keeps hue (vivid magenta ≈ 350°)', () => {
+    // High-chroma red-magenta outside sRGB.
+    const tok = tokenize('oklch(0.55 0.35 350)')[0];
+    const hex = staticColorFunctionToHex(tok)!;
+    const hue = hexToOklchHue(hex);
+    expect(Math.abs(hue - 350)).toBeLessThan(2);
+  });
+
+  it('out-of-gamut oklch reduces chroma vs the naive clip baseline', () => {
+    // Same hue (130°) at two chromas: 0.4 (out of gamut) and 0.18
+    // (in gamut). The mapped 0.4 result should land near the in-gamut
+    // 0.18 result — chroma was cut down to the boundary, not channels.
+    const out = staticColorFunctionToHex(tokenize('oklch(0.7 0.4 130)')[0])!;
+    const inGamut = staticColorFunctionToHex(tokenize('oklch(0.7 0.18 130)')[0])!;
+    // Same green family, similar G byte; mapped should be close.
+    const gOut = parseInt(out.slice(3, 5), 16);
+    const gIn = parseInt(inGamut.slice(3, 5), 16);
+    expect(Math.abs(gOut - gIn)).toBeLessThan(40);
+  });
+
+  it('lightness >= 1 maps to white in destination', () => {
+    const tok = tokenize('oklch(1.2 0.1 30)')[0];
+    expect(staticColorFunctionToHex(tok)).toBe('#ffffff');
+  });
+
+  it('lightness <= 0 maps to black in destination', () => {
+    const tok = tokenize('oklch(-0.1 0.1 30)')[0];
+    expect(staticColorFunctionToHex(tok)).toBe('#000000');
+  });
+
+  it('out-of-gamut CIE lab keeps hue family', () => {
+    // `lab(60% 100% 0)` puts a-axis at +125 (way outside sRGB). The
+    // CSS Color 4 algo routes CIE Lab through OKLCh for the bisection,
+    // so the result should still be reddish (R dominant) rather than
+    // hue-rotated by per-channel clip.
+    const tok = tokenize('lab(60% 100% 0)')[0];
+    const hex = staticColorFunctionToHex(tok)!;
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    expect(r).toBeGreaterThan(g);
+    expect(r).toBeGreaterThan(b);
+  });
+
+  it('in-gamut colors are byte-identical to pre-mapping output', () => {
+    // Mid-gray is trivially in-gamut. The gamut-map fast path returns
+    // the direct conversion unchanged.
+    const tok = tokenize('oklch(0.5 0 0)')[0];
+    const hex = staticColorFunctionToHex(tok)!;
+    // L=0.5, C=0, H=0 — neutral gray at oklab(0.5, 0, 0).
+    // Should round to a single-byte mid-gray hex.
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    expect(r).toBe(g);
+    expect(g).toBe(b);
+    // L=0.5 in OKLab → ≈ #777 (perceptual midpoint)
+    expect(r).toBeGreaterThan(0x60);
+    expect(r).toBeLessThan(0xa0);
+  });
+});
+
 describe('line-clamp polyfill', () => {
   it('line-clamp: 3 → numberOfLines + overflow hidden', () => {
     expect(transformDecl('line-clamp', '3')).toEqual({

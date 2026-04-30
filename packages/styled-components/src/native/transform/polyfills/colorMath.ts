@@ -1,5 +1,6 @@
 import { Token, TokenKind } from '../tokens';
 import { tokenizeFunctionArgs } from '../tokenize';
+import { resolveStaticMathFunction } from './mathFns';
 
 /**
  * Static color-math polyfills: convert `oklch()` / `oklab()` / `lch()` /
@@ -12,8 +13,17 @@ import { tokenizeFunctionArgs } from '../tokenize';
  * caller falls back to either a runtime resolver or passes the string
  * through (RN will reject but the dev warning is the user's signal).
  *
+ * Out-of-gamut input (e.g. `oklch(0.7 0.4 130)`) goes through Björn
+ * Ottosson's analytic sRGB clip with adaptive L0=0.5 and α=0.05 (the
+ * recommended default in his post). The projection target smoothly
+ * blends the input lightness toward 0.5 as chroma exceeds gamut,
+ * trading a small L drift for retained chroma at hue/lightness
+ * combinations where preserve-lightness over-desaturates (notably
+ * yellow/green near the gamut cusp). Hue stays exact.
+ *
  * References:
  * - https://www.w3.org/TR/css-color-4/#rgb-to-lab
+ * - https://bottosson.github.io/posts/gamutclipping/ (clip algo)
  * - https://bottosson.github.io/posts/oklab/
  * - https://www.w3.org/TR/css-color-5/#color-mix
  */
@@ -102,27 +112,241 @@ const OKLCH_SCALES: [number, number, number] = [1, 0.4, NaN];
 const LAB_SCALES: [number, number, number] = [100, 125, 125];
 const LCH_SCALES: [number, number, number] = [100, 150, NaN];
 
-function oklabToRgb(L: number, a: number, b: number, alpha: number): RGB {
-  // Oklab to linear sRGB (Bottosson's matrices)
+interface LinearRGB {
+  r: number;
+  g: number;
+  b: number;
+}
+
+/** Pure Oklab → linear sRGB conversion (Bottosson's matrices). No clipping. */
+function oklabToLinearRgb(L: number, a: number, b: number): LinearRGB {
   const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
   const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
   const s_ = L - 0.0894841775 * a - 1.291485548 * b;
   const l = l_ * l_ * l_;
   const m = m_ * m_ * m_;
   const s = s_ * s_ * s_;
-  const rLin = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
-  const gLin = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
-  const bLin = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s;
   return {
-    r: linearToSrgb(rLin),
-    g: linearToSrgb(gLin),
-    b: linearToSrgb(bLin),
+    r: 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    g: -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    b: -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  };
+}
+
+/** Linear sRGB → Oklab. Inverse of {@link oklabToLinearRgb}. */
+function linearRgbToOklab(r: number, g: number, b: number): { L: number; a: number; b: number } {
+  const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+  const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+  const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+  const l_ = Math.cbrt(l);
+  const m_ = Math.cbrt(m);
+  const s_ = Math.cbrt(s);
+  return {
+    L: 0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_,
+    a: 1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_,
+    b: 0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_,
+  };
+}
+
+function inSrgbGamut(c: LinearRGB): boolean {
+  // Tiny epsilon absorbs the float noise that gamut-clipped output
+  // accumulates after roundtripping through OKLab and back.
+  const E = 1e-6;
+  return c.r >= -E && c.r <= 1 + E && c.g >= -E && c.g <= 1 + E && c.b >= -E && c.b <= 1 + E;
+}
+
+/**
+ * Björn Ottosson's compute-max-saturation: given a unit-length OKLab
+ * direction `(a, b)` (`a*a + b*b == 1`), return the largest saturation
+ * `S = C/L` that stays inside sRGB. The polynomial in `(a, b)` is a
+ * tight initial guess; one Halley step refines it to numerical accuracy.
+ *
+ * Three branches pick the linear-sRGB row whose `f(S)=0` defines the
+ * gamut boundary for this hue (R, G, or B reaching zero first). The
+ * predicates are halfspace-cuts of the OKLab a/b plane.
+ */
+function computeMaxSaturation(a: number, b: number): number {
+  let k0: number, k1: number, k2: number, k3: number, k4: number;
+  let wL: number, wM: number, wS: number;
+  if (-1.88170328 * a - 0.80936493 * b > 1) {
+    k0 = 1.19086277;
+    k1 = 1.76576728;
+    k2 = 0.59662641;
+    k3 = 0.75515197;
+    k4 = 0.56771245;
+    wL = 4.0767416621;
+    wM = -3.3077115913;
+    wS = 0.2309699292;
+  } else if (1.81444104 * a - 1.19445276 * b > 1) {
+    k0 = 0.73956515;
+    k1 = -0.45954404;
+    k2 = 0.08285427;
+    k3 = 0.1254107;
+    k4 = 0.14503204;
+    wL = -1.2684380046;
+    wM = 2.6097574011;
+    wS = -0.3413193965;
+  } else {
+    k0 = 1.35733652;
+    k1 = -0.00915799;
+    k2 = -1.1513021;
+    k3 = -0.50559606;
+    k4 = 0.00692167;
+    wL = -0.0041960863;
+    wM = -0.7034186147;
+    wS = 1.707614701;
+  }
+  let S = k0 + k1 * a + k2 * b + k3 * a * a + k4 * a * b;
+
+  const kL = 0.3963377774 * a + 0.2158037573 * b;
+  const kM = -0.1055613458 * a - 0.0638541728 * b;
+  const kS = -0.0894841775 * a - 1.291485548 * b;
+
+  const lq = 1 + S * kL;
+  const mq = 1 + S * kM;
+  const sq = 1 + S * kS;
+  const l = lq * lq * lq;
+  const m = mq * mq * mq;
+  const s = sq * sq * sq;
+  const ldS = 3 * kL * lq * lq;
+  const mdS = 3 * kM * mq * mq;
+  const sdS = 3 * kS * sq * sq;
+  const ldS2 = 6 * kL * kL * lq;
+  const mdS2 = 6 * kM * kM * mq;
+  const sdS2 = 6 * kS * kS * sq;
+  const f = wL * l + wM * m + wS * s;
+  const f1 = wL * ldS + wM * mdS + wS * sdS;
+  const f2 = wL * ldS2 + wM * mdS2 + wS * sdS2;
+  return S - (f * f1) / (f1 * f1 - 0.5 * f * f2);
+}
+
+/**
+ * Find the cusp `(L_cusp, C_cusp)` of the sRGB gamut for hue `(a, b)`
+ * (unit-length). The cusp is the apex of the gamut triangle in the
+ * (L, C) plane at this hue; chroma above it is unrepresentable at any
+ * lightness. Above the cusp (L > L_cusp) the boundary slopes toward
+ * white at L=1; below, toward black at L=0.
+ */
+function findCusp(a: number, b: number): { L: number; C: number } {
+  const Smax = computeMaxSaturation(a, b);
+  // Linear sRGB at oklab(1, S*a, S*b); the cube root rescales L so
+  // the brightest channel sits on the upper boundary.
+  const rgb = oklabToLinearRgb(1, Smax * a, Smax * b);
+  const Lc = Math.cbrt(1 / Math.max(rgb.r, rgb.g, rgb.b));
+  return { L: Lc, C: Lc * Smax };
+}
+
+/**
+ * Find `t` along the line from `(L0, 0)` to `(L1, C1)` where the line
+ * intersects the sRGB gamut boundary in OKLCh space. The result `t * C1`
+ * is the largest chroma that fits on this projection line; the caller
+ * scales back into OKLab.
+ *
+ * Lower half (`L1 <= cusp.L` along the projection): the boundary is a
+ * straight line from black to the cusp, so the intersection has a
+ * closed form.
+ *
+ * Upper half: the boundary curves toward white, so a triangle estimate
+ * is followed by one Halley step that finds the smallest `t` where any
+ * of R, G, B linear channels reaches 1.
+ */
+function findGamutIntersection(a: number, b: number, L1: number, C1: number, L0: number): number {
+  const cusp = findCusp(a, b);
+  if ((L1 - L0) * cusp.C - (cusp.L - L0) * C1 <= 0) {
+    return (cusp.C * L0) / (C1 * cusp.L + cusp.C * (L0 - L1));
+  }
+  let t = (cusp.C * (L0 - 1)) / (C1 * (cusp.L - 1) + cusp.C * (L0 - L1));
+  const dL = L1 - L0;
+  const dC = C1;
+  const kL = 0.3963377774 * a + 0.2158037573 * b;
+  const kM = -0.1055613458 * a - 0.0638541728 * b;
+  const kS = -0.0894841775 * a - 1.291485548 * b;
+  const ldT = dL + dC * kL;
+  const mdT = dL + dC * kM;
+  const sdT = dL + dC * kS;
+  const Lcur = L0 * (1 - t) + t * L1;
+  const Ccur = t * C1;
+  const lq = Lcur + Ccur * kL;
+  const mq = Lcur + Ccur * kM;
+  const sq = Lcur + Ccur * kS;
+  const l = lq * lq * lq;
+  const m = mq * mq * mq;
+  const s = sq * sq * sq;
+  const ldt = 3 * ldT * lq * lq;
+  const mdt = 3 * mdT * mq * mq;
+  const sdt = 3 * sdT * sq * sq;
+  const ldt2 = 6 * ldT * ldT * lq;
+  const mdt2 = 6 * mdT * mdT * mq;
+  const sdt2 = 6 * sdT * sdT * sq;
+  const r = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s - 1;
+  const r1 = 4.0767416621 * ldt - 3.3077115913 * mdt + 0.2309699292 * sdt;
+  const r2 = 4.0767416621 * ldt2 - 3.3077115913 * mdt2 + 0.2309699292 * sdt2;
+  const uR = r1 / (r1 * r1 - 0.5 * r * r2);
+  const tR = uR >= 0 ? -r * uR : Number.MAX_VALUE;
+  const g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s - 1;
+  const g1 = -1.2684380046 * ldt + 2.6097574011 * mdt - 0.3413193965 * sdt;
+  const g2 = -1.2684380046 * ldt2 + 2.6097574011 * mdt2 - 0.3413193965 * sdt2;
+  const uG = g1 / (g1 * g1 - 0.5 * g * g2);
+  const tG = uG >= 0 ? -g * uG : Number.MAX_VALUE;
+  const bv = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s - 1;
+  const b1 = -0.0041960863 * ldt - 0.7034186147 * mdt + 1.707614701 * sdt;
+  const b2 = -0.0041960863 * ldt2 - 0.7034186147 * mdt2 + 1.707614701 * sdt2;
+  const uB = b1 / (b1 * b1 - 0.5 * bv * b2);
+  const tB = uB >= 0 ? -bv * uB : Number.MAX_VALUE;
+  return t + Math.min(tR, Math.min(tG, tB));
+}
+
+/**
+ * Adaptive L0 = 0.5 sRGB gamut clip with α = 0.05 (Ottosson's
+ * recommended default). The projection target `L0` smoothly blends
+ * between the input lightness `L` (when chroma fits) and 0.5 (when
+ * chroma exceeds gamut), trading slight L drift for retained chroma.
+ *
+ * Hue stays exact regardless. For inputs that fit, this returns the
+ * direct conversion unchanged via the in-gamut fast path.
+ */
+function oklabToRgb(L: number, a: number, b: number, alpha: number): RGB {
+  if (L >= 1) return { r: 1, g: 1, b: 1, a: alpha };
+  if (L <= 0) return { r: 0, g: 0, b: 0, a: alpha };
+
+  const direct = oklabToLinearRgb(L, a, b);
+  if (inSrgbGamut(direct)) return finalizeSrgb(direct, alpha);
+
+  const C = Math.hypot(a, b);
+  if (C === 0) return finalizeSrgb(direct, alpha);
+
+  const aHat = a / C;
+  const bHat = b / C;
+
+  // Adaptive L0: smoothly drift L toward 0.5 as chroma exceeds gamut.
+  // α=0.05 is the spec-recommended default — small enough to keep the
+  // result close to the input L but enough to preserve chroma at the
+  // yellow/green boundary where preserve-lightness over-desaturates.
+  const ALPHA = 0.05;
+  const Ld = L - 0.5;
+  const absLd = Math.abs(Ld);
+  const e1 = 0.5 + absLd + ALPHA * C;
+  const sgn = Ld === 0 ? 0 : Ld < 0 ? -1 : 1;
+  const L0 = 0.5 * (1 + sgn * (e1 - Math.sqrt(e1 * e1 - 2 * absLd)));
+
+  const t = findGamutIntersection(aHat, bHat, L, C, L0);
+  const Lclipped = L0 * (1 - t) + t * L;
+  const Cclipped = t * C;
+  return finalizeSrgb(oklabToLinearRgb(Lclipped, Cclipped * aHat, Cclipped * bHat), alpha);
+}
+
+/** Linear sRGB → display-space sRGB with gamma correction; final 8-bit-ready. */
+function finalizeSrgb(c: LinearRGB, alpha: number): RGB {
+  return {
+    r: linearToSrgb(c.r),
+    g: linearToSrgb(c.g),
+    b: linearToSrgb(c.b),
     a: alpha,
   };
 }
 
 function linearToSrgb(v: number): number {
-  const x = Math.max(0, Math.min(1, v));
+  const x = v < 0 ? 0 : v > 1 ? 1 : v;
   return x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055;
 }
 
@@ -146,7 +370,7 @@ function parseLab(tok: Token): RGB | null {
 }
 
 function labToRgb(L: number, a: number, b: number, alpha: number): RGB {
-  // CIE Lab → XYZ (D50)
+  // CIE Lab → XYZ (D50) → linear sRGB
   const fy = (L + 16) / 116;
   const fx = a / 500 + fy;
   const fz = fy - b / 200;
@@ -159,15 +383,19 @@ function labToRgb(L: number, a: number, b: number, alpha: number): RGB {
   const Y = yr * 1.0;
   const Z = zr * 0.8249;
   // XYZ D50 → linear sRGB (Bradford-adapted matrix)
-  const rLin = 3.1338561 * X - 1.6168667 * Y - 0.4906146 * Z;
-  const gLin = -0.9787684 * X + 1.9161415 * Y + 0.033454 * Z;
-  const bLin = 0.0719453 * X - 0.2289914 * Y + 1.4052427 * Z;
-  return {
-    r: linearToSrgb(rLin),
-    g: linearToSrgb(gLin),
-    b: linearToSrgb(bLin),
-    a: alpha,
+  const direct: LinearRGB = {
+    r: 3.1338561 * X - 1.6168667 * Y - 0.4906146 * Z,
+    g: -0.9787684 * X + 1.9161415 * Y + 0.033454 * Z,
+    b: 0.0719453 * X - 0.2289914 * Y + 1.4052427 * Z,
   };
+  // Already in gamut: gamma-correct and ship. Common case.
+  if (inSrgbGamut(direct)) return finalizeSrgb(direct, alpha);
+  // Out of sRGB: re-derive an OKLab triple from the (out-of-gamut)
+  // linear-light representation and route through the OKLCh bisection
+  // gamut mapper. Per CSS Color 4 §13 the algorithm uses OKLCh
+  // regardless of source space.
+  const ok = linearRgbToOklab(direct.r, direct.g, direct.b);
+  return oklabToRgb(ok.L, ok.a, ok.b, alpha);
 }
 
 // ─── sRGB ↔ Oklab + sRGB ↔ Lab round-trips ──────────────────────────
@@ -185,21 +413,8 @@ interface LabTriple {
 }
 
 function srgbToOklab(r: number, g: number, b: number, alpha: number): LabTriple {
-  const rLin = srgbToLinear(r);
-  const gLin = srgbToLinear(g);
-  const bLin = srgbToLinear(b);
-  const l = 0.4122214708 * rLin + 0.5363325363 * gLin + 0.0514459929 * bLin;
-  const m = 0.2119034982 * rLin + 0.6806995451 * gLin + 0.1073969566 * bLin;
-  const s = 0.0883024619 * rLin + 0.2817188376 * gLin + 0.6299787005 * bLin;
-  const l_ = Math.cbrt(l);
-  const m_ = Math.cbrt(m);
-  const s_ = Math.cbrt(s);
-  return {
-    L: 0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_,
-    a: 1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_,
-    b: 0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_,
-    alpha,
-  };
+  const ok = linearRgbToOklab(srgbToLinear(r), srgbToLinear(g), srgbToLinear(b));
+  return { L: ok.L, a: ok.a, b: ok.b, alpha };
 }
 
 function srgbToCieLab(r: number, g: number, b: number, alpha: number): LabTriple {
@@ -386,9 +601,22 @@ function parseColorPct(tokens: Token[]): [RGB | null, number | null] {
       if (named !== undefined) color = parseHex(named);
       else return [null, null];
     } else if (t.kind === TokenKind.Function) {
+      // First try the slot as a nested color function (the original
+      // case — `color-mix(…, oklch(…), red)`).
       const hex = staticColorFunctionToHex(t);
-      if (hex !== null) color = parseHex(hex.slice(1));
-      else return [null, null];
+      if (hex !== null) {
+        color = parseHex(hex.slice(1));
+        continue;
+      }
+      // Otherwise fold static math fns whose result is a percentage.
+      // Lets `color-mix(in srgb, X calc(100% - 30%), Y)` work the same
+      // way a literal `70%` would.
+      const numeric = resolveStaticMathFunction(t);
+      if (numeric !== null && numeric.unit === '%') {
+        pct = numeric.value;
+        continue;
+      }
+      return [null, null];
     } else {
       return [null, null];
     }
@@ -452,6 +680,28 @@ function readChannels(
         const scale = idx < scales.length ? scales[idx] : NaN;
         if (Number.isNaN(scale)) return null;
         vals.push((t.value! / 100) * scale);
+      }
+    } else if (t.kind === TokenKind.Function) {
+      // Static-foldable math fns (`calc`, `min`, `max`, `clamp`) are
+      // valid channel sources when the result is a bare number or a
+      // percentage. Other units (px / em / vw / …) don't make sense as
+      // a color channel and bail back to null.
+      const numeric = resolveStaticMathFunction(t);
+      if (numeric === null) return null;
+      if (numeric.unit === '') {
+        if (sawSlash) alpha = numeric.value;
+        else vals.push(numeric.value);
+      } else if (numeric.unit === '%') {
+        if (sawSlash) {
+          alpha = numeric.value / 100;
+        } else {
+          const idx = vals.length;
+          const scale = idx < scales.length ? scales[idx] : NaN;
+          if (Number.isNaN(scale)) return null;
+          vals.push((numeric.value / 100) * scale);
+        }
+      } else {
+        return null;
       }
     } else {
       // Ident (e.g. `none`, `from`); we don't support dynamic forms

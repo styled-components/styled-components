@@ -19,9 +19,9 @@ describe('transformDecl — pass-through + coercion (skeleton)', () => {
     });
   });
 
-  it('passes through backgroundImage gradients', () => {
+  it('passes through backgroundImage gradients (renamed to RN experimental_)', () => {
     expect(transformDecl('backgroundImage', 'linear-gradient(to right, red, blue)')).toEqual({
-      backgroundImage: 'linear-gradient(to right, red, blue)',
+      experimental_backgroundImage: 'linear-gradient(to right, red, blue)',
     });
   });
 
