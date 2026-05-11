@@ -81,10 +81,22 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      # `changeset version` deletes each consumed `.md` from `.changeset/`, so
+      # the release-notes step below would find nothing. Stash a copy first.
+      - name: Stash pending changesets for release-note generation
+        if: steps.changesets.outputs.has_pending == 'true'
+        run: |
+          mkdir -p /tmp/changeset-stash
+          cp .changeset/*.md /tmp/changeset-stash/
+
       - name: Snapshot version bump (in-place, not committed)
         if: steps.changesets.outputs.has_pending == 'true'
         run: |
           pnpm changeset version --snapshot prerelease
+          # Restore the stashed `.md` files so the release-notes builder can
+          # read them via `@changesets/read`. `changeset publish` does not
+          # re-consume them, so this is safe.
+          cp /tmp/changeset-stash/*.md .changeset/
           echo "## Snapshot versions" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           for pkg_json in packages/*/package.json; do
