@@ -349,6 +349,7 @@ describe('basic', () => {
         ".b {
           background: blue;
           container-type: inline-size;
+          container-name: sc-a;
         }
         @container (width > 30px) {
           .b {
@@ -381,7 +382,7 @@ describe('basic', () => {
       const Outer = styled(Inner)``;
 
       expect(Outer.styledComponentId).not.toBe(Inner.styledComponentId);
-      expect(Outer.componentStyle).not.toEqual(Inner.componentStyle);
+      expect(Outer.webStyle).not.toEqual(Inner.webStyle);
     });
 
     it('should not fold components if there is an interim HOC', () => {
@@ -406,56 +407,43 @@ describe('basic', () => {
       const rendered = render(<Outer />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        ".d {
+        ".c {
           color: red;
         }
-        .c {
+        .d {
           color: green;
         }"
       `);
       expect(rendered.asFragment()).toMatchInlineSnapshot(`
         <DocumentFragment>
           <div
-            class="sc-a d sc-b c"
+            class="sc-a sc-b c d"
           />
         </DocumentFragment>
       `);
     });
 
-    it('folds defaultProps', () => {
-      const Inner = styled.div``;
-
-      Inner.defaultProps = {
-        theme: {
-          fontSize: 12,
-        },
+    it('merges attrs across an extended chain', () => {
+      const Inner = styled.div.attrs({
         style: {
           background: 'blue',
           textAlign: 'center',
         },
-      };
+      })``;
 
-      const Outer = styled(Inner)``;
-
-      Outer.defaultProps = {
-        theme: {
-          fontSize: 16,
-        },
+      const Outer = styled(Inner).attrs({
         style: {
           background: 'silver',
         },
-      };
+      })``;
 
-      expect(Outer.defaultProps).toMatchInlineSnapshot(`
-        {
-          "style": {
-            "background": "silver",
-            "textAlign": "center",
-          },
-          "theme": {
-            "fontSize": 16,
-          },
-        }
+      const { asFragment } = render(<Outer />);
+
+      expect(asFragment().firstChild).toMatchInlineSnapshot(`
+        <div
+          class="sc-a sc-b"
+          style="background: silver; text-align: center;"
+        />
       `);
     });
 
@@ -502,6 +490,38 @@ describe('basic', () => {
       );
 
       expect(console.error).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('extending a ruleless component (#5727)', () => {
+    it('applies the new rules when wrapping an empty styled component', () => {
+      const Inner = styled(({ className }: { className?: string }) => (
+        <span data-testid="inner" className={className}>
+          inner
+        </span>
+      ))``;
+      const Outer = styled(Inner)`
+        color: red;
+        width: 100px;
+      `;
+
+      const { getByTestId } = render(<Outer />);
+      const className = getByTestId('inner').className;
+      const css = getRenderedCSS();
+
+      expect(css).toMatchInlineSnapshot(`
+        ".c {
+          color: red;
+          width: 100px;
+        }"
+      `);
+      expect(className.split(/\s+/)).toMatchInlineSnapshot(`
+        [
+          "sc-a",
+          "sc-b",
+          "c",
+        ]
+      `);
     });
   });
 
@@ -567,6 +587,132 @@ describe('basic', () => {
           background-color: red;
         }"
       `);
+    });
+  });
+
+  describe('deep inheritance chains', () => {
+    it('should render a 4-level inheritance chain with styles at each level', () => {
+      const L1 = styled.div`
+        display: flex;
+      `;
+      const L2 = styled(L1)`
+        color: blue;
+      `;
+      const L3 = styled(L2)`
+        font-size: 14px;
+      `;
+      const L4 = styled(L3)`
+        opacity: 0.9;
+      `;
+      render(<L4 />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".e {
+          display: flex;
+        }
+        .f {
+          color: blue;
+        }
+        .g {
+          font-size: 14px;
+        }
+        .h {
+          opacity: 0.9;
+        }"
+      `);
+    });
+
+    it('should render a 4-level chain with dynamic styles at various levels', () => {
+      const L1 = styled.div`
+        display: ${() => 'flex'};
+      `;
+      const L2 = styled(L1)`
+        color: blue;
+      `;
+      const L3 = styled(L2)<{ $size: number }>`
+        font-size: ${p => p.$size}px;
+      `;
+      const L4 = styled(L3)`
+        opacity: 0.9;
+      `;
+      render(<L4 $size={14} />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".e {
+          display: flex;
+        }
+        .f {
+          color: blue;
+        }
+        .g {
+          font-size: 14px;
+        }
+        .h {
+          opacity: 0.9;
+        }"
+      `);
+    });
+
+    it('should forward refs through a deep inheritance chain', () => {
+      const ref = React.createRef<HTMLDivElement>();
+      const L1 = styled.div`
+        display: flex;
+      `;
+      const L2 = styled(L1)`
+        color: blue;
+      `;
+      const L3 = styled(L2)`
+        font-size: 14px;
+      `;
+      render(<L3 ref={ref} />);
+      expect(ref.current).toBeInstanceOf(HTMLDivElement);
+    });
+
+    it('should apply attrs from multiple levels in a chain', () => {
+      const L1 = styled.div.attrs({ 'data-level': '1' })`
+        display: flex;
+      `;
+      const L2 = styled(L1).attrs({ 'data-level': '2' })`
+        color: blue;
+      `;
+      const L3 = styled(L2).attrs({ 'data-extra': 'yes' })`
+        font-size: 14px;
+      `;
+      const { container } = render(<L3 />);
+      const el = container.firstChild as HTMLElement;
+      expect(el.getAttribute('data-level')).toBe('2');
+      expect(el.getAttribute('data-extra')).toBe('yes');
+    });
+  });
+
+  describe('as prop with attrs and styles', () => {
+    it('should support as prop on a styled component with attrs', () => {
+      const Comp = styled.button.attrs({ type: 'button', role: 'button' })<{
+        $bold?: boolean;
+      }>`
+        font-weight: ${p => (p.$bold ? 'bold' : 'normal')};
+      `;
+      const { container } = render(<Comp as="a" $bold />);
+      const el = container.firstChild as HTMLElement;
+      expect(el.tagName).toBe('A');
+      expect(el.getAttribute('type')).toBe('button');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".b {
+          font-weight: bold;
+        }"
+      `);
+    });
+
+    it('should support as prop on an extended component with attrs at both levels', () => {
+      const Base = styled.div.attrs({ 'data-base': 'true' })`
+        display: flex;
+      `;
+      const Ext = styled(Base).attrs({ 'data-ext': 'true' })`
+        color: red;
+      `;
+      const { container } = render(<Ext as="section" />);
+      const el = container.firstChild as HTMLElement;
+      expect(el.tagName).toBe('SECTION');
+      expect(el.getAttribute('data-base')).toBe('true');
+      expect(el.getAttribute('data-ext')).toBe('true');
     });
   });
 });

@@ -127,16 +127,16 @@ describe('with styles', () => {
       .a[disabled] > .a[disabled] {
         margin-top: 4px;
       }
-      .sc-gRlPMw + .sc-gRlPMw {
+      .sc-kqxcKS + .sc-kqxcKS {
         margin-left: 4px;
       }
-      .sc-gRlPMw + .sc-gRlPMw ~ .sc-gRlPMw {
+      .sc-kqxcKS + .sc-kqxcKS ~ .sc-kqxcKS {
         background: black;
       }
-      .sc-gRlPMw ~ .sc-gRlPMw {
+      .sc-kqxcKS ~ .sc-kqxcKS {
         margin-right: 4px;
       }
-      .sc-gRlPMw > .sc-gRlPMw {
+      .sc-kqxcKS > .sc-kqxcKS {
         margin-top: 4px;
       }
       .foo .a {
@@ -167,16 +167,16 @@ describe('with styles', () => {
       .b[disabled] > .b[disabled] {
         margin-top: 4px;
       }
-      .sc-gRlPMw + .sc-gRlPMw {
+      .sc-kqxcKS + .sc-kqxcKS {
         margin-left: 4px;
       }
-      .sc-gRlPMw + .sc-gRlPMw ~ .sc-gRlPMw {
+      .sc-kqxcKS + .sc-kqxcKS ~ .sc-kqxcKS {
         background: black;
       }
-      .sc-gRlPMw ~ .sc-gRlPMw {
+      .sc-kqxcKS ~ .sc-kqxcKS {
         margin-right: 4px;
       }
-      .sc-gRlPMw > .sc-gRlPMw {
+      .sc-kqxcKS > .sc-kqxcKS {
         margin-top: 4px;
       }
       .foo .b {
@@ -202,6 +202,52 @@ describe('with styles', () => {
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".a {
         background-color: blue;
+      }"
+    `);
+  });
+
+  it('honours a custom toString on a value inside an inline style object (#5740)', () => {
+    // Design-token shape — `toString` returns the canonical value while
+    // the alternates ride along for explicit lookups (`token.subtle`).
+    const ink = {
+      default: '#000',
+      subtle: '#444',
+      toString() {
+        return this.default;
+      },
+    };
+    const Comp = styled.div`
+      ${{ color: ink, background: ink }};
+    `;
+    render(<Comp />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a {
+        color: #000;
+        background: #000;
+      }"
+    `);
+  });
+
+  it('honours a custom toString on a value-position interpolation in a template literal (#5740)', () => {
+    // Same design-token shape, but interpolated directly into a value
+    // slot (the reporter's original repro). Verifies the `resolveInterpolation`
+    // path, separate from the inline-object path covered above.
+    const ink = {
+      default: '#000',
+      subtle: '#444',
+      toString() {
+        return this.default;
+      },
+    };
+    const Comp = styled.div`
+      color: ${ink};
+      background: ${ink};
+    `;
+    render(<Comp />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a {
+        color: #000;
+        background: #000;
       }"
     `);
   });
@@ -408,6 +454,36 @@ describe('with styles', () => {
     `);
   });
 
+  it('block-position ternary between two css fragments emits per-branch classes', () => {
+    const Comp = styled.div<{ $primary?: boolean }>`
+      ${p =>
+        p.$primary
+          ? css`
+              background: blue;
+              color: white;
+            `
+          : css`
+              background: white;
+              color: blue;
+            `}
+    `;
+
+    const { rerender } = render(<Comp $primary />);
+    rerender(<Comp />);
+    rerender(<Comp $primary />);
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a {
+        background: blue;
+        color: white;
+      }
+      .b {
+        background: white;
+        color: blue;
+      }"
+    `);
+  });
+
   it('conditional styles should only apply to the relevant component instance', () => {
     interface IconProps {
       $color?: string;
@@ -541,5 +617,532 @@ describe('with styles', () => {
         background-color: green;
       }"
     `);
+  });
+
+  describe('css helper', () => {
+    it('should support css`` fragments with their own interpolations', () => {
+      const dynamicMixin = css<{ $spacing: number }>`
+        padding: ${p => p.$spacing}px;
+        margin: ${p => p.$spacing / 2}px;
+      `;
+      const Comp = styled.div<{ $spacing: number }>`
+        color: red;
+        ${dynamicMixin}
+      `;
+      render(<Comp $spacing={16} />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+          padding: 16px;
+          margin: 8px;
+        }"
+      `);
+    });
+
+    it('should support css`` with nested @media', () => {
+      const responsive = css`
+        font-size: 14px;
+        @media (min-width: 768px) {
+          font-size: 16px;
+        }
+      `;
+      const Comp = styled.div`
+        ${responsive}
+        color: black;
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          font-size: 14px;
+          color: black;
+        }
+        @media (min-width:768px) {
+          .a {
+            font-size: 16px;
+          }
+        }"
+      `);
+    });
+
+    it('should handle CSS custom properties set via css``', () => {
+      const tokenMixin = css`
+        --color-primary: blue;
+        --spacing-sm: 4px;
+        --spacing-md: 8px;
+      `;
+      const Comp = styled.div`
+        ${tokenMixin}
+        color: var(--color-primary);
+        padding: var(--spacing-md);
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          --color-primary: blue;
+          --spacing-sm: 4px;
+          --spacing-md: 8px;
+          color: var(--color-primary);
+          padding: var(--spacing-md);
+        }"
+      `);
+    });
+  });
+
+  describe('css feature pass-through', () => {
+    it('should pass through transition property unchanged', () => {
+      const Comp = styled.div`
+        transition: opacity 0.3s;
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          transition: opacity 0.3s;
+        }"
+      `);
+    });
+
+    it('should pass through flexbox properties unchanged', () => {
+      const Comp = styled.div`
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }"
+      `);
+    });
+
+    it('should generate styles for nested media queries', () => {
+      const Comp = styled.div`
+        @media (min-width: 10px) {
+          @media (min-height: 20px) {
+            color: red;
+          }
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        "@media (min-width:10px) {
+          @media (min-height:20px) {
+            .a {
+              color: red;
+            }
+          }
+        }"
+      `);
+    });
+
+    it('should pass through custom properties', () => {
+      const Comp = styled.div`
+        --custom-prop: some-val;
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          --custom-prop: some-val;
+        }"
+      `);
+    });
+  });
+
+  describe('real-world composition patterns', () => {
+    it('multiple interpolations in a single declaration value', () => {
+      const Comp = styled.div<{ $w: number; $s: string; $c: string }>`
+        border: ${p => p.$w}px ${p => p.$s} ${p => p.$c};
+      `;
+      render(<Comp $w={2} $s="solid" $c="red" />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          border: 2px solid red;
+        }"
+      `);
+    });
+
+    it('multiple interpolations in shorthand value with fallback', () => {
+      const Comp = styled.div<{ $x: string; $y: string; $blur: string; $color: string }>`
+        box-shadow: ${p => p.$x} ${p => p.$y} ${p => p.$blur} ${p => p.$color};
+      `;
+      render(<Comp $x="0px" $y="4px" $blur="6px" $color="rgba(0,0,0,0.1)" />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }"
+      `);
+    });
+
+    it('interpolation inside @media prelude', () => {
+      const breakpoint = 768;
+      const Comp = styled.div`
+        color: blue;
+        @media (min-width: ${breakpoint}px) {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: blue;
+        }
+        @media (min-width:768px) {
+          .a {
+            color: red;
+          }
+        }"
+      `);
+    });
+
+    it('deeply nested @media with pseudo and theme interpolation', () => {
+      const theme = { bp: '768px', hoverColor: 'crimson', focusOutline: '2px solid blue' };
+      const Comp = styled.div`
+        color: black;
+        @media (min-width: ${theme.bp}) {
+          &:hover {
+            color: ${theme.hoverColor};
+          }
+          &:focus {
+            outline: ${theme.focusOutline};
+          }
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: black;
+        }
+        @media (min-width:768px) {
+          .a:hover {
+            color: crimson;
+          }
+          .a:focus {
+            outline: 2px solid blue;
+          }
+        }"
+      `);
+    });
+
+    it('theme-driven interpolations via ThemeProvider', () => {
+      const Comp = styled.div`
+        color: ${p => p.theme.fg};
+        background: ${p => p.theme.bg};
+        padding: ${p => p.theme.space}px;
+      `;
+      render(
+        <ThemeProvider theme={{ fg: 'white', bg: '#333', space: 16 }}>
+          <Comp />
+        </ThemeProvider>
+      );
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: white;
+          background: #333;
+          padding: 16px;
+        }"
+      `);
+    });
+
+    it('mixed static and dynamic declarations in the same block', () => {
+      const Comp = styled.div<{ $highlight: string }>`
+        display: flex;
+        align-items: center;
+        color: ${p => p.$highlight};
+        font-size: 14px;
+        background: ${p => (p.$highlight === 'red' ? '#fee' : '#eef')};
+        border-radius: 4px;
+      `;
+      render(<Comp $highlight="red" />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          display: flex;
+          align-items: center;
+          color: red;
+          font-size: 14px;
+          background: #fee;
+          border-radius: 4px;
+        }"
+      `);
+    });
+
+    it('css`` helper composed inside an interpolation', () => {
+      const truncate = css`
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      `;
+      const Comp = styled.div`
+        ${truncate}
+        max-width: 200px;
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 200px;
+        }"
+      `);
+    });
+
+    it('conditional css`` fragments inside interpolation', () => {
+      const Comp = styled.div<{ $active: boolean }>`
+        color: black;
+        ${p =>
+          p.$active
+            ? css`
+                background: blue;
+                color: white;
+              `
+            : css`
+                background: gray;
+                opacity: 0.5;
+              `}
+      `;
+      render(<Comp $active />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: white;
+          background: blue;
+        }"
+      `);
+    });
+
+    it('nested css`` fragments (composition of compositions)', () => {
+      const fontStack = css`
+        font-family: 'Inter', sans-serif;
+        font-weight: 400;
+      `;
+      const baseCard = css`
+        ${fontStack}
+        padding: 16px;
+        border-radius: 8px;
+      `;
+      const Comp = styled.div`
+        ${baseCard}
+        background: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          font-family: 'Inter', sans-serif;
+          font-weight: 400;
+          padding: 16px;
+          border-radius: 8px;
+          background: white;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }"
+      `);
+    });
+
+    it('CSS custom properties with interpolated fallbacks', () => {
+      const fallbackColor = 'coral';
+      const Comp = styled.div`
+        color: var(--theme-color, ${fallbackColor});
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: var(--theme-color, coral);
+        }"
+      `);
+    });
+
+    it('nested var() with interpolated inner fallback', () => {
+      const Comp = styled.div<{ $fallback: string }>`
+        color: var(--primary, var(--secondary, ${p => p.$fallback}));
+      `;
+      render(<Comp $fallback="hotpink" />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: var(--primary, var(--secondary, hotpink));
+        }"
+      `);
+    });
+
+    it('@media + @supports combined with interpolation', () => {
+      const Comp = styled.div<{ $gap: string }>`
+        display: flex;
+        @supports (display: grid) {
+          display: grid;
+          @media (min-width: 600px) {
+            grid-template-columns: repeat(3, 1fr);
+            gap: ${p => p.$gap};
+          }
+        }
+      `;
+      render(<Comp $gap="1rem" />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          display: flex;
+        }
+        @supports (display:grid) {
+          .a {
+            display: grid;
+          }
+          @media (min-width:600px) {
+            .a {
+              grid-template-columns: repeat(3, 1fr);
+              gap: 1rem;
+            }
+          }
+        }"
+      `);
+    });
+
+    it('component selector with theme-driven child styles', () => {
+      const Icon = styled.span`
+        font-size: 20px;
+      `;
+      const Button = styled.button`
+        color: ${p => p.theme.color};
+        ${Icon} {
+          margin-right: 8px;
+          color: inherit;
+        }
+      `;
+      render(
+        <ThemeProvider theme={{ color: 'navy' }}>
+          <Button>
+            <Icon />
+            Click me
+          </Button>
+        </ThemeProvider>
+      );
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".b {
+          font-size: 20px;
+        }
+        .a {
+          color: navy;
+        }
+        .a {
+          margin-right: 8px;
+          color: inherit;
+        }"
+      `);
+    });
+
+    it('deeply nested pseudo-classes inside @media with theme interpolation', () => {
+      const Comp = styled.a`
+        color: ${p => p.theme.link};
+        @media (min-width: 768px) {
+          &:hover {
+            color: ${p => p.theme.linkHover};
+            &::after {
+              content: ' →';
+              color: ${p => p.theme.accent};
+            }
+          }
+        }
+      `;
+      render(
+        <ThemeProvider theme={{ link: 'blue', linkHover: 'darkblue', accent: 'orange' }}>
+          <Comp href="#" />
+        </ThemeProvider>
+      );
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: blue;
+        }
+        @media (min-width:768px) {
+          .a:hover {
+            color: darkblue;
+          }
+          .a:hover::after {
+            content: ' →';
+            color: orange;
+          }
+        }"
+      `);
+    });
+
+    it('inline @keyframes with static frames', () => {
+      const Comp = styled.div`
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        animation: spin 1s linear infinite;
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }"
+      `);
+    });
+
+    it('inline @keyframes with interpolation in frame values', () => {
+      const Comp = styled.div<{ $deg: number }>`
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(${p => p.$deg}deg);
+          }
+        }
+        animation: spin 1s linear infinite;
+      `;
+      render(<Comp $deg={360} />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }"
+      `);
+    });
+
+    it('inline @keyframes with interpolation in animation shorthand', () => {
+      const Comp = styled.div<{ $dur: string }>`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        animation: fadeIn ${p => p.$dur} ease-in;
+      `;
+      render(<Comp $dur="0.3s" />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }"
+      `);
+    });
   });
 });

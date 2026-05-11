@@ -48,7 +48,7 @@ describe('SSR memory growth', () => {
       cssLengths.push(css.length);
     }
 
-    // CSS length should be bounded — same input should produce same-length output
+    // CSS length should be bounded;same input should produce same-length output
     const maxLen = Math.max(...cssLengths);
     const minLen = Math.min(...cssLengths);
     // Allow for "red" vs "blue" length difference but no unbounded growth
@@ -60,7 +60,7 @@ describe('SSR memory growth', () => {
     expect(first).toBe(last);
   });
 
-  it('does not leak keyframeIds across SSR requests', () => {
+  it('does not leak keyframe registrations across SSR requests', () => {
     const fade = keyframes`
       from { opacity: 0; }
       to { opacity: 1; }
@@ -71,10 +71,10 @@ describe('SSR memory growth', () => {
     `;
 
     const { sheet: sheet1 } = simulateSSRRequest(<Box />);
-    const ids1 = sheet1.instance.keyframeIds.size;
+    const ids1 = sheet1.instance.names.get(fade.id)?.size ?? 0;
 
     const { sheet: sheet2 } = simulateSSRRequest(<Box />);
-    const ids2 = sheet2.instance.keyframeIds.size;
+    const ids2 = sheet2.instance.names.get(fade.id)?.size ?? 0;
 
     expect(ids1).toBe(ids2);
     expect(ids1).toBeLessThanOrEqual(1);
@@ -164,9 +164,9 @@ describe('SSR memory growth', () => {
       expect(cssOutputs[i]).toBe(cssOutputs[0]);
     }
 
-    // The CSS should contain exactly 3 copies of the rule (one per instance)
+    // Static globals dedup across mounts;3 instances emit 1 copy of the rule
     const ruleCount = (stripWhitespace(stripComments(cssOutputs[0])).match(/margin:0/g) || [])
       .length;
-    expect(ruleCount).toBe(3);
+    expect(ruleCount).toBe(1);
   });
 });
