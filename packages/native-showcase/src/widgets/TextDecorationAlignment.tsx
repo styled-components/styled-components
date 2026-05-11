@@ -16,10 +16,10 @@ const Tag = styled.Text`
 
 const Hello = styled.Text<{ $align: 'top' | 'middle' | 'bottom' }>`
   height: 120px;
-  background-color: #eee;
-  color: black;
+  background-color: ${t.colors.surfaceMuted};
+  color: ${t.colors.fg};
   font-size: 24px;
-  text-decoration: underline #ff00aa;
+  text-decoration: underline ${t.colors.fail};
   vertical-align: ${p => p.$align};
 `;
 
