@@ -81,7 +81,7 @@ export function textDecorationShorthand(tokens: Token[]): Dict<any> | null {
 function warnAndroidNoDecorationColor(raw: string): void {
   warnOnce(
     'native-text-decoration-color-android',
-    '`text-decoration-color` is iOS-only in React Native 0.85 — Android paints the underline in the text color. The declaration still reaches iOS and rn-web where it works as expected. Android natively supports a colored underline via `Paint.underlineColor` (API 29+) but RN does not wire the prop through.',
+    '`text-decoration-color` only applies on iOS and rn-web in RN 0.85; Android paints the underline in the text color.',
     raw
   );
 }
