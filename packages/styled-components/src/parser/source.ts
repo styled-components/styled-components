@@ -68,6 +68,7 @@ interface ClientReferenceShape {
 }
 
 function warnClientReference(ref: unknown): void {
+  if (!__DEV__) return;
   const r = ref as ClientReferenceShape;
   const id = r.$$id;
   const label = (id && id.includes('#') ? id.split('#').pop() : id) || r.name || 'unknown';
@@ -135,7 +136,7 @@ export function parseSource(
     ) {
       // Client reference proxies throw when invoked from a server component.
       // Classify as Static-empty + dev warn so the rest of the template renders.
-      if (process.env.NODE_ENV !== 'production') warnClientReference(slot);
+      if (__DEV__) warnClientReference(slot);
       kinds[i] = InterpolationKind.Static;
       staticValues[i] = '';
     } else if (t === 'function' && (slot as Function).length <= 1) {

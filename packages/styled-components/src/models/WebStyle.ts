@@ -153,7 +153,7 @@ export default class WebStyle {
     if (name === undefined && fastFilled === null) {
       // Defensive: every constructor input path attaches a Source. A miss
       // here means a hand-built styles input bypassed `css()`; render no CSS.
-      if (process.env.NODE_ENV !== 'production') {
+      if (__DEV__) {
         warnOnce(
           'no-styles',
           'this component has no usable styles. Define styles with the css helper or a tagged template (e.g. styled.div`...`).',

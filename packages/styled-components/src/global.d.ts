@@ -1,14 +1,10 @@
-/**
- * Build-time constant; `true` in the React Native bundle, `false` in
- * every other build (browser / server / standalone / plugins / RSC).
- * Rollup's `replace` plugin substitutes the literal so V8 / terser
- * dead-code-eliminate the branch we don't want.
- */
+/** Build-time constant; `true` in the server bundle, `false` elsewhere. */
+declare var __SERVER__: boolean;
+/** Build-time constant; `true` in any React Native bundle, `false` elsewhere. */
 declare var __NATIVE__: boolean;
-
-/**
- * Build-time constant; `true` only in the React Native browser bundle
- * (rn-web; emitted at `native/dist/styled-components.native.browser.*`).
- * `false` everywhere else, including the Hermes-targeted native bundle.
- */
+/** Build-time constant; `true` in the rn-web variant only. */
 declare var __NATIVE_WEB__: boolean;
+/** Build-time constant; `true` in dev, `false` in prod. See AGENTS.md. */
+declare var __DEV__: boolean;
+/** Build-time replacement; the package version string. */
+declare var __VERSION__: string;

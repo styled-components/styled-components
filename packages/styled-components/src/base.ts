@@ -17,11 +17,7 @@ import ThemeProvider, { ThemeConsumer, ThemeContext, useTheme } from './models/T
 import extractCSS from './utils/extractCSS';
 import isStyledComponent from './utils/isStyledComponent';
 
-if (
-  process.env.NODE_ENV !== 'production' &&
-  typeof navigator !== 'undefined' &&
-  navigator.product === 'ReactNative'
-) {
+if (__DEV__ && typeof navigator !== 'undefined' && navigator.product === 'ReactNative') {
   console.warn(
     `[sc] you've imported 'styled-components' on React Native. Perhaps you're looking to import 'styled-components/native'? See https://styled-components.com/docs/basics#react-native`
   );
@@ -29,11 +25,7 @@ if (
 
 const windowGlobalKey = `__sc-${SC_ATTR}__`;
 
-if (
-  process.env.NODE_ENV !== 'production' &&
-  process.env.NODE_ENV !== 'test' &&
-  typeof window !== 'undefined'
-) {
+if (__DEV__ && process.env.NODE_ENV !== 'test' && typeof window !== 'undefined') {
   // Window doesn't model dynamic string-keyed globals.
   const w = window as unknown as Record<string, number>;
   w[windowGlobalKey] ||= 0;

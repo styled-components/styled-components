@@ -90,7 +90,7 @@ export function evaluateForFastPath(
         if (resolved === null) {
           // Likely a non-styled component used as a selector ref.
           if (
-            process.env.NODE_ENV !== 'production' &&
+            __DEV__ &&
             typeof result === 'object' &&
             result !== null &&
             !Array.isArray(result) &&

@@ -239,11 +239,13 @@ export function identToNumeric(
   else if (nameLower === 'nan') nonFiniteValue = NaN;
   if (nonFiniteValue === null) return null;
   if (permitNonFinite) return { value: nonFiniteValue, unit: '' };
-  warnOnce(
-    'native-math-keyword',
-    `\`${raw}\` is valid CSS but React Native cannot represent ±∞ or NaN in a dimension; the value would silently collapse to 0. Drop the keyword or pick a finite alternative (e.g. a large literal pixel value or a viewport unit).`,
-    raw
-  );
+  if (__DEV__) {
+    warnOnce(
+      'native-math-keyword',
+      `\`${raw}\` is valid CSS but React Native cannot represent ±∞ or NaN in a dimension; the value would silently collapse to 0. Drop the keyword or pick a finite alternative (e.g. a large literal pixel value or a viewport unit).`,
+      raw
+    );
+  }
   return null;
 }
 

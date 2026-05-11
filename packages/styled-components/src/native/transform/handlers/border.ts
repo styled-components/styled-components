@@ -95,7 +95,7 @@ export function outlineShorthand(tokens: Token[]): Dict<any> | null {
         if (style !== null) return null;
         style = name;
         stream.consume();
-        if (webOnly) {
+        if (__DEV__ && webOnly) {
           warnOnce(
             'native-outline-style',
             '`outline-style: ' +

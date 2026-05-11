@@ -71,7 +71,7 @@ export function sanitizeValue(value: string): string {
   if (!needsRewrite) return value;
 
   // Slow path: strip the offending characters, warn once.
-  if (process.env.NODE_ENV !== 'production') {
+  if (__DEV__) {
     warnOnce(
       'control-char',
       'style value contained control / bidirectional characters. These were stripped to prevent ordering-spoof injection.'

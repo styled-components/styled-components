@@ -79,6 +79,7 @@ export function textDecorationShorthand(tokens: Token[]): Dict<any> | null {
  * to react-native, not a consumer-side workaround.
  */
 function warnAndroidNoDecorationColor(raw: string): void {
+  if (!__DEV__) return;
   warnOnce(
     'native-text-decoration-color-android',
     '`text-decoration-color` only applies on iOS and rn-web in RN 0.85; Android paints the underline in the text color.',

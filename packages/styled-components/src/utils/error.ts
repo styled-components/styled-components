@@ -1,7 +1,7 @@
 import type { Dict } from '../types';
 import errorMap from './errors';
 
-const ERRORS: Dict<any> = process.env.NODE_ENV !== 'production' ? errorMap : {};
+const ERRORS: Dict<any> = __DEV__ ? errorMap : {};
 
 /**
  * super basic version of sprintf
@@ -29,7 +29,7 @@ export default function throwStyledComponentsError(
   code: string | number,
   ...interpolations: any[]
 ) {
-  if (process.env.NODE_ENV === 'production') {
+  if (!__DEV__) {
     return new Error(
       `An error occurred. See https://github.com/styled-components/styled-components/blob/main/packages/styled-components/src/utils/errors.md#${code} for more information.${
         interpolations.length > 0 ? ` Args: ${interpolations.join(', ')}` : ''

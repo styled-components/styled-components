@@ -47,21 +47,27 @@ function textWrapShorthand(tokens: Token[]): Dict<any> | null {
     out.textBreakStrategy = 'highQuality';
     warnIosNoTextWrap(style);
   } else if (style === 'stable') {
-    warnOnce(
-      'native-text-wrap-stable',
-      '`text-wrap: stable` has no React Native equivalent on iOS or Android in 0.85 (no platform API for re-flow stability). The declaration still reaches rn-web where it works as expected.'
-    );
+    warnNoTextWrapStable();
   }
   return out;
 }
 
 function warnIosNoTextWrap(style: string): void {
+  if (!__DEV__) return;
   warnOnce(
     'native-text-wrap-ios',
     '`text-wrap: ' +
       style +
       "` maps to Android's `textBreakStrategy` but iOS has no equivalent in RN 0.85 (silently rendered with default line-breaking). The declaration still reaches rn-web where it works as expected.",
     style
+  );
+}
+
+function warnNoTextWrapStable(): void {
+  if (!__DEV__) return;
+  warnOnce(
+    'native-text-wrap-stable',
+    '`text-wrap: stable` has no React Native equivalent on iOS or Android in 0.85 (no platform API for re-flow stability). The declaration still reaches rn-web where it works as expected.'
   );
 }
 

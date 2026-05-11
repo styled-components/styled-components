@@ -19,6 +19,7 @@ function dimToCss(t: Token): string {
 }
 
 function warn3DDrop(code: string, prop: string): void {
+  if (!__DEV__) return;
   warnOnce(
     code,
     '`' +

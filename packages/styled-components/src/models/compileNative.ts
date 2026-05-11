@@ -514,7 +514,7 @@ function stripSpecialCasesFromConditional(styles: Dict<any>, entry: ConditionalS
   let out: Dict<any> | null = null;
   for (const k in styles) {
     if (SPECIAL_CASE_PROPS[k] !== undefined) {
-      if (process.env.NODE_ENV !== 'production') {
+      if (__DEV__) {
         const meta = SPECIAL_CASE_PROPS[k];
         const cond = describeCondition(entry);
         warnOnce(
@@ -611,7 +611,7 @@ function processDecls(decls: StaticDeclNode[]): {
       if (r !== null) {
         resolvers.push([k, r]);
       } else {
-        if (process.env.NODE_ENV !== 'production') {
+        if (__DEV__) {
           warnIfSentinelLeak(k, v);
         }
         base[k] = v;
@@ -701,7 +701,7 @@ function applyRuleClass(
   _reserved?: undefined
 ): void {
   if (cls.kind === 'unsupported') {
-    if (outer === undefined && process.env.NODE_ENV !== 'production') {
+    if (__DEV__ && outer === undefined) {
       const sels = node.selectors.join(', ');
       warnOnce(
         'native-complex-selector',
@@ -872,7 +872,7 @@ function handleAtRule(
 
   if (cls.kind !== 'unsupported') return;
   const warnKind = cls.warn;
-  if (process.env.NODE_ENV !== 'production') {
+  if (__DEV__) {
     if (warnKind === 'web-only') {
       warnOnce(
         'native-at-rule-web-only',
@@ -914,7 +914,7 @@ function pushDecl(out: StaticDeclNode[], node: StaticDeclNode): void {
   // compares are faster than the indexOf machinery.
   const v = node.value;
   if (v === 'fit-content' || v === 'min-content' || v === 'max-content') {
-    if (process.env.NODE_ENV !== 'production') {
+    if (__DEV__) {
       warnOnce(
         'native-unsupported-value',
         `the value "${v}" for "${node.prop}" is not supported in React Native and will be ignored.`,

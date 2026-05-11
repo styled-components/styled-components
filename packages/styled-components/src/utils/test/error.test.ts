@@ -21,7 +21,10 @@ describe('development', () => {
 
 describe('production', () => {
   beforeEach(() => {
-    process.env.NODE_ENV = 'production';
+    (global as { __DEV__: boolean }).__DEV__ = false;
+  });
+  afterEach(() => {
+    (global as { __DEV__: boolean }).__DEV__ = true;
   });
 
   it('returns an error link', () => {

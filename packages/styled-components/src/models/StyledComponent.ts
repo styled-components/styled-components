@@ -118,7 +118,7 @@ function useInjectedStyle<T extends ExecutionContext>(
 ): string {
   const className = webStyle.flush(resolvedAttrs, styleSheet, compiler);
 
-  if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
+  if (__DEV__ && React.useDebugValue) {
     React.useDebugValue(className);
   }
 
@@ -465,8 +465,8 @@ function buildPropsForElement(
       out[key] = context[key];
 
       if (
+        __DEV__ &&
         !shouldForwardProp &&
-        process.env.NODE_ENV !== 'production' &&
         !isPropValid(key) &&
         !(seenUnknownProps || (seenUnknownProps = new Set())).has(key) &&
         isTag(elementToBeCreated) &&
@@ -502,7 +502,7 @@ function useImpl<Props extends BaseObject>(
   const ssc = useStyleSheetContext();
   const shouldForwardProp = forwardedComponent.shouldForwardProp || ssc.shouldForwardProp;
 
-  if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
+  if (__DEV__ && React.useDebugValue) {
     React.useDebugValue(styledComponentId);
   }
 
@@ -572,7 +572,7 @@ function useImpl<Props extends BaseObject>(
     if (IS_RSC) {
       generatedStyle = rscFlush(webStyle, context, ssc.styleSheet, ssc.compiler);
       generatedClassName = generatedStyle.className;
-      if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
+      if (__DEV__ && React.useDebugValue) {
         React.useDebugValue(generatedClassName);
       }
     } else {
@@ -580,7 +580,7 @@ function useImpl<Props extends BaseObject>(
     }
   }
 
-  if (process.env.NODE_ENV !== 'production' && forwardedComponent.warnTooManyClasses) {
+  if (__DEV__ && forwardedComponent.warnTooManyClasses) {
     forwardedComponent.warnTooManyClasses(generatedClassName);
   }
 
@@ -775,7 +775,7 @@ function createStyledComponent<
     toString: styledToString,
   } as unknown as IStyledComponent<'web', any> & Statics;
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (__DEV__) {
     checkDynamicCreation(displayName, styledComponentId);
 
     WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(

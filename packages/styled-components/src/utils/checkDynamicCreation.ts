@@ -7,8 +7,6 @@ const SEEN_LIMIT = 200;
 const seen: Map<string, true> = new Map();
 
 export const checkDynamicCreation = (displayName: string, componentId?: string | undefined) => {
-  // Caller already gates on `process.env.NODE_ENV !== 'production'` so this
-  // function name appears only in dev bundles (verified by the tree-shake test).
   // RSC: components are module-level by construction and hook-detection is
   // unreliable across the server-component eval boundary.
   if (IS_RSC) return;

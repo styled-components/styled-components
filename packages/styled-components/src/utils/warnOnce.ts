@@ -12,14 +12,11 @@ export function hasWarned(key: string): boolean {
 
 /**
  * Emit a `[sc] ...` warning at most once for the lifetime of the module.
- *
- * - `code` is the internal dedupe key (e.g. `unknown-prop`, `withTheme`).
- *   It does NOT appear in the printed message; callers wrap the user-facing
- *   text with whatever framing the warning needs.
- * - `dedupeSuffix` (optional) makes the dedupe per-instance, e.g.
- *   `unknown-prop` should warn once per offending prop name, not once total.
+ * `code` is the dedupe key (not printed); `dedupeSuffix` makes dedupe
+ * per-instance (e.g. once per offending prop name). No-op in production.
  */
 export function warnOnce(code: string, message: string, dedupeSuffix?: string): void {
+  if (!__DEV__) return;
   const key = warnKey(code, dedupeSuffix);
   if (warned.has(key)) return;
   warned.add(key);

@@ -67,7 +67,7 @@ function hyphensShorthand(tokens: Token[]): Dict<any> | null {
     hyphens: name,
     android_hyphenationFrequency: SPEC_TO_ANDROID[name],
   };
-  if (name === 'auto') {
+  if (__DEV__ && name === 'auto') {
     warnOnce(
       'native-hyphens-ios',
       "`hyphens: auto` maps to Android's `android_hyphenationFrequency` but iOS has no equivalent in RN 0.85 (auto-hyphenation cannot be enabled programmatically). The declaration still reaches rn-web where it works as expected; on iOS, embed soft-hyphens (U+00AD) in source text to control break points."

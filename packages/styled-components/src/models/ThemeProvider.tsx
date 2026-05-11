@@ -93,7 +93,7 @@ function mergeTheme(theme: ThemeArgument, outerTheme?: DefaultTheme | undefined)
     const mergedTheme = themeFn(outerTheme);
 
     if (
-      process.env.NODE_ENV !== 'production' &&
+      __DEV__ &&
       (mergedTheme === null || Array.isArray(mergedTheme) || typeof mergedTheme !== 'object')
     ) {
       throw styledError(7);

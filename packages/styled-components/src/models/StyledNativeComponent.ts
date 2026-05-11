@@ -303,7 +303,7 @@ function applySpecialCases(
     if (!(k in elementProps)) {
       elementProps[k] = specialCases[k];
     }
-    if (process.env.NODE_ENV !== 'production') {
+    if (__DEV__) {
       const meta = SPECIAL_CASE_PROPS[k];
       if (meta && !targetMatchesValidOn(effectiveTarget, meta.validOn)) {
         if (!specialCaseWarned.has(warningKey)) {
@@ -1149,7 +1149,7 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
     // (transient prop convention). The `else` branch tree-shakes out of the
     // production bundle so prod has zero residue.
     let RenderStyledComponent: typeof RenderInner;
-    if (process.env.NODE_ENV !== 'production') {
+    if (__DEV__) {
       const RenderInjector: typeof RenderInner = props =>
         // `$$nativeStyle` is a sentinel transient prop, not part of the public
         // RenderInner props; cast at the createElement boundary.

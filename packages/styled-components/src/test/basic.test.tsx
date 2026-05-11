@@ -561,15 +561,12 @@ describe('basic', () => {
   });
 
   describe('production mode', () => {
-    let originalEnv: string | undefined;
-
     beforeEach(() => {
-      originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'production';
+      (global as { __DEV__: boolean }).__DEV__ = false;
     });
 
     afterEach(() => {
-      process.env.NODE_ENV = originalEnv;
+      (global as { __DEV__: boolean }).__DEV__ = true;
     });
 
     it('should inject two different styles if the same component is mounted with different props and css', () => {

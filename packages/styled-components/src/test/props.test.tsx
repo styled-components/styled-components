@@ -270,9 +270,6 @@ describe('props', () => {
     });
 
     it('warns in development mode when shouldForwardProp is not provided for an unknown prop', () => {
-      let originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
-
       jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       const Comp = styled('div')<{ filterThis: string }>`
@@ -282,13 +279,9 @@ describe('props', () => {
       render(<Comp as="a" href="/foo" filterThis="abc" />);
 
       expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('filterThis'));
-      process.env.NODE_ENV = originalEnv;
     });
 
     it('do not warn in development mode when shouldForwardProp is not provided for an unknown prop on React component', () => {
-      let originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
-
       jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       const Comp = styled(({ className, myLabel }: { className?: string; myLabel: string }) => (
@@ -301,7 +294,6 @@ describe('props', () => {
 
       expect(console.warn).not.toHaveBeenCalledWith(expect.stringContaining('myLabel'));
       expect(console.warn).toHaveBeenCalledTimes(0);
-      process.env.NODE_ENV = originalEnv;
     });
   });
 });

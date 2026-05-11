@@ -22,7 +22,7 @@ export const groupForId = (id: string): number => {
 
   const group = nextFreeGroup++;
 
-  if (process.env.NODE_ENV !== 'production' && ((group | 0) < 0 || group > MAX_SMI)) {
+  if (__DEV__ && ((group | 0) < 0 || group > MAX_SMI)) {
     throw styledError(16, `${group}`);
   }
 

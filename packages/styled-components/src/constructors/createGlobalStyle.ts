@@ -38,10 +38,9 @@ export default function createGlobalStyle<Props extends object>(
   const globalStyle = new WebGlobalStyle<Props>(rules, styledComponentId);
 
   const hasImport =
-    process.env.NODE_ENV !== 'production' &&
-    rules.some(rule => typeof rule === 'string' && rule.indexOf('@import') !== -1);
+    __DEV__ && rules.some(rule => typeof rule === 'string' && rule.indexOf('@import') !== -1);
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (__DEV__) {
     checkDynamicCreation(styledComponentId);
   }
 
@@ -50,10 +49,7 @@ export default function createGlobalStyle<Props extends object>(
     const theme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
     const instance = React.useId();
 
-    if (
-      process.env.NODE_ENV !== 'production' &&
-      React.Children.count((props as { children?: React.ReactNode }).children)
-    ) {
+    if (__DEV__ && React.Children.count((props as { children?: React.ReactNode }).children)) {
       warnOnce(
         'gs-children',
         `the global style component ${styledComponentId} was given child JSX. createGlobalStyle does not render children.`,

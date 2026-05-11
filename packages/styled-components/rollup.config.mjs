@@ -159,6 +159,7 @@ const standaloneConfig = {
   ...standaloneBaseConfig,
   plugins: standaloneBaseConfig.plugins.concat(
     replace({
+      __DEV__: JSON.stringify(true),
       'process.env.NODE_ENV': JSON.stringify('development'),
     })
   ),
@@ -172,6 +173,7 @@ const standaloneProdConfig = {
   },
   plugins: standaloneBaseConfig.plugins.concat(
     replace({
+      __DEV__: JSON.stringify(false),
       'process.env.NODE_ENV': JSON.stringify('production'),
     }),
     minifierPlugin
@@ -189,6 +191,7 @@ const serverConfig = {
       __SERVER__: JSON.stringify(true),
       __NATIVE__: JSON.stringify(false),
       __NATIVE_WEB__: JSON.stringify(false),
+      __DEV__: "process.env.NODE_ENV !== 'production'",
     }),
     minifierPlugin
   ),
@@ -205,6 +208,7 @@ const browserConfig = {
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(false),
       __NATIVE_WEB__: JSON.stringify(false),
+      __DEV__: "process.env.NODE_ENV !== 'production'",
     }),
     replace({
       delimiters: ['', ''],
@@ -246,6 +250,7 @@ const nativeConfig = {
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(true),
       __NATIVE_WEB__: JSON.stringify(false),
+      __DEV__: "process.env.NODE_ENV !== 'production'",
     }),
     minifierPlugin
   ],
@@ -270,6 +275,7 @@ const nativeWebConfig = {
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(true),
       __NATIVE_WEB__: JSON.stringify(true),
+      __DEV__: "process.env.NODE_ENV !== 'production'",
     }),
     minifierPlugin
   ],
@@ -287,6 +293,7 @@ const pluginsConfig = {
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(false),
       __NATIVE_WEB__: JSON.stringify(false),
+      __DEV__: "process.env.NODE_ENV !== 'production'",
     }),
     replace({
       delimiters: ['', ''],
@@ -315,6 +322,7 @@ const reanimatedConfig = {
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(true),
       __NATIVE_WEB__: JSON.stringify(false),
+      __DEV__: "process.env.NODE_ENV !== 'production'",
     }),
     minifierPlugin
   ],

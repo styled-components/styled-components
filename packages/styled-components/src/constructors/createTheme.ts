@@ -14,7 +14,7 @@ function buildVarNames<T extends Record<string, any>>(obj: T, varPrefix: string)
 function buildVarRefs<T extends Record<string, any>>(obj: T, varPrefix: string): CSSVarTheme<T> {
   const result: Record<string, any> = {};
   walkTheme(obj, '-', result, (fullPath, val) => {
-    if (process.env.NODE_ENV !== 'production') {
+    if (__DEV__) {
       const str = String(val);
       let depth = 0;
       for (let i = 0; i < str.length; i++) {

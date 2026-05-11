@@ -78,7 +78,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
 
   const passthroughKeys = getPassthroughKeys(camel);
   if (passthroughKeys !== undefined) {
-    if (process.env.NODE_ENV !== 'production' && passthroughKeys[0] === 'transform') {
+    if (__DEV__ && passthroughKeys[0] === 'transform') {
       warnIfAndroidSkew(rawValue);
     }
     const value = isLayeredCommaProp(camel) ? collapseIdenticalCommas(rawValue) : rawValue;
@@ -149,7 +149,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     tokens = tokenize(rawValue);
     const out = shorthand(tokens);
     if (out !== null) return out;
-    if (process.env.NODE_ENV !== 'production') {
+    if (__DEV__) {
       warnOnce(
         'native-shorthand-parse',
         `the value "${rawValue}" could not be parsed for property "${camel}". The declaration was ignored.`,
@@ -191,7 +191,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     // can interpret. Flag the value before it silently renders as
     // transparent. The dedupeSuffix is the value itself so repeat
     // declarations don't spam.
-    if (process.env.NODE_ENV !== 'production' && rawValue.indexOf('\0') === -1) {
+    if (__DEV__ && rawValue.indexOf('\0') === -1) {
       warnOnce(
         'native-modern-color-cant-fold',
         `the value "${rawValue}" for property "${camel}" uses a modern color form that couldn't be statically resolved for React Native. ` +

@@ -51,6 +51,7 @@ export function getUserCallSite(stack?: string | null): string | null {
  * internal dedupe key only;it does NOT appear in the printed message.
  */
 export function warnOnce(code: string, message: string, dedupeSuffix?: string): void {
+  if (!__DEV__) return;
   // Skip the `new Error().stack` walk when the warning is already deduped.
   // The user-call-site suffix is only useful the first time the warning fires;
   // dedupe short-circuit lets repeated decls (same css value across many
@@ -82,8 +83,7 @@ export function resetWarningsForTest(): void {
  * `border: ${t.borderWidth} solid ${t.colors.ink}`) and must NOT trigger
  * the warning.
  *
- * Production builds tree-shake this function out via the
- * `process.env.NODE_ENV` guard at the call site.
+ * Callers must wrap in `if (__DEV__)` so production tree-shakes the call.
  */
 export function warnIfSentinelLeak(prop: string, value: unknown): void {
   if (typeof value !== 'string') return;
@@ -124,8 +124,7 @@ const SKEW_RE = /\bskew[XY]?\s*\(/;
  * declaration looks like it works at the styled-components layer; the
  * pixels just never move. Tracked at facebook/react-native#27649.
  *
- * No-op outside Android. Production builds tree-shake the call via the
- * `process.env.NODE_ENV` guard at the call site.
+ * No-op outside Android. Callers must wrap in `if (__DEV__)`.
  */
 export function warnIfAndroidSkew(value: unknown): void {
   if (typeof value !== 'string') return;

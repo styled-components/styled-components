@@ -23,7 +23,7 @@ export default function withTheme<T extends AnyComponent>(
     const theme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
     const themeProp = determineTheme(props, theme);
 
-    if (process.env.NODE_ENV !== 'production' && themeProp === undefined) {
+    if (__DEV__ && themeProp === undefined) {
       const name = getComponentName(Component);
       warnOnce('withTheme', `no ThemeProvider or theme prop in scope for "${name}"`, name);
     }

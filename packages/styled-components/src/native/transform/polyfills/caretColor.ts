@@ -47,18 +47,22 @@ function caretColorShorthand(tokens: Token[]): Dict<any> | null {
       return null;
     }
     if (!stream.eof()) return null;
-    warnOnce(
-      'native-caret-color-block',
-      "`caret-color`'s second value (text color overlapping the caret) requires `caret-shape: block`, which React Native does not render on iOS or Android in 0.85. The first value is applied; the second has no effect. rn-web honors both natively."
-    );
+    if (__DEV__) {
+      warnOnce(
+        'native-caret-color-block',
+        "`caret-color`'s second value (text color overlapping the caret) requires `caret-shape: block`, which React Native does not render on iOS or Android in 0.85. The first value is applied; the second has no effect. rn-web honors both natively."
+      );
+    }
   }
 
   if (firstIsAuto) return { caretColor: 'auto' };
 
-  warnOnce(
-    'native-caret-color-ios',
-    "`caret-color` maps to Android's `cursorColor` TextInput prop but iOS has no equivalent: RN's `selectionColor` would tint the selection range as well, violating the spec. iOS will use its default caret color. The declaration reaches rn-web and Android where it works as expected."
-  );
+  if (__DEV__) {
+    warnOnce(
+      'native-caret-color-ios',
+      "`caret-color` maps to Android's `cursorColor` TextInput prop but iOS has no equivalent: RN's `selectionColor` would tint the selection range as well, violating the spec. iOS will use its default caret color. The declaration reaches rn-web and Android where it works as expected."
+    );
+  }
   return { caretColor: first.raw, cursorColor: first.raw };
 }
 

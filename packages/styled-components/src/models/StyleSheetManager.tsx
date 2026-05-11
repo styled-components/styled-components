@@ -33,7 +33,7 @@ const getRscSlot: (() => RscRenderSlot) | null = IS_RSC
 // production builds; hoisting leaks names into the bundle and trips the
 // tree-shake test. Unnamed plugins throw error #15.
 function warnUnsupportedPlugins(plugins: SCPlugin[] | undefined): void {
-  if (process.env.NODE_ENV === 'production' || !plugins) return;
+  if (!__DEV__ || !plugins) return;
   for (let i = 0; i < plugins.length; i++) {
     const name = plugins[i]?.name;
     if (!name || name === 'rsc' || name === 'rtl') continue;

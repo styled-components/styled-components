@@ -259,11 +259,13 @@ const UNSUPPORTED_MATH_KEYWORD_RE = /(?:^|[^a-z0-9_-])(-?infinity|nan)(?![a-z0-9
 function bailOnUnsupportedKeyword(value: string): boolean {
   const m = UNSUPPORTED_MATH_KEYWORD_RE.exec(value);
   if (m === null) return false;
-  warnOnce(
-    'native-math-keyword',
-    `\`${m[1]}\` is valid CSS but React Native cannot represent ±∞ or NaN in a dimension; the value would silently collapse to 0. Drop the keyword or pick a finite alternative (e.g. a large literal pixel value or a viewport unit).`,
-    m[1].toLowerCase()
-  );
+  if (__DEV__) {
+    warnOnce(
+      'native-math-keyword',
+      `\`${m[1]}\` is valid CSS but React Native cannot represent ±∞ or NaN in a dimension; the value would silently collapse to 0. Drop the keyword or pick a finite alternative (e.g. a large literal pixel value or a viewport unit).`,
+      m[1].toLowerCase()
+    );
+  }
   return true;
 }
 

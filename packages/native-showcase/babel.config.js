@@ -1,10 +1,12 @@
-// Substitutes the build-time constants rollup-plugin-replace handles for
-// production bundles (see `packages/styled-components/rollup.config.mjs`):
-// `__SERVER__` → false, `__NATIVE__` → true, `__NATIVE_WEB__` → true on
-// the web platform. Metro pulls styled-components from source via
-// `metro.config.js`, so without this the bare identifiers would
-// ReferenceError at runtime.
+// Substitutes styled-components' build-time constants so Metro can
+// compile its TS source verbatim (see `metro.config.js`). Mirrors
+// `packages/styled-components/rollup.config.mjs`:
+//   __SERVER__       → false
+//   __NATIVE__       → true
+//   __NATIVE_WEB__   → isWeb (per `api.caller(platform)`)
+//   __DEV__          → process.env.NODE_ENV !== 'production'
 function makeReplaceBuildConstants(isWebTarget) {
+  const isDev = process.env.NODE_ENV !== 'production';
   return ({ types: t }) => ({
     name: 'styled-components-native-build-constants',
     visitor: {
@@ -15,6 +17,8 @@ function makeReplaceBuildConstants(isWebTarget) {
           path.replaceWith(t.booleanLiteral(true));
         } else if (path.node.name === '__NATIVE_WEB__') {
           path.replaceWith(t.booleanLiteral(isWebTarget));
+        } else if (path.node.name === '__DEV__') {
+          path.replaceWith(t.booleanLiteral(isDev));
         }
       },
     },
