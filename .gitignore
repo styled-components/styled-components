@@ -19,8 +19,17 @@ update-dynamic-styles-trace.json
 .rollup.cache
 .build
 .next
+.expo
 *.tsbuildinfo
 **/next-env.d.ts
 **/dist-test
 .claude
 node-compile-cache
+*.cpuprofile
+native-compile-profile.md
+# Bun CPU profiles (`bun --cpu-prof-md`, see AGENTS.md Profiling)
+.cpu-profiles
+parser-profile-harness
+# WPT raw HTML fixtures — corpus.json is the canonical extracted form;
+# `pnpm wpt:fetch` re-pulls raw/ from upstream when refreshing.
+packages/styled-components/src/parser/wpt-corpus/raw/

@@ -1,3 +1,5 @@
+import { resetWarnOnce } from '../src/utils/warnOnce';
+
 const consoleError = console.error;
 
 const suppressedErrors = [
@@ -24,6 +26,10 @@ beforeEach(() => {
       consoleError(logged);
     }
   });
+
+  // The shared `warnOnce` dedupe Set persists across tests; reset so each
+  // assertion that expects a warning to fire actually sees it.
+  resetWarnOnce();
 });
 
 afterEach(() => {

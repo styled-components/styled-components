@@ -1,0 +1,7 @@
+{
+  "name": "styled-components-plugins",
+  "private": true,
+  "types": "../dist/plugins/index.d.ts",
+  "main": "../dist/plugins.cjs.js",
+  "module": "../dist/plugins.esm.js"
+}
