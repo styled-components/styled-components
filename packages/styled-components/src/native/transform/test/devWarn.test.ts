@@ -191,7 +191,9 @@ describe('warnIfIosVerticalAlign', () => {
     warnIfIosVerticalAlign('middle');
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy.mock.calls[0][0]).toMatch(/`vertical-align: middle` has no effect on iOS/);
-    expect(warnSpy.mock.calls[0][0]).toMatch(/wrap the Text in a View with `justify-content/);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/`<Text>` or `<TextInput>`/);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/wrap it in a View with `justify-content/);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/`<TextInput>` has no Text-level workaround/);
   });
 
   it('warns for top and bottom too', () => {
