@@ -1,5 +1,5 @@
 ---
-"styled-components": minor
+'styled-components': minor
 ---
 
 Modern CSS functions now work in React Native styles. Static expressions resolve up front; values that depend on the device environment (viewport, container, safe area, color scheme) re-resolve as the environment changes.
@@ -30,6 +30,6 @@ const Card = styled.View`
 - `line-clamp: N` truncates to N lines.
 - `&:is(:hover, :focus)` and `&:where(:pressed, :disabled)` apply the styles to each listed state.
 - `@media (min-aspect-ratio: 16/9)`, `(max-aspect-ratio: 1/1)`, and exact `(aspect-ratio: 4/3)` match the device's current width-to-height ratio. Bare numbers are treated as `<n>/1` per spec.
-- `@starting-style { ... }` declarations are recognized; first-mount enter animations apply via the opt-in reanimated adapter (see the animation changeset).
+- `@starting-style { ... }` declarations apply on first mount: the starting values are the initial state and any transitions on the same component animate from there toward the resolved values.
 
 Features React Native does not yet support (`position: fixed`, `position: sticky`, `backdrop-filter`, 3D transforms, `text-shadow`, scroll-snap, view-transitions, form-state selectors, and more) are listed in the "React Native CSS Features" compatibility tracker maintained alongside the library.
