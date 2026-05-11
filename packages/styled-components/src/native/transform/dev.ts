@@ -144,14 +144,12 @@ export function warnIfAndroidSkew(value: unknown): void {
 }
 
 /**
- * Warn once if `vertical-align` is set on iOS. RN's `Text.js` translates
- * `verticalAlign` to `textAlignVertical` at the JS layer, but iOS Fabric
- * has no `textAlignVertical` handler (the prop only registers on Android
- * via `ReactTextViewManager`). So on iOS the declaration looks like it
- * works but never repositions the glyphs. There is no Text-level
- * workaround in RN 0.85; wrap the Text in a View and use flex
- * justification to vertically align the content within a fixed-height
- * container.
+ * Warn once if `vertical-align` is set on iOS. RN's `Text.js` and
+ * `TextInput.js` both translate `verticalAlign` to `textAlignVertical`
+ * at the JS layer, but iOS Fabric exposes no `textAlignVertical`
+ * handler (`ReactTextViewManager` / `ReactTextInputManager` only
+ * register the prop on Android). On iOS the declaration looks like it
+ * works but never repositions the glyphs or the caret.
  *
  * No-op outside iOS. Callers must wrap in `if (__DEV__)`.
  */
@@ -166,7 +164,7 @@ export function warnIfIosVerticalAlign(value: string): void {
   if (os !== 'ios') return;
   warnOnce(
     'native-vertical-align-ios',
-    `\`vertical-align: ${value}\` has no effect on iOS \`<Text>\` in React Native 0.85 (no platform API; the prop only renders on Android and rn-web). To vertically align text within a fixed-height container on iOS, wrap the Text in a View with \`justify-content: <flex-start | center | flex-end>\`.`,
+    `\`vertical-align: ${value}\` has no effect on iOS \`<Text>\` or \`<TextInput>\` in React Native 0.85 (no platform API; the prop only renders on Android and rn-web). For \`<Text>\`, wrap it in a View with \`justify-content: <flex-start | center | flex-end>\` to align glyphs within a fixed-height container. \`<TextInput>\` has no Text-level workaround; iOS positions the caret and content at the platform default.`,
     value
   );
 }

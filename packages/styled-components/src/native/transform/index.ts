@@ -59,6 +59,15 @@ export function camelize(prop: string): string {
 // full shorthand set).
 import './shorthands.register';
 
+const VERTICAL_ALIGN_TO_ALIGN_CONTENT: Record<
+  string,
+  'flex-start' | 'center' | 'flex-end' | undefined
+> = {
+  top: 'flex-start',
+  middle: 'center',
+  bottom: 'flex-end',
+};
+
 /**
  * Transform a single CSS declaration into an RN style partial.
  *
@@ -87,6 +96,16 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     }
     const value = isLayeredCommaProp(camel) ? collapseIdenticalCommas(rawValue) : rawValue;
     if (passthroughKeys.length === 1) {
+      // rn-web's `vertical-align` is baseline-only; emit `align-content`
+      // for the box-positioning keywords so they reposition content
+      // like Android's `textAlignVertical`. Other values fall through
+      // to the browser's native baseline-shifting semantics.
+      if (__NATIVE_WEB__ && camel === 'verticalAlign') {
+        const alignContent = VERTICAL_ALIGN_TO_ALIGN_CONTENT[rawValue];
+        if (alignContent !== undefined) {
+          return { verticalAlign: value, alignContent };
+        }
+      }
       return { [passthroughKeys[0]]: value };
     }
     // Dual-emit (background props): write every key in order so the

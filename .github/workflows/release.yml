@@ -144,10 +144,38 @@ jobs:
               }
             }
 
+            // Per-package previous tag. Snapshot publishes don't consume
+            // `.changeset/*.md`, so without this filter every prerelease
+            // re-emits the full pending pile — including changesets that
+            // were already announced in earlier prereleases.
+            const prevTagByPkg = new Map();
+            for (const pkg of packages) {
+              let prevTag = '';
+              try {
+                prevTag = execSync(`git tag --list '${pkg.name}@*' --sort=-v:refname`, { encoding: 'utf8' })
+                  .split('\n').filter(Boolean)[0] || '';
+              } catch {}
+              prevTagByPkg.set(pkg.name, prevTag);
+            }
+
+            // True when `commit` is reachable from `tag` (i.e. already
+            // shipped in that release). Conservatively returns false on
+            // any error so unknown commits surface in the next release.
+            function isCommitInTag(commit, tag) {
+              if (!commit || !tag) return false;
+              try {
+                execSync(`git merge-base --is-ancestor ${commit} ${tag}`, { stdio: 'ignore' });
+                return true;
+              } catch {
+                return false;
+              }
+            }
+
             const byPkg = new Map();
             for (const cs of changesets) {
               for (const release of cs.releases) {
                 if (release.type === 'none') continue;
+                if (isCommitInTag(cs.commit, prevTagByPkg.get(release.name))) continue;
                 let groups = byPkg.get(release.name);
                 if (!groups) {
                   groups = { major: [], minor: [], patch: [] };
@@ -171,13 +199,9 @@ jobs:
                   parts.push('');
                 }
               }
-              if (parts.length === 0) parts.push('Internal changes only.', '');
+              if (parts.length === 0) parts.push('No new changes since the previous release.', '');
 
-              let prevTag = '';
-              try {
-                prevTag = execSync(`git tag --list '${pkg.name}@*' --sort=-v:refname`, { encoding: 'utf8' })
-                  .split('\n').filter(Boolean)[0] || '';
-              } catch {}
+              const prevTag = prevTagByPkg.get(pkg.name);
               if (prevTag) {
                 const currentTag = `${pkg.name}@${pkg.version}`;
                 const compareUrl = `https://github.com/${repo}/compare/${encodeURIComponent(prevTag)}...${encodeURIComponent(currentTag)}`;
