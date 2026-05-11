@@ -188,6 +188,20 @@ const Card = styled.div`
 </ThemeProvider>
 ```
 
+Tokens are placeholder references that resolve at render time, not raw values. Interpolate them anywhere a CSS value goes; don't combine them with JS arithmetic. For runtime composition use `calc()`, or reach for `theme.raw.space.md` when you genuinely need the original number in JS.
+
+```tsx
+// works
+padding: ${theme.space.md};
+margin: ${theme.space.sm} ${theme.space.md};
+top: calc(${insets.top}px + ${theme.space.md});
+
+// breaks: JS `+` produces a malformed string the browser drops
+top: ${insets.top + theme.space.md};
+```
+
+See the [createTheme API docs](https://styled-components.com/docs/api#createtheme) for the full composition rules.
+
 ### Shared styles with `css`
 
 Extract reusable style blocks to share across components or apply conditionally.
@@ -255,6 +269,21 @@ const PasswordInput = styled.input.attrs({
   padding: 0.5em;
 `;
 ```
+
+The function form receives a second `ast` argument for bridging declarations or theme tokens into props on third-party components. `peek` reads a value; `pop` reads and removes it from the rendered style. Both accept either a CSS property name or a typed dot-separated theme path:
+
+```tsx
+import { Path } from 'react-native-svg';
+
+const Icon = styled(Path).attrs((_props, ast) => ({
+  fill: ast.pop('color'),                  // lift the CSS color decl
+  stroke: ast.peek('palette.brand'),        // read from theme via typed path
+}))`
+  color: red;
+`;
+```
+
+Both methods take an optional fallback as the second argument, returned when the value is missing. The lift happens at construction time when the callback's behavior is fully determined by static declarations, so renders pay nothing extra.
 
 ## Documentation
 
