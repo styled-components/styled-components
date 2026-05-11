@@ -136,9 +136,11 @@ jobs:
             const changesets = await readChangesets(cwd);
             if (changesets.length) {
               const paths = changesets.map(c => `.changeset/${c.id}.md`);
-              const shaMap = await git.getCommitsThatAddFiles(paths, { cwd, short: true });
-              for (const cs of changesets) {
-                cs.commit = shaMap.get(`.changeset/${cs.id}.md`) || undefined;
+              // `@changesets/git`'s getCommitsThatAddFiles returns an array
+              // aligned with `paths`, not a Map keyed by path.
+              const shaList = await git.getCommitsThatAddFiles(paths, { cwd, short: true });
+              for (let i = 0; i < changesets.length; i++) {
+                changesets[i].commit = shaList[i] || undefined;
               }
             }
 
