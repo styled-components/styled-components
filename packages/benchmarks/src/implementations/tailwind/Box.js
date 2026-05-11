@@ -12,7 +12,6 @@ const colorClasses = {
 
 const Box = ({ color, fixed = false, layout = 'column', outer = false, ...other }) => {
   const classes = [
-    'self-start',
     colorClasses[color] || '',
     layout === 'row' ? 'flex-row' : '',
     outer ? 'p-1' : '',

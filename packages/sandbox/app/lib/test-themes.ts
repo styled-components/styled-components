@@ -21,6 +21,7 @@ export interface Theme {
   };
   typography: {
     fontFamily: string;
+    fontFamilyMono: string;
     fontSize: {
       small: string;
       medium: string;
@@ -51,6 +52,7 @@ export const themes: Record<ThemePreset, Theme> = {
     },
     typography: {
       fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamilyMono: `ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, monospace`,
       fontSize: {
         small: '14px',
         medium: '16px',
@@ -79,6 +81,7 @@ export const themes: Record<ThemePreset, Theme> = {
     },
     typography: {
       fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamilyMono: `ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, monospace`,
       fontSize: {
         small: '14px',
         medium: '16px',

@@ -1,7 +1,8 @@
-import styled, { createGlobalStyle, keyframes } from 'styled-components';
+import styled, { createGlobalStyle, css, keyframes } from 'styled-components';
 import { TestStatus, type TestCheck } from '../components/auto-test';
 import { TestSummary } from '../components/test-summary';
 import ClientButton from '../components/client-button';
+import { DedupCountBadge } from '../components/dedup-count-badge';
 import {
   Section,
   SectionTitle,
@@ -14,6 +15,14 @@ import {
   Code,
 } from '../components/test-ui';
 import theme from '../lib/theme';
+
+// Declared early so test9Checks can reference its runtime styledComponentId.
+const DedupGlobalStyle = createGlobalStyle`
+  [data-testid="dedup-marker"] {
+    border-style: dashed !important;
+  }
+`;
+const dedupId = DedupGlobalStyle.styledComponentId;
 
 const test1Checks: TestCheck[] = [
   {
@@ -184,6 +193,66 @@ const test9Checks: TestCheck[] = [
     expected: 'dashed',
     label: 'Dedup marker has dashed border',
   },
+  {
+    ref: 'style[data-styled-global="' + dedupId + '"]',
+    type: 'count',
+    expected: '1',
+    label: 'Exactly one <style data-styled-global> tag emitted',
+  },
+];
+
+const test10Checks: TestCheck[] = [
+  {
+    ref: 'container-child',
+    type: 'style',
+    prop: 'color',
+    expected: 'rgb(37, 99, 235)',
+    label: '@container query applies (parent wide enough)',
+  },
+  {
+    ref: 'layered-target',
+    type: 'style',
+    prop: 'background-color',
+    expected: 'rgb(22, 163, 74)',
+    label: '@layer cascade order: later layer wins',
+  },
+  {
+    ref: 'has-with-flag',
+    type: 'style',
+    prop: 'border-color',
+    expected: 'rgb(217, 119, 6)',
+    label: ':has(.flag) selector applies when child present',
+  },
+  {
+    ref: 'has-without-flag',
+    type: 'style-not',
+    prop: 'border-color',
+    expected: 'rgb(217, 119, 6)',
+    label: ':has(.flag) does NOT apply without child',
+  },
+];
+
+const test11Checks: TestCheck[] = [
+  {
+    ref: 'fwd-control',
+    type: 'attr',
+    prop: 'data-tracking',
+    expected: 'control',
+    label: 'Control button forwards data-tracking attr',
+  },
+  {
+    ref: 'fwd-filtered',
+    type: 'attr-absent',
+    prop: 'data-tracking',
+    label: 'Filtered button strips data-tracking attr',
+  },
+  {
+    ref: 'fwd-filtered',
+    type: 'attr',
+    prop: 'data-keep',
+    expected: 'kept',
+    label: 'Filtered button forwards data-keep',
+  },
 ];
 
 const rscSuites = [
@@ -196,6 +265,8 @@ const rscSuites = [
   { name: '7. CSS vars', checks: test7Checks },
   { name: '8. Child-index selectors', checks: test8Checks },
   { name: '9. GlobalStyle dedup', checks: test9Checks },
+  { name: '10. Modern CSS', checks: test10Checks },
+  { name: '11. shouldForwardProp', checks: test11Checks },
 ];
 
 export default function RSCTestPage() {
@@ -446,8 +517,8 @@ export default function RSCTestPage() {
           RSC emits inline <Code>&lt;style&gt;</Code> tags as siblings of the styled element. These
           tags are real DOM children, so <Code>:first-child</Code>, <Code>:last-child</Code>, and{' '}
           <Code>:nth-child()</Code> would normally count them and produce wrong results. This page
-          uses <Code>stylisPluginRSC</Code> via <Code>StyleSheetManager</Code> to rewrite these
-          selectors automatically. Both columns should match.
+          uses <Code>rscPlugin</Code> via <Code>StyleSheetManager</Code> to rewrite these selectors
+          automatically. Both columns should match.
         </SectionDesc>
         <HintText>
           If broken: the <Code>:nth-child</Code> column colors don&apos;t match the{' '}
@@ -486,26 +557,137 @@ export default function RSCTestPage() {
           9. GlobalStyle dedup in RSC <TestStatus checks={test9Checks} />
         </SectionTitle>
         <SectionDesc>
-          Multiple instances of the same static <Code>createGlobalStyle</Code> in one RSC render
-          should emit only one <Code>&lt;style&gt;</Code> tag (identical CSS is deduped via{' '}
-          <Code>React.cache</Code>). Inspect the HTML source to verify only one{' '}
-          <Code>data-styled-global=&quot;{DedupGlobalStyle.styledComponentId}&quot;</Code> tag
-          exists.
+          Three <Code>&lt;DedupGlobalStyle /&gt;</Code> instances render below; identical CSS
+          deduplicates via <Code>React.cache</Code> so only one{' '}
+          <Code>&lt;style data-styled-global&gt;</Code> tag should land in the document. The badge
+          below shows the live count.
         </SectionDesc>
         <HintText>
-          If broken: you&apos;ll see multiple identical{' '}
-          <Code>&lt;style data-styled-global&gt;</Code> tags in the page source. The visual test
-          below just confirms the global style applied.
+          Visual: green badge = 1 of 1 (deduped). Red badge = duplicates leaked. The dashed border
+          on the marker confirms the global style applied at all.
         </HintText>
         <DedupGlobalStyle />
         <DedupGlobalStyle />
         <DedupGlobalStyle />
         <Demo>
-          <DedupMarker data-testid="dedup-marker">
-            This box has a dashed border from <Code>DedupGlobalStyle</Code>. Check page source — the
-            global style tag should appear only once despite three{' '}
-            <Code>&lt;DedupGlobalStyle /&gt;</Code> instances above.
-          </DedupMarker>
+          <DedupStack>
+            <DedupCountBadge
+              tagId={dedupId}
+              expected={1}
+              unit={
+                <>
+                  <Code>&lt;style data-styled-global&gt;</Code> tag
+                </>
+              }
+              title={'data-styled-global="' + dedupId + '"'}
+            />
+            <DedupMarker data-testid="dedup-marker">
+              Dashed border ⇒ <Code>DedupGlobalStyle</Code> applied. Badge above ⇒ exactly one tag
+              emitted.
+            </DedupMarker>
+          </DedupStack>
+        </Demo>
+      </Section>
+
+      {/* 10. Modern CSS */}
+      <Section>
+        <SectionTitle>
+          10. Modern CSS in RSC <TestStatus checks={test10Checks} />
+        </SectionTitle>
+        <SectionDesc>
+          Three modern CSS features routed through the in-house parser: <Code>@container</Code>{' '}
+          queries, <Code>@layer</Code> cascade, and the <Code>:has()</Code> selector. Each is
+          emitted via the RSC inline-style path and must round-trip without mangling.
+        </SectionDesc>
+        <HintText>
+          If broken: child text is red instead of blue (container query lost), the layered box
+          background is red instead of green (cascade layer order broken), or the flagged card has
+          the same border color as the unflagged one (:has() not parsed).
+        </HintText>
+        <Demo>
+          <Row>
+            <Column>
+              <ColumnLabel>
+                <Code>@container</Code> (300px wide → blue):
+              </ColumnLabel>
+              <ContainerHost>
+                <ContainerChild data-testid="container-child">
+                  Child color depends on parent container width (red &lt; 250px, blue ≥ 250px).
+                </ContainerChild>
+              </ContainerHost>
+            </Column>
+            <Column>
+              <ColumnLabel>
+                <Code>@layer</Code> (later layer wins):
+              </ColumnLabel>
+              <LayeredGlobalStyle />
+              <LayeredBox data-layer-target="" data-testid="layered-target">
+                base layer red, accent layer green — accent declared later wins
+              </LayeredBox>
+            </Column>
+          </Row>
+          <Row style={{ marginTop: 16 }}>
+            <Column>
+              <ColumnLabel>
+                <Code>:has(.flag)</Code> matches:
+              </ColumnLabel>
+              <HasCard data-testid="has-with-flag">
+                <HasFlag className="flag" />
+                Card with .flag child (orange border)
+              </HasCard>
+            </Column>
+            <Column>
+              <ColumnLabel>
+                <Code>:has(.flag)</Code> doesn&apos;t match:
+              </ColumnLabel>
+              <HasCard data-testid="has-without-flag">
+                Card without .flag child (default border)
+              </HasCard>
+            </Column>
+          </Row>
+        </Demo>
+      </Section>
+
+      {/* 11. shouldForwardProp via withConfig */}
+      <Section>
+        <SectionTitle>
+          11. shouldForwardProp via withConfig <TestStatus checks={test11Checks} />
+        </SectionTitle>
+        <SectionDesc>
+          Two buttons: the control forwards every lowercase prop to the DOM (default behavior); the
+          filtered one uses{' '}
+          <Code>
+            withConfig({'{'} shouldForwardProp {'}'})
+          </Code>{' '}
+          to strip <Code>data-tracking</Code>. Both buttons receive{' '}
+          <Code>data-keep=&quot;kept&quot;</Code> (green ring); only the control should receive{' '}
+          <Code>data-tracking</Code> (red outline).
+        </SectionDesc>
+        <HintText>
+          Visual: control = red outline + green ring. Filtered = green ring only. If broken: both
+          have outlines (filter not running) or neither has one (filter applied to control too).
+        </HintText>
+        <Demo>
+          <Row>
+            <Column>
+              <ColumnLabel>Control (no filter):</ColumnLabel>
+              <FwdControlButton data-tracking="control" data-keep="kept" data-testid="fwd-control">
+                Control
+              </FwdControlButton>
+            </Column>
+            <Column>
+              <ColumnLabel>
+                Filtered (strips <Code>data-tracking</Code>):
+              </ColumnLabel>
+              <FwdFilteredButton
+                data-tracking="should-be-stripped"
+                data-keep="kept"
+                data-testid="fwd-filtered"
+              >
+                Filtered
+              </FwdFilteredButton>
+            </Column>
+          </Row>
         </Demo>
       </Section>
     </Container>
@@ -809,12 +991,11 @@ const NthChildItem = styled(NthBaseItem)`
 
 // ---------------------------------------------------------------------------
 // 9. GlobalStyle dedup
-// ---------------------------------------------------------------------------
-
-const DedupGlobalStyle = createGlobalStyle`
-  [data-testid="dedup-marker"] {
-    border-style: dashed !important;
-  }
+const DedupStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
 `;
 
 const DedupMarker = styled.div`
@@ -823,4 +1004,113 @@ const DedupMarker = styled.div`
   border-radius: 8px;
   font-size: 14px;
   color: ${theme.colors.text};
+  align-self: stretch;
+`;
+
+// ---------------------------------------------------------------------------
+// 10. Modern CSS — @container, @layer, :has()
+// ---------------------------------------------------------------------------
+
+const ContainerHost = styled.div`
+  container-type: inline-size;
+  container-name: rsc-card;
+  width: 300px;
+  padding: 12px;
+  background: ${theme.colors.surface};
+  border: 1px solid ${theme.colors.border};
+  border-radius: 8px;
+`;
+
+const ContainerChild = styled.p`
+  margin: 0;
+  color: #dc2626;
+  font-size: 13px;
+
+  @container rsc-card (min-width: 250px) {
+    color: #2563eb;
+  }
+`;
+
+const LayeredGlobalStyle = createGlobalStyle`
+  @layer base {
+    [data-layer-target] {
+      background: #dc2626;
+    }
+  }
+  @layer accent {
+    [data-layer-target] {
+      background: #16a34a;
+    }
+  }
+`;
+
+const LayeredBox = styled.div`
+  padding: 12px 16px;
+  border-radius: 8px;
+  color: white;
+  font-size: 13px;
+  width: 240px;
+`;
+
+const HasCard = styled.div`
+  padding: 12px 16px;
+  border: 2px solid ${theme.colors.border};
+  border-radius: 8px;
+  font-size: 13px;
+  color: ${theme.colors.text};
+  width: 240px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &:has(.flag) {
+    border-color: #d97706;
+  }
+`;
+
+const HasFlag = styled.span`
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d97706;
+  flex-shrink: 0;
+`;
+
+// ---------------------------------------------------------------------------
+// 11. shouldForwardProp via withConfig
+// ---------------------------------------------------------------------------
+
+/**
+ * Visual tells:
+ *   &[data-tracking]      → red outline (control gets it; filtered must not)
+ *   &[data-keep="kept"]   → green ring (both should get it)
+ */
+const fwdButtonStyles = css`
+  padding: 10px 18px;
+  border-radius: 6px;
+  border: 1px solid ${theme.colors.border};
+  background: ${theme.colors.surface};
+  color: ${theme.colors.text};
+  font-size: 13px;
+  cursor: pointer;
+
+  &[data-keep='kept'] {
+    box-shadow: 0 0 0 2px #16a34a;
+  }
+
+  &[data-tracking] {
+    outline: 3px solid #dc2626;
+    outline-offset: 3px;
+  }
+`;
+
+const FwdControlButton = styled.button<{ 'data-tracking'?: string }>`
+  ${fwdButtonStyles}
+`;
+
+const FwdFilteredButton = styled.button.withConfig({
+  shouldForwardProp: prop => prop !== 'data-tracking',
+})<{ 'data-tracking'?: string }>`
+  ${fwdButtonStyles}
 `;

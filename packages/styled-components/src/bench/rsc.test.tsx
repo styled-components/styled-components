@@ -8,7 +8,7 @@
  * and keyframe handling.
  */
 
-// Mock React.cache — scoped per render via manual clear
+// Mock React.cache ; scoped per render via manual clear
 const mockCacheStore = new Map<Function, any>();
 
 jest.mock('react', () => {
@@ -22,10 +22,7 @@ jest.mock('react', () => {
   };
 });
 
-jest.mock('../constants', () => ({
-  ...jest.requireActual('../constants'),
-  IS_RSC: true,
-}));
+jest.mock('../utils/isRsc', () => ({ IS_RSC: true }));
 
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';

@@ -13,6 +13,7 @@ const sections = [
       { href: '/rsc', label: 'RSC' },
       { href: '/client-example', label: 'Client Components' },
       { href: '/global-style-test', label: 'Global Styles' },
+      { href: '/container-queries', label: 'Container Queries' },
     ],
   },
   {
@@ -63,7 +64,7 @@ export function Sidebar() {
 const Nav = styled.nav`
   width: 180px;
   flex-shrink: 0;
-  border-right: 1px solid ${theme.colors.border};
+  border-right: 1px solid color-mix(in srgb, ${theme.colors.border} 20%, ${theme.colors.background});
   padding: ${theme.spacing.medium};
   display: flex;
   flex-direction: column;

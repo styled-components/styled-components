@@ -1,10 +1,21 @@
 /**
- * Integrated stress benchmarks for styled-components.
+ * Integrated stress benchmarks for styled-components (react-test-renderer).
  *
- * Run: pnpm --filter styled-components bench
+ * Run this file only (with reduced iterations for faster / CI-friendly runs):
+ *   pnpm --filter styled-components bench:web:stress
+ *
+ * Full web bench suite (parser, preprocess, v6 vs v7, responsive, etc.):
+ *   pnpm --filter styled-components bench:web
+ *
+ * Optional env (see bench-utils.ts): SC_BENCH_ITER_SCALE, SC_BENCH_RUNS
  *
  * Runs in NODE_ENV=production (via setup.js) so isStatic fast-paths
  * activate and results reflect real-world performance.
+ *
+ * Sections:
+ *   - creation at scale: cost of styled() / attrs / extension factories
+ *   - render at scale: mount/unmount, siblings, parent re-renders, attrs at 1K–10K children
+ *   - 10K decomposition: isolate createElement vs reconcile vs SC render vs forwardRef baseline
  */
 
 const React = require('react');
@@ -452,5 +463,55 @@ describe('stress benchmarks', () => {
     console.log('  SC total - forwardRef baseline = SC style overhead');
     console.log('  forwardRef baseline - plain divs = React component wrapper cost');
     console.log('  plain divs - createElement = React reconciliation cost');
+  });
+
+  it('runtime hot path (no React)', () => {
+    // Direct calls into webStyle.flush;the SC core hot path that runs
+    // inside React's render. Strips React reconciliation out so the
+    // measurement reflects styled-components' own work. React-inclusive
+    // view lives in 'render at scale' above and packages/benchmarks.
+    const { mainSheet, mainCompiler } = require('../models/StyleSheetManager');
+
+    const Static = styled.div`
+      color: red;
+      padding: 8px;
+    `;
+    const Dynamic = styled.div`
+      color: ${p => p.$color};
+      padding: 8px;
+    `;
+    const staticCtx = {};
+    const stableCtx = { $color: 'red' };
+    const cyclingCtxs = COLORS.slice(0, 30).map(c => ({ $color: c }));
+    const flushOpts = { runs: 9, nameWidth: 50 };
+
+    console.log('\n--- Runtime hot path (webStyle.flush, no React) ---');
+
+    _bench(
+      'static, repeat call',
+      200_000,
+      () => {
+        Static.webStyle.flush(staticCtx, mainSheet, mainCompiler);
+      },
+      flushOpts
+    );
+
+    _bench(
+      'dynamic prop, stable value (interpKeyCache hit)',
+      200_000,
+      () => {
+        Dynamic.webStyle.flush(stableCtx, mainSheet, mainCompiler);
+      },
+      flushOpts
+    );
+
+    _bench(
+      'dynamic prop, cycling 30 values (warm cache)',
+      100_000,
+      i => {
+        Dynamic.webStyle.flush(cyclingCtxs[i % 30], mainSheet, mainCompiler);
+      },
+      flushOpts
+    );
   });
 });
