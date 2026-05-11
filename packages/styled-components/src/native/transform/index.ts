@@ -59,10 +59,13 @@ export function camelize(prop: string): string {
 // full shorthand set).
 import './shorthands.register';
 
-const VERTICAL_ALIGN_TO_ALIGN_CONTENT: Record<string, 'start' | 'center' | 'end' | undefined> = {
-  top: 'start',
+const VERTICAL_ALIGN_TO_ALIGN_CONTENT: Record<
+  string,
+  'flex-start' | 'center' | 'flex-end' | undefined
+> = {
+  top: 'flex-start',
   middle: 'center',
-  bottom: 'end',
+  bottom: 'flex-end',
 };
 
 /**

@@ -136,9 +136,9 @@ describe('passthrough mapping', () => {
     });
 
     it.each([
-      ['top', 'start'],
+      ['top', 'flex-start'],
       ['middle', 'center'],
-      ['bottom', 'end'],
+      ['bottom', 'flex-end'],
     ])('vertical-align: %s also emits align-content: %s', (value, alignContent) => {
       expect(transformDecl('vertical-align', value)).toEqual({
         verticalAlign: value,
