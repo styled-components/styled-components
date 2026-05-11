@@ -267,9 +267,6 @@ importers:
 
   packages/styled-components:
     dependencies:
-      '@emotion/is-prop-valid':
-        specifier: 1.4.0
-        version: 1.4.0
       csstype:
         specifier: 3.2.3
         version: 3.2.3
