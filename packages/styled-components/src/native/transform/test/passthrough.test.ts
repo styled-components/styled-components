@@ -124,6 +124,36 @@ describe('passthrough mapping', () => {
     });
   });
 
+  describe('vertical-align align-content polyfill on rn-web', () => {
+    // CSS Box Alignment L3 §5.3.
+    const g = global as { __NATIVE_WEB__?: boolean };
+    const originalNativeWeb = g.__NATIVE_WEB__;
+    beforeAll(() => {
+      g.__NATIVE_WEB__ = true;
+    });
+    afterAll(() => {
+      g.__NATIVE_WEB__ = originalNativeWeb;
+    });
+
+    it.each([
+      ['top', 'start'],
+      ['middle', 'center'],
+      ['bottom', 'end'],
+    ])('vertical-align: %s also emits align-content: %s', (value, alignContent) => {
+      expect(transformDecl('vertical-align', value)).toEqual({
+        verticalAlign: value,
+        alignContent,
+      });
+    });
+
+    it.each([['baseline'], ['sub'], ['super'], ['text-top'], ['text-bottom'], ['auto']])(
+      'vertical-align: %s passes through unchanged',
+      value => {
+        expect(transformDecl('vertical-align', value)).toEqual({ verticalAlign: value });
+      }
+    );
+  });
+
   describe('helpers', () => {
     it('getPassthroughKeys returns the array form', () => {
       expect(getPassthroughKeys('backgroundImage')).toEqual([
