@@ -1,4 +1,5 @@
-import { Dict } from '../types';
+import type { Dict } from '../types';
+import { warnOnce } from './warnOnce';
 
 export const LIMIT = 200;
 
@@ -10,20 +11,20 @@ export default (displayName: string, componentId: string) => {
     if (!warningSeen) {
       generatedClasses[className] = true;
       if (Object.keys(generatedClasses).length >= LIMIT) {
-        // Unable to find latestRule in test environment.
-
         const parsedIdString = componentId ? ` with the id of "${componentId}"` : '';
+        warnOnce(
+          'too-many-classes',
+          `over ${LIMIT} classes were generated for component ${displayName}${parsedIdString}.
+Consider using the attrs method, together with a style object for frequently changed styles.
+Example:
+  const Component = styled.div.attrs(props => ({
+    style: {
+      background: props.background,
+    },
+  }))\`width: 100%;\`
 
-        console.warn(
-          `Over ${LIMIT} classes were generated for component ${displayName}${parsedIdString}.\n` +
-            'Consider using the attrs method, together with a style object for frequently changed styles.\n' +
-            'Example:\n' +
-            '  const Component = styled.div.attrs(props => ({\n' +
-            '    style: {\n' +
-            '      background: props.background,\n' +
-            '    },\n' +
-            '  }))`width: 100%;`\n\n' +
-            '  <Component />'
+  <Component />`,
+          componentId
         );
         warningSeen = true;
         generatedClasses = {};
