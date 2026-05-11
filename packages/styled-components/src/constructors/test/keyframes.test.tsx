@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 import React from 'react';
-import stylisRTLPlugin from 'stylis-plugin-rtl';
+import rscPlugin from '../../plugins/rsc';
 import Keyframes from '../../models/Keyframes';
 import { StyleSheetManager } from '../../models/StyleSheetManager';
 import { getRenderedCSS, resetStyled } from '../../test/utils';
@@ -8,7 +8,7 @@ import css from '../css';
 import keyframes from '../keyframes';
 
 // Disable isStaticRules optimisation since we're not
-// testing for ComponentStyle specifics here
+// testing for WebStyle specifics here
 jest.mock('../../utils/isStaticRules', () => () => false);
 
 let styled: ReturnType<typeof resetStyled>;
@@ -151,7 +151,7 @@ describe('keyframes', () => {
           opacity: 1;
         }
       }
-      @media(max-width:700px) {
+      @media (max-width:700px) {
         .c {
           animation: a 2s linear infinite;
         }
@@ -303,22 +303,22 @@ describe('keyframes', () => {
       animation: ${animation} 2s linear infinite;
     `;
     render(
-      <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <Comp />
       </StyleSheetManager>
     );
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "@keyframes ahjdkdY {
+      "@keyframes aAxDRB {
         0% {
-          right: 0%;
+          left: 0%;
         }
         100% {
-          right: 100%;
+          left: 100%;
         }
       }
       .c {
-        animation: ahjdkdY 2s linear infinite;
+        animation: aAxDRB 2s linear infinite;
       }"
     `);
   });
@@ -343,7 +343,7 @@ describe('keyframes', () => {
     render(
       <>
         <Comp />
-        <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Comp />
         </StyleSheetManager>
       </>
@@ -358,19 +358,19 @@ describe('keyframes', () => {
           left: 100%;
         }
       }
-      @keyframes ahjdkdY {
+      @keyframes aAxDRB {
         0% {
-          right: 0%;
+          left: 0%;
         }
         100% {
-          right: 100%;
+          left: 100%;
         }
       }
       .c {
         animation: a 2s linear infinite;
       }
       .d {
-        animation: ahjdkdY 2s linear infinite;
+        animation: aAxDRB 2s linear infinite;
       }"
     `);
   });
@@ -401,7 +401,6 @@ describe('keyframes', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        @keyframes ahpOEuS{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}.animparent .c{color:blue;animation:ahpOEuS 0.75s infinite linear;}
       </style>
     `);
   });

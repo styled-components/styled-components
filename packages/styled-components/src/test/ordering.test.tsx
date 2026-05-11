@@ -74,7 +74,7 @@ describe('CSS injection ordering', () => {
         color: blue;
       `;
 
-      // Render in reverse order — CSS should still follow definition order
+      // Render in reverse order;CSS should still follow definition order
       render(
         <>
           <Comp />
@@ -212,7 +212,7 @@ describe('CSS injection ordering', () => {
         }"
       `);
 
-      // Unmount Second — its CSS rules remain in the sheet
+      // Unmount Second;its CSS rules remain in the sheet
       rerender(<App showSecond={false} />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".a {
@@ -226,7 +226,7 @@ describe('CSS injection ordering', () => {
         }"
       `);
 
-      // Remount Second — order is preserved since rules never left
+      // Remount Second;order is preserved since rules never left
       rerender(<App showSecond={true} />);
       const css = getRenderedCSS();
       expect(posIn(css, 'color: red')).toBeLessThan(posIn(css, 'color: blue'));
@@ -251,12 +251,12 @@ describe('CSS injection ordering', () => {
         );
       }
 
-      // First mount — shared group was pre-registered → appears before Comp
+      // First mount;shared group was pre-registered → appears before Comp
       const { rerender } = render(<App showGlobal={true} />);
       let css = getRenderedCSS();
       expect(posIn(css, 'background: coral')).toBeLessThan(posIn(css, 'color: navy'));
 
-      // Unmount global style — its CSS is removed
+      // Unmount global style;its CSS is removed
       rerender(<App showGlobal={false} />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".a {
@@ -264,7 +264,7 @@ describe('CSS injection ordering', () => {
         }"
       `);
 
-      // Remount — new instance inserts into same shared group → still before Comp
+      // Remount;new instance inserts into same shared group → still before Comp
       rerender(<App showGlobal={true} />);
       css = getRenderedCSS();
       expect(css).toMatchInlineSnapshot(`
@@ -300,7 +300,7 @@ describe('CSS injection ordering', () => {
       // Base defined first → lower group → appears first
       expect(posIn(css, 'color: red')).toBeLessThan(posIn(css, 'color: blue'));
 
-      // Unmount and remount Base — styled component rules persist, order preserved
+      // Unmount and remount Base;styled component rules persist, order preserved
       rerender(<App showBase={false} />);
       rerender(<App showBase={true} />);
 
@@ -389,7 +389,7 @@ describe('CSS injection ordering', () => {
         </StyleSheetManager>
       );
 
-      const source = target.innerHTML;
+      const source = getCSS(target);
       const redPos = source.indexOf('color:red');
       const bluePos = source.indexOf('color:blue');
       expect(redPos).toBeGreaterThanOrEqual(0);
@@ -498,7 +498,7 @@ describe('CSS injection ordering', () => {
       // Both instances (shared group, defined before Comp) before component
       expect(posIn(css, 'background: red')).toBeLessThan(posIn(css, 'color: navy'));
 
-      // Remove second instance — first's styles must survive in correct position
+      // Remove second instance;first's styles must survive in correct position
       rerender(<App showSecond={false} />);
       css = getRenderedCSS();
       expect(css).toMatchInlineSnapshot(`
@@ -695,7 +695,7 @@ describe('CSS injection ordering', () => {
         let css = getRenderedCSS();
         expect(posIn(css, 'font-size: 16px')).toBeLessThan(posIn(css, 'color: blue'));
 
-        // Now add GlobalB — definition order is GlobalA, Comp, GlobalB
+        // Now add GlobalB;definition order is GlobalA, Comp, GlobalB
         rerender(<App showB={true} />);
         css = getRenderedCSS();
         expect(posIn(css, 'font-size: 16px')).toBeLessThan(posIn(css, 'color: blue'));
@@ -918,7 +918,7 @@ describe('CSS injection ordering', () => {
           }"
         `);
 
-        // Remount a new instance (key=3) — should appear in the shared group, before Comp
+        // Remount a new instance (key=3);should appear in the shared group, before Comp
         rerender(<App keys={[0, 2, 3]} />);
         const css = getRenderedCSS();
         // All global instances should be before the component
@@ -1069,7 +1069,7 @@ describe('CSS injection ordering', () => {
           }"
         `);
 
-        // Now mount global style — definition order: keyframes→global→component
+        // Now mount global style;definition order: keyframes→global→component
         rerender(<App showGlobal={true} />);
         const css = getRenderedCSS();
         expect(posIn(css, '@keyframes')).toBeLessThan(posIn(css, 'margin: 0'));

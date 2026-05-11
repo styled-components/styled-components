@@ -5,11 +5,22 @@
 import { resetStyled } from './utils';
 
 import React from 'react';
-import { renderToNodeStream, renderToPipeableStream, renderToString } from 'react-dom/server';
+import { renderToPipeableStream, renderToString } from 'react-dom/server';
+// `renderToNodeStream` was removed in React 19. SC still supports its SSR
+// pipeline via `renderToPipeableStream`; the legacy tests below are gated on
+// whether the function is present, so they silently skip in R19 test runs.
+const renderToNodeStream: typeof renderToPipeableStream | undefined = (
+  require('react-dom/server') as any
+).renderToNodeStream;
 import stylisRTLPlugin from 'stylis-plugin-rtl';
+import { ThemeProvider } from '../base';
+import css from '../constructors/css';
 import createGlobalStyle from '../constructors/createGlobalStyle';
+import keyframes from '../constructors/keyframes';
 import ServerStyleSheet from '../models/ServerStyleSheet';
-import { StyleSheetManager } from '../models/StyleSheetManager';
+import { StyleSheetManager, mainCompiler } from '../models/StyleSheetManager';
+import WebGlobalStyle from '../models/WebGlobalStyle';
+import StyleSheet from '../sheet';
 
 jest.mock('../utils/nonce', () => {
   const mock = jest.fn(() => null);
@@ -18,17 +29,16 @@ jest.mock('../utils/nonce', () => {
 
 let styled: ReturnType<typeof resetStyled>;
 
-// Test helper to run streaming tests with both stream types
-const streamingTestCases = [
-  {
-    name: 'renderToNodeStream (legacy)',
-    renderFn: renderToNodeStream,
-  },
-  {
-    name: 'renderToPipeableStream',
-    renderFn: renderToPipeableStream,
-  },
-] as const;
+// Test helper to run streaming tests with both stream types (legacy
+// renderToNodeStream was removed in React 19 and is skipped when absent).
+const streamingTestCases = (
+  [
+    renderToNodeStream
+      ? { name: 'renderToNodeStream (legacy)', renderFn: renderToNodeStream }
+      : null,
+    { name: 'renderToPipeableStream', renderFn: renderToPipeableStream },
+  ] as const
+).filter(Boolean) as { name: string; renderFn: typeof renderToPipeableStream }[];
 
 /**
  * Helper function to create parameterized streaming tests
@@ -109,7 +119,7 @@ describe('ssr', () => {
              data-styled-version="JEST_MOCK_VERSION"
       >
         body{background:papayawhip;}/*!sc*/
-      data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
+      data-styled.g1[id="sc-global-a"]{content:"sc-global-a,"}/*!sc*/
       .c{color:red;}/*!sc*/
       data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
       </style>
@@ -145,24 +155,29 @@ describe('ssr', () => {
              data-styled-version="JEST_MOCK_VERSION"
       >
         body{background:papayawhip;}/*!sc*/
-      data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
+      data-styled.g1[id="sc-global-a"]{content:"sc-global-a,"}/*!sc*/
       </style>
     `);
 
     const cssElements = sheet.getStyleElement();
     expect(cssElements).toMatchInlineSnapshot(`
       [
-        <style
-          dangerouslySetInnerHTML={
-            {
+        {
+          "$$typeof": Symbol(react.transitional.element),
+          "_owner": null,
+          "_store": {},
+          "key": "sc-0-0",
+          "props": {
+            "dangerouslySetInnerHTML": {
               "__html": "body{background:papayawhip;}/*!sc*/
-      data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
+      data-styled.g1[id="sc-global-a"]{content:"sc-global-a,"}/*!sc*/
       ",
-            }
-          }
-          data-styled=""
-          data-styled-version="JEST_MOCK_VERSION"
-        />,
+            },
+            "data-styled": "",
+            "data-styled-version": "JEST_MOCK_VERSION",
+          },
+          "type": "style",
+        },
       ]
     `);
   });
@@ -235,7 +250,7 @@ describe('ssr', () => {
              data-styled-version="JEST_MOCK_VERSION"
       >
         body{background:papayawhip;}/*!sc*/
-      data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
+      data-styled.g1[id="sc-global-a"]{content:"sc-global-a,"}/*!sc*/
       .c{color:red;}/*!sc*/
       data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
       </style>
@@ -308,7 +323,7 @@ describe('ssr', () => {
       {
         "dangerouslySetInnerHTML": {
           "__html": "body{background:papayawhip;}/*!sc*/
-      data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
+      data-styled.g1[id="sc-global-a"]{content:"sc-global-a,"}/*!sc*/
       .c{color:red;}/*!sc*/
       data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
       ",
@@ -729,7 +744,8 @@ describe('ssr', () => {
     }
   );
 
-  it('should work with stylesheet manager and passed stylis plugins', () => {
+  it('emits a dev warning when a legacy stylis plugin is passed (v7)', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const Heading = styled.h1`
       padding-left: 5px;
     `;
@@ -737,7 +753,7 @@ describe('ssr', () => {
     const sheet = new ServerStyleSheet();
     const html = renderToString(
       sheet.collectStyles(
-        <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+        <StyleSheetManager plugins={[stylisRTLPlugin]}>
           <Heading>Hello SSR!</Heading>
         </StyleSheetManager>
       )
@@ -753,10 +769,27 @@ describe('ssr', () => {
       <style data-styled="true"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .b{padding-right:5px;}/*!sc*/
+        .b{padding-left:5px;}/*!sc*/
       data-styled.g1[id="sc-a"]{content:"b,"}/*!sc*/
       </style>
     `);
+    expect(warnSpy.mock.calls[0][0]).toMatchInlineSnapshot(
+      `"[sc] plugin "stylisRTLPlugin" is not supported in v7. Only the first-party plugins from \`styled-components/plugins\` are recognised; legacy stylis plugins (prefixer, RTL, etc.) must migrate to a build-time transform or use the v7 plugin shape."`
+    );
+    warnSpy.mockRestore();
+  });
+
+  it('should use given StyleSheetManager sheet instance', () => {
+    const serverStyles = new ServerStyleSheet();
+    const Title = styled.h1`
+      color: palevioletred;
+    `;
+    renderToString(
+      <StyleSheetManager sheet={serverStyles.instance}>
+        <Title />
+      </StyleSheetManager>
+    );
+    expect(serverStyles.getStyleTags().includes(`palevioletred`)).toEqual(true);
   });
 
   describe('dynamic creation warnings', () => {
@@ -919,5 +952,372 @@ describe('ssr', () => {
       `);
       expect(warn).not.toHaveBeenCalledWith(expect.stringMatching(/has been created dynamically/i));
     });
+  });
+
+  describe('real-world SSR patterns', () => {
+    it('should render extended styled components with correct CSS', () => {
+      const Base = styled.div`
+        display: flex;
+        color: blue;
+      `;
+      const Extended = styled(Base)`
+        color: red;
+        font-weight: bold;
+      `;
+      const sheet = new ServerStyleSheet();
+      renderToString(sheet.collectStyles(<Extended />));
+      const css = sheet.getStyleTags();
+      expect(css).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .c{display:flex;color:blue;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"c,"}/*!sc*/
+        .d{color:red;font-weight:bold;}/*!sc*/
+        data-styled.g2[id="sc-b"]{content:"d,"}/*!sc*/
+        </style>
+      `);
+    });
+
+    it('should render keyframes in SSR', () => {
+      const fadeIn = keyframes`
+        from { opacity: 0; }
+        to { opacity: 1; }
+      `;
+      const Comp = styled.div`
+        animation: ${fadeIn} 0.3s ease-in;
+      `;
+      const sheet = new ServerStyleSheet();
+      renderToString(sheet.collectStyles(<Comp />));
+      const tags = sheet.getStyleTags();
+      expect(tags).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          @keyframes a{from{opacity:0;}to{opacity:1;}}/*!sc*/
+        data-styled.g1[id="sc-keyframes-a"]{content:"a,"}/*!sc*/
+        .c{animation:a 0.3s ease-in;}/*!sc*/
+        data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
+        </style>
+      `);
+    });
+
+    it('should render attrs correctly in SSR', () => {
+      const Input = styled.input.attrs({ type: 'email', placeholder: 'Enter email' })`
+        border: 1px solid gray;
+        padding: 8px;
+      `;
+      const sheet = new ServerStyleSheet();
+      const html = renderToString(sheet.collectStyles(<Input />));
+      const tags = sheet.getStyleTags();
+      expect(tags).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .b{border:1px solid gray;padding:8px;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"b,"}/*!sc*/
+        </style>
+      `);
+      expect(html).toContain('type="email"');
+      expect(html).toContain('placeholder="Enter email"');
+    });
+
+    it('should render themed components in SSR', () => {
+      const Heading = styled.h1`
+        color: ${p => p.theme.color};
+        font-size: ${p => p.theme.fontSize};
+      `;
+      const sheet = new ServerStyleSheet();
+      renderToString(
+        sheet.collectStyles(
+          <ThemeProvider theme={{ color: 'navy', fontSize: '2rem' }}>
+            <Heading>Hello</Heading>
+          </ThemeProvider>
+        )
+      );
+      const tags = sheet.getStyleTags();
+      expect(tags).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .b{color:navy;font-size:2rem;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"b,"}/*!sc*/
+        </style>
+      `);
+    });
+
+    it('should render component selectors in SSR', () => {
+      const Icon = styled.span`
+        font-size: 20px;
+      `;
+      const Button = styled.button`
+        ${Icon} {
+          margin-right: 8px;
+        }
+      `;
+      const sheet = new ServerStyleSheet();
+      renderToString(
+        sheet.collectStyles(
+          <Button>
+            <Icon />
+            Click
+          </Button>
+        )
+      );
+      const tags = sheet.getStyleTags();
+      expect(tags).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .d{font-size:20px;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"d,"}/*!sc*/
+        .c .sc-a{margin-right:8px;}/*!sc*/
+        data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
+        </style>
+      `);
+    });
+
+    it('should render deep inheritance chain in SSR', () => {
+      const L1 = styled.div`
+        display: flex;
+      `;
+      const L2 = styled(L1)`
+        color: blue;
+      `;
+      const L3 = styled(L2)`
+        font-size: 14px;
+      `;
+      const sheet = new ServerStyleSheet();
+      renderToString(sheet.collectStyles(<L3 />));
+      const tags = sheet.getStyleTags();
+      expect(tags).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .d{display:flex;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"d,"}/*!sc*/
+        .e{color:blue;}/*!sc*/
+        data-styled.g2[id="sc-b"]{content:"e,"}/*!sc*/
+        .f{font-size:14px;}/*!sc*/
+        data-styled.g3[id="sc-c"]{content:"f,"}/*!sc*/
+        </style>
+      `);
+    });
+
+    it('should render GlobalStyle with ThemeProvider in SSR', () => {
+      const GlobalStyle = createGlobalStyle`
+        body {
+          background: ${p => p.theme.bg};
+          color: ${p => p.theme.fg};
+        }
+      `;
+      const sheet = new ServerStyleSheet();
+      renderToString(
+        sheet.collectStyles(
+          <ThemeProvider theme={{ bg: '#111', fg: '#eee' }}>
+            <GlobalStyle />
+          </ThemeProvider>
+        )
+      );
+      const tags = sheet.getStyleTags();
+      expect(tags).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          body{background:#111;color:#eee;}/*!sc*/
+        data-styled.g1[id="sc-global-a"]{content:"sc-global-a_R_0_,"}/*!sc*/
+        </style>
+      `);
+    });
+
+    it('should render dynamic attrs with theme in SSR', () => {
+      const Comp = styled.div.attrs<{ $size?: 'sm' | 'lg' }>(p => ({
+        'data-size': p.$size || 'sm',
+      }))`
+        padding: ${p => (p.$size === 'lg' ? '16px' : '8px')};
+      `;
+      const sheet = new ServerStyleSheet();
+      const html = renderToString(sheet.collectStyles(<Comp $size="lg" />));
+      const tags = sheet.getStyleTags();
+      expect(tags).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .b{padding:16px;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"b,"}/*!sc*/
+        </style>
+      `);
+      expect(html).toContain('data-size="lg"');
+    });
+
+    it('should render multiple components with shared keyframes in SSR', () => {
+      const pulse = keyframes`
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+      `;
+      const A = styled.div`
+        animation: ${pulse} 2s infinite;
+      `;
+      const B = styled.span`
+        animation: ${pulse} 1s infinite;
+      `;
+      const sheet = new ServerStyleSheet();
+      renderToString(
+        sheet.collectStyles(
+          <>
+            <A />
+            <B />
+          </>
+        )
+      );
+      const tags = sheet.getStyleTags();
+      expect(tags).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          @keyframes a{0%{transform:scale(1);}50%{transform:scale(1.05);}100%{transform:scale(1);}}/*!sc*/
+        data-styled.g1[id="sc-keyframes-a"]{content:"a,"}/*!sc*/
+        .d{animation:a 2s infinite;}/*!sc*/
+        data-styled.g2[id="sc-b"]{content:"d,"}/*!sc*/
+        .e{animation:a 1s infinite;}/*!sc*/
+        data-styled.g3[id="sc-c"]{content:"e,"}/*!sc*/
+        </style>
+      `);
+    });
+
+    it('should handle extended component with attrs and theme in SSR', () => {
+      const Base = styled.button.attrs({ type: 'button' })`
+        display: inline-flex;
+        border: none;
+      `;
+      const Themed = styled(Base)`
+        background: ${p => p.theme.primary};
+        color: white;
+      `;
+      const sheet = new ServerStyleSheet();
+      const html = renderToString(
+        sheet.collectStyles(
+          <ThemeProvider theme={{ primary: 'dodgerblue' }}>
+            <Themed>Click</Themed>
+          </ThemeProvider>
+        )
+      );
+      const tags = sheet.getStyleTags();
+      expect(tags).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .c{display:inline-flex;border:none;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"c,"}/*!sc*/
+        .d{background:dodgerblue;color:white;}/*!sc*/
+        data-styled.g2[id="sc-b"]{content:"d,"}/*!sc*/
+        </style>
+      `);
+      expect(html).toContain('type="button"');
+    });
+  });
+
+  it('should not emit useLayoutEffect warning during SSR', () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const sheet = new ServerStyleSheet();
+    const Component = createGlobalStyle`body { background: red; }`;
+    renderToString(sheet.collectStyles(<Component />));
+
+    const useLayoutEffectWarning = consoleErrorSpy.mock.calls.find(call =>
+      call.some(arg => typeof arg === 'string' && arg.includes('useLayoutEffect'))
+    );
+    expect(useLayoutEffectWarning).toBeUndefined();
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  describe('XSS hardening on SSR emit', () => {
+    it('escapes `</style>` substrings in interpolated values so the host `<style>` cannot be terminated', () => {
+      const Comp = styled.div<{ $bg: string }>`
+        color: ${p => p.$bg};
+      `;
+      const sheet = new ServerStyleSheet();
+      renderToString(sheet.collectStyles(<Comp $bg={'</style>'} />));
+
+      const tags = sheet.getStyleTags();
+      // The CSS body must not contain a literal `</style` other than the
+      // closing tag we control at the very end.
+      const lastClose = tags.lastIndexOf('</style>');
+      expect(lastClose).toBeGreaterThan(0);
+      expect(tags.slice(0, lastClose).toLowerCase()).not.toContain('</style');
+      // The original payload's `<` was rewritten to the CSS hex escape `\3C`.
+      expect(tags).toContain('\\3C/style');
+    });
+
+    it('escapes `</style>` from createGlobalStyle interpolations', () => {
+      const Global = createGlobalStyle<{ $bg: string }>`
+        body { background: ${p => p.$bg}; }
+      `;
+      const sheet = new ServerStyleSheet();
+      renderToString(sheet.collectStyles(<Global $bg={'</style>'} />));
+
+      const tags = sheet.getStyleTags();
+      const lastClose = tags.lastIndexOf('</style>');
+      expect(tags.slice(0, lastClose).toLowerCase()).not.toContain('</style');
+    });
+
+    it('HTML-escapes the nonce attribute so a hostile value cannot break out of the `<style ...>` tag', () => {
+      const sheet = new ServerStyleSheet({
+        nonce: '"><script>alert("nonce-pwn")</script>',
+      });
+      const Comp = styled.div`
+        color: red;
+      `;
+      renderToString(sheet.collectStyles(<Comp />));
+
+      const tags = sheet.getStyleTags();
+      // The injected `"` must be HTML-escaped so the `nonce` attribute
+      // closes correctly. We don't need to escape `>` to keep the tag intact
+      // (per HTML5 §13.2.5.32 the parser enters tag-state on `<` not `>`),
+      // but the literal `<script` must be escaped to `&lt;script` so no
+      // markup leaks past the attribute.
+      expect(tags).toContain('nonce="&quot;');
+      expect(tags).not.toMatch(/<script/);
+    });
+
+    it('passes a benign nonce through unchanged', () => {
+      const sheet = new ServerStyleSheet({ nonce: 'abcDEF123/+=' });
+      const Comp = styled.div`
+        color: red;
+      `;
+      renderToString(sheet.collectStyles(<Comp />));
+
+      expect(sheet.getStyleTags()).toContain('nonce="abcDEF123/+="');
+    });
+  });
+
+  it('preserves dynamic global styles when same instance renders after clearTag', () => {
+    const rules = css`
+      body {
+        color: ${() => 'red'};
+      }
+    `;
+    const gs = new WebGlobalStyle(rules, 'sc-global-clearTag-test');
+    const sheet = new StyleSheet({ isServer: true });
+    const executionContext = { theme: {} } as any;
+
+    gs.renderStyles('1', executionContext, sheet, mainCompiler);
+    expect(gs.instanceRules.size).toBe(1);
+    expect(sheet.toString()).toMatchInlineSnapshot(`
+      "body{color:red;}/*!sc*/
+      data-styled.g1[id="sc-global-clearTag-test"]{content:"sc-global-clearTag-test1,"}/*!sc*/
+      "
+    `);
+
+    sheet.clearTag();
+
+    gs.renderStyles('1', executionContext, sheet, mainCompiler);
+    expect(sheet.toString()).toMatchInlineSnapshot(`
+      "body{color:red;}/*!sc*/
+      data-styled.g1[id="sc-global-clearTag-test"]{content:"sc-global-clearTag-test1,"}/*!sc*/
+      "
+    `);
   });
 });
