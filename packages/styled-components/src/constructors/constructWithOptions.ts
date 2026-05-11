@@ -15,7 +15,7 @@ import {
 } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
 import styledError from '../utils/error';
-import css from './css';
+import { cssWithInterpolations } from './css';
 
 type AttrsResult<T extends Attrs<any>> = T extends (...args: any) => infer P
   ? P extends object
@@ -109,7 +109,10 @@ export default function constructWithOptions<
     throw styledError(1, tag);
   }
 
-  /* This is callable directly as a template function */
+  /* This is callable directly as a template function. We forward the
+   * rest-param array straight to `cssWithInterpolations` rather than
+   * spreading into `css(...)` and re-collecting, which skips one array
+   * allocation + one spread iteration per styled.div`...` call. */
   const templateFunction = <Props extends object = BaseObject, Statics extends object = BaseObject>(
     initialStyles: Styles<Substitute<OuterProps, Props>>,
     ...interpolations: Interpolation<Substitute<OuterProps, Props>>[]
@@ -117,7 +120,7 @@ export default function constructWithOptions<
     componentConstructor<Substitute<OuterProps, Props>, Statics>(
       tag,
       options as StyledOptions<R, Substitute<OuterProps, Props>>,
-      css<Substitute<OuterProps, Props>>(initialStyles, ...interpolations)
+      cssWithInterpolations<Substitute<OuterProps, Props>>(initialStyles, interpolations)
     );
 
   /**

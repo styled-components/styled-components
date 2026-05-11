@@ -26,10 +26,11 @@ const styled = baseStyled as typeof baseStyled & {
 };
 
 // Shorthands for all valid HTML Elements.
-// The type assertion avoids 120 Styled<> instantiations during type checking —
+// The type assertion avoids 120 Styled<> instantiations during type checking;
 // the correct types are declared on the `styled` const above via the mapped type.
+const styledShorthands = styled as Record<SupportedHTMLElements, ReturnType<typeof baseStyled>>;
 domElements.forEach(domElement => {
-  (styled as any)[domElement] = baseStyled(domElement);
+  styledShorthands[domElement] = baseStyled(domElement);
 });
 
 export default styled;

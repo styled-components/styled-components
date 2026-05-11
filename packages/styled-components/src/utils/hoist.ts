@@ -1,5 +1,5 @@
 import React from 'react';
-import { AnyComponent } from '../types';
+import type { AnyComponent } from '../types';
 
 // copied from react-is
 const REACT_MEMO_TYPE = Symbol.for('react.memo');
@@ -26,6 +26,12 @@ const KNOWN_STATICS = {
   callee: true,
   arguments: true,
   arity: true,
+  // React identity markers; hoisting from an RSC reference target makes
+  // the wrapper look like the reference and React skips its body (#5672).
+  $$typeof: true,
+  $$id: true,
+  $$async: true,
+  $$bound: true,
 };
 
 const FORWARD_REF_STATICS = {
@@ -52,25 +58,8 @@ const TYPE_STATICS: Record<symbol, Record<string, boolean>> = {
 
 type OmniComponent = AnyComponent;
 
-// adapted from react-is
-function isMemo(
-  object: OmniComponent | React.MemoExoticComponent<any>
-): object is React.MemoExoticComponent<any> {
-  const $$typeofType = 'type' in object && object.type.$$typeof;
-
-  return $$typeofType === REACT_MEMO_TYPE;
-}
-
 function getStatics(component: OmniComponent) {
-  // React v16.11 and below
-  if (isMemo(component)) {
-    return MEMO_STATICS;
-  }
-
-  // React v16.12 and above
-  return '$$typeof' in component
-    ? TYPE_STATICS[component['$$typeof'] as unknown as symbol]
-    : REACT_STATICS;
+  return '$$typeof' in component ? TYPE_STATICS[component['$$typeof']] : REACT_STATICS;
 }
 
 const defineProperty = Object.defineProperty;
@@ -79,6 +68,7 @@ const getOwnPropertySymbols = Object.getOwnPropertySymbols;
 const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
 const getPrototypeOf = Object.getPrototypeOf;
 const objectPrototype = Object.prototype;
+const functionPrototype = Function.prototype;
 
 type ExcludeList = {
   [key: string]: true;
@@ -103,8 +93,16 @@ export default function hoistNonReactStatics<
   if (typeof sourceComponent !== 'string') {
     // don't hoist over string (html) components
 
+    // React 19 ref-as-prop means styled components are plain functions;
+    // `getPrototypeOf(fn)` returns Function.prototype, which has no statics
+    // worth hoisting (`length`/`name`/`apply`/`bind`/…). Skipping it avoids
+    // an extra pass through KNOWN_STATICS per styled-component creation.
     const inheritedComponent = getPrototypeOf(sourceComponent);
-    if (inheritedComponent && inheritedComponent !== objectPrototype) {
+    if (
+      inheritedComponent &&
+      inheritedComponent !== objectPrototype &&
+      inheritedComponent !== functionPrototype
+    ) {
       hoistNonReactStatics(targetComponent, inheritedComponent, excludelist);
     }
 
@@ -123,11 +121,12 @@ export default function hoistNonReactStatics<
         !(sourceStatics && key in sourceStatics) &&
         !(targetStatics && key in targetStatics)
       ) {
-        const descriptor = getOwnPropertyDescriptor(sourceComponent, key);
+        // Key came from `getOwnPropertyNames` above, so the descriptor exists.
+        const descriptor = getOwnPropertyDescriptor(sourceComponent, key)!;
 
         try {
           // Avoid failures from read-only properties
-          defineProperty(targetComponent, key, descriptor!);
+          defineProperty(targetComponent, key, descriptor);
         } catch (e) {
           /* ignore */
         }

@@ -1,12 +1,13 @@
 import { render } from '@testing-library/react';
 import * as CSS from 'csstype';
 import React from 'react';
+import css from '../constructors/css';
 import ThemeProvider from '../models/ThemeProvider';
 import { AnyComponent, DataAttributes } from '../types';
 import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
-// testing for ComponentStyle specifics here
+// testing for WebStyle specifics here
 jest.mock('../utils/isStaticRules', () => () => false);
 
 let styled: ReturnType<typeof resetStyled>;
@@ -132,18 +133,18 @@ describe('attrs', () => {
     `);
   });
 
-  it('defaultProps are merged into what function attrs receives', () => {
+  it('theme from ThemeProvider is visible to function attrs', () => {
     const Comp = styled.button.attrs<DataAttributes>(props => ({
       'data-color': props.theme!.color,
     }))``;
 
-    Comp.defaultProps = {
-      theme: {
-        color: 'red',
-      },
-    };
-
-    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+    expect(
+      render(
+        <ThemeProvider theme={{ color: 'red' }}>
+          <Comp />
+        </ThemeProvider>
+      ).asFragment()
+    ).toMatchInlineSnapshot(`
       <DocumentFragment>
         <button
           class="sc-a"
@@ -547,10 +548,31 @@ describe('attrs', () => {
     expect(container.querySelector('div')!.hasAttribute('data-removed')).toBe(false);
   });
 
+  it('function-form attrs supports user-overridable defaults', () => {
+    // Replacement for the v6 `defaultProps` pattern where user props could
+    // override built-in defaults. In v7, object-form attrs always win over
+    // props; the function form is the escape hatch that reads props first
+    // and only falls back to the default.
+    const Button = styled('button').attrs<{ variant?: 'primary' | 'danger' }>(p => ({
+      variant: p.variant || 'primary',
+      'data-variant': p.variant || 'primary',
+    }))``;
+
+    const withDefault = render(<Button />);
+    expect(withDefault.container.querySelector('button')!.getAttribute('data-variant')).toBe(
+      'primary'
+    );
+
+    const withOverride = render(<Button variant="danger" />);
+    expect(withOverride.container.querySelector('button')!.getAttribute('data-variant')).toBe(
+      'danger'
+    );
+  });
+
   it('should not mutate the props object passed to attrs callbacks', () => {
     const Comp = styled.div
       .attrs(props => {
-        // Attempt to mutate the received props — this should not affect
+        // Attempt to mutate the received props;this should not affect
         // the internal context or the rendered output.
         (props as any).id = 'mutated';
         (props as any).injected = 'bad';
@@ -591,8 +613,306 @@ describe('attrs', () => {
     // callback, and directly-passed props should still take priority in
     // the final element.
     expect(el.getAttribute('data-test')).toBe('yes');
-    // id comes from attrs callback mutation of context — this documents
+    // id comes from attrs callback mutation of context;this documents
     // current behavior where single-attrs mutations leak
     expect(el.getAttribute('id')).toBe('mutated');
+  });
+
+  describe('attrs + extension composition', () => {
+    it('should compose attrs through a 3-level extension chain', () => {
+      const Base = styled.div.attrs({ 'data-level': '1', role: 'region' })`
+        display: flex;
+      `;
+      const Mid = styled(Base).attrs({ 'data-level': '2', 'aria-label': 'card' })`
+        color: blue;
+      `;
+      const Final = styled(Mid).attrs({ 'data-level': '3' })`
+        font-size: 14px;
+      `;
+      const { container } = render(<Final />);
+      const el = container.firstChild as HTMLElement;
+      expect(el.getAttribute('data-level')).toBe('3');
+      expect(el.getAttribute('role')).toBe('region');
+      expect(el.getAttribute('aria-label')).toBe('card');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".d {
+          display: flex;
+        }
+        .e {
+          color: blue;
+        }
+        .f {
+          font-size: 14px;
+        }"
+      `);
+    });
+
+    it('should support function attrs chained with extension', () => {
+      const Base = styled.div.attrs<{ $size?: 'sm' | 'lg' }>(p => ({
+        'data-size': p.$size || 'sm',
+      }))`
+        display: flex;
+      `;
+      const Extended = styled(Base).attrs<{ $variant?: string }>(p => ({
+        'data-variant': p.$variant || 'default',
+      }))`
+        color: ${p => (p.$variant === 'primary' ? 'blue' : 'gray')};
+      `;
+      const { container } = render(<Extended $size="lg" $variant="primary" />);
+      const el = container.firstChild as HTMLElement;
+      expect(el.getAttribute('data-size')).toBe('lg');
+      expect(el.getAttribute('data-variant')).toBe('primary');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".c {
+          display: flex;
+        }
+        .d {
+          color: blue;
+        }"
+      `);
+    });
+
+    it('should chain .attrs().attrs() on a single component', () => {
+      const Comp = styled.div
+        .attrs({ 'data-first': 'yes' })
+        .attrs({ 'data-second': 'yes' })
+        .attrs<{ $ready?: boolean }>(p => ({
+          'data-ready': String(!!p.$ready),
+        }))`
+        padding: 8px;
+      `;
+      const { container } = render(<Comp $ready />);
+      const el = container.firstChild as HTMLElement;
+      expect(el.getAttribute('data-first')).toBe('yes');
+      expect(el.getAttribute('data-second')).toBe('yes');
+      expect(el.getAttribute('data-ready')).toBe('true');
+    });
+
+    it('should use as prop with attrs that reference props', () => {
+      const Comp = styled.button.attrs<{ $href?: string }>(p => ({
+        ...(p.$href ? { href: p.$href } : {}),
+      }))`
+        color: blue;
+      `;
+      const { container } = render(<Comp as="a" $href="https://example.com" />);
+      const el = container.firstChild as HTMLElement;
+      expect(el.tagName).toBe('A');
+      expect(el.getAttribute('href')).toBe('https://example.com');
+    });
+
+    it('should merge css`` fragment with attrs-driven styles', () => {
+      const highlight = css`
+        background: yellow;
+        color: black;
+      `;
+      const Comp = styled.div.attrs({ 'data-highlighted': 'true' })`
+        ${highlight}
+        padding: 4px 8px;
+      `;
+      const { container } = render(<Comp />);
+      expect((container.firstChild as HTMLElement).getAttribute('data-highlighted')).toBe('true');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".b {
+          background: yellow;
+          color: black;
+          padding: 4px 8px;
+        }"
+      `);
+    });
+  });
+
+  describe('post-compile (arity-2 ast)', () => {
+    it('lifts a static decl into a prop via ast.pop and overrides via inline style', () => {
+      const Comp = styled.div.attrs<{ 'data-tint'?: string }>((_p, ast) => ({
+        'data-tint': ast.pop('color'),
+      }))`
+        color: red;
+        padding: 4px;
+      `;
+      const { container } = render(<Comp />);
+      const el = container.firstChild as HTMLElement;
+      expect(el.getAttribute('data-tint')).toBe('red');
+      // pop emits `unset` inline-style for the popped property; user `style`
+      // keys still win on web.
+      expect(el.style.color).toBe('unset');
+    });
+
+    it('reads without removing via ast.peek', () => {
+      const Comp = styled.div.attrs<{ 'data-tint'?: string }>((_p, ast) => ({
+        'data-tint': ast.peek('color'),
+      }))`
+        color: blue;
+      `;
+      const { container } = render(<Comp />);
+      const el = container.firstChild as HTMLElement;
+      expect(el.getAttribute('data-tint')).toBe('blue');
+      // peek does not emit an inline-style override.
+      expect(el.style.color).toBe('');
+    });
+
+    it('user style prop overrides pop inline-style override', () => {
+      const Comp = styled.div.attrs<{ 'data-tint'?: string }>((_p, ast) => ({
+        'data-tint': ast.pop('color'),
+      }))`
+        color: red;
+      `;
+      const { container } = render(<Comp style={{ color: 'green' }} />);
+      const el = container.firstChild as HTMLElement;
+      expect(el.getAttribute('data-tint')).toBe('red');
+      // User-provided `style` value wins over the pop's `unset`.
+      expect(el.style.color).toBe('green');
+    });
+
+    it('arity-1 attrs continue to flow through the legacy pre-compile path', () => {
+      const Comp = styled.div.attrs<{ 'data-tag'?: string }>(() => ({
+        'data-tag': 'tagged',
+      }))`
+        color: orange;
+      `;
+      const { container } = render(<Comp />);
+      const el = container.firstChild as HTMLElement;
+      expect(el.getAttribute('data-tag')).toBe('tagged');
+      expect(el.style.color).toBe('');
+    });
+
+    it('peek returns undefined for non-existent decls', () => {
+      const Comp = styled.div.attrs<{ 'data-tint'?: string }>((_p, ast) => ({
+        'data-tint': ast.peek('color'),
+      }))`
+        padding: 4px;
+      `;
+      const { container } = render(<Comp />);
+      const el = container.firstChild as HTMLElement;
+      // Decl missing → returns undefined → omitted from rendered attrs.
+      expect(el.getAttribute('data-tint')).toBeNull();
+    });
+
+    it('pop/peek accept a fallback value when the decl is missing', () => {
+      const Comp = styled.div.attrs<{ 'data-a'?: string; 'data-b'?: string }>((_p, ast) => ({
+        'data-a': ast.pop('color', 'fallback-a'),
+        'data-b': ast.peek('color', 'fallback-b'),
+      }))`
+        padding: 4px;
+      `;
+      const { container } = render(<Comp />);
+      const el = container.firstChild as HTMLElement;
+      expect(el.getAttribute('data-a')).toBe('fallback-a');
+      expect(el.getAttribute('data-b')).toBe('fallback-b');
+    });
+
+    it('resolves a templated decl via interpolation', () => {
+      const Comp = styled.div.attrs<{ 'data-tint'?: string }>((_p, ast) => ({
+        'data-tint': ast.pop('color'),
+      }))`
+        color: ${(p: { theme: { c: string } }) => p.theme.c};
+      `;
+      const { container } = render(
+        <ThemeProvider theme={{ c: 'purple' }}>
+          <Comp />
+        </ThemeProvider>
+      );
+      const el = container.firstChild as HTMLElement;
+      expect(el.getAttribute('data-tint')).toBe('purple');
+    });
+
+    it('static decl + static callback: callback is not invoked at render time', () => {
+      const cb = jest.fn((_p: any, ast: any) => ({
+        'data-tint': ast.pop('color'),
+      }));
+      const Comp = styled.div.attrs<{ 'data-tint'?: string }>(cb)`
+        color: red;
+      `;
+      // Construction-time trace called the callback once. Clear, then assert
+      // that subsequent renders do NOT invoke it again;the plan supplies
+      // the output and the popped set without running user code.
+      cb.mockClear();
+      const { rerender, container } = render(<Comp />);
+      rerender(<Comp />);
+      rerender(<Comp />);
+      expect(cb).not.toHaveBeenCalled();
+      expect((container.firstChild as HTMLElement).getAttribute('data-tint')).toBe('red');
+    });
+
+    it('templated decl falls back to per-render invocation', () => {
+      const cb = jest.fn((_p: any, ast: any) => ({
+        'data-tint': ast.pop('color'),
+      }));
+      const Comp = styled.div.attrs<{ 'data-tint'?: string }>(cb)`
+        color: ${(p: { theme: { c: string } }) => p.theme.c};
+      `;
+      cb.mockClear();
+      render(
+        <ThemeProvider theme={{ c: 'purple' }}>
+          <Comp />
+        </ThemeProvider>
+      );
+      // Trace bailed (templated decl); render path invoked the callback.
+      expect(cb).toHaveBeenCalledTimes(1);
+    });
+
+    it('pop with a dotted path resolves a value from the active theme', () => {
+      const Comp = styled.div.attrs<{ 'data-tint'?: string }>((_p, ast) => ({
+        'data-tint': ast.pop('palette.brand'),
+      }))``;
+      const { container } = render(
+        <ThemeProvider theme={{ palette: { brand: '#abc123' } }}>
+          <Comp />
+        </ThemeProvider>
+      );
+      const el = container.firstChild as HTMLElement;
+      expect(el.getAttribute('data-tint')).toBe('#abc123');
+    });
+
+    it('peek with a dotted path also reads from the theme', () => {
+      const Comp = styled.div.attrs<{ 'data-tint'?: string }>((_p, ast) => ({
+        'data-tint': ast.peek('palette.brand'),
+      }))``;
+      const { container } = render(
+        <ThemeProvider theme={{ palette: { brand: '#fed' } }}>
+          <Comp />
+        </ThemeProvider>
+      );
+      expect((container.firstChild as HTMLElement).getAttribute('data-tint')).toBe('#fed');
+    });
+
+    it('a missing theme path returns undefined', () => {
+      const Comp = styled.div.attrs<{ 'data-tint'?: string }>((_p, ast) => ({
+        'data-tint': ast.pop('palette.missing') ?? 'fallback',
+      }))``;
+      const { container } = render(
+        <ThemeProvider theme={{ palette: { brand: '#fed' } }}>
+          <Comp />
+        </ThemeProvider>
+      );
+      expect((container.firstChild as HTMLElement).getAttribute('data-tint')).toBe('fallback');
+    });
+
+    it('theme path with fallback returns the fallback when missing', () => {
+      const Comp = styled.div.attrs<{ 'data-tint'?: string }>((_p, ast) => ({
+        'data-tint': ast.pop('palette.missing', 'baked-fallback'),
+      }))``;
+      const { container } = render(
+        <ThemeProvider theme={{ palette: { brand: '#fed' } }}>
+          <Comp />
+        </ThemeProvider>
+      );
+      expect((container.firstChild as HTMLElement).getAttribute('data-tint')).toBe(
+        'baked-fallback'
+      );
+    });
+
+    it('callback that reads props falls back to per-render invocation', () => {
+      const cb = jest.fn((p: any, ast: any) => ({
+        'data-tint': p.$on ? ast.pop('color') : 'off',
+      }));
+      const Comp = styled.div.attrs<{ $on?: boolean; 'data-tint'?: string }>(cb)`
+        color: red;
+      `;
+      cb.mockClear();
+      const { container } = render(<Comp $on />);
+      // Props read at trace time → bail → callback runs at render.
+      expect(cb).toHaveBeenCalled();
+      expect((container.firstChild as HTMLElement).getAttribute('data-tint')).toBe('red');
+    });
   });
 });

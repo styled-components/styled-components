@@ -1,63 +1,49 @@
 import React from 'react';
-import { IS_RSC } from '../constants';
+import { fifoSet } from './fifoMap';
+import { IS_RSC } from './isRsc';
 
 const invalidHookCallRe = /invalid hook call/i;
-const seen = new Set();
+const SEEN_LIMIT = 200;
+const seen: Map<string, true> = new Map();
 
 export const checkDynamicCreation = (displayName: string, componentId?: string | undefined) => {
-  if (process.env.NODE_ENV !== 'production') {
-    // Skip check in RSC environments where:
-    // 1. Components are always module-level (can't be in render functions)
-    // 2. Hook detection is unreliable due to different module evaluation context
-    if (IS_RSC) {
-      return;
+  // Caller already gates on `process.env.NODE_ENV !== 'production'` so this
+  // function name appears only in dev bundles (verified by the tree-shake test).
+  // RSC: components are module-level by construction and hook-detection is
+  // unreliable across the server-component eval boundary.
+  if (IS_RSC) return;
+
+  const key = componentId ? displayName + '|' + componentId : displayName;
+
+  // React 18+ logs invalid-hook-call to console.error rather than throwing,
+  // so probe by calling a hook here and watch for that error.
+  const originalConsoleError = console.error;
+  try {
+    let didNotCallInvalidHook = true;
+    console.error = (consoleErrorMessage, ...consoleErrorArgs) => {
+      if (invalidHookCallRe.test(consoleErrorMessage)) {
+        didNotCallInvalidHook = false;
+        seen.delete(key);
+      } else {
+        originalConsoleError(consoleErrorMessage, ...consoleErrorArgs);
+      }
+    };
+    if (typeof React.useState === 'function') {
+      React.useState(null);
     }
 
-    const parsedIdString = componentId ? ` with the id of "${componentId}"` : '';
-    const message =
-      `The component ${displayName}${parsedIdString} has been created dynamically.\n` +
-      "You may see this warning because you've called styled inside another component.\n" +
-      'To resolve this only create new StyledComponents outside of any render method and function component.\n' +
-      'See https://styled-components.com/docs/basics#define-styled-components-outside-of-the-render-method for more info.\n';
-
-    // If a hook is called outside of a component:
-    // React 17 and earlier throw an error
-    // React 18 and above use console.error
-
-    const originalConsoleError = console.error;
-    try {
-      let didNotCallInvalidHook = true;
-      console.error = (consoleErrorMessage, ...consoleErrorArgs) => {
-        // The error here is expected, since we're expecting anything that uses `checkDynamicCreation` to
-        // be called outside of a React component.
-        if (invalidHookCallRe.test(consoleErrorMessage)) {
-          didNotCallInvalidHook = false;
-          // This shouldn't happen, but resets `warningSeen` if we had this error happen intermittently
-          seen.delete(message);
-        } else {
-          originalConsoleError(consoleErrorMessage, ...consoleErrorArgs);
-        }
-      };
-      // We purposefully call a hook outside of a component and expect it to throw
-      // If it doesn't, then we're inside another component.
-      // Use useState instead of useRef to avoid importing useRef
-      if (typeof React.useState === 'function') {
-        React.useState(null);
-      }
-
-      if (didNotCallInvalidHook && !seen.has(message)) {
-        console.warn(message);
-        seen.add(message);
-      }
-    } catch (error) {
-      // The error here is expected, since we're expecting anything that uses `checkDynamicCreation` to
-      // be called outside of a React component.
-      if (invalidHookCallRe.test((error as Error).message)) {
-        // This shouldn't happen, but resets `warningSeen` if we had this error happen intermittently
-        seen.delete(message);
-      }
-    } finally {
-      console.error = originalConsoleError;
+    if (didNotCallInvalidHook && !seen.has(key)) {
+      const parsedIdString = componentId ? ` with the id of "${componentId}"` : '';
+      console.warn(
+        `[sc] the component ${displayName}${parsedIdString} has been created dynamically. You may see this warning because you've called styled inside another component. To resolve this only create new StyledComponents outside of any render method and function component. See https://styled-components.com/docs/basics#define-styled-components-outside-of-the-render-method for more info.`
+      );
+      fifoSet(seen, key, true, SEEN_LIMIT);
     }
+  } catch (error) {
+    if (invalidHookCallRe.test((error as Error).message)) {
+      seen.delete(key);
+    }
+  } finally {
+    console.error = originalConsoleError;
   }
 };
