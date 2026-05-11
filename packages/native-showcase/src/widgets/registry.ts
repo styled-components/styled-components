@@ -235,7 +235,7 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     slug: 'text-input-alignment',
     title: 'TextInput vertical alignment',
     summary:
-      'Tall multiline `TextInput` fields with `vertical-align` `top` / `middle` / `bottom`. iOS historically ignores `textAlignVertical` on TextInput; the caret and placeholder should sit at the requested position before any text is typed, and follow the content once the user starts typing.',
+      'Tall multiline `TextInput` fields with `vertical-align` `top` / `middle` / `bottom`. On Android and rn-web the caret and placeholder should sit at the requested position before any text is typed, and follow the content once the user starts typing. iOS has no `textAlignVertical` API for TextInput in RN 0.85 and the declaration has no effect.',
     feature: 'TextInput + textAlignVertical',
     category: 'Typography',
     Widget: TextInputAlignment,
