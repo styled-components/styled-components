@@ -1,17 +1,24 @@
-import { IS_RSC, KEYFRAMES_ID_PREFIX } from '../constants';
+import { KEYFRAMES_ID_PREFIX } from '../constants';
 import StyleSheet from '../sheet';
-import { getGroupForId } from '../sheet/GroupIDAllocator';
-import { Keyframes as KeyframesType, Stringifier } from '../types';
+import { groupForId } from '../sheet/GroupIDAllocator';
+import { Compiler, Keyframes as KeyframesType } from '../types';
 import styledError from '../utils/error';
 import generateAlphabeticName from '../utils/generateAlphabeticName';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import { setToString } from '../utils/setToString';
-import { mainStylis } from './StyleSheetManager';
+import { mainCompiler } from './StyleSheetManager';
 
-/** RSC optimization: caches compiled keyframe CSS per stylis hash. */
-const kfCompiledCache: WeakMap<Keyframes, Map<string, string[]>> | null = IS_RSC
-  ? new WeakMap()
-  : null;
+/**
+ * Pure compile output for a keyframes interpolation. `id` is the
+ * KEYFRAMES_ID_PREFIX-prefixed sheet group ID; `name` is the compiler-resolved
+ * keyframes name (used as both the @keyframes identifier and the dedup key);
+ * `rules` is the compiled CSS ready for `StyleSheet.insertRules`.
+ */
+export interface CompiledKeyframes {
+  id: string;
+  name: string;
+  rules: string[];
+}
 
 export default class Keyframes implements KeyframesType {
   readonly [KEYFRAMES_SYMBOL] = true as const;
@@ -27,43 +34,41 @@ export default class Keyframes implements KeyframesType {
 
     // Eagerly register the group so keyframes defined before components
     // get a lower group ID and appear before them in the stylesheet.
-    // Uses getGroupForId directly (not StyleSheet.registerId) because
-    // GroupIDAllocator is pure JS — safe for native builds.
-    getGroupForId(this.id);
+    // Uses groupForId directly (not StyleSheet.registerId) because
+    // GroupIDAllocator is pure JS; safe for native builds.
+    groupForId(this.id);
 
     setToString(this, () => {
       throw styledError(12, String(this.name));
     });
   }
 
-  inject = (styleSheet: StyleSheet, stylisInstance: Stringifier = mainStylis): void => {
-    const resolvedName = this.getName(stylisInstance);
+  /**
+   * Pure: produce the compiled CSS without touching any sheet. Callers carry
+   * the result through their own generate→inject pipeline so the parser stays
+   * side-effect-free.
+   */
+  compile(compiler: Compiler = mainCompiler): CompiledKeyframes {
+    const name = this.getName(compiler);
+    const rules = compiler.compile(this.rules, name, '@keyframes');
+    return { id: this.id, name, rules };
+  }
 
-    if (!styleSheet.hasNameForId(this.id, resolvedName)) {
-      const cacheKey = stylisInstance.hash || '';
-      const cached = IS_RSC ? kfCompiledCache?.get(this)?.get(cacheKey) : undefined;
-      if (cached) {
-        // RSC cache hit: re-insert cached rules into the tag (needed for
-        // getGroup in the RSC emission path) without re-running stylis.
-        styleSheet.insertRules(this.id, resolvedName, cached);
-      } else {
-        const compiled = stylisInstance(this.rules, resolvedName, '@keyframes');
-        if (IS_RSC && kfCompiledCache) {
-          let map = kfCompiledCache.get(this);
-          if (!map) {
-            map = new Map();
-            kfCompiledCache.set(this, map);
-          }
-          map.set(cacheKey, compiled);
-        }
-        styleSheet.insertRules(this.id, resolvedName, compiled);
-      }
+  getName(compiler: Compiler = mainCompiler): string {
+    return compiler.hash ? this.name + generateAlphabeticName(+compiler.hash >>> 0) : this.name;
+  }
+}
+
+/**
+ * Write a batch of compiled keyframes to the sheet. Idempotent via
+ * `hasNameForId`. Shared by `WebStyle.inject` and `WebGlobalStyle.computeRules`
+ * so both callers route through one bytecode path.
+ */
+export function flushKeyframes(styleSheet: StyleSheet, compiled: CompiledKeyframes[]): void {
+  for (let i = 0; i < compiled.length; i++) {
+    const kf = compiled[i];
+    if (!styleSheet.hasNameForId(kf.id, kf.name)) {
+      styleSheet.insertRules(kf.id, kf.name, kf.rules);
     }
-  };
-
-  getName(stylisInstance: Stringifier = mainStylis): string {
-    return stylisInstance.hash
-      ? this.name + generateAlphabeticName(+stylisInstance.hash >>> 0)
-      : this.name;
   }
 }

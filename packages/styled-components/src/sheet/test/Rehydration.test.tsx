@@ -70,9 +70,9 @@ describe('rehydrateSheet', () => {
     rehydrateSheet(sheet.instance);
 
     // Adds ID to Group mapping to GroupIDAllocator
-    expect(GroupIDAllocator.getIdForGroup(11)).toBe('idA');
-    expect(GroupIDAllocator.getIdForGroup(33)).toBe('empty');
-    expect(GroupIDAllocator.getIdForGroup(22)).toBe('idB');
+    expect(GroupIDAllocator.idForGroup(11)).toBe('idA');
+    expect(GroupIDAllocator.idForGroup(33)).toBe('empty');
+    expect(GroupIDAllocator.idForGroup(22)).toBe('idB');
     // Registers ID + name combinations on the StyleSheet
     expect(sheet.instance.hasNameForId('idA', 'nameA')).toBe(true);
     expect(sheet.instance.hasNameForId('empty', 'empty')).toBe(false);
@@ -98,17 +98,18 @@ describe('rehydrateSheet', () => {
     );
 
     expect(sheet.instance.getTag().tag.length).toBe(3);
-    expect(sheet.getStyleTags()).toBe(
-      `
-<style data-styled=\"true\" data-styled-version=\"JEST_MOCK_VERSION\">.a {}/*!sc*/
-data-styled.g11[id=\"idA\"]{content:\"nameA,\"}/*!sc*/
-.b {}/*!sc*/
-data-styled.g22[id=\"idB\"]{content:\"nameB,\"}/*!sc*/
-.a{color:burgundy;}/*!sc*/
-data-styled.g23[id=\"sc-kqxcKS\"]{content:\"a,\"}/*!sc*/
-</style>
-    `.trim()
-    );
+    expect(sheet.getStyleTags()).toMatchInlineSnapshot(`
+      <style data-styled="true"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .a {}/*!sc*/
+      data-styled.g11[id="idA"]{content:"nameA,"}/*!sc*/
+      .b {}/*!sc*/
+      data-styled.g22[id="idB"]{content:"nameB,"}/*!sc*/
+      .a {color: burgundy;}/*!sc*/
+      data-styled.g23[id="sc-kqxcKS"]{content:"a,"}/*!sc*/
+      </style>
+    `);
   });
 
   it('ignores active style elements', () => {
@@ -123,7 +124,7 @@ data-styled.g23[id=\"sc-kqxcKS\"]{content:\"a,\"}/*!sc*/
     expect(styleHead!.parentElement).toBe(document.head);
     const sheet = new StyleSheet({ isServer: true });
     rehydrateSheet(sheet);
-    expect(GroupIDAllocator.getIdForGroup(11)).toBe(undefined);
+    expect(GroupIDAllocator.idForGroup(11)).toBe(undefined);
     expect(sheet.hasNameForId('idA', 'nameA')).toBe(false);
     expect(sheet.getTag().tag.length).toBe(0);
     expect(styleHead!.parentElement).toBe(document.head);
@@ -170,7 +171,7 @@ data-styled.g23[id=\"sc-kqxcKS\"]{content:\"a,\"}/*!sc*/
       rehydrateSheet(sheet);
 
       // Verify the styles were rehydrated
-      expect(GroupIDAllocator.getIdForGroup(11)).toBe('shadowIdA');
+      expect(GroupIDAllocator.idForGroup(11)).toBe('shadowIdA');
       expect(sheet.hasNameForId('shadowIdA', 'shadowNameA')).toBe(true);
       expect(sheet.getTag().tag.length).toBe(1);
       expect(sheet.getTag().getGroup(11)).toBe('.shadow-a {}/*!sc*/\n');
@@ -203,7 +204,7 @@ data-styled.g23[id=\"sc-kqxcKS\"]{content:\"a,\"}/*!sc*/
       rehydrateSheet(sheet);
 
       // Verify the styles were NOT rehydrated
-      expect(GroupIDAllocator.getIdForGroup(12)).toBe(undefined);
+      expect(GroupIDAllocator.idForGroup(12)).toBe(undefined);
       expect(sheet.hasNameForId('shadowIdB', 'shadowNameB')).toBe(false);
       expect(sheet.getTag().tag.length).toBe(0);
 

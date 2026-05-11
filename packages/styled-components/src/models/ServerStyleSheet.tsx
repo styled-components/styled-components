@@ -3,9 +3,9 @@ import { type PipeableStream } from 'react-dom/server';
 import { SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
 import styledError from '../utils/error';
+import { escapeCssForStyleTag, escapeHtmlAttribute } from '../utils/escapeStyleSink';
 
 declare const __SERVER__: boolean;
-import { joinStringArray } from '../utils/joinStrings';
 import getNonce from '../utils/nonce';
 import { StyleSheetManager } from './StyleSheetManager';
 
@@ -25,13 +25,13 @@ export default class ServerStyleSheet {
     if (!css) return '';
     const nonce = this.instance.options.nonce || getNonce();
     const attrs = [
-      nonce && `nonce="${nonce}"`,
+      nonce && `nonce="${escapeHtmlAttribute(nonce)}"`,
       `${SC_ATTR}="true"`,
       `${SC_ATTR_VERSION}="${SC_VERSION}"`,
     ];
-    const htmlAttr = joinStringArray(attrs.filter(Boolean) as string[], ' ');
+    const htmlAttr = (attrs.filter(Boolean) as string[]).join(' ');
 
-    return `<style ${htmlAttr}>${css}</style>`;
+    return `<style ${htmlAttr}>${escapeCssForStyleTag(css)}</style>`;
   };
 
   collectStyles(children: any): React.JSX.Element {
@@ -58,17 +58,19 @@ export default class ServerStyleSheet {
     const css = this.instance.toString();
     if (!css) return [];
 
-    const props = {
+    const nonce = this.instance.options.nonce || getNonce();
+    const props: {
+      [SC_ATTR]: string;
+      [SC_ATTR_VERSION]: string;
+      dangerouslySetInnerHTML: { __html: string };
+      nonce?: string;
+    } = {
       [SC_ATTR]: '',
       [SC_ATTR_VERSION]: SC_VERSION,
-      dangerouslySetInnerHTML: {
-        __html: css,
-      },
+      dangerouslySetInnerHTML: { __html: escapeCssForStyleTag(css) },
     };
-
-    const nonce = this.instance.options.nonce || getNonce();
     if (nonce) {
-      (props as any).nonce = nonce;
+      props.nonce = nonce;
     }
 
     // v4 returned an array for this fn, so we'll do the same for v5 for backward compat

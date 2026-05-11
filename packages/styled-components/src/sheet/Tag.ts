@@ -4,15 +4,13 @@ import { SheetOptions, Tag } from './types';
 
 declare const __SERVER__: boolean;
 
-/** Create a CSSStyleSheet-like tag depending on the environment */
-export const makeTag = ({ isServer, useCSSOMInjection, target, nonce }: SheetOptions) => {
+/** CSSOM tag for browser builds, virtual rule list for server builds. Tools
+ * needing CSS as text call `extractCSS()`. */
+export const makeTag = ({ isServer, target, nonce }: SheetOptions) => {
   if (__SERVER__ && isServer) {
     return new VirtualTag(target);
-  } else if (useCSSOMInjection) {
-    return new CSSOMTag(target, nonce);
-  } else {
-    return new TextTag(target, nonce);
   }
+  return new CSSOMTag(target, nonce);
 };
 
 export const CSSOMTag = class CSSOMTag implements Tag {
@@ -24,10 +22,7 @@ export const CSSOMTag = class CSSOMTag implements Tag {
 
   constructor(target?: InsertionTarget | undefined, nonce?: string | undefined) {
     this.element = makeStyleTag(target, nonce);
-
-    // Avoid Edge bug where empty style elements don't create sheets
     this.element.appendChild(document.createTextNode(''));
-
     this.sheet = getSheet(this.element);
     this.length = 0;
   }
@@ -49,51 +44,7 @@ export const CSSOMTag = class CSSOMTag implements Tag {
 
   getRule(index: number): string {
     const rule = this.sheet.cssRules[index];
-
-    // Avoid IE11 quirk where cssText is inaccessible on some invalid rules
-    if (rule && rule.cssText) {
-      return rule.cssText;
-    } else {
-      return '';
-    }
-  }
-};
-
-/** A Tag that emulates the CSSStyleSheet API but uses text nodes */
-export const TextTag = class TextTag implements Tag {
-  element: HTMLStyleElement;
-  nodes: NodeListOf<Node>;
-  length: number;
-
-  constructor(target?: InsertionTarget | undefined, nonce?: string | undefined) {
-    this.element = makeStyleTag(target, nonce);
-    this.nodes = this.element.childNodes;
-    this.length = 0;
-  }
-
-  insertRule(index: number, rule: string) {
-    if (index <= this.length && index >= 0) {
-      const node = document.createTextNode(rule);
-      const refNode = this.nodes[index];
-      this.element.insertBefore(node, refNode || null);
-      this.length++;
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  deleteRule(index: number) {
-    this.element.removeChild(this.nodes[index]);
-    this.length--;
-  }
-
-  getRule(index: number) {
-    if (index < this.length) {
-      return this.nodes[index].textContent as string;
-    } else {
-      return '';
-    }
+    return rule && rule.cssText ? rule.cssText : '';
   }
 };
 

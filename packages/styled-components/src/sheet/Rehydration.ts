@@ -1,6 +1,6 @@
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION, SPLITTER } from '../constants';
 import { InsertionTarget } from '../types';
-import { getIdForGroup, setGroupForId } from './GroupIDAllocator';
+import { idForGroup, setGroupForId } from './GroupIDAllocator';
 import { Sheet } from './types';
 
 const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
@@ -49,11 +49,13 @@ export const getRehydrationContainer = (
 
 export const outputSheet = (sheet: Sheet) => {
   const tag = sheet.getTag();
-  const { length } = tag;
+  const { length, groupSizes } = tag;
 
   let css = '';
   for (let group = 0; group < length; group++) {
-    const id = getIdForGroup(group);
+    if (groupSizes[group] === 0) continue;
+
+    const id = idForGroup(group);
     if (id === undefined) continue;
 
     const names = sheet.names.get(id);
@@ -122,10 +124,10 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
 
 export const rehydrateSheet = (sheet: Sheet) => {
   const container = getRehydrationContainer(sheet.options.target);
-  const nodes = container.querySelectorAll(SELECTOR);
+  const nodes = container.querySelectorAll<HTMLStyleElement>(SELECTOR);
 
   for (let i = 0, l = nodes.length; i < l; i++) {
-    const node = nodes[i] as any as HTMLStyleElement;
+    const node = nodes[i];
     if (node && node.getAttribute(SC_ATTR) !== SC_ATTR_ACTIVE) {
       rehydrateSheetFromTag(sheet, node);
 
