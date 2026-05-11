@@ -88,24 +88,32 @@ export default class Benchmark extends React.Component {
       componentProps,
       cycle,
       running: false,
+      _lastGetComponentProps: props.getComponentProps,
     };
     this._startTime = 0;
     this._samples = [];
   }
 
-  componentWillReceiveProps(nextProps) {
-    if (nextProps) {
-      this.setState(state => ({ componentProps: nextProps.getComponentProps(state.cycle) }));
+  // Replaces the deprecated `componentWillReceiveProps` lifecycle. Recomputes
+  // componentProps when the parent passes a new `getComponentProps`.
+  static getDerivedStateFromProps(nextProps, prevState) {
+    if (
+      nextProps.getComponentProps &&
+      nextProps.getComponentProps !== prevState._lastGetComponentProps
+    ) {
+      return {
+        componentProps: nextProps.getComponentProps({ cycle: prevState.cycle }),
+        _lastGetComponentProps: nextProps.getComponentProps,
+      };
     }
+    return null;
   }
 
-  componentWillUpdate(nextProps, nextState) {
-    if (nextState.running && !this.state.running) {
+  componentDidUpdate(_prevProps, prevState) {
+    if (this.state.running && !prevState.running) {
       this._startTime = Timing.now();
     }
-  }
 
-  componentDidUpdate() {
     const { forceLayout, sampleCount, timeout, type } = this.props;
     const { cycle, running } = this.state;
 
@@ -136,6 +144,17 @@ export default class Benchmark extends React.Component {
     if (this._raf) {
       window.cancelAnimationFrame(this._raf);
     }
+  }
+
+  /** Cancel a running benchmark. Emits no `onComplete` — the caller is
+   *  responsible for restoring app state (status, autoQueue, etc). */
+  stop() {
+    if (this._raf) {
+      window.cancelAnimationFrame(this._raf);
+      this._raf = null;
+    }
+    this._samples = [];
+    this.setState(() => ({ running: false, cycle: 0 }));
   }
 
   render() {

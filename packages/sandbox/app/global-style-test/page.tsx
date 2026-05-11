@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import { HintText } from '../components/test-ui';
+import { ClientDedupSection } from './client-dedup-client';
 
 export default function GlobalStyleTestPage() {
   return (
@@ -20,6 +21,12 @@ export default function GlobalStyleTestPage() {
         If broken: the gradient/border disappear when navigating, or the red outline persists after
         toggling off.
       </HintText>
+      <SubHeading>Test: Client-side GlobalStyle dedup</SubHeading>
+      <Text>
+        Three identical <code>&lt;ClientDedupGlobalStyle /&gt;</code> mount in a client subtree.
+        They should collapse to a single <code>&lt;style data-styled-global&gt;</code> tag.
+      </Text>
+      <ClientDedupSection />
     </Card>
   );
 }

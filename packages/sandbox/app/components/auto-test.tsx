@@ -9,7 +9,7 @@ export interface TestCheck {
   /** CSS selector or data-testid to find the element */
   ref: string;
   /** Type of check to perform */
-  type: 'style' | 'style-not' | 'element' | 'attr' | 'exists';
+  type: 'style' | 'style-not' | 'element' | 'attr' | 'attr-absent' | 'count' | 'exists';
   /** CSS property name (for style checks) or attribute name (for attr checks) */
   prop?: string;
   /** Expected value — for style checks, compared case-insensitively; for element checks, compared against tagName */
@@ -32,6 +32,13 @@ function hexToRgb(hex: string): string {
 }
 
 export function runCheck(check: TestCheck): Result {
+  if (check.type === 'count') {
+    const found = document.querySelectorAll(check.ref).length;
+    const expected = Number(check.expected);
+    const pass = found === expected;
+    return { label: check.label, pass, detail: 'found ' + found + ' (expected ' + expected + ')' };
+  }
+
   const el = check.ref.startsWith('[')
     ? document.querySelector(check.ref)
     : document.querySelector('[data-testid="' + check.ref + '"]');
@@ -54,6 +61,15 @@ export function runCheck(check: TestCheck): Result {
     const actual = el.getAttribute(check.prop || '') || '';
     const pass = actual === check.expected;
     return { label: check.label, pass, detail: actual || '(empty)' };
+  }
+
+  if (check.type === 'attr-absent') {
+    const present = el.hasAttribute(check.prop || '');
+    return {
+      label: check.label,
+      pass: !present,
+      detail: present ? 'present: ' + el.getAttribute(check.prop || '') : 'absent',
+    };
   }
 
   // style check (or style-not: pass when value does NOT match)

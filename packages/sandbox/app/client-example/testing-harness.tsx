@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styled, { css, keyframes, useTheme } from 'styled-components';
 import { TestStatus, type TestCheck } from '../components/auto-test';
 import { TestSummary } from '../components/test-summary';
@@ -60,6 +60,54 @@ const test7Checks: TestCheck[] = [
   { ref: 'swatch-success', type: 'exists', label: 'Success swatch renders' },
 ];
 
+const test8Checks: TestCheck[] = [
+  {
+    ref: 'chained-input',
+    type: 'attr',
+    prop: 'data-base',
+    expected: 'yes',
+    label: 'Base attrs() applied',
+  },
+  {
+    ref: 'chained-input',
+    type: 'attr',
+    prop: 'data-labeled',
+    expected: 'yes',
+    label: 'Labeled attrs() applied',
+  },
+  {
+    ref: 'chained-input',
+    type: 'attr',
+    prop: 'data-validated',
+    expected: 'yes',
+    label: 'Validated attrs() applied',
+  },
+  {
+    ref: 'chained-input',
+    type: 'attr',
+    prop: 'aria-invalid',
+    expected: 'true',
+    label: 'aria-invalid reflects $hasError transient',
+  },
+  {
+    ref: 'chained-input',
+    type: 'attr',
+    prop: 'type',
+    expected: 'text',
+    label: 'type=text from base attrs',
+  },
+];
+
+const test9Checks: TestCheck[] = [
+  {
+    ref: 'progress-bar-fixed',
+    type: 'style',
+    prop: 'width',
+    expected: '120px',
+    label: 'CSS-var transient: width resolves from --progress (60% of 200px)',
+  },
+];
+
 const clientSuites = [
   { name: '1. Variants', checks: test1Checks },
   { name: '2. Transient', checks: test2Checks },
@@ -68,6 +116,8 @@ const clientSuites = [
   { name: '5. undefined as', checks: test5Checks },
   { name: '6. css helper', checks: test6Checks },
   { name: '7. Theme', checks: test7Checks },
+  { name: '8. attrs chain', checks: test8Checks },
+  { name: '9. CSS-var transient', checks: test9Checks },
 ];
 
 const VARIANTS = ['default', 'active', 'error'] as const;
@@ -105,6 +155,7 @@ export function ClientTestingHarness() {
   const variant = useCycle(VARIANTS, 1500);
   const color = useCycle(COLORS, 1200);
   const flipCount = useThemeFlip();
+  const cyclingPct = useCycle([25, 75] as const, 1500);
 
   return (
     <Container>
@@ -218,6 +269,56 @@ export function ClientTestingHarness() {
           <Swatch $color="danger" $flip={flipCount} />
           <Swatch $color="success" $flip={flipCount} data-testid="swatch-success" />
         </ThemeSwatches>
+      </Section>
+
+      {/* 8. attrs chaining (function form + transient prop dependency) */}
+      <Section>
+        <SectionTitle>
+          8. attrs chaining <TestStatus checks={test8Checks} />
+        </SectionTitle>
+        <SectionDesc>
+          Three-deep chain: <code>ChainedBase</code> → <code>ChainedLabeled</code> →{' '}
+          <code>ChainedValidated</code>. Each level adds <code>attrs()</code> entries; the deepest
+          uses the function form to read the transient <code>$hasError</code> prop and emit a
+          corresponding <code>aria-invalid</code>. Each attrs layer paints a different side of the
+          input — left=green (base), bottom=blue (labeled), right=orange (validated), top=red
+          (aria-invalid from $hasError).
+        </SectionDesc>
+        <HintText>
+          Visual: a fully four-sided rainbow border on the input means every layer landed. Any
+          missing side = that <code>attrs()</code> didn&apos;t reach the DOM.
+        </HintText>
+        <ChainedValidated $hasError data-testid="chained-input" defaultValue="error state" />
+      </Section>
+
+      {/* 9. CSS custom property driven by transient input */}
+      <Section>
+        <SectionTitle>
+          9. CSS-var-driven transient prop <TestStatus checks={test9Checks} />
+        </SectionTitle>
+        <SectionDesc>
+          The progress bar reads <code>var(--progress)</code> from the element&apos;s inline{' '}
+          <code>style</code>. Updating the var doesn&apos;t allocate a new className, so cycling is
+          cheap. Top bar cycles 25% ↔ 75%; bottom bar is fixed at 60% for assertion (= 120px out of
+          200px track).
+        </SectionDesc>
+        <HintText>
+          If broken: the bottom bar has zero or full width (var didn&apos;t resolve), or the top bar
+          doesn&apos;t move.
+        </HintText>
+        <ProgressColumn>
+          <ProgressLabel>Cycling 25% ↔ 75%:</ProgressLabel>
+          <ProgressTrack>
+            <ProgressBar style={{ '--progress': cyclingPct + '%' } as React.CSSProperties} />
+          </ProgressTrack>
+          <ProgressLabel>Fixed 60% (asserted):</ProgressLabel>
+          <ProgressTrack>
+            <ProgressBar
+              data-testid="progress-bar-fixed"
+              style={{ '--progress': '60%' } as React.CSSProperties}
+            />
+          </ProgressTrack>
+        </ProgressColumn>
       </Section>
     </Container>
   );
@@ -374,4 +475,92 @@ const Swatch = styled.div<{
   &:nth-child(4) {
     transition-delay: 0.15s;
   }
+`;
+
+// ---------------------------------------------------------------------------
+// 8. attrs chaining (function form + transient prop dependency)
+// ---------------------------------------------------------------------------
+
+/**
+ * Each attrs() layer earns its own visible side of the input via attribute
+ * selectors so a missing layer leaves that side gray.
+ *   left  = #16a34a   data-base="yes"          (base)
+ *   bottom= #2563eb   data-labeled="yes"       (labeled)
+ *   right = #d97706   data-validated="yes"     (validated)
+ *   top   = #dc2626   aria-invalid="true"      (function-form attrs reading $hasError)
+ */
+const ChainedBase = styled.input.attrs({
+  type: 'text',
+  'data-base': 'yes',
+})`
+  padding: 10px 14px;
+  border: 2px solid ${p => p.theme.colors.border};
+  border-radius: 6px;
+  font-size: 14px;
+  background: ${p => p.theme.colors.background};
+  color: ${p => p.theme.colors.text};
+  width: 320px;
+  box-sizing: border-box;
+
+  &[data-base='yes'] {
+    border-left: 6px solid #16a34a;
+  }
+`;
+
+const ChainedLabeled = styled(ChainedBase).attrs({
+  autoComplete: 'off',
+  spellCheck: false,
+  'data-labeled': 'yes',
+})`
+  letter-spacing: 0.02em;
+
+  &[data-labeled='yes'] {
+    border-bottom: 6px solid #2563eb;
+  }
+`;
+
+const ChainedValidated = styled(ChainedLabeled).attrs<{ $hasError?: boolean }>(p => ({
+  'aria-invalid': p.$hasError ? 'true' : 'false',
+  'data-validated': 'yes',
+}))`
+  &[data-validated='yes'] {
+    border-right: 6px solid #d97706;
+  }
+
+  &[aria-invalid='true'] {
+    border-top: 6px solid #dc2626;
+  }
+`;
+
+// ---------------------------------------------------------------------------
+// 9. CSS custom property driven by transient input
+// ---------------------------------------------------------------------------
+
+const ProgressColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const ProgressLabel = styled.span`
+  font-size: 12px;
+  color: ${p => p.theme.colors.textMuted};
+`;
+
+const ProgressTrack = styled.div`
+  /* override the BaseStyle border-box reset so 60% of width = 120px exactly */
+  box-sizing: content-box;
+  width: 200px;
+  height: 16px;
+  background: ${p => p.theme.colors.surface};
+  border: 1px solid ${p => p.theme.colors.border};
+  border-radius: 8px;
+  overflow: hidden;
+`;
+
+const ProgressBar = styled.div`
+  height: 100%;
+  width: var(--progress, 0%);
+  background: ${p => p.theme.colors.primary};
+  transition: width 0.6s ease;
 `;
