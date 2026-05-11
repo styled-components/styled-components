@@ -3,6 +3,7 @@ import {
   getUserCallSite,
   resetWarningsForTest,
   warnIfAndroidSkew,
+  warnIfIosVerticalAlign,
   warnIfSentinelLeak,
 } from '../dev';
 
@@ -164,6 +165,67 @@ describe('warnIfAndroidSkew', () => {
     warnIfAndroidSkew('skewY(15deg)');
     warnIfAndroidSkew('skew(5deg)');
     expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('warnIfIosVerticalAlign', () => {
+  const realOS = Platform.OS;
+  let warnSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    resetWarningsForTest();
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+    Object.defineProperty(Platform, 'OS', { value: realOS, configurable: true });
+  });
+
+  function setPlatform(os: 'ios' | 'android' | 'web'): void {
+    Object.defineProperty(Platform, 'OS', { value: os, configurable: true });
+  }
+
+  it('warns when middle is set on iOS', () => {
+    setPlatform('ios');
+    warnIfIosVerticalAlign('middle');
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/`vertical-align: middle` has no effect on iOS/);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/wrap the Text in a View with `justify-content/);
+  });
+
+  it('warns for top and bottom too', () => {
+    setPlatform('ios');
+    warnIfIosVerticalAlign('top');
+    warnIfIosVerticalAlign('bottom');
+    expect(warnSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('does NOT warn for the default `auto` value', () => {
+    setPlatform('ios');
+    warnIfIosVerticalAlign('auto');
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('does NOT warn on Android', () => {
+    setPlatform('android');
+    warnIfIosVerticalAlign('middle');
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('does NOT warn on web', () => {
+    setPlatform('web');
+    warnIfIosVerticalAlign('middle');
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('dedupes per value so each distinct value warns once', () => {
+    setPlatform('ios');
+    warnIfIosVerticalAlign('middle');
+    warnIfIosVerticalAlign('middle');
+    warnIfIosVerticalAlign('bottom');
+    warnIfIosVerticalAlign('bottom');
+    expect(warnSpy).toHaveBeenCalledTimes(2);
   });
 });
 

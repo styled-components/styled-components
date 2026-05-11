@@ -20,6 +20,7 @@ import { ReducedMotionBeacon } from './ReducedMotionBeacon';
 import { SafeAreaInsetsBadge } from './SafeAreaInsetsBadge';
 import { ShadowComposer } from './ShadowComposer';
 import { StandaloneTransforms } from './StandaloneTransforms';
+import { TextDecorationAlignment } from './TextDecorationAlignment';
 import { TextWrapShelf } from './TextWrapShelf';
 import { ThemeOverrides } from './ThemeOverrides';
 import { TransformPlayground } from './TransformPlayground';
@@ -219,6 +220,15 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     feature: 'text-wrap',
     category: 'Typography',
     Widget: TextWrapShelf,
+  },
+  {
+    slug: 'text-decoration-alignment',
+    title: 'Decoration vs vertical alignment',
+    summary:
+      'Tall `<Text>` boxes with `textAlignVertical` `top` / `center` / `bottom`. The magenta underline must track the glyphs vertically — drift on Android exposes a missing gravity offset in the decoration draw.',
+    feature: 'textDecoration + textAlignVertical',
+    category: 'Typography',
+    Widget: TextDecorationAlignment,
   },
   {
     slug: 'safe-area-insets-badge',

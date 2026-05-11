@@ -142,3 +142,31 @@ export function warnIfAndroidSkew(value: unknown): void {
     `\`skewX\` / \`skewY\` are silently dropped on Android (seen in transform: "${value}"). Android's \`View\` has no \`setSkew*\` API; RN's BaseViewManager decomposes the transform matrix and only applies translation, rotation, and scale to the View. Translates and rotates in the same value still apply;only the skew components are lost. Tracked at https://github.com/facebook/react-native/issues/27649.`
   );
 }
+
+/**
+ * Warn once if `vertical-align` is set on iOS. RN's `Text.js` translates
+ * `verticalAlign` to `textAlignVertical` at the JS layer, but iOS Fabric
+ * has no `textAlignVertical` handler (the prop only registers on Android
+ * via `ReactTextViewManager`). So on iOS the declaration looks like it
+ * works but never repositions the glyphs. There is no Text-level
+ * workaround in RN 0.85; wrap the Text in a View and use flex
+ * justification to vertically align the content within a fixed-height
+ * container.
+ *
+ * No-op outside iOS. Callers must wrap in `if (__DEV__)`.
+ */
+export function warnIfIosVerticalAlign(value: string): void {
+  if (value === 'auto') return;
+  let os: string | undefined;
+  try {
+    os = (require('react-native') as { Platform?: { OS?: string } }).Platform?.OS;
+  } catch {
+    return;
+  }
+  if (os !== 'ios') return;
+  warnOnce(
+    'native-vertical-align-ios',
+    `\`vertical-align: ${value}\` has no effect on iOS \`<Text>\` in React Native 0.85 (no platform API; the prop only renders on Android and rn-web). To vertically align text within a fixed-height container on iOS, wrap the Text in a View with \`justify-content: <flex-start | center | flex-end>\`.`,
+    value
+  );
+}

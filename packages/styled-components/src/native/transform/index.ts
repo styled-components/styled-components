@@ -1,7 +1,7 @@
 import { Dict } from '../../types';
 import * as $ from '../../utils/charCodes';
 import hyphenateStyleName from '../../utils/hyphenateStyleName';
-import { warnIfAndroidSkew, warnOnce } from './dev';
+import { warnIfAndroidSkew, warnIfIosVerticalAlign, warnOnce } from './dev';
 import { collapseIdenticalCommas, getPassthroughKeys, isLayeredCommaProp } from './passthrough';
 import { staticColorFunctionToHex } from './polyfills/colorMath';
 import { numericResultToRn, resolveStaticMathFunction } from './polyfills/mathFns';
@@ -78,8 +78,12 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
 
   const passthroughKeys = getPassthroughKeys(camel);
   if (passthroughKeys !== undefined) {
-    if (__DEV__ && passthroughKeys[0] === 'transform') {
-      warnIfAndroidSkew(rawValue);
+    if (__DEV__) {
+      if (passthroughKeys[0] === 'transform') {
+        warnIfAndroidSkew(rawValue);
+      } else if (camel === 'verticalAlign') {
+        warnIfIosVerticalAlign(rawValue);
+      }
     }
     const value = isLayeredCommaProp(camel) ? collapseIdenticalCommas(rawValue) : rawValue;
     if (passthroughKeys.length === 1) {
