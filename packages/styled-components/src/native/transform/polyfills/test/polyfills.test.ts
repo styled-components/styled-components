@@ -1815,7 +1815,7 @@ describe('text-decoration platform skew (Android underline color)', () => {
     });
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy.mock.calls[0][0]).toMatch(/text-decoration-color/);
-    expect(warnSpy.mock.calls[0][0]).toMatch(/iOS-only/);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/only applies on iOS/);
   });
 
   it('does not warn when text-decoration omits the color (default black falls back)', () => {
