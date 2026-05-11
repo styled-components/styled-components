@@ -1,4 +1,4 @@
-import { Dict } from '../types';
+import type { Dict } from '../types';
 import errorMap from './errors';
 
 const ERRORS: Dict<any> = process.env.NODE_ENV !== 'production' ? errorMap : {};

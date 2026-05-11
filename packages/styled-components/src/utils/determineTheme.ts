@@ -1,10 +1,8 @@
-import { DefaultTheme, ExecutionProps } from '../types';
-import { EMPTY_OBJECT } from './empties';
+import type { DefaultTheme, ExecutionProps } from '../types';
 
 export default function determineTheme(
   props: ExecutionProps,
-  providedTheme?: DefaultTheme | undefined,
-  defaultProps: { theme?: DefaultTheme | undefined } = EMPTY_OBJECT
+  providedTheme?: DefaultTheme | undefined
 ): DefaultTheme | undefined {
-  return (props.theme !== defaultProps.theme && props.theme) || providedTheme || defaultProps.theme;
+  return props.theme || providedTheme;
 }

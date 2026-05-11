@@ -1,4 +1,4 @@
-import { StyledTarget } from '../types';
+import type { StyledTarget } from '../types';
 import getComponentName from './getComponentName';
 import isTag from './isTag';
 
