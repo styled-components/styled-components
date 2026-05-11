@@ -21,6 +21,7 @@ import { SafeAreaInsetsBadge } from './SafeAreaInsetsBadge';
 import { ShadowComposer } from './ShadowComposer';
 import { StandaloneTransforms } from './StandaloneTransforms';
 import { TextDecorationAlignment } from './TextDecorationAlignment';
+import { TextInputAlignment } from './TextInputAlignment';
 import { TextWrapShelf } from './TextWrapShelf';
 import { ThemeOverrides } from './ThemeOverrides';
 import { TransformPlayground } from './TransformPlayground';
@@ -229,6 +230,15 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     feature: 'textDecoration + textAlignVertical',
     category: 'Typography',
     Widget: TextDecorationAlignment,
+  },
+  {
+    slug: 'text-input-alignment',
+    title: 'TextInput vertical alignment',
+    summary:
+      'Tall multiline `TextInput` fields with `vertical-align` `top` / `middle` / `bottom`. iOS historically ignores `textAlignVertical` on TextInput; the caret and placeholder should sit at the requested position before any text is typed, and follow the content once the user starts typing.',
+    feature: 'TextInput + textAlignVertical',
+    category: 'Typography',
+    Widget: TextInputAlignment,
   },
   {
     slug: 'safe-area-insets-badge',
