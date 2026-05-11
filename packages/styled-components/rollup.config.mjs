@@ -142,6 +142,8 @@ const standaloneBaseConfig = {
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(false),
+      __NATIVE__: JSON.stringify(false),
+      __NATIVE_WEB__: JSON.stringify(false),
     }),
     replace({
       delimiters: ['', ''],
@@ -185,6 +187,8 @@ const serverConfig = {
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(true),
+      __NATIVE__: JSON.stringify(false),
+      __NATIVE_WEB__: JSON.stringify(false),
     }),
     minifierPlugin
   ),
@@ -199,6 +203,8 @@ const browserConfig = {
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(false),
+      __NATIVE__: JSON.stringify(false),
+      __NATIVE_WEB__: JSON.stringify(false),
     }),
     replace({
       delimiters: ['', ''],
@@ -207,6 +213,16 @@ const browserConfig = {
     minifierPlugin
   ),
 };
+
+// Shared between the Hermes-target native bundle and the rn-web variant.
+const nativeBasePlugins = [
+  nativeTypescriptPlugin,
+  ...basePlugins,
+  replace({
+    delimiters: ['', ''],
+    "typeof React.createContext === 'undefined'": JSON.stringify(false),
+  }),
+];
 
 const nativeConfig = {
   ...configBase,
@@ -219,15 +235,98 @@ const nativeConfig = {
       file: 'native/dist/styled-components.native.esm.js',
     }),
   ],
+  // The native build runs only `nativeTypescriptPlugin` so declarations land
+  // in `native/dist/` once. Concatenating `commonPlugins` previously
+  // included `defaultTypescriptPlugin` too, which wrote a parallel d.ts tree
+  // into `native/dist/dist/` and `native/dist/native/` — those shadow trees
+  // shipped to npm.
   plugins: [
-    nativeTypescriptPlugin,
-    ...commonPlugins,
+    ...nativeBasePlugins,
     replace({
-      delimiters: ['', ''],
-      "typeof React.createContext === 'undefined'": JSON.stringify(false),
+      __SERVER__: JSON.stringify(false),
+      __NATIVE__: JSON.stringify(true),
+      __NATIVE_WEB__: JSON.stringify(false),
     }),
     minifierPlugin
   ],
 };
 
-export default [standaloneConfig, standaloneProdConfig, serverConfig, browserConfig, nativeConfig];
+// react-native-web variant. Consumers reach this entry through
+// `native/package.json`'s `browser` field.
+const nativeWebConfig = {
+  ...configBase,
+  input: './src/native/index.ts',
+  output: [
+    getCJS({
+      file: 'native/dist/styled-components.native.browser.cjs.js',
+    }),
+    getESM({
+      file: 'native/dist/styled-components.native.browser.esm.js',
+    }),
+  ],
+  plugins: [
+    ...nativeBasePlugins,
+    replace({
+      __SERVER__: JSON.stringify(false),
+      __NATIVE__: JSON.stringify(true),
+      __NATIVE_WEB__: JSON.stringify(true),
+    }),
+    minifierPlugin
+  ],
+};
+
+const pluginsConfig = {
+  ...configBase,
+  input: './src/plugins/index.ts',
+  output: [
+    getESM({ file: 'dist/plugins.esm.js' }),
+    getCJS({ file: 'dist/plugins.cjs.js' }),
+  ],
+  plugins: configBase.plugins.concat(
+    replace({
+      __SERVER__: JSON.stringify(false),
+      __NATIVE__: JSON.stringify(false),
+      __NATIVE_WEB__: JSON.stringify(false),
+    }),
+    replace({
+      delimiters: ['', ''],
+      "typeof React.createContext === 'undefined'": JSON.stringify(false),
+    }),
+    minifierPlugin
+  ),
+};
+
+const reanimatedConfig = {
+  ...configBase,
+  input: './src/native/reanimated/index.ts',
+  // configBase.external is a function that already treats bare module ids
+  // (`react-native-reanimated`, `react-native`) as external; no addition needed.
+  output: [
+    getCJS({
+      file: 'native/dist/styled-components.native.reanimated.cjs.js',
+    }),
+    getESM({
+      file: 'native/dist/styled-components.native.reanimated.esm.js',
+    }),
+  ],
+  plugins: [
+    ...nativeBasePlugins,
+    replace({
+      __SERVER__: JSON.stringify(false),
+      __NATIVE__: JSON.stringify(true),
+      __NATIVE_WEB__: JSON.stringify(false),
+    }),
+    minifierPlugin
+  ],
+};
+
+export default [
+  standaloneConfig,
+  standaloneProdConfig,
+  serverConfig,
+  browserConfig,
+  nativeConfig,
+  nativeWebConfig,
+  pluginsConfig,
+  reanimatedConfig,
+];

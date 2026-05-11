@@ -1,6 +1,16 @@
 {
   "include": ["src"],
-  "exclude": ["dist", ".rollup.cache", "**/*.test.ts", "**/*.test.tsx", "src/test"],
+  "exclude": [
+    "dist",
+    ".rollup.cache",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "src/test",
+    "src/bench",
+    "src/parser/profile-harness.ts",
+    "src/native/profile-pipeline.ts",
+    "src/native/bunProfileGlobals.ts"
+  ],
   "compilerOptions": {
     "tsBuildInfoFile": "local.tsbuildinfo",
     "outDir": "dist",

@@ -1,6 +1,7 @@
 packages:
   - 'packages/*'
   - 'packages/styled-components/native'
+  - 'packages/native-showcase/modules/*'
 
 # Optional security features (NOT recommended for initial migration):
 # These may break legitimate dependencies and should only be enabled after testing

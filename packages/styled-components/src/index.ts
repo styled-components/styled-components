@@ -1,8 +1,8 @@
 import styled, { LibraryStyled, Styled, StyledInstance } from './constructors/styled';
 
 export * from './base';
-export { default as stylisPluginRSC } from './utils/stylisPluginRSC';
 export {
+  CompiledAst,
   CSSKeyframes,
   CSSObject,
   CSSProp,
