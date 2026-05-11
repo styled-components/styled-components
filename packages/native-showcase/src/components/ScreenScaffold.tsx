@@ -209,8 +209,10 @@ const Main = styled.View`
 `;
 
 // Sibling of Main (not child) so position: absolute anchors to the full
-// Shell viewport. Inside Main it would drift right behind the rail on
-// tablet/desktop. Visual language mirrors FpsMeter at top-right.
+// Shell viewport. On tablet/desktop the rail sits at the page's left
+// edge; the button shifts past it so it lines up with the content column
+// instead of floating over the rail. Visual language mirrors FpsMeter
+// at top-right.
 const BackToTop = styled.Pressable<{ $topInset: number; $leftInset: number }>`
   position: absolute;
   top: calc(${p => p.$topInset}px + ${t.space.xs}px);
@@ -223,6 +225,14 @@ const BackToTop = styled.Pressable<{ $topInset: number; $leftInset: number }>`
   border-width: ${t.borderWidth.hairline}px;
   border-color: ${t.colors.border};
   z-index: 1000;
+
+  @media (min-width: 720px) {
+    left: calc(260px + ${t.space.md}px);
+  }
+
+  @media (min-width: 1100px) {
+    left: calc(320px + ${t.space.md}px);
+  }
 `;
 
 const BackToTopLabel = styled.Text`

@@ -1,0 +1,7 @@
+{
+  "name": "styled-components-native-reanimated",
+  "private": true,
+  "types": "../dist/native/reanimated/index.d.ts",
+  "main": "../dist/styled-components.native.reanimated.cjs.js",
+  "module": "../dist/styled-components.native.reanimated.esm.js"
+}
