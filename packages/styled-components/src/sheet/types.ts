@@ -22,11 +22,9 @@ export type SheetOptions = {
   isServer: boolean;
   nonce?: string | undefined;
   target?: InsertionTarget | undefined;
-  useCSSOMInjection: boolean;
 };
 
 export interface Sheet {
-  allocateGSInstance(id: string): number;
   clearNames(id: string): void;
   clearRules(id: string): void;
   clearTag(): void;
@@ -35,7 +33,7 @@ export interface Sheet {
   insertRules(id: string, name: string, rules: string[]): void;
   options: SheetOptions;
   names: Map<string, Set<string>>;
-  registerName(id: string, name: string): void;
+  registerName(id: string, name: string): number;
   rehydrate(): void;
   toString(): string;
 }

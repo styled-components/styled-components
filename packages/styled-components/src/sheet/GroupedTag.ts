@@ -51,9 +51,8 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
   insertRules(group: number, rules: string[]) {
     if (group >= this.groupSizes.length) {
       const oldBuffer = this.groupSizes;
-      const oldSize = oldBuffer.length;
 
-      let newSize = oldSize;
+      let newSize = oldBuffer.length;
       while (group >= newSize) {
         newSize <<= 1;
         if (newSize < 0) {
@@ -64,10 +63,6 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
       this.groupSizes = new Uint32Array(newSize);
       this.groupSizes.set(oldBuffer);
       this.length = newSize;
-
-      for (let i = oldSize; i < newSize; i++) {
-        this.groupSizes[i] = 0;
-      }
     }
 
     let ruleIndex = this.indexOfGroup(group + 1);

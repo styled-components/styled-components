@@ -5,9 +5,8 @@ import getNonce from '../utils/nonce';
 
 /** Find last style element if any inside target */
 const findLastStyleTag = (target: InsertionTarget): void | HTMLStyleElement => {
-  const arr = Array.from(target.querySelectorAll<HTMLStyleElement>(`style[${SC_ATTR}]`));
-
-  return arr[arr.length - 1];
+  const list = target.querySelectorAll<HTMLStyleElement>(`style[${SC_ATTR}]`);
+  return list[list.length - 1];
 };
 
 /** Create a style element inside `target` or <head> after the last */
@@ -36,18 +35,21 @@ export const makeStyleTag = (
 /** Get the CSSStyleSheet instance for a given style element */
 export const getSheet = (tag: HTMLStyleElement): CSSStyleSheet => {
   if (tag.sheet) {
-    return tag.sheet as any as CSSStyleSheet;
+    return tag.sheet;
   }
 
   // Avoid Firefox quirk where the style element might not have a sheet property.
-  // Use the tag's root node to find styleSheets — document.styleSheets doesn't
+  // Use the tag's root node to find styleSheets; document.styleSheets doesn't
   // include sheets inside shadow roots.
   const root = tag.getRootNode() as Document | ShadowRoot;
   const styleSheets = root.styleSheets ?? document.styleSheets;
   for (let i = 0, l = styleSheets.length; i < l; i++) {
     const sheet = styleSheets[i];
     if (sheet.ownerNode === tag) {
-      return sheet as any as CSSStyleSheet;
+      // `document.styleSheets`/`ShadowRoot.styleSheets` is typed as
+      // `StyleSheetList`, whose entries are `CSSStyleSheet` at runtime
+      // but the iteration return type widens to `StyleSheet`.
+      return sheet as CSSStyleSheet;
     }
   }
 
