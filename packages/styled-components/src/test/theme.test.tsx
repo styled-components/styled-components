@@ -2,7 +2,8 @@ import '@testing-library/jest-dom';
 import { render } from '@testing-library/react';
 import React, { Component } from 'react';
 import withTheme from '../hoc/withTheme';
-import ThemeProvider, { DefaultTheme } from '../models/ThemeProvider';
+import ThemeProvider, { DefaultTheme, useTheme } from '../models/ThemeProvider';
+import { DataAttributes } from '../types';
 import { getRenderedCSS, resetStyled } from './utils';
 
 let styled: ReturnType<typeof resetStyled>;
@@ -51,18 +52,17 @@ describe('theming', () => {
     `);
   });
 
-  it('should properly allow a component to fallback to its default props when a theme is not provided', () => {
-    const Comp1 = styled.div`
-      color: ${props => props.theme.test!.color};
-    `;
-
-    Comp1.defaultProps = {
+  it('should properly allow a component to fall back to a theme set via attrs when a ThemeProvider is not used', () => {
+    const Comp1 = styled.div.attrs({
       theme: {
         test: {
           color: 'purple',
         },
       },
-    };
+    })`
+      color: ${props => props.theme.test!.color};
+    `;
+
     render(
       <div>
         <Comp1 />
@@ -76,18 +76,13 @@ describe('theming', () => {
   });
 
   // https://github.com/styled-components/styled-components/issues/344
-  it('should use ThemeProvider theme instead of defaultProps theme', () => {
-    const Comp1 = styled.div`
+  it('should use ThemeProvider theme instead of a fallback theme set via function attrs', () => {
+    const Comp1 = styled.div.attrs(p => ({
+      theme: p.theme || { test: { color: 'purple' } },
+    }))`
       color: ${props => props.theme.test?.color};
     `;
 
-    Comp1.defaultProps = {
-      theme: {
-        test: {
-          color: 'purple',
-        },
-      },
-    };
     const theme = { test: { color: 'green' } };
 
     render(
@@ -98,32 +93,6 @@ describe('theming', () => {
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: green;
-      }"
-    `);
-  });
-
-  it('should properly allow a component to override the theme with a prop even if it is equal to defaultProps theme', () => {
-    const Comp1 = styled.div`
-      color: ${props => props.theme.test!.color};
-    `;
-
-    Comp1.defaultProps = {
-      theme: {
-        test: {
-          color: 'purple',
-        },
-      },
-    };
-    const theme = { test: { color: 'green' } };
-
-    render(
-      <ThemeProvider theme={theme}>
-        <Comp1 theme={{ test: { color: 'purple' } }} />
-      </ThemeProvider>
-    );
-    expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".b {
-        color: purple;
       }"
     `);
   });
@@ -242,16 +211,14 @@ describe('theming', () => {
     `);
   });
 
-  it('should properly render with the same theme from default props on re-render', () => {
-    const Comp1 = styled.div`
-      color: ${props => props.theme.color};
-    `;
-
-    Comp1.defaultProps = {
+  it('should properly render with the same theme from attrs on re-render', () => {
+    const Comp1 = styled.div.attrs({
       theme: {
         color: 'purple',
       },
-    };
+    })`
+      color: ${props => props.theme.color};
+    `;
 
     const jsx = <Comp1 />;
 
@@ -310,14 +277,12 @@ describe('theming', () => {
   });
 
   it('should properly update style if props used in styles is changed', () => {
-    const Comp1 = styled.div<{ zIndex?: number }>`
+    const Comp1 = styled.div.attrs<{ zIndex?: number }>(p => ({
+      zIndex: p.zIndex ?? 0,
+    }))`
       color: ${props => props.theme.color};
       z-index: ${props => props.zIndex};
     `;
-
-    Comp1.defaultProps = {
-      zIndex: 0,
-    };
 
     const wrapper = render(
       <ThemeProvider
@@ -357,14 +322,13 @@ describe('theming', () => {
       }"
     `);
 
-    Comp1.defaultProps.zIndex = 1;
     wrapper.rerender(
       <ThemeProvider
         theme={{
           color: 'pink',
         }}
       >
-        <Comp1 />
+        <Comp1 zIndex={1} />
       </ThemeProvider>
     );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -459,16 +423,12 @@ describe('theming', () => {
   });
 
   // https://github.com/styled-components/styled-components/issues/445
-  it('should use ThemeProvider theme instead of defaultProps theme after initial render', () => {
-    const Text = styled.div`
+  it('should use ThemeProvider theme instead of a fallback theme set via function attrs after initial render', () => {
+    const Text = styled.div.attrs(p => ({
+      theme: p.theme || { color: 'purple' },
+    }))`
       color: ${props => props.theme.color};
     `;
-
-    Text.defaultProps = {
-      theme: {
-        color: 'purple',
-      },
-    };
 
     const Theme = (props: React.ComponentProps<typeof Text>) => (
       <ThemeProvider theme={{ color: 'green' }}>
@@ -543,7 +503,7 @@ describe('theming', () => {
   });
 
   // https://github.com/styled-components/styled-components/issues/1130
-  it('should not break without a ThemeProvider if it has a defaultTheme', () => {
+  it('should not break without a ThemeProvider when a theme prop is passed directly', () => {
     const MyDiv: React.FunctionComponent<{ theme: DefaultTheme }> = ({ theme }) => (
       <div>{theme.color}</div>
     );
@@ -551,25 +511,12 @@ describe('theming', () => {
     const theme = { color: 'red' };
     const newTheme = { color: 'blue' };
 
-    const consoleWarn = console.warn;
-
-    jest
-      .spyOn(console, 'warn')
-      .mockImplementation(msg =>
-        !msg.includes('You are not using a ThemeProvider') ? consoleWarn(msg) : null
-      );
-
-    MyDivWithTheme.defaultProps = { theme };
-
-    const wrapper = render(<MyDivWithTheme />);
+    const wrapper = render(<MyDivWithTheme theme={theme} />);
 
     expect(wrapper.getByText('red')).toBeDefined();
 
     // Change theme
-    MyDivWithTheme.defaultProps = { theme: newTheme };
-
-    // Change theme
-    wrapper.rerender(<MyDivWithTheme />);
+    wrapper.rerender(<MyDivWithTheme theme={newTheme} />);
 
     expect(wrapper.getByText('blue')).toBeDefined();
   });
@@ -675,5 +622,185 @@ describe('theming', () => {
       );
       expect(mock).toHaveBeenCalledTimes(1);
     }).toThrowErrorMatchingSnapshot();
+  });
+
+  describe('ThemeProvider rendering', () => {
+    it('should not throw an error when no children are passed', () => {
+      render(<ThemeProvider theme={{}} />);
+    });
+
+    it("should accept a theme prop that's a plain object", () => {
+      render(<ThemeProvider theme={{ main: 'black' }} />);
+    });
+
+    it('should render its child', () => {
+      const child = <p>Child!</p>;
+      const wrapper = render(<ThemeProvider theme={{ main: 'black' }}>{child}</ThemeProvider>);
+
+      expect(wrapper.asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <p>
+            Child!
+          </p>
+        </DocumentFragment>
+      `);
+    });
+
+    it('should merge its theme with an outer theme', () => {
+      const outerTheme = { main: 'black' };
+      const innerTheme = { secondary: 'black' };
+
+      const MyDiv = styled.div.attrs<DataAttributes>(p => ({
+        'data-theme': JSON.stringify(p.theme),
+      }))``;
+      const MyDivWithTheme = withTheme(MyDiv);
+
+      const wrapper = render(
+        <ThemeProvider theme={outerTheme}>
+          <ThemeProvider theme={innerTheme}>
+            <MyDivWithTheme data-testid="subject" />
+          </ThemeProvider>
+        </ThemeProvider>
+      );
+
+      expect(wrapper.getByTestId('subject')).toHaveAttribute(
+        'data-theme',
+        JSON.stringify({
+          ...outerTheme,
+          ...innerTheme,
+        })
+      );
+    });
+
+    it('should merge its theme with multiple outer themes', () => {
+      const outerestTheme = { main: 'black' };
+      const outerTheme = { main: 'blue' };
+      const innerTheme = { secondary: 'black' };
+
+      const MyDiv = styled.div.attrs<DataAttributes>(p => ({
+        'data-theme': JSON.stringify(p.theme),
+      }))``;
+      const MyDivWithTheme = withTheme(MyDiv);
+
+      const wrapper = render(
+        <ThemeProvider theme={outerestTheme}>
+          <ThemeProvider theme={outerTheme}>
+            <ThemeProvider theme={innerTheme}>
+              <MyDivWithTheme data-testid="subject" />
+            </ThemeProvider>
+          </ThemeProvider>
+        </ThemeProvider>
+      );
+
+      expect(wrapper.getByTestId('subject')).toHaveAttribute(
+        'data-theme',
+        JSON.stringify({
+          ...outerestTheme,
+          ...outerTheme,
+          ...innerTheme,
+        })
+      );
+    });
+
+    it('should be able to render two independent themes', () => {
+      const themes = {
+        one: { main: 'black', secondary: 'red' },
+        two: { main: 'blue', other: 'green' },
+      };
+
+      const MyDivOne = withTheme(
+        styled.div.attrs<DataAttributes>(p => ({ 'data-theme': JSON.stringify(p.theme) }))``
+      );
+      const MyDivWithThemeOne = withTheme(MyDivOne);
+      const MyDivTwo = withTheme(
+        styled.div.attrs<DataAttributes>(p => ({ 'data-theme': JSON.stringify(p.theme) }))``
+      );
+      const MyDivWithThemeTwo = withTheme(MyDivTwo);
+
+      const wrapper = render(
+        <div>
+          <ThemeProvider theme={themes.one}>
+            <MyDivWithThemeOne data-testid="subject-one" />
+          </ThemeProvider>
+          <ThemeProvider theme={themes.two}>
+            <MyDivWithThemeTwo data-testid="subject-two" />
+          </ThemeProvider>
+        </div>
+      );
+
+      expect(wrapper.getByTestId('subject-one')).toHaveAttribute(
+        'data-theme',
+        JSON.stringify(themes.one)
+      );
+      expect(wrapper.getByTestId('subject-two')).toHaveAttribute(
+        'data-theme',
+        JSON.stringify(themes.two)
+      );
+    });
+
+    it('ThemeProvider propagates theme updates through nested ThemeProviders', () => {
+      const theme = { themed: true };
+      const augment = (outerTheme: typeof theme) =>
+        Object.assign({}, outerTheme, { augmented: true });
+      const update = { updated: true };
+      const expected = { themed: true, updated: true, augmented: true };
+
+      const MyDiv = styled.div.attrs<DataAttributes>(p => ({
+        'data-theme': JSON.stringify(p.theme),
+      }))``;
+      const MyDivWithTheme = withTheme(MyDiv);
+
+      const getJSX = (givenTheme = theme) => (
+        <ThemeProvider theme={givenTheme}>
+          <ThemeProvider theme={augment}>
+            <MyDivWithTheme data-testid="subject" />
+          </ThemeProvider>
+        </ThemeProvider>
+      );
+
+      const wrapper = render(getJSX());
+
+      wrapper.rerender(getJSX(Object.assign({}, theme, update)));
+
+      expect(wrapper.getByTestId('subject')).toHaveAttribute(
+        'data-theme',
+        JSON.stringify(expected)
+      );
+    });
+  });
+
+  describe('useTheme', () => {
+    it('useTheme should get the same theme that is serving ThemeProvider', () => {
+      const mainTheme = { main: 'black' };
+
+      const MyDivOne = withTheme(
+        styled.div.attrs<DataAttributes>(p => ({ 'data-theme': JSON.stringify(p.theme) }))``
+      );
+      const MyDivWithThemeOne = withTheme(MyDivOne);
+      const MyDivWithThemeContext = (props: React.PropsWithChildren) => {
+        const theme = useTheme();
+        return <div data-theme={JSON.stringify(theme)} {...props} />;
+      };
+
+      const wrapper = render(
+        <div>
+          <ThemeProvider theme={mainTheme}>
+            <React.Fragment>
+              <MyDivWithThemeOne data-testid="subject-one" />
+              <MyDivWithThemeContext data-testid="subject-context" />
+            </React.Fragment>
+          </ThemeProvider>
+        </div>
+      );
+
+      expect(wrapper.getByTestId('subject-one')).toHaveAttribute(
+        'data-theme',
+        JSON.stringify(mainTheme)
+      );
+      expect(wrapper.getByTestId('subject-context')).toHaveAttribute(
+        'data-theme',
+        JSON.stringify(mainTheme)
+      );
+    });
   });
 });
