@@ -11,6 +11,8 @@ import { Animated } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 import styled from '../../';
 import { resetResponsiveCache } from '../../responsive';
+import { resetNativeStyleCache, toNativeStyles } from '../../../models/compileNative';
+import { resetWarningsForTest } from '../../transform/dev';
 import '../'; // ensure default adapter side-effect registers
 import {
   __additiveCombineForTests,
@@ -1326,20 +1328,15 @@ describe('Animated adapter;@keyframes', () => {
     expect(byKind.rotate).toBe('10deg');
   });
 
-  // https://drafts.csswg.org/css-animations-2/#animation-composition
-  // CSS Animations 2 §4.8 — "Syntax: <single-animation-composition>#;
-  // keyword values `replace | add | accumulate`; initial `replace`;
-  // not inherited; not animatable." For list-valued properties §10
-  // distinguishes addition (concatenation) and accumulation (componentwise
-  // pad). For the scalar / color / per-kind-transform properties our
-  // adapter animates, the two operations produce identical output.
-  it('CSS Animations 2 §4.8 — animation-composition keyword set', () => {});
-
   it('parses animation-composition: add into the descriptor', () => {
-    // Smoke test for the descriptor pipeline. Composition lands on
-    // the descriptor as a string. The adapter side branches numeric
-    // and transform keyframe values through `additiveCombine` /
-    // `additiveCombineTransform` when this is 'add'.
+    // CSS Animations 2 §4.8 (editor draft): <single-animation-composition> = replace | add | accumulate
+    resetNativeStyleCache();
+    resetWarningsForTest();
+    const flat = toNativeStyles('animation: bump 100ms linear; animation-composition: add;', {
+      create: <T extends object>(styles: T) => styles,
+    } as any);
+    expect(flat.animations![0].composition).toBe('add');
+
     const Box = styled.View`
       opacity: 0.4;
       animation: bump 100ms linear;
@@ -1354,10 +1351,6 @@ describe('Animated adapter;@keyframes', () => {
     act(() => {
       renderer = track(TestRenderer.create(<Box />));
     });
-    // The rendered tree mounts without error. Adapter wires the
-    // additive path internally — the integration assertion is that
-    // composition flows through the descriptor pipeline without
-    // breaking existing keyframe builds.
     expect(renderer.toJSON()).toBeDefined();
   });
 

@@ -288,14 +288,6 @@ describe('animation/transition shorthand parsing', () => {
     expect(r.transitions).toBeUndefined();
   });
 
-  // https://drafts.csswg.org/css-animations-1/#timing-functions
-  // CSS Animations 1 §3.2 — "If a keyframe contains an
-  // `animation-timing-function`, that timing function applies starting
-  // from that keyframe until the next keyframe with a different
-  // timing function (or the end of the animation). A timing function
-  // on the last keyframe is ignored."
-  it('CSS Animations 1 §3.2 — per-frame easing applies from frame to next', () => {});
-
   it('extracts per-frame animation-timing-function from keyframe block', () => {
     const r = toNativeStyles(
       'animation: foo 1s; @keyframes foo { 0% { opacity: 0; animation-timing-function: ease-out; } 100% { opacity: 1; } }',
@@ -348,6 +340,96 @@ describe('animation/transition shorthand parsing', () => {
     );
     expect(r.keyframes[0].frames[0].decls).toMatchInlineSnapshot(`{}`);
     expect(r.keyframes[0].frames[0].easing).toBeDefined();
+  });
+
+  // https://drafts.csswg.org/css-animations-1/#timing-functions
+  // https://drafts.csswg.org/css-animations-1/#animation-timing-function
+  describe('CSS Animations 1 §3.1 / §4.3 (editor draft; keyframe timing functions)', () => {
+    // §3.1 — "A keyframe style rule may also declare the timing function that is to be used as the animation moves to the next keyframe."
+    it('§3.1 — timing on an end-only `100%` keyframe is ignored (no stored per-frame easing)', () => {
+      const r = toNativeStyles(
+        'animation: k 1s linear; @keyframes k { 0% { opacity: 0; animation-timing-function: ease-out; } 100% { opacity: 1; animation-timing-function: ease-in; } }',
+        stubStyleSheet
+      );
+      const frames = r.keyframes![0].frames;
+      const end = frames.find(f => f.stops.join() === '100%')!;
+      expect(end.decls).not.toHaveProperty('animationTimingFunction');
+      expect(end.easing).toBeUndefined();
+      const start = frames.find(f => f.stops.join() === '0%')!;
+      expect(start.easing).toMatchObject({ kind: 'cubic-bezier', p: [0, 0, 0.58, 1] });
+    });
+
+    // §3.1 — same paragraph: "A timing function specified on the to or 100% keyframe is ignored."
+    it('§3.1 — timing on an end-only `to` keyframe is ignored (no stored per-frame easing)', () => {
+      const r = toNativeStyles(
+        'animation: k 1s; @keyframes k { from { opacity: 0; } to { opacity: 1; animation-timing-function: ease-in; } }',
+        stubStyleSheet
+      );
+      const toFrame = r.keyframes![0].frames.find(f => f.stops.join() === 'to')!;
+      expect(toFrame.easing).toBeUndefined();
+      expect(toFrame.decls).not.toHaveProperty('animationTimingFunction');
+    });
+
+    // §3.1 — mixed stops include a non-end selector, so the frame is not "the to/100% keyframe" for ignore purposes.
+    it('§3.1 — `0%, 100%` shared frame is not end-only; declared timing is kept', () => {
+      const r = toNativeStyles(
+        'animation: k 1s; @keyframes k { 0%, 100% { opacity: 1; animation-timing-function: ease-in; } 50% { opacity: 0.5; } }',
+        stubStyleSheet
+      );
+      const shared = r.keyframes![0].frames.find(
+        f => f.stops.includes('0%') && f.stops.includes('100%')
+      )!;
+      expect(shared.easing).toMatchObject({ kind: 'cubic-bezier', p: [0.42, 0, 1, 1] });
+    });
+
+    // §4.3 — "When specified in a keyframe, animation-timing-function defines the progression of the animation between the current keyframe and the next keyframe for the animating property in sorted keyframe selector order (which may be an implicit 100% keyframe)."
+    it('§4.3 — keyframe timing is stored on the originating stop for the segment toward the next keyframe', () => {
+      const r = toNativeStyles(
+        'animation: k 1s; @keyframes k { 0% { opacity: 0; animation-timing-function: steps(4, end); } 100% { opacity: 1; } }',
+        stubStyleSheet
+      );
+      const f0 = r.keyframes![0].frames.find(f => f.stops.includes('0%'))!;
+      expect(f0.easing).toEqual({ kind: 'steps', n: 4, jump: 'jump-end' });
+      expect(f0.decls).not.toHaveProperty('animationTimingFunction');
+      const f1 = r.keyframes![0].frames.find(f => f.stops.includes('100%'))!;
+      expect(f1.easing).toBeUndefined();
+    });
+  });
+
+  // https://drafts.csswg.org/css-animations-2/#animation-composition
+  describe('CSS Animations 2 §4.8 (editor draft; animation-composition)', () => {
+    // Propdef: Value: <single-animation-composition>#
+    // "<single-animation-composition> = replace | add | accumulate"
+    // Initial: replace
+    it.each([
+      ['replace', 'replace'],
+      ['add', 'add'],
+      ['accumulate', 'accumulate'],
+    ] as const)('parses animation-composition: %s', (keyword, expected) => {
+      const r = toNativeStyles(
+        `animation: x 1s; animation-composition: ${keyword};`,
+        stubStyleSheet
+      );
+      expect(r.animations![0].composition).toBe(expected);
+    });
+
+    it('defaults composition to replace when animation-composition is omitted', () => {
+      const r = toNativeStyles('animation: x 1s;', stubStyleSheet);
+      expect(r.animations![0].composition).toBe('replace');
+    });
+
+    // Coordinating list: a shorter animation-composition list cycles per
+    // CSS Values "coordinating list property group" rules (same model as
+    // `animation-*` longhands in CSS Animations 1 §4).
+    it('cycles a single animation-composition keyword across paired animation names', () => {
+      const r = toNativeStyles(
+        'animation: a 1s, b 2s; animation-composition: add;',
+        stubStyleSheet
+      );
+      expect(r.animations).toHaveLength(2);
+      expect(r.animations![0].composition).toBe('add');
+      expect(r.animations![1].composition).toBe('add');
+    });
   });
 
   // Dynamic `animation-play-state` (CSS Animations §4.6). The longhand
