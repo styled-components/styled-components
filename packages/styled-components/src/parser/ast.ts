@@ -50,9 +50,23 @@ export const NATIVE_AT_CLASS: unique symbol = Symbol('nativeAtClass');
 
 export type PseudoState = 'hover' | 'focus' | 'pressed' | 'disabled';
 
+export type AttrOperator = '=' | '~=' | '|=' | '^=' | '$=' | '*=';
+
 export interface ConditionalAttr {
   name: string;
   value?: string;
+  /**
+   * Attribute-selector operator per CSS Selectors 4 §6.2. Defaults to
+   * `'='` (exact match) when omitted. Listed so the render-time matcher
+   * dispatches the right substring / list-contains / prefix-match logic.
+   */
+  operator?: AttrOperator;
+  /**
+   * CSS Selectors 4 §6.3 case-sensitivity flag. `'i'` forces ASCII
+   * case-insensitive matching; `'s'` is the default (case-sensitive)
+   * and is left unset for size. Only meaningful when `value` is set.
+   */
+  caseFlag?: 'i';
 }
 
 export interface AttrSelector {
@@ -60,10 +74,77 @@ export interface AttrSelector {
   pseudo?: PseudoState;
 }
 
+/**
+ * CSS Selectors 4 §9 nth pseudo-class parsed representation. `pos = a*n + b`
+ * iterates n = 0, 1, 2, …; the matcher uses 1-based position in the CSS
+ * sense. `fromEnd` swaps the counting direction (`:nth-last-child`).
+ * `ofType` restricts to same-target siblings (`:nth-of-type`).
+ * `onlyChild` adds an extra gate of total siblings === 1 (or total
+ * same-target siblings === 1 when combined with `ofType`).
+ */
+export interface NthSpec {
+  a: number;
+  b: number;
+  fromEnd: boolean;
+  ofType: boolean;
+  onlyChild?: boolean;
+}
+
 export type NativeRuleClass =
-  | { kind: 'pseudo'; pseudo: PseudoState }
+  | { kind: 'pseudo'; pseudo: PseudoState; negate?: boolean }
   | { kind: 'pseudoFanOut'; pseudos: PseudoState[] }
-  | { kind: 'attr'; selectors: AttrSelector[] }
+  | { kind: 'attr'; selectors: AttrSelector[]; negate?: boolean }
+  | {
+      /**
+       * CSS Selectors 4 §15 combinator selector against a referenced
+       * styled component. `descendant` matches when `ancestorId` is
+       * anywhere on the ParentContext.ancestors chain; `child` matches
+       * only when ParentContext.parentId === ancestorId;
+       * `adjacent-sibling` matches when ParentContext.prevSiblingId ===
+       * ancestorId; `general-sibling` matches when ancestorId is
+       * anywhere in ParentContext.prevSiblings. Authored as
+       * `${StyledFoo} &` (descendant), `${StyledFoo} > &` (child),
+       * `${StyledFoo} + &` (adjacent), `${StyledFoo} ~ &` (general).
+       */
+      kind: 'combinator';
+      combinator: 'descendant' | 'child' | 'adjacent-sibling' | 'general-sibling';
+      ancestorId: string;
+      /** Optional `:hover` / `:focus` / etc. carried on `&`. */
+      pseudo?: PseudoState;
+      negate?: boolean;
+    }
+  | {
+      /**
+       * CSS Selectors 4 §9 tree-structural pseudo (`&:nth-child(an+b)`,
+       * `&:first-child`, `&:last-child`, `&:only-child`,
+       * `&:nth-of-type`, etc.). Match runs against
+       * ParentContext.siblingIndex / totalSiblings /
+       * siblingIndexOfType per `spec`.
+       */
+      kind: 'nthChild';
+      spec: NthSpec;
+      /** Optional pseudo-state appended after the nth pseudo
+       *  (`&:first-child:hover`). */
+      pseudo?: PseudoState;
+      negate?: boolean;
+    }
+  | {
+      /**
+       * CSS Selectors 4 §13.1 — `&:has(<simple>)`. The match fires when
+       * the styled component has a descendant in its own `children`
+       * subtree that satisfies the inner simple selector. Two inner
+       * forms are supported on native:
+       *  - `&:has(${Component})`: any descendant whose `type` is the
+       *    referenced styled component.
+       *  - `&:has([attr])` / `&:has([attr='value'])`: any descendant
+       *    whose props expose the named prop (with optional
+       *    string-equality value match).
+       */
+      kind: 'has';
+      inner: { kind: 'component'; id: string } | { kind: 'attr'; attr: ConditionalAttr };
+      pseudo?: PseudoState;
+      negate?: boolean;
+    }
   | { kind: 'unsupported' };
 
 export type NativeAtClass =

@@ -15,6 +15,7 @@ import {
   transitionShorthand,
   transitionTimingFunctionLonghand,
 } from '../animation/parse-shorthand';
+import { backgroundShorthand } from './handlers/background';
 import {
   borderColorShorthand,
   borderShorthand,
@@ -25,9 +26,18 @@ import {
   aspectRatioShorthand,
   fontFamilyShorthand,
   fontShorthand,
+  fontStyleHandler,
   fontVariantShorthand,
+  letterSpacingHandler,
+  lineHeightHandler,
 } from './handlers/font';
-import { flexFlowShorthand, flexShorthand, placeContentShorthand } from './handlers/flex';
+import {
+  flexFlowShorthand,
+  flexShorthand,
+  placeContentShorthand,
+  placeItemsShorthand,
+  placeSelfShorthand,
+} from './handlers/flex';
 import {
   borderRadiusShorthand,
   borderWidthShorthand,
@@ -37,6 +47,7 @@ import {
 } from './handlers/spacing';
 import {
   shadowOffsetShorthand,
+  textAlignHandler,
   textDecorationLineShorthand,
   textDecorationShorthand,
   textShadowOffsetShorthand,
@@ -56,15 +67,23 @@ register('outline', outlineShorthand);
 register('flex', flexShorthand);
 register('flexFlow', flexFlowShorthand);
 register('placeContent', placeContentShorthand);
+register('placeItems', placeItemsShorthand);
+register('placeSelf', placeSelfShorthand);
 register('font', fontShorthand);
 register('fontFamily', fontFamilyShorthand);
+register('fontStyle', fontStyleHandler);
 register('fontVariant', fontVariantShorthand);
+register('lineHeight', lineHeightHandler);
+register('letterSpacing', letterSpacingHandler);
 register('aspectRatio', aspectRatioShorthand);
+register('textAlign', textAlignHandler);
 register('textDecoration', textDecorationShorthand);
 register('textDecorationLine', textDecorationLineShorthand);
 register('textShadow', textShadowShorthand);
 register('textShadowOffset', textShadowOffsetShorthand);
 register('shadowOffset', shadowOffsetShorthand);
+
+register('background', backgroundShorthand);
 
 register('animation', animationShorthand);
 register('animationName', animationNameLonghand);
@@ -84,8 +103,11 @@ register('transitionBehavior', transitionBehaviorLonghand);
 
 // Side-effect imports register polyfill handlers.
 import './polyfills/logicalShorthand';
+import './polyfills/logicalBorder';
+import './polyfills/interactivity';
 import './polyfills/lineClamp';
 import './polyfills/textWrap';
 import './polyfills/hyphens';
 import './polyfills/caretColor';
 import './polyfills/standaloneTransform';
+import './polyfills/fieldSizing';

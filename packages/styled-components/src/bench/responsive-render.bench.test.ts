@@ -39,6 +39,9 @@ const resolveEnv = {
   theme,
   insets: null,
   rootFontSize: 16,
+  fontSize: 16,
+  lineHeight: 24,
+  direction: 'ltr',
 } as any;
 
 const flatCompiled: NativeStyles = {

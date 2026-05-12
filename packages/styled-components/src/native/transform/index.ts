@@ -2,9 +2,16 @@ import { Dict } from '../../types';
 import * as $ from '../../utils/charCodes';
 import hyphenateStyleName from '../../utils/hyphenateStyleName';
 import { warnIfAndroidSkew, warnIfIosVerticalAlign, warnOnce } from './dev';
-import { collapseIdenticalCommas, getPassthroughKeys, isLayeredCommaProp } from './passthrough';
+import {
+  collapseIdenticalCommas,
+  getPassthroughKeys,
+  isLayeredCommaProp,
+  isMultiTokenPosition,
+  substituteBackgroundSizeKeywordsForNative,
+} from './passthrough';
 import { staticColorFunctionToHex } from './polyfills/colorMath';
 import { numericResultToRn, resolveStaticMathFunction } from './polyfills/mathFns';
+import { getSystemColorLightDark } from './polyfills/systemColors';
 import { getShorthand } from './shorthands';
 import { tokenize } from './tokenize';
 import { Token, TokenKind } from './tokens';
@@ -85,6 +92,27 @@ const VERTICAL_ALIGN_TO_ALIGN_CONTENT: Record<
 export function transformDecl(prop: string, rawValue: string): Dict<any> {
   const camel = camelize(prop);
 
+  // CSS Color 4 §6.2 system colors: a bare keyword (no whitespace, no
+  // parens, no comma) becomes a `light-dark()` expression so the
+  // existing light-dark polyfill resolves the active scheme on iOS /
+  // Android. rn-web skips the expansion so the browser handles the
+  // system keyword natively (it tracks the user's actual system theme,
+  // forced-colors mode, and high-contrast settings that our static
+  // light-dark approximation can't represent).
+  // Composite uses (`border: 1px solid Canvas`) aren't covered yet —
+  // they need parser-level token rewriting.
+  if (
+    !__NATIVE_WEB__ &&
+    rawValue.length > 0 &&
+    rawValue.indexOf(' ') === -1 &&
+    rawValue.indexOf('(') === -1 &&
+    rawValue.indexOf(',') === -1 &&
+    rawValue.charCodeAt(0) !== $.HASH
+  ) {
+    const ld = getSystemColorLightDark(rawValue);
+    if (ld !== null) rawValue = ld;
+  }
+
   const passthroughKeys = getPassthroughKeys(camel);
   if (passthroughKeys !== undefined) {
     if (__DEV__) {
@@ -110,8 +138,23 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     }
     // Dual-emit (background props): write every key in order so the
     // host platform sees both the vendor-prefixed and standard names.
+    // `experimental_backgroundSize` folds `cover` / `contain` to `auto`
+    // because RN 0.85's native parser drops the keyword strings and
+    // lands an empty list that later crashes the draw pass; see
+    // `substituteBackgroundSizeKeywordsForNative` for the spec basis.
+    // `backgroundPosition` skips the rn-web key when the value is
+    // multi-token (rn-web's validator drops it anyway with a
+    // console.error); see `isMultiTokenPosition`.
     const out: Dict<any> = {};
-    for (let i = 0; i < passthroughKeys.length; i++) out[passthroughKeys[i]] = value;
+    const dropRnWebPosition = camel === 'backgroundPosition' && isMultiTokenPosition(value);
+    for (let i = 0; i < passthroughKeys.length; i++) {
+      const key = passthroughKeys[i];
+      if (dropRnWebPosition && key === 'backgroundPosition') continue;
+      out[key] =
+        key === 'experimental_backgroundSize'
+          ? substituteBackgroundSizeKeywordsForNative(value)
+          : value;
+    }
     return out;
   }
 
@@ -183,8 +226,11 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
   }
 
   // Polyfill: static math fn (`clamp` / `min` / `max` / `calc`) over
-  // resolvable arms. Cheap prefix gate before tokenizing.
-  if (mightBeMathFn(rawValue)) {
+  // resolvable arms. Cheap prefix gate before tokenizing. rn-web skips
+  // the fold entirely — the browser parses these natively and rn-web's
+  // `normalizeValueWithProperty` passes string values through unchanged,
+  // so the raw CSS expression reaches the CSS engine intact.
+  if (!__NATIVE_WEB__ && mightBeMathFn(rawValue)) {
     tokens = tokens ?? tokenize(rawValue);
     if (tokens.length === 1 && tokens[0].kind === TokenKind.Function) {
       const numeric = resolveStaticMathFunction(tokens[0]);
@@ -246,12 +292,42 @@ function isSingleSentinel(v: string): boolean {
 }
 
 function mightBeMathFn(v: string): boolean {
-  // Cheap prefix check before tokenizing; avoids work on `10px` etc.
-  // Branch on first char so we only run the relevant startsWith calls.
+  // Cheap prefix check before tokenizing; avoids work on `10px` etc. CSS
+  // function names are ASCII case-insensitive (Syntax 3 §4.3.10), so we
+  // OR the first char with 0x20 to fold A-Z → a-z and lowercase the
+  // matched substring only when an uppercase letter is detected. The
+  // common path (already-lowercase input) skips the allocation.
   if (v.length <= 4) return false;
-  const c0 = v.charCodeAt(0);
-  if (c0 === 0x63 /* c */) return v.startsWith('calc(') || v.startsWith('clamp(');
-  if (c0 === 0x6d /* m */) return v.startsWith('min(') || v.startsWith('max(');
+  const raw0 = v.charCodeAt(0);
+  const c0 = raw0 | 0x20;
+  const needsLower = raw0 >= 0x41 && raw0 <= 0x5a; // A-Z
+  const haystack = needsLower ? v.toLowerCase() : v;
+  if (c0 === 0x63 /* c */)
+    return (
+      haystack.startsWith('calc(') || haystack.startsWith('clamp(') || haystack.startsWith('cos(')
+    );
+  if (c0 === 0x6d /* m */)
+    return (
+      haystack.startsWith('min(') || haystack.startsWith('max(') || haystack.startsWith('mod(')
+    );
+  if (c0 === 0x72 /* r */) return haystack.startsWith('round(') || haystack.startsWith('rem(');
+  if (c0 === 0x73 /* s */)
+    return (
+      haystack.startsWith('sin(') || haystack.startsWith('sqrt(') || haystack.startsWith('sign(')
+    );
+  if (c0 === 0x74 /* t */) return haystack.startsWith('tan(');
+  if (c0 === 0x61 /* a */)
+    return (
+      haystack.startsWith('abs(') ||
+      haystack.startsWith('asin(') ||
+      haystack.startsWith('acos(') ||
+      haystack.startsWith('atan(') ||
+      haystack.startsWith('atan2(')
+    );
+  if (c0 === 0x70 /* p */) return haystack.startsWith('pow(');
+  if (c0 === 0x68 /* h */) return haystack.startsWith('hypot(');
+  if (c0 === 0x6c /* l */) return haystack.startsWith('log(');
+  if (c0 === 0x65 /* e */) return haystack.startsWith('exp(');
   return false;
 }
 

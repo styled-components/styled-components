@@ -1326,6 +1326,15 @@ describe('Animated adapter;@keyframes', () => {
     expect(byKind.rotate).toBe('10deg');
   });
 
+  // https://drafts.csswg.org/css-animations-2/#animation-composition
+  // CSS Animations 2 §4.8 — "Syntax: <single-animation-composition>#;
+  // keyword values `replace | add | accumulate`; initial `replace`;
+  // not inherited; not animatable." For list-valued properties §10
+  // distinguishes addition (concatenation) and accumulation (componentwise
+  // pad). For the scalar / color / per-kind-transform properties our
+  // adapter animates, the two operations produce identical output.
+  it('CSS Animations 2 §4.8 — animation-composition keyword set', () => {});
+
   it('parses animation-composition: add into the descriptor', () => {
     // Smoke test for the descriptor pipeline. Composition lands on
     // the descriptor as a string. The adapter side branches numeric

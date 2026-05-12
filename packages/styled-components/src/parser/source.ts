@@ -429,13 +429,15 @@ function interleaveWithSentinels(strings: ReadonlyArray<string>, count: number):
 function isStandaloneSlot(prefix: string, suffix: string, prevWasStandalone: boolean): boolean {
   const last = nonWsCharCode(prefix, prefix.length - 1, -1);
   if (last === SEMICOLON || last === OPEN_BRACE || last === CLOSE_BRACE) {
-    // Block-position by prefix (`;` `{` `}`), but check if the suffix puts
-    // the slot at a property-name spot (`${vars.bg}: value;`) inside a
-    // Decl. A leading `:` in the suffix means the slot is the property
-    // name; stay embedded so substitute() resolves it without lifting an
-    // InterpolationNode that the parser would classify as block.
+    // Block-position by prefix (`;` `{` `}`). Two suffix overrides flip the
+    // slot to embedded: a leading `:` puts the slot at a property-name spot
+    // inside a Decl (`${vars.bg}: value;`); a leading selector-continuation
+    // char or `{` puts the slot at the start of a selector
+    // (`${Foo} & { ... }`, `${Foo} > & { ... }`, `${Foo} { ... }`).
     const nextAfterPrefixBoundary = nonWsCharCode(suffix, 0, 1);
-    if (nextAfterPrefixBoundary === COLON) return false;
+    if (nextAfterPrefixBoundary === -1) return true;
+    if (isSelectorContinuationChar(nextAfterPrefixBoundary)) return false;
+    if (nextAfterPrefixBoundary === OPEN_BRACE) return false;
     return true;
   }
   if (last !== -1) return false;

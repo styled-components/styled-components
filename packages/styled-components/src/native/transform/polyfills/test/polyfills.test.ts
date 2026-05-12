@@ -4,6 +4,8 @@ import { tokenize } from '../../tokenize';
 import { TokenKind } from '../../tokens';
 import { staticColorFunctionToHex } from '../colorMath';
 import { parseLinearEasing } from '../linearEasing';
+import { resolveStaticMathFunction } from '../mathFns';
+import { buildResolver } from '../resolvers';
 
 describe('logical properties spec compliance (CSS Logical Properties Level 1 §4)', () => {
   // Spec source: https://drafts.csswg.org/css-logical-1/
@@ -241,6 +243,425 @@ describe('static math functions', () => {
     const out = transformDecl('width', 'clamp(100px, 50vw, 300px)');
     expect(typeof out.width).toBe('string');
     expect(out.width).toContain('clamp(');
+  });
+
+  describe('on rn-web', () => {
+    const g = global as { __NATIVE_WEB__?: boolean };
+    const originalNativeWeb = g.__NATIVE_WEB__;
+    beforeAll(() => {
+      g.__NATIVE_WEB__ = true;
+    });
+    afterAll(() => {
+      g.__NATIVE_WEB__ = originalNativeWeb;
+    });
+
+    // The browser parses `calc()`, `min()`, `max()`, `clamp()`, and the
+    // Math L4 functions natively. rn-web's `normalizeValueWithProperty`
+    // passes string values through unchanged so the raw CSS expression
+    // reaches the engine intact. Folding at transform time would only
+    // duplicate work and discard `var()` / dynamic operand recovery the
+    // browser handles for free.
+
+    it('passes calc() through as a string instead of folding', () => {
+      expect(transformDecl('width', 'calc(100px + 20px)')).toEqual({
+        width: 'calc(100px + 20px)',
+      });
+    });
+
+    it('passes min / max / clamp through as strings', () => {
+      expect(transformDecl('width', 'min(100px, 200px)')).toEqual({ width: 'min(100px, 200px)' });
+      expect(transformDecl('width', 'max(100px, 200px)')).toEqual({ width: 'max(100px, 200px)' });
+      expect(transformDecl('width', 'clamp(100px, 150px, 200px)')).toEqual({
+        width: 'clamp(100px, 150px, 200px)',
+      });
+    });
+
+    it('passes Math L4 trig / exp / sign through as strings', () => {
+      expect(transformDecl('width', 'calc(sin(90deg) * 100px)')).toEqual({
+        width: 'calc(sin(90deg) * 100px)',
+      });
+      expect(transformDecl('width', 'pow(2, 8)')).toEqual({ width: 'pow(2, 8)' });
+    });
+  });
+});
+
+// https://drafts.csswg.org/css-values-4/#math-function
+describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
+  // §10.3 Stepped-value functions: round(<strategy>?, A, B?), mod(A,B), rem(A,B).
+
+  describe('§10.3 round()', () => {
+    // "If the type of A matches <number>, then B may be omitted, and
+    // defaults to 1; otherwise, omitting B is a syntax error."
+    it('B defaults to 1 when A is a <number> and B is omitted', () => {
+      // Number A → unitless output; B implicit 1.
+      expect(transformDecl('opacity', 'round(0.73)')).toEqual({ opacity: 1 });
+      expect(transformDecl('opacity', 'round(0.49)')).toEqual({ opacity: 0 });
+    });
+
+    // "nearest (default)"
+    it('default strategy is nearest', () => {
+      expect(transformDecl('width', 'round(10.49px, 1px)')).toEqual({ width: 10 });
+      expect(transformDecl('width', 'round(10.5px, 1px)')).toEqual({ width: 11 });
+    });
+
+    it('rounds with explicit nearest', () => {
+      expect(transformDecl('width', 'round(nearest, 10.4px, 1px)')).toEqual({ width: 10 });
+    });
+
+    it('rounds up regardless of magnitude with strategy `up`', () => {
+      expect(transformDecl('width', 'round(up, 10.1px, 1px)')).toEqual({ width: 11 });
+      expect(transformDecl('width', 'round(up, -10.9px, 1px)')).toEqual({ width: -10 });
+    });
+
+    it('rounds down regardless of magnitude with strategy `down`', () => {
+      expect(transformDecl('width', 'round(down, 10.9px, 1px)')).toEqual({ width: 10 });
+      expect(transformDecl('width', 'round(down, -10.1px, 1px)')).toEqual({ width: -11 });
+    });
+
+    it('rounds toward zero with strategy `to-zero`', () => {
+      expect(transformDecl('width', 'round(to-zero, 10.9px, 1px)')).toEqual({ width: 10 });
+      expect(transformDecl('width', 'round(to-zero, -10.9px, 1px)')).toEqual({ width: -10 });
+    });
+
+    it('defers (string passthrough) on unknown strategy keyword', () => {
+      const out = transformDecl('width', 'round(banana, 10px, 1px)');
+      expect(typeof out.width).toBe('string');
+      expect(out.width).toContain('round(');
+    });
+
+    it('defers (string passthrough) on mismatched units', () => {
+      const out = transformDecl('width', 'round(10px, 1deg)');
+      expect(typeof out.width).toBe('string');
+    });
+
+    // "otherwise, omitting B is a syntax error."
+    it('defers (string passthrough) when A is a <length> and B is omitted', () => {
+      const out = transformDecl('width', 'round(7.3px)');
+      expect(typeof out.width).toBe('string');
+      expect(out.width).toContain('round(');
+    });
+
+    // "All math functions perform type checking on their arguments." A
+    // number A combined with a typed B yields a type mismatch.
+    it('defers (string passthrough) when A is a <number> and B is a <length>', () => {
+      const out = transformDecl('width', 'round(7, 1px)');
+      expect(typeof out.width).toBe('string');
+    });
+
+    it('defers (string passthrough) when A is a <length> and B is a <number>', () => {
+      const out = transformDecl('width', 'round(7px, 1)');
+      expect(typeof out.width).toBe('string');
+    });
+
+    // Section 10.3 strategy keyword for `line-width` rounds to the
+    // nearest CSS device pixel — needs runtime PixelRatio.
+    it('defers (string passthrough) on `line-width` strategy and warns once', () => {
+      resetWarningsForTest();
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        const out = transformDecl('width', 'round(line-width, 1.5px, 1px)');
+        expect(typeof out.width).toBe('string');
+        expect(out.width).toContain('round(');
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+        const msg = (warnSpy.mock.calls[0] as string[])[0];
+        expect(msg).toContain('round(line-width');
+        expect(msg).toContain('PixelRatio.get()');
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
+  });
+
+  describe('§10.3 mod()', () => {
+    // "mod(A, B) ... result has the sign of B"
+    it('returns a result with the sign of B (math mod)', () => {
+      expect(transformDecl('width', 'mod(7px, 3px)')).toEqual({ width: 1 });
+      // -7 mod 3 = 2 (sign of B)
+      expect(transformDecl('width', 'mod(-7px, 3px)')).toEqual({ width: 2 });
+      // 7 mod -3 = -2 (sign of B)
+      expect(transformDecl('width', 'mod(7px, -3px)')).toEqual({ width: -2 });
+    });
+
+    it('defers (string passthrough) when B is zero', () => {
+      const out = transformDecl('width', 'mod(7px, 0px)');
+      expect(typeof out.width).toBe('string');
+      expect(out.width).toContain('mod(');
+    });
+  });
+
+  describe('§10.3 rem()', () => {
+    // "rem(A, B) ... result has the sign of A"
+    it('returns a result with the sign of A (JS remainder)', () => {
+      expect(transformDecl('width', 'rem(7px, 3px)')).toEqual({ width: 1 });
+      // -7 rem 3 = -1 (sign of A)
+      expect(transformDecl('width', 'rem(-7px, 3px)')).toEqual({ width: -1 });
+      // 7 rem -3 = 1 (sign of A)
+      expect(transformDecl('width', 'rem(7px, -3px)')).toEqual({ width: 1 });
+    });
+
+    it('defers (string passthrough) when B is zero', () => {
+      const out = transformDecl('width', 'rem(7px, 0px)');
+      expect(typeof out.width).toBe('string');
+      expect(out.width).toContain('rem(');
+    });
+  });
+
+  // §10.4 Trigonometric functions.
+
+  describe('§10.4 sin / cos / tan', () => {
+    // "accept angles or unitless numbers" — numbers treated as radians.
+    it('sin accepts an angle', () => {
+      const out = transformDecl('width', 'calc(sin(90deg) * 100px)');
+      expect(Math.abs(out.width - 100)).toBeLessThan(1e-9);
+    });
+
+    it('sin accepts a unitless number as radians', () => {
+      const out = transformDecl('width', 'calc(sin(0) * 100px)');
+      expect(out.width).toBe(0);
+    });
+
+    it('cos(0) is 1', () => {
+      const out = transformDecl('width', 'calc(cos(0deg) * 100px)');
+      expect(Math.abs(out.width - 100)).toBeLessThan(1e-9);
+    });
+
+    it('tan(45deg) is 1', () => {
+      const out = transformDecl('width', 'calc(tan(45deg) * 100px)');
+      expect(Math.abs(out.width - 100)).toBeLessThan(1e-9);
+    });
+  });
+
+  // The inverse trig + atan2 functions return `<angle>` (degrees). RN's
+  // host-side properties only accept literal angle tokens; the math
+  // pipeline can fold them into composed `calc()` expressions but not
+  // into bare angle slots (`rotate(asin(1))` etc. would require the
+  // standalone-transform polyfill to accept inner math first). Test the
+  // angle return path by calling `resolveStaticMathFunction` directly.
+  describe('§10.4 asin / acos / atan / atan2', () => {
+    function mathOf(src: string) {
+      const fn = tokenize(src)[0];
+      return resolveStaticMathFunction(fn);
+    }
+
+    // "asin / acos / atan: returns <angle> in degrees"
+    it('asin returns degrees', () => {
+      const r = mathOf('asin(1)')!;
+      expect(r.unit).toBe('deg');
+      expect(r.value).toBeCloseTo(90, 6);
+    });
+
+    it('asin rejects when argument is outside [-1, 1]', () => {
+      expect(mathOf('asin(2)')).toBeNull();
+    });
+
+    it('acos returns degrees', () => {
+      const r = mathOf('acos(0)')!;
+      expect(r.unit).toBe('deg');
+      expect(r.value).toBeCloseTo(90, 6);
+    });
+
+    it('acos rejects when argument is outside [-1, 1]', () => {
+      expect(mathOf('acos(-2)')).toBeNull();
+    });
+
+    it('atan returns degrees', () => {
+      const r = mathOf('atan(1)')!;
+      expect(r.unit).toBe('deg');
+      expect(r.value).toBeCloseTo(45, 6);
+    });
+
+    // "atan2(y, x) calculates the arctangent of y/x"
+    it('atan2 takes (y, x) and returns degrees', () => {
+      const r = mathOf('atan2(1, 0)')!;
+      expect(r.unit).toBe('deg');
+      expect(r.value).toBeCloseTo(90, 6);
+    });
+
+    it('atan2 rejects when args disagree on unit', () => {
+      expect(mathOf('atan2(1px, 1)')).toBeNull();
+    });
+  });
+
+  // §10.5 Exponential functions.
+
+  describe('§10.5 pow / sqrt / hypot / log / exp', () => {
+    it('pow(base, exp) returns base^exp', () => {
+      expect(transformDecl('width', 'calc(pow(2, 8) * 1px)')).toEqual({ width: 256 });
+    });
+
+    // "Negative or zero values in arguments that don't support them result in NaN"
+    it('pow defers (string passthrough) on negative base with non-integer exponent', () => {
+      const out = transformDecl('width', 'calc(pow(-2, 0.5) * 1px)');
+      expect(typeof out.width).toBe('string');
+    });
+
+    it('sqrt(A) returns √A', () => {
+      expect(transformDecl('width', 'calc(sqrt(81) * 1px)')).toEqual({ width: 9 });
+    });
+
+    it('sqrt defers (string passthrough) on negative argument', () => {
+      const out = transformDecl('width', 'calc(sqrt(-4) * 1px)');
+      expect(typeof out.width).toBe('string');
+    });
+
+    it('hypot preserves unit', () => {
+      // hypot(3,4) = 5; with px arms result is 5px.
+      expect(transformDecl('width', 'hypot(3px, 4px)')).toEqual({ width: 5 });
+    });
+
+    it('hypot defers (string passthrough) when arms disagree on unit', () => {
+      const out = transformDecl('width', 'hypot(3px, 4deg)');
+      expect(typeof out.width).toBe('string');
+    });
+
+    it('log defaults to natural log', () => {
+      const out = transformDecl('width', 'calc(log(2.718281828) * 100px)');
+      expect(Math.abs(out.width - 100)).toBeLessThan(0.5);
+    });
+
+    it('log accepts an explicit base', () => {
+      // log(8, 2) = 3
+      expect(transformDecl('width', 'calc(log(8, 2) * 1px)')).toEqual({ width: 3 });
+    });
+
+    it('log defers (string passthrough) on non-positive argument', () => {
+      const zero = transformDecl('width', 'calc(log(0) * 1px)');
+      expect(typeof zero.width).toBe('string');
+      const neg = transformDecl('width', 'calc(log(-1) * 1px)');
+      expect(typeof neg.width).toBe('string');
+    });
+
+    it('exp returns e^A', () => {
+      const out = transformDecl('width', 'calc(exp(1) * 100px)');
+      expect(Math.abs(out.width - 271.828)).toBeLessThan(0.1);
+    });
+  });
+
+  // §10.6 Sign-related functions.
+
+  describe('§10.6 abs / sign', () => {
+    // "abs(x) ... Returns the absolute value. Units are preserved."
+    it('abs preserves units', () => {
+      expect(transformDecl('width', 'abs(-12px)')).toEqual({ width: 12 });
+      expect(transformDecl('width', 'abs(12px)')).toEqual({ width: 12 });
+    });
+
+    // "sign(x) ... Returns +1, -1, or 0 with the sign of the argument."
+    it('sign returns +1 for positive', () => {
+      expect(transformDecl('opacity', 'sign(5)')).toEqual({ opacity: 1 });
+    });
+
+    it('sign returns -1 for negative', () => {
+      expect(transformDecl('opacity', 'sign(-5)')).toEqual({ opacity: -1 });
+    });
+
+    it('sign returns 0 for zero', () => {
+      expect(transformDecl('opacity', 'sign(0)')).toEqual({ opacity: 0 });
+    });
+
+    it('sign strips unit (result is a number even when input had a length)', () => {
+      expect(transformDecl('opacity', 'sign(5px)')).toEqual({ opacity: 1 });
+    });
+  });
+
+  // §10.9 Type checking.
+
+  describe('§10.9 type checking', () => {
+    // "All math functions perform type checking on their arguments before
+    //  evaluation. An argument with incompatible units produces an invalid expression."
+    it('defers (string passthrough) on mixed length + angle in stepped-value', () => {
+      const out = transformDecl('width', 'mod(10px, 4deg)');
+      expect(typeof out.width).toBe('string');
+    });
+
+    it('defers (string passthrough) on mixed length + angle in hypot', () => {
+      const out = transformDecl('width', 'hypot(3px, 4deg)');
+      expect(typeof out.width).toBe('string');
+    });
+  });
+
+  // Edge-case coverage for §10.4 / §10.5 corners. Each test quotes the
+  // relevant spec text in a leading comment.
+  describe('§10.4 / §10.5 edge cases', () => {
+    function mathOf(src: string) {
+      const fn = tokenize(src)[0];
+      return resolveStaticMathFunction(fn);
+    }
+
+    // §10.4: "atan2(A, B) ... is equivalent to atan(A / B), except that
+    // it handles the case where A and B have value 0 and where B is 0
+    // gracefully." Both zero → 0.
+    it('atan2(0, 0) is 0deg', () => {
+      const r = mathOf('atan2(0, 0)')!;
+      expect(r.unit).toBe('deg');
+      expect(r.value).toBeCloseTo(0, 6);
+    });
+
+    // §10.4: y=0, x=1 lies on the positive x-axis → 0deg.
+    it('atan2(0, 1) is 0deg', () => {
+      const r = mathOf('atan2(0, 1)')!;
+      expect(r.unit).toBe('deg');
+      expect(r.value).toBeCloseTo(0, 6);
+    });
+
+    // §10.4: y=1, x=0 lies on the positive y-axis → 90deg.
+    it('atan2(1, 0) is 90deg', () => {
+      const r = mathOf('atan2(1, 0)')!;
+      expect(r.unit).toBe('deg');
+      expect(r.value).toBeCloseTo(90, 6);
+    });
+
+    // §10.5: "hypot(A, ...) ... returns the square root of the sum of
+    // squares of its arguments." A single argument therefore returns
+    // |A| with the unit preserved.
+    it('hypot(5px) single-arg returns 5px', () => {
+      expect(transformDecl('width', 'hypot(5px)')).toEqual({ width: 5 });
+    });
+
+    // §10.5: Pythagorean triple.
+    it('hypot(3px, 4px) is 5px', () => {
+      expect(transformDecl('width', 'hypot(3px, 4px)')).toEqual({ width: 5 });
+    });
+
+    // §10.5 + IEEE 754: pow(0, 0) is defined as 1 per the math
+    // definition the spec inherits via ECMAScript (Math.pow(0, 0) === 1).
+    it('pow(0, 0) is 1', () => {
+      expect(transformDecl('opacity', 'pow(0, 0)')).toEqual({ opacity: 1 });
+    });
+
+    // §10.5: "Negative or zero values in arguments that don't support
+    // them result in NaN." pow(-1, 0.5) is √(-1) — NaN → defer.
+    it('pow(-1, 0.5) defers (NaN bails the static fold)', () => {
+      expect(mathOf('pow(-1, 0.5)')).toBeNull();
+    });
+
+    // §10.5: sqrt of a negative is NaN; the static fold bails.
+    it('sqrt(-1) defers (NaN bails the static fold)', () => {
+      expect(mathOf('sqrt(-1)')).toBeNull();
+    });
+
+    // §10.5: sqrt(0) is 0 exactly.
+    it('sqrt(0) is 0', () => {
+      const r = mathOf('sqrt(0)')!;
+      expect(r.value).toBe(0);
+      expect(r.unit).toBe('');
+    });
+  });
+
+  // Syntax 3 §4.3.10: CSS function names are ASCII case-insensitive.
+  // The polyfill gate (mightBeMathFn) runs on the raw value text before
+  // tokenization, so uppercase forms must reach the fold identically
+  // to lowercase forms.
+  describe('§4.3.10 ASCII case-insensitive function names', () => {
+    it('uppercase math fn names fold identically to lowercase', () => {
+      expect(transformDecl('width', 'SIN(45deg)')).toEqual(transformDecl('width', 'sin(45deg)'));
+      expect(transformDecl('width', 'CALC(10px + 5px)')).toEqual(
+        transformDecl('width', 'calc(10px + 5px)')
+      );
+      expect(transformDecl('width', 'HYPOT(3px, 4px)')).toEqual(
+        transformDecl('width', 'hypot(3px, 4px)')
+      );
+    });
   });
 });
 
@@ -684,16 +1105,19 @@ describe('color() spec compliance (CSS Color Module Level 4 §10)', () => {
       expect(warnSpy.mock.calls[0][0]).toContain('color-mix(in okhsv, red, blue)');
     });
 
-    it('relative-color syntax emits a warnOnce', () => {
-      transformDecl('color', 'oklch(from red l c h)');
-      expect(warnSpy).toHaveBeenCalledTimes(1);
-      expect(warnSpy.mock.calls[0][0]).toContain('oklch(from red l c h)');
+    it('relative-color syntax with literal base folds to hex (no warn)', () => {
+      // CSS Color 5 §4: `oklch(from red l c h)` resolves to red's OKLCh
+      // coordinates and recomposes red. No warning fires; the value
+      // lands on RN as a literal hex.
+      const out = transformDecl('color', 'oklch(from red l c h)');
+      expect(out.color).toMatch(/^#[0-9a-f]{6}$/);
+      expect(warnSpy).not.toHaveBeenCalled();
     });
 
-    it('warning dedupes on repeat declarations of the same value', () => {
-      transformDecl('color', 'oklch(from red l c h)');
-      transformDecl('color', 'oklch(from red l c h)');
-      transformDecl('color', 'oklch(from red l c h)');
+    it('warning dedupes on repeat declarations of an unfoldable value', () => {
+      transformDecl('backgroundColor', 'color-mix(in okhsv, red, blue)');
+      transformDecl('backgroundColor', 'color-mix(in okhsv, red, blue)');
+      transformDecl('backgroundColor', 'color-mix(in okhsv, red, blue)');
       expect(warnSpy).toHaveBeenCalledTimes(1);
     });
 
@@ -879,7 +1303,7 @@ describe('color-mix() spec compliance (CSS Color Module Level 5 §3)', () => {
   });
 });
 
-describe('out-of-gamut handling (channel clip)', () => {
+describe('out-of-gamut handling (CSS Color 4 §13 OKLCh bisection)', () => {
   // Convert a hex string back to OKLCh hue (degrees) so we can assert
   // the input hue survived gamut mapping.
   function hexToOklchHue(hex: string): number {
@@ -907,10 +1331,9 @@ describe('out-of-gamut handling (channel clip)', () => {
 
   it('out-of-gamut oklch keeps hue family (vivid green stays green-ish)', () => {
     // `oklch(0.7 0.4 130)` is a high-chroma green well outside sRGB.
-    // The polyfill uses channel-clipping;preserves saturation/punch
-    // at the cost of a small hue shift toward the dominant channel.
-    // For this severely out-of-gamut input the output stays in the
-    // green family (110°-145°) without rotating into yellow or cyan.
+    // The bisection mapper holds L and h constant while reducing C, so
+    // the output stays in the green family (110°-145°) without
+    // rotating into yellow or cyan.
     const tok = tokenize('oklch(0.7 0.4 130)')[0];
     const hex = staticColorFunctionToHex(tok)!;
     const hue = hexToOklchHue(hex);
@@ -919,7 +1342,7 @@ describe('out-of-gamut handling (channel clip)', () => {
   });
 
   it('out-of-gamut oklch keeps hue family (vivid magenta stays magenta-ish)', () => {
-    // High-chroma red-magenta outside sRGB. Channel-clip output stays
+    // High-chroma red-magenta outside sRGB. Bisection output stays
     // in the magenta-to-red family (340°-360°).
     const tok = tokenize('oklch(0.55 0.35 350)')[0];
     const hex = staticColorFunctionToHex(tok)!;
@@ -928,10 +1351,10 @@ describe('out-of-gamut handling (channel clip)', () => {
     expect(hue).toBeLessThan(360);
   });
 
-  it('out-of-gamut oklch reduces chroma vs the naive clip baseline', () => {
+  it('out-of-gamut oklch reduces chroma vs the in-gamut baseline', () => {
     // Same hue (130°) at two chromas: 0.4 (out of gamut) and 0.18
     // (in gamut). The mapped 0.4 result should land near the in-gamut
-    // 0.18 result;chroma was cut down to the boundary, not channels.
+    // 0.18 result; chroma is cut down to the boundary, not channels.
     const out = staticColorFunctionToHex(tokenize('oklch(0.7 0.4 130)')[0])!;
     const inGamut = staticColorFunctionToHex(tokenize('oklch(0.7 0.18 130)')[0])!;
     // Same green family, similar G byte; mapped should be close.
@@ -979,6 +1402,120 @@ describe('out-of-gamut handling (channel clip)', () => {
     // L=0.5 in OKLab → ≈ #777 (perceptual midpoint)
     expect(r).toBeGreaterThan(0x60);
     expect(r).toBeLessThan(0xa0);
+  });
+});
+
+describe('gamut mapping spec compliance (CSS Color 4 §13)', () => {
+  // Spec source: https://drafts.csswg.org/css-color-4/#binsearch
+  // "If the origin color is within the destination gamut, return it.
+  //  Otherwise hold L (lightness) and H (hue) constant in OKLCh and
+  //  bisect C (chroma) on [0, origin chroma] for the largest C whose
+  //  conversion is in destination gamut."
+
+  // Convert an emitted hex back to oklch (L, C, h) so we can assert
+  // the bisection invariants without going through colorMath internals.
+  function hexToOklch(hex: string): { L: number; C: number; h: number } {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.slice(0, 2), 16) / 255;
+    const g = parseInt(h.slice(2, 4), 16) / 255;
+    const b = parseInt(h.slice(4, 6), 16) / 255;
+    const linearize = (v: number) =>
+      v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    const rL = linearize(r);
+    const gL = linearize(g);
+    const bL = linearize(b);
+    const lc = 0.4122214708 * rL + 0.5363325363 * gL + 0.0514459929 * bL;
+    const mc = 0.2119034982 * rL + 0.6806995451 * gL + 0.1073969566 * bL;
+    const sc = 0.0883024619 * rL + 0.2817188376 * gL + 0.6299787005 * bL;
+    const l_ = Math.cbrt(lc);
+    const m_ = Math.cbrt(mc);
+    const s_ = Math.cbrt(sc);
+    const L = 0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_;
+    const aOk = 1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_;
+    const bOk = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_;
+    const C = Math.hypot(aOk, bOk);
+    let deg = (Math.atan2(bOk, aOk) * 180) / Math.PI;
+    if (deg < 0) deg += 360;
+    return { L, C, h: deg };
+  }
+
+  it('in-gamut origin: return it unchanged (spec step 1)', () => {
+    // "If the origin color is within the destination gamut, return it."
+    // oklch(0.7 0.05 130) sits comfortably inside sRGB. The bisection
+    // fast path returns the direct conversion; result decodes back to
+    // (L≈0.7, C≈0.05, h≈130).
+    const hex = staticColorFunctionToHex(tokenize('oklch(0.7 0.05 130)')[0])!;
+    const back = hexToOklch(hex);
+    expect(Math.abs(back.L - 0.7)).toBeLessThan(0.01);
+    expect(Math.abs(back.C - 0.05)).toBeLessThan(0.005);
+    // Hue tolerance: 8-bit hex quantization perturbs h by a few °.
+    expect(Math.min(Math.abs(back.h - 130), 360 - Math.abs(back.h - 130))).toBeLessThan(3);
+  });
+
+  it('out-of-gamut origin: L preserved within bisection epsilon', () => {
+    // "Hold L (lightness) and H (hue) constant ... bisect C." For an
+    // input at oklch(0.7 0.4 130) the L of the mapped sRGB output
+    // should still decode to ~0.7 within bisection epsilon (the L+H
+    // axes are locked through every iteration).
+    const hex = staticColorFunctionToHex(tokenize('oklch(0.7 0.4 130)')[0])!;
+    const back = hexToOklch(hex);
+    expect(Math.abs(back.L - 0.7)).toBeLessThan(0.01);
+  });
+
+  it('out-of-gamut origin: H preserved within bisection epsilon', () => {
+    // Same input, hue invariant. 130° (green) must stay 130°. Tolerance
+    // absorbs 8-bit hex quantization on the way back out.
+    const hex = staticColorFunctionToHex(tokenize('oklch(0.7 0.4 130)')[0])!;
+    const back = hexToOklch(hex);
+    expect(Math.min(Math.abs(back.h - 130), 360 - Math.abs(back.h - 130))).toBeLessThan(3);
+  });
+
+  it('out-of-gamut origin: C strictly less than origin C (spec consequence)', () => {
+    // "the largest C whose conversion is in destination gamut." For
+    // an out-of-gamut origin the in-gamut bound is strictly below
+    // origin C, so the mapped result must report a smaller chroma.
+    const hex = staticColorFunctionToHex(tokenize('oklch(0.7 0.4 130)')[0])!;
+    const back = hexToOklch(hex);
+    expect(back.C).toBeLessThan(0.4);
+    expect(back.C).toBeGreaterThan(0.05);
+  });
+
+  it('pure sRGB red oklch(0.628 0.258 29.23) round-trips at full chroma', () => {
+    // Pure sRGB red sits on the sRGB gamut boundary. The bisection
+    // fast path detects in-gamut and short-circuits; chroma survives.
+    // Hue 29.23° is sRGB red's OKLCh hue per Bottosson's tables.
+    const hex = staticColorFunctionToHex(tokenize('oklch(0.628 0.258 29.23)')[0])!;
+    const back = hexToOklch(hex);
+    expect(back.C).toBeGreaterThan(0.24);
+    expect(back.C).toBeLessThan(0.27);
+    expect(Math.min(Math.abs(back.h - 29.23), 360 - Math.abs(back.h - 29.23))).toBeLessThan(3);
+  });
+
+  it('slightly out-of-gamut oklch(0.5 0.4 0) reduces chroma but stays red', () => {
+    // L=0.5, C=0.4, h=0° (red-axis) is well outside sRGB at 0.4
+    // chroma. Bisection cuts C to the gamut boundary; result is
+    // still in the red family and red-dominant in sRGB.
+    const hex = staticColorFunctionToHex(tokenize('oklch(0.5 0.4 0)')[0])!;
+    const back = hexToOklch(hex);
+    expect(back.C).toBeLessThan(0.4);
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    expect(r).toBeGreaterThan(g);
+    expect(r).toBeGreaterThan(b);
+  });
+
+  it('zero-chroma origin: bisection collapses to gray (spec degenerate case)', () => {
+    // oklch(0.5 0 30) has |C| = 0; the unit-vector rebuild yields the
+    // same triple. In-gamut fast path returns the gray. Hue is
+    // powerless when chroma is 0 (CSS Color 4 §12.3) so we only assert
+    // a neutral output.
+    const hex = staticColorFunctionToHex(tokenize('oklch(0.5 0 30)')[0])!;
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    expect(r).toBe(g);
+    expect(g).toBe(b);
   });
 });
 
@@ -1279,10 +1816,15 @@ describe('text-wrap spec compliance (CSS Text Module Level 4 §5.5)', () => {
       expect(warnSpy).not.toHaveBeenCalled();
     });
 
-    it('mode alone: nowrap maps to numberOfLines: 1', () => {
+    it('mode alone: nowrap maps to numberOfLines: 1 + ellipsizeMode: clip (CSS Text 4 §5.4 overflow approximation)', () => {
+      // Spec `nowrap` overflows horizontally; RN cannot truly overflow,
+      // so the polyfill silently applies the closest approximation
+      // (`numberOfLines: 1` + `ellipsizeMode: 'clip'`). No warn — the
+      // workaround matches the spec intent.
       expect(transformDecl('text-wrap', 'nowrap')).toEqual({
         textWrap: 'nowrap',
         numberOfLines: 1,
+        ellipsizeMode: 'clip',
       });
       expect(warnSpy).not.toHaveBeenCalled();
     });
@@ -1317,10 +1859,11 @@ describe('text-wrap spec compliance (CSS Text Module Level 4 §5.5)', () => {
       expect(warnSpy.mock.calls[0][0]).toMatch(/text-wrap: stable/);
     });
 
-    it('combined: nowrap balance (mode + style both translated)', () => {
+    it('combined: nowrap balance (mode + style both translated; nowrap adds ellipsizeMode: clip)', () => {
       expect(transformDecl('text-wrap', 'nowrap balance')).toEqual({
         textWrap: 'nowrap balance',
         numberOfLines: 1,
+        ellipsizeMode: 'clip',
         textBreakStrategy: 'balanced',
       });
     });
@@ -1354,6 +1897,98 @@ describe('text-wrap spec compliance (CSS Text Module Level 4 §5.5)', () => {
       transformDecl('text-wrap', 'balance');
       transformDecl('text-wrap', 'balance');
       expect(warnSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // CSS Text 4 §5.4 (text-wrap-mode) and §5.5 (text-wrap-style) define
+  // the longhands. The shorthand block above covers behavior; this block
+  // confirms the longhands can be set independently and route to the
+  // same RN-effective props.
+  describe('§5.4 / §5.5 longhand registration', () => {
+    it('text-wrap-mode: wrap is a no-op (initial value)', () => {
+      expect(transformDecl('text-wrap-mode', 'wrap')).toEqual({ textWrapMode: 'wrap' });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('text-wrap-mode: nowrap maps to numberOfLines: 1 + ellipsizeMode: clip (CSS Text 4 §5.4 overflow approximation)', () => {
+      // Workaround applied silently (no horizontal overflow surface on
+      // RN, so we clip — matches spec intent).
+      expect(transformDecl('text-wrap-mode', 'nowrap')).toEqual({
+        textWrapMode: 'nowrap',
+        numberOfLines: 1,
+        ellipsizeMode: 'clip',
+      });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('text-wrap-style: auto is a no-op (initial value)', () => {
+      expect(transformDecl('text-wrap-style', 'auto')).toEqual({ textWrapStyle: 'auto' });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('text-wrap-style: balance maps to textBreakStrategy + iOS warn', () => {
+      expect(transformDecl('text-wrap-style', 'balance')).toEqual({
+        textWrapStyle: 'balance',
+        textBreakStrategy: 'balanced',
+      });
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('text-wrap-style: pretty maps to textBreakStrategy + iOS warn', () => {
+      expect(transformDecl('text-wrap-style', 'pretty')).toEqual({
+        textWrapStyle: 'pretty',
+        textBreakStrategy: 'highQuality',
+      });
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('text-wrap-style: stable warns + emits the original key', () => {
+      expect(transformDecl('text-wrap-style', 'stable')).toEqual({ textWrapStyle: 'stable' });
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects unknown mode keyword', () => {
+      expect(transformDecl('text-wrap-mode', 'foo')).toEqual({});
+    });
+
+    it('rejects unknown style keyword', () => {
+      expect(transformDecl('text-wrap-style', 'foo')).toEqual({});
+    });
+  });
+
+  // Chrome 114+, Safari 17.4+, and Firefox 121+ implement the
+  // `text-wrap` shorthand and longhands natively. On rn-web we emit only
+  // the original property + value so the browser does its own line-
+  // breaking; the RN-prop lifts (numberOfLines / ellipsizeMode /
+  // textBreakStrategy) would fight the browser's implementation.
+  describe('on rn-web', () => {
+    const g = global as { __NATIVE_WEB__?: boolean };
+    const originalNativeWeb = g.__NATIVE_WEB__;
+    beforeAll(() => {
+      g.__NATIVE_WEB__ = true;
+    });
+    afterAll(() => {
+      g.__NATIVE_WEB__ = originalNativeWeb;
+    });
+
+    it('text-wrap: nowrap emits only the shorthand', () => {
+      expect(transformDecl('text-wrap', 'nowrap')).toEqual({ textWrap: 'nowrap' });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('text-wrap: balance emits only the shorthand', () => {
+      expect(transformDecl('text-wrap', 'balance')).toEqual({ textWrap: 'balance' });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('text-wrap-mode: nowrap emits only the longhand', () => {
+      expect(transformDecl('text-wrap-mode', 'nowrap')).toEqual({ textWrapMode: 'nowrap' });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('text-wrap-style: pretty emits only the longhand', () => {
+      expect(transformDecl('text-wrap-style', 'pretty')).toEqual({ textWrapStyle: 'pretty' });
+      expect(warnSpy).not.toHaveBeenCalled();
     });
   });
 });
@@ -1438,6 +2073,29 @@ describe('hyphens spec compliance (CSS Text Module Level 4 §6.3.1)', () => {
       transformDecl('hyphens', 'auto');
       transformDecl('hyphens', 'auto');
       expect(warnSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('on rn-web', () => {
+    const g = global as { __NATIVE_WEB__?: boolean };
+    const originalNativeWeb = g.__NATIVE_WEB__;
+    beforeAll(() => {
+      g.__NATIVE_WEB__ = true;
+    });
+    afterAll(() => {
+      g.__NATIVE_WEB__ = originalNativeWeb;
+    });
+
+    // Browser handles `hyphens` natively; the Android prop lift and the
+    // iOS-limitation warn are meaningless on web.
+    it('emits hyphens only, no android_hyphenationFrequency lift', () => {
+      expect(transformDecl('hyphens', 'auto')).toEqual({ hyphens: 'auto' });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it.each(['none', 'manual', 'auto'])('%s passes the spec keyword through', value => {
+      expect(transformDecl('hyphens', value)).toEqual({ hyphens: value });
+      expect(warnSpy).not.toHaveBeenCalled();
     });
   });
 });
@@ -1643,6 +2301,352 @@ describe('standalone transform properties (CSS Transforms 2 §3)', () => {
       expect(transformDecl('scale', '2px')).toEqual({});
     });
   });
+
+  describe('on rn-web', () => {
+    const g = global as { __NATIVE_WEB__?: boolean };
+    const originalNativeWeb = g.__NATIVE_WEB__;
+    beforeAll(() => {
+      g.__NATIVE_WEB__ = true;
+    });
+    afterAll(() => {
+      g.__NATIVE_WEB__ = originalNativeWeb;
+    });
+
+    // rn-web's `preprocess` passes the standalone `translate` / `rotate`
+    // / `scale` keys through unchanged; the browser parses each
+    // independent CSS property surface (CSS Transforms 2 §3) end-to-end.
+    // Emitting `transform: translate(...)` would force the browser to
+    // process the value through `transform` instead, and drop the Z
+    // component when present. Pass the raw value through and let the
+    // browser handle 2D + 3D forms uniformly.
+
+    it('translate single value passes through as standalone prop', () => {
+      expect(transformDecl('translate', '10px')).toEqual({ translate: '10px' });
+    });
+
+    it('translate 2D value passes through, no warn', () => {
+      expect(transformDecl('translate', '10px 20px')).toEqual({ translate: '10px 20px' });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('translate 3D value keeps Z, no warn (browser handles z natively)', () => {
+      expect(transformDecl('translate', '10px 20px 5px')).toEqual({
+        translate: '10px 20px 5px',
+      });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('rotate angle passes through', () => {
+      expect(transformDecl('rotate', '45deg')).toEqual({ rotate: '45deg' });
+    });
+
+    it('rotate axis + angle passes through', () => {
+      expect(transformDecl('rotate', 'x 30deg')).toEqual({ rotate: 'x 30deg' });
+    });
+
+    it('scale single value passes through', () => {
+      expect(transformDecl('scale', '2')).toEqual({ scale: '2' });
+    });
+
+    it('scale two values passes through, no transform decomposition', () => {
+      expect(transformDecl('scale', '2 0.5')).toEqual({ scale: '2 0.5' });
+    });
+
+    it('scale 3D value keeps Z, no warn', () => {
+      expect(transformDecl('scale', '2 1 0.5')).toEqual({ scale: '2 1 0.5' });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+  });
+});
+
+// https://drafts.csswg.org/css-ui-4/#interactivity
+describe('interactivity spec compliance (CSS UI 4 §6.3)', () => {
+  let warnSpy: jest.SpyInstance;
+  beforeEach(() => {
+    resetWarningsForTest();
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('interactivity: auto is a no-op (initial value)', () => {
+    expect(transformDecl('interactivity', 'auto')).toEqual({});
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  // Spec bullet 1: "Hit-testing must act as if `pointer-events` was
+  // `none`, regardless of its actual value."
+  // Spec bullet 2: "Text selection must act as if `user-select` was
+  // `none`, regardless of its actual value."
+  // Spec bullet 3: "If the element or text node is editable, it must
+  // behave as if it was non-editable."
+  // Spec bullet 4: a11y subtree is hidden / unreachable.
+  it('interactivity: inert lifts pointer / a11y / focus / selection / editable', () => {
+    expect(transformDecl('interactivity', 'inert')).toEqual({
+      pointerEvents: 'none',
+      accessibilityElementsHidden: true,
+      importantForAccessibility: 'no-hide-descendants',
+      focusable: false,
+      selectable: false,
+      editable: false,
+    });
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/focusable={false}/);
+  });
+
+  it('rejects unknown keyword', () => {
+    expect(transformDecl('interactivity', 'banana')).toEqual({});
+  });
+
+  describe('on rn-web', () => {
+    const g = global as { __NATIVE_WEB__?: boolean };
+    const originalNativeWeb = g.__NATIVE_WEB__;
+    beforeAll(() => {
+      g.__NATIVE_WEB__ = true;
+    });
+    afterAll(() => {
+      g.__NATIVE_WEB__ = originalNativeWeb;
+    });
+
+    // The browser implements every inert surface (hit-test, focus,
+    // selection, edit-suppression, a11y) via the HTML `inert`
+    // attribute. rn-web forwards `inert` to the DOM verbatim, so a
+    // single boolean covers what native needs six props for.
+    it('inert lifts the HTML inert attribute (browser handles end-to-end)', () => {
+      expect(transformDecl('interactivity', 'inert')).toEqual({ inert: true });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('auto clears the inert attribute', () => {
+      expect(transformDecl('interactivity', 'auto')).toEqual({ inert: false });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+  });
+});
+
+// https://drafts.csswg.org/css-forms-1/#field-sizing
+describe('field-sizing spec compliance (CSS Form Control Styling 1 §7.1)', () => {
+  let warnSpy: jest.SpyInstance;
+  beforeEach(() => {
+    resetWarningsForTest();
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  // "Initial: fixed; Applies to: elements with default preferred size;
+  // Inherited: no; Computed value: as specified; Animation type: discrete."
+  it('field-sizing: fixed is a no-op on native (initial value)', () => {
+    expect(transformDecl('field-sizing', 'fixed')).toEqual({});
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  // "content: The UA must determine the element's intrinsic size based
+  // on its content, and must ignore any default preferred size defined
+  // by the host language."
+  it('field-sizing: content lifts multiline + fieldSizing flag on native', () => {
+    expect(transformDecl('field-sizing', 'content')).toEqual({
+      multiline: true,
+      fieldSizing: 'content',
+    });
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejects unknown keyword', () => {
+    expect(transformDecl('field-sizing', 'auto')).toEqual({});
+    expect(transformDecl('field-sizing', 'banana')).toEqual({});
+  });
+
+  it('rejects multi-token values', () => {
+    expect(transformDecl('field-sizing', 'content fixed')).toEqual({});
+  });
+
+  describe('on rn-web', () => {
+    const g = global as { __NATIVE_WEB__?: boolean };
+    const originalNativeWeb = g.__NATIVE_WEB__;
+    beforeAll(() => {
+      g.__NATIVE_WEB__ = true;
+    });
+    afterAll(() => {
+      g.__NATIVE_WEB__ = originalNativeWeb;
+    });
+
+    it('content passes through to the browser CSS engine + lifts multiline so rn-web renders a textarea', () => {
+      expect(transformDecl('field-sizing', 'content')).toEqual({
+        multiline: true,
+        fieldSizing: 'content',
+      });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('fixed passes through to the browser CSS engine', () => {
+      expect(transformDecl('field-sizing', 'fixed')).toEqual({ fieldSizing: 'fixed' });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+  });
+});
+
+// CSS Transforms 2 §8 — https://drafts.csswg.org/css-transforms-2/#perspective-property
+describe('perspective spec compliance (CSS Transforms 2 §8)', () => {
+  let warnSpy: jest.SpyInstance;
+  beforeEach(() => {
+    resetWarningsForTest();
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  // The polyfill emits a sentinel key (`__sc_perspective`) that
+  // `compileNative.processDecls` folds into the final `transform` string
+  // after all decls in the block have run. End-to-end composition with
+  // an author-declared `transform:` is covered in
+  // `native.test.tsx › perspective composition` (full pipeline).
+
+  // "Initial: none. Syntax: none | <length [0,∞]>."
+  it('perspective: none → sentinel cleared transform', () => {
+    expect(transformDecl('perspective', 'none')).toEqual({ __sc_perspective: 'none' });
+  });
+
+  it('perspective: <length> emits a perspective() sentinel', () => {
+    expect(transformDecl('perspective', '800px')).toEqual({
+      __sc_perspective: 'perspective(800px)',
+    });
+  });
+
+  // Spec note: "Lengths less than 1px are clamped at 1px for rendering."
+  it('perspective: < 1px clamps to 1px', () => {
+    expect(transformDecl('perspective', '0.4px')).toEqual({
+      __sc_perspective: 'perspective(1px)',
+    });
+  });
+
+  it('perspective: bare 0 treated as a near-zero length and clamped to 1px', () => {
+    expect(transformDecl('perspective', '0')).toEqual({
+      __sc_perspective: 'perspective(1px)',
+    });
+  });
+
+  it('rejects negative lengths', () => {
+    expect(transformDecl('perspective', '-200px')).toEqual({});
+  });
+
+  it('rejects keyword other than none', () => {
+    expect(transformDecl('perspective', 'flat')).toEqual({});
+  });
+
+  // The browser implements `perspective` as a first-class property that
+  // applies to descendants' 3D contexts (CSS Transforms 2 §8). On rn-web
+  // we emit the raw `perspective: <length>` property and skip the
+  // sentinel-into-transform fold — the browser handles the descendant
+  // composition that RN can't natively express.
+  describe('on rn-web', () => {
+    const g = global as { __NATIVE_WEB__?: boolean };
+    const originalNativeWeb = g.__NATIVE_WEB__;
+    beforeAll(() => {
+      g.__NATIVE_WEB__ = true;
+    });
+    afterAll(() => {
+      g.__NATIVE_WEB__ = originalNativeWeb;
+    });
+
+    it('passes raw <length> through as perspective: <length>', () => {
+      expect(transformDecl('perspective', '800px')).toEqual({ perspective: '800px' });
+    });
+
+    it('passes none through as perspective: none', () => {
+      expect(transformDecl('perspective', 'none')).toEqual({ perspective: 'none' });
+    });
+  });
+});
+
+// CSS Transforms 2 §7 — https://drafts.csswg.org/css-transforms-2/#transform-style-property
+describe('transform-style spec compliance (CSS Transforms 2 §7)', () => {
+  let warnSpy: jest.SpyInstance;
+  beforeEach(() => {
+    resetWarningsForTest();
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('transform-style: flat is a no-op on native (initial value)', () => {
+    expect(transformDecl('transform-style', 'flat')).toEqual({});
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('transform-style: preserve-3d drops on native + warns once', () => {
+    expect(transformDecl('transform-style', 'preserve-3d')).toEqual({});
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/preserve-3d/);
+  });
+
+  it('rejects unknown keyword', () => {
+    expect(transformDecl('transform-style', 'banana')).toEqual({});
+  });
+
+  describe('on rn-web', () => {
+    const g = global as { __NATIVE_WEB__?: boolean };
+    const originalNativeWeb = g.__NATIVE_WEB__;
+    beforeAll(() => {
+      g.__NATIVE_WEB__ = true;
+    });
+    afterAll(() => {
+      g.__NATIVE_WEB__ = originalNativeWeb;
+    });
+
+    it('passes preserve-3d through (browser honors)', () => {
+      expect(transformDecl('transform-style', 'preserve-3d')).toEqual({
+        transformStyle: 'preserve-3d',
+      });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+  });
+});
+
+// CSS Transforms 1 §5 — https://drafts.csswg.org/css-transforms-1/#transform-box
+describe('transform-box spec compliance (CSS Transforms 1 §5)', () => {
+  let warnSpy: jest.SpyInstance;
+  beforeEach(() => {
+    resetWarningsForTest();
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it.each([['content-box'], ['border-box'], ['fill-box'], ['stroke-box'], ['view-box']])(
+    'transform-box: %s drops the declaration on native and warns once',
+    value => {
+      expect(transformDecl('transform-box', value)).toEqual({});
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy.mock.calls[0][0]).toMatch(/transform-box/);
+      expect(warnSpy.mock.calls[0][0]).toMatch(/no React Native equivalent/);
+    }
+  );
+
+  it('rejects an unknown keyword', () => {
+    expect(transformDecl('transform-box', 'banana')).toEqual({});
+  });
+
+  describe('on rn-web', () => {
+    const g = global as { __NATIVE_WEB__?: boolean };
+    const originalNativeWeb = g.__NATIVE_WEB__;
+    beforeAll(() => {
+      g.__NATIVE_WEB__ = true;
+    });
+    afterAll(() => {
+      g.__NATIVE_WEB__ = originalNativeWeb;
+    });
+
+    it('passes the value through (browser honors)', () => {
+      expect(transformDecl('transform-box', 'border-box')).toEqual({ transformBox: 'border-box' });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe('caret-color spec compliance (CSS UI 4 §5.2.1)', () => {
@@ -1788,6 +2792,35 @@ describe('caret-color spec compliance (CSS UI 4 §5.2.1)', () => {
       expect(warnSpy).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('on rn-web', () => {
+    const g = global as { __NATIVE_WEB__?: boolean };
+    const originalNativeWeb = g.__NATIVE_WEB__;
+    beforeAll(() => {
+      g.__NATIVE_WEB__ = true;
+    });
+    afterAll(() => {
+      g.__NATIVE_WEB__ = originalNativeWeb;
+    });
+
+    // The browser handles `caret-color` end-to-end; the Android
+    // `cursorColor` TextInput prop is meaningless on web, and the iOS
+    // limitation doesn't apply. Emit the style key only.
+    it('emits caretColor only, no cursorColor lift, no iOS warn', () => {
+      expect(transformDecl('caret-color', 'red')).toEqual({ caretColor: 'red' });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('auto still emits caretColor: auto with no warn', () => {
+      expect(transformDecl('caret-color', 'auto')).toEqual({ caretColor: 'auto' });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('two-value form drops the second value silently (browser handles caret-shape)', () => {
+      expect(transformDecl('caret-color', 'red auto')).toEqual({ caretColor: 'red' });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe('text-decoration platform skew (Android underline color)', () => {
@@ -1833,5 +2866,589 @@ describe('text-decoration platform skew (Android underline color)', () => {
     expect(warnSpy).toHaveBeenCalledTimes(1);
     transformDecl('text-decoration', 'underline #0f0');
     expect(warnSpy).toHaveBeenCalledTimes(2);
+  });
+});
+
+// https://drafts.csswg.org/css-color-5/#relative-colors
+describe('relative-color spec compliance (CSS Color Module Level 5 §4)', () => {
+  // The literal-base path folds at compile time via staticColorFunctionToHex.
+  // Sentinel-base form (var() / theme tokens) bails with the warn.
+
+  beforeEach(() => {
+    resetWarningsForTest();
+  });
+
+  describe('§4.1 channel-keyword resolution', () => {
+    // "All operations take part in the color space of the relative
+    // color function; if the originally specified color space for the
+    // origin color used a different color function, it's first
+    // converted into the chosen color function, so it has meaningful
+    // values for the components, and component keywords refer to the
+    // color space of the relative color, not the origin color."
+    it('oklch(from #f00 l c h) recomposes the origin (red) ≈ #ff0000', () => {
+      const tok = tokenize('oklch(from #f00 l c h)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+      const r = parseInt(hex!.slice(1, 3), 16);
+      const g = parseInt(hex!.slice(3, 5), 16);
+      const b = parseInt(hex!.slice(5, 7), 16);
+      expect(r).toBeGreaterThan(0xf0);
+      expect(g).toBeLessThan(0x20);
+      expect(b).toBeLessThan(0x20);
+    });
+
+    it('oklab(from #00f l a b) recomposes the origin (blue) ≈ #0000ff', () => {
+      const tok = tokenize('oklab(from #00f l a b)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+      const r = parseInt(hex!.slice(1, 3), 16);
+      const b = parseInt(hex!.slice(5, 7), 16);
+      expect(r).toBeLessThan(0x20);
+      expect(b).toBeGreaterThan(0xf0);
+    });
+
+    it('lch(from #0f0 l c h) recomposes the origin (green) ≈ #00ff00', () => {
+      const tok = tokenize('lch(from #0f0 l c h)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+      const g = parseInt(hex!.slice(3, 5), 16);
+      expect(g).toBeGreaterThan(0xf0);
+    });
+
+    it('lab(from #fff l a b) recomposes white', () => {
+      const tok = tokenize('lab(from #fff l a b)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+      const r = parseInt(hex!.slice(1, 3), 16);
+      const g = parseInt(hex!.slice(3, 5), 16);
+      const b = parseInt(hex!.slice(5, 7), 16);
+      expect(r).toBeGreaterThan(0xf0);
+      expect(g).toBeGreaterThan(0xf0);
+      expect(b).toBeGreaterThan(0xf0);
+    });
+
+    it('cross-space conversion: lab(from #ff0000 l a b) re-emits red', () => {
+      // sRGB → CIELab → LabToRgb roundtrip preserves perceptual red.
+      const tok = tokenize('lab(from #ff0000 l a b)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+      const r = parseInt(hex!.slice(1, 3), 16);
+      expect(r).toBeGreaterThan(0xf0);
+    });
+
+    it('keywords accepted in any slot order (oklch c l h is valid)', () => {
+      // Swapping `l` and `c` produces a different color than the origin;
+      // we just verify the parse succeeds rather than asserting a value.
+      const tok = tokenize('oklch(from oklch(0.5 0.1 200) c l h)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+    });
+  });
+
+  describe('§4.1 alpha default = origin alpha', () => {
+    // "If the alpha value of the relative color is omitted, it defaults
+    // to that of the origin color (rather than defaulting to 100%, as
+    // it does in the absolute syntax)."
+    it('oklch with omitted alpha inherits the origin alpha', () => {
+      // Origin is rgb(...,0.5); the relative color omits `/ alpha`.
+      const tok = tokenize('oklch(from rgb(255 0 0 / 0.5) l c h)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      // 8-digit hex with `80` alpha byte (0.5 × 255 ≈ 128).
+      expect(hex).toMatch(/^#[0-9a-f]{6}80$/i);
+    });
+
+    it('explicit alpha overrides the origin alpha', () => {
+      const tok = tokenize('oklch(from rgb(255 0 0 / 0.5) l c h / 1)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+    });
+  });
+
+  describe('§4.2 calc() with bound channel keywords', () => {
+    // "By using the component keywords in a math function, an origin
+    // color can be manipulated in more advanced ways."
+    it('oklch(from #f00 calc(l - 0.2) c h) darkens red', () => {
+      const tok = tokenize('oklch(from #f00 calc(l - 0.2) c h)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+      // Darker than #f00.
+      const r = parseInt(hex!.slice(1, 3), 16);
+      expect(r).toBeLessThan(0xf0);
+    });
+
+    it('oklch(from #f00 l c calc(h + 90)) shifts hue', () => {
+      const tok = tokenize('oklch(from #f00 l c calc(h + 90))')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+      expect(hex).not.toMatch(/^#ff/);
+    });
+
+    it('oklch(from #f00 l calc(c / 2) h) reduces chroma', () => {
+      const tok = tokenize('oklch(from #f00 l calc(c / 2) h)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+      // Halved chroma desaturates red toward gray; green/blue lift.
+      const r = parseInt(hex!.slice(1, 3), 16);
+      const g = parseInt(hex!.slice(3, 5), 16);
+      expect(r).toBeLessThan(0xff);
+      expect(g).toBeGreaterThan(0x20);
+    });
+
+    it('calc() composes channel keywords with literal numbers', () => {
+      const tok = tokenize('oklch(from #f00 0.5 c h)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+    });
+  });
+
+  describe('§4 origin in nested color functions', () => {
+    it('oklch(from rgb(255 0 0) l c h) accepts an rgb() origin', () => {
+      const tok = tokenize('oklch(from rgb(255 0 0) l c h)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+      const r = parseInt(hex!.slice(1, 3), 16);
+      expect(r).toBeGreaterThan(0xf0);
+    });
+
+    it('oklch(from oklab(0.7 0.1 0.1) l c h) accepts an oklab() origin', () => {
+      const tok = tokenize('oklch(from oklab(0.7 0.1 0.1) l c h)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+    });
+
+    it('named-color origin: oklch(from blue l c h)', () => {
+      const tok = tokenize('oklch(from blue l c h)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+      const b = parseInt(hex!.slice(5, 7), 16);
+      expect(b).toBeGreaterThan(0xc0);
+    });
+
+    // Spec verbatim: "The origin color can be any <color>, including
+    // any of the color() function spaces." `color()` originates from
+    // CSS Color 4 §10 (predefined RGB spaces); the relative-color
+    // grammar in CSS Color 5 §4 doesn't restrict the origin.
+    it('color(srgb 1 0 0) origin recomposes through OKLCh', () => {
+      const tok = tokenize('oklch(from color(srgb 1 0 0) l c h)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+      // sRGB red → roundtrip through OKLCh → red.
+      const r = parseInt(hex!.slice(1, 3), 16);
+      const g = parseInt(hex!.slice(3, 5), 16);
+      const b = parseInt(hex!.slice(5, 7), 16);
+      expect(r).toBeGreaterThan(0xf0);
+      expect(g).toBeLessThan(0x20);
+      expect(b).toBeLessThan(0x20);
+    });
+
+    it('color(display-p3 1 0 0) origin resolves (gamut-mapped to sRGB)', () => {
+      // Display-P3 pure red is out-of-gamut for sRGB; the existing
+      // finalizeOrMap routes through the OKLCh bisection mapper, so the
+      // result is the closest in-gamut red, not a clip-floor.
+      const tok = tokenize('oklch(from color(display-p3 1 0 0) l c h)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+      const r = parseInt(hex!.slice(1, 3), 16);
+      const g = parseInt(hex!.slice(3, 5), 16);
+      const b = parseInt(hex!.slice(5, 7), 16);
+      expect(r).toBeGreaterThan(0xd0);
+      expect(g).toBeLessThan(0x40);
+      expect(b).toBeLessThan(0x40);
+    });
+
+    it('legacy rgba() origin preserves alpha through the relative fold', () => {
+      // CSS Color 5 §4.1: "If the alpha value of the relative color is
+      // omitted, it defaults to that of the origin color (rather than
+      // defaulting to 100%, as it does in the absolute syntax)." Legacy
+      // comma form should round-trip identically to slash form.
+      const tok = tokenize('oklch(from rgba(255, 0, 0, 0.5) l c h)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}80$/i);
+    });
+  });
+
+  describe('§4 `none` channel substitution in relative-color (Color 4 §4.4)', () => {
+    // CSS Color 4 §4.4: "If the value of a channel is the keyword
+    // `none`, the channel is given a used value of zero for the purpose
+    // of interpolation, compositing, and serialization." Relative-color
+    // syntax inherits the same substitution rule for any channel slot.
+    it('oklch(from #f00 none c h) substitutes L=0 (black with red chroma direction)', () => {
+      const tok = tokenize('oklch(from #f00 none c h)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+      // L=0 forces the color to black regardless of chroma / hue.
+      expect(hex).toBe('#000000');
+    });
+  });
+
+  describe('§4.1 alpha clamp (Color 5 §4.1)', () => {
+    // CSS Color 5 §4.1 inherits alpha clamping from Color 4 §1.4: "The
+    // alpha value is clamped to the range [0,1]." A `calc()` that
+    // overshoots must clamp at the used-value step rather than emit a
+    // raw 2.0 alpha.
+    it('oklch(from #f00 l c h / calc(alpha * 2)) clamps alpha to 1 (no alpha byte)', () => {
+      const tok = tokenize('oklch(from #f00 l c h / calc(alpha * 2))')[0];
+      const hex = staticColorFunctionToHex(tok);
+      // Origin alpha is 1; doubling clamps to 1 — fully opaque, 6-digit
+      // hex (no alpha byte appended).
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+    });
+  });
+
+  describe('§4 currentColor origin requires the cascade', () => {
+    // CSS Color 5 §4: "The origin color can be any <color>." But
+    // `currentColor` resolves at used-value time against the cascaded
+    // `color` value, which the static fold can't see on native. We
+    // warn once and drop the declaration so the author chooses a
+    // theme-token base or pre-resolves the value.
+    it('oklch(from currentColor l c h) drops the declaration', () => {
+      const tok = tokenize('oklch(from currentColor l c h)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toBeNull();
+    });
+
+    it('emits warnOnce naming the offending construct and an alternative', () => {
+      resetWarningsForTest();
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        const tok = tokenize('oklch(from currentColor l c h)')[0];
+        staticColorFunctionToHex(tok);
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+        const message = (warnSpy.mock.calls[0] as string[])[0];
+        expect(message).toContain('currentColor');
+        expect(message).toContain('oklch(from currentColor');
+        // The warning steers the author at a theme-token base.
+        expect(message).toContain('t.colors.fg');
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
+
+    it('mixed-case currentColor matches (ASCII case-insensitive ident)', () => {
+      resetWarningsForTest();
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        const tok = tokenize('oklch(from CURRENTCOLOR l c h)')[0];
+        const hex = staticColorFunctionToHex(tok);
+        expect(hex).toBeNull();
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
+  });
+
+  describe('§4.1 sentinel-base (theme-token) defers to runtime resolver', () => {
+    // The static fold bails (returns null) so transformDecl's
+    // dispatch falls into buildResolver → colorFnResolver, which at
+    // render time substitutes the sentinel with the resolved theme
+    // value and re-enters the fold pipeline. No warning fires.
+    it('staticColorFunctionToHex returns null for sentinel-base values', () => {
+      const tok = tokenize('oklch(from \0sc:colors.brand:#f00 l c h)')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toBeNull();
+    });
+
+    it('no warning fires; the runtime resolver handles substitution', () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        const tok = tokenize('oklch(from \0sc:colors.brand:#f00 l c h)')[0];
+        staticColorFunctionToHex(tok);
+        expect(warnSpy).not.toHaveBeenCalled();
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
+
+    it('buildResolver returns a resolver that substitutes + folds at render time', () => {
+      const r = buildResolver('oklch(from \0sc:colors.brand:#f00 l c h)');
+      expect(r).not.toBeNull();
+      // Theme path resolved at render time; the resolver substitutes
+      // the sentinel with the theme value, then folds the relative
+      // color against the resolved base.
+      const env = {
+        media: {
+          width: 0,
+          height: 0,
+          colorScheme: null,
+          reduceMotion: false,
+          fontScale: 1,
+          pixelRatio: 1,
+        },
+        container: null,
+        theme: { colors: { brand: '#00ff00' } },
+        insets: { top: 0, right: 0, bottom: 0, left: 0 },
+        rootFontSize: 16,
+        fontSize: 16,
+        lineHeight: 24,
+        direction: 'ltr' as const,
+      };
+      const out = r!(env);
+      expect(typeof out).toBe('string');
+      expect(out as string).toMatch(/^#[0-9a-f]{6}$/);
+      // The resolved hex should be the brand color (green) recomposed
+      // through OKLCh — bytes close to #00ff00.
+      const g = parseInt((out as string).slice(3, 5), 16);
+      expect(g).toBeGreaterThan(0xf0);
+    });
+
+    it('relative color with calc() against sentinel base resolves', () => {
+      const r = buildResolver('oklch(from \0sc:colors.brand:#0066cc calc(l - 0.15) c h)');
+      expect(r).not.toBeNull();
+      const env = {
+        media: {
+          width: 0,
+          height: 0,
+          colorScheme: null,
+          reduceMotion: false,
+          fontScale: 1,
+          pixelRatio: 1,
+        },
+        container: null,
+        theme: { colors: { brand: '#3399ff' } },
+        insets: { top: 0, right: 0, bottom: 0, left: 0 },
+        rootFontSize: 16,
+        fontSize: 16,
+        lineHeight: 24,
+        direction: 'ltr' as const,
+      };
+      const out = r!(env);
+      expect(typeof out).toBe('string');
+      expect(out as string).toMatch(/^#[0-9a-f]{6}$/);
+    });
+  });
+
+  describe('§4.1 percentage and angle origins resolve to numbers', () => {
+    // "If the origin color has a hue <angle> specified in degrees, then
+    // RCS in the same colorspace will use the resolved <number> form."
+    it('hue from origin angle resolves to a number for use in calc()', () => {
+      const tok = tokenize('oklch(from oklch(0.5 0.1 90deg) l c calc(h + 10))')[0];
+      const hex = staticColorFunctionToHex(tok);
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+    });
+  });
+});
+
+// https://drafts.csswg.org/css-color-4/#css-system-colors
+describe('system color spec compliance (CSS Color Module Level 4 §6.2)', () => {
+  // "Each system color value resolves to a UA / platform-defined
+  // color appropriate to the platform." v7 folds the keyword to a
+  // `light-dark()` expression carrying sensible per-mode defaults;
+  // the existing light-dark polyfill resolves the active scheme on
+  // iOS / Android and passes the function through on rn-web.
+
+  describe('§6.2 keyword set', () => {
+    // "User agents must support the following keywords": Canvas,
+    // CanvasText, LinkText, VisitedText, ActiveText, ButtonFace,
+    // ButtonText, ButtonBorder, Field, FieldText, GrayText,
+    // SelectedItem, SelectedItemText, Mark, MarkText, Highlight,
+    // HighlightText, AccentColor, AccentColorText (19 total).
+    const KEYWORDS = [
+      'Canvas',
+      'CanvasText',
+      'Field',
+      'FieldText',
+      'GrayText',
+      'Highlight',
+      'HighlightText',
+      'LinkText',
+      'VisitedText',
+      'ActiveText',
+      'ButtonFace',
+      'ButtonText',
+      'ButtonBorder',
+      'SelectedItem',
+      'SelectedItemText',
+      'Mark',
+      'MarkText',
+      'AccentColor',
+      'AccentColorText',
+    ];
+
+    it.each(KEYWORDS)('%s folds to a `light-dark()` expression', keyword => {
+      const out = transformDecl('color', keyword);
+      // Native (jest default): light-dark resolves at runtime via the
+      // existing polyfill chain. The compile-time output retains the
+      // function form so the runtime resolver sees the same shape it
+      // already handles for authored `light-dark()` values.
+      expect(typeof out.color).toBe('string');
+      expect(out.color as string).toMatch(/^light-dark\(/);
+    });
+
+    it('matches case-insensitively per CSS syntax §3.4', () => {
+      const lower = transformDecl('color', 'canvas');
+      const mixed = transformDecl('color', 'Canvas');
+      const upper = transformDecl('color', 'CANVAS');
+      expect(lower.color).toBe(mixed.color);
+      expect(mixed.color).toBe(upper.color);
+    });
+
+    it('ButtonFace folds with light + dark literals', () => {
+      const out = transformDecl('color', 'ButtonFace');
+      expect(out.color as string).toContain('#efefef');
+      expect(out.color as string).toContain('#5f5f5f');
+    });
+
+    it('AccentColor folds with light + dark literals', () => {
+      const out = transformDecl('color', 'AccentColor');
+      expect(out.color as string).toContain('#0078d4');
+      expect(out.color as string).toContain('#3b82f6');
+    });
+
+    it('Mark folds with light + dark literals', () => {
+      const out = transformDecl('color', 'Mark');
+      expect(out.color as string).toContain('#fcf4a3');
+      expect(out.color as string).toContain('#9c8d2a');
+    });
+
+    it('ButtonFace mixed-case input (buttonface / BUTTONFACE / ButtonFace) all match', () => {
+      // CSS syntax §3.4: identifiers are ASCII case-insensitive.
+      const lower = transformDecl('color', 'buttonface');
+      const upper = transformDecl('color', 'BUTTONFACE');
+      const mixed = transformDecl('color', 'ButtonFace');
+      expect(lower.color).toBe(mixed.color);
+      expect(mixed.color).toBe(upper.color);
+    });
+  });
+
+  describe('CSS Color 4 Appendix A deprecated aliases', () => {
+    // Spec verbatim: "User agents must support these keywords, and to
+    // mitigate fingerprinting must map them to the (undeprecated)
+    // system colors."
+
+    it.each([
+      ['ActiveBorder', 'ButtonBorder'],
+      ['ActiveCaption', 'CanvasText'],
+      ['AppWorkspace', 'Canvas'],
+      ['Background', 'Canvas'],
+      ['ButtonHighlight', 'ButtonFace'],
+      ['ButtonShadow', 'ButtonFace'],
+      ['CaptionText', 'CanvasText'],
+      ['InactiveBorder', 'ButtonBorder'],
+      ['InactiveCaption', 'Canvas'],
+      ['InactiveCaptionText', 'GrayText'],
+      ['InfoBackground', 'Canvas'],
+      ['InfoText', 'CanvasText'],
+      ['Menu', 'Canvas'],
+      ['MenuText', 'CanvasText'],
+      ['Scrollbar', 'Canvas'],
+      ['ThreeDDarkShadow', 'ButtonBorder'],
+      ['ThreeDFace', 'ButtonFace'],
+      ['ThreeDHighlight', 'ButtonBorder'],
+      ['ThreeDLightShadow', 'ButtonBorder'],
+      ['ThreeDShadow', 'ButtonBorder'],
+      ['Window', 'Canvas'],
+      ['WindowFrame', 'ButtonBorder'],
+      ['WindowText', 'CanvasText'],
+    ])('%s resolves to %s', (deprecated, replacement) => {
+      const dep = transformDecl('color', deprecated);
+      const repl = transformDecl('color', replacement);
+      expect(dep.color).toBe(repl.color);
+    });
+
+    it('deprecated alias matches case-insensitively', () => {
+      const lower = transformDecl('color', 'activeborder');
+      const upper = transformDecl('color', 'ACTIVEBORDER');
+      const mixed = transformDecl('color', 'ActiveBorder');
+      expect(lower.color).toBe(mixed.color);
+      expect(mixed.color).toBe(upper.color);
+    });
+  });
+
+  describe('§6.2 currentColor is not eaten by the polyfill', () => {
+    // `currentColor` is a <color> keyword, not a system color. The
+    // polyfill must return null so the declaration passes through to
+    // the existing coerce path (where rn-web preserves the keyword and
+    // native lets it propagate to RN's color parser).
+    it('color: currentColor passes through unchanged', () => {
+      const out = transformDecl('color', 'currentColor');
+      expect(out.color).toBe('currentColor');
+    });
+  });
+
+  describe('§6.2 prop-context coverage', () => {
+    // System colors apply on any color-accepting property.
+    it('background-color: Canvas folds', () => {
+      const out = transformDecl('background-color', 'Canvas');
+      expect(out.backgroundColor as string).toMatch(/^light-dark\(/);
+    });
+
+    it('border-color: GrayText folds', () => {
+      const out = transformDecl('border-color', 'GrayText');
+      expect(out.borderColor as string).toMatch(/^light-dark\(/);
+    });
+
+    it('caret-color: Highlight folds', () => {
+      const out = transformDecl('caret-color', 'Highlight');
+      expect(out.caretColor as string).toMatch(/^light-dark\(/);
+    });
+  });
+
+  describe('§6.2 color-scheme reactivity', () => {
+    // System colors respond to the user agent's color scheme. The
+    // light-dark polyfill drives the per-mode switch; the keyword
+    // simply selects which two literals to interpolate between.
+    it('Canvas → white in light, near-black in dark', () => {
+      const out = transformDecl('color', 'Canvas');
+      // `light-dark(<light>, <dark>)`: the structure is preserved
+      // so the runtime resolver can pick the right arm.
+      expect(out.color as string).toContain('#ffffff');
+      expect(out.color as string).toContain('#1c1c1e');
+    });
+
+    it('CanvasText → black in light, white in dark', () => {
+      const out = transformDecl('color', 'CanvasText');
+      expect(out.color as string).toContain('#000000');
+      expect(out.color as string).toContain('#ffffff');
+    });
+
+    it('LinkText → blue in light, lighter blue in dark', () => {
+      const out = transformDecl('color', 'LinkText');
+      expect(out.color as string).toContain('#0066cc');
+      expect(out.color as string).toContain('#4099ff');
+    });
+  });
+
+  describe('§6.2 non-keyword passthrough (no regressions)', () => {
+    // Bare keywords that are NOT system colors (e.g. `auto`) must
+    // continue to flow through unchanged.
+    it('bare `auto` is not rewritten', () => {
+      // `auto` was previously the unit fallback in coerceRawValue;
+      // the system-color check must not steal it.
+      expect(transformDecl('aspect-ratio', 'auto')).not.toEqual({
+        aspectRatio: expect.stringMatching(/^light-dark/),
+      });
+    });
+
+    it('named CSS colors (`red`) pass through to the color parser', () => {
+      const out = transformDecl('color', 'red');
+      // `red` is not a system color; the existing NAMED_TO_RGB
+      // path or coerce returns it untouched.
+      expect(out.color).toBe('red');
+    });
+  });
+
+  // Modern browsers track the user's actual system theme, forced-colors
+  // mode, and high-contrast settings when resolving CSS Color 4 system
+  // keywords (CSS Color 4 §6.2). Our compile-time `light-dark()` pair is
+  // a coarse approximation. On rn-web we skip the expansion so the
+  // browser does the right thing end-to-end.
+  describe('on rn-web', () => {
+    const g = global as { __NATIVE_WEB__?: boolean };
+    const originalNativeWeb = g.__NATIVE_WEB__;
+    beforeAll(() => {
+      g.__NATIVE_WEB__ = true;
+    });
+    afterAll(() => {
+      g.__NATIVE_WEB__ = originalNativeWeb;
+    });
+
+    it('passes Canvas through unchanged so the browser tracks the system theme', () => {
+      expect(transformDecl('color', 'Canvas')).toEqual({ color: 'Canvas' });
+    });
+
+    it('passes deprecated keywords through unchanged (browser handles the alias)', () => {
+      expect(transformDecl('color', 'WindowText')).toEqual({ color: 'WindowText' });
+    });
   });
 });

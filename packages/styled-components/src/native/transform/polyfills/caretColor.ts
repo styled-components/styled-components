@@ -47,7 +47,9 @@ function caretColorShorthand(tokens: Token[]): Dict<any> | null {
       return null;
     }
     if (!stream.eof()) return null;
-    if (__DEV__) {
+    // The block-caret limitation only applies to native; rn-web ignores
+    // the second value the same way the browser does (no caret-shape).
+    if (!__NATIVE_WEB__ && __DEV__) {
       warnOnce(
         'native-caret-color-block',
         "`caret-color`'s second value (text color overlapping the caret) requires `caret-shape: block`, which React Native does not render on iOS or Android in 0.85. The first value is applied; the second has no effect. rn-web honors both natively."
@@ -56,6 +58,11 @@ function caretColorShorthand(tokens: Token[]): Dict<any> | null {
   }
 
   if (firstIsAuto) return { caretColor: 'auto' };
+
+  // rn-web: emit the style key only; the browser handles `caret-color`
+  // natively. The `cursorColor` Android prop lift and the iOS limitation
+  // warn are native-only concerns.
+  if (__NATIVE_WEB__) return { caretColor: first.raw };
 
   if (__DEV__) {
     warnOnce(

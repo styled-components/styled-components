@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { useContext, useMemo } from 'react';
 import { fifoSet } from '../utils/fifoMap';
 
 // Pull RN APIs eagerly at module load so the `useEffect` closures don't chase
@@ -550,32 +550,30 @@ export function useBreakpoint<T extends Record<string, number>>(
   return active;
 }
 
-export interface ContainerEntry {
-  name?: string | undefined;
-  width: number;
-  height: number;
-}
-
-export interface ContainerContextValue {
-  /** nearest ancestor container (unnamed) */
-  nearest: ContainerEntry | null;
-  /** map of named containers up the tree */
-  named: Readonly<Record<string, ContainerEntry>>;
-}
-
-const EMPTY_NAMED: Readonly<Record<string, ContainerEntry>> = Object.freeze({});
-
-export const ContainerContext = createContext<ContainerContextValue>({
-  nearest: null,
-  named: EMPTY_NAMED,
-});
+/**
+ * Container query state is published by `ContainerPublisher` into the
+ * consolidated {@link NativeStyleContext}; this hook reads the
+ * `container` field. The standalone `ContainerContext` from earlier
+ * v7 prereleases is gone — providers and consumers go through
+ * `NativeStyleContext.Provider` / `useNativeStyleContext()`.
+ *
+ * `ContainerEntry` and `ContainerContextValue` are re-exported here
+ * for backward-compat with code that imported them from `responsive`;
+ * canonical home is `NativeStyleContext.ts`.
+ */
+export type { ContainerEntry, ContainerContextValue } from './NativeStyleContext';
+import {
+  type ContainerContextValue,
+  type ContainerEntry,
+  NativeStyleContext,
+} from './NativeStyleContext';
 
 export function useContainerContext(): ContainerContextValue {
-  return useContext(ContainerContext);
+  return useContext(NativeStyleContext).container;
 }
 
 export function useContainer(name?: string): ContainerEntry | null {
-  const ctx = useContext(ContainerContext);
+  const ctx = useContainerContext();
   if (name) return ctx.named[name] ?? null;
   return ctx.nearest;
 }

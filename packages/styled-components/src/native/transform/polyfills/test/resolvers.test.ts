@@ -13,6 +13,9 @@ const baseEnv: ResolveEnv = {
   theme: {},
   insets: { top: 44, right: 0, bottom: 34, left: 0 },
   rootFontSize: 16,
+  fontSize: 16,
+  lineHeight: 24,
+  direction: 'ltr',
 };
 
 describe('runtime resolvers', () => {
@@ -29,6 +32,104 @@ describe('runtime resolvers', () => {
   it('resolves vmin / vmax', () => {
     expect(buildResolver('10vmin')!(baseEnv)).toBe(40);
     expect(buildResolver('10vmax')!(baseEnv)).toBe(80);
+  });
+
+  // CSS Values 4 §6.1.1 — https://drafts.csswg.org/css-values-4/#rem
+  describe('rem (CSS Values 4 §6.1.1)', () => {
+    // "Equal to the computed value of font-size on the root element."
+    it('resolves to rootFontSize × n', () => {
+      expect(buildResolver('1rem')!(baseEnv)).toBe(16);
+      expect(buildResolver('2rem')!(baseEnv)).toBe(32);
+      expect(buildResolver('0.5rem')!(baseEnv)).toBe(8);
+    });
+
+    it('honors a custom rootFontSize from the env', () => {
+      const env: ResolveEnv = { ...baseEnv, rootFontSize: 20 };
+      expect(buildResolver('1rem')!(env)).toBe(20);
+      expect(buildResolver('1.5rem')!(env)).toBe(30);
+    });
+
+    it('handles negative rem values', () => {
+      expect(buildResolver('-1rem')!(baseEnv)).toBe(-16);
+      expect(buildResolver('-0.25rem')!(baseEnv)).toBe(-4);
+    });
+
+    it('handles zero rem', () => {
+      expect(buildResolver('0rem')!(baseEnv)).toBe(0);
+    });
+
+    it('rem regex does not absorb the trailing characters of similar units', () => {
+      // `rem` and `em` share a suffix; the unit regex must match the
+      // longer form first so `12rem` doesn't accidentally fold to
+      // `12r` + `em`. Verified by checking that `1em` resolves
+      // against fontSize, not rootFontSize.
+      const env: ResolveEnv = { ...baseEnv, fontSize: 24, rootFontSize: 16 };
+      expect(buildResolver('1em')!(env)).toBe(24);
+      expect(buildResolver('1rem')!(env)).toBe(16);
+    });
+  });
+
+  // CSS Values 4 §6.1.1 — https://drafts.csswg.org/css-values-4/#em
+  describe('em / lh / rlh (CSS Values 4 §6.1.1)', () => {
+    // "Equal to the computed value of the font-size property of the
+    // element on which it is used."
+    it('em resolves against env.fontSize', () => {
+      const env: ResolveEnv = { ...baseEnv, fontSize: 20 };
+      expect(buildResolver('1em')!(env)).toBe(20);
+      expect(buildResolver('1.5em')!(env)).toBe(30);
+      expect(buildResolver('-0.5em')!(env)).toBe(-10);
+    });
+
+    // "Equal to the computed value of the line-height property of
+    // the element on which it is used."
+    it('lh resolves against env.lineHeight', () => {
+      const env: ResolveEnv = { ...baseEnv, lineHeight: 28 };
+      expect(buildResolver('1lh')!(env)).toBe(28);
+      expect(buildResolver('0.5lh')!(env)).toBe(14);
+    });
+
+    // "Equal to the computed value of the line-height property on
+    // the root element." v7 today tracks one cascade.lineHeight
+    // (parent-anchored); rlh matches lh until a future split tracks
+    // root-only.
+    it('rlh resolves against env.lineHeight', () => {
+      const env: ResolveEnv = { ...baseEnv, lineHeight: 24 };
+      expect(buildResolver('1rlh')!(env)).toBe(24);
+      expect(buildResolver('2rlh')!(env)).toBe(48);
+    });
+  });
+
+  // https://drafts.csswg.org/css-text-4/#text-align-property
+  describe('text-align direction-aware sentinel (CSS Text 4 §7.1)', () => {
+    // "start: aligns to the inline start edge of the line box."
+    it('text-align: start resolves to `left` under ltr', () => {
+      const env: ResolveEnv = { ...baseEnv, direction: 'ltr' };
+      expect(buildResolver('\0scta:start')!(env)).toBe('left');
+    });
+
+    it('text-align: start resolves to `right` under rtl', () => {
+      const env: ResolveEnv = { ...baseEnv, direction: 'rtl' };
+      expect(buildResolver('\0scta:start')!(env)).toBe('right');
+    });
+
+    // "end: aligns to the inline end edge."
+    it('text-align: end resolves to `right` under ltr', () => {
+      const env: ResolveEnv = { ...baseEnv, direction: 'ltr' };
+      expect(buildResolver('\0scta:end')!(env)).toBe('right');
+    });
+
+    it('text-align: end resolves to `left` under rtl', () => {
+      const env: ResolveEnv = { ...baseEnv, direction: 'rtl' };
+      expect(buildResolver('\0scta:end')!(env)).toBe('left');
+    });
+
+    // match-parent collapses to start in horizontal-tb (Yoga's only mode).
+    it('text-align: match-parent resolves like start', () => {
+      const env: ResolveEnv = { ...baseEnv, direction: 'ltr' };
+      expect(buildResolver('\0scta:match-parent')!(env)).toBe('left');
+      const rtl: ResolveEnv = { ...baseEnv, direction: 'rtl' };
+      expect(buildResolver('\0scta:match-parent')!(rtl)).toBe('right');
+    });
   });
 
   // Native runtimes do not have a "URL bar collapses" surface, so the
@@ -265,6 +366,16 @@ describe('dynamic math fn resolver;calc()', () => {
   it('resolves calc() with viewport unit arm + static', () => {
     const r = buildResolver('calc(50vw + 10px)')!;
     expect(r({ ...baseEnv, media: { ...baseEnv.media, width: 400 } })).toBe(210);
+  });
+
+  it('resolves calc() with rem arm + static (Values 4 §6.1.1)', () => {
+    const r = buildResolver('calc(2rem + 4px)')!;
+    expect(r(baseEnv)).toBe(36);
+  });
+
+  it('resolves calc() rem against custom rootFontSize', () => {
+    const r = buildResolver('calc(1.5rem - 2px)')!;
+    expect(r({ ...baseEnv, rootFontSize: 20 })).toBe(28);
   });
 
   it('resolves calc() with container unit arm + static', () => {
@@ -1160,10 +1271,15 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
     // Spec: "the argument calculations can resolve to any <number>,
     // <dimension>, or <percentage>, but must have a consistent type or
     // else the function is invalid"
-    it('rejects mixed-incompatible-unit operands: min(10px, 5em)', () => {
-      // em isn't supported by the polyfill so this is the practical
-      // outcome of "consistent type"; the result drops the declaration.
-      expect(buildResolver('min(10px, 5em)')).toBeNull();
+    it('mixes px with em now that em resolves against cascade.fontSize', () => {
+      // em is a font-relative length (CSS Values 4 §6.1.1) — same
+      // "length" type as px, so min() / max() accept the mix once
+      // the cascade is plumbed.
+      const env: ResolveEnv = { ...baseEnv, fontSize: 12 };
+      // min(10px, 5em) = min(10, 60) = 10
+      expect(buildResolver('min(10px, 5em)')!(env)).toBe(10);
+      // max(10px, 5em) = max(10, 60) = 60
+      expect(buildResolver('max(10px, 5em)')!(env)).toBe(60);
     });
 
     it('rejects empty min(): min()', () => {

@@ -195,7 +195,6 @@ export {
   StyledOptions,
 } from '../types';
 export {
-  ContainerContext,
   matchMedia,
   useBreakpoint,
   useContainer,
@@ -204,6 +203,14 @@ export {
   useMediaQuery,
 } from './responsive';
 export type { ContainerEntry, MediaQueryEnv } from './responsive';
+export { NativeStyleContext, useNativeStyleContext } from './NativeStyleContext';
+export type {
+  ContainerContextValue,
+  NativeCascadeValues,
+  NativeStyleContextValue,
+} from './NativeStyleContext';
+export { ParentContext, useParentContext } from './ParentContext';
+export type { ParentContextValue } from './ParentContext';
 export {
   createTheme,
   css,

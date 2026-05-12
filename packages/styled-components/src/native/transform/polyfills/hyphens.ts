@@ -63,6 +63,10 @@ function hyphensShorthand(tokens: Token[]): Dict<any> | null {
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name!;
   if (!VALUES.has(name)) return null;
+  // rn-web: emit the style key only; the browser handles `hyphens`
+  // natively. The Android prop lift and the iOS limitation warn are
+  // native-only concerns.
+  if (__NATIVE_WEB__) return { hyphens: name };
   const out: Dict<any> = {
     hyphens: name,
     android_hyphenationFrequency: SPEC_TO_ANDROID[name],

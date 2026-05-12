@@ -258,6 +258,9 @@ const env: ResolveEnv = {
   theme: { colors: { fg: '#111', bg: '#fff', border: '#ddd' } },
   insets: { top: 47, right: 0, bottom: 34, left: 0 },
   rootFontSize: 16,
+  fontSize: 16,
+  lineHeight: 24,
+  direction: 'ltr',
 };
 
 bench('apply (no resolvers;fast path)', 5_000_000, () => {

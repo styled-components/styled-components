@@ -1,3 +1,4 @@
+import { warnOnce } from '../native/transform/dev';
 import * as $ from '../utils/charCodes';
 import {
   AtRuleNode,
@@ -7,11 +8,12 @@ import {
   NATIVE_RULE_CLASS,
   NativeAtClass,
   NativeRuleClass,
+  NthSpec,
   PseudoState,
   RuleNode,
 } from './ast';
 
-export type { AttrSelector, ConditionalAttr, NativeAtClass, NativeRuleClass, PseudoState };
+export type { AttrSelector, ConditionalAttr, NativeAtClass, NativeRuleClass, NthSpec, PseudoState };
 export { NATIVE_AT_CLASS, NATIVE_RULE_CLASS };
 
 /**
@@ -125,7 +127,281 @@ export function classifyRuleNow(selectors: string[]): NativeRuleClass {
   if (fanOut) return { kind: 'pseudoFanOut', pseudos: fanOut };
   const attrSels = detectAttrSelectors(selectors);
   if (attrSels) return { kind: 'attr', selectors: attrSels };
+  // CSS Selectors 4 §4.3 — `:not(<simple-selector>)`. Current scope is
+  // simple-arg only; complex/compound arguments fall through to the
+  // generic complex-selector warn.
+  const notCls = detectNot(selectors);
+  if (notCls !== null) return notCls;
+  // CSS Selectors 4 §15 — descendant / child / adjacent-sibling /
+  // general-sibling combinator against an interpolated styled
+  // component reference. `${Foo} &` / `> &` / `+ &` / `~ &` compile
+  // to `.sc-FooId &` / `.sc-FooId > &` / `.sc-FooId + &` / `.sc-FooId
+  // ~ &` after `${StyledComponent}.toString()`.
+  const combinator = detectCombinator(selectors);
+  if (combinator !== null) return combinator;
+  // CSS Selectors 4 §9 — tree-structural pseudo-classes that match by
+  // sibling position. `&:first-child`, `&:last-child`,
+  // `&:only-child`, `&:nth-child(an+b)`, `&:nth-last-child(...)`,
+  // `&:nth-of-type(...)`, `&:nth-last-of-type(...)`.
+  const nth = detectNthChild(selectors);
+  if (nth !== null) return nth;
+  // CSS Selectors 4 §13.1 — `&:has(<simple>)`. Inner restricted to a
+  // single class selector (`${Component}`) or a single attribute
+  // selector for the v7 scope.
+  const has = detectHas(selectors);
+  if (has !== null) return has;
   return { kind: 'unsupported' };
+}
+
+/**
+ * `&:has(<inner>)` — match when the element has a descendant matching
+ * the inner simple selector. v7 scope: a styled-component reference
+ * (post-fillAst class selector `.sc-FooId`) or a single attribute
+ * selector. Compound / complex inner forms fall through.
+ */
+function detectHas(selectors: string[]): NativeRuleClass | null {
+  if (selectors.length !== 1) return null;
+  const sel = selectors[0];
+  const prefix = '&:has(';
+  if (!sel.startsWith(prefix) || sel.charCodeAt(sel.length - 1) !== $.CLOSE_PAREN) return null;
+  const inner = sel.substring(prefix.length, sel.length - 1).trim();
+  if (inner.length === 0) return null;
+
+  // Component reference: `.sc-<id>` produced by `${Component}.toString()`.
+  if (inner.charCodeAt(0) === $.DOT) {
+    let i = 1;
+    while (i < inner.length) {
+      const c = inner.charCodeAt(i);
+      const isIdent =
+        (c >= 0x30 && c <= 0x39) /* 0-9 */ ||
+        (c >= 0x41 && c <= 0x5a) /* A-Z */ ||
+        (c >= 0x61 && c <= 0x7a) /* a-z */ ||
+        c === 0x2d /* - */ ||
+        c === 0x5f; /* _ */
+      if (!isIdent) break;
+      i++;
+    }
+    if (i !== inner.length) return null;
+    if (i === 1) return null;
+    return { kind: 'has', inner: { kind: 'component', id: inner.substring(1) } };
+  }
+
+  // Attribute selector: `[attr]`, `[attr=value]`, `[attr='value']`.
+  if (inner.charCodeAt(0) === $.OPEN_BRACKET) {
+    const end = findClosingBracket(inner, 0);
+    if (end !== inner.length - 1) return null;
+    const attr = parseAttrInner(inner.substring(1, end));
+    if (attr === null) return null;
+    return { kind: 'has', inner: { kind: 'attr', attr } };
+  }
+
+  return null;
+}
+
+/**
+ * Parse the `an+b` syntax inside a `:nth-child` family pseudo. Returns
+ * null on unrecognized forms (keeps caller bailing to generic
+ * "complex selector" treatment). Supports literal integers (`3`),
+ * keyword shortcuts (`odd`, `even`), and the full `[+-]?(\d*)n([+-]\d+)?`
+ * grammar with whitespace tolerance per CSS Syntax 3 §6.
+ */
+function parseAnPlusB(raw: string): { a: number; b: number } | null {
+  const s = raw.trim().toLowerCase();
+  if (s.length === 0) return null;
+  if (s === 'odd') return { a: 2, b: 1 };
+  if (s === 'even') return { a: 2, b: 0 };
+  // No `n` → bare integer.
+  const nIdx = s.indexOf('n');
+  if (nIdx === -1) {
+    const n = parseInt(s, 10);
+    if (Number.isNaN(n) || String(n) !== s.replace(/^\+/, '')) {
+      // Also accept signed integer forms (`+3`, `-3`).
+      const m = s.match(/^[+-]?\d+$/);
+      if (!m) return null;
+    }
+    return { a: 0, b: parseInt(s, 10) };
+  }
+  // `n` present. Split into a-coefficient and b-offset.
+  const aRaw = s.substring(0, nIdx).trim();
+  const bRaw = s.substring(nIdx + 1).trim();
+  let a: number;
+  if (aRaw === '' || aRaw === '+') a = 1;
+  else if (aRaw === '-') a = -1;
+  else {
+    const am = aRaw.match(/^[+-]?\d+$/);
+    if (!am) return null;
+    a = parseInt(aRaw, 10);
+  }
+  let b: number;
+  if (bRaw === '') b = 0;
+  else {
+    const bm = bRaw.match(/^[+-]\s*\d+$/);
+    if (!bm) return null;
+    b = parseInt(bRaw.replace(/\s+/g, ''), 10);
+  }
+  return { a, b };
+}
+
+function warnOfSelectorForm(inner: string): void {
+  if (!__DEV__) return;
+  if (inner.indexOf(' of ') === -1) return;
+  warnOnce(
+    'native-nth-child-of-selector',
+    "The CSS Selectors 4 `:nth-child(<formula> of <selector>)` syntax — passing a selector list to scope the structural count — isn't supported on native because evaluating the inner selector against each sibling requires React tree introspection. The plain `:nth-child(<formula>)` form (`:nth-child(2n+1)`, `:nth-child(odd)`) is supported.",
+    inner
+  );
+}
+
+/**
+ * `&:first-child` / `&:last-child` / `&:only-child` / `&:nth-child(...)`
+ * / `&:nth-last-child(...)` / `&:nth-of-type(...)` /
+ * `&:nth-last-of-type(...)` and optional trailing pseudo-state.
+ */
+function detectNthChild(selectors: string[]): NativeRuleClass | null {
+  if (selectors.length !== 1) return null;
+  const sel = selectors[0];
+  if (sel.length < 3 || sel.charCodeAt(0) !== $.AMPERSAND || sel.charCodeAt(1) !== $.COLON) {
+    return null;
+  }
+  // Split into nth-pseudo head and optional trailing `:pseudo` tail
+  // (`&:first-child:hover`). Find the second colon AFTER any
+  // parenthesized argument list closes.
+  let head = sel.substring(2);
+  let tailPseudo: PseudoState | undefined;
+  const openParen = head.indexOf('(');
+  if (openParen !== -1) {
+    const closeParen = findClosingParen(head, openParen);
+    if (closeParen === -1) return null;
+    const tail = head.substring(closeParen + 1);
+    if (tail.length > 0) {
+      if (tail.charCodeAt(0) !== $.COLON) return null;
+      const p = KNOWN_PSEUDOS[tail.substring(1)];
+      if (!p) return null;
+      tailPseudo = p;
+    }
+    head = head.substring(0, closeParen + 1);
+  } else {
+    // Parameterless nth pseudos: look for a trailing `:pseudo`.
+    const secondColon = head.indexOf(':');
+    if (secondColon !== -1) {
+      const tail = head.substring(secondColon);
+      const p = KNOWN_PSEUDOS[tail.substring(1)];
+      if (!p) return null;
+      tailPseudo = p;
+      head = head.substring(0, secondColon);
+    }
+  }
+
+  let spec: NthSpec | null = null;
+  if (head === 'first-child') spec = { a: 0, b: 1, fromEnd: false, ofType: false };
+  else if (head === 'last-child') spec = { a: 0, b: 1, fromEnd: true, ofType: false };
+  else if (head === 'only-child')
+    spec = { a: 0, b: 1, fromEnd: false, ofType: false, onlyChild: true };
+  else if (head === 'first-of-type') spec = { a: 0, b: 1, fromEnd: false, ofType: true };
+  else if (head === 'last-of-type') spec = { a: 0, b: 1, fromEnd: true, ofType: true };
+  else if (head === 'only-of-type')
+    spec = { a: 0, b: 1, fromEnd: false, ofType: true, onlyChild: true };
+  else if (head.startsWith('nth-child(') && head.endsWith(')')) {
+    const inner = head.substring('nth-child('.length, head.length - 1);
+    const ab = parseAnPlusB(inner);
+    if (ab === null) {
+      warnOfSelectorForm(inner);
+      return null;
+    }
+    spec = { a: ab.a, b: ab.b, fromEnd: false, ofType: false };
+  } else if (head.startsWith('nth-last-child(') && head.endsWith(')')) {
+    const inner = head.substring('nth-last-child('.length, head.length - 1);
+    const ab = parseAnPlusB(inner);
+    if (ab === null) {
+      warnOfSelectorForm(inner);
+      return null;
+    }
+    spec = { a: ab.a, b: ab.b, fromEnd: true, ofType: false };
+  } else if (head.startsWith('nth-of-type(') && head.endsWith(')')) {
+    const inner = head.substring('nth-of-type('.length, head.length - 1);
+    const ab = parseAnPlusB(inner);
+    if (ab === null) {
+      warnOfSelectorForm(inner);
+      return null;
+    }
+    spec = { a: ab.a, b: ab.b, fromEnd: false, ofType: true };
+  } else if (head.startsWith('nth-last-of-type(') && head.endsWith(')')) {
+    const inner = head.substring('nth-last-of-type('.length, head.length - 1);
+    const ab = parseAnPlusB(inner);
+    if (ab === null) {
+      warnOfSelectorForm(inner);
+      return null;
+    }
+    spec = { a: ab.a, b: ab.b, fromEnd: true, ofType: true };
+  }
+
+  if (spec === null) return null;
+  return tailPseudo === undefined
+    ? { kind: 'nthChild', spec }
+    : { kind: 'nthChild', spec, pseudo: tailPseudo };
+}
+
+function findClosingParen(s: string, openIdx: number): number {
+  let depth = 0;
+  for (let i = openIdx; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c === $.OPEN_PAREN) depth++;
+    else if (c === $.CLOSE_PAREN) {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+/**
+ * `&:not(<simple-selector>)` — fire the bucket when the inner selector
+ * does NOT match. Supports a single pseudo-state (`&:not(:hover)`), a
+ * single attribute selector (`&:not([disabled])`), and the compound
+ * trailing-pseudo form `&:not([attr]):pseudo`. Complex / multi-arg
+ * forms (`&:not(:hover, :focus)`, `&:not(.foo .bar)`) fall through.
+ */
+function detectNot(selectors: string[]): NativeRuleClass | null {
+  if (selectors.length !== 1) return null;
+  const sel = selectors[0];
+  const prefix = '&:not(';
+  if (!sel.startsWith(prefix)) return null;
+  const innerStart = prefix.length;
+  const innerEnd = findClosingParen(sel, innerStart - 1);
+  if (innerEnd === -1) return null;
+  const inner = sel.substring(innerStart, innerEnd).trim();
+  if (inner.length === 0) return null;
+
+  let tailPseudo: PseudoState | undefined;
+  if (innerEnd + 1 < sel.length) {
+    if (sel.charCodeAt(innerEnd + 1) !== $.COLON) return null;
+    const p = KNOWN_PSEUDOS[sel.substring(innerEnd + 2)];
+    if (!p) return null;
+    tailPseudo = p;
+  }
+
+  // Pseudo-state inversion: `&:not(:hover)`.
+  if (inner.charCodeAt(0) === $.COLON) {
+    if (tailPseudo !== undefined) return null;
+    const name = inner.substring(1);
+    const pseudo = KNOWN_PSEUDOS[name];
+    if (!pseudo) return null;
+    return { kind: 'pseudo', pseudo, negate: true };
+  }
+
+  // Attribute selector inversion: `&:not([disabled])`, `&:not([a='b'])`,
+  // `&:not([disabled]):hover`.
+  if (inner.charCodeAt(0) === $.OPEN_BRACKET) {
+    const end = findClosingBracket(inner, 0);
+    if (end !== inner.length - 1) return null;
+    const attr = parseAttrInner(inner.substring(1, end));
+    if (attr === null) return null;
+    const selector: AttrSelector = { attrs: [attr] };
+    if (tailPseudo !== undefined) selector.pseudo = tailPseudo;
+    return { kind: 'attr', selectors: [selector], negate: true };
+  }
+
+  return null;
 }
 
 function detectPseudoSelector(sel: string): PseudoState | null {
@@ -135,6 +411,82 @@ function detectPseudoSelector(sel: string): PseudoState | null {
   }
   const name = sel.substring(2);
   return KNOWN_PSEUDOS[name] || null;
+}
+
+/**
+ * `${StyledFoo} &` (descendant) or `${StyledFoo} > &` (child) per CSS
+ * Selectors 4 §15. After `${StyledComponent}.toString()` interpolates
+ * to `.<styledComponentId>`, the selector string lands here as
+ * `.sc-FooId &` / `.sc-FooId > &`. Optional pseudo on `&`
+ * (`${Foo} &:hover`) is captured for composite matching.
+ *
+ * Direct-children limitation (per
+ * `~/.claude/plans/v7-three-context-consolidation.md`): the chain
+ * threads through every styled-component intermediary's ParentContext
+ * publish, so a non-styled user component between Foo and the
+ * matching descendant breaks the match. Both the dynamic and the
+ * static impls publish ParentContext, so a static styled intermediary
+ * stays visible to the chain as an ancestor.
+ */
+function detectCombinator(selectors: string[]): NativeRuleClass | null {
+  if (selectors.length !== 1) return null;
+  const sel = selectors[0];
+  if (sel.charCodeAt(0) !== $.DOT) return null;
+  // Walk the styled-component id (`sc-` + ident chars + digits).
+  let i = 1;
+  while (i < sel.length) {
+    const c = sel.charCodeAt(i);
+    const isIdent =
+      (c >= 0x30 && c <= 0x39) /* 0-9 */ ||
+      (c >= 0x41 && c <= 0x5a) /* A-Z */ ||
+      (c >= 0x61 && c <= 0x7a) /* a-z */ ||
+      c === 0x2d /* - */ ||
+      c === 0x5f; /* _ */
+    if (!isIdent) break;
+    i++;
+  }
+  if (i === 1) return null;
+  const ancestorId = sel.substring(1, i);
+  // Whitespace mandatory before the combinator or descendant suffix.
+  let j = i;
+  let sawSpace = false;
+  while (j < sel.length && sel.charCodeAt(j) === 0x20) {
+    sawSpace = true;
+    j++;
+  }
+  if (!sawSpace) return null;
+  // Optional combinator char: `>` (child), `+` (adjacent sibling),
+  // `~` (general sibling). Absent → descendant.
+  let combinator: 'descendant' | 'child' | 'adjacent-sibling' | 'general-sibling' = 'descendant';
+  const ch = sel.charCodeAt(j);
+  if (ch === 0x3e /* > */) {
+    combinator = 'child';
+    j++;
+    while (j < sel.length && sel.charCodeAt(j) === 0x20) j++;
+  } else if (ch === 0x2b /* + */) {
+    combinator = 'adjacent-sibling';
+    j++;
+    while (j < sel.length && sel.charCodeAt(j) === 0x20) j++;
+  } else if (ch === 0x7e /* ~ */) {
+    combinator = 'general-sibling';
+    j++;
+    while (j < sel.length && sel.charCodeAt(j) === 0x20) j++;
+  }
+  // Must end with `&` optionally followed by a `:pseudo`. Compound
+  // forms (e.g. `&[attr]`, `&.cls`) are out of Phase 3 scope.
+  if (sel.charCodeAt(j) !== $.AMPERSAND) return null;
+  j++;
+  let pseudo: PseudoState | undefined;
+  if (j < sel.length) {
+    if (sel.charCodeAt(j) !== $.COLON) return null;
+    const name = sel.substring(j + 1);
+    const p = KNOWN_PSEUDOS[name];
+    if (!p) return null;
+    pseudo = p;
+  }
+  return pseudo === undefined
+    ? { kind: 'combinator', combinator, ancestorId }
+    : { kind: 'combinator', combinator, ancestorId, pseudo };
 }
 
 function detectPseudo(selectors: string[]): PseudoState | null {
@@ -285,25 +637,42 @@ function parseAttrInner(inner: string): ConditionalAttr | null {
     const name = inner.trim();
     return isAttrName(name) ? { name } : null;
   }
+  // CSS Selectors 4 §6.2 — operator detection. The operator char sits
+  // immediately before `=`. `=` alone is the default exact-match.
+  let operator: '=' | '~=' | '|=' | '^=' | '$=' | '*=' = '=';
+  let nameEnd = eqIdx;
   if (eqIdx > 0) {
     const before = inner.charCodeAt(eqIdx - 1);
-    if (
-      before === $.TILDE ||
-      before === $.PIPE ||
-      before === $.CARET ||
-      before === $.DOLLAR ||
-      before === $.ASTERISK
-    ) {
-      return null;
+    if (before === $.TILDE) {
+      operator = '~=';
+      nameEnd = eqIdx - 1;
+    } else if (before === $.PIPE) {
+      operator = '|=';
+      nameEnd = eqIdx - 1;
+    } else if (before === $.CARET) {
+      operator = '^=';
+      nameEnd = eqIdx - 1;
+    } else if (before === $.DOLLAR) {
+      operator = '$=';
+      nameEnd = eqIdx - 1;
+    } else if (before === $.ASTERISK) {
+      operator = '*=';
+      nameEnd = eqIdx - 1;
     }
   }
-  const name = inner.substring(0, eqIdx).trim();
+  const name = inner.substring(0, nameEnd).trim();
   if (!isAttrName(name)) return null;
   let raw = inner.substring(eqIdx + 1).trim();
-  // Strip CSS Selectors L4 case-flag suffix (` i` / ` s`).
+  // CSS Selectors 4 §6.3 case-sensitivity flag suffix (` i` / ` s`).
+  // `i` makes the comparison ASCII case-insensitive;`s` is the
+  // (default) sensitive form and is dropped.
+  let caseFlag: 'i' | undefined;
   if (raw.length >= 2 && raw.charCodeAt(raw.length - 2) === $.SPACE) {
     const flag = raw.charCodeAt(raw.length - 1);
-    if (flag === $.LOWER_I || flag === $.LOWER_S || flag === $.UPPER_I || flag === $.UPPER_S) {
+    if (flag === $.LOWER_I || flag === $.UPPER_I) {
+      caseFlag = 'i';
+      raw = raw.substring(0, raw.length - 2).trim();
+    } else if (flag === $.LOWER_S || flag === $.UPPER_S) {
       raw = raw.substring(0, raw.length - 2).trim();
     }
   }
@@ -318,7 +687,10 @@ function parseAttrInner(inner: string): ConditionalAttr | null {
       value = value.substring(1, value.length - 1);
     }
   }
-  return { name, value };
+  const out: ConditionalAttr = { name, value };
+  if (operator !== '=') out.operator = operator;
+  if (caseFlag !== undefined) out.caseFlag = caseFlag;
+  return out;
 }
 
 function isAttrName(name: string): boolean {
