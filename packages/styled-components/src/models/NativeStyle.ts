@@ -57,14 +57,19 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
       if (this.staticCSS !== null) {
         const compiled = toNativeStyles(this.staticCSS, styleSheet);
         this.staticCompiled = compiled;
-        // Static-impl eligibility: zero hooks, so the compile output cannot carry any
-        // runtime work. Components with function interpolations or any responsive /
-        // animated feature route to the dynamic impl regardless.
+        // Static-impl eligibility: the static path doesn't publish a fresh
+        // NativeStyleContext (no useState / no Provider for cascade), so any
+        // declaration that descendants need to see during their own resolve
+        // (font-size / line-height / direction) must route through the
+        // dynamic impl. Otherwise a child `1em` resolves against the
+        // inherited base rather than this component's override. Same
+        // rationale for responsive / animated outputs.
         this.staticEligible =
           !hasResponsiveOutput(compiled) &&
           compiled.startingStyle === undefined &&
           compiled.animations === undefined &&
-          compiled.transitions === undefined;
+          compiled.transitions === undefined &&
+          !publishesCascade(compiled.base);
       }
     }
 
@@ -144,6 +149,19 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
   };
 
   return NativeStyle;
+}
+
+/**
+ * Cascade-significant property check: a component declaring `font-size`,
+ * `line-height`, or `direction` in its base must publish a fresh
+ * cascade so descendants resolving `1em`, `1lh`, or direction-aware
+ * keywords see the override. Only useDynamicImpl publishes the
+ * cascade; useStaticImpl is hookless.
+ */
+function publishesCascade(base: Record<string, unknown>): boolean {
+  return (
+    base.fontSize !== undefined || base.lineHeight !== undefined || base.direction !== undefined
+  );
 }
 
 function isAllStaticStrings(rules: ReadonlyArray<unknown>): boolean {

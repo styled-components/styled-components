@@ -6,11 +6,80 @@ import {
   tokenToValue,
   withoutSlashes,
 } from '../shorthandHelpers';
+import { register } from '../shorthands';
 import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
 
+/**
+ * Compile-time marker for `text-align: start | end | match-parent`.
+ * The runtime resolver in `polyfills/resolvers.ts` reads
+ * `env.direction` to map the keyword to `'left'` or `'right'`.
+ *
+ * Format: `\0scta:<start|end|match-parent>`. The 4-character tag
+ * `scta` differentiates from the theme sentinel `\0sc:<path>:<fallback>`
+ * at the fourth code point (`t` vs `:`).
+ */
+export const TEXT_ALIGN_DIRECTION_PREFIX = '\0scta:';
+
 const DECORATION_LINES = new Set(['none', 'underline', 'line-through', 'overline', 'blink']);
 const DECORATION_STYLES = new Set(['solid', 'double', 'dotted', 'dashed', 'wavy']);
+
+/**
+ * CSS Text 4 §7.1 (`text-align`). Initial value is `start`.
+ *
+ * RN's `textAlign` only accepts `'auto' | 'left' | 'right' | 'center' |
+ * 'justify'` (per `TextStyleIOS.js` / `TextStyleAndroid.js`); `start` /
+ * `end` / `match-parent` are spec values RN doesn't recognise and
+ * would silently drop. rn-web honors the full spec set.
+ *
+ * Direction-aware resolution: v7 plumbs `cascade.direction` through
+ * NativeStyleContext, so `start` and `end` resolve to `'left'` or
+ * `'right'` at render time based on the inherited writing direction.
+ * `match-parent` is an alias of `start` in horizontal-tb (which is
+ * Yoga's only writing mode), so it maps identically.
+ *
+ * `justify-all` (CSS Text 4 §7.1) forces justification on the last
+ * line; RN has no last-line surface so it degrades to `justify`
+ * with a one-time dev warn.
+ */
+const TEXT_ALIGN_NATIVE_PASS = new Set(['auto', 'left', 'right', 'center', 'justify']);
+
+export function textAlignHandler(tokens: Token[]): Dict<any> | null {
+  const stream = new TokenStream(withoutSlashes(tokens));
+  const t = stream.consume();
+  if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
+  const value = t.name!;
+
+  if (__NATIVE_WEB__) {
+    return { textAlign: value };
+  }
+
+  if (value === 'start' || value === 'end' || value === 'match-parent') {
+    return { textAlign: TEXT_ALIGN_DIRECTION_PREFIX + value };
+  }
+  if (value === 'justify-all') {
+    if (__DEV__) {
+      warnOnce(
+        'native-text-align-justify-all-degrades',
+        '`text-align: justify-all` forces justification on the last line (CSS Text 4 §7.1); React Native has no last-line surface so the value degrades to `justify` (the last line stays left-aligned). rn-web honors the full keyword natively.',
+        value
+      );
+    }
+    return { textAlign: 'justify' };
+  }
+  if (TEXT_ALIGN_NATIVE_PASS.has(value)) {
+    return { textAlign: value };
+  }
+  return null;
+}
+
+/**
+ * CSS Text 4 §7.3 — `text-align-all` is the descendant-applying base
+ * property; `text-align` is a shorthand over it plus `text-align-last`.
+ * Routes through the same handler so direction-aware folding and
+ * `justify-all` degradation apply uniformly.
+ */
+register('textAlignAll', textAlignHandler);
 
 /**
  * `text-decoration: <line> || <style> || <color>` → split into longhands.
@@ -87,7 +156,11 @@ function warnAndroidNoDecorationColor(raw: string): void {
   );
 }
 
-/** `text-decoration-line: <line> [<line>]`. */
+/**
+ * `text-decoration-line: <line>{1,4}`. Per CSS Text Decoration 4 §3.1
+ * the `none` keyword is exclusive — it can't be combined with any
+ * other line keyword.
+ */
 export function textDecorationLineShorthand(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const lines: string[] = [];
@@ -97,6 +170,7 @@ export function textDecorationLineShorthand(tokens: Token[]): Dict<any> | null {
     lines.push(t.name!);
   }
   if (lines.length === 0) return null;
+  if (lines.length > 1 && lines.indexOf('none') !== -1) return null;
   lines.sort().reverse();
   return { textDecorationLine: lines.join(' ') };
 }

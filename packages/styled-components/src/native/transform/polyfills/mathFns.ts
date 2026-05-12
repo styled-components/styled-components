@@ -35,7 +35,308 @@ export function resolveStaticMathFunction(
   if (name === 'min' || name === 'max' || name === 'clamp') {
     return resolveMinMaxClamp(name, fn, permitNonFinite);
   }
+  // CSS Values 4 §10.3 stepped-value functions.
+  if (name === 'round' || name === 'mod' || name === 'rem') {
+    return resolveStepped(name, fn, permitNonFinite);
+  }
+  // CSS Values 4 §10.4 trigonometric functions.
+  if (
+    name === 'sin' ||
+    name === 'cos' ||
+    name === 'tan' ||
+    name === 'asin' ||
+    name === 'acos' ||
+    name === 'atan' ||
+    name === 'atan2'
+  ) {
+    return resolveTrig(name, fn, permitNonFinite);
+  }
+  // CSS Values 4 §10.5 exponential functions.
+  if (name === 'pow' || name === 'sqrt' || name === 'hypot' || name === 'log' || name === 'exp') {
+    return resolveExpLog(name, fn, permitNonFinite);
+  }
+  // CSS Values 4 §10.6 sign-related functions.
+  if (name === 'abs' || name === 'sign') {
+    return resolveAbsSign(name, fn, permitNonFinite);
+  }
   return null;
+}
+
+/**
+ * CSS Values 4 §10.3 — stepped-value functions.
+ *
+ *   round(<rounding-strategy>?, A, B?)
+ *   mod(A, B)   → sign of B (math mod; result has divisor's sign)
+ *   rem(A, B)   → sign of A (remainder, like JS `%`)
+ *
+ * `round()` strategy keywords (Values 4 §10.3.1): `nearest` (default),
+ * `up`, `down`, `to-zero`. B defaults to 1 when omitted.
+ */
+const ROUND_STRATEGIES = new Set(['nearest', 'up', 'down', 'to-zero']);
+
+function resolveStepped(name: string, fn: Token, permitNonFinite: boolean): NumericResult | null {
+  const operands = readCommaOperandsWithLeadingKeyword(fn, permitNonFinite);
+  if (operands === null) return null;
+  const { keyword, args } = operands;
+
+  if (name === 'round') {
+    if (keyword === 'line-width') {
+      if (__DEV__) {
+        warnOnce(
+          'native-math-round-line-width',
+          "`round(line-width, A, B?)` rounds to the nearest CSS device pixel and requires the runtime device pixel ratio. The static math fold can't access `PixelRatio.get()` so this strategy isn't supported on native. Use `round(A, 1)` with an explicit step or move the calculation into a function interpolation that reads `PixelRatio.get()` directly.",
+          fn.raw
+        );
+      }
+      return null;
+    }
+    const strategy = keyword ?? 'nearest';
+    if (!ROUND_STRATEGIES.has(strategy)) return null;
+    if (args.length < 1 || args.length > 2) return null;
+    const a = args[0];
+    // CSS Values 4 §10.3: "If the type of A matches <number>, then B may
+    // be omitted." For <length> / <angle> / <percent> A, B must be present
+    // and share A's type. A mismatch between A and B is also invalid.
+    let b: NumericResult;
+    if (args.length === 2) {
+      b = args[1];
+      const aNum = a.unit === '';
+      const bNum = b.unit === '';
+      if (aNum !== bNum) return null;
+      if (!aNum && !bNum && a.unit !== b.unit) return null;
+    } else {
+      if (a.unit !== '') return null;
+      b = { value: 1, unit: '' };
+    }
+    const unit = a.unit || b.unit;
+    if (b.value === 0) {
+      if (!permitNonFinite) return null;
+      return { value: NaN, unit };
+    }
+    let q: number;
+    if (strategy === 'up') q = Math.ceil(a.value / b.value);
+    else if (strategy === 'down') q = Math.floor(a.value / b.value);
+    else if (strategy === 'to-zero') q = Math.trunc(a.value / b.value);
+    else q = Math.round(a.value / b.value);
+    return { value: q * b.value, unit };
+  }
+
+  if (keyword !== null) return null;
+  if (args.length !== 2) return null;
+  const [a, b] = args;
+  if (a.unit !== '' && b.unit !== '' && a.unit !== b.unit) return null;
+  const unit = a.unit || b.unit;
+  if (b.value === 0) {
+    if (!permitNonFinite) return null;
+    return { value: NaN, unit };
+  }
+  if (name === 'mod') {
+    // Math mod: ((a % b) + b) % b — result carries b's sign.
+    const m = ((a.value % b.value) + b.value) % b.value;
+    return { value: m, unit };
+  }
+  // rem: JS `%` — result carries a's sign.
+  return { value: a.value % b.value, unit };
+}
+
+/**
+ * CSS Values 4 §10.4 — trigonometric functions.
+ *
+ *   sin / cos / tan: `<angle> | <number>` (numbers in radians)
+ *   asin / acos / atan: returns <angle> in degrees
+ *   atan2(y, x): returns <angle>; arms must agree on type
+ */
+function resolveTrig(name: string, fn: Token, permitNonFinite: boolean): NumericResult | null {
+  const operands = readCommaOperands(fn, permitNonFinite);
+  if (operands === null) return null;
+
+  if (name === 'sin' || name === 'cos' || name === 'tan') {
+    if (operands.length !== 1) return null;
+    const t = operands[0];
+    // Angles arrive as `deg` (normalised by toNumeric); numbers as ''.
+    let radians: number;
+    if (t.unit === 'deg') radians = (t.value * Math.PI) / 180;
+    else if (t.unit === '') radians = t.value;
+    else return null;
+    const v =
+      name === 'sin' ? Math.sin(radians) : name === 'cos' ? Math.cos(radians) : Math.tan(radians);
+    if (!permitNonFinite && !Number.isFinite(v)) return null;
+    return { value: v, unit: '' };
+  }
+
+  if (name === 'asin' || name === 'acos' || name === 'atan') {
+    if (operands.length !== 1) return null;
+    const t = operands[0];
+    if (t.unit !== '') return null;
+    let radians: number;
+    if (name === 'asin') {
+      if (t.value < -1 || t.value > 1) {
+        if (!permitNonFinite) return null;
+        return { value: NaN, unit: 'deg' };
+      }
+      radians = Math.asin(t.value);
+    } else if (name === 'acos') {
+      if (t.value < -1 || t.value > 1) {
+        if (!permitNonFinite) return null;
+        return { value: NaN, unit: 'deg' };
+      }
+      radians = Math.acos(t.value);
+    } else {
+      radians = Math.atan(t.value);
+    }
+    return { value: (radians * 180) / Math.PI, unit: 'deg' };
+  }
+
+  // atan2
+  if (operands.length !== 2) return null;
+  const [y, x] = operands;
+  if (y.unit !== x.unit) return null;
+  const radians = Math.atan2(y.value, x.value);
+  return { value: (radians * 180) / Math.PI, unit: 'deg' };
+}
+
+/**
+ * CSS Values 4 §10.5 — exponential functions.
+ *
+ *   pow(base, exp), sqrt(A), hypot(A1, A2, ...), log(A, base?), exp(A)
+ */
+function resolveExpLog(name: string, fn: Token, permitNonFinite: boolean): NumericResult | null {
+  const operands = readCommaOperands(fn, permitNonFinite);
+  if (operands === null) return null;
+
+  if (name === 'pow') {
+    if (operands.length !== 2) return null;
+    const [base, expo] = operands;
+    if (base.unit !== '' || expo.unit !== '') return null;
+    const v = Math.pow(base.value, expo.value);
+    if (!permitNonFinite && !Number.isFinite(v)) return null;
+    return { value: v, unit: '' };
+  }
+
+  if (name === 'sqrt') {
+    if (operands.length !== 1) return null;
+    const [a] = operands;
+    if (a.unit !== '') return null;
+    if (a.value < 0) {
+      if (!permitNonFinite) return null;
+      return { value: NaN, unit: '' };
+    }
+    return { value: Math.sqrt(a.value), unit: '' };
+  }
+
+  if (name === 'hypot') {
+    if (operands.length === 0) return null;
+    const unit = operands[0].unit;
+    let sumSquares = 0;
+    for (let i = 0; i < operands.length; i++) {
+      if (operands[i].unit !== unit) return null;
+      sumSquares += operands[i].value * operands[i].value;
+    }
+    return { value: Math.sqrt(sumSquares), unit };
+  }
+
+  if (name === 'log') {
+    if (operands.length < 1 || operands.length > 2) return null;
+    const [a, b] = operands;
+    if (a.unit !== '' || (b !== undefined && b.unit !== '')) return null;
+    if (a.value <= 0) {
+      if (!permitNonFinite) return null;
+      return { value: NaN, unit: '' };
+    }
+    const v = b === undefined ? Math.log(a.value) : Math.log(a.value) / Math.log(b.value);
+    if (!permitNonFinite && !Number.isFinite(v)) return null;
+    return { value: v, unit: '' };
+  }
+
+  // exp
+  if (operands.length !== 1) return null;
+  const [a] = operands;
+  if (a.unit !== '') return null;
+  return { value: Math.exp(a.value), unit: '' };
+}
+
+/**
+ * CSS Values 4 §10.6 — sign-related functions.
+ *
+ *   abs(A)  preserves unit
+ *   sign(A) returns -1 / 0 / 1, unit-stripped per spec (still a number
+ *           even when A had a length unit)
+ */
+function resolveAbsSign(name: string, fn: Token, permitNonFinite: boolean): NumericResult | null {
+  const operands = readCommaOperands(fn, permitNonFinite);
+  if (operands === null || operands.length !== 1) return null;
+  const [a] = operands;
+  if (name === 'abs') return { value: Math.abs(a.value), unit: a.unit };
+  const s = a.value > 0 ? 1 : a.value < 0 ? -1 : 0;
+  return { value: s, unit: '' };
+}
+
+/**
+ * Split a function's arg stream by top-level commas. Each comma-arm is
+ * evaluated as an expression. Returns null if any arm fails.
+ */
+function readCommaOperands(fn: Token, permitNonFinite: boolean): NumericResult[] | null {
+  const args = tokenizeFunctionArgs(fn);
+  const operands: NumericResult[] = [];
+  let current: Token[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const t = args[i];
+    if (t.kind === TokenKind.Comma) {
+      const r = evalSequence(current, permitNonFinite);
+      if (r === null) return null;
+      operands.push(r);
+      current = [];
+    } else {
+      current.push(t);
+    }
+  }
+  if (current.length > 0) {
+    const r = evalSequence(current, permitNonFinite);
+    if (r === null) return null;
+    operands.push(r);
+  }
+  return operands;
+}
+
+/**
+ * Like {@link readCommaOperands} but also peels an optional leading
+ * ident keyword (used by `round(<strategy>, A, B)`). The keyword arrives
+ * BEFORE the first comma.
+ */
+function readCommaOperandsWithLeadingKeyword(
+  fn: Token,
+  permitNonFinite: boolean
+): { keyword: string | null; args: NumericResult[] } | null {
+  const args = tokenizeFunctionArgs(fn);
+  let keyword: string | null = null;
+  let start = 0;
+  // Leading Ident before the first comma → strategy keyword.
+  if (args.length > 0 && args[0].kind === TokenKind.Ident) {
+    const second = args[1];
+    if (second !== undefined && second.kind === TokenKind.Comma) {
+      keyword = args[0].name ?? null;
+      start = 2;
+    }
+  }
+  const operands: NumericResult[] = [];
+  let current: Token[] = [];
+  for (let i = start; i < args.length; i++) {
+    const t = args[i];
+    if (t.kind === TokenKind.Comma) {
+      const r = evalSequence(current, permitNonFinite);
+      if (r === null) return null;
+      operands.push(r);
+      current = [];
+    } else {
+      current.push(t);
+    }
+  }
+  if (current.length > 0) {
+    const r = evalSequence(current, permitNonFinite);
+    if (r === null) return null;
+    operands.push(r);
+  }
+  return { keyword, args: operands };
 }
 
 function resolveMinMaxClamp(

@@ -33,15 +33,23 @@ function translateShorthand(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const x = consumeDimensionLike(stream);
   if (x === null) return null;
-  if (stream.eof()) return { transform: 'translateX(' + dimToCss(x) + ')' };
+  if (stream.eof()) {
+    if (__NATIVE_WEB__) return { translate: dimToCss(x) };
+    return { transform: 'translateX(' + dimToCss(x) + ')' };
+  }
   const y = consumeDimensionLike(stream);
   if (y === null) return null;
-  const xy = 'translate(' + dimToCss(x) + ', ' + dimToCss(y) + ')';
-  if (stream.eof()) return { transform: xy };
+  if (stream.eof()) {
+    if (__NATIVE_WEB__) return { translate: dimToCss(x) + ' ' + dimToCss(y) };
+    return { transform: 'translate(' + dimToCss(x) + ', ' + dimToCss(y) + ')' };
+  }
   const z = consumeDimensionLike(stream);
   if (z === null || !stream.eof()) return null;
+  if (__NATIVE_WEB__) {
+    return { translate: dimToCss(x) + ' ' + dimToCss(y) + ' ' + dimToCss(z) };
+  }
   warn3DDrop('native-translate-3d', 'translate');
-  return { transform: xy };
+  return { transform: 'translate(' + dimToCss(x) + ', ' + dimToCss(y) + ')' };
 }
 
 const ROTATE_AXIS = new Set(['x', 'y', 'z']);
@@ -56,11 +64,13 @@ function rotateShorthand(tokens: Token[]): Dict<any> | null {
     stream.consume();
     const angle = stream.consume();
     if (!angle || angle.kind !== TokenKind.Angle || !stream.eof()) return null;
+    if (__NATIVE_WEB__) return { rotate: axis + ' ' + angle.raw };
     return { transform: 'rotate' + axis.toUpperCase() + '(' + angle.raw + ')' };
   }
 
   const angle = stream.consume();
   if (!angle || angle.kind !== TokenKind.Angle || !stream.eof()) return null;
+  if (__NATIVE_WEB__) return { rotate: angle.raw };
   return { transform: 'rotate(' + angle.raw + ')' };
 }
 
@@ -76,7 +86,10 @@ function scaleShorthand(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const xv = consumeNumericFactor(stream);
   if (xv === null) return null;
-  if (stream.eof()) return { transform: 'scale(' + xv + ')' };
+  if (stream.eof()) {
+    if (__NATIVE_WEB__) return { scale: String(xv) };
+    return { transform: 'scale(' + xv + ')' };
+  }
 
   const yv = consumeNumericFactor(stream);
   if (yv === null) return null;
@@ -84,15 +97,176 @@ function scaleShorthand(tokens: Token[]): Dict<any> | null {
   // default case where the comma-string fails the typeof === 'number'
   // invariant. Emit scaleX + scaleY individually so RN's array form
   // accepts the values.
-  const xy = 'scaleX(' + xv + ') scaleY(' + yv + ')';
-  if (stream.eof()) return { transform: xy };
+  if (stream.eof()) {
+    if (__NATIVE_WEB__) return { scale: xv + ' ' + yv };
+    return { transform: 'scaleX(' + xv + ') scaleY(' + yv + ')' };
+  }
 
   const zv = consumeNumericFactor(stream);
   if (zv === null || !stream.eof()) return null;
+  if (__NATIVE_WEB__) return { scale: xv + ' ' + yv + ' ' + zv };
   warn3DDrop('native-scale-3d', 'scale');
-  return { transform: xy };
+  return { transform: 'scaleX(' + xv + ') scaleY(' + yv + ')' };
 }
 
 register('translate', translateShorthand);
 register('rotate', rotateShorthand);
 register('scale', scaleShorthand);
+
+/**
+ * `transform-box` (CSS Transforms 1 §5). RN has no transform-box surface
+ * — the pivot is fixed at the view's center (`transform-origin` shifts
+ * the origin point relative to that). The keyword set
+ * `content-box | border-box | fill-box | stroke-box | view-box` has no
+ * mapping; the declaration emits a one-time dev warn and drops.
+ *
+ * rn-web honors the property natively (browser handles it on web).
+ */
+const TRANSFORM_BOX_VALUES = new Set([
+  'content-box',
+  'border-box',
+  'fill-box',
+  'stroke-box',
+  'view-box',
+]);
+
+function transformBoxHandler(tokens: Token[]): Dict<any> | null {
+  const stream = new TokenStream(tokens);
+  const t = stream.consume();
+  if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
+  const value = t.name;
+  if (value === undefined || !TRANSFORM_BOX_VALUES.has(value)) return null;
+
+  if (__NATIVE_WEB__) return { transformBox: value };
+
+  if (__DEV__) {
+    warnOnce(
+      'native-transform-box-unsupported',
+      '`transform-box: ' +
+        value +
+        '` has no React Native equivalent in 0.85 (the transform pivot is fixed at the view center; `transform-origin` shifts it relative to that). The declaration is dropped on iOS / Android; rn-web honors it natively.',
+      value
+    );
+  }
+  return {};
+}
+
+register('transformBox', transformBoxHandler);
+
+/**
+ * `perspective` standalone property (CSS Transforms 2 §8). Syntax:
+ * `none | <length [0,∞]>`. Initial: `none`.
+ *
+ * RN has no separate perspective-for-descendants attribute; the
+ * closest mapping is to prepend `perspective(<length>)` to this
+ * element's `transform` array, which establishes a 3D rendering
+ * context for the element itself. The behavior approximates the CSS
+ * property when the children carry their own 3D transforms.
+ *
+ * `perspective: none` clears the value; emitted as `transform: 'none'`
+ * which RN treats as the identity transform.
+ *
+ * Lengths < 1px clamp at 1px for rendering per the spec note (Transforms 2 §8).
+ *
+ * Composition with author transforms: the handler emits the sentinel
+ * key `PERSPECTIVE_SENTINEL_KEY` instead of `transform` directly so a
+ * post-merge fold in `compileNative.processDecls` can prepend the
+ * `perspective(N)` function to any other `transform` value emitted in
+ * the same declaration block. Without this indirection cascade
+ * last-wins would silently drop the perspective whenever the user also
+ * declares `transform:`.
+ */
+export const PERSPECTIVE_SENTINEL_KEY = '__sc_perspective';
+
+function perspectiveHandler(tokens: Token[]): Dict<any> | null {
+  const stream = new TokenStream(tokens);
+  const t = stream.consume();
+  if (!t || !stream.eof()) return null;
+
+  // rn-web: emit the raw `perspective` property and let the browser
+  // handle it as its own surface (separate from `transform`). The
+  // sentinel + transform-fold is a native-only workaround for RN's
+  // lack of a perspective-for-descendants surface.
+  if (__NATIVE_WEB__) {
+    if (t.kind === TokenKind.Ident && t.name === 'none') return { perspective: 'none' };
+    if (t.kind === TokenKind.Length || t.kind === TokenKind.Number) {
+      return { perspective: t.raw };
+    }
+    return null;
+  }
+
+  if (t.kind === TokenKind.Ident && t.name === 'none') {
+    return { [PERSPECTIVE_SENTINEL_KEY]: 'none' };
+  }
+  if (t.kind === TokenKind.Length) {
+    const v = t.value;
+    if (v === undefined || v < 0) return null;
+    const clamped = v < 1 ? 1 : v;
+    return { [PERSPECTIVE_SENTINEL_KEY]: 'perspective(' + clamped + 'px)' };
+  }
+  // Bare zero is a <number>, not a length; spec says >=0px only — reject.
+  if (t.kind === TokenKind.Number && t.value === 0) {
+    return { [PERSPECTIVE_SENTINEL_KEY]: 'perspective(1px)' };
+  }
+  return null;
+}
+
+register('perspective', perspectiveHandler);
+
+/**
+ * `perspective-origin: <position>` (CSS Transforms 2 §9). Sets the
+ * vanishing point that perspective-transformed descendants converge
+ * toward. RN 0.85 has no perspective-origin surface; the vanishing
+ * point is fixed at the parent's center. Drops with a one-time dev
+ * warn on iOS / Android.
+ *
+ * rn-web honors the property natively (browser handles the position
+ * grammar end-to-end).
+ */
+function perspectiveOriginHandler(tokens: Token[]): Dict<any> | null {
+  if (tokens.length === 0) return null;
+  // We don't validate the position grammar here; both targets handle
+  // their own parsing. On native, accept any non-empty input and drop
+  // it with a warn so author intent is observable.
+  if (__NATIVE_WEB__) {
+    const raw = tokens.map(t => t.raw).join(' ');
+    return { perspectiveOrigin: raw };
+  }
+  if (__DEV__) {
+    warnOnce(
+      'native-perspective-origin-unsupported',
+      "`perspective-origin` (CSS Transforms 2 §9) has no React Native surface in 0.85 — the vanishing point for perspective-transformed descendants is fixed at the parent's center. The declaration drops on iOS / Android; rn-web honors it natively."
+    );
+  }
+  return {};
+}
+
+register('perspectiveOrigin', perspectiveOriginHandler);
+
+/**
+ * `transform-style: flat | preserve-3d` (CSS Transforms 2 §7).
+ * RN 0.85 has no transformStyle prop; `preserve-3d` is silently
+ * dropped on iOS / Android. The iOS 3D-bleed memory documents a
+ * known compositor side-effect when nested 3D transforms appear
+ * without preserve-3d. rn-web honors the property natively.
+ */
+function transformStyleHandler(tokens: Token[]): Dict<any> | null {
+  const stream = new TokenStream(tokens);
+  const t = stream.consume();
+  if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
+  const value = t.name;
+  if (value !== 'flat' && value !== 'preserve-3d') return null;
+
+  if (__NATIVE_WEB__) return { transformStyle: value };
+
+  if (value === 'preserve-3d' && __DEV__) {
+    warnOnce(
+      'native-transform-style-preserve-3d',
+      '`transform-style: preserve-3d` has no React Native equivalent in 0.85 (no platform API). The declaration is dropped on iOS / Android; for iOS 3D-context bleed across siblings, set `collapsable={false}` on the wrapper. rn-web honors the property natively.',
+      value
+    );
+  }
+  return {};
+}
+
+register('transformStyle', transformStyleHandler);

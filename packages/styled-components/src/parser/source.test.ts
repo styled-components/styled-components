@@ -262,6 +262,51 @@ describe('parseSource', () => {
         },
       ]);
     });
+
+    it('embeds sentinel when slot prefix terminates a statement and suffix starts a selector', () => {
+      // Regression lock for the component-selector case: a slot whose prefix
+      // ends in `;` (statement terminator) but whose suffix starts with a
+      // selector-continuation char must still be embedded, because the slot
+      // is a selector prefix (`${Foo} & { ... }`), not a block-level
+      // interpolation. Without this disambiguation the rule's selector
+      // collapses to `&` and the descendant prefix evaporates.
+      const otherComponent = { sentinel: true };
+      const src = tagged`color: green; ${otherComponent} & { color: red; }`;
+      expect(src.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: 'green' },
+        {
+          kind: NodeKind.Rule,
+          selectors: [tv('\0I0\0 &')],
+          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+        },
+      ]);
+    });
+
+    it('embeds sentinel for the `${Foo} > &` child-combinator form after `;`', () => {
+      const otherComponent = { sentinel: true };
+      const src = tagged`color: green; ${otherComponent} > & { color: red; }`;
+      expect(src.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: 'green' },
+        {
+          kind: NodeKind.Rule,
+          selectors: [tv('\0I0\0 > &')],
+          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+        },
+      ]);
+    });
+
+    it('embeds sentinel for the `${Foo} { ... }` selector-only form after `;`', () => {
+      const otherComponent = { sentinel: true };
+      const src = tagged`color: green; ${otherComponent} { color: red; }`;
+      expect(src.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: 'green' },
+        {
+          kind: NodeKind.Rule,
+          selectors: [tv('\0I0\0')],
+          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+        },
+      ]);
+    });
   });
 
   describe('block-position interpolations', () => {

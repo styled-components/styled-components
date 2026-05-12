@@ -886,6 +886,147 @@ describe('native', () => {
       `;
       expect(Comp.nativeStyle.staticEligible).toBe(false);
     });
+
+    // Cascade-publishing properties must route to useDynamicImpl so a
+    // fresh NativeStyleContext value reaches descendants. Without the
+    // disqualification a child `1em` would resolve against the
+    // inherited base font-size, not this component's override.
+    it('font-size declaration disqualifies static eligibility', () => {
+      const Comp = styled.View`
+        font-size: 24px;
+      `;
+      expect(Comp.nativeStyle.staticEligible).toBe(false);
+    });
+
+    it('line-height declaration disqualifies static eligibility', () => {
+      const Comp = styled.View`
+        line-height: 32px;
+      `;
+      expect(Comp.nativeStyle.staticEligible).toBe(false);
+    });
+
+    it('direction declaration disqualifies static eligibility', () => {
+      const Comp = styled.View`
+        direction: rtl;
+      `;
+      expect(Comp.nativeStyle.staticEligible).toBe(false);
+    });
+
+    // Regression: a parent declaring `font-size: 24px` must publish a
+    // fresh cascade so a child's `font-size: 1em` resolves to 24, not
+    // the inherited default of 16.
+    it('font-size publishes to descendants resolving 1em', () => {
+      const Parent = styled.View`
+        font-size: 24px;
+      `;
+      const Child = styled.Text`
+        font-size: 1em;
+      `;
+      const tree = TestRenderer.create(
+        <Parent>
+          <Child>hi</Child>
+        </Parent>
+      );
+      const text = tree.root.findByType(Text);
+      const flat = ([] as any[]).concat(text.props.style).flat(Infinity);
+      const merged: Record<string, any> = Object.assign({}, ...flat.filter(Boolean));
+      expect(merged.fontSize).toBe(24);
+    });
+
+    it('line-height publishes to descendants resolving 1lh', () => {
+      const Parent = styled.View`
+        line-height: 32px;
+      `;
+      const Child = styled.Text`
+        height: 1lh;
+      `;
+      const tree = TestRenderer.create(
+        <Parent>
+          <Child>hi</Child>
+        </Parent>
+      );
+      const text = tree.root.findByType(Text);
+      const flat = ([] as any[]).concat(text.props.style).flat(Infinity);
+      const merged: Record<string, any> = Object.assign({}, ...flat.filter(Boolean));
+      expect(merged.height).toBe(32);
+    });
+  });
+
+  describe('ParentContext value memoization', () => {
+    // Without memoization, every parent re-render allocates a fresh
+    // `ParentContextValue` object and per-child Provider value. That
+    // change-by-reference defeats `React.memo` on every styled
+    // descendant: their effective context value flips each render, so
+    // React re-runs them even when their own props are equal. The
+    // memoization caches both the published value and the indexed
+    // children across renders with stable inputs.
+    it('publishes a reference-stable ParentContext value across re-renders', () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { ParentContext } = require('../ParentContext');
+      const seen: unknown[] = [];
+      function ContextSpy() {
+        const v = React.useContext(ParentContext);
+        seen.push(v);
+        return null;
+      }
+      const Parent = styled.View.withConfig({ displayName: 'MemoParent' })`
+        padding-top: 4px;
+      `;
+      const tree = TestRenderer.create(
+        <Parent>
+          <ContextSpy />
+        </Parent>
+      );
+      // Force a re-render with a different prop reference; the inherited
+      // ParentContext above Parent is unchanged, so the published value
+      // should stay reference-stable.
+      tree.update(
+        <Parent testID="rerender">
+          <ContextSpy />
+        </Parent>
+      );
+      expect(seen.length).toBeGreaterThanOrEqual(2);
+      const first = seen[0] as { parentId?: string } | undefined;
+      const last = seen[seen.length - 1];
+      expect(first?.parentId).toBe(Parent.styledComponentId);
+      expect(last).toBe(first);
+    });
+
+    it('per-child Provider values stay reference-stable when children are unchanged', () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { ParentContext } = require('../ParentContext');
+      const seenByName: Record<string, unknown[]> = {};
+      function ContextSpy({ name }: { name: string }) {
+        const v = React.useContext(ParentContext);
+        (seenByName[name] = seenByName[name] || []).push(v);
+        return null;
+      }
+      const Parent = styled.View.withConfig({ displayName: 'MemoParentSib' })`
+        padding-top: 4px;
+      `;
+      const Child = styled.View.withConfig({ displayName: 'MemoChildSib' })`
+        color: red;
+      `;
+      const renderWith = (extra: ViewProps = {}) => (
+        <Parent {...extra}>
+          <Child>
+            <ContextSpy name="a" />
+          </Child>
+          <Child>
+            <ContextSpy name="b" />
+          </Child>
+        </Parent>
+      );
+      const tree = TestRenderer.create(renderWith());
+      tree.update(renderWith({ testID: 'rerender' }));
+      // Each ContextSpy sees its enclosing styled Child as the parent.
+      // With memoization the per-child value matches across the two
+      // renders for both siblings.
+      expect(seenByName.a.length).toBeGreaterThanOrEqual(2);
+      expect(seenByName.b.length).toBeGreaterThanOrEqual(2);
+      expect(seenByName.a[seenByName.a.length - 1]).toBe(seenByName.a[0]);
+      expect(seenByName.b[seenByName.b.length - 1]).toBe(seenByName.b[0]);
+    });
   });
 
   describe('HMR memo invalidation (dev injector)', () => {
@@ -1056,6 +1197,185 @@ describe('native', () => {
       for (const entry of flat) {
         expect(entry.numberOfLines).toBeUndefined();
       }
+    });
+  });
+
+  // https://drafts.csswg.org/css-forms-1/#field-sizing
+  describe('field-sizing lift (CSS Form Control Styling 1 §7.1)', () => {
+    // RN's multiline TextInput grows on its own via Yoga's shadow-view
+    // measure callback (`RCTBaseTextInputShadowView.sizeThatFits` returns
+    // the natural text size with `maximumSize.height = CGFLOAT_MAX`).
+    // The polyfill's job is just to flip `multiline: true` so the
+    // measure callback engages.
+    it('lifts multiline: true on a styled TextInput', () => {
+      const Auto = styled.TextInput`
+        field-sizing: content;
+        min-height: 44px;
+      `;
+      const tree = TestRenderer.create(<Auto value="" onChangeText={() => {}} />);
+      const input = tree.root.findByType(TextInput);
+      expect(input.props.multiline).toBe(true);
+    });
+
+    it('does not inject height or onContentSizeChange (Yoga handles growth)', () => {
+      const Auto = styled.TextInput`
+        field-sizing: content;
+        min-height: 44px;
+      `;
+      const tree = TestRenderer.create(<Auto value="" onChangeText={() => {}} />);
+      const input = tree.root.findByType(TextInput);
+      expect(input.props.onContentSizeChange).toBeUndefined();
+      const flat = ([] as any[])
+        .concat(input.props.style ?? [])
+        .flat(Infinity)
+        .filter(Boolean);
+      const merged = flat.reduce((acc, layer) => Object.assign(acc, layer), {});
+      expect(merged.height).toBeUndefined();
+      expect(merged.minHeight).toBe(44);
+    });
+
+    it('user multiline={false} disables the lift and warns', () => {
+      const warnSpy2 = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        const Auto = styled.TextInput`
+          field-sizing: content;
+        `;
+        const tree = TestRenderer.create(
+          <Auto value="" onChangeText={() => {}} multiline={false} />
+        );
+        const input = tree.root.findByType(TextInput);
+        expect(input.props.multiline).toBe(false);
+        const message = warnSpy2.mock.calls.find(
+          c => typeof c[0] === 'string' && c[0].includes('field-sizing')
+        );
+        expect(message).toBeDefined();
+        expect(message![0]).toContain('multiline');
+      } finally {
+        warnSpy2.mockRestore();
+      }
+    });
+
+    it('field-sizing: fixed is a no-op', () => {
+      const Plain = styled.TextInput`
+        field-sizing: fixed;
+        height: 44px;
+      `;
+      const tree = TestRenderer.create(<Plain value="" onChangeText={() => {}} />);
+      const input = tree.root.findByType(TextInput);
+      expect(input.props.multiline).toBeUndefined();
+    });
+  });
+
+  // https://drafts.csswg.org/css-ui-4/#interactivity
+  describe('interactivity: inert priority (CSS UI 4 §6.3)', () => {
+    let warnSpy: jest.SpyInstance;
+    beforeEach(() => {
+      warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    // Spec bullet 1: "Hit-testing must act as if `pointer-events` was
+    // `none`, regardless of its actual value." Same "regardless of its
+    // actual value" applies to focus / selection / editable.
+    it('priority lifts win over author-supplied props', () => {
+      const Locked = styled.View`
+        interactivity: inert;
+      `;
+      const tree = TestRenderer.create(
+        <Locked pointerEvents="auto" focusable={true} importantForAccessibility="yes" />
+      );
+      const root = tree.root.findByType(View);
+      expect(root.props.pointerEvents).toBe('none');
+      expect(root.props.focusable).toBe(false);
+      expect(root.props.importantForAccessibility).toBe('no-hide-descendants');
+      expect(root.props.accessibilityElementsHidden).toBe(true);
+    });
+
+    it('Text gets selectable={false} under inert', () => {
+      const Locked = styled.Text`
+        interactivity: inert;
+      `;
+      const tree = TestRenderer.create(<Locked selectable>frozen</Locked>);
+      const text = tree.root.findByType(Text);
+      expect(text.props.selectable).toBe(false);
+    });
+
+    it('TextInput gets editable={false} under inert', () => {
+      const Locked = styled.TextInput`
+        interactivity: inert;
+      `;
+      const tree = TestRenderer.create(<Locked value="" onChangeText={() => {}} editable={true} />);
+      const input = tree.root.findByType(TextInput);
+      expect(input.props.editable).toBe(false);
+    });
+
+    it('interactivity: auto does not lift any prop', () => {
+      const Free = styled.View`
+        interactivity: auto;
+      `;
+      const tree = TestRenderer.create(<Free pointerEvents="auto" />);
+      const root = tree.root.findByType(View);
+      expect(root.props.pointerEvents).toBe('auto');
+      expect(root.props.focusable).toBeUndefined();
+    });
+  });
+
+  // https://drafts.csswg.org/css-transforms-2/#perspective-property
+  describe('perspective composition (CSS Transforms 2 §8)', () => {
+    function getMergedStyle(node: TestRenderer.ReactTestInstance): Record<string, any> {
+      const style = node.props.style;
+      const flat = [style].flat(Infinity).filter(Boolean) as Array<Record<string, any>>;
+      return Object.assign({}, ...flat);
+    }
+
+    it('perspective alone emits a perspective() transform', () => {
+      const View3d = styled.View`
+        perspective: 500px;
+      `;
+      const tree = TestRenderer.create(<View3d />);
+      const merged = getMergedStyle(tree.root.findByType(View));
+      expect(merged.transform).toBe('perspective(500px)');
+    });
+
+    it('perspective composes with an author transform (prepends)', () => {
+      const Tilt = styled.View`
+        perspective: 500px;
+        transform: rotateY(45deg);
+      `;
+      const tree = TestRenderer.create(<Tilt />);
+      const merged = getMergedStyle(tree.root.findByType(View));
+      expect(merged.transform).toBe('perspective(500px) rotateY(45deg)');
+    });
+
+    it('transform-before-perspective in source still prepends perspective', () => {
+      const Tilt = styled.View`
+        transform: rotateX(30deg);
+        perspective: 800px;
+      `;
+      const tree = TestRenderer.create(<Tilt />);
+      const merged = getMergedStyle(tree.root.findByType(View));
+      expect(merged.transform).toBe('perspective(800px) rotateX(30deg)');
+    });
+
+    it('perspective: none clears when no other transform is set', () => {
+      const Reset = styled.View`
+        perspective: none;
+      `;
+      const tree = TestRenderer.create(<Reset />);
+      const merged = getMergedStyle(tree.root.findByType(View));
+      expect(merged.transform).toBe('none');
+    });
+
+    it('perspective: none leaves author transform intact', () => {
+      const Spin = styled.View`
+        transform: scale(1.2);
+        perspective: none;
+      `;
+      const tree = TestRenderer.create(<Spin />);
+      const merged = getMergedStyle(tree.root.findByType(View));
+      expect(merged.transform).toBe('scale(1.2)');
     });
   });
 });

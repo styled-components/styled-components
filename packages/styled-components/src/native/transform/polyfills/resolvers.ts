@@ -19,8 +19,23 @@ export interface ResolveEnv {
   theme: Record<string, any>;
   /** Safe-area insets from SafeAreaView / safe-area-context. */
   insets: { top: number; right: number; bottom: number; left: number };
-  /** Root font-size for `rem` resolution (defaults to 16). Reserved for v7.1. */
+  /** Root font-size for `rem` resolution (defaults to 16). */
   rootFontSize: number;
+  /**
+   * Parent's resolved font-size in px. Anchors `em` resolution at
+   * render time. Sourced from NativeStyleContext.cascade.fontSize.
+   */
+  fontSize: number;
+  /**
+   * Parent's resolved line-height in px. Anchors `lh` resolution.
+   * Sourced from NativeStyleContext.cascade.lineHeight.
+   */
+  lineHeight: number;
+  /**
+   * Inherited writing direction. Anchors `text-align: start | end`.
+   * Sourced from NativeStyleContext.cascade.direction.
+   */
+  direction: 'ltr' | 'rtl';
 }
 
 /**
@@ -104,6 +119,16 @@ function unescapeSentinelFallback(s: string): string {
 const VP_UNIT_RE =
   /^(-?(?:\d+(?:\.\d+)?|\.\d+))(vw|vh|vi|vb|vmin|vmax|svw|svh|svi|svb|svmin|svmax|lvw|lvh|lvi|lvb|lvmin|lvmax|dvw|dvh|dvi|dvb|dvmin|dvmax)$/i;
 const CQ_UNIT_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(cqw|cqh|cqmin|cqmax|cqi|cqb)$/i;
+// CSS Values 4 §6.1.1 — font-relative lengths. `rem` and `rlh` anchor
+// at the root; `em` and `lh` at the parent. RN has no DOM cascade —
+// values come from {@link ResolveEnv.rootFontSize / fontSize /
+// lineHeight}, populated by NativeStyleContext at render time. rn-web
+// passes them through to the browser unchanged.
+//
+// `rem` / `rlh` must come BEFORE `em` / `lh` in the alternation so
+// `12rem` matches as rem rather than `12r` + `em`. The regex anchors
+// guarantee whole-token consumption regardless.
+const REM_UNIT_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(rem|rlh|em|lh)$/i;
 const FALLBACK_UNIT_RE = /^-?(?:\d+(?:\.\d+)?|\.\d+)([a-z%]+)$/i;
 const LENGTH_LITERAL_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(px)?$/;
 const NUMERIC_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))([a-z%]*)$/i;
@@ -122,6 +147,37 @@ export function buildResolver(value: unknown): Resolver | null {
   if (value.length === 0) return null;
 
   const c0 = value.charCodeAt(0);
+
+  // Direction-aware `text-align: start | end | match-parent` per
+  // CSS Text 4 §7.1. The handler emits `\0scta:<keyword>`; the
+  // resolver here maps it to `'left'` or `'right'` against the
+  // cascade direction inherited from the parent. Checked BEFORE the
+  // theme-sentinel dispatch so `findSentinelTerminator` doesn't
+  // accidentally claim the value. The 4-character tag `scta`
+  // differentiates from the theme sentinel `\0sc:` at the fourth
+  // code point (`t` vs `:`).
+  if (
+    c0 === 0 &&
+    value.charCodeAt(3) === 0x74 /* t */ &&
+    value.charCodeAt(4) === 0x61 /* a */ &&
+    value.startsWith('\0scta:')
+  ) {
+    const keyword = value.slice('\0scta:'.length);
+    return env => {
+      // `match-parent` resolves like `start` in horizontal-tb because
+      // there's no orthogonal parent writing mode in Yoga.
+      const startsWithLeft = env.direction === 'ltr';
+      if (keyword === 'start' || keyword === 'match-parent') {
+        return startsWithLeft ? 'left' : 'right';
+      }
+      if (keyword === 'end') {
+        return startsWithLeft ? 'right' : 'left';
+      }
+      // Unrecognised marker shouldn't happen at runtime; defer to
+      // `'auto'` so RN's natural-direction default kicks in.
+      return 'auto';
+    };
+  }
 
   // createTheme sentinel; `\0<prefix>:<path>:<fallback>`. Full-value single
   // sentinel goes to themeResolver (preserves native return type). A
@@ -144,6 +200,13 @@ export function buildResolver(value: unknown): Resolver | null {
     }
     const cq = CQ_UNIT_RE.exec(value);
     if (cq !== null) return containerResolver(parseFloat(cq[1]), cq[2].toLowerCase());
+    const rem = REM_UNIT_RE.exec(value);
+    if (rem !== null) {
+      // rn-web: browser resolves font-relative units against the
+      // document's root / cascade font-size; no resolver needed.
+      if (__NATIVE_WEB__) return null;
+      return fontRelativeResolver(parseFloat(rem[1]), rem[2].toLowerCase());
+    }
     // Numeric-prefixed values fall through to templateResolver if they
     // contain a sentinel (e.g. `0 1px 2px \0sc:colors.shadow:#000`).
   }
@@ -408,6 +471,39 @@ function viewportResolver(n: number, unit: string): Resolver {
         return n;
     }
   };
+}
+
+/**
+ * Font-relative length resolver: `rem`, `rlh`, `em`, `lh`. Multiplies
+ * the numeric value by the appropriate cascade slot on render. RN has
+ * no DOM cascade, so values come from {@link ResolveEnv.rootFontSize}
+ * (rem / rlh anchor at root) and {@link ResolveEnv.fontSize} /
+ * {@link ResolveEnv.lineHeight} (em / lh anchor at parent), populated
+ * by NativeStyleContext at the boundary.
+ *
+ * `rlh` resolution: spec ties it to the root's line-height; v7 today
+ * tracks only one cascade.lineHeight (parent-anchored), so `rlh` and
+ * `lh` resolve identically at the root and increasingly diverge inside
+ * a tree that overrides line-height on descendants. Track in
+ * `project_known_open_issues.md` if the divergence matters for a real
+ * use case.
+ */
+function fontRelativeResolver(n: number, unit: string): Resolver {
+  switch (unit) {
+    case 'rem':
+      return env => n * env.rootFontSize;
+    case 'rlh':
+      // See header note: today this matches lh once cascade.lineHeight
+      // is propagated; spec-correct root-only behavior needs a
+      // separate ResolveEnv.rootLineHeight slot.
+      return env => n * env.lineHeight;
+    case 'em':
+      return env => n * env.fontSize;
+    case 'lh':
+      return env => n * env.lineHeight;
+    default:
+      return env => n;
+  }
 }
 
 function containerResolver(n: number, unit: string): Resolver {

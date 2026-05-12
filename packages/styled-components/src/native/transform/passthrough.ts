@@ -55,6 +55,12 @@ export const PASSTHROUGH_PROPS: ReadonlyMap<string, readonly string[]> = new Map
   // and ReactNativeStyleAttributes.js:84 registers `boxSizing: true`. Pure
   // identity passthrough; no transformation needed.
   ['boxSizing', ['boxSizing']],
+  // CSS Writing Modes 4. `direction: ltr | rtl` sets inline base direction
+  // (Unicode bidi level). Inherited, applies to all elements. RN's Yoga
+  // already honors `direction` for the `*-inline-*` logical mapping on
+  // iOS / Android; rn-web maps it onto the browser's bidi engine. Pure
+  // identity passthrough.
+  ['direction', ['direction']],
   // CSS Images 4. <Image> only. RN 0.85 registers `objectFit`.
   ['objectFit', ['objectFit']],
   // CSS Inline 3. <Text> only. RN 0.85 accepts the keyword grammar
@@ -125,4 +131,93 @@ export function collapseIdenticalCommas(value: string): string {
 export function getPrimaryPassthroughKey(camel: string): string | undefined {
   const keys = PASSTHROUGH_PROPS.get(camel);
   return keys === undefined ? undefined : keys[0];
+}
+
+/**
+ * `experimental_backgroundSize` native bug workaround.
+ *
+ * RN 0.85's `BackgroundSize.kt` parser only accepts `ReadableType.Map`
+ * (`{ x, y }`) for each layer. JS-side `processBackgroundSize.js`
+ * preserves `cover` / `contain` as bare strings, so the native parse
+ * returns null for those entries. When ALL layers' sizes are keyword
+ * form the resulting list is empty, then `BackgroundImageDrawable.kt`
+ * does `index % size` on draw → `ArithmeticException: divide by zero`
+ * → process self-kills via SIGKILL. The user sees the app vanish.
+ *
+ * Why `auto` is the spec-correct fold for our gradient-only path:
+ *
+ * `BackgroundImageDrawable.calculateBackgroundImageSize` is invoked
+ * with `imageWidth = containerWidth, imageHeight = containerHeight`
+ * for every layer (the native side has no intrinsic dimensions for
+ * a gradient and uses the box as the implicit image size). When
+ * `backgroundSize` is null or both axes are `auto`, the function
+ * skips the override branch and returns `(containerWidth,
+ * containerHeight)` — which is exactly what CSS Backgrounds 3 §3.10
+ * specifies for cover / contain over an image with no intrinsic
+ * dimensions and no preferred aspect ratio. So for a gradient,
+ * `cover` ≡ `contain` ≡ `auto` (all three paint over the full area).
+ *
+ * `auto` is the honest fold here: it asks the renderer for "the
+ * image's natural dimensions," which the native side already
+ * resolves to container-fill for aspect-less images. A literal
+ * `100% 100%` would also paint identically but makes a stronger
+ * (and potentially misleading) dimension claim for any future
+ * non-gradient image path.
+ *
+ * The url() image path in v7 doesn't traverse `experimental_*`:
+ * `applyBackgroundBlendModePolyfill` rebuilds url() layers as
+ * `<Image resizeMode>` (cover / contain handled there directly).
+ *
+ * The standard `backgroundSize` key still ships the original
+ * keyword for rn-web, where the browser handles cover / contain
+ * semantics natively against any image type.
+ *
+ * Once RN's native parser handles String tokens for cover / contain
+ * directly, drop this substitution.
+ */
+const SIZE_KEYWORD_NATIVE_SUBSTITUTE = 'auto';
+const SIZE_KEYWORD_PATTERN = /\b(?:cover|contain)\b/g;
+
+export function substituteBackgroundSizeKeywordsForNative(value: string): string {
+  if (value.indexOf('cover') === -1 && value.indexOf('contain') === -1) return value;
+  return value.replace(SIZE_KEYWORD_PATTERN, SIZE_KEYWORD_NATIVE_SUBSTITUTE);
+}
+
+/**
+ * `backgroundPosition` rn-web validator workaround.
+ *
+ * rn-web's `validate.js` flags `backgroundPosition` whenever the
+ * string has more than one top-level value (`valueParser.nodes.length
+ * > 1`), so any two-axis position — `0 0`, `0% 0%`, `top left`,
+ * `50% 50%` — produces a console.error and the prop is dropped from
+ * the style anyway. The native side (iOS / Android) accepts the
+ * full two-axis grammar, so the prop is only problematic on the
+ * rn-web key.
+ *
+ * The asymmetric dual-emit: any two-axis form skips the
+ * `backgroundPosition` (rn-web) emission; the `experimental_*` key
+ * still flows so iOS / Android see the value. rn-web therefore
+ * falls back to its CSS default (`0% 0%`) silently — the same
+ * paint it would have produced after dropping the invalid value,
+ * minus the warning. Single-token forms (`center`, `top`, `left`,
+ * `0`) pass through to both keys.
+ */
+export function isMultiTokenPosition(value: string): boolean {
+  // Top-level comma → multi-layer; each layer parsed separately
+  // upstream, so this helper only sees a single layer's value.
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return false;
+  // Two or more whitespace-separated runs of non-whitespace = multi-token.
+  for (let i = 0; i < trimmed.length; i++) {
+    const c = trimmed.charCodeAt(i);
+    if (c === 32 || c === 9 || c === 10 || c === 13) {
+      // First whitespace: check that at least one non-whitespace follows.
+      for (let j = i + 1; j < trimmed.length; j++) {
+        const c2 = trimmed.charCodeAt(j);
+        if (c2 !== 32 && c2 !== 9 && c2 !== 10 && c2 !== 13) return true;
+      }
+      return false;
+    }
+  }
+  return false;
 }

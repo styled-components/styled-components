@@ -37,9 +37,21 @@ function textWrapShorthand(tokens: Token[]): Dict<any> | null {
   if (mode === null && style === null) return null;
 
   const value = mode !== null && style !== null ? mode + ' ' + style : mode !== null ? mode : style;
-  const out: Dict<any> = { textWrap: value };
+  // rn-web: the browser implements `text-wrap` (mode + style) natively
+  // via Chromium / WebKit / Gecko. Emit only the shorthand and skip the
+  // RN-prop lifts (numberOfLines, ellipsizeMode, textBreakStrategy) so
+  // we don't fight the browser's own line-breaking implementation.
+  if (__NATIVE_WEB__) return { textWrap: value };
 
-  if (mode === 'nowrap') out.numberOfLines = 1;
+  const out: Dict<any> = { textWrap: value };
+  if (mode === 'nowrap') {
+    // `numberOfLines: 1` + `ellipsizeMode: 'clip'` is the closest spec
+    // approximation RN exposes (the line cannot truly overflow
+    // horizontally; we clip instead of ellipsise). Applied silently
+    // because the user-observed behavior matches the spec intent.
+    out.numberOfLines = 1;
+    out.ellipsizeMode = 'clip';
+  }
   if (style === 'balance') {
     out.textBreakStrategy = 'balanced';
     warnIosNoTextWrap(style);
@@ -47,12 +59,18 @@ function textWrapShorthand(tokens: Token[]): Dict<any> | null {
     out.textBreakStrategy = 'highQuality';
     warnIosNoTextWrap(style);
   } else if (style === 'stable') {
-    warnNoTextWrapStable();
+    if (__DEV__) {
+      warnOnce(
+        'native-text-wrap-stable',
+        '`text-wrap: stable` has no React Native equivalent on iOS or Android in 0.85 (no platform API for re-flow stability). The declaration still reaches rn-web where it works as expected.'
+      );
+    }
   }
   return out;
 }
 
 function warnIosNoTextWrap(style: string): void {
+  if (__NATIVE_WEB__) return;
   if (!__DEV__) return;
   warnOnce(
     'native-text-wrap-ios',
@@ -63,12 +81,58 @@ function warnIosNoTextWrap(style: string): void {
   );
 }
 
-function warnNoTextWrapStable(): void {
-  if (!__DEV__) return;
-  warnOnce(
-    'native-text-wrap-stable',
-    '`text-wrap: stable` has no React Native equivalent on iOS or Android in 0.85 (no platform API for re-flow stability). The declaration still reaches rn-web where it works as expected.'
-  );
+/**
+ * `text-wrap-mode: wrap | nowrap` (CSS Text 4 §5.4). Initial `wrap`,
+ * inherited. The `nowrap` value is mirrored to `numberOfLines: 1` for
+ * RN's Text lift.
+ */
+function textWrapModeLonghand(tokens: Token[]): Dict<any> | null {
+  const stream = new TokenStream(tokens);
+  const t = stream.consume();
+  if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
+  const name = t.name;
+  if (name === undefined || !MODES.has(name)) return null;
+  if (__NATIVE_WEB__) return { textWrapMode: name };
+  const out: Dict<any> = { textWrapMode: name };
+  if (name === 'nowrap') {
+    // Same nowrap approximation as the shorthand path, applied silently.
+    out.numberOfLines = 1;
+    out.ellipsizeMode = 'clip';
+  }
+  return out;
+}
+
+/**
+ * `text-wrap-style: auto | balance | stable | pretty` (CSS Text 4 §5.5).
+ * Initial `auto`, inherited. `balance` and `pretty` map to Android's
+ * `textBreakStrategy`; iOS has no equivalent (warns once). `stable` has
+ * no native equivalent at all (warns once).
+ */
+function textWrapStyleLonghand(tokens: Token[]): Dict<any> | null {
+  const stream = new TokenStream(tokens);
+  const t = stream.consume();
+  if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
+  const name = t.name;
+  if (name === undefined || !STYLES.has(name)) return null;
+  if (__NATIVE_WEB__) return { textWrapStyle: name };
+  const out: Dict<any> = { textWrapStyle: name };
+  if (name === 'balance') {
+    out.textBreakStrategy = 'balanced';
+    warnIosNoTextWrap(name);
+  } else if (name === 'pretty') {
+    out.textBreakStrategy = 'highQuality';
+    warnIosNoTextWrap(name);
+  } else if (name === 'stable') {
+    if (__DEV__) {
+      warnOnce(
+        'native-text-wrap-stable',
+        '`text-wrap: stable` has no React Native equivalent on iOS or Android in 0.85 (no platform API for re-flow stability). The declaration still reaches rn-web where it works as expected.'
+      );
+    }
+  }
+  return out;
 }
 
 register('textWrap', textWrapShorthand);
+register('textWrapMode', textWrapModeLonghand);
+register('textWrapStyle', textWrapStyleLonghand);

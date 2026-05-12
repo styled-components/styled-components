@@ -354,11 +354,20 @@ export interface INativeStyleConstructor<Props extends BaseObject> {
 interface CompileOutput {
   base: object;
   conditional: Array<{
-    type: 'media' | 'container' | 'supports' | 'pseudo' | 'attr';
+    type:
+      | 'media'
+      | 'container'
+      | 'supports'
+      | 'pseudo'
+      | 'attr'
+      | 'combinator'
+      | 'nthChild'
+      | 'has';
     condition: string;
     containerName?: string;
     attribute?: string;
     attrValue?: string;
+    combinator?: 'descendant' | 'child' | 'adjacent-sibling' | 'general-sibling';
     styles: object;
   }>;
   keyframes: Array<{

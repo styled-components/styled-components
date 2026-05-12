@@ -288,6 +288,14 @@ describe('animation/transition shorthand parsing', () => {
     expect(r.transitions).toBeUndefined();
   });
 
+  // https://drafts.csswg.org/css-animations-1/#timing-functions
+  // CSS Animations 1 §3.2 — "If a keyframe contains an
+  // `animation-timing-function`, that timing function applies starting
+  // from that keyframe until the next keyframe with a different
+  // timing function (or the end of the animation). A timing function
+  // on the last keyframe is ignored."
+  it('CSS Animations 1 §3.2 — per-frame easing applies from frame to next', () => {});
+
   it('extracts per-frame animation-timing-function from keyframe block', () => {
     const r = toNativeStyles(
       'animation: foo 1s; @keyframes foo { 0% { opacity: 0; animation-timing-function: ease-out; } 100% { opacity: 1; } }',

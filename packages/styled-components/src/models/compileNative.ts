@@ -6,6 +6,7 @@ import {
   NATIVE_RULE_CLASS,
   NativeRuleClass,
   NodeKind,
+  NthSpec,
   PseudoState,
   StaticAtRuleNode,
   StaticDeclNode,
@@ -18,6 +19,7 @@ import { camelize, transformDecl } from '../native/transform';
 import { warnIfSentinelLeak, warnOnce } from '../native/transform/dev';
 import { getPrimaryPassthroughKey } from '../native/transform/passthrough';
 import { buildResolver, Resolver } from '../native/transform/polyfills/resolvers';
+import { PERSPECTIVE_SENTINEL_KEY } from '../native/transform/polyfills/standaloneTransform';
 import {
   ANIMATION_LONGHAND_KEYS,
   TRANSITION_LONGHAND_KEYS,
@@ -34,9 +36,31 @@ import { fifoSet } from '../utils/fifoMap';
 
 export const RN_UNSUPPORTED_VALUES = ['fit-content', 'min-content', 'max-content'];
 
-export type ConditionType = 'media' | 'container' | 'supports' | 'pseudo' | 'attr';
+export type ConditionType =
+  | 'media'
+  | 'container'
+  | 'supports'
+  | 'pseudo'
+  | 'attr'
+  /** CSS Selectors 4 §15 combinator against a referenced styled component
+   *  (`${Foo} &`, `${Foo} > &`, `${Foo} + &`, `${Foo} ~ &`). `condition`
+   *  holds the referenced id; `combinator` distinguishes the four
+   *  forms. */
+  | 'combinator'
+  /** CSS Selectors 4 §9 tree-structural pseudo-classes that match by
+   *  the element's position among its parent's children (`:first-child`,
+   *  `:last-child`, `:only-child`, `:nth-child(an+b)`,
+   *  `:nth-last-child(an+b)`, `:nth-of-type(an+b)`,
+   *  `:nth-last-of-type(an+b)`). `nthSpec` carries the structured
+   *  `(a, b, fromEnd, ofType)` representation. */
+  | 'nthChild'
+  /** CSS Selectors 4 §13.1 — `&:has(<simple>)`. Match runs a recursive
+   *  walk over the element's `props.children` looking for a descendant
+   *  that satisfies the inner simple selector (`${Component}` or
+   *  `[attr]` / `[attr=value]`). */
+  | 'has';
 
-export type { PseudoState, ConditionalAttr };
+export type { PseudoState, ConditionalAttr, NthSpec };
 
 export interface ConditionalStyle {
   type: ConditionType;
@@ -63,6 +87,24 @@ export interface ConditionalStyle {
    * group, each with its own attrs list.
    */
   attrs?: ConditionalAttr[];
+  /**
+   * Inversion flag for `&:not(<simple-selector>)`. When true, the
+   * matcher inverts the result of the pseudo / attr predicate so the
+   * bucket fires when the inner selector does NOT match.
+   */
+  negate?: boolean;
+  /** For type 'combinator': `descendant` matches anywhere on the
+   *  ancestor chain; `child` matches only the immediate parent;
+   *  `adjacent-sibling` matches when the previous sibling is the
+   *  referenced component; `general-sibling` matches when any prior
+   *  sibling is the referenced component. */
+  combinator?: 'descendant' | 'child' | 'adjacent-sibling' | 'general-sibling';
+  /** For type 'nthChild': the (a, b, fromEnd, ofType) representation
+   *  parsed from `:nth-child(an+b)` / `:nth-last-of-type(an+b)` etc. */
+  nthSpec?: NthSpec;
+  /** For type 'has': inner simple selector that must match at least
+   *  one descendant of the element at render time. */
+  hasInner?: { kind: 'component'; id: string } | { kind: 'attr'; attr: ConditionalAttr };
   styles: Dict<any>;
   /**
    * Resolvers extracted from the bucket's styles (theme sentinels, viewport
@@ -95,7 +137,7 @@ export interface NativeStyles {
   base: Dict<any>;
   /** Conditional buckets; render-time matches decide which merge onto base. */
   conditional: ConditionalStyle[];
-  /** Keyframes collected for animation-adapter handoff (v7.1+). */
+  /** Keyframes collected for animation-adapter handoff. */
   keyframes: CompiledKeyframes[];
   /**
    * Element-level "special case" props lifted out of the style object.
@@ -164,6 +206,19 @@ export interface NativeStyles {
    * emits the matching `container-name: <id>` CSS for the browser.
    */
   containerInfo?: { type: string; explicitName?: string };
+  /**
+   * CSS Form Control Styling 1 §7.1 (`field-sizing`). Set when the
+   * source CSS declared `field-sizing: content` on a styled component
+   * targeting `TextInput`. The polyfill itself lifts `multiline: true`
+   * via SPECIAL_CASE_PROPS and lets RN's shadow-view measure callback
+   * grow the view to its natural text size — no JS-side autosize
+   * wiring. This flag exists so the render path can dev-warn when the
+   * user passes `multiline={false}` explicitly (voiding the lift).
+   * On rn-web the polyfill keeps the declaration in `base` so the
+   * browser handles `field-sizing` natively;the extract here only
+   * runs on non-rn-web bundles via `__NATIVE_WEB__` tree-shaking.
+   */
+  fieldSizing?: 'content';
 }
 
 /**
@@ -176,7 +231,35 @@ export interface NativeStyles {
 export interface SpecialCaseMeta {
   validOn: ReadonlyArray<string>;
   source: string;
+  /**
+   * Default `0`: user prop wins (the lift fills in only when the prop
+   * is absent). Positive values let the compiled value take priority
+   * over an author-supplied prop of the same name; higher wins. CSS UI
+   * 4 §6.3 mandates this for `inert`: hit-testing, text-selection, and
+   * editable suppression act as if their underlying props were the
+   * inert values *regardless of actual value*.
+   */
+  priority?: number;
 }
+
+// `View` props inherit broadly via React Native's `ViewProps`: every
+// touchable / scrollable / Text-derived primitive accepts these. Spelling
+// out the realistic targets keeps the dev warning useful when a consumer
+// types `interactivity: inert` on a component that genuinely can't accept
+// the prop.
+const VIEW_LIKE_TARGETS: ReadonlyArray<string> = [
+  'View',
+  'Text',
+  'Pressable',
+  'TouchableOpacity',
+  'TouchableHighlight',
+  'TouchableWithoutFeedback',
+  'TouchableNativeFeedback',
+  'ScrollView',
+  'FlatList',
+  'SectionList',
+  'VirtualizedList',
+];
 
 export const SPECIAL_CASE_PROPS: Record<string, SpecialCaseMeta> = {
   numberOfLines: {
@@ -190,6 +273,54 @@ export const SPECIAL_CASE_PROPS: Record<string, SpecialCaseMeta> = {
   // Android-only TextInput prop. iOS drops; rationale in
   // `native/transform/polyfills/caretColor.ts`.
   cursorColor: { validOn: ['TextInput'], source: 'caret-color' },
+  // `interactivity: inert` on rn-web — a single HTML `inert` attribute
+  // covers hit-testing, focus, text selection, editable suppression, and
+  // a11y subtree hiding (HTML spec §inert). rn-web's
+  // `forwardedProps.accessibilityProps` whitelists `inert` so the prop
+  // reaches the DOM verbatim. On native this entry never fires (the
+  // polyfill is gated by `__NATIVE_WEB__`).
+  inert: {
+    validOn: [...VIEW_LIKE_TARGETS, 'TextInput'],
+    source: 'interactivity',
+    priority: 1,
+  },
+  // `interactivity: inert` on native — RN has no `inert` prop, so the
+  // polyfill lifts the six underlying surfaces individually. Priority
+  // over author props is required by CSS UI 4 §6.3: hit-testing must
+  // act as if `pointer-events` were `none` regardless of its actual
+  // value, and equivalent for the a11y / focus / selection / editable
+  // surfaces.
+  pointerEvents: { validOn: VIEW_LIKE_TARGETS, source: 'interactivity', priority: 1 },
+  accessibilityElementsHidden: {
+    validOn: VIEW_LIKE_TARGETS,
+    source: 'interactivity',
+    priority: 1,
+  },
+  importantForAccessibility: {
+    validOn: VIEW_LIKE_TARGETS,
+    source: 'interactivity',
+    priority: 1,
+  },
+  focusable: { validOn: VIEW_LIKE_TARGETS, source: 'interactivity', priority: 1 },
+  // Text-selection suppression for `interactivity: inert` — CSS UI 4 §6.3:
+  // "Text selection must act as if `user-select` was `none`."
+  selectable: {
+    validOn: ['Text', 'TextInput', 'VirtualText'],
+    source: 'interactivity',
+    priority: 1,
+  },
+  // Editable suppression — same spec section: "If the element or text
+  // node is editable, it must behave as if it was non-editable." RN's
+  // TextInput exposes editability via `editable`.
+  editable: { validOn: ['TextInput'], source: 'interactivity', priority: 1 },
+  // `field-sizing: content` lifts `multiline: true` so the user can
+  // write a single CSS declaration on a single-line `styled.TextInput`
+  // and get an autosizing multiline field — RN's shadow-view measure
+  // callback then grows the view to its natural text size. Explicit
+  // `multiline={false}` from the user still wins (special cases spread
+  // with user props winning), and the render path dev-warns when that
+  // happens since the autosize behavior is voided.
+  multiline: { validOn: ['TextInput'], source: 'field-sizing' },
 };
 
 /**
@@ -199,7 +330,11 @@ export const SPECIAL_CASE_PROPS: Record<string, SpecialCaseMeta> = {
  * / `env()` / `light-dark()` via `resolvers`).
  */
 export function hasResponsiveOutput(compiled: NativeStyles): boolean {
-  return compiled.conditional.length > 0 || compiled.resolvers !== undefined;
+  return (
+    compiled.conditional.length > 0 ||
+    compiled.resolvers !== undefined ||
+    compiled.fieldSizing === 'content'
+  );
 }
 
 // Keyed by raw CSS string; V8 caches a string's hash on first access so
@@ -272,6 +407,10 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   const animations = extractAnimations(resolvedBase);
   const transitions = extractTransitions(resolvedBase);
   const containerInfo = extractContainerInfo(resolvedBase);
+  // Only lift `fieldSizing` out of `base` on native bundles; on rn-web
+  // the polyfill leaves it in place so the browser sees `field-sizing`
+  // and handles autosize without engaging the render-time hook.
+  const fieldSizing = __NATIVE_WEB__ ? null : extractFieldSizing(resolvedBase);
   // Snapshot the FULL base (including sentinel-laden values that became
   // resolvers) for the animation adapter to diff across renders.
   // Capturing only `resolvedBase` would miss values that contain
@@ -307,7 +446,7 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   if (transitions !== null) out.transitions = transitions;
   if (baseValues !== undefined) out.baseValues = baseValues;
   if (startingDecls.length > 0) {
-    // @starting-style decls are applied on the first render by the v7.1
+    // @starting-style decls are applied on the first render by the
     // animation adapter. Run resolvers here so theme sentinels / env() /
     // viewport units inside `@starting-style { … }` are render-time
     // resolvable just like base + conditional buckets.
@@ -319,6 +458,7 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
     out.resolvers = resolvers;
   }
   if (containerInfo !== null) out.containerInfo = containerInfo;
+  if (fieldSizing !== null) out.fieldSizing = fieldSizing;
   return out;
 }
 
@@ -359,6 +499,23 @@ function extractContainerInfo(base: Dict<any>): { type: string; explicitName?: s
   if (typeof type !== 'string' || type === 'normal') return null;
   const explicitName = typeof base.containerName === 'string' ? base.containerName : undefined;
   return explicitName !== undefined ? { type, explicitName } : { type };
+}
+
+/**
+ * Pull `fieldSizing` out of the resolved base into a top-level
+ * `NativeStyles.fieldSizing` flag. Only the `content` value triggers
+ * runtime work;`fixed` is the platform default and is a no-op even
+ * if it shows up here. The render path reads this flag to decide
+ * whether to engage the `useState`-backed autosize hook.
+ *
+ * Mutates `base` to remove the key so RN's style validator doesn't
+ * warn about an unknown property.
+ */
+function extractFieldSizing(base: Dict<any>): 'content' | null {
+  const fs = base.fieldSizing;
+  if (fs === undefined) return null;
+  delete base.fieldSizing;
+  return fs === 'content' ? 'content' : null;
 }
 
 const DEFAULT_EASING: EasingDescriptor = {
@@ -618,7 +775,45 @@ function processDecls(decls: StaticDeclNode[]): {
       }
     }
   }
+  // rn-web emits raw `perspective:` directly (the browser exposes it as a
+  // separate surface), so the sentinel never lands in `base` on web and
+  // the post-merge fold is dead. Gate the call so terser can DCE both the
+  // helper and the sentinel string on the rn-web bundle.
+  if (!__NATIVE_WEB__) foldPerspectiveSentinel(raw, base);
   return { raw, base, resolvers };
+}
+
+/**
+ * Compose `perspective: <length>` with any sibling `transform` value in
+ * the same declaration block. The perspective polyfill emits a sentinel
+ * key so cascade last-wins doesn't drop the perspective when the author
+ * also writes `transform:`. Per CSS Transforms 2 §8 the perspective
+ * applies to the element's own transform context.
+ */
+function foldPerspectiveSentinel(raw: Dict<any>, base: Dict<any>): void {
+  const persp = base[PERSPECTIVE_SENTINEL_KEY];
+  if (persp === undefined) return;
+  delete base[PERSPECTIVE_SENTINEL_KEY];
+  delete raw[PERSPECTIVE_SENTINEL_KEY];
+  // `perspective: none` clears: emit the identity transform. An author
+  // `transform:` declared after `perspective: none` still wins because
+  // we only fold when persp is still in `base` at end of loop.
+  if (persp === 'none') {
+    if (base.transform === undefined) {
+      base.transform = 'none';
+      raw.transform = 'none';
+    }
+    return;
+  }
+  const existing = base.transform;
+  if (existing === undefined || existing === 'none') {
+    base.transform = persp;
+    raw.transform = persp;
+  } else if (typeof existing === 'string') {
+    const composed = persp + ' ' + existing;
+    base.transform = composed;
+    raw.transform = composed;
+  }
 }
 
 function walkRoot(
@@ -645,8 +840,8 @@ function walkRoot(
           // Mirror the base/conditional pipeline: decls → transformDecl
           // → split static base / resolvers in one pass. Lets
           // `${t.colors.x}` and `env()` inside a keyframe's declarations
-          // resolve at render time when the v7.1 animation adapter
-          // applies them.
+          // resolve at render time when the animation adapter applies
+          // them.
           const decls = frame.children;
           const { base, resolvers } =
             decls.length > 0 ? processDecls(decls) : { base: {}, resolvers: [] };
@@ -716,17 +911,150 @@ function applyRuleClass(
   const { base, resolvers } = processDecls(decls);
 
   if (cls.kind === 'pseudo') {
-    pushBucket(conditional, base, resolvers, outer, cls.pseudo, undefined);
+    pushBucket(conditional, base, resolvers, outer, cls.pseudo, undefined, cls.negate);
   } else if (cls.kind === 'pseudoFanOut') {
     for (let i = 0; i < cls.pseudos.length; i++) {
-      pushBucket(conditional, base, resolvers, outer, cls.pseudos[i], undefined);
+      pushBucket(conditional, base, resolvers, outer, cls.pseudos[i], undefined, undefined);
     }
+  } else if (cls.kind === 'combinator') {
+    pushCombinatorBucket(conditional, base, resolvers, outer, cls);
+  } else if (cls.kind === 'nthChild') {
+    pushNthChildBucket(conditional, base, resolvers, outer, cls);
+  } else if (cls.kind === 'has') {
+    pushHasBucket(conditional, base, resolvers, outer, cls);
   } else {
     // attr
     for (let i = 0; i < cls.selectors.length; i++) {
-      pushBucket(conditional, base, resolvers, outer, cls.selectors[i].pseudo, cls.selectors[i]);
+      pushBucket(
+        conditional,
+        base,
+        resolvers,
+        outer,
+        cls.selectors[i].pseudo,
+        cls.selectors[i],
+        cls.negate
+      );
     }
   }
+}
+
+/**
+ * `:nth-child` family bucket. The match runs against ParentContext's
+ * sibling-position fields published by the parent's per-child Provider.
+ * Top-level only (the outer-at-rule + nthChild compound is rejected by
+ * the same direct-children scoping as combinators).
+ */
+function pushNthChildBucket(
+  conditional: ConditionalStyle[],
+  base: Dict<any>,
+  resolvers: Array<[string, Resolver]>,
+  outer:
+    | {
+        type: 'media' | 'container' | 'supports';
+        condition: string;
+        containerName: string | undefined;
+      }
+    | undefined,
+  cls: { spec: NthSpec; pseudo?: PseudoState; negate?: boolean }
+): void {
+  if (outer !== undefined) return;
+  const entry: ConditionalStyle = {
+    type: 'nthChild',
+    condition: nthSpecKey(cls.spec),
+    nthSpec: cls.spec,
+    styles: base,
+  };
+  if (cls.pseudo) entry.pseudo = cls.pseudo;
+  if (cls.negate === true) entry.negate = true;
+  if (resolvers.length > 0) entry.resolvers = resolvers;
+  conditional.push(entry);
+}
+
+/** Stable cache-key string for an NthSpec (used as `condition` so
+ *  describeCondition and dedup paths have a single source-of-truth
+ *  string identity). */
+function nthSpecKey(spec: NthSpec): string {
+  const dir = spec.fromEnd ? 'L' : 'F';
+  const ot = spec.ofType ? 't' : 'c';
+  const oc = spec.onlyChild ? '!' : '';
+  return `nth:${dir}${ot}${oc}:${spec.a}n+${spec.b}`;
+}
+
+/** `:has(<simple>)` bucket. The match walks props.children at render
+ *  time looking for a descendant satisfying the inner predicate. */
+function pushHasBucket(
+  conditional: ConditionalStyle[],
+  base: Dict<any>,
+  resolvers: Array<[string, Resolver]>,
+  outer:
+    | {
+        type: 'media' | 'container' | 'supports';
+        condition: string;
+        containerName: string | undefined;
+      }
+    | undefined,
+  cls: {
+    inner: { kind: 'component'; id: string } | { kind: 'attr'; attr: ConditionalAttr };
+    pseudo?: PseudoState;
+    negate?: boolean;
+  }
+): void {
+  if (outer !== undefined) return;
+  const inner = cls.inner;
+  const condition =
+    inner.kind === 'component'
+      ? `has:.${inner.id}`
+      : `has:[${inner.attr.name}${inner.attr.value !== undefined ? '=' + inner.attr.value : ''}]`;
+  const entry: ConditionalStyle = {
+    type: 'has',
+    condition,
+    hasInner: inner,
+    styles: base,
+  };
+  if (cls.pseudo) entry.pseudo = cls.pseudo;
+  if (cls.negate === true) entry.negate = true;
+  if (resolvers.length > 0) entry.resolvers = resolvers;
+  conditional.push(entry);
+}
+
+/**
+ * Combinator bucket: a styled component matched as a descendant or
+ * direct child of another styled component reference. The matcher
+ * reads ParentContext at render time.
+ *
+ * Phase 3 scope: top-level combinator selectors only. A combinator
+ * nested inside `@media` / `@container` / `@supports` skips the
+ * bucket and falls through to the unsupported warn — landing combos
+ * is incremental (rare in practice, and the outer-gate bucket shape
+ * needs a separate slot for the ancestorId).
+ */
+function pushCombinatorBucket(
+  conditional: ConditionalStyle[],
+  base: Dict<any>,
+  resolvers: Array<[string, Resolver]>,
+  outer:
+    | {
+        type: 'media' | 'container' | 'supports';
+        condition: string;
+        containerName: string | undefined;
+      }
+    | undefined,
+  cls: {
+    combinator: 'descendant' | 'child' | 'adjacent-sibling' | 'general-sibling';
+    ancestorId: string;
+    pseudo?: PseudoState;
+  }
+): void {
+  if (outer !== undefined) return; // not yet supported; see header note
+  const entry: ConditionalStyle = {
+    type: 'combinator',
+    condition: cls.ancestorId,
+    combinator: cls.combinator,
+    styles: base,
+  };
+  if (cls.pseudo) entry.pseudo = cls.pseudo;
+  if (resolvers.length > 0) entry.resolvers = resolvers;
+  conditional.push(entry);
 }
 
 /**
@@ -747,7 +1075,8 @@ function pushBucket(
       }
     | undefined,
   pseudo: PseudoState | undefined,
-  attrSel: AttrSelector | undefined
+  attrSel: AttrSelector | undefined,
+  negate: boolean | undefined
 ): void {
   let entry: ConditionalStyle;
   if (outer) {
@@ -770,6 +1099,7 @@ function pushBucket(
   } else {
     return;
   }
+  if (negate === true) entry.negate = true;
   entry.styles = stripSpecialCasesFromConditional(base, entry);
   if (resolvers.length > 0) entry.resolvers = resolvers;
   conditional.push(entry);

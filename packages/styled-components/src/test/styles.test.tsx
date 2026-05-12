@@ -1020,7 +1020,7 @@ describe('with styles', () => {
         .a {
           color: navy;
         }
-        .a {
+        .a .sc-kqxcKS {
           margin-right: 8px;
           color: inherit;
         }"
