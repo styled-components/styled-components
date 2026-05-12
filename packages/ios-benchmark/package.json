@@ -1,6 +1,5 @@
 {
   "name": "ios-benchmark",
-  "version": "0.0.1",
   "private": true,
   "scripts": {
     "ios": "react-native run-ios --simulator='iPhone 17'",
