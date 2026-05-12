@@ -263,7 +263,7 @@ export function DirectionBoard() {
           <AlignRight>right (reference)</AlignRight>
         </AlignFrame>
         <InlineMarkdown variant="brief">
-          {`On native, \`start\` should match the device-locale default (\`left\` in LTR locales); \`end\` warns and falls back to \`auto\`. On rn-web both spec values pass through and match \`left\` / \`right\` under a LTR document.`}
+          {`\`start\` and \`end\` resolve against the inherited writing direction on every platform, so they match \`left\` / \`right\` under LTR and swap under \`direction: rtl\`. On rn-web the browser handles the same surface natively.`}
         </InlineMarkdown>
       </Row>
     </Stack>

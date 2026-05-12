@@ -290,7 +290,7 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     slug: 'field-sizing-board',
     title: 'Field sizing · autosize',
     summary:
-      '`field-sizing: content` makes a `TextInput` grow with its content per CSS Forms 1 §7.1. The polyfill lifts `multiline={true}` and wires `onContentSizeChange` automatically; explicit `multiline={false}` keeps the fixed height with a dev warning. rn-web hands the declaration to the browser.',
+      '`field-sizing: content` makes a `TextInput` grow with its content per CSS Forms 1 §7.1. The polyfill lifts `multiline={true}` so React Native\'s own measure callback handles autosize; explicit `multiline={false}` keeps the fixed height with a dev warning. rn-web hands the declaration to the browser.',
     feature: 'field-sizing: content',
     category: 'Typography',
     Widget: FieldSizingBoard,
