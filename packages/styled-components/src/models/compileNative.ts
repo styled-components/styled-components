@@ -138,11 +138,24 @@ export interface NativeStyles {
   /** Conditional buckets; render-time matches decide which merge onto base. */
   conditional: ConditionalStyle[];
   /**
-   * `true` when any bucket in `conditional` carries a pseudo-state gate
-   * (`:hover` / `:focus` / `:pressed` / `:disabled`). Precomputed at
-   * compile time so the render path avoids re-scanning the bucket
-   * array on every render to decide whether to emit the state-callback
-   * branch. Always `false` when `conditional.length === 0`.
+   * Subset of `conditional` containing only entries the per-render
+   * `matchConditionals` walks — i.e. buckets without a pseudo-state
+   * gate. Precomputed at compile time so the render path doesn't
+   * re-skip pseudo entries on every render.
+   */
+  nonPseudoEntries: ConditionalStyle[];
+  /**
+   * Subset of `conditional` containing only pseudo-bearing buckets
+   * (`:hover` / `:focus` / `:pressed` / `:disabled`, including compound
+   * `&[attr]:hover` and `&:nth-child(...):hover` forms). The state
+   * callback iterates this slice instead of re-scanning all conditional
+   * entries on every state transition.
+   */
+  pseudoEntries: ConditionalStyle[];
+  /**
+   * `true` when {@link pseudoEntries} is non-empty; convenience alias so
+   * the render path can check a single boolean to decide whether to
+   * emit the state-callback branch.
    */
   hasPseudo: boolean;
   /** Keyframes collected for animation-adapter handoff. */
@@ -448,14 +461,27 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   // (they're applied per-render and don't benefit from registration).
   const hasBaseStyleDecls = hasOwnKeys(resolvedBase);
   const base = hasBaseStyleDecls ? styleSheet.create({ generated: resolvedBase }).generated : {};
-  let hasPseudo = false;
+  // Single pass: partition conditional into pseudo-bearing and non-pseudo
+  // subsets, so neither matchConditionals nor pseudoStylesForState
+  // re-scans the other class on every render. Alias `conditional` when
+  // it's all-one-kind to avoid empty-vs-clone allocations for the
+  // overwhelmingly common shapes (all media / all pseudo).
+  const pseudoEntries: ConditionalStyle[] = [];
+  const nonPseudoEntries: ConditionalStyle[] = [];
   for (let i = 0; i < conditional.length; i++) {
-    if (conditional[i].type === 'pseudo' || conditional[i].pseudo) {
-      hasPseudo = true;
-      break;
-    }
+    const e = conditional[i];
+    if (e.type === 'pseudo' || e.pseudo) pseudoEntries.push(e);
+    else nonPseudoEntries.push(e);
   }
-  const out: NativeStyles = { base, conditional, keyframes, hasPseudo };
+  const hasPseudo = pseudoEntries.length > 0;
+  const out: NativeStyles = {
+    base,
+    conditional,
+    nonPseudoEntries,
+    pseudoEntries,
+    keyframes,
+    hasPseudo,
+  };
   if (specialCases !== null) out.specialCases = specialCases;
   if (animations !== null) out.animations = animations;
   if (transitions !== null) out.transitions = transitions;

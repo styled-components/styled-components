@@ -370,6 +370,42 @@ interface CompileOutput {
     combinator?: 'descendant' | 'child' | 'adjacent-sibling' | 'general-sibling';
     styles: object;
   }>;
+  /** Subset of `conditional` minus pseudo-bearing entries. */
+  nonPseudoEntries: Array<{
+    type:
+      | 'media'
+      | 'container'
+      | 'supports'
+      | 'pseudo'
+      | 'attr'
+      | 'combinator'
+      | 'nthChild'
+      | 'has';
+    condition: string;
+    containerName?: string;
+    attribute?: string;
+    attrValue?: string;
+    combinator?: 'descendant' | 'child' | 'adjacent-sibling' | 'general-sibling';
+    styles: object;
+  }>;
+  /** Subset of `conditional` containing only pseudo-bearing entries. */
+  pseudoEntries: Array<{
+    type:
+      | 'media'
+      | 'container'
+      | 'supports'
+      | 'pseudo'
+      | 'attr'
+      | 'combinator'
+      | 'nthChild'
+      | 'has';
+    condition: string;
+    containerName?: string;
+    attribute?: string;
+    attrValue?: string;
+    combinator?: 'descendant' | 'child' | 'adjacent-sibling' | 'general-sibling';
+    styles: object;
+  }>;
   /** `true` when any conditional bucket carries a pseudo-state gate. */
   hasPseudo: boolean;
   keyframes: Array<{

@@ -87,11 +87,23 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
       let filled: ReadonlyArray<string> | null = null;
       let fragments: (FastPathFragment | null)[] | null = null;
       if (source !== null) {
+        // Pre-fill via push so V8 keeps these PACKED_ELEMENTS. `new
+        // Array(n)` creates HOLEY_ELEMENTS even after every slot is
+        // overwritten, which infects the IC for the per-slot reads in
+        // `evaluateForFastPath` and the `fragmentsBuffer` scan below.
+        // See feedback_v8_class_vs_struct_empirical / GroupedTag note
+        // in AGENTS.md.
         if (this.filledBuffer === undefined) {
-          this.filledBuffer = new Array(source.interpolations.length);
+          const n = source.interpolations.length;
+          const buf: string[] = [];
+          for (let i = 0; i < n; i++) buf.push('');
+          this.filledBuffer = buf;
         }
         if (this.fragmentsBuffer === undefined) {
-          this.fragmentsBuffer = new Array(source.interpolations.length);
+          const n = source.interpolations.length;
+          const buf: (FastPathFragment | null)[] = [];
+          for (let i = 0; i < n; i++) buf.push(null);
+          this.fragmentsBuffer = buf;
         }
         filled = evaluateForFastPath(
           source,

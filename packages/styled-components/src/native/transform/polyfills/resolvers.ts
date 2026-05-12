@@ -740,6 +740,13 @@ function envResolver(value: string): Resolver | null {
   }
 }
 
+/**
+ * Module-level sentinel marking the closure-local single-slot cache as
+ * empty (no previous theme observed). Shared across every themeResolver
+ * closure so we don't allocate a fresh marker per resolver.
+ */
+const NO_THEME_SEEN: object = {};
+
 function themeResolver(value: string): Resolver | null {
   const firstColon = value.indexOf(':', 1);
   if (firstColon === -1) return null;
@@ -753,7 +760,16 @@ function themeResolver(value: string): Resolver | null {
   // consumer of fallback at render time, so this never re-runs per render.
   const fallback = unescapeSentinelFallback(rawFallback);
 
+  // Single-slot identity cache. Theme is the only env field this resolver
+  // reads, so caching `(theme identity → resolved value)` short-circuits the
+  // dot-path walk on every render where the theme reference hasn't changed.
+  // Within a typical app theme is allocated once per createTheme + persists
+  // across renders, so the hit rate is dominated by re-renders.
+  let lastTheme: any = NO_THEME_SEEN;
+  let lastResult: any;
+
   return env => {
+    if (env.theme === lastTheme) return lastResult;
     let v: any = env.theme;
     for (let i = 0; i < segments.length; i++) {
       if (
@@ -766,8 +782,10 @@ function themeResolver(value: string): Resolver | null {
       }
       v = v[segments[i]];
     }
-    if (v === undefined || v === null) return fallback;
-    return v;
+    const out = v === undefined || v === null ? fallback : v;
+    lastTheme = env.theme;
+    lastResult = out;
+    return out;
   };
 }
 
@@ -1350,6 +1368,13 @@ function colorFnResolver(value: string): Resolver | null {
 /**
  * Apply resolvers onto a style object in-place at render time. Returns
  * a NEW object (preserves the cached `base` object's identity).
+ *
+ * Hot path (no resolvers) is kept tiny so V8 inlines the call at the
+ * many `applyResolvers(_, [], _)` use sites. The cached slow path
+ * lives in {@link applyResolversWithCache} where a single-slot
+ * identity cache on (resolvers, base, env) returns the previously
+ * built output object when the inputs are reference-stable across
+ * renders.
  */
 export function applyResolvers(
   base: Record<string, any>,
@@ -1357,6 +1382,24 @@ export function applyResolvers(
   env: ResolveEnv
 ): Record<string, any> {
   if (resolvers.length === 0) return base;
+  return applyResolversWithCache(base, resolvers, env);
+}
+
+const APPLY_CACHE: unique symbol = Symbol('sc-apply-cache');
+
+interface ResolversWithCache extends Array<[string, Resolver]> {
+  [APPLY_CACHE]?: { base: unknown; env: unknown; result: Record<string, any> };
+}
+
+function applyResolversWithCache(
+  base: Record<string, any>,
+  resolvers: Array<[string, Resolver]>,
+  env: ResolveEnv
+): Record<string, any> {
+  const stashed = (resolvers as ResolversWithCache)[APPLY_CACHE];
+  if (stashed !== undefined && stashed.base === base && stashed.env === env) {
+    return stashed.result;
+  }
   const out = { ...base };
   for (let i = 0; i < resolvers.length; i++) {
     const pair = resolvers[i];
@@ -1365,5 +1408,6 @@ export function applyResolvers(
     if (v === null) delete out[key];
     else out[key] = v;
   }
+  (resolvers as ResolversWithCache)[APPLY_CACHE] = { base, env, result: out };
   return out;
 }
