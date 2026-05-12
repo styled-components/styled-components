@@ -91,6 +91,45 @@ const DecoratedWavy = styled(Decorated)`
   text-decoration: underline wavy #ff00aa;
 `;
 
+/* Generic font-family rows — each row applies a generic CSS keyword and
+   prints the keyword itself, so the user can visually inspect the face
+   the platform chose for that generic. CSS Fonts 4 §2.1.5. */
+const GenericSerif = styled.Text`
+  font-family: serif;
+  font-size: ${t.fontSize.title}px;
+  color: ${t.colors.ink};
+`;
+
+const GenericSansSerif = styled.Text`
+  font-family: sans-serif;
+  font-size: ${t.fontSize.title}px;
+  color: ${t.colors.ink};
+`;
+
+const GenericMonospace = styled.Text`
+  font-family: monospace;
+  font-size: ${t.fontSize.title}px;
+  color: ${t.colors.ink};
+`;
+
+const GenericSystemUI = styled.Text`
+  font-family: system-ui;
+  font-size: ${t.fontSize.title}px;
+  color: ${t.colors.ink};
+`;
+
+const GenericUIRounded = styled.Text`
+  font-family: ui-rounded;
+  font-size: ${t.fontSize.title}px;
+  color: ${t.colors.ink};
+`;
+
+const GenericCursive = styled.Text`
+  font-family: cursive;
+  font-size: ${t.fontSize.title}px;
+  color: ${t.colors.ink};
+`;
+
 const LONG = `Line clamp truncates to N visible lines and adds an ellipsis on overflow. The text-input here is intentionally long so the clamp can do its job and prove that the polyfill maps to numberOfLines.`;
 
 export function TypeFeaturesShelf() {
@@ -132,6 +171,38 @@ export function TypeFeaturesShelf() {
       <DecoratedDotted>Dotted underline.</DecoratedDotted>
       <DecoratedDashed>Dashed underline.</DecoratedDashed>
       <DecoratedWavy>Wavy underline.</DecoratedWavy>
+      <Row>
+        <Tag>generic font families · §2.1.5</Tag>
+      </Row>
+      <GenericSerif>serif · Times New Roman / serif</GenericSerif>
+      <GenericSansSerif>sans-serif · System / sans-serif</GenericSansSerif>
+      <GenericMonospace>monospace · Menlo / monospace</GenericMonospace>
+      <GenericSystemUI>system-ui · System / sans-serif</GenericSystemUI>
+      <GenericUIRounded>ui-rounded · SF Pro Rounded / sans-serif</GenericUIRounded>
+      <GenericCursive>cursive · Snell Roundhand / cursive</GenericCursive>
+      <Row>
+        <Tag>font-style: oblique · §2.4</Tag>
+      </Row>
+      <Oblique>Oblique (maps to italic on native; rn-web uses the italic face).</Oblique>
     </Stack>
   );
 }
+
+/* iOS / Android won't synthesize italic for a custom face — only the
+   system font (sans-serif / System) has guaranteed italic glyphs in
+   stock RN. The body theme face (Figtree) ships only upright variants,
+   which would mask the polyfill's `fontStyle: 'italic'` output. Use
+   system-ui so the slant is visible cross-platform. The `oblique
+   <angle>` variant is intentionally not demoed: even with a slant-axis
+   variable font (Recursive's slnt 0..-15deg), Expo's useFonts registers
+   the font with no `font-style: oblique <range>` in its @font-face, so
+   the browser falls back to closest-match instead of mapping the angle
+   onto the variable axis. The only reliable way to drive slnt is
+   `font-variation-settings: 'slnt' <n>`, which bypasses font-style
+   entirely and wouldn't be exercising the polyfill. */
+const Oblique = styled.Text`
+  font-family: system-ui;
+  font-size: ${t.fontSize.body}px;
+  color: ${t.colors.ink};
+  font-style: oblique;
+`;

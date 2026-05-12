@@ -1,5 +1,4 @@
 import React from 'react';
-import { useWindowDimensions } from 'react-native';
 import styled from 'styled-components/native';
 import { Markdown } from '@/components/Markdown';
 import { theme as t } from '@/theme/tokens';
@@ -42,31 +41,51 @@ const Frame = styled.View`
   gap: ${t.space.xxs}px;
 `;
 
-// Horizontal bars. The viewport-unit declaration is the load-bearing
-// part; an explicit number-of-pixel readout sits next to each so the
-// resolved size is visible at a glance.
 const Bar = styled.View`
   height: 14px;
   background-color: ${t.colors.ink};
 `;
 
-const BarVw20 = styled(Bar)`
+/* Width-axis ladder: distinct multipliers so the resolver's output is
+   visually obvious. Capped at 40vw so the longest bar still fits its
+   row gracefully on desktop. */
+const Bar10vw = styled(Bar)`
+  width: 10vw;
+`;
+const Bar20vw = styled(Bar)`
   width: 20vw;
 `;
-const BarDvw20 = styled(Bar)`
-  width: 20dvw;
+const Bar30vw = styled(Bar)`
+  width: 30vw;
 `;
-const BarSvw20 = styled(Bar)`
-  width: 20svw;
+const Bar40vw = styled(Bar)`
+  width: 40vw;
 `;
-const BarLvw20 = styled(Bar)`
-  width: 20lvw;
+
+/* Variant comparison: same multiplier across vw / dvw / svw / lvw.
+   On native all four collapse to the same length (no URL-bar surface
+   to differentiate); on rn-web `dvw` flexes as the visual viewport
+   resizes. Bars are intentionally identical when the polyfill works
+   on native — the note in the row body explains why. */
+const Bar25vwVariant = styled(Bar)`
+  width: 25vw;
 `;
+const Bar25dvwVariant = styled(Bar)`
+  width: 25dvw;
+`;
+const Bar25svwVariant = styled(Bar)`
+  width: 25svw;
+`;
+const Bar25lvwVariant = styled(Bar)`
+  width: 25lvw;
+`;
+
+/* Derived axes. Multipliers chosen so the bars differ visibly. */
 const BarVmin25 = styled(Bar)`
   width: 25vmin;
 `;
-const BarVmax15 = styled(Bar)`
-  width: 15vmax;
+const BarVmax25 = styled(Bar)`
+  width: 25vmax;
 `;
 
 const BarRow = styled.View`
@@ -84,20 +103,13 @@ const BarTag = styled.Text`
   text-transform: uppercase;
 `;
 
-const BarReadout = styled.Text`
-  width: 56px;
-  font-family: ${t.fontFamily.mono};
-  font-size: ${t.fontSize.mono}px;
-  color: ${t.colors.fgMuted};
-  text-align: right;
-`;
-
 const BarBox = styled.View`
   flex: 1;
 `;
 
-// Vertical-unit demo. Each block reserves a `*vh` height; the column
-// holds them side by side so the user can compare directly.
+/* Height-axis ladder. Vertical bars at increasing multipliers; the
+   row spreads them horizontally so the height differential is the
+   readable variable. */
 const HeightRow = styled.View`
   flex-direction: row;
   gap: ${t.space.sm}px;
@@ -116,17 +128,17 @@ const HeightBlock = styled.View`
   border: ${t.borderWidth.hairline}px solid ${t.colors.border};
 `;
 
-const HeightVh = styled(HeightBlock)`
+const Height4vh = styled(HeightBlock)`
+  height: 4vh;
+`;
+const Height8vh = styled(HeightBlock)`
   height: 8vh;
 `;
-const HeightDvh = styled(HeightBlock)`
-  height: 8dvh;
+const Height12vh = styled(HeightBlock)`
+  height: 12vh;
 `;
-const HeightSvh = styled(HeightBlock)`
-  height: 8svh;
-`;
-const HeightLvh = styled(HeightBlock)`
-  height: 8lvh;
+const Height16vh = styled(HeightBlock)`
+  height: 16vh;
 `;
 
 const HeightTag = styled.Text`
@@ -137,115 +149,131 @@ const HeightTag = styled.Text`
   text-transform: uppercase;
 `;
 
-const HeightReadout = styled.Text`
-  font-family: ${t.fontFamily.mono};
-  font-size: ${t.fontSize.mono}px;
-  color: ${t.colors.fgMuted};
-`;
-
 export function ViewportUnitsRibbon() {
-  const { width, height } = useWindowDimensions();
-  const fmt = (px: number) => px.toFixed(0) + 'px';
-  // Width-axis readouts.
-  const w20 = (width * 20) / 100;
-  const min = Math.min(width, height);
-  const max = Math.max(width, height);
-  const vmin25 = (min * 25) / 100;
-  const vmax15 = (max * 15) / 100;
-  // Height-axis readouts.
-  const h8 = (height * 8) / 100;
-
   return (
     <Stack>
       <Row>
-        <RowLabel>width axis · 20 [unit]</RowLabel>
+        <RowLabel>width axis · vw ladder</RowLabel>
         <Markdown variant="hint">
-          On rn-web `dvw` flexes with the visual viewport; on native all four collapse.
+          Each bar's width is set in `vw` units. The four bars step up proportionally with the
+          viewport — rotate the device or resize the browser to watch them re-resolve.
         </Markdown>
         <Frame>
           <BarRow>
-            <BarTag>vw</BarTag>
+            <BarTag>10vw</BarTag>
             <BarBox>
-              <BarVw20 />
+              <Bar10vw />
             </BarBox>
-            <BarReadout>{fmt(w20)}</BarReadout>
           </BarRow>
           <BarRow>
-            <BarTag>dvw</BarTag>
+            <BarTag>20vw</BarTag>
             <BarBox>
-              <BarDvw20 />
+              <Bar20vw />
             </BarBox>
-            <BarReadout>{fmt(w20)}</BarReadout>
           </BarRow>
           <BarRow>
-            <BarTag>svw</BarTag>
+            <BarTag>30vw</BarTag>
             <BarBox>
-              <BarSvw20 />
+              <Bar30vw />
             </BarBox>
-            <BarReadout>{fmt(w20)}</BarReadout>
           </BarRow>
           <BarRow>
-            <BarTag>lvw</BarTag>
+            <BarTag>40vw</BarTag>
             <BarBox>
-              <BarLvw20 />
+              <Bar40vw />
             </BarBox>
-            <BarReadout>{fmt(w20)}</BarReadout>
           </BarRow>
         </Frame>
       </Row>
+
+      <Row>
+        <RowLabel>vw / dvw / svw / lvw variants</RowLabel>
+        <Markdown variant="hint">
+          Same `25 × [unit]` multiplier across the four variants. On iOS / Android all four
+          bars share one length because there's no URL-bar surface to differentiate; on rn-web
+          `dvw` flexes as the visual viewport resizes.
+        </Markdown>
+        <Frame>
+          <BarRow>
+            <BarTag>25vw</BarTag>
+            <BarBox>
+              <Bar25vwVariant />
+            </BarBox>
+          </BarRow>
+          <BarRow>
+            <BarTag>25dvw</BarTag>
+            <BarBox>
+              <Bar25dvwVariant />
+            </BarBox>
+          </BarRow>
+          <BarRow>
+            <BarTag>25svw</BarTag>
+            <BarBox>
+              <Bar25svwVariant />
+            </BarBox>
+          </BarRow>
+          <BarRow>
+            <BarTag>25lvw</BarTag>
+            <BarBox>
+              <Bar25lvwVariant />
+            </BarBox>
+          </BarRow>
+        </Frame>
+      </Row>
+
       <Row>
         <RowLabel>derived axes · vmin / vmax</RowLabel>
-        <Markdown variant="hint">vmin uses the smaller axis, vmax the larger.</Markdown>
+        <Markdown variant="hint">
+          `vmin` resolves against the smaller viewport axis, `vmax` the larger. Both use the
+          same `25 × [unit]` multiplier here; in portrait the `vmin` bar is shorter, in
+          landscape they swap.
+        </Markdown>
         <Frame>
           <BarRow>
             <BarTag>25 vmin</BarTag>
             <BarBox>
               <BarVmin25 />
             </BarBox>
-            <BarReadout>{fmt(vmin25)}</BarReadout>
           </BarRow>
           <BarRow>
-            <BarTag>15 vmax</BarTag>
+            <BarTag>25 vmax</BarTag>
             <BarBox>
-              <BarVmax15 />
+              <BarVmax25 />
             </BarBox>
-            <BarReadout>{fmt(vmax15)}</BarReadout>
           </BarRow>
         </Frame>
       </Row>
+
       <Row>
-        <RowLabel>height axis · 8 [unit]</RowLabel>
+        <RowLabel>height axis · vh ladder</RowLabel>
         <Markdown variant="hint">
-          Each column is `height: 8[unit]vh`. Equal heights = no URL-bar collapse.
+          Each column is `height: N × vh`. The blocks step up taller as the multiplier grows.
         </Markdown>
         <Frame>
           <HeightRow>
             <HeightCol>
-              <HeightVh />
-              <HeightTag>vh</HeightTag>
-              <HeightReadout>{fmt(h8)}</HeightReadout>
+              <Height4vh />
+              <HeightTag>4vh</HeightTag>
             </HeightCol>
             <HeightCol>
-              <HeightDvh />
-              <HeightTag>dvh</HeightTag>
-              <HeightReadout>{fmt(h8)}</HeightReadout>
+              <Height8vh />
+              <HeightTag>8vh</HeightTag>
             </HeightCol>
             <HeightCol>
-              <HeightSvh />
-              <HeightTag>svh</HeightTag>
-              <HeightReadout>{fmt(h8)}</HeightReadout>
+              <Height12vh />
+              <HeightTag>12vh</HeightTag>
             </HeightCol>
             <HeightCol>
-              <HeightLvh />
-              <HeightTag>lvh</HeightTag>
-              <HeightReadout>{fmt(h8)}</HeightReadout>
+              <Height16vh />
+              <HeightTag>16vh</HeightTag>
             </HeightCol>
           </HeightRow>
         </Frame>
       </Row>
+
       <Markdown variant="hint">
-        On iOS / Android there's no URL-bar surface, so `dvh` / `svh` / `lvh` resolve
-        to `vh`. In a mobile browser they differ as Safari hides chrome on scroll.
+        On iOS / Android `dvh` / `svh` / `lvh` resolve to the same value as `vh`; in a mobile
+        browser they differ as Safari hides chrome on scroll.
       </Markdown>
     </Stack>
   );

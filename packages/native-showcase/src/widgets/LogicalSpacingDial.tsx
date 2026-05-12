@@ -58,6 +58,39 @@ const InsetCaption = styled(Caption)`
   margin-top: ${t.space.xs}px;
 `;
 
+const LogicalBorderRow = styled.View`
+  flex-direction: row;
+  gap: ${t.space.sm}px;
+`;
+
+const InlineEdgeBox = styled.View`
+  flex: 1;
+  padding: ${t.space.sm}px;
+  background-color: ${t.colors.surfaceMuted};
+  border-inline: 4px solid ${t.colors.ink};
+`;
+
+const BlockEdgeBox = styled.View`
+  flex: 1;
+  padding: ${t.space.sm}px;
+  background-color: ${t.colors.surfaceMuted};
+  border-block: 4px solid ${t.colors.ink};
+`;
+
+const InlineStartBox = styled.View`
+  flex: 1;
+  padding: ${t.space.sm}px;
+  background-color: ${t.colors.surfaceMuted};
+  border-inline-start: 6px solid ${t.colors.ink};
+`;
+
+const BlockEndBox = styled.View`
+  flex: 1;
+  padding: ${t.space.sm}px;
+  background-color: ${t.colors.surfaceMuted};
+  border-block-end: 6px solid ${t.colors.ink};
+`;
+
 export function LogicalSpacingDial() {
   return (
     <Stage>
@@ -78,6 +111,22 @@ export function LogicalSpacingDial() {
           <InsetCaption>inset-inline · inset-block</InsetCaption>
         </InsetTab>
       </InsetBox>
+      <LogicalBorderRow>
+        <InlineEdgeBox>
+          <Caption>border-inline</Caption>
+        </InlineEdgeBox>
+        <BlockEdgeBox>
+          <Caption>border-block</Caption>
+        </BlockEdgeBox>
+      </LogicalBorderRow>
+      <LogicalBorderRow>
+        <InlineStartBox>
+          <Caption>border-inline-start</Caption>
+        </InlineStartBox>
+        <BlockEndBox>
+          <Caption>border-block-end</Caption>
+        </BlockEndBox>
+      </LogicalBorderRow>
     </Stage>
   );
 }

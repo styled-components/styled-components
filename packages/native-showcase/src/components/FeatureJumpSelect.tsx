@@ -1,5 +1,13 @@
+import Feather from '@expo/vector-icons/Feather';
 import React from 'react';
-import { FlatList, ListRenderItem, Modal, StyleSheet } from 'react-native';
+import {
+  FlatList,
+  ListRenderItem,
+  Modal,
+  NativeSyntheticEvent,
+  StyleSheet,
+  TextInputKeyPressEventData,
+} from 'react-native';
 import styled from 'styled-components/native';
 import { theme as t } from '@/theme/tokens';
 
@@ -14,6 +22,7 @@ const C = {
   rule: 'light-dark(#7c7c80, #3a3a3f)',
   bg: 'light-dark(#f5f3ee, #0e0e10)',
   scrim: 'light-dark(rgba(14, 14, 16, 0.55), rgba(0, 0, 0, 0.7))',
+  highlight: 'light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.08))',
 };
 
 export interface JumpItem {
@@ -39,6 +48,7 @@ const TriggerInner = styled.View`
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
+  gap: ${t.space.sm}px;
   padding-block: ${t.space.sm}px;
   padding-inline: ${t.space.sm}px;
   min-height: 44px;
@@ -64,12 +74,11 @@ const TriggerLabel = styled.Text`
   }
 `;
 
-const Caret = styled.Text`
-  font-family: ${t.fontFamily.strong};
-  font-size: ${t.fontSize.title}px;
-  line-height: ${t.fontSize.title}px;
-  color: ${C.fgMuted};
-`;
+const Chevron = styled(Feather).attrs({
+  name: 'chevron-down' as const,
+  size: 16,
+  color: C.fgMuted,
+})``;
 
 const ModalRoot = styled.View`
   flex: 1;
@@ -89,19 +98,17 @@ const Sheet = styled.View`
 
 const SheetHeader = styled.View`
   flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  padding: ${t.space.md}px;
+  align-items: stretch;
   border-bottom-width: ${t.borderWidth.hairline}px;
   border-bottom-color: ${C.rule};
 `;
 
-const SheetTitle = styled.Text`
-  font-family: ${t.fontFamily.monoStrong};
-  font-size: ${t.fontSize.monoSm}px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: ${C.fgFaint};
+const FilterInput = styled.TextInput`
+  flex: 1;
+  font-family: ${t.fontFamily.body};
+  font-size: ${t.fontSize.body}px;
+  color: ${C.ink};
+  padding: ${t.space.md}px;
 `;
 
 const CloseButton = styled.Pressable`
@@ -131,11 +138,12 @@ const GroupHeading = styled.Text`
   padding-left: ${t.space.md}px;
 `;
 
-const ItemRow = styled.Pressable`
+const ItemRow = styled.Pressable<{ $highlighted?: boolean }>`
   padding-block: ${t.space.sm}px;
   padding-inline: ${t.space.md}px;
   min-height: 44px;
   justify-content: center;
+  background-color: ${p => (p.$highlighted ? C.highlight : 'transparent')};
 `;
 
 const ItemLabel = styled.Text`
@@ -155,25 +163,58 @@ const ItemLabel = styled.Text`
   }
 `;
 
-type Row = { kind: 'group'; label: string } | { kind: 'item'; item: JumpItem };
+const EmptyLabel = styled.Text`
+  font-family: ${t.fontFamily.body};
+  font-size: ${t.fontSize.body}px;
+  color: ${C.fgFaint};
+  padding: ${t.space.md}px;
+`;
 
-function buildRows(groups: ReadonlyArray<JumpGroup>): Row[] {
-  const rows: Row[] = [];
-  for (const g of groups) {
-    rows.push({ kind: 'group', label: g.label });
-    for (const item of g.items) {
-      rows.push({ kind: 'item', item });
-    }
-  }
-  return rows;
-}
+type Row = { kind: 'group'; label: string } | { kind: 'item'; item: JumpItem };
 
 const keyExtractor = (r: Row): string =>
   r.kind === 'group' ? `g:${r.label}` : `i:${r.item.slug}`;
 
+function filterGroups(
+  groups: ReadonlyArray<JumpGroup>,
+  q: string
+): { rows: Row[]; items: JumpItem[] } {
+  const needle = q.trim().toLowerCase();
+  const rows: Row[] = [];
+  const items: JumpItem[] = [];
+  for (const g of groups) {
+    const matched = needle
+      ? g.items.filter(it => it.title.toLowerCase().includes(needle))
+      : g.items;
+    if (matched.length === 0) continue;
+    rows.push({ kind: 'group', label: g.label });
+    for (const it of matched) {
+      rows.push({ kind: 'item', item: it });
+      items.push(it);
+    }
+  }
+  return { rows, items };
+}
+
 export function FeatureJumpSelect({ groups, onJump }: Props) {
   const [open, setOpen] = React.useState(false);
-  const rows = React.useMemo(() => buildRows(groups), [groups]);
+  const [query, setQuery] = React.useState('');
+  const [highlight, setHighlight] = React.useState(0);
+  const listRef = React.useRef<FlatList<Row> | null>(null);
+
+  const { rows, items } = React.useMemo(() => filterGroups(groups, query), [groups, query]);
+
+  React.useEffect(() => {
+    if (!open) {
+      setQuery('');
+      setHighlight(0);
+    }
+  }, [open]);
+
+  // Clamp highlight whenever the filtered set shrinks.
+  React.useEffect(() => {
+    setHighlight(h => (h >= items.length ? 0 : h));
+  }, [items.length]);
 
   const handleSelect = React.useCallback(
     (slug: string) => {
@@ -183,19 +224,80 @@ export function FeatureJumpSelect({ groups, onJump }: Props) {
     [onJump]
   );
 
+  const scrollHighlightedIntoView = React.useCallback(
+    (slug: string) => {
+      const idx = rows.findIndex(r => r.kind === 'item' && r.item.slug === slug);
+      if (idx >= 0) {
+        listRef.current?.scrollToIndex({ index: idx, animated: false, viewPosition: 0.4 });
+      }
+    },
+    [rows]
+  );
+
+  const handleKeyPress = React.useCallback(
+    (e: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+      const key = e.nativeEvent.key;
+      if (key === 'ArrowDown') {
+        if (items.length === 0) return;
+        setHighlight(h => {
+          const next = (h + 1) % items.length;
+          scrollHighlightedIntoView(items[next].slug);
+          return next;
+        });
+      } else if (key === 'ArrowUp') {
+        if (items.length === 0) return;
+        setHighlight(h => {
+          const next = (h - 1 + items.length) % items.length;
+          scrollHighlightedIntoView(items[next].slug);
+          return next;
+        });
+      } else if (key === 'Enter') {
+        const it = items[highlight];
+        if (it) handleSelect(it.slug);
+      } else if (key === 'Escape') {
+        setOpen(false);
+      }
+    },
+    [items, highlight, scrollHighlightedIntoView, handleSelect]
+  );
+
+  // Native keyboards send Enter through onSubmitEditing rather than
+  // onKeyPress; covers the iOS/Android hardware-keyboard return path.
+  const handleSubmit = React.useCallback(() => {
+    const it = items[highlight];
+    if (it) handleSelect(it.slug);
+  }, [items, highlight, handleSelect]);
+
+  const handleScrollToIndexFailed = React.useCallback(
+    (info: { index: number; averageItemLength: number }) => {
+      listRef.current?.scrollToOffset({
+        offset: info.averageItemLength * info.index,
+        animated: false,
+      });
+    },
+    []
+  );
+
+  const highlightedSlug = items[highlight]?.slug;
+
   const renderRow = React.useCallback<ListRenderItem<Row>>(
     ({ item }) => {
       if (item.kind === 'group') {
         return <GroupHeading>{item.label}</GroupHeading>;
       }
       const it = item.item;
+      const isHighlighted = it.slug === highlightedSlug;
       return (
-        <ItemRow accessibilityRole="button" onPress={() => handleSelect(it.slug)}>
+        <ItemRow
+          $highlighted={isHighlighted}
+          accessibilityRole="button"
+          onPress={() => handleSelect(it.slug)}
+        >
           {state => {
             const s = state as { pressed: boolean; hovered?: boolean; focused?: boolean };
             return (
               <ItemLabel
-                data-hovered={String(!!s.hovered)}
+                data-hovered={String(!!s.hovered || isHighlighted)}
                 data-focused={String(!!s.focused)}
                 data-pressed={String(s.pressed)}
               >
@@ -206,7 +308,7 @@ export function FeatureJumpSelect({ groups, onJump }: Props) {
         </ItemRow>
       );
     },
-    [handleSelect]
+    [handleSelect, highlightedSlug]
   );
 
   return (
@@ -227,7 +329,7 @@ export function FeatureJumpSelect({ groups, onJump }: Props) {
               >
                 Jump to feature
               </TriggerLabel>
-              <Caret>⌄</Caret>
+              <Chevron />
             </TriggerInner>
           );
         }}
@@ -246,7 +348,20 @@ export function FeatureJumpSelect({ groups, onJump }: Props) {
           />
           <Sheet>
             <SheetHeader>
-              <SheetTitle>Jump to feature</SheetTitle>
+              <FilterInput
+                key={open ? 'open' : 'closed'}
+                accessibilityLabel="Filter features"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoFocus
+                placeholder="Jump to feature"
+                placeholderTextColor={C.fgFaint}
+                returnKeyType="go"
+                value={query}
+                onChangeText={setQuery}
+                onKeyPress={handleKeyPress}
+                onSubmitEditing={handleSubmit}
+              />
               <CloseButton
                 accessibilityRole="button"
                 accessibilityLabel="Close feature picker"
@@ -255,12 +370,18 @@ export function FeatureJumpSelect({ groups, onJump }: Props) {
                 <CloseLabel>✕</CloseLabel>
               </CloseButton>
             </SheetHeader>
-            <FlatList<Row>
-              data={rows}
-              renderItem={renderRow}
-              keyExtractor={keyExtractor}
-              keyboardShouldPersistTaps="handled"
-            />
+            {items.length === 0 ? (
+              <EmptyLabel>No features match "{query}"</EmptyLabel>
+            ) : (
+              <FlatList<Row>
+                ref={listRef}
+                data={rows}
+                renderItem={renderRow}
+                keyExtractor={keyExtractor}
+                keyboardShouldPersistTaps="handled"
+                onScrollToIndexFailed={handleScrollToIndexFailed}
+              />
+            )}
           </Sheet>
         </ModalRoot>
       </Modal>

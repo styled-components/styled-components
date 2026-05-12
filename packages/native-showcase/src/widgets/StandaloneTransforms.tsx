@@ -15,6 +15,11 @@ import { theme as t } from '@/theme/tokens';
 
 const Stack = styled.View`
   gap: ${t.space.md}px;
+
+  @media (min-aspect-ratio: 1/1) {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
 `;
 
 const Row = styled.View`
@@ -24,6 +29,15 @@ const Row = styled.View`
   border: ${t.borderWidth.hairline}px solid ${t.colors.border};
   background-color: ${t.colors.bg};
   padding: ${t.space.xs}px ${t.space.sm}px;
+
+  @media (min-aspect-ratio: 1/1) {
+    flex: 1 1 45%;
+    min-width: 300px;
+  }
+  @media (min-aspect-ratio: 4/3) {
+    flex: 1 1 30%;
+    min-width: 260px;
+  }
 `;
 
 const RowLabel = styled.Text`
@@ -86,6 +100,11 @@ const Combined = styled(Cell)`
   scale: 1.2;
 `;
 
+const Perspective = styled(Cell)`
+  perspective: 200px;
+  transform: rotateY(35deg);
+`;
+
 const SwatchPair = styled.View`
   flex-direction: row;
   align-items: center;
@@ -135,6 +154,9 @@ export function StandaloneTransforms() {
       </DemoRow>
       <DemoRow label="translate + rotate + scale (cascading)">
         <Combined />
+      </DemoRow>
+      <DemoRow label="perspective: 200px (last wins over translate-rotate-scale)">
+        <Perspective />
       </DemoRow>
     </Stack>
   );

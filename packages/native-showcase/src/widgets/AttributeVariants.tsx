@@ -56,6 +56,19 @@ const Pill = styled.Pressable`
     background-color: ${t.colors.pass};
     border-color: ${t.colors.pass};
   }
+
+  /* CSS Selectors 4 §6.2 operators */
+  &[data-tone^='pa'] {
+    /* Prefix-match: tones starting with "pa" (pass) */
+  }
+  &[data-tone*='ai'] {
+    /* Substring-match: tones containing "ai" (fail) */
+  }
+
+  /* CSS Selectors 4 §4.3 :not — flips back to default when pressed */
+  &:not([aria-pressed='true']):not([data-tone='pass']):not([data-tone='fail']) {
+    border-color: ${t.colors.fgMuted};
+  }
 `;
 
 const PillLabel = styled.Text`

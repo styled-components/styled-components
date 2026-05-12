@@ -565,7 +565,7 @@ export function ScreenScaffold<Item>({
       const idx = anchorIndex?.get(slug);
       if (idx === undefined) return;
       restoreTargetRef.current = idx;
-      listRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0 });
+      listRef.current?.scrollToIndex({ index: idx, animated: false, viewPosition: 0 });
     },
     [anchorIndex]
   );
