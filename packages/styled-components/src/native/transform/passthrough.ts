@@ -203,11 +203,15 @@ export function substituteBackgroundSizeKeywordsForNative(value: string): string
  * `0`) pass through to both keys.
  */
 export function isMultiTokenPosition(value: string): boolean {
-  // Top-level comma → multi-layer; each layer parsed separately
-  // upstream, so this helper only sees a single layer's value.
   const trimmed = value.trim();
   if (trimmed.length === 0) return false;
-  // Two or more whitespace-separated runs of non-whitespace = multi-token.
+  // Comma separates background layers; shorthand joins layers with ", ".
+  // rn-web's parser also rejects multi-layer strings, so skip whenever a
+  // layer boundary is present (covers `center,top` longhand with no
+  // spaces around the comma).
+  if (trimmed.indexOf(',') !== -1) return true;
+  // Two or more whitespace-separated runs of non-whitespace = multi-token
+  // within a single layer (`0 0`, `top left`).
   for (let i = 0; i < trimmed.length; i++) {
     const c = trimmed.charCodeAt(i);
     if (c === 32 || c === 9 || c === 10 || c === 13) {

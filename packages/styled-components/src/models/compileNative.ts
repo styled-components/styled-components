@@ -857,6 +857,22 @@ function foldPerspectiveSentinel(raw: Dict<any>, base: Dict<any>): void {
   }
 }
 
+/**
+ * CSS Animations 1 §3.1 (Timing functions for keyframes, editor's draft):
+ * "A timing function specified on the to or 100% keyframe is ignored."
+ * A frame whose every stop is only `to` or `100%` is treated as that end
+ * keyframe. Mixed stops such as `0%, 100%` are not end-only.
+ */
+function isEndOnlyKeyframeStops(stops: string[]): boolean {
+  if (stops.length === 0) return false;
+  for (let i = 0; i < stops.length; i++) {
+    const s = stops[i].trim().toLowerCase();
+    if (s === 'to' || s === '100%') continue;
+    return false;
+  }
+  return true;
+}
+
 function walkRoot(
   nodes: StaticNode[],
   baseDecls: StaticDeclNode[],
@@ -895,8 +911,10 @@ function walkRoot(
           if (resolvers.length > 0) out.resolvers = resolvers;
           if ('animationTimingFunction' in base) {
             const atf = base.animationTimingFunction;
-            out.easing = Array.isArray(atf) ? atf[0] : atf;
             delete base.animationTimingFunction;
+            if (!isEndOnlyKeyframeStops(frame.stops)) {
+              out.easing = Array.isArray(atf) ? atf[0] : atf;
+            }
           }
           return out;
         }),

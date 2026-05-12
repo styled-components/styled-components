@@ -242,6 +242,24 @@ describe('toNativeStyles', () => {
         },
       ]);
     });
+
+    it('omits per-frame easing on end-only 100% / to frames (CSS Animations 1 §3.1)', () => {
+      const r = compile(`
+        @keyframes k {
+          0% { opacity: 0; animation-timing-function: linear; }
+          100% { opacity: 1; animation-timing-function: ease-in; }
+        }
+      `);
+      expect(r.keyframes[0].frames[0].easing).toEqual({ kind: 'linear' });
+      expect(r.keyframes[0].frames[1].easing).toBeUndefined();
+      const r2 = compile(`
+        @keyframes k2 {
+          from { opacity: 0; }
+          to { opacity: 1; animation-timing-function: ease-in; }
+        }
+      `);
+      expect(r2.keyframes[0].frames.find(f => f.stops.includes('to'))!.easing).toBeUndefined();
+    });
   });
 
   describe('web-only at-rules', () => {
