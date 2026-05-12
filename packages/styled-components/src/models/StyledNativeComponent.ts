@@ -733,13 +733,6 @@ function pseudoStylesForState(
   return out;
 }
 
-function hasPseudo(conditional: ConditionalStyle[]): boolean {
-  for (let i = 0; i < conditional.length; i++) {
-    if (conditional[i].type === 'pseudo' || conditional[i].pseudo) return true;
-  }
-  return false;
-}
-
 // [props, theme, propsKeyCount, context, compiled, env, nativeStyleCtx,
 //  composedStyle, elementToBeCreated, elementProps, resolveEnv, effectiveBase]
 //
@@ -1370,6 +1363,12 @@ function indexStyledChildren(
   if (!hasAnyStyled) return children;
 
   const prevSiblingsRunning: string[] = [];
+  // Running NUL-joined fingerprint of `prevSiblingsRunning`. Maintained
+  // incrementally so each iteration appends one id (O(1) amortized) instead
+  // of re-joining the whole array (O(i) per iteration, O(n²) total). For a
+  // parent with N styled children this drops the total work from quadratic
+  // to linear.
+  let prevSiblingsKeyRunning = '';
   const sameTypeCount = new Map<NativeTarget, number>();
   const nextChildren: React.ReactNode[] = new Array(total);
   const perChildCache = cache.perChild;
@@ -1387,7 +1386,7 @@ function indexStyledChildren(
     const prevTarget = i > 0 ? childTargets[i - 1] : null;
     const idxOfType = target !== null ? (sameTypeCount.get(target) ?? 0) : -1;
     const totalOfType = target !== null ? (totalsByTarget.get(target) ?? 0) : 0;
-    const prevSiblingsKey = prevSiblingsRunning.length === 0 ? '' : prevSiblingsRunning.join('\0');
+    const prevSiblingsKey = prevSiblingsKeyRunning;
     const cached = perChildCache[i];
     let perChildValue: ParentContextValue;
     if (
@@ -1437,6 +1436,8 @@ function indexStyledChildren(
       child
     );
     prevSiblingsRunning.push(id);
+    prevSiblingsKeyRunning =
+      prevSiblingsKeyRunning === '' ? id : prevSiblingsKeyRunning + '\0' + id;
     if (target !== null) sameTypeCount.set(target, idxOfType + 1);
   }
   return nextChildren;
@@ -1632,7 +1633,7 @@ export function assembleFinalStyle(
   // below, since the result depends on the runtime state argument.
   if (!isFunction(userStyle)) userStyle = normalizeStyleForWeb(userStyle);
   const hasConditional = compiled.conditional.length > 0;
-  const hasPseudoState = hasConditional && hasPseudo(compiled.conditional);
+  const hasPseudoState = compiled.hasPseudo;
   const resolveEnv = buildResolveEnv(env, containerCtx, theme, cascade);
 
   const activeConditional = hasConditional

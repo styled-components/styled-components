@@ -137,6 +137,14 @@ export interface NativeStyles {
   base: Dict<any>;
   /** Conditional buckets; render-time matches decide which merge onto base. */
   conditional: ConditionalStyle[];
+  /**
+   * `true` when any bucket in `conditional` carries a pseudo-state gate
+   * (`:hover` / `:focus` / `:pressed` / `:disabled`). Precomputed at
+   * compile time so the render path avoids re-scanning the bucket
+   * array on every render to decide whether to emit the state-callback
+   * branch. Always `false` when `conditional.length === 0`.
+   */
+  hasPseudo: boolean;
   /** Keyframes collected for animation-adapter handoff. */
   keyframes: CompiledKeyframes[];
   /**
@@ -440,7 +448,14 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   // (they're applied per-render and don't benefit from registration).
   const hasBaseStyleDecls = hasOwnKeys(resolvedBase);
   const base = hasBaseStyleDecls ? styleSheet.create({ generated: resolvedBase }).generated : {};
-  const out: NativeStyles = { base, conditional, keyframes };
+  let hasPseudo = false;
+  for (let i = 0; i < conditional.length; i++) {
+    if (conditional[i].type === 'pseudo' || conditional[i].pseudo) {
+      hasPseudo = true;
+      break;
+    }
+  }
+  const out: NativeStyles = { base, conditional, keyframes, hasPseudo };
   if (specialCases !== null) out.specialCases = specialCases;
   if (animations !== null) out.animations = animations;
   if (transitions !== null) out.transitions = transitions;
