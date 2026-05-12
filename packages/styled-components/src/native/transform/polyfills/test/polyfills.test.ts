@@ -245,6 +245,26 @@ describe('static math functions', () => {
     expect(out.width).toContain('clamp(');
   });
 
+  // CSS Syntax 3 §4.3.10: function names match ASCII case-insensitively.
+  // The fold must apply regardless of how the author types the name.
+  it.each([
+    ['CALC(100px + 20px)', { width: 120 }],
+    ['cAlc(100px + 20px)', { width: 120 }],
+    ['Clamp(100px, 150px, 200px)', { width: 150 }],
+    ['MIN(100px, 200px)', { width: 100 }],
+    ['Pow(2, 8)', { width: 256 }],
+  ])('case-insensitively folds %s', (input, expected) => {
+    expect(transformDecl('width', input)).toEqual(expected);
+  });
+
+  it('case-insensitive math inside modern color channels', () => {
+    // Same case-insensitivity applies inside oklch / oklab / lch / lab
+    // channels: a mixed-case calc() must fold so the color polyfill can
+    // read the literal channel value.
+    const out = transformDecl('color', 'OKLCH(0.7 0.15 CALC(45deg * 2))');
+    expect(out.color).toMatch(/^#[0-9a-f]{6,8}$/i);
+  });
+
   describe('on rn-web', () => {
     const g = global as { __NATIVE_WEB__?: boolean };
     const originalNativeWeb = g.__NATIVE_WEB__;
