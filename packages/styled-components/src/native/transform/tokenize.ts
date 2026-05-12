@@ -235,7 +235,13 @@ export function tokenize(value: string): Token[] {
       if (identEnd < len && value.charCodeAt(identEnd) === $.OPEN_PAREN) {
         const argsEnd = findMatchingParen(value, identEnd);
         if (argsEnd !== -1) {
-          const name = value.substring(i, identEnd);
+          // CSS Syntax 3 §4.3.10: function names match
+          // ASCII case-insensitively. Lowercase at tokenization so every
+          // downstream consumer (math fold, color fold, resolvers,
+          // shorthand helpers) can compare against literal lowercase
+          // names without re-normalizing. The `raw` slice still carries
+          // the author's original casing for round-trip emission paths.
+          const name = value.substring(i, identEnd).toLowerCase();
           const args = value.substring(identEnd + 1, argsEnd);
           tokens.push(functionToken(value.substring(i, argsEnd + 1), name, args));
           i = argsEnd + 1;

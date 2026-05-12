@@ -291,17 +291,33 @@ function isSingleSentinel(v: string): boolean {
   return true;
 }
 
+/**
+ * True when any character in the leading function-name prefix is
+ * uppercase ASCII. Used as a fast gate before allocating a lowercased
+ * copy: most CSS in the wild is already lowercase, so the common path
+ * skips the allocation entirely.
+ *
+ * `endExclusive` clamps the scan to the prefix actually needed (e.g. 9
+ * for `color-mix(`); we never read past the candidate function name.
+ */
+function hasUpperInPrefix(v: string, endExclusive: number): boolean {
+  const limit = v.length < endExclusive ? v.length : endExclusive;
+  for (let i = 0; i < limit; i++) {
+    const c = v.charCodeAt(i);
+    if (c >= 0x41 && c <= 0x5a) return true;
+  }
+  return false;
+}
+
 function mightBeMathFn(v: string): boolean {
   // Cheap prefix check before tokenizing; avoids work on `10px` etc. CSS
   // function names are ASCII case-insensitive (Syntax 3 §4.3.10), so we
-  // OR the first char with 0x20 to fold A-Z → a-z and lowercase the
-  // matched substring only when an uppercase letter is detected. The
-  // common path (already-lowercase input) skips the allocation.
+  // scan the leading prefix for any uppercase letter and lowercase only
+  // when one is found. Longest math-fn-name with paren is `atan2(` (6),
+  // so a 6-char scan covers every supported function.
   if (v.length <= 4) return false;
-  const raw0 = v.charCodeAt(0);
-  const c0 = raw0 | 0x20;
-  const needsLower = raw0 >= 0x41 && raw0 <= 0x5a; // A-Z
-  const haystack = needsLower ? v.toLowerCase() : v;
+  const haystack = hasUpperInPrefix(v, 6) ? v.toLowerCase() : v;
+  const c0 = haystack.charCodeAt(0);
   if (c0 === 0x63 /* c */)
     return (
       haystack.startsWith('calc(') || haystack.startsWith('clamp(') || haystack.startsWith('cos(')
@@ -335,11 +351,13 @@ function mightBeModernColor(v: string): boolean {
   // Cheap prefix check; modern function forms RN doesn't understand:
   // `oklch(`, `oklab(`, `lch(`, `lab(`, `color-mix(`, `color(`.
   // RN already handles hex / rgb / hsl / hwb at runtime; no polyfill
-  // needed for those.
+  // needed for those. Longest prefix is `color-mix(` (10).
   if (v.length < 5) return false;
-  const c0 = v.charCodeAt(0);
-  if (c0 === 0x6f /* o */) return v.startsWith('oklch(') || v.startsWith('oklab(');
-  if (c0 === 0x6c /* l */) return v.startsWith('lch(') || v.startsWith('lab(');
-  if (c0 === 0x63 /* c */) return v.startsWith('color-mix(') || v.startsWith('color(');
+  const haystack = hasUpperInPrefix(v, 10) ? v.toLowerCase() : v;
+  const c0 = haystack.charCodeAt(0);
+  if (c0 === 0x6f /* o */) return haystack.startsWith('oklch(') || haystack.startsWith('oklab(');
+  if (c0 === 0x6c /* l */) return haystack.startsWith('lch(') || haystack.startsWith('lab(');
+  if (c0 === 0x63 /* c */)
+    return haystack.startsWith('color-mix(') || haystack.startsWith('color(');
   return false;
 }
