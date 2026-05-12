@@ -444,9 +444,11 @@ function conditionMatches(
   return false;
 }
 
-// Pseudo-gated buckets are skipped here and resolved by the state callback.
+// Pseudo-gated buckets are owned by the state callback; this walker
+// is fed a precomputed `nonPseudoEntries` subset from compileNative so
+// the per-render loop never iterates pseudo entries.
 function matchConditionals(
-  conditional: ConditionalStyle[],
+  entries: ConditionalStyle[],
   env: MediaQueryEnv,
   containerCtx: Pick<ContainerContextValue, 'named' | 'nearest'>,
   props: Record<string, unknown>,
@@ -454,10 +456,8 @@ function matchConditionals(
   parentCtx: ParentContextValue
 ): object[] {
   const out: object[] = [];
-  for (let i = 0; i < conditional.length; i++) {
-    const entry = conditional[i];
-    // Buckets with a pseudo gate are owned by the state callback.
-    if (entry.type === 'pseudo' || entry.pseudo) continue;
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
     if (entry.type === 'attr') {
       const matches = attrMatches(entry, props);
       if (entry.negate ? !matches : matches) out.push(resolveBucket(entry, resolveEnv));
@@ -692,7 +692,7 @@ function pseudoActive(
 }
 
 function pseudoStylesForState(
-  conditional: ConditionalStyle[],
+  entries: ConditionalStyle[],
   state: { pressed?: boolean; hovered?: boolean; focused?: boolean; disabled?: boolean },
   env: MediaQueryEnv,
   containerCtx: Pick<ContainerContextValue, 'named' | 'nearest'>,
@@ -700,15 +700,20 @@ function pseudoStylesForState(
   resolveEnv: ResolveEnv,
   parentCtx: ParentContextValue
 ): object[] {
+  // Caller passes the precomputed `pseudoEntries` subset; every entry
+  // is guaranteed pseudo-bearing (either `type==='pseudo'` or a
+  // compound carrying `entry.pseudo`), so the inner branches skip the
+  // membership re-check.
   const out: object[] = [];
-  for (let i = 0; i < conditional.length; i++) {
-    const entry = conditional[i];
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
     if (entry.type === 'pseudo') {
       const active = pseudoActive(entry.condition as PseudoState, state);
       if (entry.negate ? !active : active) out.push(resolveBucket(entry, resolveEnv));
       continue;
     }
-    if (!entry.pseudo || !pseudoActive(entry.pseudo, state)) continue;
+    // Compound: entry.pseudo is guaranteed set here.
+    if (!pseudoActive(entry.pseudo!, state)) continue;
     // Attrs AND-gate for compound forms like `&[disabled]:hover`.
     if (entry.attrs) {
       const attrOk = attrMatches(entry, props);
@@ -1632,12 +1637,14 @@ export function assembleFinalStyle(
   // Function-form userStyle is normalized at call time inside the closures
   // below, since the result depends on the runtime state argument.
   if (!isFunction(userStyle)) userStyle = normalizeStyleForWeb(userStyle);
-  const hasConditional = compiled.conditional.length > 0;
+  const nonPseudoEntries = compiled.nonPseudoEntries;
+  const pseudoEntries = compiled.pseudoEntries;
+  const hasConditional = nonPseudoEntries.length > 0;
   const hasPseudoState = compiled.hasPseudo;
   const resolveEnv = buildResolveEnv(env, containerCtx, theme, cascade);
 
   const activeConditional = hasConditional
-    ? matchConditionals(compiled.conditional, env, containerCtx, props, resolveEnv, parentCtx)
+    ? matchConditionals(nonPseudoEntries, env, containerCtx, props, resolveEnv, parentCtx)
     : EMPTY_ARRAY;
 
   // Use post-attrs `effectiveBase` (clone with pops applied) when supplied;
@@ -1648,13 +1655,12 @@ export function assembleFinalStyle(
     : sourceBase;
 
   if (hasPseudoState) {
-    const pseudoList = compiled.conditional;
     const preStateStyles: object[] =
       activeConditional.length > 0 ? [base as object].concat(activeConditional) : [base as object];
     return (state: any) => {
       const styles: any[] = preStateStyles.slice();
       const matched = pseudoStylesForState(
-        pseudoList,
+        pseudoEntries,
         state || EMPTY_OBJECT,
         env,
         containerCtx,

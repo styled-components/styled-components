@@ -21,6 +21,7 @@ import { tokenize } from './transform/tokenize';
 import { toNativeStyles, resetNativeStyleCache } from '../models/compileNative';
 import { applyResolvers, ResolveEnv } from './transform/polyfills/resolvers';
 import makeNativeStyleClass from '../models/NativeStyle';
+import { assembleFinalStyle } from '../models/StyledNativeComponent';
 
 const stubStyleSheet = { create: <T extends object>(s: T) => s } as any;
 const NativeStyle = makeNativeStyleClass(stubStyleSheet);
@@ -272,5 +273,60 @@ bench('apply (4 resolvers)', 1_000_000, () => {
 bench('apply (3 sentinel resolvers)', 1_000_000, () => {
   applyResolvers(compiledSentinel.base, compiledSentinel.resolvers!, env);
 });
+
+// ────────────────────────────────────────────────────────────────────
+// assembleFinalStyle (render-path conditional dispatch)
+// ────────────────────────────────────────────────────────────────────
+
+console.log('\n=== assembleFinalStyle (conditional dispatch) ===');
+
+const CSS_MIXED_CONDITIONALS = `
+  color: black;
+  padding: 8px;
+  @media (min-width: 400px) { padding: 16px; }
+  @media (min-width: 800px) { padding: 24px; }
+  @container (min-width: 300px) { color: blue; }
+  &[data-state="open"] { color: purple; }
+  &[aria-pressed="true"] { background-color: #eee; }
+  &:hover { color: orange; }
+  &:focus { color: cyan; }
+  &:active { opacity: 0.7; }
+  &:disabled { opacity: 0.3; }
+  &[disabled]:hover { opacity: 0.5; }
+`;
+
+resetNativeStyleCache();
+const compiledMixed = toNativeStyles(CSS_MIXED_CONDITIONALS, stubStyleSheet);
+
+const mediaEnv: any = {
+  width: 375,
+  height: 812,
+  colorScheme: 'light',
+  reduceMotion: false,
+  fontScale: 1,
+  pixelRatio: 2,
+};
+const containerCtx: any = { named: new Map(), nearest: null };
+const themeObj: any = {};
+const elementProps: any = { 'data-state': 'closed' };
+
+// Per-render path: matchConditionals walks `nonPseudoEntries`.
+bench('assembleFinalStyle mixed (per-render)', 500_000, () =>
+  assembleFinalStyle(compiledMixed, mediaEnv, containerCtx, themeObj, undefined, elementProps)
+);
+
+// Per-state-callback path: pseudoStylesForState walks `pseudoEntries`.
+const stateCallback = assembleFinalStyle(
+  compiledMixed,
+  mediaEnv,
+  containerCtx,
+  themeObj,
+  undefined,
+  elementProps
+);
+const hoveredState = { hovered: true };
+bench('pseudoStylesForState hovered (state callback)', 1_000_000, () =>
+  stateCallback(hoveredState)
+);
 
 console.log('\nDone.');
