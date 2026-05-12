@@ -2,24 +2,34 @@ import { ComponentType } from 'react';
 import { AspectRatioGallery } from './AspectRatioGallery';
 import { AttributeVariants } from './AttributeVariants';
 import { BackgroundBlendStudio } from './BackgroundBlendStudio';
+import { BackgroundShorthandBoard } from './BackgroundShorthandBoard';
 import { BlendModeBoard } from './BlendModeBoard';
 import { ColorFunctionsLab } from './ColorFunctionsLab';
 import { CompositeRules } from './CompositeRules';
 import { ContainerQueryCard } from './ContainerQueryCard';
 import { ContainerUnitsKnob } from './ContainerUnitsKnob';
+import { DirectionBoard } from './DirectionBoard';
+import { FieldSizingBoard } from './FieldSizingBoard';
 import { FilterStack } from './FilterStack';
 import { GradientPalette } from './GradientPalette';
 import { GridLayoutBoard } from './GridLayoutBoard';
+import { InteractivityBoard } from './InteractivityBoard';
 import { KeyframeOrchestra } from './KeyframeOrchestra';
 import { LightDarkSwatch } from './LightDarkSwatch';
 import { LogicalSpacingDial } from './LogicalSpacingDial';
 import { MathFunctionsLab } from './MathFunctionsLab';
 import { MediaRangeBars } from './MediaRangeBars';
+import { PlaceShelf } from './PlaceShelf';
 import { PressInteractive } from './PressInteractive';
+import { RelativeUnitsScale } from './RelativeUnitsScale';
+import { SelectorComboBoard } from './SelectorComboBoard';
+import { SiblingNthBoard } from './SiblingNthBoard';
+import { HasSelectorBoard } from './HasSelectorBoard';
 import { ReducedMotionBeacon } from './ReducedMotionBeacon';
 import { SafeAreaInsetsBadge } from './SafeAreaInsetsBadge';
 import { ShadowComposer } from './ShadowComposer';
 import { StandaloneTransforms } from './StandaloneTransforms';
+import { SystemColorsBoard } from './SystemColorsBoard';
 import { TextDecorationAlignment } from './TextDecorationAlignment';
 import { TextInputAlignment } from './TextInputAlignment';
 import { TextWrapShelf } from './TextWrapShelf';
@@ -66,6 +76,15 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     feature: 'oklch / color-mix',
     category: 'Color',
     Widget: ColorFunctionsLab,
+  },
+  {
+    slug: 'system-colors-board',
+    title: 'CSS system colors',
+    summary:
+      'UA / platform keywords (`Canvas`, `CanvasText`, `Field`, `Highlight`, `LinkText`, …) fold to a `light-dark()` expansion so the same declaration paints correctly under both light and dark schemes on every platform.',
+    feature: 'CSS Color 4 §6.2',
+    category: 'Color',
+    Widget: SystemColorsBoard,
   },
   {
     slug: 'gradient-palette',
@@ -138,6 +157,15 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     Widget: BlendModeBoard,
   },
   {
+    slug: 'background-shorthand',
+    title: 'Background shorthand',
+    summary:
+      'Single `background:` declaration expands to eight longhands per CSS Backgrounds 3 §2.10. Comma-layered, position/size split by slash, color on the final layer.',
+    feature: 'background shorthand',
+    category: 'Visual effects',
+    Widget: BackgroundShorthandBoard,
+  },
+  {
     slug: 'background-blend-studio',
     title: 'Background blend modes',
     summary:
@@ -162,6 +190,24 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     feature: 'margin-inline',
     category: 'Layout',
     Widget: LogicalSpacingDial,
+  },
+  {
+    slug: 'direction-board',
+    title: 'Direction',
+    summary:
+      '`direction: ltr | rtl` drives logical inline edges. `display: contents` and `position: static` ride along as passthrough locks.',
+    feature: 'direction',
+    category: 'Layout',
+    Widget: DirectionBoard,
+  },
+  {
+    slug: 'place-shelf',
+    title: 'Place items / self',
+    summary:
+      '`place-items` and `place-self` shorthands expand to the spec longhand pair. On native only the cross-axis half lands; rn-web honors both.',
+    feature: 'place-items / place-self',
+    category: 'Layout',
+    Widget: PlaceShelf,
   },
   {
     slug: 'aspect-ratio-gallery',
@@ -195,6 +241,15 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     feature: 'vh / dvh / svh / lvh',
     category: 'Math & units',
     Widget: ViewportUnitsRibbon,
+  },
+  {
+    slug: 'relative-units-scale',
+    title: 'rem ladder',
+    summary:
+      '`rem` resolves against `ResolveEnv.rootFontSize` (default 16) on native; rn-web hands it to the browser. Each dark bar should match its muted px reference exactly.',
+    feature: 'rem',
+    category: 'Math & units',
+    Widget: RelativeUnitsScale,
   },
   {
     slug: 'math-functions-lab',
@@ -232,6 +287,15 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     Widget: TextDecorationAlignment,
   },
   {
+    slug: 'field-sizing-board',
+    title: 'Field sizing · autosize',
+    summary:
+      '`field-sizing: content` makes a `TextInput` grow with its content per CSS Forms 1 §7.1. The polyfill lifts `multiline={true}` and wires `onContentSizeChange` automatically; explicit `multiline={false}` keeps the fixed height with a dev warning. rn-web hands the declaration to the browser.',
+    feature: 'field-sizing: content',
+    category: 'Typography',
+    Widget: FieldSizingBoard,
+  },
+  {
     slug: 'text-input-alignment',
     title: 'TextInput vertical alignment',
     summary:
@@ -266,6 +330,15 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     Widget: ReducedMotionBeacon,
   },
   {
+    slug: 'interactivity-board',
+    title: 'Interactivity',
+    summary:
+      '`interactivity: inert` lifts pointer, accessibility, and focus props per CSS UI 4 §5.7. Tap-blocking + screen-reader skip + D-pad focus all gated by a single declaration.',
+    feature: 'interactivity',
+    category: 'Selectors & state',
+    Widget: InteractivityBoard,
+  },
+  {
     slug: 'press-interactive',
     title: 'Press states',
     summary: '`:hover`, `:focus`, `:active`, `:disabled` — wired through one selector chain.',
@@ -289,6 +362,33 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     feature: '@media + :state',
     category: 'Selectors & state',
     Widget: CompositeRules,
+  },
+  {
+    slug: 'selector-combo-board',
+    title: 'Combinator selectors',
+    summary:
+      '`${Card} &` (descendant) and `${Card} > &` (child) — independent probes light up in their own color when their rule fires. A styled wrapper between Card and probe intercepts the child rule.',
+    feature: '${Component} & / >',
+    category: 'Selectors & state',
+    Widget: SelectorComboBoard,
+  },
+  {
+    slug: 'sibling-nth-board',
+    title: 'Sibling + :nth-child selectors',
+    summary:
+      'Adjacent and general sibling combinators (`${Marker} + &`, `${Marker} ~ &`) plus the full `:nth-child` family (`:first`, `:last`, `:nth-child(odd)`, `:nth-of-type(N)`). Matched probes fill the accent color and grow tall.',
+    feature: '+ / ~ / :nth-child',
+    category: 'Selectors & state',
+    Widget: SiblingNthBoard,
+  },
+  {
+    slug: 'has-selector-board',
+    title: ':has() selector',
+    summary:
+      'Card reads its own descendant subtree at render time. `&:has(${Icon})` matches when an Icon is anywhere inside; `&:has([data-state="active"])` matches on prop. Recursive walk finds deep descendants.',
+    feature: ':has(simple)',
+    category: 'Selectors & state',
+    Widget: HasSelectorBoard,
   },
   {
     slug: 'theme-overrides',

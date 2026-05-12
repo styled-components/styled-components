@@ -79,6 +79,14 @@ const WrapStable = styled(Body)`
   text-wrap: stable;
 `;
 
+const WrapModeNowrap = styled(Body)`
+  text-wrap-mode: nowrap;
+`;
+
+const WrapStyleBalance = styled(Body)`
+  text-wrap-style: balance;
+`;
+
 // Constrained ribbon — `text-wrap: nowrap` overflow becomes visible
 // here. Layered hairline borders mark the box even when the text
 // extends past them.
@@ -203,6 +211,32 @@ export function TextWrapShelf() {
         </Markdown>
         <NarrowFrame>
           <WrapStable>{NARROW}</WrapStable>
+        </NarrowFrame>
+      </Row>
+      <Row>
+        <RowHeader>
+          <RowLabel>text-wrap-mode: nowrap · longhand</RowLabel>
+          <PlatformBadges support={SUPPORT.universal} />
+        </RowHeader>
+        <Markdown variant="hint">
+          Independent longhand registration: `text-wrap-mode` sets the mode without touching
+          style.
+        </Markdown>
+        <Ribbon>
+          <WrapModeNowrap>{SAMPLE}</WrapModeNowrap>
+        </Ribbon>
+      </Row>
+      <Row>
+        <RowHeader>
+          <RowLabel>text-wrap-style: balance · longhand</RowLabel>
+          <PlatformBadges support={SUPPORT.androidWeb} />
+        </RowHeader>
+        <Markdown variant="hint">
+          Independent longhand registration: `text-wrap-style` sets the style without
+          touching mode.
+        </Markdown>
+        <NarrowFrame>
+          <WrapStyleBalance>{NARROW}</WrapStyleBalance>
         </NarrowFrame>
       </Row>
       <Markdown variant="hint">

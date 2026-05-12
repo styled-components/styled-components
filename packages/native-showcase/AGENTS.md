@@ -22,7 +22,7 @@ The intent is delivered live to the foreground instance (no app restart). Slugs 
 
 ## Source consumption
 
-The sandbox / showcase consume the built `dist/` of `styled-components`, not source. Run `pnpm --filter styled-components build` after editing library code before testing in the showcase.
+Metro resolves `styled-components` and `styled-components/native` directly to the library's TypeScript source via `metro.config.js`. The babel config substitutes the build-time constants (`__SERVER__`, `__NATIVE__`, `__NATIVE_WEB__`, `__DEV__`) so source compiles in place. No `pnpm build` step is needed between editing library code and reloading the showcase — Metro picks up the change on next refresh.
 
 ## Theme tokens
 

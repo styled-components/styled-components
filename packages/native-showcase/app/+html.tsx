@@ -19,8 +19,21 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="color-scheme" content="light dark" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <ScrollViewStyleReset />
+        <style dangerouslySetInnerHTML={{ __html: webFontSmoothing }} />
       </head>
       <body>{children}</body>
     </html>
   );
 }
+
+// Grayscale anti-aliasing for text on web. Browsers default to
+// subpixel anti-aliasing on most platforms which renders fonts
+// heavier; grayscale matches the appearance of RN's native text
+// rendering on iOS / Android and produces a thinner, cleaner look.
+const webFontSmoothing = `
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+`;

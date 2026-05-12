@@ -13,13 +13,9 @@ const VIOLET = RING_PALETTE[14];    // h=278
 
 /**
  * Modern color functions: `oklch()`, `oklab()`, `lch()`, `lab()`, and
- * `color-mix()`. Each declaration uses literal arguments so the v7 native
- * static color-math polyfill resolves it to a hex string at transform
- * time (`packages/styled-components/src/native/transform/polyfills/colorMath.ts`).
- *
- * Browser engines accept the source values directly via rn-web; on iOS
- * and Android RN's `normalize-colors` doesn't yet recognise them, so the
- * library converts up-front. Visually the two paths match; the only
+ * `color-mix()`. Each declaration uses literal arguments so v7 folds
+ * them to hex at transform time on native; on rn-web the browser
+ * handles them directly. Visually the two paths match; the only
  * empirical difference is on chroma values that exceed the sRGB gamut,
  * where the polyfill clips per channel.
  */
@@ -214,6 +210,29 @@ const HueLonger4 = styled(Swatch)`
   background-color: color-mix(in oklch longer hue, ${RED} 0%, ${VIOLET} 100%);
 `;
 
+// --- CSS Color 5 §4 relative-color syntax (literal-base fold) ---
+// Each swatch derives from the SAME base color via channel keywords
+// inside `calc()`: darken / lighten by adjusting `l`, shift hue by
+// adjusting `h`. The polyfill resolves the relative form at compile
+// time so iOS / Android receive a literal hex; rn-web folds at the
+// same boundary so paint matches across all three.
+
+const RelBase = styled(Swatch)`
+  background-color: oklch(from ${RED} l c h);
+`;
+const RelDarker = styled(Swatch)`
+  background-color: oklch(from ${RED} calc(l - 0.15) c h);
+`;
+const RelLighter = styled(Swatch)`
+  background-color: oklch(from ${RED} calc(l + 0.15) c h);
+`;
+const RelDesaturated = styled(Swatch)`
+  background-color: oklch(from ${RED} l calc(c * 0.5) h);
+`;
+const RelHueShifted = styled(Swatch)`
+  background-color: oklch(from ${RED} l c calc(h + 60));
+`;
+
 // --- Tints + shades anchored on the logo green ---
 
 const Tint0 = styled(Swatch)`
@@ -318,6 +337,24 @@ export function ColorFunctionsLab() {
           <SwatchLabel>130</SwatchLabel>
           <SwatchLabel>240</SwatchLabel>
           <SwatchLabel>320</SwatchLabel>
+        </SwatchLabelRow>
+      </Row>
+      <Row>
+        <RowLabel>relative-color · derive shades from one base · §4</RowLabel>
+        <RowCaption>oklch(from [red] calc(l ±0.15) [calc(c × 0.5)] [calc(h + 60)])</RowCaption>
+        <Strip>
+          <RelDarker />
+          <RelBase />
+          <RelLighter />
+          <RelDesaturated />
+          <RelHueShifted />
+        </Strip>
+        <SwatchLabelRow>
+          <SwatchLabel>−L 0.15</SwatchLabel>
+          <SwatchLabel>base</SwatchLabel>
+          <SwatchLabel>+L 0.15</SwatchLabel>
+          <SwatchLabel>+desat</SwatchLabel>
+          <SwatchLabel>+H 60</SwatchLabel>
         </SwatchLabelRow>
       </Row>
       <Group>
