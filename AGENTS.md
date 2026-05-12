@@ -96,6 +96,17 @@ Once the spec block is green, the polyfill internals (tokenization, AST shape, e
 
 Unsupported on Native (no viable workaround) MUST emit `warnOnce` from `src/native/transform/dev.ts` with a stable `code` (internal dedupe key only — not printed) and a developer-facing message that names the offending construct, why it can't run on RN, and a concrete alternative. Printed messages are prefixed with `[sc]`; the `code` argument never appears in the output. The dev wrapper appends the user call site so the warning lands on the right styled declaration; the dedupe check short-circuits before the stack walk for repeated decls. Use a unique dedupeSuffix (typically the offending value) when the same construct could appear many times. Add a characterization test alongside the spec block so the warning text is regression-locked. The polyfill must still bail to `null` (drop the declaration) instead of shipping nonsense to RN.
 
+### rn-web parity rule
+
+Every polyfill must verify its rn-web output against `node_modules/react-native-web/src/`:
+
+- If the browser ships the feature, the rn-web branch passes the raw CSS through. Don't expand, normalize, or fold what the browser handles.
+- Never emit a CSS property the browser doesn't ship yet. Lift the equivalent HTML attribute via SPECIAL_CASE_PROPS instead.
+- Gate RN-only prop lifts (`numberOfLines`, `ellipsizeMode`, `textBreakStrategy`, `focusable`, `accessibilityElementsHidden`, etc.) behind `if (!__NATIVE_WEB__)` when the browser implements the CSS surface.
+- Never let RN-only enum extensions (`pointer-events: box-none | box-only`) through the rn-web branch. Web-only enums (`safe center`, `first baseline`) reach rn-web fine.
+- Sentinel-shaped intermediates (`__sc_*`) are native-only. Short-circuit to a browser-recognized property + value before the sentinel forms on rn-web.
+- Every polyfill spec block needs an `on rn-web` sub-describe that flips `(global as { __NATIVE_WEB__?: boolean }).__NATIVE_WEB__ = true` and locks the rn-web output shape.
+
 Notes:
 
 - WPT corpus at `packages/styled-components/src/parser/wpt-corpus/` covers a lot of syntax parity; spec blocks fill the BEHAVIOR gap (e.g. mixed-form rejection in `light-dark()`, "unknown" color scheme handling, argument-count enforcement).
@@ -122,6 +133,16 @@ Notes:
 
 - `private` modifier is not allowed on anonymous class expressions (`export const Foo = class { ... }`)
 - `import type * from 'stream'` still triggers bundler module resolution even though TypeScript strips it
+
+## native-showcase rules
+
+The `packages/native-showcase` app is the visual QA surface for v7 native polyfills across iOS, Android, and rn-web. It is also a fairness contract: it must not lie about what works on which platform. Rules apply to every widget and every piece of chrome in the showcase.
+
+- Omniplatform components only. No `Platform.OS` / `Platform.select` branches in showcase code, and no `__NATIVE_WEB__` reads outside the library. Same JSX runs everywhere. Platform-skew workarounds belong inside `packages/styled-components` (transforms, polyfills, passthrough, dev warnings) — never in the app.
+- No raw DOM tags. The showcase has no `<select>`, `<a>`, `<input>`, `<table>`, `<dialog>`, etc., even web-gated. Compose from RN primitives (`View` / `Text` / `Pressable` / `Modal` / `FlatList` / `TextInput`) or pull in a cross-platform community lib. See `knowledge_rn_0_85_component_surface` for the gap inventory.
+- Maximize visual obviousness. A working vs not-working state must be glanceable at arm's length. Use macro differences — layout shifts, position changes, color floods, glyph layout, presence/absence — not subtle hue swings or 1-pixel tweaks. The reader should never have to squint.
+- Both light and dark mode must work for every widget. Default to `light-dark()` for any color decision so theme switches repaint without React re-renders. If a widget hardcodes a color, that color must read in both modes; if it can't, route through `light-dark()` or `useColorScheme()`.
+- Zero tolerance for fake demos. Every widget exercises the actual library/runtime path it claims to demonstrate. If a polyfill can't run on a given platform, the cell is allowed to fail loudly (broken layout, warnOnce message, missing glyph) — that failure is the demo on that platform. Never substitute a JS-computed mock that mimics the spec, and never hardcode `t.colors.pass`/`fail` as a stand-in for the polyfill firing. Before adding a new widget, verify how the surrounding widgets prove their behavior and follow the same pattern.
 
 ## Topical references
 

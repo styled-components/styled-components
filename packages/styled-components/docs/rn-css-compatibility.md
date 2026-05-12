@@ -10,9 +10,9 @@ If a feature you need isn't listed, or the workaround section needs updating, op
 
 As of React Native 0.85:
 
-- **~63** modern CSS features work natively (transforms, box-shadow with spread/inset, filter chains, gradients, slash-alpha colors, `hwb()`, `mix-blend-mode`, `isolation`, `cursor`, grid layout, logical margin/padding/border longhands, container queries, and more).
-- **~58** features that React Native does not parse natively are polyfilled by styled-components — either rewritten to an RN-compatible form at compile time or resolved at render time against the device environment.
-- **~71** features still require upstream React Native work to support meaningfully. This document is a contract with the community: when one of those ships, we wire it up and move the row out of the unsupported section.
+- **~64** modern CSS features work natively (transforms, box-shadow with spread/inset, filter chains, gradients, slash-alpha colors, `hwb()`, `mix-blend-mode`, `isolation`, `cursor`, grid layout, logical margin/padding/border longhands, container queries, and more).
+- **~78** features that React Native does not parse natively are polyfilled by styled-components — either rewritten to an RN-compatible form at compile time or resolved at render time against the device environment.
+- **~60** features still require upstream React Native work to support meaningfully. This document is a contract with the community: when one of those ships, we wire it up and move the row out of the unsupported section.
 
 ## Works natively in React Native 0.85
 
@@ -39,11 +39,30 @@ These work in your style templates even though React Native doesn't parse them n
 | `calc()` / `min()` / `max()` / `clamp()` with static arms | Resolved to a number or `'N%'` at compile time. |
 | `oklch()`, `oklab()`, `lch()`, `lab()` with static channels | Converted to sRGB hex. |
 | `color-mix(in <space>, colorA [p%], colorB [p%])` with literal operands | Mixed in the requested space (`srgb`, `oklab`, `oklch`, `lab`, `lch`) per CSS Color Level 5; perceptual spaces use proper round-trip + shorter-arc hue. |
+| CSS system colors (`Canvas`, `CanvasText`, `Field`, `Highlight`, `LinkText`, `ButtonFace`, `AccentColor`, …) | Expanded to a `light-dark()` pair per CSS Color 4 §6.2 so the same keyword paints correctly under light and dark schemes on every platform. |
 | `margin-inline` / `margin-block` / `padding-inline` / `padding-block` / `inset-inline` / `inset-block` shorthands | Expanded to the two-longhand pair React Native already supports. |
 | `line-clamp: N` | Emitted as `{ numberOfLines: N, overflow: 'hidden' }`. |
 | `&:is(:stateA, :stateB, …)` / `&:where(…)` | Fanned out into parallel pseudo-state buckets covering each named state. |
-| `linear()` easing | Parsed to a piecewise-linear lookup table for the v7.1 animation adapter. |
-| `@starting-style { … }` | Captured on the compile output for the v7.1 animation adapter. |
+| `linear()` easing | Parsed to a piecewise-linear lookup table for the animation adapter. |
+| `@starting-style { … }` | Captured on the compile output for the animation adapter. |
+| `place-items` / `place-self` shorthands | Expanded to RN's flex-prefixed alignItems/alignSelf longhands; `start` / `end` / `self-start` / `self-end` normalize to `flex-prefixed` per `align-items`'s accepted enum. |
+| `background` shorthand | Comma-separated layers expand to `experimental_background*` longhands plus `backgroundColor`; position/size split by `/`. |
+| `border-inline-*` / `border-block-*` longhands + shorthands + composite + mode-spanning forms | Map to RN's `borderStart*` / `borderEnd*` / `borderTop*` / `borderBottom*` under horizontal-tb. |
+| `text-wrap-mode` / `text-wrap-style` longhands | Independent registration matching the `text-wrap` shorthand's lift behavior. |
+| `aspect-ratio: auto` / `auto <ratio>` | Two-value form: emits the ratio with a one-time dev warn that the `auto` half only honors intrinsic dimensions on replaced elements. |
+| `perspective` standalone property | Lowered to a prepended `perspective()` transform on the element. |
+| Generic `font-family` keywords (`serif`, `sans-serif`, `monospace`, `system-ui`, `ui-*`, `cursive`, `fantasy`, `emoji`, `math`, `fangsong`) | Resolved to a per-platform face name on native; comma-separated fallback lists keep only the first family with a dev warn. |
+| `font-style: oblique <angle>` | Maps to `italic` on native (angle dropped + warned); rn-web honors the slant axis natively. |
+| CSS Values 4 Math L4 (`round` / `mod` / `rem` / trig / inverse trig / `pow` / `sqrt` / `hypot` / `log` / `exp` / `abs` / `sign`) with static arms | Folded at compile time inside the existing math pipeline. |
+| Attribute-selector operators (`[attr~=word]` / `[attr|=prefix]` / `[attr^=]` / `[attr$=]` / `[attr*=]`) | Render-time matcher dispatches the right list-contains / prefix / suffix / substring logic per CSS Selectors 4 §6.2. |
+| `&:not(<simple-selector>)` | Inverted bucket fires when the inner pseudo / attribute does NOT match. |
+| `${Component} &` (descendant) and `${Component} > &` (child) combinator selectors | Matches when the interpolated styled component is an ancestor (descendant) or the immediate styled parent (child). Plain `View` / `Text` / etc. between the ancestor and the matched component are transparent; a styled component in between becomes the new immediate parent, so the child combinator stops firing while descendant still matches. |
+| `${Component} + &` (adjacent sibling) and `${Component} ~ &` (general sibling) | Matches when the styled component's immediately preceding sibling (`+`) or any preceding sibling (`~`) is the referenced component. Sibling info is published by the parent's per-child walk. |
+| `:first-child` / `:last-child` / `:only-child` / `:nth-child(an+b \| odd \| even)` / `:nth-last-child(...)` | Match by literal JSX position among the parent's direct children. Full `an+b` formula syntax, keyword shortcuts (`odd`, `even`), and reverse counting (`nth-last-child`) all supported. |
+| `:first-of-type` / `:last-of-type` / `:only-of-type` / `:nth-of-type(...)` / `:nth-last-of-type(...)` | Like the `:nth-child` family but count only same-element-type siblings (`styled.View` and `styled.Text` are different types). |
+| `&:has(${Component})` / `&:has([attr])` / `&:has([attr='value'])` | Matches when the named styled component (or a descendant carrying the prop) appears anywhere inside this component's children, at any nesting depth. Complex inner selectors (descendant chains, combinators) are not supported. |
+| `interactivity: inert` | Lifts `pointerEvents`, `accessibilityElementsHidden` (iOS), `importantForAccessibility` (Android), and `focusable={false}` on the styled component. |
+| `field-sizing: content` | Auto-grows a `styled.TextInput` to its content height by lifting `multiline={true}`. React Native's shadow-view measure callback then sizes the input to its natural text size on every text change; author-declared `min-height` / `max-height` still bound the growth. Explicit `multiline={false}` voids the lift with a dev warning. rn-web hands the declaration to the browser's native `field-sizing` (Chrome 123+). |
 
 ### Render-time polyfills
 
@@ -52,6 +71,7 @@ These values re-resolve each render against the device's current state. Componen
 | Feature | Resolution source |
 | --- | --- |
 | `vw` / `vh` / `vmin` / `vmax` / `dvh` / `svh` / `lvh` / `dvw` / `svw` / `lvw` | `Dimensions.get('window')` (re-measures on rotation / resize). |
+| `rem` length unit | `1rem` = 16px by default;`createTheme({ rootFontSize: N })` rescales the ramp. Composes inside `calc()` alongside other static arms. |
 | `cqw` / `cqh` / `cqmin` / `cqmax` / `cqi` / `cqb` | Nearest registered container's `onLayout` size. |
 | `light-dark(light, dark)` | `Appearance.getColorScheme()` — swaps when OS theme changes. |
 | `env(safe-area-inset-top | right | bottom | left)` | `useSafeAreaInsets()` (SafeAreaProvider context). |
@@ -88,7 +108,6 @@ These features depend on upstream React Native primitives that do not yet exist.
 | Feature | Why unsupported | Workaround |
 | --- | --- | --- |
 | `color-contrast()` | Needs rendered-color analysis primitive; only shipped in Safari today. | Tune an `oklch` lightness threshold manually or select colors via a theme helper. |
-| System colors (`CanvasText`, `ButtonFace`, …) | No semantic system-color constants on RN. | Map to concrete values in your theme (or use `PlatformColor()`). |
 | `@media (color-gamut: srgb | p3 | rec2020)` | No color-space capability query on RN. | Assume sRGB; re-evaluate if wide-gamut support lands upstream. |
 | `@media (dynamic-range: high)` / `@media (video-dynamic-range: high)` | No HDR capability query on RN. | Branch on other signals (explicit user toggle, platform API). |
 | `@media (forced-colors: active)` | High-contrast mode is Windows-only on web; no RN equivalent. | Use RN's `AccessibilityInfo.highTextContrast` where available. |
@@ -112,14 +131,13 @@ These features depend on upstream React Native primitives that do not yet exist.
 | `font-palette` / `@font-palette-values` | Color fonts (COLR / SVG) aren't supported on RN yet. | Use multiple font files keyed by palette. |
 | `text-box-trim` / `text-box-edge` | `Text` can't measure glyph metrics. | Adjust `line-height` and vertical padding manually. |
 | `hyphens: auto` | No hyphenation engine exposed. | Insert soft-hyphens (`­`) in content. |
-| `field-sizing: content` | No auto-size on `TextInput`. | `onContentSizeChange` + controlled height state. |
 
 ### Animations & transitions
 
 | Feature | Why unsupported | Workaround |
 | --- | --- | --- |
-| `transition` shorthand / longhands | RN uses `Animated` / Shared Animation Backend, not CSS transitions. | Use `Animated.timing` / `Animated.spring` — the upcoming v7.1 animation adapter will bridge CSS transitions automatically. |
-| `animation` / `@keyframes` execution | Keyframes are captured by the compiler but not yet applied. | Use `Animated` / `useNativeDriver: true` — v7.1 bridges this. |
+| `transition` shorthand / longhands | RN uses `Animated` / Shared Animation Backend, not CSS transitions. | The animation adapter bridges CSS transitions to `Animated.timing` / `Animated.spring` automatically. |
+| `animation` / `@keyframes` execution | Driven by the animation adapter. | Keyframes interpolate via `Animated` with `useNativeDriver: true` where supported. |
 | `animation-timeline: scroll() | view()` | No scroll-timeline binding on RN. | Use a `ScrollView` `onScroll` listener + `Animated.Value.interpolate`. |
 | `view-transition` (L1 / L2) | Single-view architecture; MPA transitions don't apply. | Use screen-transition animations via `React Navigation`. |
 
@@ -139,8 +157,8 @@ These features depend on upstream React Native primitives that do not yet exist.
 
 | Feature | Why unsupported | Workaround |
 | --- | --- | --- |
-| `:has()` (parent selector) | No DOM tree / sibling inspection on RN. | Lift state up or use context. |
-| `:nth-child()`, `:first-child`, `:last-child`, `:only-child`, `:empty` | No sibling position / child-count information. | Use render-time conditional logic on list indices. |
+| `:has()` with complex inner | The simple-inner form (`:has(${Component})`, `:has([attr])`) is supported; descendant chains and combinator selectors inside `:has` are not. | Restructure to a single simple-inner predicate; multiple `:has` rules compose. |
+| `:empty` | Children-count introspection isn't published in `ParentContext`. | Branch on the prop or render the empty case as a separate component. |
 | `:target` | No URL fragment routing on RN. | Branch on route params. |
 | `:defined` | No custom-element registry on RN. | N/A. |
 | `:dir(ltr | rtl)` | No `writing-mode` support on RN. | Branch on `I18nManager.isRTL`. |
