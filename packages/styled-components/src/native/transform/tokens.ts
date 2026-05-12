@@ -175,13 +175,39 @@ export function timeToken(raw: string, value: number, unit: string): Token {
   );
 }
 
+/**
+ * Idempotent ASCII-lowercase. `String.prototype.toLowerCase` always
+ * allocates a fresh string. The overwhelming majority of CSS authored
+ * in the wild is already lowercase (function names like `oklch(` /
+ * idents like `solid`), so we scan for any uppercase ASCII byte first
+ * and skip the allocation when the input is pure-lowercase. Non-ASCII
+ * letters fall through to `toLowerCase` so Unicode case folding stays
+ * correct for the long tail of inputs.
+ *
+ * Co-located with the token factories rather than tokenize.ts to avoid
+ * a circular import (tokenize → tokens, but tokens needs the helper
+ * for identToken's lowercased `name` field).
+ *
+ * Adding a memoization cache over this scan regressed bench numbers
+ * (Map / prototypeless-object lookup overhead exceeded the cost of
+ * the short-string scan for the typical 2-6-char CSS ident / unit).
+ * The inline form is the fast path.
+ */
+export function toLowerIfMixed(s: string): string {
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c >= 0x41 && c <= 0x5a) return s.toLowerCase();
+  }
+  return s;
+}
+
 export function identToken(raw: string): Token {
   return makeToken(
     TokenKind.Ident,
     raw,
     undefined,
     undefined,
-    raw.toLowerCase(),
+    toLowerIfMixed(raw),
     undefined,
     null,
     undefined,

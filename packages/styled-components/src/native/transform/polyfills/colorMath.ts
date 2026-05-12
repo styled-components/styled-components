@@ -95,11 +95,16 @@ function toByte(x: number): number {
   return Math.max(0, Math.min(255, Math.round(x * 255)));
 }
 
-/** Polar `(c, hDeg)` → Cartesian `(a, b)` for L*a*b* / Oklab spaces. */
-function polarToLabAB(c: number, hDeg: number): [number, number] {
-  const hr = (hDeg * Math.PI) / 180;
-  return [c * Math.cos(hr), c * Math.sin(hr)];
-}
+/**
+ * Polar `(c, hDeg)` → Cartesian `(a, b)` for L*a*b* / Oklab spaces.
+ * Returning a tuple from the previous form allocated a fresh array
+ * per oklch / lch call; callers now inline the two `Math.cos` /
+ * `Math.sin` multiplications directly on locals so the hot color-fold
+ * path stays allocation-free apart from the final RGB object.
+ *
+ * Kept exported in case future polyfill code wants the abstraction,
+ * but currently no callers — the inlined form is the fast path.
+ */
 
 function parseOklch(tok: Token): RGB | null {
   // CSS Color L4: oklch L percent → 0..1, C percent → 0..0.4, hue rejects percent.
@@ -109,7 +114,9 @@ function parseOklch(tok: Token): RGB | null {
   // `none` → 0 for the used value. L clamped 0..1, C clamped >=0.
   const lc = Math.max(0, Math.min(1, usedValue(l)));
   const cc = Math.max(0, usedValue(c));
-  const [a, b] = polarToLabAB(cc, usedValue(h));
+  const hr = (usedValue(h) * Math.PI) / 180;
+  const a = cc * Math.cos(hr);
+  const b = cc * Math.sin(hr);
   return oklabToRgb(lc, a, b, usedValue(alpha));
 }
 
@@ -240,7 +247,9 @@ function parseLch(tok: Token): RGB | null {
   const [l, c, h, alpha] = args;
   const lc = Math.max(0, Math.min(100, usedValue(l)));
   const cc = Math.max(0, usedValue(c));
-  const [a, b] = polarToLabAB(cc, usedValue(h));
+  const hr = (usedValue(h) * Math.PI) / 180;
+  const a = cc * Math.cos(hr);
+  const b = cc * Math.sin(hr);
   return labToRgb(lc, a, b, usedValue(alpha));
 }
 
@@ -1631,16 +1640,16 @@ function labFromRGBForMix(opTokens: Token[], rgb: RGB, useOklab: boolean): LabTr
       if (args !== null) {
         const [l, x, y, alpha] = args;
         if (name === 'oklab') return { L: l, a: x, b: y, alpha };
-        const [a, b] = polarToLabAB(x, y);
-        return { L: l, a, b, alpha };
+        const hr = (y * Math.PI) / 180;
+        return { L: l, a: x * Math.cos(hr), b: x * Math.sin(hr), alpha };
       }
     } else if (!useOklab && (name === 'lab' || name === 'lch')) {
       const args = readChannels(func, name === 'lab' ? LAB_SCALES : LCH_SCALES);
       if (args !== null) {
         const [l, x, y, alpha] = args;
         if (name === 'lab') return { L: l, a: x, b: y, alpha };
-        const [a, b] = polarToLabAB(x, y);
-        return { L: l, a, b, alpha };
+        const hr = (y * Math.PI) / 180;
+        return { L: l, a: x * Math.cos(hr), b: x * Math.sin(hr), alpha };
       }
     }
   }
@@ -1695,7 +1704,10 @@ function lchToRgb(t: LchTriple, useOklch: boolean): RGB {
   const C = usedValue(t.C);
   const h = usedValue(t.h);
   const alpha = usedValue(t.alpha);
-  const [a, b] = polarToLabAB(Math.max(0, C), h);
+  const cc = Math.max(0, C);
+  const hr = (h * Math.PI) / 180;
+  const a = cc * Math.cos(hr);
+  const b = cc * Math.sin(hr);
   if (useOklch) {
     return oklabToRgb(Math.max(0, Math.min(1, L)), a, b, alpha);
   }

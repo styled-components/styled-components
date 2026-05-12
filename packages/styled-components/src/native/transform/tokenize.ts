@@ -15,6 +15,7 @@ import {
   sentinelToken,
   stringToken,
   timeToken,
+  toLowerIfMixed,
   COMMA_TOKEN,
   SLASH_TOKEN,
 } from './tokens';
@@ -241,7 +242,7 @@ export function tokenize(value: string): Token[] {
           // shorthand helpers) can compare against literal lowercase
           // names without re-normalizing. The `raw` slice still carries
           // the author's original casing for round-trip emission paths.
-          const name = value.substring(i, identEnd).toLowerCase();
+          const name = toLowerIfMixed(value.substring(i, identEnd));
           const args = value.substring(identEnd + 1, argsEnd);
           tokens.push(functionToken(value.substring(i, argsEnd + 1), name, args));
           i = argsEnd + 1;
@@ -314,15 +315,35 @@ function consumeNumber(value: string, start: number): NumberResult | null {
   const len = value.length;
   let i = start;
 
-  // Optional sign
-  if (value.charCodeAt(i) === $.HYPHEN || value.charCodeAt(i) === $.PLUS) i++;
+  // Optional sign. Track separately so the integer fast path below can
+  // accumulate the digit value directly without a final parseFloat call.
+  let sign = 1;
+  const c0 = value.charCodeAt(i);
+  if (c0 === $.HYPHEN) {
+    sign = -1;
+    i++;
+  } else if (c0 === $.PLUS) {
+    i++;
+  }
 
-  // Integer part
+  // Integer part. We accumulate the value in-place so an integer like
+  // `8` in `padding: 8px` skips parseFloat entirely (parseFloat shows up
+  // hot in the native CPU profile because every numeric token allocates
+  // a substring then re-scans it). When a fraction or exponent appears
+  // we fall back to parseFloat for IEEE-754-correct rounding.
   const intStart = i;
-  while (i < len && isDigit(value.charCodeAt(i))) i++;
+  let intVal = 0;
+  while (i < len) {
+    const c = value.charCodeAt(i);
+    if (c < $.DIGIT_0 || c > $.DIGIT_9) break;
+    intVal = intVal * 10 + (c - $.DIGIT_0);
+    i++;
+  }
+  let isInt = true;
 
   // Fraction
   if (i < len && value.charCodeAt(i) === $.DOT && i + 1 < len && isDigit(value.charCodeAt(i + 1))) {
+    isInt = false;
     i++;
     while (i < len && isDigit(value.charCodeAt(i))) i++;
   }
@@ -338,6 +359,7 @@ function consumeNumber(value: string, start: number): NumberResult | null {
       i++;
       if (i < len && (value.charCodeAt(i) === $.PLUS || value.charCodeAt(i) === $.HYPHEN)) i++;
       if (i < len && isDigit(value.charCodeAt(i))) {
+        isInt = false;
         while (i < len && isDigit(value.charCodeAt(i))) i++;
       } else {
         i = save; // not a valid exponent, rewind
@@ -345,8 +367,7 @@ function consumeNumber(value: string, start: number): NumberResult | null {
     }
   }
 
-  const numericRaw = value.substring(start, i);
-  const numeric = parseFloat(numericRaw);
+  const numeric = isInt ? sign * intVal : parseFloat(value.substring(start, i));
 
   // Unit / percent
   if (i < len) {
@@ -358,13 +379,13 @@ function consumeNumber(value: string, start: number): NumberResult | null {
     if (isIdentStart(c)) {
       const unitStart = i;
       while (i < len && isIdentPart(value.charCodeAt(i))) i++;
-      const unit = value.substring(unitStart, i).toLowerCase();
+      const unit = toLowerIfMixed(value.substring(unitStart, i));
       const raw = value.substring(start, i);
       return { token: classifyUnit(raw, numeric, unit), end: i };
     }
   }
 
-  return { token: numberToken(numericRaw, numeric), end: i };
+  return { token: numberToken(value.substring(start, i), numeric), end: i };
 }
 
 function classifyUnit(raw: string, value: number, unit: string): Token {

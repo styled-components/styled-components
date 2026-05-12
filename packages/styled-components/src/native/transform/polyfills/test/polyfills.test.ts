@@ -6,6 +6,11 @@ import { staticColorFunctionToHex } from '../colorMath';
 import { parseLinearEasing } from '../linearEasing';
 import { resolveStaticMathFunction } from '../mathFns';
 import { buildResolver } from '../resolvers';
+import {
+  __resetGenericFamilyCacheForTest,
+  isGenericFamily,
+  resolveGenericFamily,
+} from '../genericFamily';
 
 describe('logical properties spec compliance (CSS Logical Properties Level 1 §4)', () => {
   // Spec source: https://drafts.csswg.org/css-logical-1/
@@ -3469,6 +3474,364 @@ describe('system color spec compliance (CSS Color Module Level 4 §6.2)', () => 
 
     it('passes deprecated keywords through unchanged (browser handles the alias)', () => {
       expect(transformDecl('color', 'WindowText')).toEqual({ color: 'WindowText' });
+    });
+  });
+});
+
+describe('logical border spec compliance (CSS Logical Properties Level 1 §4.5)', () => {
+  // Spec source: https://drafts.csswg.org/css-logical-1/#border-properties
+  // Polyfill scope on RN under horizontal-tb (Yoga's only writing mode):
+  //   inline-start → borderStart*, inline-end → borderEnd*
+  //   block-start  → borderTop*,   block-end  → borderBottom*
+  // RN 0.85 exposes no per-edge borderStyle, so per-edge style declarations
+  // drop on iOS / Android with a warnOnce. rn-web honors the per-edge form
+  // via the browser; the polyfill emits camelCase border*Style keys.
+
+  beforeEach(() => {
+    resetWarningsForTest();
+  });
+
+  describe('§4.5 single-edge color longhands', () => {
+    it('border-inline-start-color → borderStartColor', () => {
+      expect(transformDecl('border-inline-start-color', 'red')).toEqual({
+        borderStartColor: 'red',
+      });
+    });
+
+    it('border-inline-end-color → borderEndColor', () => {
+      expect(transformDecl('border-inline-end-color', '#abc')).toEqual({
+        borderEndColor: '#abc',
+      });
+    });
+
+    it('border-block-start-color → borderTopColor', () => {
+      expect(transformDecl('border-block-start-color', 'rgb(10, 20, 30)')).toEqual({
+        borderTopColor: 'rgb(10, 20, 30)',
+      });
+    });
+
+    it('border-block-end-color → borderBottomColor', () => {
+      expect(transformDecl('border-block-end-color', 'blue')).toEqual({
+        borderBottomColor: 'blue',
+      });
+    });
+
+    it('invalid color value drops the declaration', () => {
+      // No tokens that parse as a color.
+      expect(transformDecl('border-inline-start-color', '5px solid')).toEqual({});
+    });
+  });
+
+  describe('§4.5 single-edge width longhands', () => {
+    it('border-inline-start-width → borderStartWidth (numeric)', () => {
+      expect(transformDecl('border-inline-start-width', '2px')).toEqual({ borderStartWidth: 2 });
+    });
+
+    it('border-inline-end-width keeps unitless 0', () => {
+      expect(transformDecl('border-inline-end-width', '0')).toEqual({ borderEndWidth: 0 });
+    });
+
+    it('border-block-start-width → borderTopWidth', () => {
+      expect(transformDecl('border-block-start-width', '4px')).toEqual({ borderTopWidth: 4 });
+    });
+
+    it('border-block-end-width → borderBottomWidth', () => {
+      expect(transformDecl('border-block-end-width', '6px')).toEqual({ borderBottomWidth: 6 });
+    });
+  });
+
+  describe('§4.5 single-edge style longhands', () => {
+    it('accepts the four RN-renderable styles (solid / dotted / dashed / none)', () => {
+      // RN exposes no per-edge `borderStyle`; the polyfill drops on native.
+      // We assert the empty result; warnOnce content is covered separately.
+      expect(transformDecl('border-inline-start-style', 'solid')).toEqual({});
+      expect(transformDecl('border-inline-end-style', 'dotted')).toEqual({});
+      expect(transformDecl('border-block-start-style', 'dashed')).toEqual({});
+      expect(transformDecl('border-block-end-style', 'none')).toEqual({});
+    });
+
+    it('rejects unknown style keywords', () => {
+      expect(transformDecl('border-inline-start-style', 'wavy')).toEqual({});
+    });
+  });
+
+  describe('§4.5 axis color shorthand', () => {
+    it('single value applies to both edges of the axis', () => {
+      expect(transformDecl('border-inline-color', 'red')).toEqual({
+        borderStartColor: 'red',
+        borderEndColor: 'red',
+      });
+    });
+
+    it('two values: start then end', () => {
+      expect(transformDecl('border-inline-color', 'red blue')).toEqual({
+        borderStartColor: 'red',
+        borderEndColor: 'blue',
+      });
+    });
+
+    it('border-block-color two values map to top / bottom', () => {
+      expect(transformDecl('border-block-color', 'red blue')).toEqual({
+        borderTopColor: 'red',
+        borderBottomColor: 'blue',
+      });
+    });
+  });
+
+  describe('§4.5 axis width shorthand', () => {
+    it('single value applies to both axis edges', () => {
+      expect(transformDecl('border-inline-width', '3px')).toEqual({
+        borderStartWidth: 3,
+        borderEndWidth: 3,
+      });
+    });
+
+    it('two values: start then end', () => {
+      expect(transformDecl('border-inline-width', '2px 4px')).toEqual({
+        borderStartWidth: 2,
+        borderEndWidth: 4,
+      });
+    });
+
+    it('border-block-width: 2 values map to top / bottom', () => {
+      expect(transformDecl('border-block-width', '2px 4px')).toEqual({
+        borderTopWidth: 2,
+        borderBottomWidth: 4,
+      });
+    });
+  });
+
+  describe('§4.5 axis style shorthand', () => {
+    it('drops on native (no per-edge styles)', () => {
+      expect(transformDecl('border-inline-style', 'solid dashed')).toEqual({});
+      expect(transformDecl('border-block-style', 'solid')).toEqual({});
+    });
+
+    it('rejects mixed-validity styles', () => {
+      expect(transformDecl('border-inline-style', 'solid wavy')).toEqual({});
+    });
+  });
+
+  describe('§4.5 composite single-edge shorthand', () => {
+    it('parses width + style + color in any order', () => {
+      expect(transformDecl('border-inline-start', '2px solid red')).toEqual({
+        borderStartWidth: 2,
+        borderStartColor: 'red',
+      });
+      expect(transformDecl('border-inline-end', 'red 2px solid')).toEqual({
+        borderEndWidth: 2,
+        borderEndColor: 'red',
+      });
+    });
+
+    it('width-only shorthand', () => {
+      expect(transformDecl('border-block-start', '4px')).toEqual({ borderTopWidth: 4 });
+    });
+
+    it('color-only shorthand', () => {
+      expect(transformDecl('border-block-end', 'blue')).toEqual({ borderBottomColor: 'blue' });
+    });
+
+    it('empty declaration drops to null', () => {
+      expect(transformDecl('border-inline-start', '')).toEqual({});
+    });
+
+    it('duplicate styles bail', () => {
+      // Two style tokens: invalid per parsing.
+      expect(transformDecl('border-inline-start', 'solid dashed')).toEqual({});
+    });
+  });
+
+  describe('§4.5 mode-spanning axis shorthand', () => {
+    it('border-inline expands to start + end (width + color)', () => {
+      expect(transformDecl('border-inline', '2px solid red')).toEqual({
+        borderStartWidth: 2,
+        borderEndWidth: 2,
+        borderStartColor: 'red',
+        borderEndColor: 'red',
+      });
+    });
+
+    it('border-block expands to top + bottom', () => {
+      expect(transformDecl('border-block', '3px solid blue')).toEqual({
+        borderTopWidth: 3,
+        borderBottomWidth: 3,
+        borderTopColor: 'blue',
+        borderBottomColor: 'blue',
+      });
+    });
+
+    it('width-only mode-spanning', () => {
+      expect(transformDecl('border-inline', '2px')).toEqual({
+        borderStartWidth: 2,
+        borderEndWidth: 2,
+      });
+    });
+  });
+
+  // CSS UI 4 §3.3: `outline-style: hidden` is invalid per spec (the
+  // `hidden` keyword only applies to `border-style`, not outline). The
+  // polyfill drops + warns. Other web-only outline styles pass through
+  // with a warning so rn-web still gets the value.
+  describe('CSS UI 4 §3.3 outline-style', () => {
+    it('renderable styles pass through unchanged (solid / dotted / dashed)', () => {
+      expect(transformDecl('outline-style', 'solid')).toEqual({ outlineStyle: 'solid' });
+      expect(transformDecl('outline-style', 'dotted')).toEqual({ outlineStyle: 'dotted' });
+      expect(transformDecl('outline-style', 'dashed')).toEqual({ outlineStyle: 'dashed' });
+    });
+
+    it('hidden drops to {} (invalid for outline per CSS UI 4 §3.3)', () => {
+      expect(transformDecl('outline-style', 'hidden')).toEqual({});
+    });
+
+    it('web-only styles still emit so rn-web honors them', () => {
+      expect(transformDecl('outline-style', 'double')).toEqual({ outlineStyle: 'double' });
+      expect(transformDecl('outline-style', 'groove')).toEqual({ outlineStyle: 'groove' });
+      expect(transformDecl('outline-style', 'auto')).toEqual({ outlineStyle: 'auto' });
+    });
+
+    it('none maps to solid + zero width (renderable equivalent)', () => {
+      expect(transformDecl('outline-style', 'none')).toEqual({
+        outlineStyle: 'solid',
+        outlineWidth: 0,
+      });
+    });
+
+    it('unknown keyword bails', () => {
+      expect(transformDecl('outline-style', 'whatever')).toEqual({});
+    });
+  });
+
+  describe('on rn-web', () => {
+    const g = global as { __NATIVE_WEB__?: boolean };
+    const originalNativeWeb = g.__NATIVE_WEB__;
+    beforeAll(() => {
+      g.__NATIVE_WEB__ = true;
+    });
+    afterAll(() => {
+      g.__NATIVE_WEB__ = originalNativeWeb;
+    });
+
+    it('single-edge style emits border<Edge>Style for the browser', () => {
+      expect(transformDecl('border-inline-start-style', 'solid')).toEqual({
+        borderInlineStartStyle: 'solid',
+      });
+      expect(transformDecl('border-block-end-style', 'dashed')).toEqual({
+        borderBlockEndStyle: 'dashed',
+      });
+    });
+
+    it('axis style emits both edges', () => {
+      expect(transformDecl('border-inline-style', 'solid dashed')).toEqual({
+        borderInlineStartStyle: 'solid',
+        borderInlineEndStyle: 'dashed',
+      });
+    });
+
+    it('composite shorthand emits per-edge style', () => {
+      expect(transformDecl('border-inline-start', '2px solid red')).toEqual({
+        borderStartWidth: 2,
+        borderStartColor: 'red',
+        borderInlineStartStyle: 'solid',
+      });
+    });
+
+    it('mode-spanning shorthand emits per-edge style on both ends', () => {
+      expect(transformDecl('border-inline', '2px solid red')).toEqual({
+        borderStartWidth: 2,
+        borderEndWidth: 2,
+        borderStartColor: 'red',
+        borderEndColor: 'red',
+        borderInlineStartStyle: 'solid',
+        borderInlineEndStyle: 'solid',
+      });
+    });
+  });
+});
+
+describe('generic font-family resolution (CSS Fonts 4 §3.1.1)', () => {
+  // Spec source: https://drafts.csswg.org/css-fonts-4/#generic-family-name-syntax
+  // Polyfill scope: detect CSS generic family keywords and route each to
+  // a concrete platform face. Detection is ASCII-case-insensitive.
+  beforeEach(() => {
+    __resetGenericFamilyCacheForTest();
+  });
+
+  describe('isGenericFamily', () => {
+    it('recognizes all 13 CSS generic family keywords', () => {
+      // CSS Fonts 4 §3.1.1: the spec-defined generic family identifiers.
+      const keywords = [
+        'system-ui',
+        'ui-sans-serif',
+        'ui-serif',
+        'ui-monospace',
+        'ui-rounded',
+        'sans-serif',
+        'serif',
+        'monospace',
+        'cursive',
+        'fantasy',
+        'emoji',
+        'math',
+        'fangsong',
+      ];
+      for (const kw of keywords) {
+        expect(isGenericFamily(kw)).toBe(true);
+      }
+    });
+
+    it('matches case-insensitively (CSS Fonts 4 §3.1.1)', () => {
+      expect(isGenericFamily('System-UI')).toBe(true);
+      expect(isGenericFamily('SERIF')).toBe(true);
+      expect(isGenericFamily('Sans-Serif')).toBe(true);
+    });
+
+    it('rejects concrete face names and unknown keywords', () => {
+      expect(isGenericFamily('Helvetica')).toBe(false);
+      expect(isGenericFamily('Arial')).toBe(false);
+      expect(isGenericFamily('')).toBe(false);
+      expect(isGenericFamily('inherit')).toBe(false);
+    });
+  });
+
+  describe('resolveGenericFamily under jest (Platform.OS = ios)', () => {
+    // jest.config.native.js uses the react-native preset which sets Platform.OS
+    // to 'ios' by default. Verify the iOS table maps correctly.
+    it('system-ui / ui-sans-serif / sans-serif map to System', () => {
+      expect(resolveGenericFamily('system-ui')).toBe('System');
+      expect(resolveGenericFamily('ui-sans-serif')).toBe('System');
+      expect(resolveGenericFamily('sans-serif')).toBe('System');
+    });
+
+    it('serif / ui-serif map to Times New Roman', () => {
+      expect(resolveGenericFamily('serif')).toBe('Times New Roman');
+      expect(resolveGenericFamily('ui-serif')).toBe('Times New Roman');
+    });
+
+    it('monospace / ui-monospace map to Menlo', () => {
+      expect(resolveGenericFamily('monospace')).toBe('Menlo');
+      expect(resolveGenericFamily('ui-monospace')).toBe('Menlo');
+    });
+
+    it('ui-rounded maps to SF Pro Rounded', () => {
+      expect(resolveGenericFamily('ui-rounded')).toBe('SF Pro Rounded');
+    });
+
+    it('cursive / fantasy / emoji / math / fangsong have iOS-specific picks', () => {
+      expect(resolveGenericFamily('cursive')).toBe('Snell Roundhand');
+      expect(resolveGenericFamily('fantasy')).toBe('Papyrus');
+      expect(resolveGenericFamily('emoji')).toBe('Apple Color Emoji');
+      expect(resolveGenericFamily('math')).toBe('System');
+      expect(resolveGenericFamily('fangsong')).toBe('PingFang SC');
+    });
+
+    it('lowercases the input before lookup (matches isGenericFamily)', () => {
+      expect(resolveGenericFamily('System-UI')).toBe('System');
+      expect(resolveGenericFamily('SERIF')).toBe('Times New Roman');
+    });
+
+    it('returns the input unchanged for unknown keywords (defensive)', () => {
+      expect(resolveGenericFamily('Helvetica')).toBe('Helvetica');
     });
   });
 });

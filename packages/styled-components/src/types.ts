@@ -370,6 +370,8 @@ interface CompileOutput {
     combinator?: 'descendant' | 'child' | 'adjacent-sibling' | 'general-sibling';
     styles: object;
   }>;
+  /** `true` when any conditional bucket carries a pseudo-state gate. */
+  hasPseudo: boolean;
   keyframes: Array<{
     name: string;
     frames: Array<{ stops: string[]; decls: Dict<any>; resolvers?: Array<[string, Resolver]> }>;
