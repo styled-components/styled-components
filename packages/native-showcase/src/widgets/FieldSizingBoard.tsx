@@ -4,14 +4,13 @@ import { theme as t } from '@/theme/tokens';
 import { InlineMarkdown } from '../components/Markdown';
 
 /**
- * CSS Form Control Styling 1 §7.1 — `field-sizing: content`.
+ * CSS Form Control Styling 1 §7.1: `field-sizing: content`.
  *
  * The autosizing TextInput grows in height as the user types; the
- * fixed reference holds its declared height. The polyfill lifts
- * `multiline: true` automatically and wires up `onContentSizeChange`
- * via a state-backed render hook. The same declaration on rn-web is
- * handed to the browser's native `field-sizing` implementation
- * (Chrome 123+).
+ * fixed reference holds its declared height. The polyfill opts the
+ * component into multiline mode so React Native's own measure
+ * callback takes over. The same declaration on rn-web is handed to
+ * the browser's native `field-sizing` implementation (Chrome 123+).
  */
 
 const Stack = styled.View`
