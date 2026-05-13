@@ -114,6 +114,15 @@ export interface ConditionalStyle {
   resolvers?: Array<[string, Resolver]>;
 }
 
+/** Partition slice for {@link NativeStyles.nonPseudoEntries}: never `type: 'pseudo'`. */
+export type NonPseudoConditionalStyle = Omit<ConditionalStyle, 'type'> & {
+  type: Exclude<ConditionType, 'pseudo'>;
+};
+
+function isNonPseudoConditionalStyle(entry: ConditionalStyle): entry is NonPseudoConditionalStyle {
+  return entry.type !== 'pseudo' && !entry.pseudo;
+}
+
 export interface CompiledKeyframes {
   name: string;
   frames: Array<{
@@ -143,7 +152,7 @@ export interface NativeStyles {
    * gate. Precomputed at compile time so the render path doesn't
    * re-skip pseudo entries on every render.
    */
-  nonPseudoEntries: ConditionalStyle[];
+  nonPseudoEntries: NonPseudoConditionalStyle[];
   /**
    * Subset of `conditional` containing only pseudo-bearing buckets
    * (`:hover` / `:focus` / `:pressed` / `:disabled`, including compound
@@ -467,11 +476,11 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   // it's all-one-kind to avoid empty-vs-clone allocations for the
   // overwhelmingly common shapes (all media / all pseudo).
   const pseudoEntries: ConditionalStyle[] = [];
-  const nonPseudoEntries: ConditionalStyle[] = [];
+  const nonPseudoEntries: NonPseudoConditionalStyle[] = [];
   for (let i = 0; i < conditional.length; i++) {
     const e = conditional[i];
-    if (e.type === 'pseudo' || e.pseudo) pseudoEntries.push(e);
-    else nonPseudoEntries.push(e);
+    if (isNonPseudoConditionalStyle(e)) nonPseudoEntries.push(e);
+    else pseudoEntries.push(e);
   }
   const hasPseudo = pseudoEntries.length > 0;
   const out: NativeStyles = {
