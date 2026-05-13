@@ -2,7 +2,6 @@ import { SPLITTER } from '../constants';
 import styledError from '../utils/error';
 import { GroupedTag, Tag } from './types';
 
-/** Create a GroupedTag with an underlying Tag implementation */
 export const makeGroupedTag = (tag: Tag) => {
   return new DefaultGroupedTag(tag);
 };
@@ -14,9 +13,7 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
   length: number;
   tag: Tag;
 
-  // Cached position for O(1) sequential indexOfGroup lookups.
-  // Avoids the O(n) linear scan on every call by remembering the last
-  // computed (group → absoluteIndex) pair and scanning incrementally.
+  // Sequential lookup cache: [group, absoluteIndex].
   _cGroup: number;
   _cIndex: number;
 
@@ -76,7 +73,6 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
       }
     }
 
-    // Keep cache consistent: groups after the insertion point shift forward
     if (insertedCount > 0 && this._cGroup > group) {
       this._cIndex += insertedCount;
     }
@@ -94,7 +90,6 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
         this.tag.deleteRule(startIndex);
       }
 
-      // Keep cache consistent: groups after the cleared group shift backward
       if (length > 0 && this._cGroup > group) {
         this._cIndex -= length;
       }

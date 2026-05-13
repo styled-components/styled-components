@@ -35,4 +35,4 @@ Supported selector forms include:
 - `:nth-last-child(...)` (same syntax as `:nth-child`, counting from the end).
 - `:first-of-type`, `:last-of-type`, `:only-of-type`, `:nth-of-type(...)`, and `:nth-last-of-type(...)`, which count siblings of the same element type.
 
-These selectors use the component's JSX position among its parent's children. Plain React Native wrappers such as `View` and `Text` do not block matching.
+These selectors follow the component's JSX position among its siblings. Regular React Native components can sit between styled components without breaking selector matching.

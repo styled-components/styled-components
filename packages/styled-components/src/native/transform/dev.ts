@@ -13,7 +13,7 @@ import { hasWarned, resetWarnOnce, warnOnce as baseWarnOnce, warnKey } from '../
  * them and let `null` fall through. The dev tools' LogBox surfaces a
  * symbolicated trace separately when the user opens the warning.
  *
- * `stack` is exposed for tests so they can pin the input;Hermes, V8,
+ * `stack` is exposed for tests so they can pin the input; Hermes, V8,
  * and JavaScriptCore order frames slightly differently in real runs.
  */
 const SC_FRAME = /styled-components[\\/](?:src|dist|native)[\\/]/;
@@ -48,7 +48,7 @@ export function getUserCallSite(stack?: string | null): string | null {
  * suffix pointing at the first user-code stack frame so the developer can
  * jump straight to the offending styled-component declaration. The shared
  * utility owns the dedupe Set and the `[sc]` prefix. The `code` is the
- * internal dedupe key only;it does NOT appear in the printed message.
+ * internal dedupe key only; it does NOT appear in the printed message.
  */
 export function warnOnce(code: string, message: string, dedupeSuffix?: string): void {
   if (!__DEV__) return;
@@ -76,7 +76,7 @@ export function resetWarningsForTest(): void {
  *
  * A "leak" is a sentinel whose `\0` start is glued to a preceding
  * non-boundary character, indicating the sentinel was concatenated with
- * something else in JS land;typically `${p => 47 + t.space.xl}` style
+ * something else in JS land; typically `${p => 47 + t.space.xl}` style
  * arithmetic that coerced the sentinel to a string before the runtime
  * resolver could see it. Boundary characters (whitespace, comma, paren,
  * slash) are normal sentinel separators in multi-value contexts (e.g.
@@ -127,7 +127,7 @@ export function getReactNativePlatformOS(): string | undefined {
  * Warn once if a `transform` value uses `skewX` / `skewY` on Android.
  * RN Android's `BaseViewManager` decomposes the transform matrix but
  * applies only translation, rotation, and scale to the underlying
- * `View`;Android `View` has no `setSkewX` / `setSkewY` API, and the
+ * `View`; Android `View` has no `setSkewX` / `setSkewY` API, and the
  * skew components of the decomposition are silently discarded. The
  * declaration looks like it works at the styled-components layer; the
  * pixels just never move. Tracked at facebook/react-native#27649.

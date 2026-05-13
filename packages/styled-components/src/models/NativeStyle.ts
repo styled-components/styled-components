@@ -38,15 +38,10 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
     private staticCSS: string | null;
     private cachedCompiled: NativeStyles | null = null;
     private cachedCSS: string | null = null;
-    /** Interp-tuple → compiled cache. Hit skips `buildHashCSS` + `toNativeStyles`. */
     private interpKeyCache: Map<string, NativeStyles> | undefined;
-    /** Lazy `getSource(rules)` cache. */
     private resolvedSource: Source | null | undefined = undefined;
-    /** Reused scratch buffer for `evaluateForFastPath`. */
     private filledBuffer: string[] | undefined;
-    /** Parallel fragment buffer; lazily allocated. */
     private fragmentsBuffer: (FastPathFragment | null)[] | undefined;
-    /** Set at construction; true when the CSS can render via the zero-hook static impl. */
     staticEligible = false;
     staticCompiled: NativeStyles | null = null;
 
@@ -57,13 +52,8 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
       if (this.staticCSS !== null) {
         const compiled = toNativeStyles(this.staticCSS, styleSheet);
         this.staticCompiled = compiled;
-        // Static-impl eligibility: the static path doesn't publish a fresh
-        // NativeStyleContext (no useState / no Provider for cascade), so any
-        // declaration that descendants need to see during their own resolve
-        // (font-size / line-height / direction) must route through the
-        // dynamic impl. Otherwise a child `1em` resolves against the
-        // inherited base rather than this component's override. Same
-        // rationale for responsive / animated outputs.
+        // Static rendering is hookless, so cascade publishers and live outputs
+        // must stay on the dynamic path.
         this.staticEligible =
           !hasResponsiveOutput(compiled) &&
           compiled.startingStyle === undefined &&
@@ -78,7 +68,6 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
         return this.staticCompiled;
       }
 
-      // Fast path: try the interp-tuple cache before any CSS or AST work.
       if (this.resolvedSource === undefined) {
         this.resolvedSource = getSource(this.rules) ?? null;
       }
@@ -127,8 +116,6 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
         }
       }
 
-      // AST-direct: walk the construction-time AST without round-tripping
-      // through string parse.
       if (source !== null && filled !== null) {
         const filledAst = fillAst(source.ast, filled, fragments);
         if (filledAst !== null) {
@@ -140,7 +127,6 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
         }
       }
 
-      // Fallback: rebuild the joined CSS and route through `toNativeStyles`.
       const css =
         filled !== null && source !== null ? buildHashCSS(source.strings, filled, fragments) : '';
       if (css === this.cachedCSS && this.cachedCompiled !== null) {

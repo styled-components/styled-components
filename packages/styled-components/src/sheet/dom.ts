@@ -3,13 +3,11 @@ import { InsertionTarget } from '../types';
 import styledError from '../utils/error';
 import getNonce from '../utils/nonce';
 
-/** Find last style element if any inside target */
 const findLastStyleTag = (target: InsertionTarget): void | HTMLStyleElement => {
   const list = target.querySelectorAll<HTMLStyleElement>(`style[${SC_ATTR}]`);
   return list[list.length - 1];
 };
 
-/** Create a style element inside `target` or <head> after the last */
 export const makeStyleTag = (
   target?: InsertionTarget | undefined,
   nonce?: string | undefined
@@ -32,7 +30,6 @@ export const makeStyleTag = (
   return style;
 };
 
-/** Get the CSSStyleSheet instance for a given style element */
 export const getSheet = (tag: HTMLStyleElement): CSSStyleSheet => {
   if (tag.sheet) {
     return tag.sheet;

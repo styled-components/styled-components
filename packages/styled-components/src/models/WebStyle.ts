@@ -94,8 +94,6 @@ export default class WebStyle {
       ? this.baseStyle.generate(executionContext, styleSheet, compiler)
       : null;
 
-    // Fast path: try the interp-tuple cache before any string work; fall
-    // through to `buildHashCSS` + `generateName` on miss.
     if (this.resolvedSource === undefined) {
       let source = getSource(this.rules);
       if (source === undefined) {
