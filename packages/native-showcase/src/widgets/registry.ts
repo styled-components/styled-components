@@ -81,7 +81,7 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     slug: 'system-colors-board',
     title: 'CSS system colors',
     summary:
-      'UA / platform keywords (`Canvas`, `CanvasText`, `Field`, `Highlight`, `LinkText`, …) fold to a `light-dark()` expansion so the same declaration paints correctly under both light and dark schemes on every platform.',
+      'UA / platform keywords (`Canvas`, `CanvasText`, `Field`, `Highlight`, `LinkText`, …) resolve through native platform colors on iOS / Android, while rn-web lets the browser handle them directly.',
     feature: 'CSS Color 4 §6.2',
     category: 'Color',
     Widget: SystemColorsBoard,

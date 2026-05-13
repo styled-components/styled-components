@@ -3320,10 +3320,9 @@ describe('relative-color spec compliance (CSS Color Module Level 5 §4)', () => 
 // https://drafts.csswg.org/css-color-4/#css-system-colors
 describe('system color spec compliance (CSS Color Module Level 4 §6.2)', () => {
   // "Each system color value resolves to a UA / platform-defined
-  // color appropriate to the platform." v7 folds the keyword to a
-  // `light-dark()` expression carrying sensible per-mode defaults;
-  // the existing light-dark polyfill resolves the active scheme on
-  // iOS / Android and passes the function through on rn-web.
+  // color appropriate to the platform." v7 folds the keyword to an
+  // opaque React Native PlatformColor object on iOS / Android and
+  // passes the keyword through on rn-web.
 
   describe('§6.2 keyword set', () => {
     // "User agents must support the following keywords": Canvas,
@@ -3353,40 +3352,52 @@ describe('system color spec compliance (CSS Color Module Level 4 §6.2)', () => 
       'AccentColorText',
     ];
 
-    it.each(KEYWORDS)('%s folds to a `light-dark()` expression', keyword => {
+    it.each(KEYWORDS)('%s folds to a native color value', keyword => {
       const out = transformDecl('color', keyword);
-      // Native (jest default): light-dark resolves at runtime via the
-      // existing polyfill chain. The compile-time output retains the
-      // function form so the runtime resolver sees the same shape it
-      // already handles for authored `light-dark()` values.
-      expect(typeof out.color).toBe('string');
-      expect(out.color as string).toMatch(/^light-dark\(/);
+      // Native (jest default): PlatformColor resolves through the iOS
+      // semantic-color object shape. Selection foregrounds stay
+      // color-mode aware because native highlight / selection colors
+      // are not guaranteed to be a solid accent color.
+      if (keyword === 'HighlightText') {
+        expect(out.color).toBe('light-dark(#000000, #ffffff)');
+      } else if (keyword === 'SelectedItemText' || keyword === 'AccentColorText') {
+        expect(out.color).toBe('#ffffff');
+      } else if (keyword === 'MarkText') {
+        expect(out.color).toBe('#000000');
+      } else {
+        expect(out.color).toEqual({
+          semantic: expect.any(Array),
+        });
+      }
     });
 
     it('matches case-insensitively per CSS syntax §3.4', () => {
       const lower = transformDecl('color', 'canvas');
       const mixed = transformDecl('color', 'Canvas');
       const upper = transformDecl('color', 'CANVAS');
-      expect(lower.color).toBe(mixed.color);
-      expect(mixed.color).toBe(upper.color);
+      expect(lower.color).toEqual(mixed.color);
+      expect(mixed.color).toEqual(upper.color);
     });
 
-    it('ButtonFace folds with light + dark literals', () => {
+    it('ButtonFace folds to native button-surface colors', () => {
       const out = transformDecl('color', 'ButtonFace');
-      expect(out.color as string).toContain('#efefef');
-      expect(out.color as string).toContain('#5f5f5f');
+      expect(out.color).toEqual({
+        semantic: expect.arrayContaining(['systemFill', '?attr/colorButtonNormal']),
+      });
     });
 
-    it('AccentColor folds with light + dark literals', () => {
+    it('AccentColor folds to native accent colors', () => {
       const out = transformDecl('color', 'AccentColor');
-      expect(out.color as string).toContain('#0078d4');
-      expect(out.color as string).toContain('#3b82f6');
+      expect(out.color).toEqual({
+        semantic: expect.arrayContaining(['systemBlue', '?attr/colorAccent']),
+      });
     });
 
-    it('Mark folds with light + dark literals', () => {
+    it('Mark folds to native highlight colors', () => {
       const out = transformDecl('color', 'Mark');
-      expect(out.color as string).toContain('#fcf4a3');
-      expect(out.color as string).toContain('#9c8d2a');
+      expect(out.color).toEqual({
+        semantic: expect.arrayContaining(['systemYellow', '@android:color/holo_orange_light']),
+      });
     });
 
     it('ButtonFace mixed-case input (buttonface / BUTTONFACE / ButtonFace) all match', () => {
@@ -3394,8 +3405,8 @@ describe('system color spec compliance (CSS Color Module Level 4 §6.2)', () => 
       const lower = transformDecl('color', 'buttonface');
       const upper = transformDecl('color', 'BUTTONFACE');
       const mixed = transformDecl('color', 'ButtonFace');
-      expect(lower.color).toBe(mixed.color);
-      expect(mixed.color).toBe(upper.color);
+      expect(lower.color).toEqual(mixed.color);
+      expect(mixed.color).toEqual(upper.color);
     });
   });
 
@@ -3431,15 +3442,15 @@ describe('system color spec compliance (CSS Color Module Level 4 §6.2)', () => 
     ])('%s resolves to %s', (deprecated, replacement) => {
       const dep = transformDecl('color', deprecated);
       const repl = transformDecl('color', replacement);
-      expect(dep.color).toBe(repl.color);
+      expect(dep.color).toEqual(repl.color);
     });
 
     it('deprecated alias matches case-insensitively', () => {
       const lower = transformDecl('color', 'activeborder');
       const upper = transformDecl('color', 'ACTIVEBORDER');
       const mixed = transformDecl('color', 'ActiveBorder');
-      expect(lower.color).toBe(mixed.color);
-      expect(mixed.color).toBe(upper.color);
+      expect(lower.color).toEqual(mixed.color);
+      expect(mixed.color).toEqual(upper.color);
     });
   });
 
@@ -3458,42 +3469,92 @@ describe('system color spec compliance (CSS Color Module Level 4 §6.2)', () => 
     // System colors apply on any color-accepting property.
     it('background-color: Canvas folds', () => {
       const out = transformDecl('background-color', 'Canvas');
-      expect(out.backgroundColor as string).toMatch(/^light-dark\(/);
+      expect(out.backgroundColor).toEqual({
+        semantic: expect.arrayContaining(['systemBackground']),
+      });
     });
 
     it('border-color: GrayText folds', () => {
       const out = transformDecl('border-color', 'GrayText');
-      expect(out.borderColor as string).toMatch(/^light-dark\(/);
+      expect(out.borderColor).toEqual({
+        semantic: expect.arrayContaining(['secondaryLabel']),
+      });
     });
 
     it('caret-color: Highlight folds', () => {
       const out = transformDecl('caret-color', 'Highlight');
-      expect(out.caretColor as string).toMatch(/^light-dark\(/);
+      expect(out.caretColor).toEqual({
+        semantic: expect.arrayContaining(['quaternarySystemFill', '?attr/colorControlHighlight']),
+      });
     });
   });
 
-  describe('§6.2 color-scheme reactivity', () => {
-    // System colors respond to the user agent's color scheme. The
-    // light-dark polyfill drives the per-mode switch; the keyword
-    // simply selects which two literals to interpolate between.
-    it('Canvas → white in light, near-black in dark', () => {
+  describe('§6.2 platform-color reactivity', () => {
+    // System colors respond to the platform's active appearance and
+    // accessibility settings through RN's native PlatformColor surface.
+    it('Canvas uses the native background semantic color', () => {
       const out = transformDecl('color', 'Canvas');
-      // `light-dark(<light>, <dark>)`: the structure is preserved
-      // so the runtime resolver can pick the right arm.
-      expect(out.color as string).toContain('#ffffff');
-      expect(out.color as string).toContain('#1c1c1e');
+      expect(out.color).toEqual({
+        semantic: expect.arrayContaining(['systemBackground']),
+      });
     });
 
-    it('CanvasText → black in light, white in dark', () => {
+    it('CanvasText uses the native foreground semantic color', () => {
       const out = transformDecl('color', 'CanvasText');
-      expect(out.color as string).toContain('#000000');
-      expect(out.color as string).toContain('#ffffff');
+      expect(out.color).toEqual({
+        semantic: expect.arrayContaining(['label']),
+      });
     });
 
-    it('LinkText → blue in light, lighter blue in dark', () => {
+    it('LinkText uses the native link semantic color', () => {
       const out = transformDecl('color', 'LinkText');
-      expect(out.color as string).toContain('#0066cc');
-      expect(out.color as string).toContain('#4099ff');
+      expect(out.color).toEqual({
+        semantic: expect.arrayContaining(['link']),
+      });
+    });
+
+    it('HighlightText remains color-mode aware over the native highlight color', () => {
+      const out = transformDecl('color', 'HighlightText');
+      expect(out.color).toBe('light-dark(#000000, #ffffff)');
+    });
+
+    it('SelectedItem prefers an iOS AccentColor asset before system fallback colors', () => {
+      const out = transformDecl('color', 'SelectedItem');
+      expect(out.color).toEqual({
+        semantic: expect.arrayContaining([
+          'AccentColor',
+          'systemBlue',
+          '?attr/colorActivatedHighlight',
+        ]),
+      });
+    });
+
+    it('SelectedItemText and MarkText use fixed foregrounds for their paired surfaces', () => {
+      expect(transformDecl('color', 'SelectedItemText').color).toBe('#ffffff');
+      expect(transformDecl('color', 'MarkText').color).toBe('#000000');
+    });
+
+    describe('on Android', () => {
+      const realOS = Platform.OS;
+      beforeAll(() => {
+        Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+      });
+      afterAll(() => {
+        Object.defineProperty(Platform, 'OS', { configurable: true, value: realOS });
+      });
+
+      it('uses the Android-only GrayText light-dark fallback', () => {
+        expect(transformDecl('color', 'GrayText').color).toBe('light-dark(#6e6e6e, #8e8e93)');
+      });
+
+      it('uses Android platform foreground resources for selected and marked text', () => {
+        expect(transformDecl('color', 'SelectedItemText').color).toEqual({
+          semantic: expect.arrayContaining(['?attr/colorForeground', '@android:color/black']),
+        });
+        expect(transformDecl('color', 'MarkText').color).toEqual({
+          semantic: expect.arrayContaining(['@android:color/black']),
+        });
+      });
     });
   });
 
@@ -3503,9 +3564,7 @@ describe('system color spec compliance (CSS Color Module Level 4 §6.2)', () => 
     it('bare `auto` is not rewritten', () => {
       // `auto` was previously the unit fallback in coerceRawValue;
       // the system-color check must not steal it.
-      expect(transformDecl('aspect-ratio', 'auto')).not.toEqual({
-        aspectRatio: expect.stringMatching(/^light-dark/),
-      });
+      expect(transformDecl('aspect-ratio', 'auto')).toEqual({ aspectRatio: 'auto' });
     });
 
     it('named CSS colors (`red`) pass through to the color parser', () => {
@@ -3518,8 +3577,7 @@ describe('system color spec compliance (CSS Color Module Level 4 §6.2)', () => 
 
   // Modern browsers track the user's actual system theme, forced-colors
   // mode, and high-contrast settings when resolving CSS Color 4 system
-  // keywords (CSS Color 4 §6.2). Our compile-time `light-dark()` pair is
-  // a coarse approximation. On rn-web we skip the expansion so the
+  // keywords (CSS Color 4 §6.2). On rn-web we skip the expansion so the
   // browser does the right thing end-to-end.
   describe('on rn-web', () => {
     const g = global as { __NATIVE_WEB__?: boolean };

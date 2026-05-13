@@ -11,7 +11,7 @@ import {
 } from './passthrough';
 import { staticColorFunctionToHex } from './polyfills/colorMath';
 import { numericResultToRn, resolveStaticMathFunction } from './polyfills/mathFns';
-import { getSystemColorLightDark } from './polyfills/systemColors';
+import { getSystemColorPlatformColor } from './polyfills/systemColors';
 import { getShorthand } from './shorthands';
 import { tokenize } from './tokenize';
 import { Token, TokenKind } from './tokens';
@@ -93,24 +93,23 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
   const camel = camelize(prop);
 
   // CSS Color 4 §6.2 system colors: a bare keyword (no whitespace, no
-  // parens, no comma) becomes a `light-dark()` expression so the
-  // existing light-dark polyfill resolves the active scheme on iOS /
-  // Android. rn-web skips the expansion so the browser handles the
-  // system keyword natively (it tracks the user's actual system theme,
-  // forced-colors mode, and high-contrast settings that our static
-  // light-dark approximation can't represent).
+  // parens, no comma) becomes an RN PlatformColor so iOS / Android
+  // resolve through native semantic colors. rn-web skips the expansion
+  // so the browser handles the system keyword natively (including
+  // forced-colors mode and high-contrast settings).
   // Composite uses (`border: 1px solid Canvas`) aren't covered yet —
   // they need parser-level token rewriting.
   if (
     !__NATIVE_WEB__ &&
+    (camel === 'color' || camel.endsWith('Color')) &&
     rawValue.length > 0 &&
     rawValue.indexOf(' ') === -1 &&
     rawValue.indexOf('(') === -1 &&
     rawValue.indexOf(',') === -1 &&
     rawValue.charCodeAt(0) !== $.HASH
   ) {
-    const ld = getSystemColorLightDark(rawValue);
-    if (ld !== null) rawValue = ld;
+    const platformColor = getSystemColorPlatformColor(rawValue);
+    if (platformColor !== null) return { [camel]: platformColor };
   }
 
   const passthroughKeys = getPassthroughKeys(camel);

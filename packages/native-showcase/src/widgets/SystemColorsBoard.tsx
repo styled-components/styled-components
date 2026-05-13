@@ -4,9 +4,8 @@ import { theme as t } from '@/theme/tokens';
 
 /**
  * CSS Color 4 §6.2 — UA / platform system colors. Each keyword folds
- * to a `light-dark()` expression carrying sensible per-mode literals;
- * the polyfill flips light↔dark with the device scheme on iOS /
- * Android, and rn-web hands the function to the browser directly.
+ * to the native platform color surface on iOS / Android, and rn-web
+ * hands the keyword to the browser directly.
  */
 
 const Stack = styled.View`
@@ -68,6 +67,35 @@ const HighlightTextLabel = styled(TileLabel)`
   color: HighlightText;
 `;
 
+const AccentTile = styled(Tile)`
+  background-color: AccentColor;
+`;
+const AccentColorTextLabel = styled(TileLabel)`
+  color: AccentColorText;
+`;
+
+const SelectedItemTile = styled(Tile)`
+  background-color: SelectedItem;
+`;
+const SelectedItemTextLabel = styled(TileLabel)`
+  color: SelectedItemText;
+`;
+
+const ButtonTile = styled(Tile)`
+  background-color: ButtonFace;
+  border: 4px solid ButtonBorder;
+`;
+const ButtonTextLabel = styled(TileLabel)`
+  color: ButtonText;
+`;
+
+const MarkTile = styled(Tile)`
+  background-color: Mark;
+`;
+const MarkTextLabel = styled(TileLabel)`
+  color: MarkText;
+`;
+
 // Text-only tiles (use a neutral background to read the foreground keyword).
 const NeutralTile = styled(Tile)`
   background-color: Canvas;
@@ -100,6 +128,23 @@ export function SystemColorsBoard() {
           <HighlightTile>
             <HighlightTextLabel>Highlight</HighlightTextLabel>
           </HighlightTile>
+          <AccentTile>
+            <AccentColorTextLabel>Accent</AccentColorTextLabel>
+          </AccentTile>
+        </Row>
+      </Section>
+      <Section>
+        <SectionTitle>state surfaces · selected / button / mark</SectionTitle>
+        <Row>
+          <SelectedItemTile>
+            <SelectedItemTextLabel>SelectedItem</SelectedItemTextLabel>
+          </SelectedItemTile>
+          <ButtonTile>
+            <ButtonTextLabel>ButtonFace</ButtonTextLabel>
+          </ButtonTile>
+          <MarkTile>
+            <MarkTextLabel>Mark</MarkTextLabel>
+          </MarkTile>
         </Row>
       </Section>
       <Section>

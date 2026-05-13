@@ -1,47 +1,94 @@
-// CSS Color 4 §6.2 system colors, mapped through `light-dark()` so
-// iOS/Android resolve at render time while rn-web keeps the native CSS form.
-// Literals are cross-platform approximations; exact native `PlatformColor`
-// values stay opaque and should come from runtime user code.
+// CSS Color 4 §6.2 system colors, mapped to React Native's platform
+// color surface where a useful native semantic exists. rn-web keeps
+// the native CSS keyword form.
 
-const SYSTEM_COLOR_LD: Record<string, string> = {
-  // Page background.
-  canvas: 'light-dark(#ffffff, #1c1c1e)',
-  // Default foreground text on the page background.
-  canvastext: 'light-dark(#000000, #ffffff)',
-  // Form field background.
-  field: 'light-dark(#ffffff, #2c2c2e)',
-  // Form field foreground.
-  fieldtext: 'light-dark(#000000, #ffffff)',
-  // Disabled / unfocused text.
+type PlatformColorFn = (...names: string[]) => unknown;
+type PlatformOS = 'ios' | 'android' | 'unknown';
+
+let platformColor: PlatformColorFn | null | undefined;
+
+function getPlatformColor(): PlatformColorFn | null {
+  if (platformColor !== undefined) return platformColor;
+  try {
+    const rn = require('react-native') as { PlatformColor?: PlatformColorFn };
+    platformColor = typeof rn.PlatformColor === 'function' ? rn.PlatformColor : null;
+  } catch {
+    platformColor = null;
+  }
+  return platformColor;
+}
+
+function getPlatformOS(): PlatformOS {
+  try {
+    const rn = require('react-native') as { Platform?: { OS?: string } };
+    const os = rn.Platform?.OS;
+    if (os === 'ios' || os === 'android') return os;
+  } catch {
+    // Non-RN test environments fall back to the cross-platform table.
+  }
+  return 'unknown';
+}
+
+const SYSTEM_COLOR_LITERAL: Record<string, string> = {
+  highlighttext: 'light-dark(#000000, #ffffff)',
+  accentcolortext: '#ffffff',
+};
+
+const IOS_SYSTEM_COLOR_LITERAL: Record<string, string> = {
+  selecteditemtext: '#ffffff',
+  marktext: '#000000',
+};
+
+const ANDROID_SYSTEM_COLOR_LITERAL: Record<string, string> = {
   graytext: 'light-dark(#6e6e6e, #8e8e93)',
-  // Selection background.
-  highlight: 'light-dark(#0066cc, #007aff)',
-  // Selection foreground.
-  highlighttext: 'light-dark(#ffffff, #ffffff)',
+};
+
+const SYSTEM_COLOR_PLATFORM: Record<string, readonly string[]> = {
+  // Page background.
+  canvas: ['systemBackground', '?attr/colorBackground'],
+  // Default foreground text on the page background.
+  canvastext: ['label', '?attr/colorForeground'],
+  // Form field background.
+  field: ['secondarySystemBackground', '?attr/colorBackgroundFloating', '?attr/colorBackground'],
+  // Form field foreground.
+  fieldtext: ['label', '?attr/colorForeground'],
+  // Disabled / unfocused text.
+  graytext: ['secondaryLabel', '?attr/textColorSecondary', '?attr/colorForeground'],
+  // Transient highlight / hover fill (menus, table rows, etc.).
+  highlight: ['quaternarySystemFill', '?attr/colorControlHighlight'],
   // Unvisited hyperlink foreground.
-  linktext: 'light-dark(#0066cc, #4099ff)',
+  linktext: ['link', '?attr/textColorLink'],
   // Visited hyperlink foreground.
-  visitedtext: 'light-dark(#551a8b, #b388ff)',
+  visitedtext: ['systemPurple', '@android:color/holo_purple'],
   // Active (currently being clicked) link foreground.
-  activetext: 'light-dark(#ff0000, #ff453a)',
+  activetext: ['systemRed', '?attr/colorAccent', '@android:color/holo_red_dark'],
   // Default button background surface.
-  buttonface: 'light-dark(#efefef, #5f5f5f)',
+  buttonface: ['systemFill', '?attr/colorButtonNormal'],
   // Default button label foreground.
-  buttontext: 'light-dark(#000000, #ffffff)',
+  buttontext: ['label', '?attr/colorForeground'],
   // Button border.
-  buttonborder: 'light-dark(#767676, #9b9b9b)',
+  buttonborder: ['separator', '?attr/colorControlNormal'],
   // Selected-item background (lists, tree views, etc.).
-  selecteditem: 'light-dark(#0078d4, #3b82f6)',
-  // Selected-item foreground.
-  selecteditemtext: 'light-dark(#ffffff, #ffffff)',
+  selecteditem: [
+    'AccentColor',
+    'systemBlue',
+    '?attr/colorActivatedHighlight',
+    '?attr/colorControlActivated',
+    '?attr/colorAccent',
+  ],
   // Highlighted text background (`<mark>`, search hits).
-  mark: 'light-dark(#fcf4a3, #9c8d2a)',
-  // Highlighted text foreground.
-  marktext: 'light-dark(#000000, #ffffff)',
+  mark: ['systemYellow', '@android:color/holo_orange_light'],
   // Accent surface — drives controls, toggles, focus rings.
-  accentcolor: 'light-dark(#0078d4, #3b82f6)',
-  // Accent foreground rendered against AccentColor.
-  accentcolortext: 'light-dark(#ffffff, #ffffff)',
+  accentcolor: ['systemBlue', '?attr/colorAccent', '?attr/colorControlActivated'],
+};
+
+const IOS_SYSTEM_COLOR_PLATFORM: Record<string, readonly string[]> = {
+  graytext: ['secondaryLabel'],
+};
+
+const ANDROID_SYSTEM_COLOR_PLATFORM: Record<string, readonly string[]> = {
+  marktext: ['@android:color/black'],
+  selecteditemtext: ['?attr/colorForeground', '@android:color/black'],
 };
 
 // CSS Color 4 Appendix A deprecated aliases.
@@ -71,16 +118,40 @@ const DEPRECATED_SYSTEM_COLOR_ALIAS: Record<string, string> = {
   windowtext: 'canvastext',
 };
 
-export function getSystemColorLightDark(keyword: string): string | null {
+export function getSystemColorPlatformColor(keyword: string): unknown | null {
   const key = keyword.toLowerCase();
-  const direct = SYSTEM_COLOR_LD[key];
-  if (direct !== undefined) return direct;
   const alias = DEPRECATED_SYSTEM_COLOR_ALIAS[key];
-  if (alias !== undefined) return SYSTEM_COLOR_LD[alias] ?? null;
-  return null;
+  const canonical = alias ?? key;
+  const os = getPlatformOS();
+  const literal =
+    (os === 'ios'
+      ? IOS_SYSTEM_COLOR_LITERAL[canonical]
+      : os === 'android'
+        ? ANDROID_SYSTEM_COLOR_LITERAL[canonical]
+        : undefined) ?? SYSTEM_COLOR_LITERAL[canonical];
+  if (literal !== undefined) return literal;
+  const names =
+    (os === 'ios'
+      ? IOS_SYSTEM_COLOR_PLATFORM[canonical]
+      : os === 'android'
+        ? ANDROID_SYSTEM_COLOR_PLATFORM[canonical]
+        : undefined) ?? SYSTEM_COLOR_PLATFORM[canonical];
+  if (names === undefined) return null;
+  const PlatformColor = getPlatformColor();
+  return PlatformColor === null ? null : PlatformColor(...names);
 }
 
-export const SYSTEM_COLOR_KEYWORDS: readonly string[] = Object.keys(SYSTEM_COLOR_LD);
+export const SYSTEM_COLOR_KEYWORDS: readonly string[] = Array.from(
+  new Set(
+    Object.keys(SYSTEM_COLOR_PLATFORM).concat(
+      Object.keys(SYSTEM_COLOR_LITERAL),
+      Object.keys(IOS_SYSTEM_COLOR_LITERAL),
+      Object.keys(ANDROID_SYSTEM_COLOR_LITERAL),
+      Object.keys(IOS_SYSTEM_COLOR_PLATFORM),
+      Object.keys(ANDROID_SYSTEM_COLOR_PLATFORM)
+    )
+  )
+);
 
 export const DEPRECATED_SYSTEM_COLOR_KEYWORDS: readonly string[] = Object.keys(
   DEPRECATED_SYSTEM_COLOR_ALIAS
