@@ -1917,8 +1917,29 @@ function startKeyframeAnimation(
       // wrapper for `remaining === 1` would mean the post-partial
       // timing starts from the partial's end value (1 for forward,
       // 0 for reverse) and animate to the same value (no motion).
-      const loopBody = Animated.loop(loopableIter(duration), { iterations: remaining });
-      body = Animated.sequence([partial, loopBody]);
+      const loopBody = Animated.loop(loopableIter(duration), {
+        iterations: remaining === Infinity ? -1 : remaining,
+      });
+      // Native `Animated.loop` calls `_startNativeLoop` (single native
+      // timing with `iterations`). Android/iOS `FrameBasedAnimation`
+      // samples `fromValue` from the node only on the first loop
+      // (`currentLoop == 1`). The resume partial ends at progress=1
+      // for forward keyframes, so the next native loop would see
+      // `fromValue === toValue === 1` (zero delta) and appear frozen
+      // after the partial. JS-driven loops still run `reset()` between
+      // iterations; insert a 0-duration snap back to the cycle start
+      // only for the native forward case.
+      const needsNativeLoopRestartSnap = useNativeDriverOnHost && !isReverse;
+      const snapToLoopStart = Animated.timing(animS.progress, {
+        toValue: 0,
+        duration: 0,
+        delay: 0,
+        easing: LINEAR_EASING,
+        useNativeDriver: useNativeDriverOnHost,
+      });
+      body = needsNativeLoopRestartSnap
+        ? Animated.sequence([partial, snapToLoopStart, loopBody])
+        : Animated.sequence([partial, loopBody]);
     }
   } else if (canResumeAlternate) {
     // Alternate resume path. The current iteration's direction is
@@ -2055,9 +2076,11 @@ function startKeyframeAnimation(
                 easing: LINEAR_EASING,
                 useNativeDriver: useNativeDriverOnHost,
               }),
-              Animated.loop(inner, { iterations: iters }),
+              Animated.loop(inner, {
+                iterations: iters === Infinity ? -1 : iters,
+              }),
             ])
-          : Animated.loop(inner, { iterations: iters });
+          : Animated.loop(inner, { iterations: iters === Infinity ? -1 : iters });
     } else {
       const fullIters = Math.floor(iterCount);
       const remainder = iterCount - fullIters;
@@ -2120,22 +2143,31 @@ function startKeyframeAnimation(
     scratch.running.delete(handle);
     const wasActive = animS.handle === handle;
     if (wasActive) animS.handle = null;
-    animS.finished = true;
-    // CSS Animations §4.8: `none` and `backwards` drop overrides after
-    // the animation ends; `forwards` and `both` keep the final values.
-    if (desc.fillMode === 'none' || desc.fillMode === 'backwards') {
-      animS.overrides = {};
+    // `CompositeAnimation.stop()` (pause) unwinds synchronously with
+    // `{ finished: false }`. That callback must not mark the slot
+    // `finished` or the next `animation-play-state: running` pass can
+    // never restart (`!animS.finished` guard). Stale completions after a
+    // superseding `startKeyframeAnimation` see `wasActive === false` and
+    // are ignored here too. Only `{ finished: true }` while this handle
+    // was still current ends a finite iteration chain.
+    if (wasActive && result && result.finished === true) {
+      animS.finished = true;
+      // CSS Animations §4.8: `none` and `backwards` drop overrides after
+      // the animation ends; `forwards` and `both` keep the final values.
+      if (desc.fillMode === 'none' || desc.fillMode === 'backwards') {
+        animS.overrides = {};
+      }
+      // Per CSS Animations §5.1, `animationend` fires once when the
+      // animation completes successfully. Interrupted animations
+      // (`result.finished === false`, or a stale completion arriving
+      // after a newer animation took over the same slot) do not dispatch
+      // — the spec calls this "cancel" and uses `animationcancel`, which
+      // we don't yet surface.
+      if (onAnimationEnd !== undefined) {
+        onAnimationEnd({ animationName: desc.name, elapsedTime: totalElapsedSec });
+      }
     }
     if (debugEnabled) dbg('anim-end', animS.name, `finished=${result?.finished ?? '?'}`);
-    // Per CSS Animations §5.1, `animationend` fires once when the
-    // animation completes successfully. Interrupted animations
-    // (`result.finished === false`, or a stale completion arriving
-    // after a newer animation took over the same slot) do not dispatch
-    // — the spec calls this "cancel" and uses `animationcancel`, which
-    // we don't yet surface.
-    if (onAnimationEnd !== undefined && wasActive && result?.finished === true) {
-      onAnimationEnd({ animationName: desc.name, elapsedTime: totalElapsedSec });
-    }
   });
 
   if (debugEnabled) {
@@ -2253,18 +2285,6 @@ function applyAnimations(
       // Same animation name: check play-state changes
       if (animS.prevPlayState !== desc.playState) {
         if (desc.playState === 'paused' && animS.handle) {
-          // Capture the linear timing progress BEFORE stopping so the
-          // next resume can continue from the same point (CSS Animations
-          // §4.6: pausing freezes the animation's current progress).
-          const readProgress = (animS.progress as { __getValue?: () => number } | null)?.__getValue;
-          if (typeof readProgress === 'function') {
-            try {
-              const v = readProgress.call(animS.progress);
-              if (Number.isFinite(v)) animS.pausedAt = Math.min(1, Math.max(0, v));
-            } catch {
-              /* fall through; resume restarts at 0 if we can't read */
-            }
-          }
           // Derive the current iteration from wall-clock elapsed time
           // so multi-iteration animations resume from the right cycle.
           // Alternate directions pair two iterations into one round
@@ -2278,9 +2298,30 @@ function applyAnimations(
               animS.pausedIterIndex = 0;
             }
           }
+          // Stop the composite timing first so native-driven progress is
+          // quiescent. Reading `__getValue()` before stop (or without a
+          // native flush) leaves the JS mirror stale while the native
+          // driver runs — resume then restarts from the wrong phase
+          // (CSS Animations §4.6: pause must freeze actual progress).
           animS.handle.stop();
           scratch.running.delete(animS.handle);
           animS.handle = null;
+          const pv = animS.progress as {
+            stopAnimation?: (cb?: (value: number) => void) => void;
+            __getValue?: () => number;
+          };
+          if (typeof pv.stopAnimation === 'function') {
+            pv.stopAnimation((value: number) => {
+              if (Number.isFinite(value)) animS.pausedAt = Math.min(1, Math.max(0, value));
+            });
+          } else if (typeof pv.__getValue === 'function') {
+            try {
+              const v = pv.__getValue();
+              if (Number.isFinite(v)) animS.pausedAt = Math.min(1, Math.max(0, v));
+            } catch {
+              /* resume restarts fresh if we can't read */
+            }
+          }
         } else if (desc.playState === 'running' && !animS.handle && !animS.finished) {
           // Resume from current progress
           let canNative = true;

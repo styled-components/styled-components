@@ -746,6 +746,7 @@ describe('Animated adapter;@keyframes', () => {
         renderer = track(TestRenderer.create(<Spinner />));
       });
       expect(loopSpy).toHaveBeenCalledTimes(1);
+      expect((loopSpy.mock.calls[0][1] as { iterations?: number }).iterations).toBe(-1);
     } finally {
       loopSpy.mockRestore();
     }
@@ -1412,6 +1413,177 @@ describe('Animated adapter;@keyframes', () => {
       expect(timingSpy).not.toHaveBeenCalled();
     } finally {
       timingSpy.mockRestore();
+    }
+  });
+
+  /**
+   * Pause must capture linear keyframe timing progress after stopping the
+   * composite handle, then flush via `Animated.Value#stopAnimation` so
+   * natively driven values (where `__getValue` is stale mid-flight) still
+   * resume from the correct phase (CSS Animations 4.6).
+   */
+  describe('animation-play-state pause / resume (CSS Animations 4.6 keyframe progress)', () => {
+    let stopSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      stopSpy = jest
+        .spyOn(Animated.Value.prototype, 'stopAnimation')
+        .mockImplementation(function mockStop(
+          this: { _animation?: { stop?: () => void } | null },
+          cb?: (value: number) => void
+        ) {
+          try {
+            this._animation?.stop?.();
+          } catch {
+            /* noop */
+          }
+          (this as { _animation?: null })._animation = null;
+          if (typeof cb === 'function') {
+            cb(0.72);
+          }
+        });
+    });
+
+    afterEach(() => {
+      stopSpy.mockRestore();
+      jest.useRealTimers();
+    });
+
+    it('invokes Animated.Value#stopAnimation when toggling running → paused mid-flight', () => {
+      const Pulse = styled.View<{ $run: boolean }>`
+        opacity: 0.2;
+        @keyframes fade {
+          from {
+            opacity: 0.2;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        animation: fade 1000ms linear infinite;
+        animation-play-state: ${p => (p.$run ? 'running' : 'paused')};
+      `;
+      let renderer!: TestRenderer.ReactTestRenderer;
+      act(() => {
+        renderer = track(TestRenderer.create(<Pulse $run />));
+      });
+      act(() => {
+        jest.advanceTimersByTime(10);
+      });
+      stopSpy.mockClear();
+      act(() => {
+        renderer.update(<Pulse $run={false} />);
+      });
+      expect(stopSpy).toHaveBeenCalled();
+    });
+
+    it('resumes with a partial timing duration from flushed progress (1000ms * (1 - 0.72) = 280ms)', () => {
+      const Pulse = styled.View<{ $run: boolean }>`
+        opacity: 0.2;
+        @keyframes fade {
+          from {
+            opacity: 0.2;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        animation: fade 1000ms linear infinite;
+        animation-play-state: ${p => (p.$run ? 'running' : 'paused')};
+      `;
+      let renderer!: TestRenderer.ReactTestRenderer;
+      act(() => {
+        renderer = track(TestRenderer.create(<Pulse $run />));
+      });
+      act(() => {
+        jest.advanceTimersByTime(10);
+      });
+      act(() => {
+        renderer.update(<Pulse $run={false} />);
+      });
+      timingSpy.mockClear();
+      act(() => {
+        renderer.update(<Pulse $run />);
+      });
+      const durations = timingSpy.mock.calls
+        .map(c => (c[1] as { duration?: number }).duration)
+        .filter((d): d is number => typeof d === 'number');
+      expect(durations).toContain(280);
+    });
+
+    it('after resume, snaps normalized progress back to 0 before native Animated.loop (forward infinite)', () => {
+      const Pulse = styled.View<{ $run: boolean }>`
+        opacity: 0.2;
+        @keyframes fade {
+          from {
+            opacity: 0.2;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        animation: fade 1000ms linear infinite;
+        animation-play-state: ${p => (p.$run ? 'running' : 'paused')};
+      `;
+      let renderer!: TestRenderer.ReactTestRenderer;
+      act(() => {
+        renderer = track(TestRenderer.create(<Pulse $run />));
+      });
+      act(() => {
+        jest.advanceTimersByTime(10);
+      });
+      act(() => {
+        renderer.update(<Pulse $run={false} />);
+      });
+      timingSpy.mockClear();
+      act(() => {
+        renderer.update(<Pulse $run />);
+      });
+      const hasCycleResetSnap = timingSpy.mock.calls.some(c => {
+        const cfg = c[1] as { duration?: number; toValue?: number };
+        return cfg.duration === 0 && cfg.toValue === 0;
+      });
+      expect(hasCycleResetSnap).toBe(true);
+    });
+  });
+
+  it('starts a fresh timing on resume after pause (slot must not be marked finished on stop unwind)', () => {
+    jest.useFakeTimers();
+    try {
+      const Pulse = styled.View<{ $run: boolean }>`
+        opacity: 0.2;
+        @keyframes fade {
+          from {
+            opacity: 0.2;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        animation: fade 400ms linear infinite;
+        animation-play-state: ${p => (p.$run ? 'running' : 'paused')};
+      `;
+      let renderer!: TestRenderer.ReactTestRenderer;
+      act(() => {
+        renderer = track(TestRenderer.create(<Pulse $run />));
+      });
+      act(() => {
+        jest.advanceTimersByTime(50);
+      });
+      act(() => {
+        renderer.update(<Pulse $run={false} />);
+      });
+      timingSpy.mockClear();
+      act(() => {
+        renderer.update(<Pulse $run />);
+      });
+      // Resume must call `startKeyframeAnimation` again. A prior bug
+      // marked the slot `finished` on `{ finished: false }` unwind from
+      // `stop()`, so this guard never fired and the animation died.
+      expect(timingSpy).toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
     }
   });
 });
