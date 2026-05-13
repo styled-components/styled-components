@@ -21,7 +21,7 @@ function warnIosTextWrapBalancePretty(style: string): void {
     'native-text-wrap-ios',
     '`text-wrap: ' +
       style +
-      "` maps to Android's `textBreakStrategy` but iOS has no equivalent in RN 0.85 (silently rendered with default line-breaking). The declaration still reaches rn-web where it works as expected.",
+      '` uses Android-only line-breaking controls. iOS keeps its default line breaking; rn-web keeps the authored value.',
     style
   );
 }
@@ -74,7 +74,7 @@ function textWrapShorthand(tokens: Token[]): Dict<any> | null {
     if (__DEV__) {
       warnOnce(
         'native-text-wrap-stable',
-        '`text-wrap: stable` has no React Native equivalent on iOS or Android in 0.85 (no platform API for re-flow stability). The declaration still reaches rn-web where it works as expected.'
+        '`text-wrap: stable` is ignored on React Native because iOS and Android do not expose reflow stability controls. rn-web keeps the authored value.'
       );
     }
   }
@@ -126,7 +126,7 @@ function textWrapStyleLonghand(tokens: Token[]): Dict<any> | null {
     if (__DEV__) {
       warnOnce(
         'native-text-wrap-stable',
-        '`text-wrap: stable` has no React Native equivalent on iOS or Android in 0.85 (no platform API for re-flow stability). The declaration still reaches rn-web where it works as expected.'
+        '`text-wrap: stable` is ignored on React Native because iOS and Android do not expose reflow stability controls. rn-web keeps the authored value.'
       );
     }
   }

@@ -2,8 +2,8 @@
 'styled-components': patch
 ---
 
-`font-style: oblique` now maps to `italic` on React Native; an optional `<angle>` after `oblique` (e.g. `oblique 14deg`) is dropped on native with a one-time dev warning, and `react-native-web` passes the declaration through so the browser handles slant-axis variable fonts natively.
+`font-style: oblique` now maps to `italic` on React Native. If an angle is provided, such as `oblique 14deg`, styled-components shows a one-time development warning because React Native cannot control the exact slant. `react-native-web` still passes the declaration to the browser.
 
-`line-height` percentage values and non-px length units (`em`, `rem`) silently drop on React Native (RN accepts only unitless multipliers and px lengths). A one-time dev warning now surfaces both cases with the specific value involved and a concrete migration path.
+`line-height` values React Native cannot apply, such as percentages, `em`, and `rem`, now show a one-time development warning with the specific value and a suggested replacement.
 
-`letter-spacing` with em / rem / percentage units silently drops on React Native; a one-time dev warning explains and points at the px / unitless equivalents.
+`letter-spacing` values written with `em`, `rem`, or percentages also now warn on React Native and point to pixel or unitless values instead.

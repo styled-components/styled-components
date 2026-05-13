@@ -188,7 +188,7 @@ function readItemsKeyword(stream: TokenStream): string | null {
     if (__DEV__) {
       warnOnce(
         'native-align-overflow-position-dropped',
-        '`align-items` / `justify-items` / `align-self` / `justify-self` `safe` / `unsafe` overflow-position prefixes drop on React Native (Yoga has no overflow alignment surface). The position keyword still applies; the overflow prefix is discarded.',
+        '`safe` and `unsafe` alignment prefixes are ignored on React Native because Yoga has no overflow-alignment control. The alignment value still applies.',
         name
       );
     }
@@ -201,7 +201,7 @@ function readItemsKeyword(stream: TokenStream): string | null {
     if (__DEV__) {
       warnOnce(
         'native-align-baseline-qualifier-dropped',
-        '`first baseline` / `last baseline` both map to `baseline` on React Native (RN has no first / last baseline surface). The qualifier is discarded.',
+        '`first baseline` and `last baseline` both map to `baseline` on React Native because iOS and Android do not expose first/last baseline alignment.',
         name
       );
     }
@@ -263,7 +263,7 @@ function readSelfKeyword(stream: TokenStream): string | null {
     if (__DEV__) {
       warnOnce(
         'native-align-overflow-position-dropped',
-        '`align-items` / `justify-items` / `align-self` / `justify-self` `safe` / `unsafe` overflow-position prefixes drop on React Native (Yoga has no overflow alignment surface). The position keyword still applies; the overflow prefix is discarded.',
+        '`safe` and `unsafe` alignment prefixes are ignored on React Native because Yoga has no overflow-alignment control. The alignment value still applies.',
         name
       );
     }
@@ -276,7 +276,7 @@ function readSelfKeyword(stream: TokenStream): string | null {
     if (__DEV__) {
       warnOnce(
         'native-align-baseline-qualifier-dropped',
-        '`first baseline` / `last baseline` both map to `baseline` on React Native (RN has no first / last baseline surface). The qualifier is discarded.',
+        '`first baseline` and `last baseline` both map to `baseline` on React Native because iOS and Android do not expose first/last baseline alignment.',
         name
       );
     }

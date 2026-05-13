@@ -2,4 +2,6 @@
 'styled-components': minor
 ---
 
-React Native: the public hooks (`useContainer`, `useContainerQuery`, `useContainerContext`) keep working unchanged. The container provider has moved from `ContainerContext` to `NativeStyleContext`. If your app renders `<ContainerContext.Provider>` directly from the native entry, swap it for `<NativeStyleContext.Provider value={{ container: …, cascade: DEFAULT_CASCADE }}>`. Most consumers will not need to change anything.
+React Native container query hooks continue to work unchanged. Most apps do not need to change anything.
+
+If your app manually renders the low-level container context provider from `styled-components/native`, update it to the new native style context provider exported from the same entrypoint. The provider now carries both container information and inherited style values needed by newer native CSS features.

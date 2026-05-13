@@ -2,4 +2,4 @@
 'styled-components': patch
 ---
 
-CSS generic font-family keywords (`serif`, `sans-serif`, `monospace`, `system-ui`, `ui-serif`, `ui-sans-serif`, `ui-monospace`, `ui-rounded`, `cursive`, `fantasy`, `emoji`, `math`, `fangsong`) now resolve to a platform-specific face name on iOS and Android. `react-native-web` passes the keyword through so the browser's user-agent stylesheet applies. Comma-separated fallback lists on React Native keep only the first family (RN supports a single face); a one-time dev warning surfaces the truncation.
+Generic `font-family` keywords such as `serif`, `sans-serif`, `monospace`, `system-ui`, `ui-rounded`, `emoji`, and `math` now map to an appropriate platform font on iOS and Android. `react-native-web` still passes the keyword to the browser. When a React Native font list contains multiple comma-separated families, styled-components uses the first one and shows a one-time development warning because React Native accepts only one font family.

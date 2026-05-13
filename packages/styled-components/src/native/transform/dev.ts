@@ -139,7 +139,7 @@ export function warnIfAndroidSkew(value: unknown): void {
   if (getReactNativePlatformOS() !== 'android') return;
   warnOnce(
     'native-android-skew',
-    `\`skewX\` / \`skewY\` are silently dropped on Android (seen in transform: "${value}"). Android's \`View\` has no \`setSkew*\` API; RN's BaseViewManager decomposes the transform matrix and only applies translation, rotation, and scale to the View. Translates and rotates in the same value still apply;only the skew components are lost. Tracked at https://github.com/facebook/react-native/issues/27649.`
+    `\`skewX\` / \`skewY\` are ignored on Android (seen in transform: "${value}"). Android views support translation, rotation, and scale, but not skew. Tracked at https://github.com/facebook/react-native/issues/27649.`
   );
 }
 

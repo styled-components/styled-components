@@ -23,6 +23,20 @@ const FONT_WEIGHTS = new Set([
 ]);
 const FONT_VARIANTS = new Set(['small-caps']);
 
+function rawTokens(tokens: Token[]): string {
+  let out = '';
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t.kind === TokenKind.Comma) {
+      out += ',';
+      continue;
+    }
+    if (out.length !== 0) out += ' ';
+    out += t.raw;
+  }
+  return out;
+}
+
 /**
  * `font: [<style>] [<weight>] [<variant>] <size>[/<line-height>] <family>`
  * Slash handled inline; pre-stripping loses line-height association.
@@ -82,20 +96,22 @@ export function fontShorthand(tokens: Token[]): Dict<any> | null {
   }
 
   // Required: font-family (one or more idents/strings)
+  const familyStart = stream.pos;
   const fontFamily = readFontFamily(stream);
   if (fontFamily === null) return null;
 
   const hasFamilyFallbacks = !stream.eof();
-  if (hasFamilyFallbacks && __DEV__) {
+  if (__DEV__ && hasFamilyFallbacks && !__NATIVE_WEB__) {
     warnOnce(
       'native-font-family-fallbacks-dropped',
-      '`font-family` accepts a single face name on React Native — any comma-separated fallbacks after the first are silently dropped (rn-web passes the full list to the browser). The native side keeps only the first family in this declaration.',
+      '`font-family` accepts one family on React Native. Extra comma-separated fallbacks are ignored on iOS and Android; rn-web keeps the full list.',
       fontFamily.name
     );
   }
 
-  const resolvedFamily =
-    !__NATIVE_WEB__ && !fontFamily.quoted && isGenericFamily(fontFamily.name)
+  const resolvedFamily = __NATIVE_WEB__
+    ? rawTokens(stream.tokens.slice(familyStart))
+    : !fontFamily.quoted && isGenericFamily(fontFamily.name)
       ? resolveGenericFamily(fontFamily.name)
       : fontFamily.name;
 
@@ -123,15 +139,17 @@ export function fontShorthand(tokens: Token[]): Dict<any> | null {
  * face name on native; rn-web passes them through.
  */
 export function fontFamilyShorthand(tokens: Token[]): Dict<any> | null {
+  if (__NATIVE_WEB__) return tokens.length === 0 ? null : { fontFamily: rawTokens(tokens) };
+
   const stream = new TokenStream(tokens);
   const family = readFontFamily(stream);
   if (family === null) return null;
 
   const hasFallbacks = !stream.eof();
-  if (hasFallbacks && __DEV__) {
+  if (__DEV__ && hasFallbacks) {
     warnOnce(
       'native-font-family-fallbacks-dropped',
-      '`font-family` accepts a single face name on React Native — any comma-separated fallbacks after the first are silently dropped (rn-web passes the full list to the browser). The native side keeps only the first family in this declaration.',
+      '`font-family` accepts one family on React Native. Extra comma-separated fallbacks are ignored on iOS and Android; rn-web keeps the full list.',
       family.name
     );
   }
@@ -187,7 +205,7 @@ export function fontStyleHandler(tokens: Token[]): Dict<any> | null {
     if (__DEV__) {
       warnOnce(
         'native-font-oblique-angle-dropped',
-        "`font-style: oblique <angle>` is mapped to `italic` on React Native; the angle is dropped. RN has no per-glyph slant-axis surface, and a transform-based skew would shear the whole element (kerning + descenders + background + padding) which is not the same as the browser's per-glyph synthesis. For exact slant control, ship an italic variant of the font or use a slant-axis variable font.",
+        '`font-style: oblique <angle>` maps to `italic` on React Native because RN cannot control glyph slant. For exact slant, use an italic font face or a slant-axis variable font.',
         arg.raw
       );
     }
@@ -236,7 +254,7 @@ export function lineHeightHandler(tokens: Token[]): Dict<any> | null {
         'native-line-height-unit-unsupported',
         '`line-height: ' +
           t.raw +
-          '` uses a unit React Native does not accept (only unitless multipliers and px lengths land on iOS / Android). The declaration drops. Switch to a unitless number (`line-height: 1.4`) or a px length (`line-height: 20px`).',
+          '` is ignored on React Native. Use a unitless multiplier (`line-height: 1.4`) or px (`line-height: 20px`) on iOS and Android.',
         t.unit
       );
     }
@@ -246,7 +264,7 @@ export function lineHeightHandler(tokens: Token[]): Dict<any> | null {
     if (__DEV__) {
       warnOnce(
         'native-line-height-percent-unsupported',
-        '`line-height` percentage values silently drop on React Native (RN accepts only unitless multipliers and px lengths). Switch to a unitless multiplier (`line-height: 1.4`) — equivalent to `line-height: 140%` against the current font-size.',
+        '`line-height` percentages are ignored on React Native. Use a unitless multiplier instead; `line-height: 1.4` is equivalent to `140%`.',
         t.raw
       );
     }
@@ -278,7 +296,7 @@ export function letterSpacingHandler(tokens: Token[]): Dict<any> | null {
         'native-letter-spacing-unit-unsupported',
         '`letter-spacing: ' +
           t.raw +
-          '` uses a unit React Native does not accept (only unitless numbers and px lengths land on iOS / Android). Switch to a px length.',
+          '` is ignored on React Native. Use a number or px value on iOS and Android.',
         t.unit
       );
     }
@@ -347,10 +365,10 @@ export function aspectRatioShorthand(tokens: Token[]): Dict<any> | null {
 
   if (auto && ratio === null) return { aspectRatio: 'auto' };
   if (ratio !== null) {
-    if (auto && __DEV__) {
+    if (__DEV__ && auto) {
       warnOnce(
         'native-aspect-ratio-auto-intrinsic',
-        '`aspect-ratio: auto <ratio>` honors the `auto` half only on replaced elements (e.g. styled `<Image>`). Other styled views see only the explicit ratio; the `auto` keyword has no effect. Drop the `auto` keyword to suppress this warning.',
+        '`aspect-ratio: auto <ratio>` only uses `auto` for image-like components with natural dimensions. Other styled views use the ratio and ignore `auto`; remove `auto` to silence this warning.',
         String(ratio)
       );
     }

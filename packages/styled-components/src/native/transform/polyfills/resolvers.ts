@@ -325,7 +325,7 @@ function bailOnUnsupportedKeyword(value: string): boolean {
   if (__DEV__) {
     warnOnce(
       'native-math-keyword',
-      `\`${m[1]}\` is valid CSS but React Native cannot represent ±∞ or NaN in a dimension; the value would silently collapse to 0. Drop the keyword or pick a finite alternative (e.g. a large literal pixel value or a viewport unit).`,
+      `\`${m[1]}\` cannot be used as a React Native dimension. Use a finite value instead, such as a large px value or a viewport unit.`,
       m[1].toLowerCase()
     );
   }

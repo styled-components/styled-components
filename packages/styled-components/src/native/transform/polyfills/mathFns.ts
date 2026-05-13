@@ -84,7 +84,7 @@ function resolveStepped(name: string, fn: Token, permitNonFinite: boolean): Nume
       if (__DEV__) {
         warnOnce(
           'native-math-round-line-width',
-          "`round(line-width, A, B?)` rounds to the nearest CSS device pixel and requires the runtime device pixel ratio. The static math fold can't access `PixelRatio.get()` so this strategy isn't supported on native. Use `round(A, 1)` with an explicit step or move the calculation into a function interpolation that reads `PixelRatio.get()` directly.",
+          '`round(line-width, ...)` needs the device pixel ratio, which is not available while converting static styles. Use an explicit step such as `round(nearest, 10px, 1px)`, or calculate the value in a function interpolation with `PixelRatio.get()`.',
           fn.raw
         );
       }
@@ -543,7 +543,7 @@ export function identToNumeric(
   if (__DEV__) {
     warnOnce(
       'native-math-keyword',
-      `\`${raw}\` is valid CSS but React Native cannot represent ±∞ or NaN in a dimension; the value would silently collapse to 0. Drop the keyword or pick a finite alternative (e.g. a large literal pixel value or a viewport unit).`,
+      `\`${raw}\` cannot be used as a React Native dimension. Use a finite value instead, such as a large px value or a viewport unit.`,
       raw
     );
   }

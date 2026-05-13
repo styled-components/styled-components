@@ -26,13 +26,13 @@ const ListItem = styled.View`
 `;
 ```
 
-Supported selector forms:
+Supported selector forms include:
 
-- Adjacent sibling: `${Component} + &`, fires when the immediately preceding styled sibling is the referenced component.
-- General sibling: `${Component} ~ &`, fires when any preceding styled sibling is the referenced component.
+- Adjacent sibling: `${Component} + &`, which applies when the previous styled sibling is the referenced component.
+- General sibling: `${Component} ~ &`, which applies when any earlier styled sibling is the referenced component.
 - `:first-child`, `:last-child`, `:only-child`.
 - `:nth-child(N)`, `:nth-child(an+b)`, `:nth-child(odd)`, `:nth-child(even)`.
 - `:nth-last-child(...)` (same syntax as `:nth-child`, counting from the end).
-- `:first-of-type`, `:last-of-type`, `:only-of-type`, `:nth-of-type(...)`, `:nth-last-of-type(...)`, count only same-element-type siblings.
+- `:first-of-type`, `:last-of-type`, `:only-of-type`, `:nth-of-type(...)`, and `:nth-last-of-type(...)`, which count siblings of the same element type.
 
-These selectors operate on the styled component's literal JSX position among its parent's children. Plain wrappers (`View`, `Text`, host components) between the parent and a child are transparent: their children participate in the sibling chain as if rendered directly under the styled parent.
+These selectors use the component's JSX position among its parent's children. Plain React Native wrappers such as `View` and `Text` do not block matching.

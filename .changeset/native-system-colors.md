@@ -2,6 +2,6 @@
 'styled-components': minor
 ---
 
-CSS system color keywords (`Canvas`, `CanvasText`, `Field`, `FieldText`, `GrayText`, `Highlight`, `HighlightText`, `LinkText`, `VisitedText`, `ActiveText`) now resolve correctly on React Native. Each keyword folds to a `light-dark()` expression carrying sensible per-mode literals, so `color: Canvas` produces white text on dark backgrounds and black text on light backgrounds without authors having to write the conditional themselves. The browser still resolves the keyword natively on the web build.
+System color keywords such as `Canvas`, `CanvasText`, `Field`, `FieldText`, `GrayText`, `Highlight`, and `LinkText` now work on React Native. They adapt to light and dark mode, so values like `color: CanvasText` and `background-color: Canvas` stay readable without writing separate colors for each appearance. The browser still handles these keywords directly on the web build.
 
-Matches case-insensitively per CSS syntax. Composite uses where the keyword sits inside a larger value (e.g. `border: 1px solid Canvas`) aren't covered in this release; set the keyword on the standalone color longhand for the same result.
+Keywords match regardless of casing. Values inside larger shorthands, such as `border: 1px solid Canvas`, are not covered in this release; use the matching standalone color property for the same result.

@@ -47,7 +47,7 @@ function warnNoPerEdgeStyle(edge: string, value: string): void {
       edge +
       '-style: ' +
       value +
-      '` has no React Native surface in 0.85 (RN only exposes the whole-element `borderStyle`). The declaration drops on iOS / Android; rn-web honors via the browser. Set `border-style` at the element level if you want a uniform style across all four edges.',
+      '` is ignored on React Native because iOS and Android only support one `border-style` for the whole element. Use `border-style` for a uniform style; rn-web keeps the per-edge value.',
     edge + ':' + value
   );
 }
@@ -290,7 +290,7 @@ function outlineStyleHandler(tokens: Token[]): Dict<any> | null {
     if (__DEV__) {
       warnOnce(
         'native-outline-style-hidden-invalid',
-        '`outline-style: hidden` is invalid per CSS UI 4 §3.3 (the keyword only applies to `border-style`, not outline). Use `outline: none` to suppress the outline.',
+        '`outline-style: hidden` is not a valid outline value. Use `outline: none` to suppress the outline.',
         name
       );
     }
@@ -305,7 +305,7 @@ function outlineStyleHandler(tokens: Token[]): Dict<any> | null {
         'native-outline-style',
         '`outline-style: ' +
           name +
-          "` is web-only; React Native only renders 'solid' / 'dotted' / 'dashed'. The declaration still reaches rn-web where it works as expected.",
+          "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', or 'dashed'; rn-web keeps the authored value.",
         name
       );
     }
