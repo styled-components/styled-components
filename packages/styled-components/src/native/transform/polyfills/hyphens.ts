@@ -1,5 +1,5 @@
 import { Dict } from '../../../types';
-import { warnOnce } from '../dev';
+import { getReactNativePlatformOS, warnOnce } from '../dev';
 import { register } from '../shorthands';
 import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
@@ -71,7 +71,7 @@ function hyphensShorthand(tokens: Token[]): Dict<any> | null {
     hyphens: name,
     android_hyphenationFrequency: SPEC_TO_ANDROID[name],
   };
-  if (__DEV__ && name === 'auto') {
+  if (__DEV__ && name === 'auto' && getReactNativePlatformOS() === 'ios') {
     warnOnce(
       'native-hyphens-ios',
       "`hyphens: auto` maps to Android's `android_hyphenationFrequency` but iOS has no equivalent in RN 0.85 (auto-hyphenation cannot be enabled programmatically). The declaration still reaches rn-web where it works as expected; on iOS, embed soft-hyphens (U+00AD) in source text to control break points."

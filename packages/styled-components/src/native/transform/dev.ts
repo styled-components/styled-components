@@ -115,6 +115,14 @@ export function warnIfSentinelLeak(prop: string, value: unknown): void {
 
 const SKEW_RE = /\bskew[XY]?\s*\(/;
 
+export function getReactNativePlatformOS(): string | undefined {
+  try {
+    return (require('react-native') as { Platform?: { OS?: string } }).Platform?.OS;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Warn once if a `transform` value uses `skewX` / `skewY` on Android.
  * RN Android's `BaseViewManager` decomposes the transform matrix but
@@ -123,20 +131,12 @@ const SKEW_RE = /\bskew[XY]?\s*\(/;
  * skew components of the decomposition are silently discarded. The
  * declaration looks like it works at the styled-components layer; the
  * pixels just never move. Tracked at facebook/react-native#27649.
- *
- * No-op outside Android. Callers must wrap in `if (__DEV__)`.
  */
 export function warnIfAndroidSkew(value: unknown): void {
+  if (!__DEV__) return;
   if (typeof value !== 'string') return;
   if (!SKEW_RE.test(value)) return;
-  // Lazy require avoids loading react-native in non-RN test environments.
-  let os: string | undefined;
-  try {
-    os = (require('react-native') as { Platform?: { OS?: string } }).Platform?.OS;
-  } catch {
-    return;
-  }
-  if (os !== 'android') return;
+  if (getReactNativePlatformOS() !== 'android') return;
   warnOnce(
     'native-android-skew',
     `\`skewX\` / \`skewY\` are silently dropped on Android (seen in transform: "${value}"). Android's \`View\` has no \`setSkew*\` API; RN's BaseViewManager decomposes the transform matrix and only applies translation, rotation, and scale to the View. Translates and rotates in the same value still apply;only the skew components are lost. Tracked at https://github.com/facebook/react-native/issues/27649.`
@@ -150,18 +150,11 @@ export function warnIfAndroidSkew(value: unknown): void {
  * handler (`ReactTextViewManager` / `ReactTextInputManager` only
  * register the prop on Android). On iOS the declaration looks like it
  * works but never repositions the glyphs or the caret.
- *
- * No-op outside iOS. Callers must wrap in `if (__DEV__)`.
  */
 export function warnIfIosVerticalAlign(value: string): void {
+  if (!__DEV__) return;
   if (value === 'auto') return;
-  let os: string | undefined;
-  try {
-    os = (require('react-native') as { Platform?: { OS?: string } }).Platform?.OS;
-  } catch {
-    return;
-  }
-  if (os !== 'ios') return;
+  if (getReactNativePlatformOS() !== 'ios') return;
   warnOnce(
     'native-vertical-align-ios',
     `\`vertical-align: ${value}\` has no effect on iOS \`<Text>\` or \`<TextInput>\` in React Native 0.85 (no platform API; the prop only renders on Android and rn-web). For \`<Text>\`, wrap it in a View with \`justify-content: <flex-start | center | flex-end>\` to align glyphs within a fixed-height container. \`<TextInput>\` has no Text-level workaround; iOS positions the caret and content at the platform default.`,

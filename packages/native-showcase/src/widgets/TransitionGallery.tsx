@@ -12,9 +12,6 @@ import { theme as t } from '@/theme/tokens';
  *
  * The underlying CSS per row is the only source of truth for HOW each
  * property animates — no Animated API consumed at the widget layer.
- *
- * Properties grouped by driver eligibility (native vs JS) so it's
- * obvious which transitions run off the bridge.
  */
 
 const HOLD_MS = 600;
@@ -35,14 +32,6 @@ const RowLabel = styled.Text`
   font-size: ${t.fontSize.monoSm}px;
   letter-spacing: 0.6px;
   color: ${t.colors.ink};
-  text-transform: uppercase;
-`;
-
-const RowDriver = styled.Text<{ $native: boolean }>`
-  font-family: ${t.fontFamily.monoStrong};
-  font-size: ${t.fontSize.mono}px;
-  letter-spacing: 0.6px;
-  color: ${p => (p.$native ? t.colors.pass : t.colors.fail)};
   text-transform: uppercase;
 `;
 
@@ -120,7 +109,8 @@ const TransformCompoundCell = styled.View<{ $on: boolean }>`
   width: 24px;
   height: 24px;
   background-color: ${t.colors.ink};
-  transform: ${p => (p.$on ? 'translateX(24px) rotate(45deg) scale(1.4)' : 'translateX(0px) rotate(0deg) scale(1)')};
+  transform: ${p =>
+    p.$on ? 'translateX(24px) rotate(45deg) scale(1.4)' : 'translateX(0px) rotate(0deg) scale(1)'};
   transition: transform 320ms ease-in-out;
 `;
 
@@ -159,11 +149,8 @@ const MultiPropCell = styled.View<{ $on: boolean }>`
   border-radius: ${p => (p.$on ? 12 : 0)}px;
   opacity: ${p => (p.$on ? 1 : 0.4)};
   transform: rotate(${p => (p.$on ? 90 : 0)}deg);
-  transition:
-    background-color 320ms ease-in-out,
-    border-radius 320ms ease-in-out,
-    opacity 320ms ease-in-out,
-    transform 320ms ease-in-out;
+  transition: background-color 320ms ease-in-out, border-radius 320ms ease-in-out,
+    opacity 320ms ease-in-out, transform 320ms ease-in-out;
 `;
 
 const AllPropCell = styled.View<{ $on: boolean }>`
@@ -191,19 +178,15 @@ const LinearStopsCell = styled.View<{ $on: boolean }>`
 
 interface RowProps {
   label: string;
-  driver: 'native' | 'js';
   on: boolean;
   onToggle: () => void;
   children: React.ReactNode;
 }
 
-function Row({ label, driver, on, onToggle, children }: RowProps) {
+function Row({ label, on, onToggle, children }: RowProps) {
   return (
     <RowFrame onPress={onToggle} accessibilityRole="button" aria-pressed={on}>
       <RowLabel>{label}</RowLabel>
-      <RowDriver $native={driver === 'native'}>
-        {driver === 'native' ? 'native ✓' : 'js'}
-      </RowDriver>
       {children}
     </RowFrame>
   );
@@ -226,116 +209,59 @@ export function TransitionGallery() {
 
   return (
     <Stack>
-      <Row label="opacity" driver="native" on={on} onToggle={() => toggle('opacity')}>
+      <Row label="opacity" on={on} onToggle={() => toggle('opacity')}>
         <OpacityCell $on={on} />
       </Row>
-      <Row
-        label="background-color"
-        driver="native"
-        on={on}
-        onToggle={() => toggle('bg')}
-      >
+      <Row label="background-color" on={on} onToggle={() => toggle('bg')}>
         <BackgroundCell $on={on} />
       </Row>
-      <Row label="color" driver="native" on={on} onToggle={() => toggle('color')}>
+      <Row label="color" on={on} onToggle={() => toggle('color')}>
         <ColorCell $on={on}>AaBb</ColorCell>
       </Row>
-      <Row
-        label="border-color"
-        driver="native"
-        on={on}
-        onToggle={() => toggle('borderColor')}
-      >
+      <Row label="border-color" on={on} onToggle={() => toggle('borderColor')}>
         <BorderColorCell $on={on} />
       </Row>
-      <Row
-        label="border-radius"
-        driver="native"
-        on={on}
-        onToggle={() => toggle('radius')}
-      >
+      <Row label="border-radius" on={on} onToggle={() => toggle('radius')}>
         <RadiusCell $on={on} />
       </Row>
-      <Row
-        label="transform · scale (overshoot)"
-        driver="native"
-        on={on}
-        onToggle={() => toggle('scale')}
-      >
+      <Row label="transform · scale (overshoot)" on={on} onToggle={() => toggle('scale')}>
         <TransformScaleCell $on={on} />
       </Row>
-      <Row
-        label="transform · rotate"
-        driver="native"
-        on={on}
-        onToggle={() => toggle('rotate')}
-      >
+      <Row label="transform · rotate" on={on} onToggle={() => toggle('rotate')}>
         <TransformRotateCell $on={on} />
       </Row>
-      <Row
-        label="transform · translateX"
-        driver="native"
-        on={on}
-        onToggle={() => toggle('translate')}
-      >
+      <Row label="transform · translateX" on={on} onToggle={() => toggle('translate')}>
         <TransformTranslateCell $on={on} />
       </Row>
-      <Row
-        label="transform · compound (matched kinds)"
-        driver="native"
-        on={on}
-        onToggle={() => toggle('compound')}
-      >
+      <Row label="transform · compound (matched kinds)" on={on} onToggle={() => toggle('compound')}>
         <TransformCompoundCell $on={on} />
       </Row>
       <Row
         label="transform · disjoint kinds (translate ↔ rotate+scale)"
-        driver="native"
         on={on}
         onToggle={() => toggle('disjoint')}
       >
         <TransformDisjointCell $on={on} />
       </Row>
-      <Row label="width" driver="js" on={on} onToggle={() => toggle('width')}>
+      <Row label="width" on={on} onToggle={() => toggle('width')}>
         <WidthCell $on={on} />
       </Row>
-      <Row
-        label="padding-left"
-        driver="js"
-        on={on}
-        onToggle={() => toggle('padding')}
-      >
+      <Row label="padding-left" on={on} onToggle={() => toggle('padding')}>
         <PaddingCell $on={on}>
           <PaddingDot />
         </PaddingCell>
       </Row>
-      <Row
-        label="multi-prop · same duration"
-        driver="native"
-        on={on}
-        onToggle={() => toggle('multi')}
-      >
+      <Row label="multi-prop · same duration" on={on} onToggle={() => toggle('multi')}>
         <MultiPropCell $on={on} />
       </Row>
-      <Row
-        label="transition: all"
-        driver="native"
-        on={on}
-        onToggle={() => toggle('all')}
-      >
+      <Row label="transition: all" on={on} onToggle={() => toggle('all')}>
         <AllPropCell $on={on} />
       </Row>
-      <Row
-        label="easing · steps(4, jump-end)"
-        driver="native"
-        on={on}
-        onToggle={() => toggle('stepped')}
-      >
+      <Row label="easing · steps(4, jump-end)" on={on} onToggle={() => toggle('stepped')}>
         <SteppedCell $on={on} />
       </Row>
       <Row
         label="easing · linear(0, 0.3 25%, 0.7 75%, 1)"
-        driver="native"
         on={on}
         onToggle={() => toggle('linearStops')}
       >

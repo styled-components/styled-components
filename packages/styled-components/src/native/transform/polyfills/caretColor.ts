@@ -1,5 +1,5 @@
 import { Dict } from '../../../types';
-import { warnOnce } from '../dev';
+import { getReactNativePlatformOS, warnOnce } from '../dev';
 import { consumeColor } from '../shorthandHelpers';
 import { register } from '../shorthands';
 import { Token, TokenKind } from '../tokens';
@@ -14,16 +14,6 @@ import { TokenStream } from '../tokenStream';
  * Spec verbatim (first-value definitions):
  *   auto:    "User agents should use currentColor."
  *   <color>: "The caret is colored with the specified color."
- *
- * The optional second value is for `caret-shape: block` (text overlapping
- * the caret); RN has no block-caret rendering, so it's parsed for grammar
- * conformance and warned on.
- *
- * Cross-platform routing: rn-web reads `caretColor` from style; Android
- * reads `cursorColor` (TextInput prop, lifted via SPECIAL_CASE_PROPS) and
- * applies it to the caret only. iOS has no spec-compliant API; its
- * `selectionColor` would tint the selection range too, so the polyfill
- * emits no iOS-side prop and warns once.
  */
 
 function caretColorShorthand(tokens: Token[]): Dict<any> | null {
@@ -47,8 +37,6 @@ function caretColorShorthand(tokens: Token[]): Dict<any> | null {
       return null;
     }
     if (!stream.eof()) return null;
-    // The block-caret limitation only applies to native; rn-web ignores
-    // the second value the same way the browser does (no caret-shape).
     if (!__NATIVE_WEB__ && __DEV__) {
       warnOnce(
         'native-caret-color-block',
@@ -59,12 +47,9 @@ function caretColorShorthand(tokens: Token[]): Dict<any> | null {
 
   if (firstIsAuto) return { caretColor: 'auto' };
 
-  // rn-web: emit the style key only; the browser handles `caret-color`
-  // natively. The `cursorColor` Android prop lift and the iOS limitation
-  // warn are native-only concerns.
   if (__NATIVE_WEB__) return { caretColor: first.raw };
 
-  if (__DEV__) {
+  if (__DEV__ && getReactNativePlatformOS() === 'ios') {
     warnOnce(
       'native-caret-color-ios',
       "`caret-color` maps to Android's `cursorColor` TextInput prop but iOS has no equivalent: RN's `selectionColor` would tint the selection range as well, violating the spec. iOS will use its default caret color. The declaration reaches rn-web and Android where it works as expected."

@@ -272,7 +272,7 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     slug: 'text-wrap-shelf',
     title: 'Text wrap',
     summary:
-      'Five line-breaking strategies, with per-row platform support chips. `wrap` / `nowrap` are universal; `balance` / `pretty` need Android `textBreakStrategy`; `stable` is web-only.',
+      'Five line-breaking strategies side by side. `wrap` / `nowrap` are universal; `balance` / `pretty` lean on Android `textBreakStrategy`; `stable` is web-only.',
     feature: 'text-wrap',
     category: 'Typography',
     Widget: TextWrapShelf,
@@ -290,7 +290,7 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     slug: 'field-sizing-board',
     title: 'Field sizing · autosize',
     summary:
-      '`field-sizing: content` makes a `TextInput` grow with its content per CSS Forms 1 §7.1. The polyfill lifts `multiline={true}` so React Native\'s own measure callback handles autosize; explicit `multiline={false}` keeps the fixed height with a dev warning. rn-web hands the declaration to the browser.',
+      "`field-sizing: content` makes a `TextInput` grow with its content per CSS Forms 1 §7.1. The polyfill lifts `multiline={true}` so React Native's own measure callback handles autosize; explicit `multiline={false}` keeps the fixed height with a dev warning. rn-web hands the declaration to the browser.",
     feature: 'field-sizing: content',
     category: 'Typography',
     Widget: FieldSizingBoard,
@@ -307,7 +307,8 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
   {
     slug: 'safe-area-insets-badge',
     title: 'Safe-area insets badge',
-    summary: 'Pinned via `env(safe-area-inset-*)`. Notch on iOS, `env()` on web.',
+    summary:
+      'Pinned via `env(safe-area-inset-*)`. Inset readout is measured from the laid-out padding on the card so it matches what that rule applied.',
     feature: 'env()',
     category: 'Responsive environment',
     Widget: SafeAreaInsetsBadge,

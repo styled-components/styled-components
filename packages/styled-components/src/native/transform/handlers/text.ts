@@ -1,5 +1,5 @@
 import { Dict } from '../../../types';
-import { warnOnce } from '../dev';
+import { getReactNativePlatformOS, warnOnce } from '../dev';
 import {
   consumeColor,
   consumeDimensionLike,
@@ -95,7 +95,6 @@ export function textDecorationShorthand(tokens: Token[]): Dict<any> | null {
   while (!stream.eof()) {
     const t = stream.peek()!;
     if (t.kind === TokenKind.Ident && DECORATION_LINES.has(t.name!)) {
-      // Collect contiguous line tokens
       if (line !== null) return null;
       const collected: string[] = [t.name!];
       stream.consume();
@@ -110,7 +109,7 @@ export function textDecorationShorthand(tokens: Token[]): Dict<any> | null {
           stream.consume();
         } else break;
       }
-      collected.sort().reverse(); // underline > line-through > …
+      collected.sort().reverse();
       line = collected.join(' ');
       continue;
     }
@@ -129,31 +128,18 @@ export function textDecorationShorthand(tokens: Token[]): Dict<any> | null {
     return null;
   }
 
-  if (color !== null) warnAndroidNoDecorationColor(color.raw);
+  if (__DEV__ && color !== null && getReactNativePlatformOS() === 'android') {
+    warnOnce(
+      'native-text-decoration-color-android',
+      '`text-decoration-color` only applies on iOS and rn-web in RN 0.85; Android paints the underline in the text color.',
+      color.raw
+    );
+  }
   return {
     textDecorationLine: line !== null ? line : 'none',
     textDecorationStyle: style !== null ? style : 'solid',
     textDecorationColor: color !== null ? color.raw : 'black',
   };
-}
-
-/**
- * RN 0.85's `TextStyleAndroid` omits `textDecorationColor` and
- * `textDecorationStyle`; the Android shadow tree silently drops both
- * keys and paints the underline in the text color. iOS and rn-web honor
- * both. Android's underlying platform exposes `Paint.underlineColor`
- * (API 29+) but RN's `ReactUnderlineSpan` never wires it through, and
- * RN ships as a prebuilt AAR on Android so app-level patching can't
- * reach the relevant Kotlin source — fixing this needs an upstream PR
- * to react-native, not a consumer-side workaround.
- */
-function warnAndroidNoDecorationColor(raw: string): void {
-  if (!__DEV__) return;
-  warnOnce(
-    'native-text-decoration-color-android',
-    '`text-decoration-color` only applies on iOS and rn-web in RN 0.85; Android paints the underline in the text color.',
-    raw
-  );
 }
 
 /**
