@@ -84,6 +84,8 @@ Bun records a CPU profile and emits a markdown report (`--cpu-prof-md`: hot func
 
 The v7 native build polyfills CSS features that React Native's style engine doesn't understand (`light-dark()`, viewport / container units, `calc()`, `color-mix()`, `env()`, etc.). Each polyfill must have a spec-driven validation block before its parser internals can be safely refactored.
 
+Keep `packages/styled-components/docs/rn-css-compatibility.md` eagerly current when RN versions ship, RN support changes, native polyfills are added or removed, or workaround behavior changes. Treat it as the consumer-facing compatibility ledger for the native CSS surface.
+
 The procedure for a new polyfill, or when revisiting an existing one:
 
 1. Pull verbatim spec text from `drafts.csswg.org/<module>/` (editor's draft is canonical, NOT MDN). Use `curl -s ... > /tmp/<module>.html` then extract the relevant section by line range. Never paraphrase the spec from training data.
