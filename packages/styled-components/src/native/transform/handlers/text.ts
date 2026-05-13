@@ -61,7 +61,7 @@ export function textAlignHandler(tokens: Token[]): Dict<any> | null {
     if (__DEV__) {
       warnOnce(
         'native-text-align-justify-all-degrades',
-        '`text-align: justify-all` forces justification on the last line (CSS Text 4 §7.1); React Native has no last-line surface so the value degrades to `justify` (the last line stays left-aligned). rn-web honors the full keyword natively.',
+        '`text-align: justify-all` falls back to `justify` on React Native because iOS and Android cannot justify the final line separately. rn-web keeps the authored value.',
         value
       );
     }
@@ -131,7 +131,7 @@ export function textDecorationShorthand(tokens: Token[]): Dict<any> | null {
   if (__DEV__ && color !== null && getReactNativePlatformOS() === 'android') {
     warnOnce(
       'native-text-decoration-color-android',
-      '`text-decoration-color` only applies on iOS and rn-web in RN 0.85; Android paints the underline in the text color.',
+      '`text-decoration-color` is ignored on Android in React Native. Underlines use the text color there; iOS and rn-web keep the authored color.',
       color.raw
     );
   }

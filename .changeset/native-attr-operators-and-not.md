@@ -2,4 +2,4 @@
 'styled-components': minor
 ---
 
-React Native: `:not(<simple-selector>)` now applies. Simple arguments like `:not(:hover)`, `:not(:focus)`, `:not([disabled])`, and `:not([data-state='loading'])` invert the inner predicate, so the rule fires when the inner selector does NOT match. Complex or multi-argument forms (`:not(:hover, :focus)`, descendant combinators inside `:not`) still warn and drop.
+React Native: `:not(...)` now works for simple selectors. Rules such as `:not(:hover)`, `:not(:focus)`, `:not([disabled])`, and `:not([data-state='loading'])` apply when the condition inside `:not()` is not true. More complex forms, including multiple selectors or nested descendant selectors, still show a development warning and are ignored on native.

@@ -74,7 +74,7 @@ function hyphensShorthand(tokens: Token[]): Dict<any> | null {
   if (__DEV__ && name === 'auto' && getReactNativePlatformOS() === 'ios') {
     warnOnce(
       'native-hyphens-ios',
-      "`hyphens: auto` maps to Android's `android_hyphenationFrequency` but iOS has no equivalent in RN 0.85 (auto-hyphenation cannot be enabled programmatically). The declaration still reaches rn-web where it works as expected; on iOS, embed soft-hyphens (U+00AD) in source text to control break points."
+      '`hyphens: auto` cannot enable automatic hyphenation on iOS in React Native. Android and rn-web keep the authored behavior; on iOS, add soft hyphens (U+00AD) where words may break.'
     );
   }
   return out;

@@ -21,6 +21,6 @@ const Title = styled.Text`
 <Title>Default size when standalone</Title>
 ```
 
-The descendant form `${Card} &` matches whenever the styled-component reference appears anywhere up the parent chain. The child form `${Card} > &` only matches when the reference is the immediate styled-component parent. Plain wrappers (`View`, `Text`, host components) between the ancestor and the matched component are transparent to the chain; a styled component in between becomes the new immediate parent, so the child combinator stops firing while descendant still matches.
+The descendant form `${Card} &` matches whenever the component is rendered anywhere inside `Card`. The child form `${Card} > &` only matches when `Card` is the nearest styled parent. Plain React Native wrappers such as `View` and `Text` do not block matching.
 
-The same selectors also work on web. As a bonus, a long-standing case where `${Component} { … }` rules placed after another declaration silently dropped the component prefix on the web has been fixed; those rules now correctly target descendants.
+The same selectors also work on web. This also fixes a web bug where `${Component} { ... }` rules placed after another declaration could lose the component selector and target too broadly.

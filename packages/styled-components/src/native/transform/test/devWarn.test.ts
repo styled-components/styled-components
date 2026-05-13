@@ -109,7 +109,7 @@ describe('warnIfAndroidSkew', () => {
     setPlatform('android');
     warnIfAndroidSkew('skewX(-12deg) translateY(8px)');
     expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0][0]).toMatch(/skewX.*silently dropped on Android/);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/skewX.*ignored on Android/);
   });
 
   it('warns when transform contains skewY on Android', () => {

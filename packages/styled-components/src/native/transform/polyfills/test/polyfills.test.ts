@@ -2406,12 +2406,15 @@ describe('standalone transform properties (CSS Transforms 2 §3)', () => {
 // https://drafts.csswg.org/css-ui-4/#interactivity
 describe('interactivity spec compliance (CSS UI 4 §6.3)', () => {
   let warnSpy: jest.SpyInstance;
+  const realOS = Platform.OS;
   beforeEach(() => {
     resetWarningsForTest();
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
   afterEach(() => {
     jest.restoreAllMocks();
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: realOS });
   });
 
   it('interactivity: auto is a no-op (initial value)', () => {
@@ -2435,8 +2438,22 @@ describe('interactivity spec compliance (CSS UI 4 §6.3)', () => {
       selectable: false,
       editable: false,
     });
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('warns about descendant focus leaks on Android only', () => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+    expect(transformDecl('interactivity', 'inert')).toEqual({
+      pointerEvents: 'none',
+      accessibilityElementsHidden: true,
+      importantForAccessibility: 'no-hide-descendants',
+      focusable: false,
+      selectable: false,
+      editable: false,
+    });
     expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0][0]).toMatch(/focusable={false}/);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/cannot stop focus/);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/Android/);
   });
 
   it('rejects unknown keyword', () => {
@@ -2668,7 +2685,7 @@ describe('transform-box spec compliance (CSS Transforms 1 §5)', () => {
       expect(transformDecl('transform-box', value)).toEqual({});
       expect(warnSpy).toHaveBeenCalledTimes(1);
       expect(warnSpy.mock.calls[0][0]).toMatch(/transform-box/);
-      expect(warnSpy.mock.calls[0][0]).toMatch(/no React Native equivalent/);
+      expect(warnSpy.mock.calls[0][0]).toMatch(/ignored on React Native/);
     }
   );
 
@@ -2897,7 +2914,7 @@ describe('text-decoration platform skew (Android underline color)', () => {
       });
       expect(warnSpy).toHaveBeenCalledTimes(1);
       expect(warnSpy.mock.calls[0][0]).toMatch(/text-decoration-color/);
-      expect(warnSpy.mock.calls[0][0]).toMatch(/only applies on iOS/);
+      expect(warnSpy.mock.calls[0][0]).toMatch(/ignored on Android/);
     });
 
     it('does not warn when text-decoration omits the color (default black falls back)', () => {
@@ -3189,8 +3206,7 @@ describe('relative-color spec compliance (CSS Color Module Level 5 §4)', () => 
         const message = (warnSpy.mock.calls[0] as string[])[0];
         expect(message).toContain('currentColor');
         expect(message).toContain('oklch(from currentColor');
-        // The warning steers the author at a theme-token base.
-        expect(message).toContain('t.colors.fg');
+        expect(message).toContain('theme value');
       } finally {
         warnSpy.mockRestore();
       }

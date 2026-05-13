@@ -1,5 +1,5 @@
 import { Dict } from '../../../types';
-import { warnOnce } from '../dev';
+import { getReactNativePlatformOS, warnOnce } from '../dev';
 import { register } from '../shorthands';
 import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
@@ -22,8 +22,9 @@ import { TokenStream } from '../tokenStream';
  *
  * Known limitation: RN doesn't propagate `focusable={false}` to
  * descendants, so a focusable child inside an inert subtree may still
- * receive focus. A future refactor could traverse the subtree at render
- * time; for now the lift covers the common case. rn-web honors
+ * receive D-pad / keyboard focus on Android. A future refactor could
+ * traverse the subtree at render time; for now the lift covers the
+ * common case. rn-web honors
  * `interactivity: inert` natively via the browser's HTML inert
  * attribute (passes through unchanged).
  */
@@ -46,11 +47,14 @@ function interactivityHandler(tokens: Token[]): Dict<any> | null {
 
   // inert: lift six top-level props via SPECIAL_CASE_PROPS.
   if (__DEV__) {
-    warnOnce(
-      'native-interactivity-inert-focusable-leak',
-      '`interactivity: inert` lifts `focusable={false}` on the root view, but React Native does not propagate `focusable={false}` to descendants. A focusable child inside an inert subtree may still receive D-pad / keyboard focus on Android / tvOS. The touch + screen-reader gates (pointerEvents, accessibilityElementsHidden, importantForAccessibility) apply to the whole subtree as expected.',
-      'inert'
-    );
+    const platform = getReactNativePlatformOS();
+    if (platform === 'android') {
+      warnOnce(
+        'native-interactivity-inert-focusable-leak',
+        '`interactivity: inert` cannot stop focus on every descendant on Android. A focusable child inside the inert subtree may still receive D-pad or keyboard focus; touch and screen-reader blocking still apply to the subtree.',
+        'inert'
+      );
+    }
   }
   return {
     pointerEvents: 'none',

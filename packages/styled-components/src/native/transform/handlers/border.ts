@@ -100,7 +100,7 @@ export function outlineShorthand(tokens: Token[]): Dict<any> | null {
             'native-outline-style',
             '`outline-style: ' +
               name +
-              "` is web-only; React Native only renders 'solid' / 'dotted' / 'dashed'. The declaration still reaches rn-web where it works as expected.",
+              "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', or 'dashed'; rn-web keeps the authored value.",
             name
           );
         }

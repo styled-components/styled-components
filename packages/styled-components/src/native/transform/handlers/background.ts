@@ -239,28 +239,28 @@ export function backgroundShorthand(tokens: Token[]): Dict<any> | null {
   const finalLayer = layers[layers.length - 1];
   for (let i = 0; i < layers.length; i++) {
     const layer = layers[i];
-    if (!__NATIVE_WEB__ && layer.attachment === 'fixed' && __DEV__) {
+    if (__DEV__ && !__NATIVE_WEB__ && layer.attachment === 'fixed') {
       warnOnce(
         'native-background-attachment-fixed',
-        '`background-attachment: fixed` has no React Native equivalent in 0.85 (no scroll-anchored background surface). The keyword drops on iOS / Android; rn-web honors it natively.',
+        '`background-attachment: fixed` is ignored on React Native because iOS and Android do not expose scroll-anchored backgrounds. rn-web keeps it.',
         'fixed'
       );
     }
-    if (!__NATIVE_WEB__ && layer.origin !== null && layer.origin !== 'padding-box' && __DEV__) {
+    if (__DEV__ && !__NATIVE_WEB__ && layer.origin !== null && layer.origin !== 'padding-box') {
       warnOnce(
         'native-background-origin-unsupported',
         '`background-origin: ' +
           layer.origin +
-          '` has no React Native surface in 0.85 (the gradient renderer paints at the border-box edges by default). The keyword drops on iOS / Android; rn-web honors it natively.',
+          '` is ignored on React Native. Native backgrounds paint from the default box on iOS and Android; rn-web keeps the authored value.',
         layer.origin
       );
     }
-    if (!__NATIVE_WEB__ && layer.clip !== null && layer.clip !== 'border-box' && __DEV__) {
+    if (__DEV__ && !__NATIVE_WEB__ && layer.clip !== null && layer.clip !== 'border-box') {
       warnOnce(
         'native-background-clip-unsupported',
         '`background-clip: ' +
           layer.clip +
-          '` has no React Native surface in 0.85. The keyword drops on iOS / Android; rn-web honors it natively. For `background-clip: text` use a dedicated rendering library.',
+          '` is ignored on React Native. rn-web keeps the authored value. For `background-clip: text`, use a dedicated native text rendering library.',
         layer.clip
       );
     }

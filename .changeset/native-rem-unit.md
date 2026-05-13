@@ -2,4 +2,4 @@
 'styled-components': patch
 ---
 
-`rem` length values now resolve on React Native. The value multiplies against the inherited root font size (16 by default) at render time, so `width: 1rem` is `16` and `width: 2rem` is `32`. Works standalone and inside `calc()`. `react-native-web` defers to the browser's native handling.
+`rem` length values now work on React Native. They use the app's root font size, `16` by default, so `width: 1rem` becomes `16` and `width: 2rem` becomes `32`. `rem` works on its own and inside `calc()`. `react-native-web` continues to let the browser handle it.

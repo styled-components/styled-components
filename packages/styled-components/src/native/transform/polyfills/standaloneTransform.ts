@@ -1,5 +1,5 @@
 import { Dict } from '../../../types';
-import { warnOnce } from '../dev';
+import { getReactNativePlatformOS, warnOnce } from '../dev';
 import { consumeDimensionLike, tokenToValue, withoutSlashes } from '../shorthandHelpers';
 import { register } from '../shorthands';
 import { Token, TokenKind } from '../tokens';
@@ -24,7 +24,7 @@ function warn3DDrop(code: string, prop: string): void {
     code,
     '`' +
       prop +
-      ': x y z` 3D form is partially supported on RN;the Z component is dropped. The declaration still reaches rn-web where it works as expected.',
+      ': x y z` is only partially supported on React Native. iOS and Android use the X and Y values and ignore Z; rn-web keeps the full value.',
     prop + '-3d'
   );
 }
@@ -144,7 +144,7 @@ function transformBoxHandler(tokens: Token[]): Dict<any> | null {
       'native-transform-box-unsupported',
       '`transform-box: ' +
         value +
-        '` has no React Native equivalent in 0.85 (the transform pivot is fixed at the view center; `transform-origin` shifts it relative to that). The declaration is dropped on iOS / Android; rn-web honors it natively.',
+        '` is ignored on React Native because transforms use the view center as their reference box. Use `transform-origin` to move the pivot. rn-web keeps `transform-box`.',
       value
     );
   }
@@ -235,7 +235,7 @@ function perspectiveOriginHandler(tokens: Token[]): Dict<any> | null {
   if (__DEV__) {
     warnOnce(
       'native-perspective-origin-unsupported',
-      "`perspective-origin` (CSS Transforms 2 §9) has no React Native surface in 0.85 — the vanishing point for perspective-transformed descendants is fixed at the parent's center. The declaration drops on iOS / Android; rn-web honors it natively."
+      "`perspective-origin` is ignored on React Native. The vanishing point stays at the parent's center on iOS and Android; rn-web keeps the property."
     );
   }
   return {};
@@ -259,10 +259,16 @@ function transformStyleHandler(tokens: Token[]): Dict<any> | null {
 
   if (__NATIVE_WEB__) return { transformStyle: value };
 
-  if (value === 'preserve-3d' && __DEV__) {
+  if (__DEV__ && value === 'preserve-3d') {
+    const iosHint =
+      getReactNativePlatformOS() === 'ios'
+        ? ' On iOS, `collapsable={false}` on the wrapper can avoid 3D rendering bleed across siblings.'
+        : '';
     warnOnce(
       'native-transform-style-preserve-3d',
-      '`transform-style: preserve-3d` has no React Native equivalent in 0.85 (no platform API). The declaration is dropped on iOS / Android; for iOS 3D-context bleed across siblings, set `collapsable={false}` on the wrapper. rn-web honors the property natively.',
+      '`transform-style: preserve-3d` is ignored on React Native because iOS and Android expose no matching style property.' +
+        iosHint +
+        ' rn-web keeps the property.',
       value
     );
   }

@@ -263,9 +263,8 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     if (__DEV__ && rawValue.indexOf('\0') === -1) {
       warnOnce(
         'native-modern-color-cant-fold',
-        `the value "${rawValue}" for property "${camel}" uses a modern color form that couldn't be statically resolved for React Native. ` +
-          `Likely cause: relative-color syntax (e.g. \`oklch(from red l c h)\`), \`calc()\` with dynamic units inside a channel, or an unsupported colorspace. ` +
-          `RN's color parser doesn't recognise these — the value would render as transparent. Substitute a literal \`#hex\` / \`rgb()\` / \`hsl()\`, or fold the math up front.`,
+        `the value "${rawValue}" for "${camel}" uses a modern color form React Native cannot render directly. ` +
+          `Use a literal \`#hex\`, \`rgb()\`, or \`hsl()\` value, or make sure any color math can be resolved before render.`,
         camel + ':' + rawValue
       );
     }

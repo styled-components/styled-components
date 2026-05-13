@@ -2,4 +2,6 @@
 'styled-components': patch
 ---
 
-`background` shorthand now expands on React Native: a single declaration sets `background-image`, `background-position`, `background-size`, `background-repeat`, `background-attachment`, `background-origin`, `background-clip`, and `background-color` per CSS Backgrounds 3 §2.10. Multi-layer (comma-separated), position/size split by `/`, and color on the final layer all work. Native dev warnings fire for surfaces RN doesn't expose (`background-attachment: fixed`, non-default `background-origin` / `background-clip`); `react-native-web` honors the full shorthand through the browser.
+The `background` shorthand now works on React Native. A single declaration can set image, position, size, repeat behavior, attachment, origin, clipping, and color. Multiple background layers, `position / size`, and a final background color are supported.
+
+When React Native does not expose a matching behavior, such as fixed background attachment or non-default background origin and clipping, styled-components shows a development warning instead of silently dropping the unsupported part. `react-native-web` continues to let the browser handle the full shorthand.

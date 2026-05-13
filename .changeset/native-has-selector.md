@@ -20,9 +20,9 @@ const Card = styled.View`
 </Card>
 ```
 
-The match reads the component's own children subtree at render time and fires when any descendant satisfies the inner predicate. Two inner forms are supported on native:
+The rule checks the component's children at render time and applies when any descendant matches. Two forms are supported on native:
 
-- `${Component}`: matches when the referenced styled component appears anywhere in the subtree, recursively (a plain wrapper between the card and the icon is fine).
-- `[attr]` / `[attr=value]`: matches when any descendant carries the named prop. Presence form fires for any non-undefined value; value form compares as a string, with boolean coercion so `aria-pressed={true}` and `aria-pressed="true"` both satisfy `[aria-pressed='true']`.
+- `${Component}`: matches when the referenced styled component appears anywhere inside.
+- `[attr]` and `[attr=value]`: match when any descendant has the named prop. Value checks compare the rendered prop value as text, so `aria-pressed={true}` and `aria-pressed="true"` both match `[aria-pressed='true']`.
 
-Complex inner selectors (descendant chains, sibling combinators, `:not(:has(...))`) are out of scope for this release.
+More complex selectors inside `:has()`, such as descendant chains, sibling selectors, and nested `:has()` calls, are not supported on native yet.

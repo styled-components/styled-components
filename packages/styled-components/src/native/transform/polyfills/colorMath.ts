@@ -1964,7 +1964,7 @@ function parseRelativeFrom(
       if (__DEV__) {
         warnOnce(
           'native-relative-color-currentcolor',
-          `\`${outerFn}(from currentColor ...)\` can't be statically resolved on native because \`currentColor\` requires the cascade. Use a theme-token base (\`${outerFn}(from t.colors.fg ...)\`) instead, or write the resolved value directly.`
+          `\`${outerFn}(from currentColor ...)\` cannot be converted for React Native because \`currentColor\` depends on inherited styles. Use a theme value as the base color, or write the resolved color directly.`
         );
       }
       return null;
