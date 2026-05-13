@@ -180,9 +180,9 @@ export function timeToken(raw: string, value: number, unit: string): Token {
  * allocates a fresh string. The overwhelming majority of CSS authored
  * in the wild is already lowercase (function names like `oklch(` /
  * idents like `solid`), so we scan for any uppercase ASCII byte first
- * and skip the allocation when the input is pure-lowercase. Non-ASCII
- * letters fall through to `toLowerCase` so Unicode case folding stays
- * correct for the long tail of inputs.
+ * and skip the allocation when the input is pure-lowercase. Only
+ * ASCII `A–Z` triggers `toLowerCase`, matching CSS identifiers’
+ * ASCII case-insensitivity; other code units are returned unchanged.
  *
  * Co-located with the token factories rather than tokenize.ts to avoid
  * a circular import (tokenize → tokens, but tokens needs the helper

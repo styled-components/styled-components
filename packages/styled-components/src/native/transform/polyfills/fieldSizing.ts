@@ -7,7 +7,7 @@ import { TokenStream } from '../tokenStream';
  * CSS Form Control Styling 1 §7.1 (`field-sizing`).
  * Syntax: `fixed | content`. Initial: `fixed`. Inherited: no.
  *
- * `content` makes form controls autosize to their content;`fixed` keeps
+ * `content` makes form controls autosize to their content; `fixed` keeps
  * the author-specified dimensions (the default).
  *
  * On native, the polyfill lifts `multiline: true` (via SPECIAL_CASE_PROPS).
@@ -51,7 +51,7 @@ function fieldSizingHandler(tokens: Token[]): Dict<any> | null {
   }
 
   // Native: lift `multiline` only. Yoga + RN's shadow-view measure
-  // callback do the actual growth;a flag stays on the compile output
+  // callback do the actual growth; a flag stays on the compile output
   // so the render path can warn when user `multiline={false}` voids
   // the lift.
   return { multiline: true, fieldSizing: 'content' };

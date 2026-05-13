@@ -372,15 +372,7 @@ interface CompileOutput {
   }>;
   /** Subset of `conditional` minus pseudo-bearing entries. */
   nonPseudoEntries: Array<{
-    type:
-      | 'media'
-      | 'container'
-      | 'supports'
-      | 'pseudo'
-      | 'attr'
-      | 'combinator'
-      | 'nthChild'
-      | 'has';
+    type: 'media' | 'container' | 'supports' | 'attr' | 'combinator' | 'nthChild' | 'has';
     condition: string;
     containerName?: string;
     attribute?: string;
