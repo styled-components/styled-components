@@ -11,6 +11,7 @@ import {
   isGenericFamily,
   resolveGenericFamily,
 } from '../genericFamily';
+import { Platform } from 'react-native';
 
 describe('logical properties spec compliance (CSS Logical Properties Level 1 §4)', () => {
   // Spec source: https://drafts.csswg.org/css-logical-1/
@@ -2082,6 +2083,24 @@ describe('hyphens spec compliance (CSS Text Module Level 4 §6.3.1)', () => {
     });
   });
 
+  describe('on Android', () => {
+    const realOS = Platform.OS;
+    beforeEach(() => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+    });
+    afterEach(() => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: realOS });
+    });
+
+    it('hyphens: auto maps without the iOS-only dev warn', () => {
+      expect(transformDecl('hyphens', 'auto')).toEqual({
+        hyphens: 'auto',
+        android_hyphenationFrequency: 'normal',
+      });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe('invalid input', () => {
     // Spec value-list is closed: only `none | manual | auto` accepted.
     it('unknown keyword drops the declaration', () => {
@@ -2856,41 +2875,69 @@ describe('text-decoration platform skew (Android underline color)', () => {
   // tree drops the unrecognised keys silently. We warn so consumers
   // hit by the discrepancy aren't left wondering why their underline
   // is the wrong color on Android.
-  let warnSpy: jest.SpyInstance;
-  beforeEach(() => {
-    resetWarningsForTest();
-    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-  });
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
+  const realOS = Platform.OS;
 
-  it('warns + emits color when text-decoration carries an explicit color', () => {
-    expect(transformDecl('text-decoration', 'underline #f00')).toEqual({
-      textDecorationLine: 'underline',
-      textDecorationStyle: 'solid',
-      textDecorationColor: '#f00',
+  describe('on Android', () => {
+    let warnSpy: jest.SpyInstance;
+    beforeEach(() => {
+      resetWarningsForTest();
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+      warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     });
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0][0]).toMatch(/text-decoration-color/);
-    expect(warnSpy.mock.calls[0][0]).toMatch(/only applies on iOS/);
-  });
-
-  it('does not warn when text-decoration omits the color (default black falls back)', () => {
-    expect(transformDecl('text-decoration', 'underline')).toEqual({
-      textDecorationLine: 'underline',
-      textDecorationStyle: 'solid',
-      textDecorationColor: 'black',
+    afterEach(() => {
+      warnSpy.mockRestore();
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: realOS });
     });
-    expect(warnSpy).not.toHaveBeenCalled();
+
+    it('warns + emits color when text-decoration carries an explicit color', () => {
+      expect(transformDecl('text-decoration', 'underline #f00')).toEqual({
+        textDecorationLine: 'underline',
+        textDecorationStyle: 'solid',
+        textDecorationColor: '#f00',
+      });
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy.mock.calls[0][0]).toMatch(/text-decoration-color/);
+      expect(warnSpy.mock.calls[0][0]).toMatch(/only applies on iOS/);
+    });
+
+    it('does not warn when text-decoration omits the color (default black falls back)', () => {
+      expect(transformDecl('text-decoration', 'underline')).toEqual({
+        textDecorationLine: 'underline',
+        textDecorationStyle: 'solid',
+        textDecorationColor: 'black',
+      });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('dedupe gates on the raw color value (one warn per unique color)', () => {
+      transformDecl('text-decoration', 'underline #f00');
+      transformDecl('text-decoration', 'underline #f00');
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      transformDecl('text-decoration', 'underline #0f0');
+      expect(warnSpy).toHaveBeenCalledTimes(2);
+    });
   });
 
-  it('dedupe gates on the raw color value (one warn per unique color)', () => {
-    transformDecl('text-decoration', 'underline #f00');
-    transformDecl('text-decoration', 'underline #f00');
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    transformDecl('text-decoration', 'underline #0f0');
-    expect(warnSpy).toHaveBeenCalledTimes(2);
+  describe('on iOS', () => {
+    let warnSpy: jest.SpyInstance;
+    beforeEach(() => {
+      resetWarningsForTest();
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
+      warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+    afterEach(() => {
+      warnSpy.mockRestore();
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: realOS });
+    });
+
+    it('does not warn when text-decoration carries an explicit color (iOS honors the keys)', () => {
+      expect(transformDecl('text-decoration', 'underline #f00')).toEqual({
+        textDecorationLine: 'underline',
+        textDecorationStyle: 'solid',
+        textDecorationColor: '#f00',
+      });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
   });
 });
 

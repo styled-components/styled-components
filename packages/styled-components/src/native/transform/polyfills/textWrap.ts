@@ -1,5 +1,5 @@
 import { Dict } from '../../../types';
-import { warnOnce } from '../dev';
+import { getReactNativePlatformOS, warnOnce } from '../dev';
 import { register } from '../shorthands';
 import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
@@ -13,6 +13,18 @@ import { TokenStream } from '../tokenStream';
 
 const MODES = new Set(['wrap', 'nowrap']);
 const STYLES = new Set(['auto', 'balance', 'stable', 'pretty']);
+
+function warnIosTextWrapBalancePretty(style: string): void {
+  if (!__DEV__) return;
+  if (getReactNativePlatformOS() !== 'ios') return;
+  warnOnce(
+    'native-text-wrap-ios',
+    '`text-wrap: ' +
+      style +
+      "` maps to Android's `textBreakStrategy` but iOS has no equivalent in RN 0.85 (silently rendered with default line-breaking). The declaration still reaches rn-web where it works as expected.",
+    style
+  );
+}
 
 function textWrapShorthand(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(tokens);
@@ -54,10 +66,10 @@ function textWrapShorthand(tokens: Token[]): Dict<any> | null {
   }
   if (style === 'balance') {
     out.textBreakStrategy = 'balanced';
-    warnIosNoTextWrap(style);
+    if (__DEV__) warnIosTextWrapBalancePretty(style);
   } else if (style === 'pretty') {
     out.textBreakStrategy = 'highQuality';
-    warnIosNoTextWrap(style);
+    if (__DEV__) warnIosTextWrapBalancePretty(style);
   } else if (style === 'stable') {
     if (__DEV__) {
       warnOnce(
@@ -67,18 +79,6 @@ function textWrapShorthand(tokens: Token[]): Dict<any> | null {
     }
   }
   return out;
-}
-
-function warnIosNoTextWrap(style: string): void {
-  if (__NATIVE_WEB__) return;
-  if (!__DEV__) return;
-  warnOnce(
-    'native-text-wrap-ios',
-    '`text-wrap: ' +
-      style +
-      "` maps to Android's `textBreakStrategy` but iOS has no equivalent in RN 0.85 (silently rendered with default line-breaking). The declaration still reaches rn-web where it works as expected.",
-    style
-  );
 }
 
 /**
@@ -118,10 +118,10 @@ function textWrapStyleLonghand(tokens: Token[]): Dict<any> | null {
   const out: Dict<any> = { textWrapStyle: name };
   if (name === 'balance') {
     out.textBreakStrategy = 'balanced';
-    warnIosNoTextWrap(name);
+    if (__DEV__) warnIosTextWrapBalancePretty(name);
   } else if (name === 'pretty') {
     out.textBreakStrategy = 'highQuality';
-    warnIosNoTextWrap(name);
+    if (__DEV__) warnIosTextWrapBalancePretty(name);
   } else if (name === 'stable') {
     if (__DEV__) {
       warnOnce(
