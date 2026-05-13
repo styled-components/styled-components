@@ -37,7 +37,6 @@ type Props = {
   theme: ThemeArgument;
 };
 
-// Create context only if createContext is available, otherwise create a fallback
 export const ThemeContext = !IS_RSC
   ? React.createContext<DefaultTheme | undefined>(undefined)
   : ({

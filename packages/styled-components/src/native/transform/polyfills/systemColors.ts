@@ -1,32 +1,7 @@
-/**
- * CSS Color 4 §6.2 — CSS system colors.
- *
- * Each keyword resolves to a UA / platform-defined color tied to a UI
- * surface (page background, default foreground text, selection,
- * disabled text, hyperlink). Per CSS Color 4: "User agents must
- * provide a mapping of these system color values to specific colors
- * appropriate to the platform" and "must respect the user agent's
- * color scheme."
- *
- * v7 native maps the keyword to a `light-dark()` expression carrying
- * sensible per-mode literals; the existing light-dark polyfill then
- * resolves the active scheme at render time on iOS / Android and
- * leaves the function intact for the browser on rn-web. This keeps
- * the implementation transparent (one CSS declaration, three
- * platforms) without coupling to RN's `PlatformColor` surface, which
- * varies across iOS / Android and is awkward to round-trip through
- * the static fold.
- *
- * The light / dark literals were picked from the closest macOS /
- * iOS / Android system defaults and cross-checked against Safari,
- * Chrome, and Firefox so the swatches read consistently across the
- * three engines. Platform-specific overrides via PlatformColor stay
- * available to authors who need the exact native value — emit the
- * keyword from a runtime resolver instead of from the styled
- * declaration, since PlatformColor returns an opaque token.
- *
- * Reference: https://drafts.csswg.org/css-color-4/#css-system-colors
- */
+// CSS Color 4 §6.2 system colors, mapped through `light-dark()` so
+// iOS/Android resolve at render time while rn-web keeps the native CSS form.
+// Literals are cross-platform approximations; exact native `PlatformColor`
+// values stay opaque and should come from runtime user code.
 
 const SYSTEM_COLOR_LD: Record<string, string> = {
   // Page background.
@@ -69,12 +44,7 @@ const SYSTEM_COLOR_LD: Record<string, string> = {
   accentcolortext: 'light-dark(#ffffff, #ffffff)',
 };
 
-/**
- * Deprecated keyword → mandatory keyword per CSS Color 4 Appendix A.
- * Per spec: "User agents must support these keywords, and to mitigate
- * fingerprinting must map them to the (undeprecated) system colors."
- * Reference: https://drafts.csswg.org/css-color-4/#deprecated-system-colors
- */
+// CSS Color 4 Appendix A deprecated aliases.
 const DEPRECATED_SYSTEM_COLOR_ALIAS: Record<string, string> = {
   activeborder: 'buttonborder',
   activecaption: 'canvastext',
@@ -101,15 +71,6 @@ const DEPRECATED_SYSTEM_COLOR_ALIAS: Record<string, string> = {
   windowtext: 'canvastext',
 };
 
-/**
- * Look up a CSS system color keyword and return its `light-dark()`
- * expansion. Returns `null` for non-system-color identifiers.
- *
- * Match is case-insensitive per CSS syntax §3.4 ("identifiers are
- * ASCII case-insensitive when compared in normative contexts").
- * Deprecated aliases route through the replacement table per CSS
- * Color 4 Appendix A.
- */
 export function getSystemColorLightDark(keyword: string): string | null {
   const key = keyword.toLowerCase();
   const direct = SYSTEM_COLOR_LD[key];
@@ -119,13 +80,8 @@ export function getSystemColorLightDark(keyword: string): string | null {
   return null;
 }
 
-/** All recognised system color keywords (lowercased). Exported for
- *  the spec compliance describe block; library code goes through
- *  {@link getSystemColorLightDark}. */
 export const SYSTEM_COLOR_KEYWORDS: readonly string[] = Object.keys(SYSTEM_COLOR_LD);
 
-/** Deprecated keyword aliases (lowercased) → replacement keyword. Exported
- *  for the spec compliance describe block. */
 export const DEPRECATED_SYSTEM_COLOR_KEYWORDS: readonly string[] = Object.keys(
   DEPRECATED_SYSTEM_COLOR_ALIAS
 );

@@ -45,8 +45,7 @@ function warnUnsupportedPlugins(plugins: SCPlugin[] | undefined): void {
   }
 }
 
-// Per-render sheet reset; the override slot is mutated by the SSM render
-// function instead of by token components (see comment in StyleSheetManager).
+// Reset once per RSC render.
 const ensureSheetReset: (() => void) | null = IS_RSC
   ? React.cache(() => {
       mainSheet.names.clear();
@@ -86,7 +85,6 @@ const defaultContextValue: IStyleSheetContext = {
   plugins: undefined,
 };
 
-// Create context only if createContext is available, otherwise create a fallback
 export const StyleSheetContext = !IS_RSC
   ? React.createContext<IStyleSheetContext>(defaultContextValue)
   : ({
@@ -157,16 +155,10 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
   if (IS_RSC) {
     if (ensureSheetReset) ensureSheetReset();
 
-    // Per-render slot (via React.cache) carries the override + compiler
-    // memoization across this single server render without leaking to
-    // concurrent ones.
     const slot = getRscSlot!();
 
-    // Merge with existing override: inherit parent values when props are omitted.
     const parentResolved = slot.override || defaultContextValue;
 
-    // Build a compiler instance when any compiler-related prop is provided.
-    // Cache it when the plugins array ref is stable.
     const hasCompilerProps = props.plugins !== undefined || props.namespace !== undefined;
 
     if (hasCompilerProps) {
@@ -241,7 +233,6 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     return sheet;
   }, [props.nonce, props.sheet, props.target, styleSheet]);
 
-  // Inherit parent compiler when no compiler-related props are provided.
   // When `namespace` changes, create a new instance but still inherit plugins
   // from the parent if `plugins` is omitted. An explicit empty array disables
   // inherited plugins.
@@ -256,11 +247,9 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     });
   }, [props.namespace, props.plugins, parentContext.compiler, parentContext.plugins]);
 
-  // Inherit parent shouldForwardProp when not provided.
   const shouldForwardProp =
     'shouldForwardProp' in props ? props.shouldForwardProp : parentContext.shouldForwardProp;
 
-  // Resolve which plugins to propagate: own > parent > none
   const resolvedPlugins = props.plugins ?? parentContext.plugins;
 
   const styleSheetContextValue = React.useMemo(

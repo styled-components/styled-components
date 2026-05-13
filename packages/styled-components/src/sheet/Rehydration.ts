@@ -6,10 +6,6 @@ import { Sheet } from './types';
 const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
 const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\].*?"([^"]*)`);
 
-/**
- * Type guard to check if a node is a ShadowRoot.
- * Uses instanceof when available, with duck-typing fallback for cross-realm scenarios.
- */
 const isShadowRoot = (node: InsertionTarget | Node): node is ShadowRoot => {
   return (
     (typeof ShadowRoot !== 'undefined' && node instanceof ShadowRoot) ||
@@ -19,11 +15,6 @@ const isShadowRoot = (node: InsertionTarget | Node): node is ShadowRoot => {
   );
 };
 
-/**
- * Extract the container (Document or ShadowRoot) from an InsertionTarget.
- * If the target is a ShadowRoot, return it directly.
- * If the target is an HTMLElement, return its root node if it's a ShadowRoot, otherwise return document.
- */
 export const getRehydrationContainer = (
   target?: InsertionTarget | undefined
 ): Document | ShadowRoot => {
@@ -31,12 +22,10 @@ export const getRehydrationContainer = (
     return document;
   }
 
-  // Check if target is a ShadowRoot
   if (isShadowRoot(target)) {
     return target;
   }
 
-  // Check if target is an HTMLElement inside a ShadowRoot
   if ('getRootNode' in target) {
     const root = (target as HTMLElement).getRootNode();
     if (isShadowRoot(root)) {
@@ -73,8 +62,7 @@ export const outputSheet = (sheet: Sheet) => {
       }
     }
 
-    // NOTE: It's easier to collect rules and have the marker
-    // after the actual rules to simplify the rehydration
+    // The marker follows the rules so rehydration can collect them first.
     css += rules + selector + '{content:"' + content + '"}' + SPLITTER;
   }
 
@@ -107,9 +95,7 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
       const id = marker[2];
 
       if (group !== 0) {
-        // Rehydrate componentId to group index mapping
         setGroupForId(id, group);
-        // Rehydrate names and rules
         // looks like: data-styled.g11[id="idA"]{content:"nameA,"}
         rehydrateNamesFromContent(sheet, id, marker[3]);
         sheet.getTag().insertRules(group, rules);

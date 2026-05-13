@@ -300,12 +300,10 @@ export function attachSourceInputs<T extends RuleSet<any>>(
   return rules;
 }
 
-/** Membership test: was this Array produced by the `css(...)` helper? */
 export function isCssProduct(arr: unknown): boolean {
   return Array.isArray(arr) && (arr as RulesWithSlot)[SOURCE_SLOT] !== undefined;
 }
 
-/** Read the `Source` for a `RuleSet`, parsing on demand. */
 export function getSource(rules: RuleSet<any>): Source | undefined {
   const slot = (rules as unknown as RulesWithSlot)[SOURCE_SLOT];
   if (slot === undefined) return undefined;

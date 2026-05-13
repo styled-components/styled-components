@@ -25,24 +25,13 @@ function flattenStructure<T>(input: ReadonlyArray<unknown>, out: T[] = [] as T[]
   return out;
 }
 
-/**
- * Body of `css(...)`, accepting interpolations as a pre-built array so
- * the hot call site (`templateFunction` in `constructWithOptions`) can
- * skip the rest→spread→rest dance. Public `css(...)` collects its rest
- * args into an array and forwards here; `templateFunction` already has
- * a rest array and forwards it directly.
- */
+/** Internal `css(...)` body for callers that already have an interpolation array. */
 export function cssWithInterpolations<Props extends object = BaseObject>(
   styles: Styles<NoInfer<Props>>,
   interpolations: Interpolation<NoInfer<Props>>[]
 ): RuleSet<NoInfer<Props>> {
   if (isPlainObject(styles)) {
-    // Object input becomes a synthetic template literal. `objectToTemplate`
-    // walks the object and produces (strings, interpolations) where any
-    // function or fragment values become block-position slots; the rest of
-    // the pipeline (Source, fast path) handles it identically to
-    // `css\`...\``. Trailing call-site interpolations append as additional
-    // block-level slots after the object body.
+    // Object styles use the same Source/fast-path pipeline as template literals.
     const objTemplate = objectToTemplate(styles as Record<string, unknown>);
     const allStrings = objTemplate.strings.slice();
     const allInterps: Interpolation<NoInfer<Props>>[] =
@@ -59,9 +48,7 @@ export function cssWithInterpolations<Props extends object = BaseObject>(
   }
 
   if (isFunction(styles)) {
-    // Function input becomes a single block-level interpolation slot at
-    // the head of the template. The function evaluates per-render and its
-    // return (string, object, fragment) is resolved by the Source path.
+    // Treat function input as a block-level interpolation.
     const slots = [styles as StyleFunction<Props>, ...interpolations];
     const synthesizedStrings: string[] = new Array(slots.length + 1).fill('');
     const rules = flattenStructure<Interpolation<NoInfer<Props>>>(
@@ -79,11 +66,7 @@ export function cssWithInterpolations<Props extends object = BaseObject>(
     typeof styleStringArray[0] === 'string'
   ) {
     // Pure-static templates (no interpolations): skip flattenStructure
-    // entirely. The input is already a one-element string array, so we
-    // just allocate a fresh array literal for `attachSourceInputs` to mark.
-    // Without the source attached, every `${staticMixin}` referencing this
-    // RuleSet would force a bail to the legacy path even though the body
-    // is fixed.
+    // while still attaching Source metadata for `${staticMixin}` reuse.
     const rules: Interpolation<NoInfer<Props>>[] = [
       styleStringArray[0] as Interpolation<NoInfer<Props>>,
     ];

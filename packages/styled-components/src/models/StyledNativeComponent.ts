@@ -1717,7 +1717,6 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
       ? escape(options.displayName) + '-' + componentId
       : componentId;
 
-    // fold the underlying StyledComponent attrs up (implicit extend)
     const finalAttrs =
       isTargetStyledComp && styledComponentTarget.attrs
         ? styledComponentTarget.attrs.concat(attrs).filter(Boolean)
@@ -1731,7 +1730,6 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
       if (options.shouldForwardProp) {
         const passedShouldForwardPropFn = options.shouldForwardProp;
 
-        // compose nested shouldForwardProp calls
         shouldForwardProp = (prop, elementToBeCreated) =>
           shouldForwardPropFn(prop, elementToBeCreated) &&
           passedShouldForwardPropFn(prop, elementToBeCreated);
@@ -1774,14 +1772,7 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
     const RenderInner: {
       (props: ExecutionProps & OuterProps & { ref?: React.Ref<any> }): React.JSX.Element;
       displayName?: string;
-    } = props =>
-      impl<OuterProps>(
-        WrappedStyledComponent,
-        // impl reads props as ExecutionProps & OuterProps; the `ref`
-        // intersection is captured in the second argument.
-        props,
-        props.ref
-      );
+    } = props => impl<OuterProps>(WrappedStyledComponent, props, props.ref);
     RenderInner.displayName = displayName;
     const MemoizedRenderInner = React.memo(RenderInner);
     // displayName must live on the memo wrapper, not the inner: React DevTools
@@ -1829,7 +1820,6 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
 
     WrappedStyledComponent.styledComponentId = styledComponentId;
 
-    // fold the underlying StyledComponent target up since we folded the styles
     WrappedStyledComponent.target = isTargetStyledComp ? styledComponentTarget.target : target;
 
     hoist<typeof WrappedStyledComponent, typeof target>(

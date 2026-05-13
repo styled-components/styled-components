@@ -89,21 +89,18 @@ export const resetIdentifiers = (): void => {
   for (const k in identifiers) delete identifiers[k];
 };
 
-/* We depend on components having unique IDs */
 function generateId(
   displayName?: string | undefined,
   parentComponentId?: string | undefined
 ): string {
   const name = typeof displayName !== 'string' ? 'sc' : escape(displayName);
-  // Ensure that no displayName can lead to duplicate componentIds
   identifiers[name] = (identifiers[name] || 0) + 1;
 
   const componentId =
     name +
     '-' +
     generateComponentId(
-      // SC_VERSION gives us isolation between multiple runtimes on the page at once
-      // this is improved further with use of the babel plugin "namespace" feature
+      // Isolate multiple styled-components runtimes on one page.
       SC_VERSION + name + identifiers[name]
     );
 
@@ -225,7 +222,6 @@ function getWhereRegExp(name: string): RegExp {
   return re;
 }
 
-/** Wrap a single level's class selector in :where() for zero specificity (RSC inheritance). */
 function wrapLevelInWhere(levelCss: string, name: string): string {
   const re = getWhereRegExp(name);
   re.lastIndex = 0;
@@ -285,7 +281,6 @@ function findBaseDecl(
  * Native fully removes the decl from the compiled style object; web
  * relies on the inline-style override. Documented asymmetry.
  */
-/** Merge a result bag from an arity-2 attr (plan output OR runtime return) into context. */
 function mergePostAttrsResult<Props extends BaseObject>(
   context: React.HTMLAttributes<Element> & ExecutionContext & Props,
   props: ExecutionProps & Props,
@@ -451,15 +446,17 @@ function buildPropsForElement(
 
   for (const key in context) {
     if (context[key] === undefined) {
-      // Omit undefined values from props passed to wrapped element.
-    } else if (
+      continue;
+    }
+    if (
       key[0] === '$' ||
       key === 'as' ||
       key === 'ref' || // React 19 ref-as-prop: the ref is re-attached explicitly below.
       (key === 'theme' && context.theme === theme)
     ) {
-      // Omit transient props and execution props.
-    } else if (key === 'forwardedAs') {
+      continue;
+    }
+    if (key === 'forwardedAs') {
       out.as = context.forwardedAs;
     } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
       out[key] = context[key];
@@ -689,7 +686,6 @@ function createStyledComponent<
       ? escape(options.displayName) + '-' + options.componentId
       : options.componentId || componentId;
 
-  // fold the underlying StyledComponent attrs up (implicit extend)
   const finalAttrs =
     isTargetStyledComp && styledComponentTarget.attrs
       ? styledComponentTarget.attrs.concat(attrs as unknown as Attrs<OuterProps>[]).filter(Boolean)
@@ -703,7 +699,6 @@ function createStyledComponent<
     if (options.shouldForwardProp) {
       const passedShouldForwardPropFn = options.shouldForwardProp;
 
-      // compose nested shouldForwardProp calls
       shouldForwardProp = (prop, elementToBeCreated) =>
         shouldForwardPropFn(prop, elementToBeCreated) &&
         passedShouldForwardPropFn(prop, elementToBeCreated);
@@ -733,14 +728,7 @@ function createStyledComponent<
   const RenderInner: {
     (props: ExecutionProps & OuterProps & { ref?: Ref<Element> }): React.JSX.Element;
     displayName?: string;
-  } = props =>
-    useImpl<OuterProps>(
-      WrappedStyledComponent,
-      // useImpl reads props as ExecutionProps & OuterProps; the `ref`
-      // intersection is captured in the second argument.
-      props,
-      props.ref
-    );
+  } = props => useImpl<OuterProps>(WrappedStyledComponent, props, props.ref);
   RenderInner.displayName = displayName;
 
   const hasPostAttrs = hasPostAttrsWeb(finalAttrs);
@@ -760,10 +748,7 @@ function createStyledComponent<
     displayName,
     shouldForwardProp,
     hasPostAttrs,
-    // For each arity-2 attr (in order), attempt to fold its work into a
-    // static plan against the rules' parsed AST. Plans are `null` when the
-    // callback can't be statically resolved; the render path falls back to
-    // runtime invocation for those entries.
+    // Static plan where possible; null slots fall back to runtime invocation.
     postAttrsPlans: hasPostAttrs ? buildPostAttrsPlans(finalAttrs, rules) : undefined,
     foldedComponentIds,
     target: resolvedTarget,
