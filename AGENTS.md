@@ -45,6 +45,7 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - `pnpm --filter styled-components bench:web` -- Run web benchmarks
 - `pnpm --filter styled-components bench:native` -- Run native benchmarks (parser + render)
 - `pnpm --filter styled-components bench:rsc` -- Run RSC benchmarks (renderToString + dedup + React baseline)
+- `pnpm test:prerelease-notes` -- Regenerate prerelease GitHub release-note markdown locally (set `GITHUB_REPOSITORY=owner/name`; optional `CHANGESET_NOTES_ROOT`, `RELEASE_NOTES_OUTDIR`)
 
 ## Build Architecture
 

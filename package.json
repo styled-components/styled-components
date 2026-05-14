@@ -9,7 +9,8 @@
     "prepare": "husky",
     "prettier": "pnpm --filter styled-components prettier:check",
     "size": "pnpm --filter styled-components size",
-    "test": "pnpm --filter styled-components test"
+    "test": "pnpm --filter styled-components test",
+    "test:prerelease-notes": "node scripts/prerelease-release-notes.cjs"
   },
   "author": "Glen Maddern",
   "license": "MIT",
