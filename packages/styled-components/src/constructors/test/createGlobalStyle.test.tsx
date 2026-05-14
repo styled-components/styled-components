@@ -450,7 +450,7 @@ describe(`createGlobalStyle`, () => {
       }"
     `);
 
-    // Unmount the second instance — first instance's styles must survive
+    // Unmount the second instance - first instance's styles must survive
     rerender(<Wrapper showSecond={false} />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "body {
@@ -483,7 +483,7 @@ describe(`createGlobalStyle`, () => {
       }"
     `);
 
-    // Unmount second — first should keep its styles
+    // Unmount second - first should keep its styles
     rerender(<Wrapper showSecond={false} color="red" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "body {
@@ -491,7 +491,7 @@ describe(`createGlobalStyle`, () => {
       }"
     `);
 
-    // Update prop on remaining instance — should still work
+    // Update prop on remaining instance - should still work
     rerender(<Wrapper showSecond={false} color="blue" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "body {
@@ -574,7 +574,7 @@ describe(`createGlobalStyle`, () => {
     rerender(<Wrapper show={false} />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
 
-    // Remount — should work again
+    // Remount - should work again
     rerender(<Wrapper show={true} />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "body {
@@ -608,7 +608,7 @@ describe(`createGlobalStyle`, () => {
       }"
     `);
 
-    // Remove the FIRST instance — second should survive
+    // Remove the FIRST instance - second should survive
     rerender(<Wrapper showFirst={false} showSecond={true} />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "body {
@@ -645,7 +645,7 @@ describe(`createGlobalStyle`, () => {
       }"
     `);
 
-    // Change only instance A's prop — instance B's CSS is unchanged, and
+    // Change only instance A's prop - instance B's CSS is unchanged, and
     // rule order must remain mount-order (A then B) so cascade doesn't flip
     // based on which instance updated last.
     rerender(<Wrapper colorA="green" colorB="blue" />);
@@ -860,7 +860,7 @@ describe('createGlobalStyle HMR', () => {
 
   /**
    * Call the inner GlobalStyleComponent render function directly on a
-   * stable host fiber — hooks attach to the host, state is preserved,
+   * stable host fiber - hooks attach to the host, state is preserved,
    * but the closure (and thus `globalStyle`) changes when we swap `renderFn`.
    */
   function DynamicRenderer({ renderFn }: { renderFn: (props: any) => React.ReactNode }) {
@@ -884,7 +884,7 @@ describe('createGlobalStyle HMR', () => {
       }"
     `);
 
-    // "HMR patch" — swap to V2's render function on the SAME fiber.
+    // "HMR patch" - swap to V2's render function on the SAME fiber.
     // DynamicRenderer's fiber stays mounted; hooks are preserved.
     // The useLayoutEffect callback now captures V2's globalStyle.
     // With fix: deps include globalStyle (new ref) → effect re-runs.
@@ -980,13 +980,13 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     const gs = new GlobalStyle(rules, 'sc-global-eq-test');
     const ctx = { theme: { color: 'red' } } as any;
 
-    // First render — populates instanceRules
+    // First render - populates instanceRules
     gs.renderStyles(1, ctx, sheet, mainStylis);
     expect(gs.instanceRules.has(1)).toBe(true);
 
     const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
 
-    // Second render with same CSS — should hit fast-path and skip rebuildGroup
+    // Second render with same CSS - should hit fast-path and skip rebuildGroup
     gs.renderStyles(1, ctx, sheet, mainStylis);
     expect(clearRulesSpy).not.toHaveBeenCalled();
   });
@@ -1003,7 +1003,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     gs.renderStyles(1, { theme: { color: 'red' } } as any, sheet, mainStylis);
     const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
 
-    // Second render with different CSS — should NOT hit fast-path
+    // Second render with different CSS - should NOT hit fast-path
     gs.renderStyles(1, { theme: { color: 'blue' } } as any, sheet, mainStylis);
     expect(clearRulesSpy).toHaveBeenCalled();
 
@@ -1027,7 +1027,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     const gs = new GlobalStyle(rules, 'sc-global-count-test');
     const ctx = { theme: {} } as any;
 
-    // First render — one rule
+    // First render - one rule
     gs.renderStyles(1, ctx, sheet, mainStylis);
     const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
 
@@ -1051,7 +1051,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     gs.renderStyles(1, ctx, serverSheet, mainStylis);
     const clearRulesSpy = jest.spyOn(serverSheet, 'clearRules');
 
-    // Same CSS — server must always rebuild (clearTag invalidates DOM)
+    // Same CSS - server must always rebuild (clearTag invalidates DOM)
     gs.renderStyles(1, ctx, serverSheet, mainStylis);
     expect(clearRulesSpy).toHaveBeenCalled();
   });
@@ -1065,7 +1065,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     const gs = new GlobalStyle(rules, 'sc-global-static-test');
     const ctx = { theme: {} } as any;
 
-    // First render — inserts rules
+    // First render - inserts rules
     gs.renderStyles(1, ctx, sheet, mainStylis);
     expect(sheet.toString()).toMatchInlineSnapshot(`
       "body{background:pink;}/*!sc*/
@@ -1075,7 +1075,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
 
     const insertSpy = jest.spyOn(sheet, 'insertRules');
 
-    // Second render — name already registered, should skip
+    // Second render - name already registered, should skip
     gs.renderStyles(1, ctx, sheet, mainStylis);
     expect(insertSpy).not.toHaveBeenCalled();
   });
@@ -1089,7 +1089,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     const gs = new GlobalStyle(rules, 'sc-global-rehydrate-test');
     const ctx = { theme: {} } as any;
 
-    // First render — inserts rules and populates cache
+    // First render - inserts rules and populates cache
     gs.renderStyles(1, ctx, sheet, mainStylis);
     expect(gs.instanceRules.has(1)).toBe(true);
     const entry1 = gs.instanceRules.get(1)!;
@@ -1098,7 +1098,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     gs.instanceRules.clear();
     expect(gs.instanceRules.has(1)).toBe(false);
 
-    // Re-render — should repopulate cache from computation (not re-insert)
+    // Re-render - should repopulate cache from computation (not re-insert)
     const insertSpy = jest.spyOn(sheet, 'insertRules');
     gs.renderStyles(1, ctx, sheet, mainStylis);
     expect(gs.instanceRules.has(1)).toBe(true);
@@ -1127,7 +1127,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
       "
     `);
 
-    // Remove instance 1 — instance 2 should survive
+    // Remove instance 1 - instance 2 should survive
     gs.removeStyles(1, sheet);
     expect(gs.instanceRules.size).toBe(1);
     expect(sheet.toString()).toMatchInlineSnapshot(`
@@ -1136,7 +1136,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
       "
     `);
 
-    // Remove instance 2 — all gone
+    // Remove instance 2 - all gone
     gs.removeStyles(2, sheet);
     expect(gs.instanceRules.size).toBe(0);
     expect(sheet.toString()).toBe('');

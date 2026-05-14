@@ -68,7 +68,7 @@ describe('memoization correctness', () => {
       `".b{color:red;font-size:14px;}.c{color:blue;font-size:16px;}"`
     );
 
-    // Back to red — should get the same className as the first render
+    // Back to red - should get the same className as the first render
     renderer.update(<Comp $color="red" />);
     expect(renderer.root.findByType('div').props.className).toBe(redClass);
 
@@ -259,7 +259,7 @@ describe('memoization correctness', () => {
       `".b{color:red;}.c{color:blue;}.d{color:green;}"`
     );
 
-    // Re-render — each sibling caches independently
+    // Re-render - each sibling caches independently
     renderer.update(
       <div>
         <Comp $color="red" />
@@ -292,7 +292,7 @@ describe('memoization correctness', () => {
     const blueClass = children[1].findByType('div').props.className;
     expect(redClass).not.toBe(blueClass);
 
-    // Swap colors — each child should get the other's className
+    // Swap colors - each child should get the other's className
     renderer.update(
       <div>
         <Comp $color="blue" />
@@ -304,7 +304,7 @@ describe('memoization correctness', () => {
     expect(children2[0].findByType('div').props.className).toBe(blueClass);
     expect(children2[1].findByType('div').props.className).toBe(redClass);
 
-    // Back to original — should restore original classNames
+    // Back to original - should restore original classNames
     renderer.update(
       <div>
         <Comp $color="red" />

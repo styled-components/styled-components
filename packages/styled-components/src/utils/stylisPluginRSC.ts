@@ -14,7 +14,7 @@ import { isEscaped } from './stylis';
  *    that match when 1 or 2 `<style data-styled>` tags are interleaved
  *    between siblings. The RSC render path emits Fragment[kfStyle?, compStyle?,
  *    element] per component, so a component's style tags always precede its own
- *    element — the maximum between any two elements is 2 (the next component's
+ *    element - the maximum between any two elements is 2 (the next component's
  *    keyframe + component CSS). Known limitations:
  *    - `+` inside pseudo-functions (:is(), :has(), :where(), :not()) is not
  *      expanded. Prefer :first-of-type/:nth-of-type or ~ (general sibling).
@@ -91,7 +91,7 @@ function expandAdjacentSibling(selector: string, out: string[]): void {
 
 function stylisPluginRSC(element: Parameters<Middleware>[0]) {
   if (element.type === RULESET) {
-    // New array — stylis caches AST objects, in-place mutation corrupts the cache
+    // New array - stylis caches AST objects, in-place mutation corrupts the cache
     const props = element.props as string[];
     const newProps: string[] = [];
     for (let i = 0; i < props.length; i++) {

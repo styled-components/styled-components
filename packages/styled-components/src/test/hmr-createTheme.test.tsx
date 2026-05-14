@@ -15,7 +15,7 @@ describe('HMR + createTheme interaction', () => {
     // Simulate initial module evaluation: createTheme with original values
     const themeV1 = createTheme({ colors: { primary: '#0070f3', text: '#111' } });
 
-    // Component created with V1 tokens — these are static strings baked into rules
+    // Component created with V1 tokens - these are static strings baked into rules
     const Comp = styled.div`
       color: ${themeV1.colors.primary};
       background: ${themeV1.colors.text};
@@ -250,7 +250,7 @@ describe('HMR + createTheme interaction', () => {
 
     const { container, rerender } = render(<CompV1 />);
 
-    // Re-render with SAME props — should be a cache hit
+    // Re-render with SAME props - should be a cache hit
     rerender(<CompV1 />);
     const classAfterCacheHit = container.firstElementChild!.className;
 
@@ -279,7 +279,7 @@ describe('HMR + createTheme interaction', () => {
     expect(themeV2.vars.colors.primary).toBe('--sc-colors-primary');
     expect(themeV2.vars.colors.secondary).toBe('--sc-colors-secondary');
 
-    // Using both in components — new token works correctly
+    // Using both in components - new token works correctly
     const Comp = styled.div`
       color: ${themeV2.colors.primary};
       border-color: ${themeV2.colors.secondary};

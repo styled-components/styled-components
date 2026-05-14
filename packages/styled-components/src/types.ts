@@ -223,11 +223,32 @@ export interface PolymorphicComponent<
   out R extends Runtime,
   in out BaseProps extends BaseObject,
 > extends React.ForwardRefExoticComponent<
-  BaseProps & {
+  // FastOmit ahead of the intersection so a wrapped component's own `as` /
+  // `forwardedAs` props (e.g. Next.js Link's `as?: Url`) don't intersect with
+  // our `WebTarget`-typed versions and produce conflicting required-shape
+  // types (#5734). `React.ComponentProps<typeof StyledComponent>` still
+  // surfaces our `as` / `forwardedAs` (the original #5654 fix).
+  FastOmit<BaseProps, 'as' | 'forwardedAs'> & {
     as?: StyledTarget<R> | undefined;
     forwardedAs?: StyledTarget<R> | undefined;
   }
 > {
+  // Default overload (no `as`/`forwardedAs`) is listed first so TypeScript's JSX
+  // completion resolves to it for plain `<StyledComponent ... />` usage. The
+  // generic overloads below introduce unsolved type parameters that, when
+  // visited first, suppress JSX attribute name completions for keys carried by
+  // `BaseProps` (#5741). Avoids `Substitute` so ref callbacks get contextual
+  // typing even with spread props (#5687).
+  (
+    props: OverrideStyle<
+      NoInfer<FastOmit<BaseProps, keyof ExecutionProps>> &
+        FastOmit<ExecutionProps, 'as' | 'forwardedAs'> & {
+          as?: void;
+          forwardedAs?: void;
+        }
+    >
+  ): React.JSX.Element;
+
   // Overload for `as` polymorphism. `as` is required here to prevent TS from
   // falling back to the constraint type (`StyledTarget<R>`) which is too wide.
   <AsTarget extends StyledTarget<R>, ForwardedAsTarget extends StyledTarget<R> | void = void>(
@@ -239,18 +260,6 @@ export interface PolymorphicComponent<
     props: PolymorphicComponentProps<R, BaseProps, void, ForwardedAsTarget> & {
       forwardedAs: ForwardedAsTarget;
     }
-  ): React.JSX.Element;
-
-  // Default overload (no `as`/`forwardedAs`). Avoids Substitute so ref callbacks
-  // get contextual typing even with spread props (#5687).
-  (
-    props: OverrideStyle<
-      NoInfer<FastOmit<BaseProps, keyof ExecutionProps>> &
-        FastOmit<ExecutionProps, 'as' | 'forwardedAs'> & {
-          as?: void;
-          forwardedAs?: void;
-        }
-    >
   ): React.JSX.Element;
 }
 
@@ -267,7 +276,7 @@ export interface IStyledComponentBase<
  * Intersected with `string` so styled components can be used as computed
  * property keys in object styles: `{ [MyComponent]: { ... } }`.
  * The conditional `R extends 'web' ? string : {}` was removed to avoid
- * a type alias with a conditional — type aliases require full structural
+ * a type alias with a conditional - type aliases require full structural
  * comparison on every use, while this unconditional intersection is cheaper.
  */
 export type IStyledComponent<

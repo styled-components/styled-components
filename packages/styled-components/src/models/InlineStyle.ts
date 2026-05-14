@@ -51,7 +51,7 @@ function stripComments(css: string): string {
 
 /**
  * Extract CSS declaration pairs from flat CSS text.
- * Only handles `property: value;` — selectors, at-rules, and nesting
+ * Only handles `property: value;` - selectors, at-rules, and nesting
  * are not supported (and not expected in the native inline style path).
  */
 export function parseCSSDeclarations(rawCss: string): [string, string][] {
@@ -136,7 +136,7 @@ export function parseCSSDeclarations(rawCss: string): [string, string][] {
               'Only CSS declarations (property: value) are supported in React Native.'
           );
         }
-        // Skip to matching closing brace — count braces in both prop and value
+        // Skip to matching closing brace - count braces in both prop and value
         let depth = 0;
         let k = j;
         for (let vi = i; vi < j; vi++) {

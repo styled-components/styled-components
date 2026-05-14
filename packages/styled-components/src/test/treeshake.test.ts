@@ -114,7 +114,7 @@ describe('native build isolation', () => {
   });
 
   it('does not contain StyleSheetManager (web-only)', () => {
-    // StyleSheetManager manages DOM <style> tags — should not
+    // StyleSheetManager manages DOM <style> tags - should not
     // be bundled into native. Check for the export, not error strings.
     expect(nativeCJS).not.toMatch(/exports\.StyleSheetManager/);
   });

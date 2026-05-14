@@ -48,7 +48,7 @@ describe('SSR memory growth', () => {
       cssLengths.push(css.length);
     }
 
-    // CSS length should be bounded — same input should produce same-length output
+    // CSS length should be bounded - same input should produce same-length output
     const maxLen = Math.max(...cssLengths);
     const minLen = Math.min(...cssLengths);
     // Allow for "red" vs "blue" length difference but no unbounded growth

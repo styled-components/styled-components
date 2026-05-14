@@ -52,12 +52,12 @@ type ThemeContract<T> = CSSVarTheme<T> & {
    * Optionally pass a target element to read scoped variables from
    * (defaults to `document.documentElement`).
    *
-   * Client-only — throws if called on the server.
+   * Client-only - throws if called on the server.
    */
   resolve(el?: Element): T;
 };
 
-/** Shared recursive traversal — calls `leafFn` for each leaf, recurses for objects. */
+/** Shared recursive traversal - calls `leafFn` for each leaf, recurses for objects. */
 function walkTheme(
   obj: Record<string, any>,
   varPrefix: string,
@@ -124,7 +124,7 @@ function resolveVars<T extends Record<string, any>>(
 
 /**
  * Emit CSS var declarations by walking `shape` for structure and reading
- * values from `theme`. This avoids hardcoded skip lists — only keys
+ * values from `theme`. This avoids hardcoded skip lists - only keys
  * present in the original theme shape are traversed.
  */
 function emitVarDeclarations(
@@ -178,7 +178,7 @@ interface CreateThemeOptions {
  *
  * Returns an object with the same shape as the input theme, but every leaf value
  * is a `var(--prefix-*, fallback)` CSS string. Use these in styled component
- * templates — they work in both client and RSC contexts.
+ * templates - they work in both client and RSC contexts.
  *
  * Mount the returned `GlobalStyle` component inside your `ThemeProvider` to emit
  * the CSS variables. When the theme changes (e.g. light → dark), the variables

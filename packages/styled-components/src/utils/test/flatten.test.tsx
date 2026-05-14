@@ -88,6 +88,18 @@ describe('flatten', () => {
     expect(flatten([new SomeClass()])).toEqual(['some: thing;']);
   });
 
+  it('toStrings plain objects that define their own toString (#5740)', () => {
+    const token = {
+      default: '#000000',
+      subtle: '#AAAAAA',
+      toString() {
+        return '#000000';
+      },
+    };
+    // @ts-expect-error design-token-style value object not in Interpolation
+    expect(flatten([token])).toEqual(['#000000']);
+  });
+
   it('flattens subarrays', () => {
     expect(flatten([1, 2, [3, 4, 5], 'come:on;', 'lets:ride;'])).toEqual([
       '1',
