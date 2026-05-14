@@ -82,6 +82,21 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      # `changeset version --snapshot` still applies the release plan and deletes
+      # `.changeset/*.md` when not in changesets pre mode -- read those files from a
+      # copy afterward (see CHANGESET_NOTES_ROOT in Build release notes).
+      - name: Preserve changesets for release notes
+        if: steps.changesets.outputs.has_pending == 'true'
+        shell: bash
+        run: |
+          rm -rf /tmp/sc-notes-root
+          mkdir -p /tmp/sc-notes-root/.changeset
+          shopt -s nullglob
+          for f in .changeset/*.md; do
+            [ "$(basename "$f")" = "README.md" ] && continue
+            cp "$f" /tmp/sc-notes-root/.changeset/
+          done
+
       - name: Snapshot version bump (in-place, not committed)
         if: steps.changesets.outputs.has_pending == 'true'
         run: |
@@ -98,6 +113,10 @@ jobs:
       - name: Build release notes per package
         if: steps.changesets.outputs.has_pending == 'true'
         shell: bash
+        env:
+          # Reads `.changeset` under this directory; must be pre-snapshot copy because
+          # `changeset version --snapshot` removes applied changeset files from the repo.
+          CHANGESET_NOTES_ROOT: /tmp/sc-notes-root
         run: |
           mkdir -p /tmp/release-notes
           node - <<'NODE'
@@ -105,11 +124,13 @@ jobs:
             const fs = require('fs');
             const path = require('path');
             const { execSync } = require('child_process');
+            const semver = require('semver');
             const readChangesets = require('@changesets/read').default;
             const git = require('@changesets/git');
             const { getReleaseLine } = require('@changesets/cli/changelog').default;
 
             const cwd = process.cwd();
+            const changesetReadRoot = process.env.CHANGESET_NOTES_ROOT || cwd;
             const repo = process.env.GITHUB_REPOSITORY;
 
             const packagesDir = path.join(cwd, 'packages');
@@ -122,7 +143,7 @@ jobs:
               packages.push(pkg);
             }
 
-            const changesets = await readChangesets(cwd);
+            const changesets = await readChangesets(changesetReadRoot);
             if (changesets.length) {
               const paths = changesets.map(c => `.changeset/${c.id}.md`);
               const shaMap = await git.getCommitsThatAddFiles(paths, { cwd, short: true });
@@ -162,8 +183,19 @@ jobs:
 
               let prevTag = '';
               try {
-                prevTag = execSync(`git tag --list '${pkg.name}@*' --sort=-v:refname`, { encoding: 'utf8' })
-                  .split('\n').filter(Boolean)[0] || '';
+                const tagPrefix = `${pkg.name}@`;
+                const currentMajor = semver.major(pkg.version);
+                const allTags = execSync('git tag -l', { encoding: 'utf8' })
+                  .split('\n')
+                  .filter((t) => t.startsWith(tagPrefix));
+                const sameMajor = allTags.filter((tag) => {
+                  const v = tag.slice(tagPrefix.length);
+                  return semver.major(v) === currentMajor;
+                });
+                sameMajor.sort((a, b) =>
+                  semver.rcompare(a.slice(tagPrefix.length), b.slice(tagPrefix.length))
+                );
+                prevTag = sameMajor[0] || '';
               } catch {}
               if (prevTag) {
                 const currentTag = `${pkg.name}@${pkg.version}`;
@@ -177,9 +209,9 @@ jobs:
           })().catch(err => { console.error(err); process.exit(1); });
           NODE
 
-      - name: Publish to npm test tag
+      - name: Publish to npm 6.x-test tag
         if: steps.changesets.outputs.has_pending == 'true'
-        run: pnpm release --tag test --no-git-tag
+        run: pnpm release --tag 6.x-test --no-git-tag
 
       - name: Create git tag + GitHub prerelease per published package
         if: steps.changesets.outputs.has_pending == 'true'
