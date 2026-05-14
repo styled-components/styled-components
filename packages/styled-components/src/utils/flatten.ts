@@ -46,7 +46,7 @@ function warnClientReference(ref: ClientReference): void {
   );
 }
 
-/** Internal accumulator form — avoids allocating a temp array per nesting level. */
+/** Internal accumulator form - avoids allocating a temp array per nesting level. */
 function objToCssArrayInto(obj: Dict<any>, rules: any[]): void {
   for (const key in obj) {
     const val = obj[key];
@@ -141,13 +141,21 @@ export default function flatten<Props extends object>(
     return result;
   }
 
-  // Module-level client reference proxies (typeof 'object') pass isPlainObject — catch before
+  // Module-level client reference proxies (typeof 'object') pass isPlainObject - catch before
   if (isClientReference(chunk)) {
     if (process.env.NODE_ENV !== 'production') warnClientReference(chunk);
     return result;
   }
 
   if (isPlainObject(chunk)) {
+    // A plain object that defines its own toString takes the stringification
+    // path - it's being interpolated as a value (e.g. a design token), not as
+    // a CSS-in-JS rule object. Without this, `${token}` in a tagged template
+    // would walk the object's enumerable keys as CSS declarations. (#5740)
+    if ((chunk as object).toString !== Object.prototype.toString) {
+      result.push((chunk as object).toString());
+      return result;
+    }
     objToCssArrayInto(chunk as Dict<any>, result);
     return result;
   }

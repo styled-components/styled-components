@@ -69,7 +69,7 @@ const Example = styled.div.attrs({
   margin-top: ${props => props.theme?.spacing};
 `;
 
-// Same as above but without any attrs values — theme should still work
+// Same as above but without any attrs values - theme should still work
 const Example2 = styled.div.attrs({})`
   margin-top: ${props => props.theme?.spacing};
 `;
@@ -493,7 +493,7 @@ const StyledCheckbox = styled.input``;
 type CheckboxProps = React.ComponentPropsWithoutRef<typeof StyledCheckbox>;
 const checkboxProps: CheckboxProps = { value: 'on' };
 <StyledCheckbox
-  // The ref callback MUST remain untyped — the bug is that TS can't infer the
+  // The ref callback MUST remain untyped - the bug is that TS can't infer the
   // parameter type when props are spread. Adding an explicit type annotation
   // (e.g. `ref: HTMLInputElement`) masks the failure. Do not "fix" by adding one.
   ref={ref => {
@@ -602,6 +602,38 @@ const testAs3: AsType = undefined;
 const testForwardedAs: ForwardedAsType = 'span';
 const testForwardedAs2: ForwardedAsType = Button;
 const testForwardedAs3: ForwardedAsType = undefined;
+
+/**
+ * Wrapping a component whose own `as` prop has a non-WebTarget type (e.g.
+ * Next.js `Link` with `as?: Url`) must not produce an `as`-type conflict
+ * (#5734). The styled-components `as` overrides the wrapped component's `as`.
+ */
+// Match the shape of Next.js's `UrlObject` (required `pathname`) so the
+// intersection check below has real bite.
+type FakeUrl = string | { pathname: string };
+interface FakeLinkProps {
+  href: FakeUrl;
+  as?: FakeUrl;
+  children?: React.ReactNode;
+}
+const FakeLink: React.FC<FakeLinkProps> = () => null;
+const StyledFakeLink = styled(FakeLink)`
+  color: red;
+`;
+<StyledFakeLink href="/foo">ok</StyledFakeLink>;
+<StyledFakeLink href={{ pathname: '/foo' }}>also ok</StyledFakeLink>;
+// `as` here is the styled-components polymorphism prop, not the FakeLink one.
+<StyledFakeLink as="section" href="/foo">
+  poly
+</StyledFakeLink>;
+// `React.ComponentProps` extraction must surface the styled-components `as`
+// shape directly, not an intersection of both. Without the fix `as` resolves
+// to `FakeUrl & WebTarget`, so a plain component reference (`KnownTarget`,
+// without a `pathname`) is rejected.
+type ExtractedFakeLink = React.ComponentProps<typeof StyledFakeLink>;
+const FakeLinkAlt: React.FC<{}> = () => null;
+const _fakeLinkAsTag: ExtractedFakeLink['as'] = 'a';
+const _fakeLinkAsComp: ExtractedFakeLink['as'] = FakeLinkAlt;
 
 // Test with a component that has custom props
 const ComponentWithPropsForExtraction = styled.div<{ customProp: string }>``;

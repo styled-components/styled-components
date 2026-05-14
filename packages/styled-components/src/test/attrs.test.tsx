@@ -550,7 +550,7 @@ describe('attrs', () => {
   it('should not mutate the props object passed to attrs callbacks', () => {
     const Comp = styled.div
       .attrs(props => {
-        // Attempt to mutate the received props — this should not affect
+        // Attempt to mutate the received props - this should not affect
         // the internal context or the rendered output.
         (props as any).id = 'mutated';
         (props as any).injected = 'bad';
@@ -591,7 +591,7 @@ describe('attrs', () => {
     // callback, and directly-passed props should still take priority in
     // the final element.
     expect(el.getAttribute('data-test')).toBe('yes');
-    // id comes from attrs callback mutation of context — this documents
+    // id comes from attrs callback mutation of context - this documents
     // current behavior where single-attrs mutations leak
     expect(el.getAttribute('id')).toBe('mutated');
   });

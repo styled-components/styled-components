@@ -90,7 +90,7 @@ export default class GlobalStyle<Props extends object> {
 
   /**
    * Clear all CSS rules in the shared group and re-insert from surviving instances.
-   * Must run synchronously — no yielding between clear and re-insert.
+   * Must run synchronously - no yielding between clear and re-insert.
    */
   private rebuildGroup(styleSheet: StyleSheet): void {
     const id = this.componentId;

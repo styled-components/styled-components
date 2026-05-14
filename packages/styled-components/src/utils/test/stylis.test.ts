@@ -251,7 +251,7 @@ background-color: green;`)
     });
 
     it('preserves // inside function call parens (calc, etc.)', () => {
-      // // inside parens is preserved — paren-depth tracking protects
+      // // inside parens is preserved - paren-depth tracking protects
       // all function arguments, not just url()
       expect(
         stylisTest(`width: 100px;
@@ -530,7 +530,7 @@ background-color: green;`)
 
     it('preserves // inside any function call via paren-depth tracking', () => {
       // Paren-depth tracking protects // inside ALL function calls,
-      // not just url() — no function name list needed
+      // not just url() - no function name list needed
       expect(
         stylisTest(`
         background: foourl(https://example.com/image.png); // comment
@@ -1182,7 +1182,7 @@ background-color: green;`)
       `);
     });
 
-    // Orphaned */ — only stripped when the full tokenizer runs (// present)
+    // Orphaned */ - only stripped when the full tokenizer runs (// present)
     it('passes orphaned */ through when no // present (fast path)', () => {
       expect(
         stylisTest(`

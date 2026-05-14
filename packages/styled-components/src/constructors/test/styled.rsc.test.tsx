@@ -26,6 +26,7 @@ import React from 'react';
 import ReactDOMServer from 'react-dom/server';
 import { mainSheet } from '../../models/StyleSheetManager';
 import { resetGroupIds } from '../../sheet/GroupIDAllocator';
+import { resetIdentifiers } from '../../models/StyledComponent';
 import styled, { css, keyframes } from '../../index';
 import { StyleSheetManager } from '../../models/StyleSheetManager';
 import stylisPluginRSC from '../../utils/stylisPluginRSC';
@@ -41,6 +42,7 @@ describe('styled RSC mode', () => {
   beforeEach(() => {
     mockCacheStore.clear();
     resetGroupIds();
+    resetIdentifiers();
     mainSheet.gs = {};
     mainSheet.names = new Map();
     mainSheet.clearTag();
@@ -79,7 +81,7 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      expect(allCSS).toMatchInlineSnapshot(`":where(.gXogWk){display:flex;}.kWExMu{color:red;}"`);
+      expect(allCSS).toMatchInlineSnapshot(`":where(.jYQgFj){display:flex;}.inzFhn{color:red;}"`);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
     });
   });
@@ -114,7 +116,7 @@ describe('styled RSC mode', () => {
       // All CSS from both base and extended must be present in the RSC output.
       // The element has class names for both, so both rulesets must exist.
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.eKVOAC){width:24px;height:24px;display:inline-block;vertical-align:middle;}.gdNspF{fill:currentColor;color:#007bff;}"`
+        `":where(.draMCs){width:24px;height:24px;display:inline-block;vertical-align:middle;}.hlyRni{fill:currentColor;color:#007bff;}"`
       );
     });
 
@@ -137,7 +139,7 @@ describe('styled RSC mode', () => {
 
       // Every level in the chain must contribute its CSS rules
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.lhhwAB){font-family:system-ui,sans-serif;line-height:1.5;}:where(.fgpciD){font-weight:700;font-size:24px;}.cptdlK{color:#1a1a2e;margin-bottom:16px;}"`
+        `":where(.dTCrO){font-family:system-ui,sans-serif;line-height:1.5;}:where(.isoHEi){font-weight:700;font-size:24px;}.iaATuJ{color:#1a1a2e;margin-bottom:16px;}"`
       );
     });
 
@@ -157,7 +159,7 @@ describe('styled RSC mode', () => {
 
       // Base Card styles must be present even though only StatusCard renders
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.gqwZoS){border-radius:8px;box-shadow:0 2px 4px rgba(0, 0, 0, 0.1);overflow:hidden;}.kohxli{border-left:4px solid #dc3545;padding:16px;}"`
+        `":where(.inSLbN){border-radius:8px;box-shadow:0 2px 4px rgba(0, 0, 0, 0.1);overflow:hidden;}.jfizpo{border-left:4px solid #dc3545;padding:16px;}"`
       );
     });
 
@@ -182,7 +184,7 @@ describe('styled RSC mode', () => {
 
       // Base CSS (including interpolated css`` helper) and extended styles
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.gToIGM){font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.bOXrbI{background:#e9ecef;border-radius:12px;padding:2px 8px;}"`
+        `":where(.hMkIFL){font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.jAjRbw{background:#e9ecef;border-radius:12px;padding:2px 8px;}"`
       );
     });
 
@@ -209,7 +211,7 @@ describe('styled RSC mode', () => {
 
       // Avatar's base styles and LargeAvatar's own styles
       expect(allCSS).toMatchInlineSnapshot(
-        `".pPjvh{width:48px;height:48px;border-radius:50%;object-fit:cover;}.kdLHkh{width:96px;height:96px;border:3px solid #fff;}"`
+        `".gA-dcpr{width:48px;height:48px;border-radius:50%;object-fit:cover;}.bmhOVL{width:96px;height:96px;border:3px solid #fff;}"`
       );
     });
 
@@ -236,7 +238,7 @@ describe('styled RSC mode', () => {
       // All CSS should be present
       const allCSS = extractStyleContents(html);
       expect(allCSS).toMatchInlineSnapshot(
-        `".jPTSk{display:flex;padding:16px;}.pTFQI{color:red;}"`
+        `".lluOde{display:flex;padding:16px;}.inzFhn{color:red;}"`
       );
     });
 
@@ -267,7 +269,7 @@ describe('styled RSC mode', () => {
 
       // Base styles and each variant's own styles
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.hwBkAG){padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;}.bgpGYu{background:#007bff;color:#fff;}.kmNeMx{background:#dc3545;color:#fff;}"`
+        `":where(.jZzqsQ){padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;}.dqxjmS{background:#007bff;color:#fff;}.gffCwu{background:#dc3545;color:#fff;}"`
       );
     });
 
@@ -293,7 +295,7 @@ describe('styled RSC mode', () => {
 
       // Both dynamic variants must be present
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.gowlGE){background:red;padding:16px;}.hlBihq{border:1px solid #ccc;}:where(.wQpdx){background:blue;padding:16px;}"`
+        `":where(.UggJu){background:red;padding:16px;}.gMmhUh{border:1px solid #ccc;}:where(.ezOOCn){background:blue;padding:16px;}"`
       );
     });
   });
@@ -390,7 +392,7 @@ describe('styled RSC mode', () => {
 
       // Both the root and media query base selectors should be wrapped
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.MPhKa){font-size:14px;}@media (min-width: 768px){:where(.MPhKa){font-size:16px;}}.eSKXDt{color:red;}"`
+        `":where(.dHlnpC){font-size:14px;}@media (min-width: 768px){:where(.dHlnpC){font-size:16px;}}.inzFhn{color:red;}"`
       );
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
     });
@@ -456,7 +458,7 @@ describe('styled RSC mode', () => {
 
       // renderToString HTML-encodes quotes (&#x27;)
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.jOAKGK){background:url(&#x27;./bg.png&#x27;);}:where(.jOAKGK)::before{content:&#x27;.item&#x27;;}.jaqQRC{color:red;}"`
+        `":where(.gpbfiF){background:url(&#x27;./bg.png&#x27;);}:where(.gpbfiF)::before{content:&#x27;.item&#x27;;}.inzFhn{color:red;}"`
       );
       expect(allCSS).not.toMatch(/:where\([^)]*\.item/);
       expect(allCSS).not.toMatch(/:where\([^)]*\.\/bg/);
@@ -481,7 +483,7 @@ describe('styled RSC mode', () => {
 
       assertValidWhereSelectors(allCSS);
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.bkJFZM){color:red;}.lygzl{font-size:16px;}:where(.xrcgh){color:blue;}"`
+        `":where(.YKVKw){color:red;}.bYbnUR{font-size:16px;}:where(.jDUPMZ){color:blue;}"`
       );
     });
 
@@ -507,7 +509,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.jorrHQ){display:flex;padding:16px;background:white;}.eQKZa-D{background:red;}.heroSN{background:blue;}"`
+        `":where(.bHuNuc){display:flex;padding:16px;background:white;}.fDRrJU{background:red;}.hpcalM{background:blue;}"`
       );
       // Both extension selectors must NOT be wrapped
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*background:red/);
@@ -573,7 +575,7 @@ describe('styled RSC mode', () => {
 
       // Both selectors in the comma list should be wrapped
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.frloER):hover,:where(.frloER):focus{outline:2px solid blue;}.eAgOEJ{color:black;}"`
+        `":where(.iYWuUt):hover,:where(.iYWuUt):focus{outline:2px solid blue;}.bSLHjz{color:black;}"`
       );
     });
 
@@ -621,7 +623,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.LxJPL){display:flex;}@supports (display: grid){:where(.LxJPL){display:grid;grid-template-columns:1fr 1fr;}}.jQsHcG{gap:16px;}"`
+        `":where(.JZrQb){display:flex;}@supports (display: grid){:where(.JZrQb){display:grid;grid-template-columns:1fr 1fr;}}.hYdMwg{gap:16px;}"`
       );
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*gap:16px/);
     });
@@ -652,7 +654,7 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Solo />);
       const allCSS = extractStyleContents(html);
 
-      expect(allCSS).toMatchInlineSnapshot(`".bETiNX{color:purple;}"`);
+      expect(allCSS).toMatchInlineSnapshot(`".ecMQEt{color:purple;}"`);
       // No :where() at all — no base to wrap
       expect(allCSS).not.toContain(':where(');
     });
@@ -675,7 +677,7 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<DangerButton>Delete</DangerButton>);
       const allCSS = extractStyleContents(html);
 
-      expect(allCSS).toMatchInlineSnapshot(`".ihqdNg{background:#dc2626;color:white;}"`);
+      expect(allCSS).toMatchInlineSnapshot(`".yAbnp{background:#dc2626;color:white;}"`);
     });
 
     it('should pass className through to the wrapped component', () => {
@@ -689,9 +691,9 @@ describe('styled RSC mode', () => {
 
       expect(html).toMatchInlineSnapshot(`
         <style data-styled>
-          .bgLEXZ{padding:12px;}
+          .bzGVaY{padding:12px;}
         </style>
-        <button class="sc-jATbBc bgLEXZ">
+        <button class="sc-kqxcKS bzGVaY">
           Click
         </button>
       `);
@@ -708,9 +710,9 @@ describe('styled RSC mode', () => {
       // No precedence — inline style tags avoid Float merging/stripping
       expect(html).toMatchInlineSnapshot(`
         <style data-styled>
-          .dOYIGf{margin:8px;}
+          .wgyXc{margin:8px;}
         </style>
-        <div class="sc-kmyQvR dOYIGf">
+        <div class="sc-kqxcKS wgyXc">
         </div>
       `);
       expect(html).not.toContain('precedence');
@@ -735,7 +737,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `".cgQZXh{border:2px solid red;}.ixTLAr{background:blue;}"`
+        `".fIlHpe{border:2px solid red;}.cavwPd{background:blue;}"`
       );
     });
 
@@ -752,11 +754,11 @@ describe('styled RSC mode', () => {
 
       expect(html).toMatchInlineSnapshot(`
         <style data-styled>
-          .jaOmec{border:1px solid gray;}
+          .TlAtb{border:1px solid gray;}
         </style>
         <input type="email"
                placeholder="test@example.com"
-               class="sc-bIUkwt jaOmec"
+               class="sc-kqxcKS TlAtb"
         >
       `);
     });
@@ -779,7 +781,7 @@ describe('styled RSC mode', () => {
 
       // Both dynamic variants should have their CSS emitted
       expect(allCSS).toMatchInlineSnapshot(
-        `".gdqHel{background:red;padding:16px;}.bbSQXs{background:blue;padding:16px;}"`
+        `".UggJu{background:red;padding:16px;}.ezOOCn{background:blue;padding:16px;}"`
       );
     });
 
@@ -794,10 +796,10 @@ describe('styled RSC mode', () => {
 
       expect(html).toMatchInlineSnapshot(`
         <style data-styled>
-          .hHYycf{font-weight:bold;}
+          .hKzoNx{font-weight:bold;}
         </style>
         <button type="submit"
-                class="sc-DZqlT hHYycf"
+                class="sc-kqxcKS hKzoNx"
         >
           Submit
         </button>
@@ -858,7 +860,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.eEETyJ){padding:8px;}:where(.eEETyJ)::before{content:&#x27;.sc-something&#x27;;}.hQbJBd{color:red;}"`
+        `":where(.fizcbf){padding:8px;}:where(.fizcbf)::before{content:&#x27;.sc-something&#x27;;}.inzFhn{color:red;}"`
       );
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
       assertValidWhereSelectors(allCSS);
@@ -877,7 +879,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.lhSFnz){background:url(./../image.png);display:block;}.hKuLJx{color:green;}"`
+        `":where(.iSnWzg){background:url(./../image.png);display:block;}.kqSrCH{color:green;}"`
       );
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:green/);
       assertValidWhereSelectors(allCSS);
@@ -898,7 +900,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.iXsZT){margin:4px;}:where(.iXsZT)[data-value=&#x27;.foo&#x27;]{background:yellow;}.lmEGQf{color:blue;}"`
+        `":where(.cyCrZY){margin:4px;}:where(.cyCrZY)[data-value=&#x27;.foo&#x27;]{background:yellow;}.gnVozW{color:blue;}"`
       );
       assertValidWhereSelectors(allCSS);
     });
@@ -918,7 +920,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.gkqpoA){padding:12px;}:where(.gkqpoA) :where(.other){color:red;}.iyYATl{margin:8px;}"`
+        `":where(.iyjGWD){padding:12px;}:where(.iyjGWD) :where(.other){color:red;}.kFKQqj{margin:8px;}"`
       );
       expect(allCSS).not.toContain(':where(:where(');
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*margin:8px/);
@@ -939,7 +941,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.geZqlp){display:flex;}@supports selector(.test){:where(.geZqlp){display:grid;}}.iFxBFf{gap:8px;}"`
+        `":where(.bWeA-do){display:flex;}@supports selector(.test){:where(.bWeA-do){display:grid;}}.cPvrSb{gap:8px;}"`
       );
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*gap:8px/);
       assertValidWhereSelectors(allCSS);
@@ -962,7 +964,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.cZxZla){container-type:inline-size;}@container (min-width: 300px){:where(.cZxZla){font-size:18px;}}.bYTfcQ{color:navy;}"`
+        `":where(.dxtSss){container-type:inline-size;}@container (min-width: 300px){:where(.dxtSss){font-size:18px;}}.eMUjUY{color:navy;}"`
       );
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:navy/);
       assertValidWhereSelectors(allCSS);
@@ -981,7 +983,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.cGRrKj){--my-var:.something;color:var(--my-var);}.betquV{font-size:14px;}"`
+        `":where(.ehNKcK){--my-var:.something;color:var(--my-var);}.bSVMP{font-size:14px;}"`
       );
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*font-size:14px/);
       assertValidWhereSelectors(allCSS);
@@ -1011,7 +1013,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.LbguG):hover,:where(.LbguG):focus,:where(.LbguG):active,:where(.LbguG):visited,:where(.LbguG):first-child,:where(.LbguG):last-child,:where(.LbguG):nth-child(2),:where(.LbguG):nth-child(3),:where(.LbguG):nth-child(4),:where(.LbguG):nth-child(5),:where(.LbguG):not(:disabled){outline:none;}.bNUiDM{border:1px solid black;}"`
+        `":where(.fTuHSW):hover,:where(.fTuHSW):focus,:where(.fTuHSW):active,:where(.fTuHSW):visited,:where(.fTuHSW):first-child,:where(.fTuHSW):last-child,:where(.fTuHSW):nth-child(2),:where(.fTuHSW):nth-child(3),:where(.fTuHSW):nth-child(4),:where(.fTuHSW):nth-child(5),:where(.fTuHSW):not(:disabled){outline:none;}.hBUEPu{border:1px solid black;}"`
       );
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*border:1px solid black/);
     });
@@ -1029,7 +1031,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.bukIwd){animation-name:sc-keyframes-abc;animation-duration:1s;}.fmVlju{opacity:1;}"`
+        `":where(.hUpqPn){animation-name:sc-keyframes-abc;animation-duration:1s;}.iMUrup{opacity:1;}"`
       );
       expect(allCSS).not.toContain(':where(sc-keyframes-abc)');
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*opacity:1/);
@@ -1054,7 +1056,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.lgASzU){color:black;}@media (min-width: 768px){:where(.lgASzU){color:gray;}@supports (display: grid){:where(.lgASzU){display:grid;}}}.eRZTcE{font-weight:bold;}"`
+        `":where(.iVldws){color:black;}@media (min-width: 768px){:where(.iVldws){color:gray;}@supports (display: grid){:where(.iVldws){display:grid;}}}.gEYtIK{font-weight:bold;}"`
       );
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*font-weight:bold/);
     });
@@ -1093,7 +1095,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.kcLobF){margin:0;}:where(.kcLobF)::before{content:&#x27;\\2022&#x27;;}.ifGgos{padding:4px;}"`
+        `":where(.iOeQph){margin:0;}:where(.iOeQph)::before{content:&#x27;\\2022&#x27;;}.esjoNE{padding:4px;}"`
       );
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*padding:4px/);
       assertValidWhereSelectors(allCSS);
@@ -1151,7 +1153,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.hvemzY){padding:8px;}:where(.hvemzY) .sc-gZWqmv{font-weight:bold;}.kUZxHW{margin:16px;}"`
+        `":where(.kqrYEI){padding:8px;}:where(.kqrYEI) .sc-kqxcKS{font-weight:bold;}.bZWURN{margin:16px;}"`
       );
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*margin:16px/);
       assertValidWhereSelectors(allCSS);
@@ -1167,7 +1169,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       // Extension CSS should be present and not wrapped
-      expect(allCSS).toMatchInlineSnapshot(`".jACqxy{color:red;}"`);
+      expect(allCSS).toMatchInlineSnapshot(`".inzFhn{color:red;}"`);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
     });
   });
@@ -1191,7 +1193,7 @@ describe('styled RSC mode', () => {
 
       expect(countStyleTags(html)).toBe(1);
       expect(extractStyleContents(html)).toMatchInlineSnapshot(
-        `".cBBLZJ{padding:8px;color:blue;}"`
+        `".iIYYsP{padding:8px;color:blue;}"`
       );
     });
 
@@ -1209,7 +1211,7 @@ describe('styled RSC mode', () => {
       );
 
       expect(countStyleTags(html)).toBe(1);
-      expect(extractStyleContents(html)).toMatchInlineSnapshot(`".fZxRoX{color:red;}"`);
+      expect(extractStyleContents(html)).toMatchInlineSnapshot(`".YKVKw{color:red;}"`);
     });
 
     it('should emit separate style tags for dynamic components with different props', () => {
@@ -1228,7 +1230,7 @@ describe('styled RSC mode', () => {
       expect(countStyleTags(html)).toBe(3);
       const allCSS = extractStyleContents(html);
       expect(allCSS).toMatchInlineSnapshot(
-        `".eWYHRw{color:red;}.ewymLl{color:blue;}.eLnNPM{color:green;}"`
+        `".YKVKw{color:red;}.jDUPMZ{color:blue;}.jygOGE{color:green;}"`
       );
     });
 
@@ -1251,7 +1253,7 @@ describe('styled RSC mode', () => {
       // All three Extended instances produce the same CSS → one tag
       expect(countStyleTags(html)).toBe(1);
       const allCSS = extractStyleContents(html);
-      expect(allCSS).toMatchInlineSnapshot(`":where(.iGfVxq){display:flex;}.bVimwG{color:red;}"`);
+      expect(allCSS).toMatchInlineSnapshot(`":where(.jYQgFj){display:flex;}.inzFhn{color:red;}"`);
     });
 
     it('should not retain rules for prefix-colliding class names in partial dedup', () => {
@@ -1271,7 +1273,7 @@ describe('styled RSC mode', () => {
       );
 
       const styles = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]);
-      expect(styles[styles.length - 1]).toMatchInlineSnapshot(`".fUjyyf{font-weight:bold;}"`);
+      expect(styles[styles.length - 1]).toMatchInlineSnapshot(`".gEYtIK{font-weight:bold;}"`);
     });
 
     it('should emit separate tags for base and extended rendered together', () => {
@@ -1309,7 +1311,7 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Dot />);
 
       expect(extractStyleContents(html)).toMatchInlineSnapshot(
-        `"@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}.iwAAaE{animation:gZZrBJ 2s infinite;}"`
+        `"@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}.dRFKIK{animation:gZZrBJ 2s infinite;}"`
       );
       expect(countStyleTags(html)).toBe(1);
     });
@@ -1336,7 +1338,7 @@ describe('styled RSC mode', () => {
 
       // @keyframes should appear exactly once despite two components using it
       expect(extractStyleContents(html)).toMatchInlineSnapshot(
-        `"@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}.fpzQDG{animation:gZZrBJ 1s;}.gKsBdu{animation:gZZrBJ 2s;}"`
+        `"@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}.eGskDT{animation:gZZrBJ 1s;}.ctTFiD{animation:gZZrBJ 2s;}"`
       );
       expect(countStyleTags(html)).toBe(2);
     });
@@ -1360,7 +1362,7 @@ describe('styled RSC mode', () => {
 
       // Two instances, but only one set of styles (component CSS + keyframe both deduped)
       expect(extractStyleContents(html)).toMatchInlineSnapshot(
-        `"@keyframes dnfVul{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}.keoQdm{animation:dnfVul 1s linear infinite;}"`
+        `"@keyframes dnfVul{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}.gjRflG{animation:dnfVul 1s linear infinite;}"`
       );
       expect(countStyleTags(html)).toBe(1);
     });
@@ -1396,7 +1398,7 @@ describe('styled RSC mode', () => {
 
       const allCSS = extractStyleContents(html);
       expect(allCSS).toMatchInlineSnapshot(
-        `".emNkMc:nth-child(1 of :not(style[data-styled])){color:red;}.emNkMc:nth-last-child(1 of :not(style[data-styled])){color:blue;}.emNkMc:nth-child(2 of :not(style[data-styled])){color:green;}"`
+        `".iHLfpj:nth-child(1 of :not(style[data-styled])){color:red;}.iHLfpj:nth-last-child(1 of :not(style[data-styled])){color:blue;}.iHLfpj:nth-child(2 of :not(style[data-styled])){color:green;}"`
       );
       expect(allCSS).not.toContain(':first-child');
       expect(allCSS).not.toContain(':last-child');
@@ -1414,7 +1416,7 @@ describe('styled RSC mode', () => {
       );
 
       const allCSS = extractStyleContents(html);
-      expect(allCSS).toMatchInlineSnapshot(`".kEfYfm:first-child{color:red;}"`);
+      expect(allCSS).toMatchInlineSnapshot(`".dnGtrT:first-child{color:red;}"`);
       expect(allCSS).not.toContain(':not(style');
     });
   });

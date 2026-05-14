@@ -7,7 +7,7 @@ declare let __webpack_nonce__: string;
  * 3. __webpack_nonce__ global (legacy)
  *
  * For Next.js/Remix, pass nonces explicitly via StyleSheetManager or
- * ServerStyleSheet instead—auto-detection doesn't apply to header-based nonces.
+ * ServerStyleSheet instead - auto-detection doesn't apply to header-based nonces.
  */
 let cached: string | undefined | false = false;
 

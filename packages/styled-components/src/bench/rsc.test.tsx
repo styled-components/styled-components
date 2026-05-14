@@ -8,7 +8,7 @@
  * and keyframe handling.
  */
 
-// Mock React.cache — scoped per render via manual clear
+// Mock React.cache - scoped per render via manual clear
 const mockCacheStore = new Map<Function, any>();
 
 jest.mock('react', () => {

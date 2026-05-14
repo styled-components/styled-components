@@ -58,7 +58,7 @@ describe(`createGlobalStyle`, () => {
     // Regression test: the Next.js registry calls clearTag() between page
     // prerenders. When the same instance number is reused (via WeakMap caching
     // per StyleSheet), the rulesEqual fast-path must not skip rebuildGroup
-    // after clearTag destroyed the tag — otherwise CSS is lost.
+    // after clearTag destroyed the tag - otherwise CSS is lost.
 
     // A dynamic rule (contains a function so isStatic is false)
     const rules = css`
@@ -82,7 +82,7 @@ describe(`createGlobalStyle`, () => {
     // Simulate Next.js registry: collect styles, then clearTag
     sheet.clearTag();
 
-    // Second render with SAME instance 1, SAME CSS — the exact regression path.
+    // Second render with SAME instance 1, SAME CSS - the exact regression path.
     // Bug: instanceRules still has instance 1's entry from render 1.
     // computeRules produces identical rules. rulesEqual returns true.
     // rebuildGroup is skipped. Tag is empty. CSS is lost.

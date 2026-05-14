@@ -438,7 +438,7 @@ describe('rehydration', () => {
         }"
       `);
 
-      // Unmount second instance — first instance's styles must survive
+      // Unmount second instance - first instance's styles must survive
       rerender(<Wrapper showSecond={false} />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         "html {
@@ -490,7 +490,7 @@ describe('rehydration', () => {
         }"
       `);
 
-      // Unmount second instance — first instance's styles must survive
+      // Unmount second instance - first instance's styles must survive
       rerender(<Wrapper showSecond={false} />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         "html {

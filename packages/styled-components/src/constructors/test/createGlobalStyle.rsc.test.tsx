@@ -73,7 +73,7 @@ describe('createGlobalStyle RSC mode', () => {
       body { margin: 0; }
     `;
 
-    // Two instances in one render — simulates a non-hydrating RSC page
+    // Two instances in one render - simulates a non-hydrating RSC page
     // where the same global style appears in multiple server components
     const html = ReactDOMServer.renderToString(
       <>
@@ -116,7 +116,7 @@ describe('createGlobalStyle RSC mode', () => {
       html { font-size: ${props => props.$size}; }
     `;
 
-    // Simulate three separate RSC requests — none will hydrate
+    // Simulate three separate RSC requests - none will hydrate
     const html1 = ReactDOMServer.renderToString(<GlobalStyle $size="14px" />);
     const html2 = ReactDOMServer.renderToString(<GlobalStyle $size="16px" />);
     const html3 = ReactDOMServer.renderToString(<GlobalStyle $size="18px" />);
@@ -143,7 +143,7 @@ describe('createGlobalStyle RSC mode', () => {
       body { color: ${props => (props.theme && props.theme.color) || 'black'}; }
     `;
 
-    // No ThemeProvider in RSC — theme is undefined, should not crash
+    // No ThemeProvider in RSC - theme is undefined, should not crash
     const html = ReactDOMServer.renderToString(<GlobalStyle />);
     expect(html).toMatchInlineSnapshot(`
       <style data-styled-global="sc-global-ekSA-DU">

@@ -384,6 +384,42 @@ describe('basic', () => {
       expect(Outer.componentStyle).not.toEqual(Inner.componentStyle);
     });
 
+    it("folds chains when forwardRef returns a function (Preact's react-compat shape, #5736)", () => {
+      // Preact's react-compat shims React.forwardRef to return a function with
+      // $$typeof = Symbol.for('react.forward_ref'), where React returns an
+      // object. styled-components must accept both as styled-component carriers
+      // so extended-chain folding still happens (and intermediate styles
+      // continue to apply when `as` overrides the rendered tag).
+      const originalForwardRef = React.forwardRef;
+      // @ts-expect-error monkey-patching for the test
+      React.forwardRef = (renderFn: any) => {
+        const fn = (props: any) => renderFn(props, null);
+        fn.$$typeof = Symbol.for('react.forward_ref');
+        fn.render = renderFn;
+        return fn;
+      };
+      try {
+        const Box = styled.div`
+          color: red;
+        `;
+        const Box1 = styled(Box)`
+          background: white;
+        `;
+        const Box2 = styled(Box1)`
+          border: 1px solid;
+        `;
+
+        // chain recognized at each level - baseStyle present, foldedComponentIds accumulated
+        expect(Box1.foldedComponentIds).toBe(Box.styledComponentId);
+        expect(Box2.foldedComponentIds).toBe(Box.styledComponentId + ' ' + Box1.styledComponentId);
+        expect(Box2.target).toBe('div');
+        expect(Box2.componentStyle.baseStyle).toBeDefined();
+      } finally {
+        // @ts-expect-error restore
+        React.forwardRef = originalForwardRef;
+      }
+    });
+
     it('should not fold components if there is an interim HOC', () => {
       function withSomething(WrappedComponent: AnyComponent) {
         const WithSomething: React.FC<any> = props => {

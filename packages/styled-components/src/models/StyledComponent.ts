@@ -44,6 +44,12 @@ const hasOwn = Object.prototype.hasOwnProperty;
 
 const identifiers: { [key: string]: number } = {};
 
+/** Test-only: clear the per-displayName counter so component IDs stay stable
+ *  across tests. Not for production use. */
+export const resetIdentifiers = (): void => {
+  for (const k in identifiers) delete identifiers[k];
+};
+
 /* We depend on components having unique IDs */
 function generateId(
   displayName?: string | undefined,

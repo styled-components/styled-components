@@ -109,7 +109,7 @@ describe('createTheme', () => {
   describe('resolve', () => {
     it('throws on the server', () => {
       const theme = createTheme({ color: 'red' });
-      // jsdom provides window, so IS_BROWSER is true — but we can still
+      // jsdom provides window, so IS_BROWSER is true - but we can still
       // verify the function exists and returns the correct shape
       expect(typeof theme.resolve).toBe('function');
     });

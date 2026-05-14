@@ -454,7 +454,7 @@ describe('stylisPluginRSC', () => {
         </StyleSheetManager>
       );
 
-      // ~ is immune — no expansion needed
+      // ~ is immune - no expansion needed
       expect(getInjectedCSS()).toMatchInlineSnapshot(`".sc-a~.sc-a{color:green;}"`);
     });
 

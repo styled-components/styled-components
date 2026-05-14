@@ -9,7 +9,7 @@ export const mainSheet: StyleSheet = new StyleSheet();
 export const mainStylis: Stringifier = createStylisInstance();
 
 /**
- * RSC context slot — module-level mutable state scoped per render via React.cache.
+ * RSC context slot - module-level mutable state scoped per render via React.cache.
  * In RSC, createContext doesn't exist, so StyleSheetManager writes here and
  * useStyleSheetContext reads from here. Single-threaded RSC renders guarantee
  * no concurrent mutation. React.cache ensures reset between renders.
@@ -34,7 +34,7 @@ export type IStyleSheetContext = {
   shouldForwardProp?: ShouldForwardProp<'web'> | undefined;
   styleSheet: StyleSheet;
   stylis: Stringifier;
-  /** Preserved for inheritance — inner SSMs that set namespace/vendorPrefixes
+  /** Preserved for inheritance - inner SSMs that set namespace/vendorPrefixes
    *  but not stylisPlugins can still inherit the parent's plugins. */
   stylisPlugins?: stylis.Middleware[] | undefined;
 };
@@ -65,7 +65,7 @@ export function useStyleSheetContext() {
 
   // Reset mainSheet once per render to prevent HMR accumulation.
   // React.cache ensures this runs exactly once per render, so calling
-  // it here AND in StyleSheetManager is safe — whichever runs first wins.
+  // it here AND in StyleSheetManager is safe - whichever runs first wins.
   if (ensureSheetReset) ensureSheetReset();
 
   return rscContextOverride || defaultContextValue;
@@ -159,7 +159,7 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
           plugins: props.stylisPlugins,
         });
       } else if (props.namespace !== undefined || props.enableVendorPrefixes !== undefined) {
-        // Namespace or prefix changed without new plugins — create fresh instance
+        // Namespace or prefix changed without new plugins - create fresh instance
         // using inherited plugins from parent.
         rscCachedStylis = createStylisInstance({
           options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },

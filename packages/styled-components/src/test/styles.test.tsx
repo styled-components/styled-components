@@ -520,6 +520,26 @@ describe('with styles', () => {
     `);
   });
 
+  it('should call toString on interpolated value objects (#5740)', () => {
+    const token = {
+      default: '#000000',
+      subtle: '#AAAAAA',
+      toString() {
+        return this.default;
+      },
+    };
+    const Comp = styled.p`
+      color: ${token};
+    `;
+    render(<Comp />);
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a {
+        color: #000000;
+      }"
+    `);
+  });
+
   it('should preserve styles after a malformed declaration with unbalanced brace', () => {
     // Ensures unbalanced braces in interpolated values don't break subsequent styles
     // In v6, a syntax error like an extra `}` in a value would cause all subsequent styles to be ignored

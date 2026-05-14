@@ -169,7 +169,7 @@ export default function createGlobalStyle<Props extends object>(
       }
     }
 
-    // Clean up server instance cache — no useLayoutEffect cleanup runs on the
+    // Clean up server instance cache - no useLayoutEffect cleanup runs on the
     // server, so instanceRules would grow unboundedly across SSR requests.
     if (__SERVER__ || ssc.styleSheet.server) {
       globalStyle.instanceRules.delete(instance);
