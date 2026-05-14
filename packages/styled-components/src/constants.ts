@@ -42,7 +42,7 @@ export const DISABLE_SPEEDY = Boolean(
         readSpeedyFlag('SC_DISABLE_SPEEDY') ??
         (typeof process !== 'undefined' && typeof process.env !== 'undefined'
           ? process.env.NODE_ENV !== 'production'
-          : true))
+          : false))
 );
 
 export const KEYFRAMES_ID_PREFIX = 'sc-keyframes-';
