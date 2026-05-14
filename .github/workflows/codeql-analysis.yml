@@ -9,16 +9,16 @@
 # the `language` matrix defined below to confirm you have the correct set of
 # supported CodeQL languages.
 #
-name: 'CodeQL'
+name: "CodeQL"
 
 on:
   push:
-    branches: [main, legacy-v5]
+    branches: [main, legacy-v5, "6.x"]
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [main]
+    branches: [main, "6.x"]
   schedule:
-    - cron: '19 4 * * 0'
+    - cron: "19 4 * * 0"
 
 jobs:
   analyze:
@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['javascript']
+        language: ["javascript"]
         # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python' ]
         # Learn more:
         # https://docs.github.com/en/free-pro-team@latest/github/finding-security-vulnerabilities-and-errors-in-your-code/configuring-code-scanning#changing-the-languages-that-are-analyzed
