@@ -37,6 +37,7 @@ jobs:
         uses: changesets/action@v1
         with:
           publish: pnpm release
+          title: ${{ github.ref_name == 'main' && 'Version Packages' || format('Version Packages ({0})', github.ref_name) }}
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
 
