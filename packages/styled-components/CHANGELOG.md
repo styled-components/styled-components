@@ -1,5 +1,15 @@
 # styled-components
 
+## 6.4.2
+
+### Patch Changes
+
+- 9945904: Restore TypeScript prop autocomplete inside the JSX of a styled component once the first attribute is typed.
+- 9945904: Apply all chain levels' styles when an extended styled component renders with the `as` prop under Preact's `react-compat`.
+- 9945904: Respect a custom `toString` on plain value objects (e.g. design tokens) when interpolated into a styled component, rather than walking the object's keys as CSS declarations.
+- 9945904: Fix a TypeScript error when wrapping a component whose props include an `as` prop with a non-string type (such as Next.js `Link`'s `as?: Url`). The styled component now accepts either the styled-components polymorphism value or the wrapped component's own `as` type, so spreading the wrapped component's props onto the styled component is assignable again.
+- 9945904: Restore reliable styling in production browser bundles built without a runtime `process` global.
+
 ## 6.4.1
 
 ### Patch Changes
