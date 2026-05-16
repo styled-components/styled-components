@@ -635,6 +635,19 @@ const FakeLinkAlt: React.FC<{}> = () => null;
 const _fakeLinkAsTag: ExtractedFakeLink['as'] = 'a';
 const _fakeLinkAsComp: ExtractedFakeLink['as'] = FakeLinkAlt;
 
+// Spreading props that include a wrapped-component-shaped `as` (Url-typed) must
+// not fail. This mirrors the actual user scenario reported in #5734.
+const fakeLinkProps: FakeLinkProps = { href: '/foo', as: { pathname: '/bar' } };
+<StyledFakeLink {...fakeLinkProps}>Click</StyledFakeLink>;
+// Same shape, explicit `as`.
+<StyledFakeLink href="/foo" as={{ pathname: '/bar' }}>
+  Click
+</StyledFakeLink>;
+// styled-components polymorphism still works with a component target.
+<StyledFakeLink as={FakeLinkAlt} href="/foo">
+  poly
+</StyledFakeLink>;
+
 // Test with a component that has custom props
 const ComponentWithPropsForExtraction = styled.div<{ customProp: string }>``;
 type ExtractedPropsWithCustom = React.ComponentProps<typeof ComponentWithPropsForExtraction>;

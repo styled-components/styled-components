@@ -239,12 +239,17 @@ export interface PolymorphicComponent<
   // visited first, suppress JSX attribute name completions for keys carried by
   // `BaseProps` (#5741). Avoids `Substitute` so ref callbacks get contextual
   // typing even with spread props (#5687).
+  //
+  // `as` / `forwardedAs` here widen to also accept the wrapped component's own
+  // `as` / `forwardedAs` type when present (e.g. Next.js Link's `as?: Url`), so
+  // spreading the wrapped component's props onto the styled component remains
+  // assignable (#5734).
   (
     props: OverrideStyle<
       NoInfer<FastOmit<BaseProps, keyof ExecutionProps>> &
         FastOmit<ExecutionProps, 'as' | 'forwardedAs'> & {
-          as?: void;
-          forwardedAs?: void;
+          as?: BaseProps extends { as?: infer A } ? A : void;
+          forwardedAs?: BaseProps extends { forwardedAs?: infer A } ? A : void;
         }
     >
   ): React.JSX.Element;
