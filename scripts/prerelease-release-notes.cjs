@@ -5,8 +5,11 @@
  *
  * Omits changesets already shipped on this major line: the branch still contains
  * `.changeset/*.md` files after prior snapshot prereleases (CI deletes them only in the
- * workspace). We keep only changesets whose introducing commit is strictly after the
- * latest same-major tag for the primary released package.
+ * workspace). We keep only changesets whose *most recent* commit (the one that last
+ * touched the changeset file) is strictly after the latest same-major tag for the
+ * primary released package. Editing a changeset to refine its description or following
+ * up with a code change that tweaks the same .md file therefore re-includes the entry
+ * in the next prerelease.
  *
  * Local (read changesets from the repo — no snapshot step):
  *   GITHUB_REPOSITORY=styled-components/styled-components pnpm run test:prerelease-notes
@@ -22,7 +25,6 @@ const path = require('path');
 const { execSync } = require('child_process');
 const semver = require('semver');
 const readChangesets = require('@changesets/read').default;
-const git = require('@changesets/git');
 const { getReleaseLine } = require('@changesets/cli/changelog').default;
 
 function getPrevTagForPackage(pkgName, pkgVersion, cwd) {
@@ -57,6 +59,14 @@ function isAncestor(baselineSha, otherSha, cwd) {
     return true;
   } catch {
     return false;
+  }
+}
+
+function getLastCommitTouchingFile(filePath, cwd) {
+  try {
+    return execSync(`git log -1 --format=%h -- '${filePath}'`, { encoding: 'utf8', cwd }).trim();
+  } catch {
+    return '';
   }
 }
 
@@ -107,16 +117,8 @@ async function main() {
 
   let changesets = await readChangesets(changesetReadRoot);
   if (changesets.length) {
-    const paths = changesets.map(c => `.changeset/${c.id}.md`);
-    const commitResult = await git.getCommitsThatAddFiles(paths, { cwd, short: true });
-    if (commitResult instanceof Map) {
-      for (const cs of changesets) {
-        cs.commit = commitResult.get(`.changeset/${cs.id}.md`) || undefined;
-      }
-    } else {
-      for (let i = 0; i < changesets.length; i++) {
-        changesets[i].commit = commitResult[i] || undefined;
-      }
+    for (const cs of changesets) {
+      cs.commit = getLastCommitTouchingFile(`.changeset/${cs.id}.md`, cwd) || undefined;
     }
     changesets = changesets.filter(cs => shouldIncludeChangeset(cs, prevTagByName, cwd));
   }
