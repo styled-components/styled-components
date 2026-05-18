@@ -107,7 +107,7 @@ export default function ToggleClient() {
 
   return (
     <Card>
-      <Heading>Conditional mount/unmount — automated test</Heading>
+      <Heading>Conditional mount/unmount - automated test</Heading>
 
       <PhaseBar $color={PHASE_COLORS[phase]}>
         <PhaseDot $color={PHASE_COLORS[phase]} $animate={phase !== 'done' && phase !== 'idle'} />

@@ -26,18 +26,14 @@ const v6 = v6Mod.default ?? v6Mod;
 const v7 = v7Mod.default ?? v7Mod;
 const emotion = emotionMod.default ?? emotionMod;
 
-const N = (n) => Array.from({ length: n });
+const N = n => Array.from({ length: n });
 
 const renderSC = (lib, Sheet, n, uid) => {
   const C = lib.div`color: ${uid % 2 ? 'red' : 'blue'}; padding: 8px; --uid: ${uid};`;
   const sheet = new Sheet();
   const html = renderToString(
     sheet.collectStyles(
-      createElement(
-        'div',
-        null,
-        ...N(n).map((_, k) => createElement(C, { key: k, children: 'x' }))
-      )
+      createElement('div', null, ...N(n).map((_, k) => createElement(C, { key: k, children: 'x' })))
     )
   );
   return html + sheet.getStyleTags();
@@ -46,11 +42,7 @@ const renderSC = (lib, Sheet, n, uid) => {
 const renderEmotion = (n, uid) => {
   const C = emotion.div`color: ${uid % 2 ? 'red' : 'blue'}; padding: 8px; --uid: ${uid};`;
   return renderToString(
-    createElement(
-      'div',
-      null,
-      ...N(n).map((_, k) => createElement(C, { key: k, children: 'x' }))
-    )
+    createElement('div', null, ...N(n).map((_, k) => createElement(C, { key: k, children: 'x' })))
   );
 };
 
@@ -58,7 +50,7 @@ const SCALES = [1, 10, 100, 1000];
 
 summary(() => {
   for (const n of SCALES) {
-    group(`SSR renderToString — ${n} components`, () => {
+    group(`SSR renderToString - ${n} components`, () => {
       let i = 0;
       bench('styled-components 6.4.1', () => {
         do_not_optimize(renderSC(v6, SheetV6, n, ++i));

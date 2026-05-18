@@ -26,8 +26,8 @@ type Props = {
 /**
  * Live count vs expected, rendered as a green/red pill.
  * Counting strategy is inferred from which discriminator prop is supplied:
- *   tagId       — RSC injection path (DOM-tag-tagged with the global id)
- *   ruleNeedle  — Client/CSSOM injection path (substring match in cssRules)
+ *   tagId - RSC injection path (DOM-tag-tagged with the global id)
+ *   ruleNeedle - Client/CSSOM injection path (substring match in cssRules)
  *
  * Both strategies take strings so the component stays usable from RSC pages
  * (function props can't cross the server→client boundary).

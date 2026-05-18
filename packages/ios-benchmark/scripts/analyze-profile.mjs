@@ -20,7 +20,7 @@ if (!file) {
 const data = JSON.parse(readFileSync(file, 'utf8'));
 const { nodes = [], samples = [], timeDeltas = [] } = data;
 
-const byId = new Map(nodes.map((n) => [n.id, n]));
+const byId = new Map(nodes.map(n => [n.id, n]));
 const selfTime = new Map(); // nodeId -> ms
 
 for (let i = 0; i < samples.length; i++) {

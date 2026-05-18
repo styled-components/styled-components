@@ -7,5 +7,5 @@ export default {
   Box,
   Dot,
   Provider,
-  View
+  View,
 };

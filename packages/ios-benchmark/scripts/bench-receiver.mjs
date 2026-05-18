@@ -23,12 +23,21 @@ const OUT_DIR = process.env.BENCH_OUT_DIR
   : resolve(process.cwd(), '.bench-results');
 const PROFILE_DIR = resolve(OUT_DIR, 'profiles');
 const TAG = process.env.BENCH_TAG ?? 'combined';
-const LIBS = (process.env.BENCH_LIBS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+const LIBS = (process.env.BENCH_LIBS ?? '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
 const PROFILE = process.env.BENCH_PROFILE === '1';
 // Comma-separated case names to profile; empty = profile all when PROFILE=1.
-const PROFILE_CASES = (process.env.BENCH_PROFILE_CASES ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+const PROFILE_CASES = (process.env.BENCH_PROFILE_CASES ?? '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
 // Comma-separated case names to run (filters the queue); empty = all cases.
-const CASES = (process.env.BENCH_CASES ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+const CASES = (process.env.BENCH_CASES ?? '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
 
 mkdirSync(OUT_DIR, { recursive: true });
 if (PROFILE) mkdirSync(PROFILE_DIR, { recursive: true });
@@ -40,10 +49,10 @@ const session = {
   done: false,
 };
 
-const readJsonBody = (req) =>
+const readJsonBody = req =>
   new Promise((resolveBody, rejectBody) => {
     const chunks = [];
-    req.on('data', (c) => chunks.push(c));
+    req.on('data', c => chunks.push(c));
     req.on('end', () => {
       try {
         const text = Buffer.concat(chunks).toString('utf8');
@@ -89,7 +98,13 @@ const server = createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/health') return send(res, 200);
 
   if (req.method === 'GET' && req.url === '/run-config') {
-    return send(res, 200, { tag: TAG, libs: LIBS, cases: CASES, profile: PROFILE, profileCases: PROFILE_CASES });
+    return send(res, 200, {
+      tag: TAG,
+      libs: LIBS,
+      cases: CASES,
+      profile: PROFILE,
+      profileCases: PROFILE_CASES,
+    });
   }
 
   if (req.method === 'POST' && req.url === '/result') {
@@ -111,9 +126,13 @@ const server = createServer(async (req, res) => {
       writeFileSync(savedTo, body.data);
       console.log(`bench-receiver: profile saved (inline ${body.data.length}B) — ${savedTo}`);
     } else if (body.path) {
-      console.log(`bench-receiver: profile recorded (path only) — ${body.implName} · ${body.caseName} · ${body.path}`);
+      console.log(
+        `bench-receiver: profile recorded (path only) — ${body.implName} · ${body.caseName} · ${body.path}`
+      );
     } else {
-      console.log(`bench-receiver: profile event with no data/path — ${body.implName} · ${body.caseName}`);
+      console.log(
+        `bench-receiver: profile event with no data/path — ${body.implName} · ${body.caseName}`
+      );
     }
     session.profiles.push({ ...body, savedTo, receivedAt: Date.now() });
     return send(res, 200, { ok: true, savedTo });
@@ -142,7 +161,9 @@ server.listen(PORT, '127.0.0.1', () => {
 
 setTimeout(() => {
   if (session.done) return;
-  console.error(`bench-receiver: timeout after ${TIMEOUT_MS}ms with ${session.results.length} results`);
+  console.error(
+    `bench-receiver: timeout after ${TIMEOUT_MS}ms with ${session.results.length} results`
+  );
   if (session.results.length > 0) writeOutput();
   process.exit(2);
 }, TIMEOUT_MS);

@@ -26,7 +26,7 @@ import { resolve } from 'node:path';
 const args = process.argv.slice(2);
 const flag = (name, dflt = '') => {
   const i = args.indexOf(name);
-  return i >= 0 ? args[i + 1] ?? dflt : dflt;
+  return i >= 0 ? (args[i + 1] ?? dflt) : dflt;
 };
 
 const LIBS = flag('--libs');
@@ -39,7 +39,9 @@ const log = (...m) => console.log('[run-bench]', ...m);
 const sh = (cmd, args, opts = {}) =>
   new Promise((resolveSh, rejectSh) => {
     const child = spawn(cmd, args, { stdio: 'inherit', ...opts });
-    child.on('exit', (code) => (code === 0 ? resolveSh() : rejectSh(new Error(`${cmd} exited ${code}`))));
+    child.on('exit', code =>
+      code === 0 ? resolveSh() : rejectSh(new Error(`${cmd} exited ${code}`))
+    );
     child.on('error', rejectSh);
   });
 
@@ -53,7 +55,7 @@ const main = async () => {
   });
 
   let receiverExit = null;
-  receiver.on('exit', (code) => {
+  receiver.on('exit', code => {
     receiverExit = code ?? -1;
   });
 
@@ -84,7 +86,7 @@ const main = async () => {
   log('done');
 };
 
-main().catch((err) => {
+main().catch(err => {
   console.error('[run-bench] error:', err.message);
   process.exit(1);
 });

@@ -269,8 +269,8 @@ const priorityStyles = css<{ $priority: 'low' | 'medium' | 'high' }>`
     p.$priority === 'high'
       ? `background: ${p.theme.colors.danger}22; color: ${p.theme.colors.danger};`
       : p.$priority === 'medium'
-      ? `background: ${p.theme.colors.warning}22; color: ${p.theme.colors.warning};`
-      : `background: ${p.theme.colors.success}22; color: ${p.theme.colors.success};`}
+        ? `background: ${p.theme.colors.warning}22; color: ${p.theme.colors.warning};`
+        : `background: ${p.theme.colors.success}22; color: ${p.theme.colors.success};`}
 `;
 
 const PriorityBadge = styled.span<{ $priority: 'low' | 'medium' | 'high' }>`
@@ -291,7 +291,9 @@ const StarButton = styled.button<{ $active: boolean }>`
   font-size: 16px;
   line-height: 1;
   color: ${p => (p.$active ? p.theme.colors.warning : p.theme.colors.border)};
-  transition: color 0.15s, transform 0.1s;
+  transition:
+    color 0.15s,
+    transform 0.1s;
 
   &:hover {
     color: ${p => p.theme.colors.warning};

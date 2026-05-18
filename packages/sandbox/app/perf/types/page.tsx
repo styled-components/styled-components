@@ -8,8 +8,8 @@ const Type01 = styled.div<{ $size: 'sm' | 'md' | 'lg' }>`
     p.$size === 'sm'
       ? p.theme.typography.fontSize.small
       : p.$size === 'md'
-      ? p.theme.typography.fontSize.medium
-      : p.theme.typography.fontSize.large};
+        ? p.theme.typography.fontSize.medium
+        : p.theme.typography.fontSize.large};
   color: ${p => p.theme.colors.text};
 `;
 
@@ -18,8 +18,8 @@ const Type02 = styled.span<{ $variant: 'primary' | 'secondary' | 'ghost' }>`
     p.$variant === 'primary'
       ? p.theme.colors.primary
       : p.$variant === 'secondary'
-      ? p.theme.colors.secondary
-      : p.theme.colors.textMuted};
+        ? p.theme.colors.secondary
+        : p.theme.colors.textMuted};
   background: ${p => p.theme.colors.surface};
 `;
 
@@ -73,8 +73,8 @@ const Type10 = styled.div<{ $variant: 'primary' | 'secondary' | 'ghost'; $paddin
       p.$variant === 'primary'
         ? p.theme.colors.primary
         : p.$variant === 'secondary'
-        ? p.theme.colors.secondary
-        : p.theme.colors.border};
+          ? p.theme.colors.secondary
+          : p.theme.colors.border};
   background: ${p => p.theme.colors.background};
 `;
 
@@ -96,8 +96,8 @@ const Type12 = styled.button<{
     p.$isActive
       ? p.theme.colors.primary
       : p.$variant === 'secondary'
-      ? p.theme.colors.secondary
-      : 'transparent'};
+        ? p.theme.colors.secondary
+        : 'transparent'};
   color: ${p => (p.$isActive ? p.theme.colors.background : p.theme.colors.text)};
   border: 1px solid ${p => p.theme.colors.border};
 `;
@@ -187,8 +187,8 @@ const Type22 = styled.button<{ $variant: 'primary' | 'secondary' | 'ghost' }>`
       p.$variant === 'primary'
         ? p.theme.colors.primary
         : p.$variant === 'secondary'
-        ? p.theme.colors.secondary
-        : 'transparent'};
+          ? p.theme.colors.secondary
+          : 'transparent'};
   background: ${p => p.theme.colors.background};
   color: ${p => p.theme.colors.text};
   cursor: pointer;
@@ -227,8 +227,8 @@ const Type27 = styled.button<{ $variant: 'primary' | 'secondary' | 'ghost'; $col
     p.$variant === 'primary'
       ? p.theme.colors.primary
       : p.$variant === 'secondary'
-      ? p.theme.colors.secondary
-      : 'transparent'};
+        ? p.theme.colors.secondary
+        : 'transparent'};
   border: 1px solid ${p => p.theme.colors.border};
   cursor: pointer;
 `;
@@ -264,8 +264,8 @@ const Type31 = styled.div<{ $size: 'sm' | 'md' | 'lg' }>`
     p.$size === 'sm'
       ? p.theme.spacing.small
       : p.$size === 'md'
-      ? p.theme.spacing.medium
-      : p.theme.spacing.large};
+        ? p.theme.spacing.medium
+        : p.theme.spacing.large};
   display: flex;
   flex-wrap: wrap;
   color: ${p => p.theme.colors.text};
@@ -276,8 +276,8 @@ const Type32 = styled.a<{ $variant: 'primary' | 'secondary' | 'ghost'; $isActive
     p.$isActive
       ? p.theme.colors.primary
       : p.$variant === 'secondary'
-      ? p.theme.colors.secondary
-      : p.theme.colors.textMuted};
+        ? p.theme.colors.secondary
+        : p.theme.colors.textMuted};
   text-decoration: none;
   background: ${p => p.theme.colors.background};
 `;
@@ -329,8 +329,8 @@ const Type37 = styled.button<{
     p.$isActive
       ? p.theme.colors.success
       : p.$variant === 'primary'
-      ? p.theme.colors.primary
-      : p.theme.colors.surface};
+        ? p.theme.colors.primary
+        : p.theme.colors.surface};
   color: ${p =>
     p.$isActive || p.$variant === 'primary' ? p.theme.colors.background : p.theme.colors.text};
   border: none;
@@ -367,14 +367,14 @@ const Type40 = styled.span<{
     p.$size === 'sm'
       ? p.theme.typography.fontSize.small
       : p.$size === 'md'
-      ? p.theme.typography.fontSize.medium
-      : p.theme.typography.fontSize.large};
+        ? p.theme.typography.fontSize.medium
+        : p.theme.typography.fontSize.large};
   color: ${p =>
     p.$variant === 'primary'
       ? p.theme.colors.primary
       : p.$variant === 'secondary'
-      ? p.theme.colors.secondary
-      : p.theme.colors.textMuted};
+        ? p.theme.colors.secondary
+        : p.theme.colors.textMuted};
   font-family: ${p => p.theme.typography.fontFamily};
 `;
 
@@ -436,8 +436,8 @@ const Type46 = styled.div<{
     p.$isActive
       ? p.theme.colors.primary
       : p.$variant === 'ghost'
-      ? 'transparent'
-      : p.theme.colors.surface};
+        ? 'transparent'
+        : p.theme.colors.surface};
   color: ${p => (p.$isActive ? p.theme.colors.background : p.theme.colors.text)};
   border: 1px solid ${p => p.theme.colors.border};
 `;
@@ -475,8 +475,8 @@ const Type49 = styled.a<{
     p.$isActive
       ? p.theme.colors.primary
       : p.$variant === 'ghost'
-      ? p.theme.colors.textMuted
-      : p.theme.colors.text};
+        ? p.theme.colors.textMuted
+        : p.theme.colors.text};
   text-decoration: none;
   background: ${p => p.theme.colors.background};
 `;
@@ -493,21 +493,21 @@ const Type50 = styled.div<{
     p.$size === 'sm'
       ? p.theme.typography.fontSize.small
       : p.$size === 'md'
-      ? p.theme.typography.fontSize.medium
-      : p.theme.typography.fontSize.large};
+        ? p.theme.typography.fontSize.medium
+        : p.theme.typography.fontSize.large};
   color: ${p => p.$color || p.theme.colors.text};
   background: ${p =>
     p.$isActive
       ? p.theme.colors.primary + '0d'
       : p.$variant === 'primary'
-      ? p.theme.colors.surface
-      : p.theme.colors.background};
+        ? p.theme.colors.surface
+        : p.theme.colors.background};
   border: 1px solid ${p => p.theme.colors.border};
   font-family: ${p => p.theme.typography.fontFamily};
 `;
 
 // ---------------------------------------------------------------------------
-// Composition chains — Chain01 through Chain20
+// Composition chains - Chain01 through Chain20
 // ---------------------------------------------------------------------------
 
 const Chain01Base = styled.div<{ $bg: string }>`
@@ -540,8 +540,8 @@ const Chain03Base = styled.button<{ $variant: 'primary' | 'secondary' | 'ghost' 
     p.$variant === 'primary'
       ? p.theme.colors.primary
       : p.$variant === 'secondary'
-      ? p.theme.colors.secondary
-      : 'transparent'};
+        ? p.theme.colors.secondary
+        : 'transparent'};
   color: ${p => (p.$variant === 'primary' ? p.theme.colors.background : p.theme.colors.text)};
   border: 1px solid ${p => p.theme.colors.border};
   cursor: pointer;
@@ -599,8 +599,8 @@ const Chain07Base = styled.div<{ $elevation: 0 | 1 | 2 }>`
     p.$elevation === 0
       ? 'none'
       : p.$elevation === 1
-      ? `0 1px 4px ${p.theme.colors.border}`
-      : `0 4px 12px ${p.theme.colors.border}`};
+        ? `0 1px 4px ${p.theme.colors.border}`
+        : `0 4px 12px ${p.theme.colors.border}`};
   background: ${p => p.theme.colors.surface};
 `;
 const Chain07Ext1 = styled(Chain07Base)<{ $rounded: boolean }>`
@@ -625,10 +625,10 @@ const Chain08Base = styled.span<{ $badge: 'info' | 'warn' | 'error' | 'ok' }>`
     p.$badge === 'ok'
       ? p.theme.colors.success
       : p.$badge === 'error'
-      ? p.theme.colors.danger
-      : p.$badge === 'warn'
-      ? p.theme.colors.warning
-      : p.theme.colors.primary};
+        ? p.theme.colors.danger
+        : p.$badge === 'warn'
+          ? p.theme.colors.warning
+          : p.theme.colors.primary};
   font-size: ${p => p.theme.typography.fontSize.small};
 `;
 const Chain08 = styled(Chain08Base)<{ $pill: boolean }>`
@@ -680,8 +680,8 @@ const Chain11Base = styled.div<{ $status: 'online' | 'offline' | 'busy' }>`
       p.$status === 'online'
         ? p.theme.colors.success
         : p.$status === 'busy'
-        ? p.theme.colors.warning
-        : p.theme.colors.danger};
+          ? p.theme.colors.warning
+          : p.theme.colors.danger};
     margin-right: 6px;
   }
   color: ${p => p.theme.colors.text};
@@ -790,8 +790,8 @@ const Chain17 = styled(Chain17Ext1)<{ $size: 'sm' | 'md' | 'lg' }>`
     p.$size === 'sm'
       ? p.theme.typography.fontSize.small
       : p.$size === 'md'
-      ? p.theme.typography.fontSize.medium
-      : p.theme.typography.fontSize.large};
+        ? p.theme.typography.fontSize.medium
+        : p.theme.typography.fontSize.large};
 `;
 
 const Chain18Base = styled.div<{ $outlined: boolean }>`
@@ -838,8 +838,8 @@ const Chain20Ext2 = styled(Chain20Ext1)<{ $size: 'sm' | 'md' | 'lg' }>`
     p.$size === 'sm'
       ? p.theme.typography.fontSize.small
       : p.$size === 'md'
-      ? p.theme.typography.fontSize.medium
-      : p.theme.typography.fontSize.large};
+        ? p.theme.typography.fontSize.medium
+        : p.theme.typography.fontSize.large};
 `;
 const Chain20 = styled(Chain20Ext2)<{ $maxWidth: number }>`
   max-width: ${p => p.$maxWidth}px;
@@ -849,7 +849,7 @@ const Chain20 = styled(Chain20Ext2)<{ $maxWidth: number }>`
 `;
 
 // ---------------------------------------------------------------------------
-// Attrs chains — Attrs01 through Attrs15
+// Attrs chains - Attrs01 through Attrs15
 // ---------------------------------------------------------------------------
 
 const Attrs01 = styled.button.attrs({ type: 'button' })`
@@ -950,8 +950,8 @@ const Attrs09 = styled(Attrs09Ext1)<{ $type?: 'error' | 'success' | 'info' }>`
     p.$type === 'error'
       ? p.theme.colors.danger
       : p.$type === 'success'
-      ? p.theme.colors.success
-      : p.theme.colors.primary};
+        ? p.theme.colors.success
+        : p.theme.colors.primary};
   border: 1px solid currentColor;
 `;
 
@@ -1029,7 +1029,7 @@ const Attrs15 = styled.textarea.attrs({ rows: 4, spellCheck: true })`
 `;
 
 // ---------------------------------------------------------------------------
-// Polymorphic as usages — Poly01 through Poly10
+// Polymorphic as usages - Poly01 through Poly10
 // ---------------------------------------------------------------------------
 
 const PolyBase = styled.div<{ $active?: boolean }>`
@@ -1099,7 +1099,7 @@ function Poly10({ children }: { children: React.ReactNode }) {
 }
 
 // ---------------------------------------------------------------------------
-// Spread prop patterns — Spread01 through Spread10
+// Spread prop patterns - Spread01 through Spread10
 // ---------------------------------------------------------------------------
 
 const SpreadBase = styled.div<{ $accent?: string }>`
@@ -1163,7 +1163,7 @@ function Spread10({
 }
 
 // ---------------------------------------------------------------------------
-// Generic wrapper components — Generic01 through Generic05
+// Generic wrapper components - Generic01 through Generic05
 // ---------------------------------------------------------------------------
 
 const GenericContainer = styled.div`

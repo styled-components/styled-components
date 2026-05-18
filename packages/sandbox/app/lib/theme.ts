@@ -2,7 +2,7 @@ import { createTheme } from 'styled-components';
 import { themes } from './test-themes';
 
 /**
- * Theme contract — generates CSS variable accessors from the default (light) theme.
+ * Theme contract - generates CSS variable accessors from the default (light) theme.
  *
  * Usage in RSC files:
  *   color: ${theme.colors.primary};

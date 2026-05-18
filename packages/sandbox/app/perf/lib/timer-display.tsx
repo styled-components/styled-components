@@ -114,8 +114,8 @@ const Wrapper = styled.div<{ $idle: boolean; $running: boolean }>`
       p.$running
         ? p.theme.colors.success
         : p.$idle
-        ? p.theme.colors.border
-        : p.theme.colors.primary};
+          ? p.theme.colors.border
+          : p.theme.colors.primary};
   border-radius: 8px;
   padding: 6px 12px;
   font-family: ui-monospace, 'SF Mono', monospace;

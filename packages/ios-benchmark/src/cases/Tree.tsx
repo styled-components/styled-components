@@ -17,7 +17,14 @@ export default function Tree({ components, breadth, depth, id, wrap }: Props) {
       {depth === 0 && <Box $color={(id % 3) + 3} $fixed />}
       {depth !== 0 &&
         Array.from({ length: breadth }, (_, i) => (
-          <Tree key={i} breadth={breadth} components={components} depth={depth - 1} id={i} wrap={wrap} />
+          <Tree
+            key={i}
+            breadth={breadth}
+            components={components}
+            depth={depth - 1}
+            id={i}
+            wrap={wrap}
+          />
         ))}
     </Box>
   );

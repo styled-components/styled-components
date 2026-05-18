@@ -32,7 +32,8 @@ class ReportCard extends React.PureComponent {
           </div>
           {!hideBenchmarkName ? (
             <div style={styles.benchmarkName}>
-              {benchmarkName}{sampleCountText}
+              {benchmarkName}
+              {sampleCountText}
             </div>
           ) : sampleCountText ? (
             <div style={styles.benchmarkName}>{sampleCountText.trim()}</div>
@@ -44,7 +45,8 @@ class ReportCard extends React.PureComponent {
           ) : (
             <div data-testid={benchmarkName + ' results'}>
               <div style={styles.meanTime}>
-                {fmt(mean)} <span style={styles.plusMinus}>±</span>{fmt(stdDev)} ms
+                {fmt(mean)} <span style={styles.plusMinus}>±</span>
+                {fmt(stdDev)} ms
               </div>
               <div style={styles.breakdown}>
                 scripting {fmt(meanScripting)} / layout {fmt(meanLayout)} ms
