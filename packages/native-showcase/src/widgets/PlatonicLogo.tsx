@@ -732,11 +732,18 @@ export function PlatonicLogo() {
   // logo reads as artwork, not chrome. Touch/click on the logo or any
   // control button bumps; web hover keeps them visible via CSS.
   const [controlsVisible, setControlsVisible] = useState(false);
+  const controlsVisibleRef = useRef(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bumpControls = useCallback(() => {
-    setControlsVisible(true);
+    if (!controlsVisibleRef.current) {
+      controlsVisibleRef.current = true;
+      setControlsVisible(true);
+    }
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = setTimeout(() => setControlsVisible(false), CONTROLS_HIDE_MS);
+    hideTimerRef.current = setTimeout(() => {
+      controlsVisibleRef.current = false;
+      setControlsVisible(false);
+    }, CONTROLS_HIDE_MS);
   }, []);
   useEffect(
     () => () => {

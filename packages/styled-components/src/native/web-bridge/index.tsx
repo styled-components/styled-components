@@ -84,6 +84,7 @@ import withTheme from '../../hoc/withTheme';
 import isStyledComponent from '../../utils/isStyledComponent';
 import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager';
 import ServerStyleSheet from '../../models/ServerStyleSheet';
+import { camelize } from '../transform';
 import type { Styled } from '../../constructors/constructWithOptions';
 
 type BridgedProps = {
@@ -159,10 +160,8 @@ function collectDataProps(rest: Record<string, unknown>): {
   for (const key in rest) {
     if (key.startsWith('data-')) {
       if (dataSet === undefined) dataSet = {};
-      // `data-place-self` → `placeSelf`
-      const suffix = key.slice(5);
-      const camel = suffix.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
-      dataSet[camel] = rest[key];
+      // `data-place-self` → `placeSelf` via the shared camelize cache.
+      dataSet[camelize(key.slice(5))] = rest[key];
     } else {
       other[key] = rest[key];
     }
@@ -185,32 +184,27 @@ function bridgePrimitive<P extends BridgedProps>(
   displayName: string
 ): React.ForwardRefExoticComponent<React.PropsWithoutRef<P> & React.RefAttributes<unknown>> {
   const Bridged = React.forwardRef<unknown, P>((props, ref) => {
-    const { className, style, ...rest } = props;
-    const fixedStyle = rewrite3dMatrices(style);
-    // RN's `pointerEvents` prop is deprecated on rn-web in favor of
-    // `style.pointerEvents`. Lift the prop into the style array so
-    // consumers writing idiomatic cross-platform RN code don't see a
-    // deprecation warning on web. The values (`auto`, `none`,
-    // `box-none`, `box-only`) pass through identically to rn-web's
-    // own `pointerEventsStyles` map.
-    let pointerEvents: unknown;
-    if ('pointerEvents' in (rest as Record<string, unknown>)) {
-      pointerEvents = (rest as Record<string, unknown>).pointerEvents;
-      delete (rest as Record<string, unknown>).pointerEvents;
-    }
-    const merged = className ? [{ $$css: true, sc: className }, fixedStyle] : fixedStyle;
-    const withPointer =
-      pointerEvents != null
-        ? Array.isArray(merged)
-          ? [...merged, { pointerEvents }]
-          : [merged, { pointerEvents }]
-        : merged;
-    const { dataSet, other } = collectDataProps(rest as Record<string, unknown>);
-    const finalProps: Record<string, unknown> = {
-      ...other,
-      ref,
-      style: withPointer,
+    // `pointerEvents` is destructured off (not deleted) because rn-web
+    // deprecates the prop in favor of `style.pointerEvents`. Values
+    // `auto | none | box-none | box-only` pass through identically to
+    // rn-web's own `pointerEventsStyles` map.
+    const { className, style, pointerEvents, ...rest } = props as P & {
+      pointerEvents?: unknown;
     };
+    const fixedStyle = rewrite3dMatrices(style);
+    const classLayer = className ? { $$css: true, sc: className } : null;
+    const pointerLayer = pointerEvents != null ? { pointerEvents } : null;
+    let finalStyle: unknown = fixedStyle;
+    if (classLayer || pointerLayer) {
+      const layers: unknown[] = [];
+      if (classLayer) layers.push(classLayer);
+      if (Array.isArray(fixedStyle)) layers.push(...fixedStyle);
+      else if (fixedStyle != null) layers.push(fixedStyle);
+      if (pointerLayer) layers.push(pointerLayer);
+      finalStyle = layers;
+    }
+    const { dataSet, other } = collectDataProps(rest as Record<string, unknown>);
+    const finalProps: Record<string, unknown> = { ...other, ref, style: finalStyle };
     if (dataSet !== undefined) finalProps.dataSet = dataSet;
     return React.createElement(Component, finalProps as unknown as P);
   });
@@ -357,6 +351,20 @@ const baselineCss: Partial<Record<KnownAlias, string>> = {
  *   hsl until rn-web's color subset catches up to CSS Color 4.
  */
 type CssLiftMap = Record<string, { prop: string; transform?: (v: string) => unknown }>;
+
+// One RegExp per CSS property name, materialized on first lookup. Each
+// regex matches `<prop>:<value>` at the start of a decl or after `;`/`{`/
+// whitespace so longer identifiers (`-webkit-object-fit`) don't false-match.
+const liftRegexCache = new Map<string, RegExp>();
+function liftRegex(cssProp: string): RegExp {
+  let re = liftRegexCache.get(cssProp);
+  if (re === undefined) {
+    const escaped = cssProp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    re = new RegExp('(?:^|[;{\\s])' + escaped + '\\s*:\\s*([^;}\\n]+)', 'i');
+    liftRegexCache.set(cssProp, re);
+  }
+  return re;
+}
 
 const imageLifts: CssLiftMap = {
   'object-fit': {
@@ -525,30 +533,11 @@ const allLifts: CssLiftMap = {
 };
 
 /**
- * `styled` bound to rn-web primitives. `styled.View\`...\`` produces a
- * styled component that renders rn-web's `<View>` while injecting CSS
- * through the web pipeline. Web-native HTML elements (`styled.a`,
- * `styled.select`, etc.) and arbitrary `styled(Component)` calls work
- * unchanged because the underlying factory IS the web `styled`.
- *
- * Every call shape — direct invocation `styled(MyComp)` and HTML
- * shorthand `styled.div` — is wrapped with `wrapBridgeFactory(...,
- * allLifts)` so the CSS-to-prop lifts (line-clamp → numberOfLines,
- * object-fit → resizeMode, accent-color → trackColor) fire even on
- * components that extend a bridged primitive. The alias getters
- * (`styled.Text`, etc.) further down add per-alias baselines and
- * lift sets on top.
- */
-/**
- * Map raw rn-web component → its bridged variant. When a consumer
- * writes `styled(TextInput)` (importing TextInput from 'react-native',
- * which on web resolves to rn-web's TextInput), we want the bridge's
- * `bridgePrimitive` shim to apply just as if they had written
- * `styled.TextInput` directly. Otherwise the className the web
- * pipeline mints never reaches the DOM because rn-web's
- * createDOMProps only honors `style` (via the `$$css` escape hatch).
- *
- * Populated lazily as each alias getter fires the first time.
+ * `styled(TextInput)` (importing from 'react-native') needs to land on
+ * the bridge shim so the web className reaches the DOM via styleq's
+ * `$$css` escape hatch. The WeakMap maps each raw rn-web primitive to
+ * the matching `bridgePrimitive`-wrapped variant; the alias-getter
+ * seeding loop below fills every entry at module load.
  */
 const rawToBridged = new WeakMap<object, React.ComponentType<BridgedProps>>();
 
@@ -562,10 +551,6 @@ function bridgeStyledCall<T>(target: T): unknown {
   return wrapBridgeFactory(result, allLifts);
 }
 styled = bridgeStyledCall as unknown as typeof styledWeb & BridgedNamespace;
-// Copy properties / HTML-element shortcuts the web `styled` already
-// has (its `domElements.forEach(...)` loop adds `styled.div`,
-// `styled.a`, etc. as pre-built factories). Wrap each so they pick
-// up the lifts too.
 for (const key of Object.keys(styledWeb)) {
   const value = (styledWeb as unknown as Record<string, unknown>)[key];
   if (typeof value === 'function') {
@@ -578,13 +563,6 @@ for (const key of Object.keys(styledWeb)) {
   }
 }
 
-/**
- * styled-components' template factory: callable as a tagged template
- * and exposes `.attrs()` / `.withConfig()` chain methods. The bridge
- * wraps this so the lift pass survives method chains that
- * `babel-plugin-styled-components` inserts automatically (every
- * styled component declaration gets a synthesized `.withConfig({...})`).
- */
 type Factoryish = ((
   strings: TemplateStringsArray,
   ...args: unknown[]
@@ -594,20 +572,11 @@ type Factoryish = ((
 };
 
 /**
- * Wrap a styled-component template factory with the bridge's
- * CSS-source preprocessing (var()+unit rewrite for createTheme
- * sentinels) and optionally a CSS-lift pass (extract specific
- * properties into rn-web component props).
- *
- * `.attrs()` / `.withConfig()` return new factories with the same
- * wrap applied so chained calls preserve both the chain semantics
- * AND the bridge transforms. `babel-plugin-styled-components`
- * synthesizes a `.withConfig({componentId, displayName})` chain on
- * every styled declaration; that chain must survive the wrap.
+ * Re-wraps `.attrs()` / `.withConfig()` so the lift extraction survives
+ * the `.withConfig({componentId, displayName})` chain that
+ * `babel-plugin-styled-components` synthesizes on every declaration.
  */
 function wrapBridgeFactory(target: Factoryish, lifts?: CssLiftMap): Factoryish {
-  // No-op wrap when there are no lifts to apply; the var()+unit
-  // rewrite already runs globally via the patched `mainCompiler`.
   if (lifts === undefined) return target;
   const wrapped = ((strings: TemplateStringsArray, ...args: unknown[]) => {
     const liftedAttrs = extractCssLifts(strings, lifts);
@@ -690,6 +659,7 @@ const KNOWN_UNITS = new Set([
   'ms',
 ]);
 function rewriteVarUnitSuffix(input: string): string {
+  if (input.indexOf('var(') < 0) return input;
   return input.replace(VAR_WITH_UNIT_RE, (match, name: string, fallback: string, unit: string) => {
     if (!KNOWN_UNITS.has(unit.toLowerCase())) return match;
     return 'calc(var(' + name + ', ' + fallback + ') * 1' + unit + ')';
@@ -715,6 +685,7 @@ const BARE_MATH_IN_LENGTH_PROP_RE = new RegExp(
   'gi'
 );
 function rewriteBareMathFn(input: string): string {
+  if (input.indexOf('(') < 0) return input;
   return input.replace(
     BARE_MATH_IN_LENGTH_PROP_RE,
     (_match, head: string, fn: string, args: string) => {
@@ -744,7 +715,7 @@ function rewriteBareMathFn(input: string): string {
  * authoring CSS that runs in a non-rn-web context still see it.
  */
 const VERT_ALIGN_RULE_RE =
-  /(\.[a-zA-Z0-9_-]+)([^{}]*\{[^{}]*?vertical-align\s*:\s*(top|middle|bottom)[^{}]*\})/gi;
+  /(\.[a-zA-Z0-9_-]+)[^{}]*\{[^{}]*?vertical-align\s*:\s*(top|middle|bottom)[^{}]*\}/i;
 const VERT_ALIGN_TO_FLEX: Record<string, string> = {
   top: 'flex-start',
   middle: 'center',
@@ -757,12 +728,10 @@ const VERT_ALIGN_TO_FLEX: Record<string, string> = {
  * separate entries by the caller.
  */
 function verticalAlignCompanions(input: string): string[] {
-  if (input.indexOf('vertical-align') < 0) return [];
   const m = VERT_ALIGN_RULE_RE.exec(input);
-  VERT_ALIGN_RULE_RE.lastIndex = 0;
   if (!m) return [];
   const cls = m[1];
-  const flexValue = VERT_ALIGN_TO_FLEX[m[3].toLowerCase()];
+  const flexValue = VERT_ALIGN_TO_FLEX[m[2].toLowerCase()];
   if (!flexValue) return [];
   return [
     cls + ':not(textarea):not(input) { display: flex; align-items: ' + flexValue + '; }',
@@ -786,90 +755,36 @@ function applyBridgeRewrites(input: string): string {
   out = rewriteBareMathFn(out);
   return out;
 }
-/**
- * Match a rule whose selector starts with `.cls` followed by a
- * `:not(...)` chain. The chain might be multiple `:not()` calls.
- * Used both for the catchall reorder AND for the `:where()`
- * specificity-neutralization rewrite.
- *
- * On the native engine there's no CSS specificity — matched rules
- * simply apply in source order. CSS-spec specificity has each
- * `:not(<simple>)` contribute the simple's weight, so a catchall
- * like `:not([a]):not([b]):not([c])` carries weight (0,3,0) and
- * beats a simple `[data-channel]` rule (weight (0,1,0)) regardless
- * of source order. The rewrite wraps the `:not(...)` chain in
- * `:where(...)` to zero it out, restoring native semantics where
- * source order is the only tiebreaker.
- */
-const CATCHALL_NOT_RE = /^\.[a-zA-Z0-9_-]+:not\(/;
+// `:not(...)` chains carry CSS-spec specificity each (`(0,n,0)` for n
+// simple selectors), which beats a sibling `.cls[attr]` rule's (0,1,0)
+// regardless of source order. Wrapping the chain in `:where(...)`
+// zeroes the specificity and restores the native engine's source-order
+// cascade. Anchored to the class selector at the start of the rule;
+// nested chains elsewhere in the selector are left alone.
 const NOT_CHAIN_AFTER_CLASS_RE = /(^\.[a-zA-Z0-9_-]+)((?::not\([^()]*\))+)/;
 
 function applyBridgeRewritesToRules(rules: string[]): void {
-  const extras: Array<{ index: number; rule: string }> = [];
+  let extras: Array<{ index: number; rule: string }> | null = null;
   for (let i = 0; i < rules.length; i++) {
     let after = applyBridgeRewrites(rules[i]);
-    // Wrap `:not(...)` chains directly after the class selector in
-    // `:where(...)` so they don't contribute specificity. Matches the
-    // native engine's no-specificity cascade and lets simple
-    // `[attr]` rules override the catchall.
-    const notMatch = NOT_CHAIN_AFTER_CLASS_RE.exec(after);
-    if (notMatch) {
-      after = after.replace(NOT_CHAIN_AFTER_CLASS_RE, notMatch[1] + ':where(' + notMatch[2] + ')');
+    if (after.indexOf(':not(') >= 0) {
+      after = after.replace(NOT_CHAIN_AFTER_CLASS_RE, '$1:where($2)');
     }
     if (after !== rules[i]) rules[i] = after;
+    if (after.indexOf('vertical-align') < 0) continue;
     const companions = verticalAlignCompanions(after);
+    if (companions.length === 0) continue;
+    if (extras === null) extras = [];
     for (let j = 0; j < companions.length; j++) {
-      // Same `index` for every companion of the same rule. The reverse
-      // splice below pops them off in reverse, which lands them in
-      // their pushed order immediately after the source rule.
+      // Same `index` for every companion of the source rule; the reverse
+      // splice below lands them in pushed order right after the source.
       extras.push({ index: i + 1, rule: companions[j] });
     }
   }
-  // Insert companion rules in reverse order so earlier indices stay valid.
+  if (extras === null) return;
   for (let i = extras.length - 1; i >= 0; i--) {
     const { index, rule } = extras[i];
     rules.splice(index, 0, rule);
-  }
-  // Reorder: rules whose selector starts with `.cls:not(` move ahead
-  // of `.cls[attr]` rules for the same class so the catchall acts as
-  // a default that specific-attribute rules can override.
-  const catchallByClass = new Map<string, number[]>();
-  for (let i = 0; i < rules.length; i++) {
-    if (!CATCHALL_NOT_RE.test(rules[i])) continue;
-    const clsMatch = rules[i].match(/^\.([a-zA-Z0-9_-]+)/);
-    if (!clsMatch) continue;
-    const cls = clsMatch[1];
-    let list = catchallByClass.get(cls);
-    if (!list) {
-      list = [];
-      catchallByClass.set(cls, list);
-    }
-    list.push(i);
-  }
-  if (catchallByClass.size === 0) return;
-  // For each catchall, find the earliest attribute-selector rule of
-  // the same class and move the catchall just before it.
-  // Process in descending original-index order so each move keeps
-  // remaining indices stable.
-  const moves: Array<{ from: number; to: number }> = [];
-  for (const [cls, catchallIdxs] of catchallByClass) {
-    const attrRe = new RegExp('^\\.' + cls + '\\[');
-    let earliestAttrIdx = -1;
-    for (let i = 0; i < rules.length; i++) {
-      if (attrRe.test(rules[i])) {
-        earliestAttrIdx = i;
-        break;
-      }
-    }
-    if (earliestAttrIdx < 0) continue;
-    for (const ci of catchallIdxs) {
-      if (ci > earliestAttrIdx) moves.push({ from: ci, to: earliestAttrIdx });
-    }
-  }
-  moves.sort((a, b) => b.from - a.from);
-  for (const { from, to } of moves) {
-    const [rule] = rules.splice(from, 1);
-    rules.splice(to, 0, rule);
   }
 }
 mainCompiler.emit = function patchedEmit(
@@ -912,26 +827,21 @@ function extractCssLifts(
   lifts: CssLiftMap
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  for (const [cssProp, { prop, transform }] of Object.entries(lifts)) {
-    // Match `<prop>: <value>;` on its own line or at the start of a
-    // declaration block. Word-boundary anchors avoid matching inside
-    // longer identifiers (e.g. don't match `-webkit-object-fit`).
-    const escaped = cssProp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(`(?:^|[;{\\s])${escaped}\\s*:\\s*([^;}\\n]+)`, 'i');
+  for (const cssProp in lifts) {
+    const { prop, transform } = lifts[cssProp];
+    const re = liftRegex(cssProp);
     for (const segment of strings) {
       const m = segment.match(re);
-      if (m) {
-        const value = m[1]
-          .trim()
-          .replace(/!important$/i, '')
-          .trim();
-        const lifted = transform ? transform(value) : value;
-        // A transform returning `undefined` means "no lift for this
-        // value" — e.g. `text-wrap: balance` doesn't map to
-        // `numberOfLines`. Skip rather than overwriting.
-        if (lifted !== undefined) out[prop] = lifted;
-        break;
-      }
+      if (m === null) continue;
+      const value = m[1]
+        .trim()
+        .replace(/!important$/i, '')
+        .trim();
+      const lifted = transform ? transform(value) : value;
+      // A transform returning `undefined` means "no lift for this value"
+      // (e.g. `text-wrap: balance` doesn't map to `numberOfLines`).
+      if (lifted !== undefined) out[prop] = lifted;
+      break;
     }
   }
   return out;

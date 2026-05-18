@@ -823,6 +823,9 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
     // the unit lands outside the var() boundary. The bridge rewrites
     // these to `calc(var(...) * 1<unit>)` so the value survives.
     it('rewrites var()+px in the styled CSS to a calc form the browser accepts', () => {
+      // Literal template form mirrors what `${t.space.sm}px` produces
+      // after template concatenation: var() and the unit suffix
+      // share the same emitted decl without a space between them.
       const Box = styled.View`
         padding: var(--sc-space-sm, 13) px;
       `;
