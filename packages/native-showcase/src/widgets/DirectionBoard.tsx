@@ -7,7 +7,7 @@ import { InlineMarkdown } from '../components/Markdown';
  * CSS Writing Modes 4 §2.1 (direction) + Display 4 §2.5 (display:contents)
  * + Position 3 §2 (position:static) + Text 3 §6.1 (text-align: start | end).
  * Every row proves the polyfill via rendered behavior (movement, layout,
- * alignment) — not via paint color labels.
+ * alignment) - not via paint color labels.
  */
 
 const Stack = styled.View`
@@ -68,7 +68,7 @@ const ToggleLabel = styled.Text`
   }
 `;
 
-/* direction row — the box visibly jumps to the opposite edge under rtl. */
+/* direction row - the box visibly jumps to the opposite edge under rtl. */
 
 const DirectionalFrame = styled.View`
   border: ${t.borderWidth.hairline}px solid ${t.colors.border};
@@ -96,7 +96,7 @@ const InlineStartLabel = styled.Text`
   color: ${t.colors.bg};
 `;
 
-/* display:contents row — the wrapper has loud padding + border declared.
+/* display:contents row - the wrapper has loud padding + border declared.
    Under working `display: contents`, the wrapper generates no box, so
    the padding/border/background do not render and the children pack
    flush in the parent's flex flow. Under a broken polyfill, the bright
@@ -128,7 +128,7 @@ const ContentsChildLabel = styled.Text`
   color: ${t.colors.bg};
 `;
 
-/* position:static row — the static parent does NOT establish a containing
+/* position:static row - the static parent does NOT establish a containing
    block, so the inner `position: absolute` resolves against the next
    non-static ancestor (the outer Anchor). Under a working passthrough,
    the dot pins to the outer frame's top-right. Under a broken behavior,
@@ -165,7 +165,7 @@ const PinnedDot = styled.View`
   background-color: ${t.colors.ink};
 `;
 
-/* text-align row — glyph alignment within neutral surface containers. */
+/* text-align row - glyph alignment within neutral surface containers. */
 
 const AlignFrame = styled.View`
   border: ${t.borderWidth.hairline}px solid ${t.colors.border};

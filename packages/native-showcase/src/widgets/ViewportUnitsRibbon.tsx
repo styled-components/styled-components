@@ -5,15 +5,15 @@ import { theme as t } from '@/theme/tokens';
 
 /**
  * Viewport units. CSS Values L4 §6.1.2 defines six families:
- * • `vh` / `vw` — UA-default viewport
- * • `dvh` / `dvw` — dynamic, recomputes as URL bars hide
- * • `svh` / `svw` — small, assumes browser chrome is visible
- * • `lvh` / `lvw` — large, assumes chrome is collapsed
+ * • `vh` / `vw` - UA-default viewport
+ * • `dvh` / `dvw` - dynamic, recomputes as URL bars hide
+ * • `svh` / `svw` - small, assumes browser chrome is visible
+ * • `lvh` / `lvw` - large, assumes chrome is collapsed
  * plus `vmin` / `vmax` derived from the smaller/larger axis.
  *
  * On rn-web all six resolve against the actual visual viewport, so
  * `dvh` shifts as iOS Safari shrinks. On native iOS / Android there is
- * no URL-bar surface — the viewport never changes height — so
+ * no URL-bar surface - the viewport never changes height - so
  * `dvh` / `svh` / `lvh` all collapse to a single value. The bars below
  * make that collapse explicit.
  */
@@ -66,7 +66,7 @@ const Bar40vw = styled(Bar)`
    On native all four collapse to the same length (no URL-bar surface
    to differentiate); on rn-web `dvw` flexes as the visual viewport
    resizes. Bars are intentionally identical when the polyfill works
-   on native — the note in the row body explains why. */
+   on native - the note in the row body explains why. */
 const Bar25vwVariant = styled(Bar)`
   width: 25vw;
 `;
@@ -156,7 +156,7 @@ export function ViewportUnitsRibbon() {
         <RowLabel>width axis · vw ladder</RowLabel>
         <Markdown variant="hint">
           Each bar's width is set in `vw` units. The four bars step up proportionally with the
-          viewport — rotate the device or resize the browser to watch them re-resolve.
+          viewport - rotate the device or resize the browser to watch them re-resolve.
         </Markdown>
         <Frame>
           <BarRow>
@@ -189,9 +189,9 @@ export function ViewportUnitsRibbon() {
       <Row>
         <RowLabel>vw / dvw / svw / lvw variants</RowLabel>
         <Markdown variant="hint">
-          Same `25 × [unit]` multiplier across the four variants. On iOS / Android all four
-          bars share one length because there's no URL-bar surface to differentiate; on rn-web
-          `dvw` flexes as the visual viewport resizes.
+          Same `25 × [unit]` multiplier across the four variants. On iOS / Android all four bars
+          share one length because there's no URL-bar surface to differentiate; on rn-web `dvw`
+          flexes as the visual viewport resizes.
         </Markdown>
         <Frame>
           <BarRow>
@@ -224,9 +224,9 @@ export function ViewportUnitsRibbon() {
       <Row>
         <RowLabel>derived axes · vmin / vmax</RowLabel>
         <Markdown variant="hint">
-          `vmin` resolves against the smaller viewport axis, `vmax` the larger. Both use the
-          same `25 × [unit]` multiplier here; in portrait the `vmin` bar is shorter, in
-          landscape they swap.
+          `vmin` resolves against the smaller viewport axis, `vmax` the larger. Both use the same
+          `25 × [unit]` multiplier here; in portrait the `vmin` bar is shorter, in landscape they
+          swap.
         </Markdown>
         <Frame>
           <BarRow>

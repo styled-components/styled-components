@@ -91,7 +91,7 @@ const DecoratedWavy = styled(Decorated)`
   text-decoration: underline wavy #ff00aa;
 `;
 
-/* Generic font-family rows — each row applies a generic CSS keyword and
+/* Generic font-family rows - each row applies a generic CSS keyword and
    prints the keyword itself, so the user can visually inspect the face
    the platform chose for that generic. CSS Fonts 4 §2.1.5. */
 const GenericSerif = styled.Text`
@@ -137,11 +137,11 @@ export function TypeFeaturesShelf() {
     <Stack>
       <TabularRow>
         <Tag>tabular-nums</Tag>
-        <Numbers>1,234.56  ·  7,890.12</Numbers>
+        <Numbers>1,234.56 · 7,890.12</Numbers>
       </TabularRow>
       <TabularRow>
         <Tag>proportional-nums</Tag>
-        <ProportionalNumbers>1,234.56  ·  7,890.12</ProportionalNumbers>
+        <ProportionalNumbers>1,234.56 · 7,890.12</ProportionalNumbers>
       </TabularRow>
       <Row>
         <Tag>line-clamp · 2</Tag>
@@ -156,21 +156,38 @@ export function TypeFeaturesShelf() {
       </Row>
       <Decorated>Underline keyed to a theme color.</Decorated>
       <Decorated>
-        Multi-line underline check: this sentence is long on purpose so the
-        layout wraps it across two or three visual lines, letting us
-        verify that each wrapped segment receives its own colored
-        underline that starts and ends at the line's content boundaries.
+        Multi-line underline check: this sentence is long on purpose so the layout wraps it across
+        two or three visual lines, letting us verify that each wrapped segment receives its own
+        colored underline that starts and ends at the line's content boundaries.
       </Decorated>
       <Struck>Strikethrough keyed to a theme color.</Struck>
       <Struck>
-        Multi-line strikethrough check: another deliberately long sentence
-        so we can confirm each wrapped line gets its own colored strike
-        positioned around the x-height midline.
+        Multi-line strikethrough check: another deliberately long sentence so we can confirm each
+        wrapped line gets its own colored strike positioned around the x-height midline.
       </Struck>
       <DecoratedDouble>Double-stroke underline.</DecoratedDouble>
       <DecoratedDotted>Dotted underline.</DecoratedDotted>
       <DecoratedDashed>Dashed underline.</DecoratedDashed>
       <DecoratedWavy>Wavy underline.</DecoratedWavy>
+      <Row>
+        <Tag>font-size · absolute-size keywords</Tag>
+      </Row>
+      <SizeXXSmall>xx-small · 9px</SizeXXSmall>
+      <SizeXSmall>x-small · 10px</SizeXSmall>
+      <SizeSmall>small · 13px</SizeSmall>
+      <SizeMedium>medium · 16px</SizeMedium>
+      <SizeLarge>large · 18px</SizeLarge>
+      <SizeXLarge>x-large · 24px</SizeXLarge>
+      <SizeXXLarge>xx-large · 32px</SizeXXLarge>
+      <SizeXXXLarge>xxx-large · 48px</SizeXXXLarge>
+      <Row>
+        <Tag>font-size · relative-size keywords</Tag>
+      </Row>
+      <RelativeScope>
+        <RelativeBase>medium (anchor)</RelativeBase>
+        <RelativeLarger>larger · steps up the ramp</RelativeLarger>
+        <RelativeSmaller>smaller · steps down the ramp</RelativeSmaller>
+      </RelativeScope>
       <Row>
         <Tag>generic font families · §2.1.5</Tag>
       </Row>
@@ -188,7 +205,7 @@ export function TypeFeaturesShelf() {
   );
 }
 
-/* iOS / Android won't synthesize italic for a custom face — only the
+/* iOS / Android won't synthesize italic for a custom face - only the
    system font (sans-serif / System) has guaranteed italic glyphs in
    stock RN. The body theme face (Figtree) ships only upright variants,
    which would mask the polyfill's `fontStyle: 'italic'` output. Use
@@ -205,4 +222,60 @@ const Oblique = styled.Text`
   font-size: ${t.fontSize.body}px;
   color: ${t.colors.ink};
   font-style: oblique;
+`;
+
+/* CSS Fonts 4 §2.5.1 absolute-size keywords resolve to a fixed pixel
+   ramp on every platform (9, 10, 13, 16, 18, 24, 32, 48). Each
+   declaration prints its keyword + expected pixel so the parity is
+   inspectable at a glance. */
+const SizeBase = styled.Text`
+  font-family: ${t.fontFamily.body};
+  color: ${t.colors.ink};
+`;
+const SizeXXSmall = styled(SizeBase)`
+  font-size: xx-small;
+`;
+const SizeXSmall = styled(SizeBase)`
+  font-size: x-small;
+`;
+const SizeSmall = styled(SizeBase)`
+  font-size: small;
+`;
+const SizeMedium = styled(SizeBase)`
+  font-size: medium;
+`;
+const SizeLarge = styled(SizeBase)`
+  font-size: large;
+`;
+const SizeXLarge = styled(SizeBase)`
+  font-size: x-large;
+`;
+const SizeXXLarge = styled(SizeBase)`
+  font-size: xx-large;
+`;
+const SizeXXXLarge = styled(SizeBase)`
+  font-size: xxx-large;
+`;
+
+/* §2.5.2 relative-size keywords step against the inherited cascade
+   font-size. Pinning the parent to `medium` makes the `larger` /
+   `smaller` neighbors land on the predictable adjacent ramp entries. */
+const RelativeScope = styled.View`
+  font-size: medium;
+  gap: ${t.space.xxs}px;
+`;
+const RelativeBase = styled.Text`
+  font-family: ${t.fontFamily.body};
+  font-size: 1em;
+  color: ${t.colors.ink};
+`;
+const RelativeLarger = styled.Text`
+  font-family: ${t.fontFamily.body};
+  font-size: larger;
+  color: ${t.colors.ink};
+`;
+const RelativeSmaller = styled.Text`
+  font-family: ${t.fontFamily.body};
+  font-size: smaller;
+  color: ${t.colors.ink};
 `;

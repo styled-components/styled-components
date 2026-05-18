@@ -5,7 +5,7 @@ import { theme as t } from '@/theme/tokens';
 import { InlineMarkdown } from '../components/Markdown';
 
 /**
- * CSS UI 4 §5.7 — `interactivity: auto | inert`.
+ * CSS UI 4 §5.7 - `interactivity: auto | inert`.
  *
  * `inert` is lifted into a multi-prop bundle (pointerEvents,
  * accessibilityElementsHidden, importantForAccessibility, focusable).

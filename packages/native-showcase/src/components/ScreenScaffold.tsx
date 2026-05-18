@@ -25,7 +25,7 @@ const SPACE = lightTheme.space;
 // the web build), so a theme switch doesn't repaint without a full
 // React re-render of every consumer. `light-dark()` resolves natively
 // in the browser via `prefers-color-scheme`, and v7 polyfills it on
-// iOS/Android — one declaration, all platforms.
+// iOS/Android - one declaration, all platforms.
 const C = {
   ink: 'light-dark(#0e0e10, #f5f3ee)',
   fgMuted: 'light-dark(#46464a, #a8a8ac)',
@@ -349,10 +349,10 @@ export function ScreenScaffold<Item>({
   const lastIndexRef = React.useRef(0);
   const writeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   // Persist + scroll-target suppression. Two states:
-  //   number — a category-nav scrollToIndex is in flight; suppress
+  //   number - a category-nav scrollToIndex is in flight; suppress
   //            persist and gate `onScrollToIndexFailed` retry until
   //            the target appears in viewable items.
-  //   null   — idle; persist live.
+  //   null - idle; persist live.
   const restoreTargetRef = React.useRef<number | null>(null);
   const storageKey = STORAGE_PREFIX + title;
 
@@ -360,7 +360,7 @@ export function ScreenScaffold<Item>({
   // FlatList has mounted, fire `scrollToIndex` on the saved row. We
   // deliberately do NOT pass `initialScrollIndex` to FlatList. Without
   // `getItemLayout`, FlatList reserves space above the saved index
-  // using the running average of items in the render window — and when
+  // using the running average of items in the render window - and when
   // item heights vary wildly (a tiny category heading sits above 600px
   // widgets), that reservation overshoots and never collapses to actual
   // height. The visible symptom is a phantom band between the header
@@ -532,7 +532,7 @@ export function ScreenScaffold<Item>({
 
   const [showBackToTop, setShowBackToTop] = React.useState(false);
   // Mirror of `showBackToTop` for the onScroll callback so we don't
-  // call setState 60 times per second — only on the threshold crossing.
+  // call setState 60 times per second - only on the threshold crossing.
   const showBackToTopRef = React.useRef(false);
 
   const onScroll = React.useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -595,7 +595,7 @@ export function ScreenScaffold<Item>({
 
   // Rail content is the same in both layouts; only its parent differs.
   // Phone (< 720px): the rail rides inside the FlatList header so it
-  //   scrolls away with the page — no fixed chrome eating viewport.
+  //   scrolls away with the page - no fixed chrome eating viewport.
   // Tablet/Desktop (≥ 720px): the rail becomes a sibling of the FlatList,
   //   so it stays put while the list scrolls underneath it.
   const railNode = (

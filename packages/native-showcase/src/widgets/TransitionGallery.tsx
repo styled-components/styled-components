@@ -11,7 +11,7 @@ import { theme as t } from '@/theme/tokens';
  * there. Reduce-motion stops the auto-rotation entirely.
  *
  * The underlying CSS per row is the only source of truth for HOW each
- * property animates — no Animated API consumed at the widget layer.
+ * property animates - no Animated API consumed at the widget layer.
  */
 
 const HOLD_MS = 600;
@@ -149,8 +149,11 @@ const MultiPropCell = styled.View<{ $on: boolean }>`
   border-radius: ${p => (p.$on ? 12 : 0)}px;
   opacity: ${p => (p.$on ? 1 : 0.4)};
   transform: rotate(${p => (p.$on ? 90 : 0)}deg);
-  transition: background-color 320ms ease-in-out, border-radius 320ms ease-in-out,
-    opacity 320ms ease-in-out, transform 320ms ease-in-out;
+  transition:
+    background-color 320ms ease-in-out,
+    border-radius 320ms ease-in-out,
+    opacity 320ms ease-in-out,
+    transform 320ms ease-in-out;
 `;
 
 const AllPropCell = styled.View<{ $on: boolean }>`
@@ -193,7 +196,7 @@ function Row({ label, on, onToggle, children }: RowProps) {
 }
 
 export function TransitionGallery() {
-  // Single shared boolean — every row reads `$on` from the same flag so
+  // Single shared boolean - every row reads `$on` from the same flag so
   // the matrix beats in sync. Tap any row to flip the flag immediately;
   // the auto-rotation picks up from the new state on the next tick.
   const [on, setOn] = useState(false);

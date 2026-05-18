@@ -83,38 +83,36 @@ const Off = styled(Tile)`
 
 export function FilterStack() {
   const [enabled, setEnabled] = useState(true);
-  const Tiles = enabled
-    ? (
-        <Row>
-          <Blur>
-            <Label>blur</Label>
-          </Blur>
-          <Saturate>
-            <Label>saturate</Label>
-          </Saturate>
-          <HueRotate>
-            <Label>hue-rotate</Label>
-          </HueRotate>
-          <Grayscale>
-            <Label>grayscale</Label>
-          </Grayscale>
-          <Brightness>
-            <Label>chained</Label>
-          </Brightness>
-          <DropShadow>
-            <Label>drop-shadow</Label>
-          </DropShadow>
-        </Row>
-      )
-    : (
-        <Row>
-          {Array.from({ length: 6 }, (_, i) => (
-            <Off key={i}>
-              <Label>none</Label>
-            </Off>
-          ))}
-        </Row>
-      );
+  const Tiles = enabled ? (
+    <Row>
+      <Blur>
+        <Label>blur</Label>
+      </Blur>
+      <Saturate>
+        <Label>saturate</Label>
+      </Saturate>
+      <HueRotate>
+        <Label>hue-rotate</Label>
+      </HueRotate>
+      <Grayscale>
+        <Label>grayscale</Label>
+      </Grayscale>
+      <Brightness>
+        <Label>chained</Label>
+      </Brightness>
+      <DropShadow>
+        <Label>drop-shadow</Label>
+      </DropShadow>
+    </Row>
+  ) : (
+    <Row>
+      {Array.from({ length: 6 }, (_, i) => (
+        <Off key={i}>
+          <Label>none</Label>
+        </Off>
+      ))}
+    </Row>
+  );
   return (
     <>
       <Toggle aria-pressed={!enabled} onPress={() => setEnabled(e => !e)}>

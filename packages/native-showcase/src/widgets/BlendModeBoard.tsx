@@ -8,13 +8,13 @@ import { theme as t } from '@/theme/tokens';
  *
  * Why layers + opacity, not `transition: background-image`? RN's
  * `experimental_backgroundImage` native parser is one-shot at first
- * commit — it doesn't respond to mid-animation `setNativeProps`
+ * commit - it doesn't respond to mid-animation `setNativeProps`
  * updates the way numeric / color props do. An Animated string
  * interpolation between two gradients still ticks on the JS driver,
  * but the native side ignores frames between the start and end.
  * Stacking gradient layers and animating the `opacity` of each (which
  * IS in the verified native-driver allowlist) gives us continuous
- * compositing — the visual result is a smooth gradient morph even
+ * compositing - the visual result is a smooth gradient morph even
  * though no individual gradient string is animating.
  */
 const GRADIENTS = [
@@ -36,7 +36,7 @@ const Stage = styled.View`
   overflow: hidden;
 `;
 
-/** Static base layer — always at full opacity, covered while the incoming overlay fades in. */
+/** Static base layer - always at full opacity, covered while the incoming overlay fades in. */
 const BaseLayer = styled.View<{ $gradient: string }>`
   position: absolute;
   top: 0;
@@ -47,7 +47,7 @@ const BaseLayer = styled.View<{ $gradient: string }>`
 `;
 
 /**
- * Incoming overlay — fades 0 → 1 on top of the base. Remounted on
+ * Incoming overlay - fades 0 → 1 on top of the base. Remounted on
  * each cycle (via `key`) so the post-cycle reset to opacity 0 doesn't
  * trigger a reverse transition (which would manifest as a flash).
  */
@@ -67,7 +67,7 @@ const Row = styled.View`
   gap: ${t.space.sm}px;
   /* rn-web's View defaults include \`z-index: 0\`, so every View is its
      own stacking context on web. The disks' mix-blend-mode would blend
-     with this Row's empty backdrop instead of the gradient on Stage —
+     with this Row's empty backdrop instead of the gradient on Stage - 
      \`z-index: auto\` undoes the default on web (no-op on native). */
   z-index: auto;
 `;
@@ -114,7 +114,7 @@ export function BlendModeBoard() {
   const incoming = (settled + 1) % GRADIENTS.length;
 
   useEffect(() => {
-    // Honour the OS reduce-motion preference.
+    // Honor the OS reduce-motion preference.
     if (env.reduceMotion) return;
     let cancelled = false;
     let promoteTimer: ReturnType<typeof setTimeout> | null = null;
@@ -127,7 +127,7 @@ export function BlendModeBoard() {
         if (cancelled) return;
         // Phase 2: the incoming layer is now at α=1, fully covering
         // base. Promote: shift `settled` forward (base instantly
-        // updates to the new gradient — invisible because it's
+        // updates to the new gradient - invisible because it's
         // covered) and reset incoming. The `key` on IncomingLayer is
         // tied to `settled`, so this triggers a remount at α=0 with
         // the NEXT gradient, sidestepping the reverse-transition flash
@@ -149,11 +149,7 @@ export function BlendModeBoard() {
   return (
     <Stage>
       <BaseLayer $gradient={GRADIENTS[settled]} />
-      <IncomingLayer
-        key={settled}
-        $gradient={GRADIENTS[incoming]}
-        $on={incomingOn}
-      />
+      <IncomingLayer key={settled} $gradient={GRADIENTS[incoming]} $on={incomingOn} />
       <Row>
         <Multiply />
         <Screen />

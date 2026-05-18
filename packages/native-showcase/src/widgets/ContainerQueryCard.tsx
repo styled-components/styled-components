@@ -82,7 +82,7 @@ const ActionLabel = styled.Text`
 // publishes itself as the @container ancestor that Wrapper / Avatar /
 // Body read from. The container-type lives here (not on Wrapper)
 // because CSS forbids an element from matching its own @container
-// query — the row-mode rules need to query an ancestor, so the bare
+// query - the row-mode rules need to query an ancestor, so the bare
 // container has to live one level above the layout element.
 //
 // `align-self: flex-start` lets the stage track its inline-styled
@@ -130,45 +130,45 @@ export function ContainerQueryCard() {
 
   return (
     <Stage style={{ width }}>
-        <Wrapper>
-          <Avatar>
-            <Initial>EJ</Initial>
-          </Avatar>
-          <Body>
-            <Name>Evan Jacobs</Name>
-            <Subtitle>Open source</Subtitle>
-          </Body>
-          <Action accessibilityRole="button">
-            <ActionLabel>Follow</ActionLabel>
-          </Action>
-        </Wrapper>
-        <Handle
-          accessibilityLabel="Drag to resize container"
-          accessibilityHint={`Width is ${Math.round(width)} pixels. Drag horizontally to change.`}
-          onStartShouldSetResponder={() => true}
-          onMoveShouldSetResponder={() => true}
-          onResponderGrant={e => {
-            draggingRef.current = { startX: e.nativeEvent.pageX, startW: width };
-            setActive(true);
-          }}
-          onResponderMove={e => {
-            const dragging = draggingRef.current;
-            if (!dragging) return;
-            const delta = e.nativeEvent.pageX - dragging.startX;
-            const next = Math.max(MIN_W, Math.min(MAX_W, dragging.startW + delta));
-            setWidth(next);
-          }}
-          onResponderRelease={() => {
-            draggingRef.current = null;
-            setActive(false);
-          }}
-          onResponderTerminate={() => {
-            draggingRef.current = null;
-            setActive(false);
-          }}
-        >
-          <HandleGrip $active={active} data-active={String(active)} />
-        </Handle>
-      </Stage>
+      <Wrapper>
+        <Avatar>
+          <Initial>EJ</Initial>
+        </Avatar>
+        <Body>
+          <Name>Evan Jacobs</Name>
+          <Subtitle>Open source</Subtitle>
+        </Body>
+        <Action accessibilityRole="button">
+          <ActionLabel>Follow</ActionLabel>
+        </Action>
+      </Wrapper>
+      <Handle
+        accessibilityLabel="Drag to resize container"
+        accessibilityHint={`Width is ${Math.round(width)} pixels. Drag horizontally to change.`}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderGrant={e => {
+          draggingRef.current = { startX: e.nativeEvent.pageX, startW: width };
+          setActive(true);
+        }}
+        onResponderMove={e => {
+          const dragging = draggingRef.current;
+          if (!dragging) return;
+          const delta = e.nativeEvent.pageX - dragging.startX;
+          const next = Math.max(MIN_W, Math.min(MAX_W, dragging.startW + delta));
+          setWidth(next);
+        }}
+        onResponderRelease={() => {
+          draggingRef.current = null;
+          setActive(false);
+        }}
+        onResponderTerminate={() => {
+          draggingRef.current = null;
+          setActive(false);
+        }}
+      >
+        <HandleGrip $active={active} data-active={String(active)} />
+      </Handle>
+    </Stage>
   );
 }

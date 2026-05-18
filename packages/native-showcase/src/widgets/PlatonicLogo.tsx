@@ -95,7 +95,7 @@ function mat4Mul(a: Mat4, b: Mat4): Mat4 {
   return r;
 }
 
-// Solid definitions — vertices on unit sphere, faces by vertex index.
+// Solid definitions - vertices on unit sphere, faces by vertex index.
 function nv(verts: Vec3[]): Vec3[] {
   return verts.map(vNorm);
 }
@@ -262,7 +262,7 @@ function computeFaces(verts: Vec3[], faces: number[][]): FaceData[] {
     // face's CCW-vs-CW winding, which differs across the five solids. The
     // rendered shape (TriangleFace, PentagonFace) draws its apex / first
     // slice in the −v direction of wrapper space, so we need v pointing
-    // *away* from vertex 2 — that way the rendered apex lands at the real
+    // *away* from vertex 2 - that way the rendered apex lands at the real
     // vertex 2 in world coords. Without this flip, octa / icosa triangles
     // are mirrored across edge 01 and don't interlock at vertices.
     let v = vNorm(vCross(normal, u));
@@ -290,7 +290,7 @@ const SOLID_SIDE: number[] = SOLIDS.map(s => {
 // One scale factor per solid maps unit-sphere coordinates to pixels. Used for
 // BOTH the matrix translations (face center × r) AND the rendered polygon
 // edge length (sideLength × r). Sharing the factor is what makes adjacent
-// face edges actually meet — they're both at the same 3D position and they
+// face edges actually meet - they're both at the same 3D position and they
 // both render with the same length, so the seams align.
 const SOLID_RADIUS_PX = 65;
 
@@ -324,7 +324,7 @@ const Stage = styled.View`
 
 // Stage flex-centers SceneOrigin to (STAGE/2, STAGE/2). All FaceWrappers
 // are absolute children of SceneOrigin, so their (0, 0) is the scene
-// center — matrix translations then read directly as 3D pixel offsets.
+// center - matrix translations then read directly as 3D pixel offsets.
 const SceneOrigin = styled.View`
   width: 0;
   height: 0;
@@ -338,7 +338,7 @@ const FaceWrapper = styled.View`
   justify-content: center;
 `;
 
-// Square face (cube only) — solid color block. No border: the 3D arrangement
+// Square face (cube only) - solid color block. No border: the 3D arrangement
 // already separates faces by their distinct colors, and a 1px ink border
 // would z-fight with neighboring faces along shared cube edges.
 const SquareFace = styled.View<{ $color: string; $size: number }>`
@@ -435,7 +435,7 @@ function FaceShape({
 }
 
 // ---------------------------------------------------------------------------
-// Color palette — sRGB cusp colors (Ottosson max-saturation per hue) run
+// Color palette - sRGB cusp colors (Ottosson max-saturation per hue) run
 // through qlab's `harmonize` optimizer (medium drift tolerance, ΔE target
 // 8.0). The cusp seeds give max chroma per hue; harmonize then trims a
 // few percent off the saturation peaks to spread perceptual distance more
@@ -502,7 +502,7 @@ function paletteAssignmentForFaces(faces: FaceData[]): number[] {
 const SOLID_PALETTE_IDX: number[][] = ALL_FACES.map(paletteAssignmentForFaces);
 
 // ---------------------------------------------------------------------------
-// Component — hero variant. Auto-cycles through all 5 solids while idle,
+// Component - hero variant. Auto-cycles through all 5 solids while idle,
 // drag-to-rotate, no surrounding chrome. Lives at the top of the catalog
 // as the brand mark, not as a widget.
 // ---------------------------------------------------------------------------
@@ -525,10 +525,10 @@ const TRANSITION_MS = 700;
 
 // Persist the user-controllable parts of the logo: which solid is showing
 // and whether the auto-cycle is paused. Orientation is intentionally NOT
-// persisted — the idle spin would consume it within a frame anyway, and
+// persisted - the idle spin would consume it within a frame anyway, and
 // JSON-serialized quaternions don't round-trip exactly.
 const STORAGE_KEY = 'sc-showcase:logo';
-const DEFAULT_SOLID_IDX = 4; // icosahedron — visually richest at rest
+const DEFAULT_SOLID_IDX = 4; // icosahedron - visually richest at rest
 type PersistedLogoState = { paused: boolean; solidIdx: number };
 
 function parsePersistedState(raw: string | null): Partial<PersistedLogoState> {
@@ -563,7 +563,7 @@ type TransitionState = {
 
 // Asymmetric collapse-expand easing. Collapse takes the first 35% of the
 // transition (snappy), expand takes the remaining 65% (softer reveal). The
-// "to" solid takes over at t=0.35, which is also the curve's peak — the
+// "to" solid takes over at t=0.35, which is also the curve's peak - the
 // moment of full invisibility. Returns collapseT (0..1, scale = 1 - collapseT).
 const SWAP_AT = 0.35;
 function collapseEase(t: number): number {
@@ -590,12 +590,12 @@ function buildScaledLocalMat(face: FaceData, s: number): Mat4 {
 }
 
 // ---------------------------------------------------------------------------
-// Controls — small playback chrome above the stage. Four discrete buttons
+// Controls - small playback chrome above the stage. Four discrete buttons
 // (prev / pause / play / next) so each affordance is unambiguous; the
 // non-active member of pause↔play renders dimmed but stays clickable for
 // idempotent affordance ("press the icon you want to be in").
 //
-// Glyphs come from Feather via @expo/vector-icons — clean monoline set
+// Glyphs come from Feather via @expo/vector-icons - clean monoline set
 // that matches the showcase's restrained type. Hand-rolled View borders
 // would render quirkily at sub-16px sizes under rn-web's flex layout, and
 // emoji are too platform-skewed (color, baseline, scaling) to use as UI
@@ -650,7 +650,7 @@ export function PlatonicLogo() {
   // fling velocity, and the tick blends it back toward IDLE_VEL.
   const velocityRef = useRef({ ...IDLE_VEL });
   // The solid currently displayed when no transition is in flight. Mirrors
-  // `activeSolid` state below — the ref is read synchronously by the rAF
+  // `activeSolid` state below - the ref is read synchronously by the rAF
   // closure and the transition machinery, the state drives persistence
   // and is the value rendered.
   const activeSolidRef = useRef(DEFAULT_SOLID_IDX);
@@ -687,7 +687,7 @@ export function PlatonicLogo() {
     };
   }, []);
 
-  // Persist on change. One write per change is fine — AsyncStorage is
+  // Persist on change. One write per change is fine - AsyncStorage is
   // async and these toggles are user-driven, not high-frequency.
   useEffect(() => {
     if (!restored) return;
@@ -833,7 +833,7 @@ export function PlatonicLogo() {
         },
         onPanResponderRelease: () => {
           draggingRef.current = false;
-          // velocity already holds the smoothed pointer delta — tick blends
+          // velocity already holds the smoothed pointer delta - tick blends
           // it back toward IDLE_VEL, producing the fling.
         },
         onPanResponderTerminate: () => {
@@ -867,7 +867,7 @@ export function PlatonicLogo() {
 
   // Face polygon edge length in pixels. Same scale factor (SOLID_RADIUS_PX)
   // used by the matrix translation, so each face's rendered edge ends exactly
-  // at the polyhedron's edge — adjacent faces' edges meet without gaps.
+  // at the polyhedron's edge - adjacent faces' edges meet without gaps.
   // Constant during transition; the matrix scale handles shrinking.
   const facePixelSize = SOLID_SIDE[renderSolidIdx] * SOLID_RADIUS_PX;
 
@@ -921,7 +921,7 @@ export function PlatonicLogo() {
             // (positive resolved Z) the face is visible. Threshold scales with
             // `scale` so culling stays consistent during the collapse animation.
             // Use `display: none` instead of returning null so the face stays
-            // mounted across rotation frames — the React DevTools tree was
+            // mounted across rotation frames - the React DevTools tree was
             // unusable while every face mounted/unmounted continuously.
             const normalZ = composed[10];
             const culled = normalZ < 0.02 * scale;

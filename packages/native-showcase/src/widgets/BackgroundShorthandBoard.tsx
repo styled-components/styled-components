@@ -4,7 +4,7 @@ import { theme as t } from '@/theme/tokens';
 import { InlineMarkdown } from '../components/Markdown';
 
 /**
- * CSS Backgrounds 3 §2.10 — `background` shorthand. Each row uses a
+ * CSS Backgrounds 3 §2.10 - `background` shorthand. Each row uses a
  * single `background:` declaration; the polyfill expands to the eight
  * longhands (image / position / size / repeat / origin / clip /
  * attachment / color). The demo's proof is the rendered paint matching
@@ -79,8 +79,7 @@ const MultiLayer = styled(Tile)`
    attachment + small background-size, the gradient tiles like a dot
    grid; with `no-repeat` you'd see one centered dot. */
 const Tiled = styled(Tile)`
-  background:
-    radial-gradient(circle at center, #1f7a52 30%, transparent 32%) 0 0 / 24px 24px repeat;
+  background: radial-gradient(circle at center, #1f7a52 30%, transparent 32%) 0 0 / 24px 24px repeat;
 `;
 
 // `background-attachment: fixed` has no demo row. The keyword can't be
@@ -108,7 +107,7 @@ export function BackgroundShorthandBoard() {
           {`background: linear-gradient(135deg, rgba(...,0.5), rgba(...,0.5)) #1f7a52`}
         </Caption>
         <InlineMarkdown variant="brief">
-          {`Translucent gradient over a solid color — color shows through transparent stops.`}
+          {`Translucent gradient over a solid color - color shows through transparent stops.`}
         </InlineMarkdown>
       </Row>
       <Row>

@@ -110,23 +110,23 @@ export function SafeAreaInsetsBadge() {
       <Readout>
         <Row>
           <Key>top</Key>
-          <Val>{measured ? px(measured.top) : '—'}</Val>
+          <Val>{measured ? px(measured.top) : ' - '}</Val>
         </Row>
         <Row>
           <Key>right</Key>
-          <Val>{measured ? px(measured.right) : '—'}</Val>
+          <Val>{measured ? px(measured.right) : ' - '}</Val>
         </Row>
         <Row>
           <Key>bottom</Key>
-          <Val>{measured ? px(measured.bottom) : '—'}</Val>
+          <Val>{measured ? px(measured.bottom) : ' - '}</Val>
         </Row>
         <Row>
           <Key>left</Key>
-          <Val>{measured ? px(measured.left) : '—'}</Val>
+          <Val>{measured ? px(measured.left) : ' - '}</Val>
         </Row>
         <Hint>
           Numbers are the padding applied around the inner block (from layout), matching what
-          `env(safe-area-inset-*)` resolved to on this view — not a second data source.
+          `env(safe-area-inset-*)` resolved to on this view - not a second data source.
         </Hint>
       </Readout>
     </>

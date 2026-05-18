@@ -5,7 +5,7 @@ import { theme as t } from '@/theme/tokens';
 import { InlineMarkdown } from '@/components/Markdown';
 
 /**
- * CSS Selectors 4 §13.1 — `&:has(<simple>)`. Each card reads its OWN
+ * CSS Selectors 4 §13.1 - `&:has(<simple>)`. Each card reads its OWN
  * children subtree at render time and reflows in response. When the
  * inner predicate matches a descendant, the card grows extra left
  * padding (component form) or a thick bottom rail (attr form), so
@@ -94,10 +94,13 @@ export function HasSelectorBoard() {
   return (
     <Stack>
       <Section>
-        <SectionTitle>:has(${'$'}{'{Component}'})</SectionTitle>
+        <SectionTitle>
+          :has(${'$'}
+          {'{Component}'})
+        </SectionTitle>
         <LabeledRow>
           <InlineMarkdown variant="brief">
-            {'Card contains an `Icon` — `:has(${Icon})` matches; card gains left padding'}
+            {'Card contains an `Icon` - `:has(${Icon})` matches; card gains left padding'}
           </InlineMarkdown>
           <ComponentCard>
             <Icon />
@@ -106,7 +109,7 @@ export function HasSelectorBoard() {
 
         <LabeledRow>
           <InlineMarkdown variant="brief">
-            {'Card contains an `Other` (no `Icon`) — no match; padding stays flush'}
+            {'Card contains an `Other` (no `Icon`) - no match; padding stays flush'}
           </InlineMarkdown>
           <ComponentCard>
             <Other />
@@ -115,7 +118,9 @@ export function HasSelectorBoard() {
 
         <LabeledRow>
           <InlineMarkdown variant="brief">
-            {'Card contains `Icon` nested two levels deep — recursive walk finds it; padding shifts'}
+            {
+              'Card contains `Icon` nested two levels deep - recursive walk finds it; padding shifts'
+            }
           </InlineMarkdown>
           <ComponentCard>
             <NestedWrap>
@@ -131,7 +136,7 @@ export function HasSelectorBoard() {
         <SectionTitle>:has([attr]) / :has([attr=value])</SectionTitle>
         <LabeledRow>
           <InlineMarkdown variant="brief">
-            {"Card contains an item with `data-state='active'` — card gains a thick bottom rail"}
+            {"Card contains an item with `data-state='active'` - card gains a thick bottom rail"}
           </InlineMarkdown>
           <AttrCard>
             <Item data-state="active" />
@@ -140,7 +145,7 @@ export function HasSelectorBoard() {
 
         <LabeledRow>
           <InlineMarkdown variant="brief">
-            {"Same selector, item has `data-state='idle'` — value mismatch, rail stays absent"}
+            {"Same selector, item has `data-state='idle'` - value mismatch, rail stays absent"}
           </InlineMarkdown>
           <AttrCard>
             <Item data-state="idle" />
@@ -149,7 +154,7 @@ export function HasSelectorBoard() {
 
         <LabeledRow>
           <InlineMarkdown variant="brief">
-            {'`:has([data-flag])` — presence form, any descendant carrying the prop; rail appears'}
+            {'`:has([data-flag])` - presence form, any descendant carrying the prop; rail appears'}
           </InlineMarkdown>
           <PresenceCard>
             <Item data-flag />

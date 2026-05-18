@@ -1,14 +1,18 @@
 import { ComponentType } from 'react';
+import { AccentColorBoard } from './AccentColorBoard';
 import { AspectRatioGallery } from './AspectRatioGallery';
 import { AttributeVariants } from './AttributeVariants';
 import { BackgroundBlendStudio } from './BackgroundBlendStudio';
 import { BackgroundShorthandBoard } from './BackgroundShorthandBoard';
 import { BlendModeBoard } from './BlendModeBoard';
+import { BoxSizingHyphensBoard } from './BoxSizingHyphensBoard';
+import { CaretColorBoard } from './CaretColorBoard';
 import { ColorFunctionsLab } from './ColorFunctionsLab';
 import { CompositeRules } from './CompositeRules';
 import { ContainerQueryCard } from './ContainerQueryCard';
 import { ContainerUnitsKnob } from './ContainerUnitsKnob';
 import { DirectionBoard } from './DirectionBoard';
+import { EmLhCascadeBoard } from './EmLhCascadeBoard';
 import { FieldSizingBoard } from './FieldSizingBoard';
 import { FilterStack } from './FilterStack';
 import { GradientPalette } from './GradientPalette';
@@ -19,9 +23,11 @@ import { LightDarkSwatch } from './LightDarkSwatch';
 import { LogicalSpacingDial } from './LogicalSpacingDial';
 import { MathFunctionsLab } from './MathFunctionsLab';
 import { MediaRangeBars } from './MediaRangeBars';
+import { ObjectFitBoard } from './ObjectFitBoard';
 import { PlaceShelf } from './PlaceShelf';
 import { PressInteractive } from './PressInteractive';
 import { RelativeUnitsScale } from './RelativeUnitsScale';
+import { ScrollSurfacesBoard } from './ScrollSurfacesBoard';
 import { SelectorComboBoard } from './SelectorComboBoard';
 import { SiblingNthBoard } from './SiblingNthBoard';
 import { HasSelectorBoard } from './HasSelectorBoard';
@@ -32,6 +38,7 @@ import { StandaloneTransforms } from './StandaloneTransforms';
 import { SystemColorsBoard } from './SystemColorsBoard';
 import { TextDecorationAlignment } from './TextDecorationAlignment';
 import { TextInputAlignment } from './TextInputAlignment';
+import { TextOverflowBoard } from './TextOverflowBoard';
 import { TextWrapShelf } from './TextWrapShelf';
 import { ThemeOverrides } from './ThemeOverrides';
 import { TransformPlayground } from './TransformPlayground';
@@ -72,10 +79,19 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     slug: 'color-functions-lab',
     title: 'Modern color functions',
     summary:
-      '`oklch`, `oklab`, `lab`, `lch`, and `color-mix` — literal arguments fold to hex at transform time on RN; rn-web hands them to the browser engine directly.',
+      '`oklch`, `oklab`, `lab`, `lch`, and `color-mix` - literal arguments fold to hex at transform time on RN; rn-web hands them to the browser engine directly.',
     feature: 'oklch / color-mix',
     category: 'Color',
     Widget: ColorFunctionsLab,
+  },
+  {
+    slug: 'accent-color-board',
+    title: 'Accent color',
+    summary:
+      "`accent-color` tints the on-state track of a `styled.Switch` on iOS and Android. `accent-color: auto` resolves to the platform's `AccentColor` system color. The same color forms work here as anywhere else: HTML names, hex, `oklch` / `color-mix`, system keywords. An attrs recipe routes the resolved value onto any third-party tint prop.",
+    feature: 'accent-color',
+    category: 'Color',
+    Widget: AccentColorBoard,
   },
   {
     slug: 'system-colors-board',
@@ -85,6 +101,15 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     feature: 'CSS Color 4 §6.2',
     category: 'Color',
     Widget: SystemColorsBoard,
+  },
+  {
+    slug: 'object-fit-board',
+    title: 'Object fit',
+    summary:
+      '`object-fit: fill | contain | cover | none | scale-down` on `styled.Image`. Each value is cropped to a wide and a tall box so the difference between `cover` and `contain` is glanceable without measuring.',
+    feature: 'object-fit',
+    category: 'Visual effects',
+    Widget: ObjectFitBoard,
   },
   {
     slug: 'gradient-palette',
@@ -125,7 +150,7 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     slug: 'standalone-transforms',
     title: 'Standalone transform properties',
     summary:
-      '`translate`, `rotate`, `scale` as independent properties (CSS Transforms L2). Each declaration cascades on its own — no `transform:` array required.',
+      '`translate`, `rotate`, `scale` as independent properties (CSS Transforms L2). Each declaration cascades on its own - no `transform:` array required.',
     feature: 'translate / rotate / scale',
     category: 'Visual effects',
     Widget: StandaloneTransforms,
@@ -134,7 +159,7 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     slug: 'transition-gallery',
     title: 'Transitions · property matrix',
     summary:
-      'Tap each row to toggle between two values. One row per transitioning property type — `opacity`, colors, `border-radius`, `transform` variants, layout dimensions, multi-prop, `transition: all`, plus `steps()` and `linear()` easings.',
+      'Tap each row to toggle between two values. One row per transitioning property type - `opacity`, colors, `border-radius`, `transform` variants, layout dimensions, multi-prop, `transition: all`, plus `steps()` and `linear()` easings.',
     feature: 'transition · all property types',
     category: 'Animation',
     Widget: TransitionGallery,
@@ -143,7 +168,7 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     slug: 'keyframe-orchestra',
     title: 'Keyframe animations',
     summary:
-      'CSS `@keyframes` with inline definitions — spin, breathe, jelly squash-and-stretch, 3D card flip, color wave, and staggered entrance. All native-thread. Play/pause via `animation-play-state`.',
+      'CSS `@keyframes` with inline definitions - spin, breathe, jelly squash-and-stretch, 3D card flip, color wave, and staggered entrance. All native-thread. Play/pause via `animation-play-state`.',
     feature: '@keyframes · animation',
     category: 'Animation',
     Widget: KeyframeOrchestra,
@@ -210,6 +235,24 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     Widget: PlaceShelf,
   },
   {
+    slug: 'box-sizing-hyphens-board',
+    title: 'Box sizing + hyphens',
+    summary:
+      '`box-sizing: border-box | content-box` flows through unchanged on every platform; same width + padding + border, very different rendered box. `hyphens: auto | manual | none` controls automatic word breaking - Android drives the system hyphenation frequency, iOS falls back to U+00AD soft hyphens, rn-web hands the keyword to the browser.',
+    feature: 'box-sizing / hyphens',
+    category: 'Layout',
+    Widget: BoxSizingHyphensBoard,
+  },
+  {
+    slug: 'scroll-surfaces-board',
+    title: 'Scroll surfaces',
+    summary:
+      '`overscroll-behavior: auto | contain | none` and `scrollbar-width: auto | none` on a `styled.ScrollView`. Drag past the top edge to feel the bounce / over-scroll glow change; toggle the indicator visibility live. `scrollbar-width: thin` is treated like `auto` on iOS and Android.',
+    feature: 'overscroll-behavior / scrollbar-width',
+    category: 'Layout',
+    Widget: ScrollSurfacesBoard,
+  },
+  {
     slug: 'aspect-ratio-gallery',
     title: 'Aspect-ratio gallery',
     summary: 'Tile grid switches between portrait, square, landscape as the window ratio changes.',
@@ -252,6 +295,15 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     Widget: RelativeUnitsScale,
   },
   {
+    slug: 'em-lh-cascade-board',
+    title: 'em / lh cascade',
+    summary:
+      'A single `font-size` at the top of a card drives every relative measurement inside it. `em` resolves against the current font-size, `lh` against the current line-height, and `rlh` against the root line-height. Direction-aware `text-align: start` flips to the right edge under `direction: rtl`.',
+    feature: 'em / lh / rlh',
+    category: 'Math & units',
+    Widget: EmLhCascadeBoard,
+  },
+  {
     slug: 'math-functions-lab',
     title: 'Math functions',
     summary:
@@ -278,10 +330,28 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     Widget: TextWrapShelf,
   },
   {
+    slug: 'caret-color-board',
+    title: 'Caret color',
+    summary:
+      'Tint the text-insertion caret of a `styled.TextInput` with any color form: literal, `oklch`, `light-dark`, or theme. On Android the caret tints alone; the selection range keeps the platform default. iOS keeps its default caret in this release; rn-web hands the declaration to the browser.',
+    feature: 'caret-color',
+    category: 'Typography',
+    Widget: CaretColorBoard,
+  },
+  {
+    slug: 'text-overflow-board',
+    title: 'Text overflow',
+    summary:
+      '`text-overflow: ellipsis | clip` paired with `text-wrap: nowrap` (single line) or `line-clamp` (multi-line). The ellipsis lands on the inline-start edge under `direction: rtl`.',
+    feature: 'text-overflow',
+    category: 'Typography',
+    Widget: TextOverflowBoard,
+  },
+  {
     slug: 'text-decoration-alignment',
     title: 'Decoration vs vertical alignment',
     summary:
-      'Tall `<Text>` boxes with `textAlignVertical` `top` / `center` / `bottom`. The magenta underline must track the glyphs vertically — drift on Android exposes a missing gravity offset in the decoration draw.',
+      'Tall `<Text>` boxes with `textAlignVertical` `top` / `center` / `bottom`. The magenta underline must track the glyphs vertically - drift on Android exposes a missing gravity offset in the decoration draw.',
     feature: 'textDecoration + textAlignVertical',
     category: 'Typography',
     Widget: TextDecorationAlignment,
@@ -342,7 +412,7 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
   {
     slug: 'press-interactive',
     title: 'Press states',
-    summary: '`:hover`, `:focus`, `:active`, `:disabled` — wired through one selector chain.',
+    summary: '`:hover`, `:focus`, `:active`, `:disabled` - wired through one selector chain.',
     feature: ':hover / :active / :disabled',
     category: 'Selectors & state',
     Widget: PressInteractive,
@@ -359,7 +429,7 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     slug: 'composite-rules',
     title: 'Composite rules',
     summary:
-      'Pseudo-state nested inside `@media` — gate is breakpoint AND `:active` together. Compound `&[attr]:active` works inside `@media` too.',
+      'Pseudo-state nested inside `@media` - gate is breakpoint AND `:active` together. Compound `&[attr]:active` works inside `@media` too.',
     feature: '@media + :state',
     category: 'Selectors & state',
     Widget: CompositeRules,
@@ -368,7 +438,7 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     slug: 'selector-combo-board',
     title: 'Combinator selectors',
     summary:
-      '`${Card} &` (descendant) and `${Card} > &` (child) — independent probes light up in their own color when their rule fires. A styled wrapper between Card and probe intercepts the child rule.',
+      '`${Card} &` (descendant) and `${Card} > &` (child) - independent probes light up in their own color when their rule fires. A styled wrapper between Card and probe intercepts the child rule.',
     feature: '${Component} & / >',
     category: 'Selectors & state',
     Widget: SelectorComboBoard,

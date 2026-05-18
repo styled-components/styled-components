@@ -73,7 +73,7 @@ const WrapStyleBalance = styled(Body)`
   text-wrap-style: balance;
 `;
 
-// Constrained ribbon — `text-wrap: nowrap` overflow becomes visible
+// Constrained ribbon - `text-wrap: nowrap` overflow becomes visible
 // here. Layered hairline borders mark the box even when the text
 // extends past them.
 const Ribbon = styled(Frame)`
@@ -108,7 +108,7 @@ export function TextWrapShelf() {
       <Row>
         <RowLabel>text-wrap: balance</RowLabel>
         <Markdown variant="hint">
-          Android: `textBreakStrategy: balanced`. iOS has no platform API — renders default wrap.
+          Android: `textBreakStrategy: balanced`. iOS has no platform API - renders default wrap.
         </Markdown>
         <NarrowFrame>
           <WrapBalance>{NARROW}</WrapBalance>
@@ -126,7 +126,7 @@ export function TextWrapShelf() {
       <Row>
         <RowLabel>text-wrap: stable</RowLabel>
         <Markdown variant="hint">
-          Web only — RN 0.85 has no re-flow stability API on either platform.
+          Web only - RN 0.85 has no re-flow stability API on either platform.
         </Markdown>
         <NarrowFrame>
           <WrapStable>{NARROW}</WrapStable>

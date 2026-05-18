@@ -19,7 +19,7 @@ const Card = styled.Pressable`
     background-color: ${t.colors.fail};
   }
 
-  /* attr + pseudo compound — overrides both attr-only and pseudo-only on press. */
+  /* attr + pseudo compound - overrides both attr-only and pseudo-only on press. */
   &[data-variant='hot']:active {
     background-color: ${t.colors.ink};
   }

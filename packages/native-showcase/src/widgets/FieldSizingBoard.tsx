@@ -77,7 +77,7 @@ export function FieldSizingBoard() {
   return (
     <Stack>
       <InlineMarkdown variant="brief">
-        {`The autosize field grows in height as more lines wrap in. The fixed field holds its declared 44px even with long content — same baseline styles, single CSS difference.`}
+        {`The autosize field grows in height as more lines wrap in. The fixed field holds its declared 44px even with long content - same baseline styles, single CSS difference.`}
       </InlineMarkdown>
       <SplitWrap>
         <Row>

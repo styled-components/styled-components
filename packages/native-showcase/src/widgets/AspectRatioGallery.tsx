@@ -50,7 +50,7 @@ const Label = styled.Text`
 
 const TILES = [1, 2, 3, 4, 5, 6];
 
-/* CSS Sizing 4 §4.1 — element-level aspect-ratio. Each ratio tile takes
+/* CSS Sizing 4 §4.1 - element-level aspect-ratio. Each ratio tile takes
    the parent's full width and computes its height from the declared
    ratio. The visible proof is the height tracking the width: a 16:9
    tile is short; a 1:2 tile is tall. */

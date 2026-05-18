@@ -51,7 +51,7 @@ const StageFrame = styled.View`
 // Bare width-carrier between StageFrame and the cq-unit Container.
 // Keeps the inline `width` prop on a non-container element so
 // Container's own cq-unit declarations (padding, gap) resolve cleanly
-// against itself — putting `width` on Container and conflating the
+// against itself - putting `width` on Container and conflating the
 // roles can subtly change how cq-units resolve on the principal box.
 const Stage = styled.View``;
 
@@ -102,7 +102,7 @@ export function ContainerUnitsKnob() {
   const [trackWidth, setTrackWidth] = useState(0);
   const [width, setWidth] = useState((MIN_W + MAX_W) / 2);
   // Drag origin recorded at responder grant. Tracking against absolute
-  // `pageX` deltas — rather than per-frame `locationX` — keeps the knob
+  // `pageX` deltas - rather than per-frame `locationX` - keeps the knob
   // live for the full press lifetime even when the cursor slides past
   // the track edges or off the view entirely. `locationX` is computed
   // from the responder view's bounding box, which gets unreliable on

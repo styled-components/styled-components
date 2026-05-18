@@ -4,7 +4,7 @@ import { theme as t } from '@/theme/tokens';
 import { InlineMarkdown } from '../components/Markdown';
 
 /**
- * CSS Values 4 §6.1.1 (rem). `1rem` equals the root font-size — on RN
+ * CSS Values 4 §6.1.1 (rem). `1rem` equals the root font-size - on RN
  * we resolve against `ResolveEnv.rootFontSize` (default 16). The demo
  * is a rem-driven type ramp: each dark bar's width is declared in rem,
  * each muted bar is the equivalent px reference at `rootFontSize: 16`.

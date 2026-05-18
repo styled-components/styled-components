@@ -3,7 +3,7 @@
  *
  * `@react-native/gradle-plugin@<future>` pins
  * `foojay-resolver-convention@0.5.0`, which references
- * `JvmVendorSpec.IBM_SEMERU` — a constant Gradle 9 removed. Setting
+ * `JvmVendorSpec.IBM_SEMERU` - a constant Gradle 9 removed. Setting
  * `org.gradle.java.installations.auto-download=false` short-circuits
  * foojay; Gradle falls back to the locally-installed JDK.
  *
