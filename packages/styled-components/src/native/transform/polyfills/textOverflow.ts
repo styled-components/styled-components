@@ -11,11 +11,9 @@ function textOverflowShorthand(tokens: Token[]): Dict<any> | null {
   const name = t.name;
   if (name !== 'clip' && name !== 'ellipsis') return null;
 
-  // text-overflow only takes effect when the line cannot wrap and the
-  // box clips content. On rn-web emit `overflow: hidden` alongside the
-  // declaration so a paired `text-wrap: nowrap` reaches the spec
-  // behavior without the user setting overflow themselves; the native
-  // path achieves the same shape via numberOfLines + ellipsizeMode.
+  // text-overflow needs a clipping context; rn-web emits `overflow: hidden`
+  // alongside so a paired `text-wrap: nowrap` truncates without the user
+  // setting overflow themselves. Native uses numberOfLines + ellipsizeMode.
   if (__NATIVE_WEB__) return { textOverflow: name, overflow: 'hidden' };
   return { ellipsizeMode: name === 'ellipsis' ? 'tail' : 'clip' };
 }

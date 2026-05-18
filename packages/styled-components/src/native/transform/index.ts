@@ -13,7 +13,11 @@ import {
 } from './passthrough';
 import { staticColorFunctionToHex } from './polyfills/colorMath';
 import { numericResultToRn, resolveStaticMathFunction } from './polyfills/mathFns';
-import { getSystemColorPlatformColor, isCssSystemColorKeyword } from './polyfills/systemColors';
+import {
+  getSystemColorPlatformColor,
+  isCssSystemColorKeyword,
+  wrapSystemColorForRnWeb,
+} from './polyfills/systemColors';
 import { getShorthand } from './shorthands';
 import { tokenize } from './tokenize';
 import { Token, TokenKind } from './tokens';
@@ -80,10 +84,8 @@ const VERTICAL_ALIGN_TO_ALIGN_CONTENT: Record<
   bottom: 'flex-end',
 };
 
-// CSS Images 3 §5.5 mapping table. Matches RN core's
-// `convertObjectFitToResizeMode`; we duplicate it here so the rn-web
-// branch (which doesn't go through native Image's internal conversion)
-// reaches the same shape.
+// rn-web's Image ignores `objectFit` and reads `resizeMode`; this table
+// mirrors RN core's internal native conversion so both bars agree.
 const OBJECT_FIT_TO_RN_RESIZE_MODE: Record<string, string | undefined> = {
   contain: 'contain',
   cover: 'cover',
@@ -109,21 +111,13 @@ const OBJECT_FIT_TO_RN_RESIZE_MODE: Record<string, string | undefined> = {
 export function transformDecl(prop: string, rawValue: string): Dict<any> {
   const camel = camelize(prop);
 
-  // System color keywords. On native (Hermes) a bare keyword resolves to
-  // an RN PlatformColor so iOS / Android route through semantic colors.
-  // On rn-web the browser understands the keyword (forced-colors mode and
-  // high-contrast settings included), but rn-web's StyleSheet pipeline
-  // routes the value through `normalizeColor`, which only accepts hex /
-  // rgb / hsl / named keywords / `currentcolor` / `inherit` / `var(...)`,
-  // and drops anything else. The `var(...)` escape hatch is the cleanest
-  // path: emit `var(--unset, <keyword>)` so rn-web passes the value
-  // straight to CSS, the unknown custom property falls back to the
-  // system-color keyword, and the browser resolves it natively.
+  // System color keywords. Native: PlatformColor so iOS / Android route
+  // through semantic colors. rn-web: wrap in `var(--unset, kw)` so the
+  // value survives rn-web's color allowlist and the browser resolves
+  // against OS theme. `accentColor` skips here so its handler can lift
+  // `trackColor.true` from the original keyword.
   if (
     (camel === 'color' || camel.endsWith('Color')) &&
-    // `accentColor` is not a direct color prop on native; the polyfill
-    // lifts it onto `Switch.trackColor.true` and needs the keyword to
-    // reach its own handler intact.
     camel !== 'accentColor' &&
     rawValue.length > 0 &&
     rawValue.indexOf(' ') === -1 &&
@@ -133,7 +127,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
   ) {
     if (__NATIVE_WEB__) {
       if (isCssSystemColorKeyword(rawValue)) {
-        return { [camel]: `var(--unset, ${rawValue})` };
+        return { [camel]: wrapSystemColorForRnWeb(rawValue) };
       }
     } else {
       const platformColor = getSystemColorPlatformColor(rawValue);
@@ -179,24 +173,15 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
       if (camel === 'filter') {
         return { filter: maybeExpandFilterDropShadowSystemColors(value) };
       }
-      // `direction` mapping. Native: emit both `direction` (Yoga's View
-      // bidi root) and `writingDirection` so RN's Text honors the
-      // cascaded bidi value without the user setting the prop twice.
-      // rn-web: emit `writingDirection` (rn-web translates it to CSS
-      // `direction` so the browser flips bidi rendering) AND lift a
-      // `dir` PROP via SPECIAL_CASE_PROPS - rn-web's LocaleContext
-      // reads `props.dir`, not the CSS direction, so without the prop
-      // its `text-align: start | end` BiDi-aware polyfill never picks
-      // `right` for rtl descendants.
+      // Native: dual-emit so RN Text honors the cascade. rn-web also
+      // lifts a `dir` prop since rn-web's BiDi-aware text-align reads
+      // `props.dir`, not the CSS direction.
       if (camel === 'direction') {
         if (__NATIVE_WEB__) return { writingDirection: value, dir: value };
         return { direction: value, writingDirection: value };
       }
-      // `object-fit`. RN 0.85's iOS and Android Image components read
-      // the keyword from style and convert internally. rn-web's Image
-      // ignores `objectFit` entirely and reads `resizeMode` instead,
-      // so the rn-web branch maps to `resizeMode` (lifted via
-      // SPECIAL_CASE_PROPS) with the spec conversion table.
+      // rn-web's Image reads `resizeMode`, not `objectFit`; lift via
+      // SPECIAL_CASE_PROPS using the spec conversion table.
       if (camel === 'objectFit') {
         if (__NATIVE_WEB__) {
           const mapped = OBJECT_FIT_TO_RN_RESIZE_MODE[value];
@@ -305,22 +290,10 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     return {};
   }
 
-  // Polyfill: static math fn (`calc` / `min` / `max` / `clamp` / `round`
-  // / `mod` / `rem` / trig / `pow` / `sqrt` / `hypot` / `abs` / `sign`)
-  // over resolvable arms. Cheap prefix gate before tokenizing. CSS math
-  // functions are "used-value" calculations per CSS Values 4, and the
-  // browser is the source of truth on rn-web for layout-dependent arms
-  // - dynamic operands (`%`, viewport / container units, `var()`) fall
-  // through to raw string emit so the browser evaluates them against
-  // the actual containing block.
-  //
-  // The exception is purely unitless static math (e.g. `pow(8, 2)`,
-  // `hypot(60, 80)`, `abs(-180)`, `mod(127, 30)`): per CSS Values 4
-  // these functions return `<number>`, which is invalid as a `width`
-  // value and the browser drops the declaration. RN's convention is
-  // that bare numbers are pixels - fold unitless static results on
-  // both paths so the rn-web bar matches the native bar. There's no
-  // layout dependency to lose because every operand is concrete.
+  // Static math fns: fold on native always. On rn-web only fold unitless
+  // results (RN's "bare number = px" convention); with-unit forms reach
+  // the browser so layout-dependent arms compute against the right
+  // containing block.
   if (mightBeMathFn(rawValue)) {
     tokens = tokens ?? tokenize(rawValue);
     if (tokens.length === 1 && tokens[0].kind === TokenKind.Function) {
