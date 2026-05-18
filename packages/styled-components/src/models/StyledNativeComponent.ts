@@ -423,6 +423,12 @@ function computePublishedCascade(
   return next;
 }
 
+type MergedCascadeCache = {
+  inherited: NativeCascadeValues;
+  own: ReadonlyMap<string, string> | undefined;
+  merged: NativeCascadeValues;
+} | null;
+
 /**
  * Merge own custom property declarations into the inherited cascade map.
  * Returns the inherited reference unchanged when there is nothing to add,
@@ -509,8 +515,7 @@ interface MatchedLayers {
   normal: object[];
   /** Important overlay produced by matched buckets that carry an
    *  `!important` declaration. Empty when no matched bucket flagged any
-   *  property; populated in source order so the later wins per CSS
-   *  Cascade L4 §6.2 ("an important declaration takes precedence"). */
+   *  property; populated in source order so the later wins. */
   important: object[];
 }
 
@@ -1174,6 +1179,15 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   if (!IS_RSC && publishCacheRef.current === null) {
     publishCacheRef.current = createParentPublishCache();
   }
+  // Single-slot identity cache for the merged custom-property cascade.
+  // The same merged Map drives buildResolveEnv (own var() resolution +
+  // conditional bucket resolvers) AND descendant publishing, so cache
+  // it once per render and reuse when both inputs reference-match.
+  // Stable-input renders thus avoid a Map allocation + descendant
+  // re-renders triggered by a spurious cascade identity change.
+  const mergedCascadeCacheRef = (
+    !IS_RSC ? React.useRef<MergedCascadeCache>(null) : { current: null }
+  ) as { current: MergedCascadeCache };
 
   let context: ExecutionContext & Props;
   let compiled: NativeStyles;
@@ -1181,6 +1195,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   let elementToBeCreated: NativeTarget;
   let resolveEnv: ResolveEnv;
   let effectiveBase: Dict<any>;
+  let renderCascade: NativeCascadeValues;
   let propsKeyCount = prev !== null ? prev[2] : 0;
 
   const propsMatch = prev !== null && prev[1] === theme && shallowEqual(prev[0], props, prev[2]);
@@ -1193,6 +1208,9 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     elementToBeCreated = prev![8];
     resolveEnv = prev![10];
     effectiveBase = prev![11];
+    // Full-hit implies (nativeStyleCtx, compiled) reference-equal to the
+    // previous render, so the prior merge result is still authoritative.
+    renderCascade = mergedCascadeCacheRef.current!.merged;
   } else {
     if (propsMatch) {
       context = prev![3] as typeof context;
@@ -1229,10 +1247,22 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
         effectiveBase = compiled.base;
       }
     }
-    const renderCascade =
-      compiled.customProperties !== undefined
-        ? mergeCustomPropertiesIntoCascade(nativeStyleCtx.cascade, compiled.customProperties)
-        : nativeStyleCtx.cascade;
+    const ownCustomProps = compiled.customProperties;
+    const cached = mergedCascadeCacheRef.current;
+    if (
+      cached !== null &&
+      cached.inherited === nativeStyleCtx.cascade &&
+      cached.own === ownCustomProps
+    ) {
+      renderCascade = cached.merged;
+    } else {
+      renderCascade = mergeCustomPropertiesIntoCascade(nativeStyleCtx.cascade, ownCustomProps);
+      mergedCascadeCacheRef.current = {
+        inherited: nativeStyleCtx.cascade,
+        own: ownCustomProps,
+        merged: renderCascade,
+      };
+    }
     resolveEnv = buildResolveEnv(env, containerCtx, theme as Record<string, any>, renderCascade);
     let varImportant: Dict<any> | undefined;
     if (!__NATIVE_WEB__ && compiled.varDeferred !== undefined) {
@@ -1258,7 +1288,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
           // (TS lacks unsealed-object covariance); normalize at the boundary.
           props as Record<string, unknown>,
           baseOverride,
-          nativeStyleCtx.cascade,
+          renderCascade,
           parentCtx,
           varImportant
         )
@@ -1343,26 +1373,15 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     compiled.containerInfo,
     forwardedComponent.styledComponentId
   );
-  // Compute the cascade to publish to descendants. `compiled.publishesCascade`
-  // is the compile-time scan; the walk is skipped entirely when both the
-  // flag is false AND no user style prop was supplied (the only runtime
-  // source of cascade keys beyond the compiled output). Keeping the gate
-  // here at the call site rather than inside `computePublishedCascade`
-  // keeps that function's IC monomorphic on its two-arg signature; an
-  // earlier version that took a boolean third arg regressed the
-  // must-walk path by ~25%.
-  // The cascade we publish to descendants reuses the merged cascade built
-  // for own var() resolution (above) so the same Map allocation backs both
-  // surfaces. When the component declares no custom properties the merge
-  // is a no-op and the inherited reference flows through.
-  const publishCascadeBase =
-    compiled.customProperties !== undefined
-      ? mergeCustomPropertiesIntoCascade(nativeStyleCtx.cascade, compiled.customProperties)
-      : nativeStyleCtx.cascade;
+  // Skip the walk entirely when the compile-time scan said no cascade
+  // key is published AND no user style prop supplied one. The gate
+  // stays at the call site to keep computePublishedCascade monomorphic
+  // on its two-arg signature; a boolean third arg regressed the
+  // must-walk path by ~25% in a prior version.
   const publishedCascade =
     compiled.publishesCascade || props.style != null
-      ? computePublishedCascade(publishCascadeBase, composedStyle)
-      : publishCascadeBase;
+      ? computePublishedCascade(renderCascade, composedStyle)
+      : renderCascade;
   const cascadeChanged = publishedCascade !== nativeStyleCtx.cascade;
 
   // Publish this component's identity to descendants so Tier 2
@@ -1890,12 +1909,9 @@ export function assembleFinalStyle(
     ? applyResolvers(sourceBase, compiled.resolvers, resolveEnv)
     : sourceBase;
 
-  // CSS Cascade L4 §6.2: important declarations win over normal ones.
-  // Build a per-render "important suffix" once and re-append it after
-  // the normal layers + user style so RN's array merge prefers it.
-  // The suffix carries the base !important values + resolver outputs +
-  // any var() deferred decls flagged important. The matched buckets'
-  // importants are appended per-state to keep state callbacks correct.
+  // Build the unconditional important overlay once (base + resolvers +
+  // var-deferred important). Matched bucket importants are appended per
+  // state callback firing so they reflect the current state's hits.
   const baseImportantLayer = buildBaseImportantLayer(compiled, resolveEnv, varImportant);
 
   if (hasPseudoState) {
@@ -1921,11 +1937,9 @@ export function assembleFinalStyle(
       } else if (userStyle) {
         Array.isArray(userStyle) ? styles.push.apply(styles, userStyle) : styles.push(userStyle);
       }
-      // Important overlay (after user style; beats it per CSS Cascade L4
-      // §6.2). Within importants, source-later wins: base first, then
-      // non-pseudo bucket importants (in their source order), then
-      // pseudo-bucket importants (effectively the latest layer because
-      // they're gated on runtime state).
+      // Important overlay (after user style; beats it). Source order
+      // wins among importants: base, then non-pseudo bucket importants,
+      // then pseudo-bucket importants (effectively latest layer).
       if (baseImportantLayer !== null) styles.push(baseImportantLayer);
       for (let i = 0; i < activeMatched.important.length; i++) {
         styles.push(activeMatched.important[i]);
@@ -1947,12 +1961,10 @@ export function assembleFinalStyle(
       return out;
     };
   }
-  const importantTail =
-    activeMatched.important.length > 0 || baseImportantLayer !== null
-      ? baseImportantLayer !== null
-        ? ([baseImportantLayer as object] as object[]).concat(activeMatched.important)
-        : activeMatched.important
-      : EMPTY_ARRAY;
+  const importantTail: ReadonlyArray<object> =
+    baseImportantLayer !== null
+      ? [baseImportantLayer, ...activeMatched.important]
+      : activeMatched.important;
   if (userStyle) {
     if (importantTail.length > 0) {
       return activeConditional.length > 0
@@ -1990,25 +2002,12 @@ function buildBaseImportantLayer(
   if (baseImp === undefined && impRes === undefined && varImportant === undefined) {
     return null;
   }
-  let layer: Record<string, any>;
-  if (baseImp !== undefined && impRes !== undefined) {
-    layer = applyResolvers(baseImp as Record<string, any>, impRes, resolveEnv);
-  } else if (baseImp !== undefined) {
-    layer = baseImp as Record<string, any>;
-  } else if (impRes !== undefined) {
-    layer = applyResolvers({}, impRes, resolveEnv);
-  } else {
-    layer = {};
-  }
-  if (varImportant !== undefined) {
-    // Avoid mutating compiled.important (which is shared across renders);
-    // clone before merging the var-substituted important values in.
-    layer =
-      layer === compiled.important
-        ? { ...layer, ...varImportant }
-        : Object.assign(layer, varImportant);
-  }
-  return layer;
+  const seed = (baseImp as Record<string, any> | undefined) ?? EMPTY_OBJECT;
+  const resolved = impRes !== undefined ? applyResolvers(seed, impRes, resolveEnv) : seed;
+  // Spread when var-deferred important values exist; never mutate
+  // compiled.important (shared across renders) or applyResolvers'
+  // identity-cached output.
+  return varImportant !== undefined ? { ...resolved, ...varImportant } : resolved;
 }
 
 export default (NativeStyle: INativeStyleConstructor<any>) => {
