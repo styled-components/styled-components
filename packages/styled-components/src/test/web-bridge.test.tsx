@@ -210,6 +210,95 @@ describe('rn-web bridge: dynamic interpolations + attrs + theme', () => {
   });
 });
 
+describe('rn-web bridge: full primitive surface', () => {
+  // Each rn-web alias exposed by `styled-components/native` should also
+  // be reachable through the bridge. Smoke-test each one renders DOM
+  // with our bridge class somewhere in its rendered subtree. Some
+  // aliases (Image, ImageBackground, TouchableHighlight, ActivityIndicator)
+  // wrap multiple DOM nodes internally so the testID target isn't
+  // always the class-bearing node; the tree-wide check covers both.
+  type AliasCase = { needsChild?: boolean };
+  const checks: ReadonlyArray<[string, AliasCase]> = [
+    ['Image', {}],
+    ['ImageBackground', { needsChild: true }],
+    ['ScrollView', {}],
+    ['TextInput', {}],
+    ['SafeAreaView', {}],
+    ['Switch', {}],
+    ['TouchableOpacity', { needsChild: true }],
+    ['TouchableHighlight', { needsChild: true }],
+    ['ActivityIndicator', {}],
+  ];
+  for (const [alias, opts] of checks) {
+    it(`bridges styled.${alias}`, () => {
+      const Factory = (styled as Record<string, unknown>)[alias] as (
+        strings: TemplateStringsArray,
+        ...args: unknown[]
+      ) => React.ComponentType<{ testID?: string; children?: React.ReactNode }>;
+      const Component = Factory`
+        background-color: rebeccapurple;
+      `;
+      const children = opts.needsChild ? <span>x</span> : undefined;
+      const { container } = render(
+        React.createElement(
+          Component,
+          { testID: `probe-${alias}` } as { testID: string; children?: React.ReactNode },
+          children
+        )
+      );
+      expect(container.innerHTML).toMatch(/sc-/);
+    });
+  }
+});
+
+describe('rn-web bridge: web-native primitives and arbitrary components', () => {
+  it('handles browser HTML element shortcuts via the inherited web factory', () => {
+    // The bridge re-exports the web `styled` so HTML primitives without
+    // an rn-web equivalent (`<a>`, `<select>`, `<dialog>`, etc.) work
+    // unchanged. These render directly to the underlying tag.
+    const Link = styled.a`
+      color: rgb(7, 8, 9);
+      text-decoration: underline;
+    `;
+    const Select = styled.select`
+      background-color: rgb(101, 102, 103);
+    `;
+    const { container } = render(
+      <>
+        <Link href="#x" data-testid="link">
+          hi
+        </Link>
+        <Select data-testid="select">
+          <option>a</option>
+        </Select>
+      </>
+    );
+    const link = container.querySelector('[data-testid="link"]') as HTMLElement;
+    const select = container.querySelector('[data-testid="select"]') as HTMLElement;
+    expect(link.tagName.toLowerCase()).toBe('a');
+    expect(select.tagName.toLowerCase()).toBe('select');
+    expect(link.getAttribute('class') ?? '').toMatch(/sc-/);
+    expect(select.getAttribute('class') ?? '').toMatch(/sc-/);
+  });
+
+  it('wraps an arbitrary React component via styled(Component)', () => {
+    function Card(props: { className?: string; children?: React.ReactNode }): React.ReactElement {
+      return (
+        <div data-testid="card" className={props.className}>
+          {props.children}
+        </div>
+      );
+    }
+    const Styled = styled(Card)`
+      background-color: rgb(220, 230, 240);
+    `;
+    const { container } = render(<Styled>inside</Styled>);
+    const card = container.querySelector('[data-testid="card"]') as HTMLElement;
+    expect(card).not.toBeNull();
+    expect(card.getAttribute('class') ?? '').toMatch(/sc-/);
+  });
+});
+
 describe('rn-web bridge: createTheme integration', () => {
   // The bridge unblocks the createTheme native unification spike from
   // 2026-05-18: with the bridge, themes go through the web pipeline so
