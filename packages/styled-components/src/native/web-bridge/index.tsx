@@ -89,6 +89,52 @@ type BridgedProps = {
 };
 
 /**
+ * rn-web's `preprocess.js` emits `matrix(${vals.join(',')})` for
+ * `transform: [{matrix: [...]}]` regardless of element count. With a
+ * 16-element matrix the result is `matrix(a, b, c, ..., p)` which
+ * isn't valid CSS — `matrix()` takes 6 args, `matrix3d()` takes 16.
+ * The browser drops the entire `transform` declaration as invalid,
+ * collapsing 3D transforms (every face stacks at origin).
+ *
+ * Rewrite 16-element matrix entries to `matrix3d` before rn-web's
+ * preprocess sees them so the right CSS function name is emitted.
+ */
+function rewrite3dMatrices(style: unknown): unknown {
+  if (style == null || typeof style !== 'object') return style;
+  if (Array.isArray(style)) {
+    let changed = false;
+    const out = new Array<unknown>(style.length);
+    for (let i = 0; i < style.length; i++) {
+      const before = style[i];
+      const after = rewrite3dMatrices(before);
+      if (after !== before) changed = true;
+      out[i] = after;
+    }
+    return changed ? out : style;
+  }
+  const obj = style as Record<string, unknown>;
+  const t = obj.transform;
+  if (!Array.isArray(t)) return style;
+  let changed = false;
+  const rewritten = new Array<unknown>(t.length);
+  for (let i = 0; i < t.length; i++) {
+    const entry = t[i];
+    if (
+      entry != null &&
+      typeof entry === 'object' &&
+      Array.isArray((entry as { matrix?: unknown[] }).matrix) &&
+      (entry as { matrix: unknown[] }).matrix.length === 16
+    ) {
+      changed = true;
+      rewritten[i] = { matrix3d: (entry as { matrix: unknown[] }).matrix };
+    } else {
+      rewritten[i] = entry;
+    }
+  }
+  return changed ? { ...obj, transform: rewritten } : style;
+}
+
+/**
  * Wrap a rn-web primitive so the web pipeline's `className` prop becomes a
  * styleq `$$css` entry in `style`. rn-web's createDOMProps reads `style`
  * exclusively for className generation, so we must deliver our class
@@ -100,7 +146,8 @@ function bridgePrimitive<P extends BridgedProps>(
 ): React.ForwardRefExoticComponent<React.PropsWithoutRef<P> & React.RefAttributes<unknown>> {
   const Bridged = React.forwardRef<unknown, P>((props, ref) => {
     const { className, style, ...rest } = props;
-    const merged = className ? [{ $$css: true, sc: className }, style] : style;
+    const fixedStyle = rewrite3dMatrices(style);
+    const merged = className ? [{ $$css: true, sc: className }, fixedStyle] : fixedStyle;
     return React.createElement(Component, {
       ...(rest as object),
       ref,
@@ -231,12 +278,103 @@ const baselineCss: Partial<Record<KnownAlias, string>> = {
   Pressable: 'cursor: pointer;',
 };
 
-const bridgedCache = new Map<KnownAlias, ReturnType<typeof styledWeb>>();
+/**
+ * CSS-to-prop lifts for primitives whose rn-web rendering doesn't
+ * pick up the spec CSS surface. rn-web abstracts the HTML element
+ * away (Image renders as `<div>` with background-image, Switch as a
+ * custom div/span tree), so declarations like `object-fit` or
+ * `accent-color` reach the CSSOM but have no visual effect on the
+ * rendered output. The lift mirrors what the native engine's
+ * `SPECIAL_CASE_PROPS` mechanism did at compile time: pull the value
+ * out of the authored CSS, hand it to rn-web as the component prop
+ * that the component actually consumes.
+ *
+ * Limitations:
+ * - Static values only. Dynamic interpolations (e.g.
+ *   `object-fit: ${p => p.$fit}`) aren't lifted; consumers needing
+ *   dynamic values should pass `resizeMode={...}` / `trackColor={...}`
+ *   directly as props on the rendered element.
+ * - Modern color functions (`oklch()`, `color-mix()`, etc.) that
+ *   reach rn-web's `normalizeColor` are normalized to `transparent`.
+ *   The bridge ships the value verbatim; consumers wanting modern
+ *   color support on a lifted prop need to author with hex / rgb /
+ *   hsl until rn-web's color subset catches up to CSS Color 4.
+ */
+type CssLiftMap = Record<string, { prop: string; transform?: (v: string) => unknown }>;
+
+const imageLifts: CssLiftMap = {
+  'object-fit': {
+    prop: 'resizeMode',
+    transform: v => {
+      // CSS Images 3 §5.5 → rn-web Image.resizeMode enum.
+      // `fill` stretches without preserving aspect (`stretch` on rn-web).
+      // `none` displays the intrinsic size (`center` on rn-web is the
+      // nearest analog: no scaling, anchored at center).
+      // `scale-down` collapses to `contain` since rn-web has no
+      // direct analog — both keep aspect and never upscale past the
+      // intrinsic size when the image fits the box.
+      if (v === 'fill') return 'stretch';
+      if (v === 'none') return 'center';
+      if (v === 'scale-down') return 'contain';
+      return v;
+    },
+  },
+};
+
+const switchLifts: CssLiftMap = {
+  'accent-color': {
+    prop: 'trackColor',
+    // rn-web Switch only consumes color via its `trackColor.true` /
+    // `trackColor.false` prop; CSS `accent-color` doesn't reach the
+    // custom-rendered control.
+    transform: v => ({ true: v, false: v }),
+  },
+};
+
+const liftsByAlias: Partial<Record<KnownAlias, CssLiftMap>> = {
+  Image: imageLifts,
+  ImageBackground: imageLifts,
+  Switch: switchLifts,
+};
+
+/**
+ * Walk the static string segments of a tagged template and extract
+ * any CSS declarations matching the lift map. Dynamic segments
+ * (interpolated args) are skipped because we can't statically evaluate
+ * them. Returns the lifted prop bag ready to feed `.attrs()`.
+ */
+function extractCssLifts(
+  strings: TemplateStringsArray,
+  lifts: CssLiftMap
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [cssProp, { prop, transform }] of Object.entries(lifts)) {
+    // Match `<prop>: <value>;` on its own line or at the start of a
+    // declaration block. Word-boundary anchors avoid matching inside
+    // longer identifiers (e.g. don't match `-webkit-object-fit`).
+    const escaped = cssProp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(?:^|[;{\\s])${escaped}\\s*:\\s*([^;}\\n]+)`, 'i');
+    for (const segment of strings) {
+      const m = segment.match(re);
+      if (m) {
+        const value = m[1]
+          .trim()
+          .replace(/!important$/i, '')
+          .trim();
+        out[prop] = transform ? transform(value) : value;
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+const bridgedCache = new Map<KnownAlias, unknown>();
 aliases.forEach(alias => {
   Object.defineProperty(styled, alias, {
     enumerable: true,
     configurable: false,
-    get(): ReturnType<typeof styledWeb> {
+    get(): unknown {
       const cached = bridgedCache.get(alias);
       if (cached) return cached;
       const primitive = reactNativeWeb[alias];
@@ -256,8 +394,36 @@ aliases.forEach(alias => {
           `
         : bridged;
       const styledBridged = styledWeb(base as React.ComponentType);
-      bridgedCache.set(alias, styledBridged);
-      return styledBridged;
+      const lifts = liftsByAlias[alias];
+      let exposed: unknown = styledBridged;
+      if (lifts !== undefined) {
+        // Wrap as a tagged-template factory that extracts CSS lifts
+        // and forwards them through `.attrs()` so rn-web's component
+        // receives the lifted props at render time. Chain methods
+        // like `.attrs()` directly on the bridge result are NOT
+        // preserved by this wrapper; consumers wanting both lifts
+        // and chained attrs should pass the prop explicitly on the
+        // rendered element instead.
+        const liftedFactory = (
+          strings: TemplateStringsArray,
+          ...args: unknown[]
+        ): React.ComponentType<unknown> => {
+          const liftedAttrs = extractCssLifts(strings, lifts);
+          const target =
+            Object.keys(liftedAttrs).length > 0
+              ? (styledBridged as unknown as { attrs: (a: unknown) => unknown }).attrs(liftedAttrs)
+              : styledBridged;
+          return (
+            target as unknown as (
+              s: TemplateStringsArray,
+              ...a: unknown[]
+            ) => React.ComponentType<unknown>
+          )(strings, ...args);
+        };
+        exposed = liftedFactory;
+      }
+      bridgedCache.set(alias, exposed);
+      return exposed;
     },
   });
 });

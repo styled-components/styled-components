@@ -344,6 +344,214 @@ describe('rn-web bridge: CSS surfaces that needed polyfills on native pass throu
   }
 });
 
+describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
+  // accent-color: oklch / color-mix / system color / auto must reach the CSSOM
+  // intact. The browser handles each natively; the web pipeline just
+  // needs to not eat them.
+  describe('accent-color modern color functions and system values', () => {
+    const cases: ReadonlyArray<[string, string, RegExp]> = [
+      ['oklch()', 'accent-color: oklch(60% 0.2 250);', /accent-color:\s*oklch\(60%\s*0\.2\s*250\)/],
+      [
+        'color-mix()',
+        'accent-color: color-mix(in srgb, red, blue);',
+        /accent-color:\s*color-mix\(in srgb,\s*red,\s*blue\)/,
+      ],
+      ['system color', 'accent-color: AccentColor;', /accent-color:\s*AccentColor/i],
+      ['auto', 'accent-color: auto;', /accent-color:\s*auto/],
+    ];
+    for (const [name, decl, expected] of cases) {
+      it(`passes accent-color: ${name} through`, () => {
+        const Box = styled.View`
+          ${decl}
+        `;
+        render(<Box testID={`accent-${name}`} />);
+        expect(readAllCss()).toMatch(expected);
+      });
+    }
+  });
+
+  describe('system color keywords on arbitrary properties', () => {
+    const cases: ReadonlyArray<[string, string, RegExp]> = [
+      ['Canvas (background)', 'background-color: Canvas;', /background-color:\s*Canvas/i],
+      ['CanvasText (color)', 'color: CanvasText;', /color:\s*CanvasText/i],
+      ['LinkText (color)', 'color: LinkText;', /color:\s*LinkText/i],
+      [
+        'ButtonFace (background)',
+        'background-color: ButtonFace;',
+        /background-color:\s*ButtonFace/i,
+      ],
+      ['Mark (background)', 'background-color: Mark;', /background-color:\s*Mark/i],
+    ];
+    for (const [name, decl, expected] of cases) {
+      it(`passes ${name} through`, () => {
+        const Box = styled.View`
+          ${decl}
+        `;
+        render(<Box testID={`sysc-${name}`} />);
+        expect(readAllCss()).toMatch(expected);
+      });
+    }
+  });
+
+  describe('object-fit on Image', () => {
+    // rn-web's `<Image>` renders as a `<div>` with `background-image: url(...)`,
+    // not as `<img>`. CSS `object-fit` only applies to replaced elements, so a
+    // raw `object-fit: cover` declaration is a no-op against a `<div>`. The
+    // native engine knew this and lifted `object-fit` to a `resizeMode` prop
+    // (which rn-web's Image then translates to `background-size`).
+    it('lands the bridge class on the Image DOM node', () => {
+      const Pic = styled.Image`
+        object-fit: contain;
+      `;
+      const { container } = render(
+        <Pic testID="pic-fit" source={{ uri: 'data:image/png;base64,iVBORw0KGgo=' }} />
+      );
+      const node = container.querySelector('[data-testid="pic-fit"]') as HTMLElement;
+      expect(node).not.toBeNull();
+      const cls = (node.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
+      const ourClass = cls.find(c => c.startsWith('sc-'));
+      expect(ourClass).toBeDefined();
+    });
+
+    it('renders the rn-web Image as a <div> with background-image (not an <img>)', () => {
+      // Documents the architectural reason `object-fit` is a no-op
+      // against the CSS alone: the element it's authored against is
+      // a `<div>`, not a replaced element.
+      const Pic = styled.Image`
+        object-fit: contain;
+      `;
+      const { container } = render(
+        <Pic testID="pic-shape" source={{ uri: 'data:image/png;base64,iVBORw0KGgo=' }} />
+      );
+      const node = container.querySelector('[data-testid="pic-shape"]') as HTMLElement;
+      expect(node).not.toBeNull();
+      expect(node.tagName.toLowerCase()).toBe('div');
+    });
+
+    it('lifts object-fit to resizeMode so rn-web Image actually shapes the image', () => {
+      const Pic = styled.Image`
+        object-fit: contain;
+      `;
+      const { container } = render(
+        <Pic testID="pic-lifted" source={{ uri: 'data:image/png;base64,iVBORw0KGgo=' }} />
+      );
+      // rn-web emits its `background-size` atomic class on the inner
+      // backdrop `<div>`. The class name carries a hash of the value;
+      // the underlying CSS rule lives in the CSSOM.
+      const inner = container.querySelector(
+        '[data-testid="pic-lifted"] > div'
+      ) as HTMLElement | null;
+      expect(inner).not.toBeNull();
+      const innerCls = (inner!.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
+      const bgSize = innerCls.find(c => c.startsWith('r-backgroundSize-'));
+      expect(bgSize).toBeDefined();
+      // The actual `background-size: contain` rule should live in the
+      // CSSOM, keyed by that atomic class.
+      expect(readAllCss()).toMatch(
+        new RegExp(`\\.${bgSize}\\s*\\{[^}]*background-size:\\s*contain`, 'i')
+      );
+    });
+
+    const fitCases: ReadonlyArray<[string, RegExp]> = [
+      ['fill', /background-size:\s*100%\s*100%/i],
+      ['cover', /background-size:\s*cover/i],
+      ['contain', /background-size:\s*contain/i],
+    ];
+    for (const [fit, expected] of fitCases) {
+      it(`lifts object-fit: ${fit} to a background-size match`, () => {
+        // Each value gets its own styled component so the lift is
+        // statically detectable (no interpolation).
+        const factory = styled.Image as (
+          s: TemplateStringsArray
+        ) => React.ComponentType<{ testID?: string; source?: unknown }>;
+        const Pic = factory(['object-fit: ' + fit + ';'] as unknown as TemplateStringsArray);
+        render(
+          <Pic testID={'pic-' + fit} source={{ uri: 'data:image/png;base64,iVBORw0KGgo=' }} />
+        );
+        expect(readAllCss()).toMatch(expected);
+      });
+    }
+  });
+
+  describe('accent-color lift on Switch', () => {
+    it('lifts accent-color to trackColor so rn-web Switch tinting works', () => {
+      const Toggle = styled.Switch`
+        accent-color: rgb(11, 22, 33);
+      `;
+      render(<Toggle testID="toggle" value={true} onValueChange={() => {}} />);
+      // rn-web Switch emits the trackColor.true value as background-
+      // color on its track element. The color lands in the CSSOM
+      // (rn-web normalizes via @react-native/normalize-colors → rgba).
+      const css = readAllCss();
+      expect(css).toMatch(/background-color:\s*rgba?\(11,\s*22,\s*33/i);
+    });
+  });
+
+  describe('3D matrix transform rewrite', () => {
+    // rn-web emits transform values containing function-call parens as
+    // inline `style` attributes (not atomic CSS), so the assertion
+    // target is the rendered node's `style` attribute.
+    it('rewrites a 16-element matrix inline transform so rn-web emits matrix3d', () => {
+      // The showcase logo uses `transform: [{matrix: [...16 numbers]}]`
+      // as inline style on absolute children. rn-web's preprocess
+      // naively emits matrix(...) with all 16 args; the browser drops
+      // the declaration as invalid and all elements stack at origin.
+      // The bridge rewrites to matrix3d before rn-web sees it.
+      const Box = styled.View``;
+      const identity4x4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+      const { container } = render(
+        <Box testID="m3d" style={{ transform: [{ matrix: identity4x4 }] } as unknown as object} />
+      );
+      const node = container.querySelector('[data-testid="m3d"]') as HTMLElement;
+      const style = node.getAttribute('style') ?? '';
+      expect(style).toMatch(/matrix3d\(/i);
+      // And the broken 16-arg matrix() (would be 15 commas inside)
+      // must NOT appear.
+      expect(style).not.toMatch(/transform:\s*matrix\((?:[^,)]+,){15}/i);
+    });
+
+    it('leaves a 9-element matrix alone', () => {
+      // rn-web parses 9-element matrices as 3x3 affine and emits
+      // matrix(...) which is valid 2D CSS. The bridge MUST NOT
+      // promote those to matrix3d.
+      const Box = styled.View``;
+      const id3x3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+      const { container } = render(
+        <Box testID="m9" style={{ transform: [{ matrix: id3x3 }] } as unknown as object} />
+      );
+      const node = container.querySelector('[data-testid="m9"]') as HTMLElement;
+      const style = node.getAttribute('style') ?? '';
+      // rn-web emits matrix(...) for the 9-element form.
+      expect(style).toMatch(/matrix\(/i);
+      expect(style).not.toMatch(/matrix3d/i);
+    });
+  });
+
+  describe('ScrollView baseline clipping survives through the bridge', () => {
+    it('renders rn-web ScrollView with overflow + flex baseline preserved', () => {
+      const Scroll = styled.ScrollView`
+        overscroll-behavior: auto;
+        scrollbar-width: auto;
+      `;
+      const { container } = render(
+        <Scroll testID="scroll-probe">
+          <span>row 1</span>
+          <span>row 2</span>
+          <span>row 3</span>
+        </Scroll>
+      );
+      const node = container.querySelector('[data-testid="scroll-probe"]') as HTMLElement;
+      expect(node).not.toBeNull();
+      const cls = (node.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
+      // Our class lands
+      expect(cls.some(c => c.startsWith('sc-'))).toBe(true);
+      // rn-web atomic baseline classes must also be present so the
+      // ScrollView clips its overflow and grows to fill its flex parent.
+      expect(cls.some(c => c.startsWith('r-overflow'))).toBe(true);
+    });
+  });
+});
+
 describe('rn-web bridge: createTheme integration', () => {
   // The bridge unblocks the createTheme native unification spike from
   // 2026-05-18: with the bridge, themes go through the web pipeline so
