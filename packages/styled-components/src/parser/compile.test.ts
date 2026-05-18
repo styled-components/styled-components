@@ -467,6 +467,99 @@ describe('compileWeb', () => {
       expect(out).toEqual(expected);
     });
 
+    it('terminates a prior decl when the user forgot `;` before a block-style fragment', () => {
+      // Authored: `margin: 0 ${10}px ${css\`color: red\`};`. The user
+      // forgot the `;` after the unit literal. The fragment has top-level
+      // `;` so it's clearly a block; recovery promotes it to a sibling
+      // declaration and injects `;` before its sentinel so `margin: 0
+      // 10px` terminates cleanly instead of swallowing the fragment as
+      // part of its value.
+      const block = css`
+        color: red;
+      `;
+      const src = parseSource(['margin: 0 ', 'px\n', ';'], [10, block]);
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual(
+        legacy('margin: 0 10px; color: red;')
+      );
+    });
+
+    it('terminates a prior decl when the user forgot `;` before a nested-rule fragment', () => {
+      // The fragment carries `{`/`}` so it's unambiguously a rule block.
+      const hover = css`
+        &:hover {
+          color: blue;
+        }
+      `;
+      const src = parseSource(['color: red\n', ''], [hover]);
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual(
+        legacy('color: red; &:hover { color: blue; }')
+      );
+    });
+
+    it('promotes both fragments when two block-style fragments are adjacent', () => {
+      // Author wrote `${first}${second}` with no separator. Both source
+      // strings carry top-level `;` so both must be standalone siblings;
+      // the inherited `prevWasStandalone` flag carries through the empty
+      // gap between them.
+      const first = css`
+        color: red;
+      `;
+      const second = css`
+        background: blue;
+      `;
+      const src = parseSource(['', '', ''], [first, second]);
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual(
+        legacy('color: red; background: blue;')
+      );
+    });
+
+    it('does not crash on a fragment whose only top-level `;` lives inside a quoted string', () => {
+      // `content: "hi;there"` — the recovery scan walks raw strings
+      // without honoring quotes, so the in-string `;` triggers the
+      // promotion. The behavior is correct in this case because the
+      // surrounding context (a styled component's body) makes the
+      // fragment a sibling decl regardless. Lock that no crash + a
+      // sensible decl output happens.
+      const frag = css`
+        content: 'hi;there';
+      `;
+      const src = parseSource(['color: red\n', ''], [frag]);
+      const out = compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' });
+      // Either the legacy splice path produces the decl, or it bails to
+      // the slow string path. Both flows are valid; the requirement is
+      // no thrown exception and the literal quoted content preserved.
+      if (out !== null) {
+        expect(out.join('\n')).toMatch(/hi;there/);
+      }
+    });
+
+    it('handles a fragment whose only braces live inside a comment', () => {
+      // `/* {} */` braces trigger the look-like-block check but the
+      // recovery is harmless when the slot is already at a statement
+      // boundary. Lock that the comment is stripped and the surrounding
+      // decls compile.
+      const frag = css`
+        /* {} */
+        color: red;
+      `;
+      const src = parseSource(['', ''], [frag]);
+      const out = compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' });
+      expect(out).toEqual(legacy('color: red;'));
+    });
+
+    it('leaves a value-position fragment embedded when the prefix ends in `:`', () => {
+      // `border: ${frag};` with a value-shaped fragment must NOT be
+      // promoted to a sibling; the prefix's `:` is the value-position
+      // signal that overrides the block-shape heuristic.
+      const frag = css`
+        1px solid red
+      `;
+      const src = parseSource(['border: ', ';'], [frag]);
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual(
+        legacy('border: 1px solid red;')
+      );
+    });
+
     it('stringifies a ternary between two embedded-position multi-line fragments', () => {
       // Multi-line `css\`...\`` is the natural way users write fragments;
       // the template literal syntax forces leading/trailing whitespace into
