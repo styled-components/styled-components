@@ -514,28 +514,47 @@ function conditionMatches(
 interface MatchedLayers {
   normal: object[];
   /** Important overlay produced by matched buckets that carry an
-   *  `!important` declaration. Empty when no matched bucket flagged any
-   *  property; populated in source order so the later wins. */
-  important: object[];
+   *  `!important` declaration. Lazily allocated on first push so the
+   *  common case (no bucket has importance) costs no extra array. */
+  important: object[] | null;
 }
 
 const EMPTY_MATCHED: MatchedLayers = {
   normal: EMPTY_ARRAY as unknown as object[],
-  important: EMPTY_ARRAY as unknown as object[],
+  important: null,
 };
 
 function pushMatched(out: MatchedLayers, entry: ConditionalStyle, env: ResolveEnv): void {
-  out.normal.push(resolveBucket(entry, env));
-  if (entry.important !== undefined || entry.importantResolvers !== undefined) {
-    out.important.push(resolveImportantBucket(entry, env));
+  // varDeferred resolves at match time against the cascade map and may
+  // contribute to either the normal or important layer depending on
+  // each entry's importance flag.
+  let varOut: { normal: Dict<any> | null; important: Dict<any> | null } | null = null;
+  if (entry.varDeferred !== undefined) {
+    varOut = applyVarDeferred(entry.varDeferred, env.customProperties);
+  }
+  out.normal.push(resolveBucket(entry, env, varOut !== null ? varOut.normal : null));
+  if (
+    entry.important !== undefined ||
+    entry.importantResolvers !== undefined ||
+    (varOut !== null && varOut.important !== null)
+  ) {
+    if (out.important === null) out.important = [];
+    out.important.push(
+      resolveImportantBucket(entry, env, varOut !== null ? varOut.important : null)
+    );
   }
 }
 
-function resolveImportantBucket(entry: ConditionalStyle, env: ResolveEnv): object {
+function resolveImportantBucket(
+  entry: ConditionalStyle,
+  env: ResolveEnv,
+  varImportant: Dict<any> | null
+): object {
   const imp = entry.important ?? EMPTY_OBJECT;
-  return entry.importantResolvers
+  const resolved = entry.importantResolvers
     ? applyResolvers(imp as Record<string, any>, entry.importantResolvers, env)
     : imp;
+  return varImportant !== null ? { ...resolved, ...varImportant } : resolved;
 }
 
 function matchConditionals(
@@ -546,7 +565,7 @@ function matchConditionals(
   resolveEnv: ResolveEnv,
   parentCtx: ParentContextValue
 ): MatchedLayers {
-  const out: MatchedLayers = { normal: [], important: [] };
+  const out: MatchedLayers = { normal: [], important: null };
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
     if (entry.type === 'attr') {
@@ -785,8 +804,15 @@ function matchNthOfInner(sibling: SiblingInfo, of: NthOfBranch): boolean {
   return evaluateAttrOperator(attr.operator, actual, expected);
 }
 
-function resolveBucket(entry: ConditionalStyle, env: ResolveEnv): object {
-  return entry.resolvers ? applyResolvers(entry.styles, entry.resolvers, env) : entry.styles;
+function resolveBucket(
+  entry: ConditionalStyle,
+  env: ResolveEnv,
+  varNormal: Dict<any> | null = null
+): object {
+  const resolved = entry.resolvers
+    ? applyResolvers(entry.styles, entry.resolvers, env)
+    : entry.styles;
+  return varNormal !== null ? { ...resolved, ...varNormal } : resolved;
 }
 
 /**
@@ -874,7 +900,7 @@ function pseudoStylesForState(
   // is guaranteed pseudo-bearing (either `type==='pseudo'` or a
   // compound carrying `entry.pseudo`), so the inner branches skip the
   // membership re-check.
-  const out: MatchedLayers = { normal: [], important: [] };
+  const out: MatchedLayers = { normal: [], important: null };
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
     if (entry.type === 'pseudo') {
@@ -1912,7 +1938,14 @@ export function assembleFinalStyle(
   // Build the unconditional important overlay once (base + resolvers +
   // var-deferred important). Matched bucket importants are appended per
   // state callback firing so they reflect the current state's hits.
-  const baseImportantLayer = buildBaseImportantLayer(compiled, resolveEnv, varImportant);
+  // Skip the call entirely for components that ship no important at
+  // all — the function would just allocate a frame and return null.
+  const baseImportantLayer =
+    compiled.important !== undefined ||
+    compiled.importantResolvers !== undefined ||
+    varImportant !== undefined
+      ? buildBaseImportantLayer(compiled, resolveEnv, varImportant)
+      : null;
 
   if (hasPseudoState) {
     const preStateStyles: object[] =
@@ -1941,10 +1974,14 @@ export function assembleFinalStyle(
       // wins among importants: base, then non-pseudo bucket importants,
       // then pseudo-bucket importants (effectively latest layer).
       if (baseImportantLayer !== null) styles.push(baseImportantLayer);
-      for (let i = 0; i < activeMatched.important.length; i++) {
-        styles.push(activeMatched.important[i]);
+      if (activeMatched.important !== null) {
+        for (let i = 0; i < activeMatched.important.length; i++) {
+          styles.push(activeMatched.important[i]);
+        }
       }
-      for (let i = 0; i < matched.important.length; i++) styles.push(matched.important[i]);
+      if (matched.important !== null) {
+        for (let i = 0; i < matched.important.length; i++) styles.push(matched.important[i]);
+      }
       return styles;
     };
   }
@@ -1955,16 +1992,22 @@ export function assembleFinalStyle(
     return (state: any) => {
       const out: any[] = preStateStyles.concat(normalizeStyleForWeb(userStyle(state)));
       if (baseImportantLayer !== null) out.push(baseImportantLayer);
-      for (let i = 0; i < activeMatched.important.length; i++) {
-        out.push(activeMatched.important[i]);
+      if (activeMatched.important !== null) {
+        for (let i = 0; i < activeMatched.important.length; i++) {
+          out.push(activeMatched.important[i]);
+        }
       }
       return out;
     };
   }
   const importantTail: ReadonlyArray<object> =
     baseImportantLayer !== null
-      ? [baseImportantLayer, ...activeMatched.important]
-      : activeMatched.important;
+      ? activeMatched.important !== null
+        ? [baseImportantLayer, ...activeMatched.important]
+        : [baseImportantLayer]
+      : activeMatched.important !== null
+        ? activeMatched.important
+        : EMPTY_ARRAY;
   if (userStyle) {
     if (importantTail.length > 0) {
       return activeConditional.length > 0

@@ -125,6 +125,13 @@ export interface ConditionalStyle {
   important?: Dict<any>;
   /** Render-time resolvers attached to `important` declarations. */
   importantResolvers?: Array<[string, Resolver]>;
+  /**
+   * Decl values that contain a `var(--name)` reference, deferred from
+   * the bucket-build pass. Resolved at bucket-match time against the
+   * active cascade map; output merges into the bucket's normal layer
+   * (or the important layer per the tuple's importance flag).
+   */
+  varDeferred?: ReadonlyArray<readonly [string, string, boolean]>;
 }
 
 /** Partition slice for {@link NativeStyles.nonPseudoEntries}: never `type: 'pseudo'`. */
@@ -994,19 +1001,22 @@ function stripImportant(value: string): string {
   return start === 0 && end === value.length ? value : value.substring(start, end);
 }
 
-/** Attach optional resolvers + important + importantResolvers from a
- *  processDecls output to a freshly-built bucket entry. */
+/** Attach optional resolvers + important + importantResolvers +
+ *  varDeferred from a processDecls output to a freshly-built bucket
+ *  entry. */
 function attachBucketExtras(
   entry: ConditionalStyle,
   resolvers: Array<[string, Resolver]>,
   important: Dict<any> | null,
-  importantResolvers: Array<[string, Resolver]> | null
+  importantResolvers: Array<[string, Resolver]> | null,
+  varDeferred: Array<[string, string, boolean]> | null
 ): void {
   if (resolvers.length > 0) entry.resolvers = resolvers;
   if (important !== null) entry.important = important;
   if (importantResolvers !== null && importantResolvers.length > 0) {
     entry.importantResolvers = importantResolvers;
   }
+  if (varDeferred !== null && varDeferred.length > 0) entry.varDeferred = varDeferred;
 }
 
 function processDecls(decls: StaticDeclNode[]): {
@@ -1313,7 +1323,7 @@ function applyRuleClass(
   }
   const decls = collectDecls(node.children);
   if (decls.length === 0) return;
-  const { base, resolvers, important, importantResolvers } = processDecls(decls);
+  const { base, resolvers, important, importantResolvers, varDeferred } = processDecls(decls);
 
   if (cls.kind === 'pseudo') {
     pushBucket(
@@ -1322,6 +1332,7 @@ function applyRuleClass(
       resolvers,
       important,
       importantResolvers,
+      varDeferred,
       outer,
       cls.pseudo,
       undefined,
@@ -1335,6 +1346,7 @@ function applyRuleClass(
         resolvers,
         important,
         importantResolvers,
+        varDeferred,
         outer,
         cls.pseudos[i],
         undefined,
@@ -1342,11 +1354,38 @@ function applyRuleClass(
       );
     }
   } else if (cls.kind === 'combinator') {
-    pushCombinatorBucket(conditional, base, resolvers, important, importantResolvers, outer, cls);
+    pushCombinatorBucket(
+      conditional,
+      base,
+      resolvers,
+      important,
+      importantResolvers,
+      varDeferred,
+      outer,
+      cls
+    );
   } else if (cls.kind === 'nthChild') {
-    pushNthChildBucket(conditional, base, resolvers, important, importantResolvers, outer, cls);
+    pushNthChildBucket(
+      conditional,
+      base,
+      resolvers,
+      important,
+      importantResolvers,
+      varDeferred,
+      outer,
+      cls
+    );
   } else if (cls.kind === 'has') {
-    pushHasBucket(conditional, base, resolvers, important, importantResolvers, outer, cls);
+    pushHasBucket(
+      conditional,
+      base,
+      resolvers,
+      important,
+      importantResolvers,
+      varDeferred,
+      outer,
+      cls
+    );
   } else {
     // attr
     for (let i = 0; i < cls.selectors.length; i++) {
@@ -1356,6 +1395,7 @@ function applyRuleClass(
         resolvers,
         important,
         importantResolvers,
+        varDeferred,
         outer,
         cls.selectors[i].pseudo,
         cls.selectors[i],
@@ -1377,6 +1417,7 @@ function pushNthChildBucket(
   resolvers: Array<[string, Resolver]>,
   important: Dict<any> | null,
   importantResolvers: Array<[string, Resolver]> | null,
+  varDeferred: Array<[string, string, boolean]> | null,
   outer:
     | {
         type: 'media' | 'container' | 'supports';
@@ -1395,7 +1436,7 @@ function pushNthChildBucket(
   };
   if (cls.pseudo) entry.pseudo = cls.pseudo;
   if (cls.negate === true) entry.negate = true;
-  attachBucketExtras(entry, resolvers, important, importantResolvers);
+  attachBucketExtras(entry, resolvers, important, importantResolvers, varDeferred);
   conditional.push(entry);
 }
 
@@ -1428,6 +1469,7 @@ function pushHasBucket(
   resolvers: Array<[string, Resolver]>,
   important: Dict<any> | null,
   importantResolvers: Array<[string, Resolver]> | null,
+  varDeferred: Array<[string, string, boolean]> | null,
   outer:
     | {
         type: 'media' | 'container' | 'supports';
@@ -1455,7 +1497,7 @@ function pushHasBucket(
   };
   if (cls.pseudo) entry.pseudo = cls.pseudo;
   if (cls.negate === true) entry.negate = true;
-  attachBucketExtras(entry, resolvers, important, importantResolvers);
+  attachBucketExtras(entry, resolvers, important, importantResolvers, varDeferred);
   conditional.push(entry);
 }
 
@@ -1476,6 +1518,7 @@ function pushCombinatorBucket(
   resolvers: Array<[string, Resolver]>,
   important: Dict<any> | null,
   importantResolvers: Array<[string, Resolver]> | null,
+  varDeferred: Array<[string, string, boolean]> | null,
   outer:
     | {
         type: 'media' | 'container' | 'supports';
@@ -1497,7 +1540,7 @@ function pushCombinatorBucket(
     styles: base,
   };
   if (cls.pseudo) entry.pseudo = cls.pseudo;
-  attachBucketExtras(entry, resolvers, important, importantResolvers);
+  attachBucketExtras(entry, resolvers, important, importantResolvers, varDeferred);
   conditional.push(entry);
 }
 
@@ -1513,6 +1556,7 @@ function pushBucket(
   resolvers: Array<[string, Resolver]>,
   important: Dict<any> | null,
   importantResolvers: Array<[string, Resolver]> | null,
+  varDeferred: Array<[string, string, boolean]> | null,
   outer:
     | {
         type: 'media' | 'container' | 'supports';
@@ -1547,7 +1591,7 @@ function pushBucket(
   }
   if (negate === true) entry.negate = true;
   entry.styles = stripSpecialCasesFromConditional(base, entry);
-  attachBucketExtras(entry, resolvers, important, importantResolvers);
+  attachBucketExtras(entry, resolvers, important, importantResolvers, varDeferred);
   conditional.push(entry);
 }
 
@@ -1613,7 +1657,7 @@ function handleAtRule(
     // Direct declarations inside the at-rule body apply to the component itself.
     const decls = collectDecls(node.children);
     if (decls.length > 0) {
-      const { base, resolvers, important, importantResolvers } = processDecls(decls);
+      const { base, resolvers, important, importantResolvers, varDeferred } = processDecls(decls);
       const entry: ConditionalStyle = {
         type: outer.type,
         condition: outer.condition,
@@ -1621,7 +1665,7 @@ function handleAtRule(
       };
       if (outer.containerName) entry.containerName = outer.containerName;
       entry.styles = stripSpecialCasesFromConditional(base, entry);
-      attachBucketExtras(entry, resolvers, important, importantResolvers);
+      attachBucketExtras(entry, resolvers, important, importantResolvers, varDeferred);
       conditional.push(entry);
     }
 
