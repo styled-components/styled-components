@@ -404,6 +404,114 @@ describe('CSS Custom Properties Module Level 1 spec compliance', () => {
     });
   });
 
+  describe('var() inside conditional buckets', () => {
+    function flat(El: React.ComponentType<any>, props: object = {}): any {
+      const tree = TestRenderer.create(React.createElement(El, props));
+      const raw = tree.root.findByType(View).props.style;
+      if (!Array.isArray(raw)) return raw;
+      const out: any = {};
+      for (const layer of raw) Object.assign(out, layer ?? {});
+      return out;
+    }
+
+    it('@media bucket resolves var() against own --* declarations', () => {
+      const Box = styled(View)`
+        --brand: tomato;
+        @media (min-width: 0px) {
+          color: var(--brand);
+        }
+      `;
+      expect(flat(Box).color).toBe('tomato');
+    });
+
+    it('@media bucket resolves var() against ancestor --* declarations', () => {
+      const Theme = styled(View)`
+        --brand: rebeccapurple;
+      `;
+      const Leaf = styled(View)`
+        @media (min-width: 0px) {
+          color: var(--brand);
+        }
+      `;
+      const tree = TestRenderer.create(
+        <Theme>
+          <Leaf />
+        </Theme>
+      );
+      const all = tree.root.findAllByType(View);
+      const raw = all[all.length - 1].props.style;
+      const out: any = {};
+      if (Array.isArray(raw)) for (const layer of raw) Object.assign(out, layer ?? {});
+      else Object.assign(out, raw ?? {});
+      expect(out.color).toBe('rebeccapurple');
+    });
+
+    it('attribute-selector bucket resolves var() against own --* declarations', () => {
+      const Box = styled(View)`
+        --brand: papayawhip;
+        &[data-on='true'] {
+          color: var(--brand);
+        }
+      `;
+      const tree = TestRenderer.create(React.createElement(Box, { 'data-on': 'true' }));
+      const raw = tree.root.findByType(View).props.style;
+      const out: any = {};
+      if (Array.isArray(raw)) for (const layer of raw) Object.assign(out, layer ?? {});
+      else Object.assign(out, raw ?? {});
+      expect(out.color).toBe('papayawhip');
+    });
+
+    it('falls back inside a bucket when the var() is unresolved', () => {
+      const Box = styled(View)`
+        @media (min-width: 0px) {
+          color: var(--missing, slategray);
+        }
+      `;
+      expect(flat(Box).color).toBe('slategray');
+    });
+  });
+
+  describe('quote-aware var() argument parsing', () => {
+    // Spec: var() argument parsing must respect CSS string literals.
+    // A quoted string can contain `)` (would terminate var() naively)
+    // or `,` (would prematurely split name from fallback).
+    it('a `)` inside a quoted fallback does not terminate the var() early', () => {
+      // The `)` lives INSIDE the quoted fallback. A naive
+      // findMatchingClose would cut the var() short there, leaking
+      // ` paren')` into the surrounding value. With quote-awareness the
+      // real closing `)` is at the end and `--existing` substitutes
+      // cleanly to tomato.
+      const Box = styled(View)`
+        --existing: tomato;
+        color: var(--existing, ${"'has)paren'"});
+      `;
+      const tree = TestRenderer.create(React.createElement(Box));
+      const raw = tree.root.findByType(View).props.style;
+      const out: any = {};
+      if (Array.isArray(raw)) for (const layer of raw) Object.assign(out, layer ?? {});
+      else Object.assign(out, raw ?? {});
+      expect(out.color).toBe('tomato');
+    });
+
+    it('a `,` inside a quoted fallback is not treated as the name/fallback split', () => {
+      // `--existing` is set so the fallback machinery never runs; this
+      // isolates the test to argument parsing. If the comma inside the
+      // quoted name is misread as the name/fallback split, `--existing`
+      // wouldn't be found and the result would silently drop instead
+      // of substituting tomato.
+      const Box = styled(View)`
+        --existing: tomato;
+        color: var(--existing, ${"'red, blue'"});
+      `;
+      const tree = TestRenderer.create(React.createElement(Box));
+      const raw = tree.root.findByType(View).props.style;
+      const out: any = {};
+      if (Array.isArray(raw)) for (const layer of raw) Object.assign(out, layer ?? {});
+      else Object.assign(out, raw ?? {});
+      expect(out.color).toBe('tomato');
+    });
+  });
+
   describe('developer feedback', () => {
     // Unresolvable var() without a fallback drops the declaration and
     // surfaces a dev warning so the silent missing value is debuggable.

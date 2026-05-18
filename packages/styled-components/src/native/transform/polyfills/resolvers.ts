@@ -402,6 +402,10 @@ function findMatchingClose(s: string, openIdx: number): number {
   let depth = 0;
   for (let i = openIdx; i < s.length; i++) {
     const c = s.charCodeAt(i);
+    if (c === 0x22 || c === 0x27) {
+      i = skipString(s, i, c);
+      continue;
+    }
     if (c === $.OPEN_PAREN) depth++;
     else if (c === $.CLOSE_PAREN) {
       depth--;
@@ -409,6 +413,25 @@ function findMatchingClose(s: string, openIdx: number): number {
     }
   }
   return -1;
+}
+
+/** Advance past a `'…'` / `"…"` string literal that begins at `i`,
+ *  returning the index of the closing quote (`i` if unterminated, in
+ *  which case the caller naturally walks to end-of-string). Honors
+ *  `\<x>` escapes per CSS Syntax 3 §4.3.5. */
+function skipString(s: string, i: number, quote: number): number {
+  const len = s.length;
+  let j = i + 1;
+  while (j < len) {
+    const c = s.charCodeAt(j);
+    if (c === 0x5c) {
+      j += 2;
+      continue;
+    }
+    if (c === quote) return j;
+    j++;
+  }
+  return j;
 }
 
 const NATIVE_MATH_OPTS: BuildOpts = {
@@ -942,6 +965,10 @@ function topLevelCommaIdx(s: string): number {
   let depth = 0;
   for (let i = 0; i < s.length; i++) {
     const c = s.charCodeAt(i);
+    if (c === 0x22 || c === 0x27) {
+      i = skipString(s, i, c);
+      continue;
+    }
     if (c === $.OPEN_PAREN) depth++;
     else if (c === $.CLOSE_PAREN) depth--;
     else if (c === $.COMMA && depth === 0) return i;
