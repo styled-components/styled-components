@@ -1,1 +1,30 @@
+# Default to LF and let git auto-detect text vs binary
+* text=auto eol=lf
+
+# Source and test files always render as text (UTF-8 § / ≈ / em-dash glyphs in
+# CSS spec citations trip git's binary heuristic without this).
+*.ts        text diff
+*.tsx       text diff
+*.js        text diff
+*.mjs       text diff
+*.cjs       text diff
+*.json      text diff
+*.md        text diff
+*.yml       text diff
+*.yaml      text diff
+*.html      text diff
+*.css       text diff
+*.svg       text diff
+
+# Known binary artifacts
 test-results.json binary
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.otf       binary
+*.pdf       binary

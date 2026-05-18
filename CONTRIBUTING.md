@@ -53,7 +53,6 @@ Here is a quick guide to doing code contributions to the library.
 6. Make desired changes...
 
 7. Add a changeset via `pnpm changeset`, be descriptive!
-
    - patch = bugfix, chores, small things
    - minor = new functionality
    - major = breaking changes

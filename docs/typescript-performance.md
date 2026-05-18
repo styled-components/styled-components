@@ -45,7 +45,7 @@ Defined as `FastOmit<P, K> & { [Key in Extract<keyof P, K>]?: P[Key] }`; direct 
 ### `NoInfer`
 
 Use built-in `NoInfer` (TS 5.4+) internally. **Never declare a local `NoInfer<T>`
-alias in the same file as types that reference it** — within a single source
+alias in the same file as types that reference it** - within a single source
 file, the local declaration shadows the global lib type and references resolve
 to the slower form (`[T][T extends any ? 0 : never]` deferred type instead of
 the built-in marker). v7 saw a measured -3% to -5% consumer instantiations from
@@ -54,7 +54,7 @@ removing one such shadow in `types.ts`.
 ### `Interpolation` union
 
 `RuleSet<Props>` aliases `Interpolation<Props>[]`, so don't list both as
-separate branches inside `Interpolation<Props>` — TS doesn't always collapse
+separate branches inside `Interpolation<Props>` - TS doesn't always collapse
 type aliases against their expansion at union dedupe time.
 
 ### Inline trivial `FastOmit` results
@@ -80,10 +80,10 @@ load-bearing for the contextual typing of `.attrs({ as: 'label' })`: the literal
 `'label'` only narrows against a union that includes `SupportedHTMLElements`. If
 `KnownTarget` becomes plain `string | ComponentType<any>`, the literal widens to
 `string` and downstream `ComponentPropsWithRef<Target>` resolves to the wrong
-element / event types — breaking ref typing for attrs-overridden styled
+element / event types - breaking ref typing for attrs-overridden styled
 components. The lib's `test/types.tsx:305-306` is the regression gate.
 
 Localizing the literal union to an attrs-only helper type keeps the literal
 narrowing but doesn't recover the win, since `Attrs<Props>` is referenced from
-`IStyledStatics.attrs[]` — the literal-bearing type still propagates wherever a
+`IStyledStatics.attrs[]` - the literal-bearing type still propagates wherever a
 styled component appears.

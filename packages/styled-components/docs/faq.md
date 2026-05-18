@@ -22,7 +22,7 @@ export default function Page() {
 }
 ```
 
-RSC environments are detected automatically—no configuration required. Styles are emitted alongside each component's markup and deduplicated per render.
+RSC environments are detected automatically; no configuration required. Styles are emitted alongside each component's markup and deduplicated per render.
 
 **For Next.js App Router (SSR Style Extraction):**
 
@@ -77,7 +77,7 @@ The registry collects styles from client components during SSR so pages are full
 
 **For traditional SSR (Next.js Pages Router, custom SSR):**
 
-Continue using `ServerStyleSheet` as before - no changes needed!
+Continue using `ServerStyleSheet` as before; no changes needed!
 
 **RSC Best Practices:**
 
@@ -108,11 +108,11 @@ export default async function Page() {
 }
 ```
 
-This generates static CSS with a sensible default—no attribute needed for the base case.
+This generates static CSS with a sensible default; no attribute needed for the base case.
 
 2. **Use CSS custom properties for dynamic values:**
 
-CSS variables can be set via inline `style` and cascade to all DOM children—perfect for RSC theming:
+CSS variables can be set via inline `style` and cascade to all DOM children, which suits RSC theming:
 
 ```tsx
 const Container = styled.div``;

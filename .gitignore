@@ -30,8 +30,11 @@ native-compile-profile.md
 # Bun CPU profiles (`bun --cpu-prof-md`, see AGENTS.md Profiling)
 .cpu-profiles
 parser-profile-harness
-# WPT raw HTML fixtures — corpus.json is the canonical extracted form;
+# WPT raw HTML fixtures - corpus.json is the canonical extracted form;
 # `pnpm wpt:fetch` re-pulls raw/ from upstream when refreshing.
 packages/styled-components/src/parser/wpt-corpus/raw/
 .cursor
+
+# Local prerelease release-notes dry-run (see scripts/release-notes)
+.dry-run-release-notes/
 

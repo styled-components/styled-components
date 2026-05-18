@@ -1,15 +1,20 @@
 {
   "name": "styled-components-project",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "pnpm --filter styled-components build",
     "sandbox": "pnpm --filter sandbox dev",
     "release": "pnpm --filter styled-components prepublishOnly && changeset publish",
     "postinstall": "pnpm --filter styled-components generateErrors",
     "prepare": "husky",
-    "prettier": "pnpm --filter styled-components prettier:check",
+    "format": "prettier . --write",
+    "lint-staged": "lint-staged",
+    "prettier": "prettier . --check",
     "size": "pnpm --filter styled-components size",
-    "test": "pnpm --filter styled-components test"
+    "test": "pnpm --filter styled-components test",
+    "test:changeset-changelog": "node --test scripts/release-notes/changelog.test.ts scripts/release-notes/prerelease-aggregation.test.ts",
+    "dry-run:prerelease-notes": "node scripts/release-notes/build-prerelease-release-notes.ts"
   },
   "author": "Glen Maddern",
   "license": "MIT",
@@ -23,7 +28,12 @@
   "packageManager": "pnpm@10.0.0",
   "devDependencies": {
     "@changesets/cli": "^2.27.7",
-    "husky": "9.1.7"
+    "husky": "9.1.7",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.6.2"
+  },
+  "lint-staged": {
+    "*": "prettier --write --ignore-unknown"
   },
   "pnpm": {
     "overrides": {

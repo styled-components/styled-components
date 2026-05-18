@@ -1,6 +1,9 @@
 {
   "$schema": "https://unpkg.com/@changesets/config@3.0.2/schema.json",
-  "changelog": "@changesets/cli/changelog",
+  "changelog": [
+    "../scripts/release-notes/changelog.ts",
+    { "repo": "styled-components/styled-components", "branch": "main" }
+  ],
   "commit": false,
   "fixed": [],
   "linked": [],
