@@ -9,7 +9,7 @@ import { InlineMarkdown, Markdown } from '@/components/Markdown';
  * pseudo-classes). Each row places styled siblings inside a styled
  * parent so the per-child sibling context is published; the probes
  * read it through real CSS rules. A matched probe both fills with the
- * MATCH color AND grows tall — pairing color and height so the row
+ * MATCH color AND grows tall - pairing color and height so the row
  * reads as an unmissable stair-step of matches.
  */
 
@@ -71,7 +71,7 @@ const LegendText = styled.Text`
   color: ${t.colors.fg};
 `;
 
-// Marker — visually distinct catalyst (square + ink color). Its presence
+// Marker - visually distinct catalyst (square + ink color). Its presence
 // makes the AdjacentProbe immediately to its right fill MATCH via
 // `${Marker} + &`. Square shape vs bar shape keeps it readable as the
 // "trigger" at a glance.
@@ -140,12 +140,25 @@ const Nth2Probe = styled.View`
     background-color: ${MATCH};
   }
 `;
-// :nth-of-type — fires on the first View among mixed View + Text siblings.
+// :nth-of-type - fires on the first View among mixed View + Text siblings.
 const TypeProbe = styled.View`
   flex: 1;
   height: 16px;
   background-color: ${OFF};
   &:nth-of-type(1) {
+    height: 48px;
+    background-color: ${MATCH};
+  }
+`;
+
+// :nth-child(<formula> of S) - the formula counts position WITHIN the
+// filtered subset, so inactive probes never advance the counter. With
+// `2n+1 of [data-active]` only odd active siblings match.
+const FilteredProbe = styled.View`
+  flex: 1;
+  height: 16px;
+  background-color: ${OFF};
+  &:nth-child(2n + 1 of [data-active]) {
     height: 48px;
     background-color: ${MATCH};
   }
@@ -174,7 +187,7 @@ export function SiblingNthBoard() {
         <RowGroup>
           <LabeledRow>
             <InlineMarkdown variant="brief">
-              {'`${Marker} + &` — adjacent: prev sibling must be a `Marker`'}
+              {'`${Marker} + &` - adjacent: prev sibling must be a `Marker`'}
             </InlineMarkdown>
             <ProbeRow>
               <AdjacentProbe />
@@ -188,7 +201,7 @@ export function SiblingNthBoard() {
 
           <LabeledRow>
             <InlineMarkdown variant="brief">
-              {'`${Marker} ~ &` — general: any prior sibling must be a `Marker`'}
+              {'`${Marker} ~ &` - general: any prior sibling must be a `Marker`'}
             </InlineMarkdown>
             <ProbeRow>
               <GeneralProbe />
@@ -205,7 +218,7 @@ export function SiblingNthBoard() {
         <RowGroup>
           <LabeledRow>
             <InlineMarkdown variant="brief">
-              {'`&:first-child` — only the first probe fires'}
+              {'`&:first-child` - only the first probe fires'}
             </InlineMarkdown>
             <ProbeRow>
               <PosProbe />
@@ -217,7 +230,7 @@ export function SiblingNthBoard() {
 
           <LabeledRow>
             <InlineMarkdown variant="brief">
-              {'`&:last-child` — only the final probe fires'}
+              {'`&:last-child` - only the final probe fires'}
             </InlineMarkdown>
             <ProbeRow>
               <LastProbe />
@@ -228,7 +241,7 @@ export function SiblingNthBoard() {
           </LabeledRow>
 
           <LabeledRow>
-            <InlineMarkdown variant="brief">{'`&:nth-child(odd)` — alternating'}</InlineMarkdown>
+            <InlineMarkdown variant="brief">{'`&:nth-child(odd)` - alternating'}</InlineMarkdown>
             <ProbeRow>
               <OddProbe />
               <OddProbe />
@@ -240,7 +253,7 @@ export function SiblingNthBoard() {
 
           <LabeledRow>
             <InlineMarkdown variant="brief">
-              {'`&:nth-child(2)` — only the second probe fires'}
+              {'`&:nth-child(2)` - only the second probe fires'}
             </InlineMarkdown>
             <ProbeRow>
               <Nth2Probe />
@@ -253,10 +266,27 @@ export function SiblingNthBoard() {
       </Section>
 
       <Section>
+        <SectionTitle>:nth-child(&lt;formula&gt; of S)</SectionTitle>
+        <Markdown variant="hint">
+          {
+            'The formula counts position WITHIN the filter selector, not the full sibling list. Inactive probes never advance the counter, so `2n+1 of [data-active]` matches every odd ACTIVE sibling regardless of how many inactive ones sit between them.'
+          }
+        </Markdown>
+        <ProbeRow>
+          <FilteredProbe data-active />
+          <FilteredProbe />
+          <FilteredProbe data-active />
+          <FilteredProbe />
+          <FilteredProbe data-active />
+          <FilteredProbe data-active />
+        </ProbeRow>
+      </Section>
+
+      <Section>
         <SectionTitle>:nth-of-type vs :nth-child</SectionTitle>
         <Markdown variant="hint">
           {
-            'Same parent, mixed element types (`View` + `Text`). `:nth-of-type(1)` indexes only same-target siblings — the first `View` matches even though it is the second JSX child.'
+            'Same parent, mixed element types (`View` + `Text`). `:nth-of-type(1)` indexes only same-target siblings - the first `View` matches even though it is the second JSX child.'
           }
         </Markdown>
         <ProbeRow>

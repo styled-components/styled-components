@@ -6,10 +6,10 @@ import { RING_PALETTE } from './PlatonicLogo';
 // Logo palette anchors used as seeds for the modern color-function demos.
 // The lightness ramp anchors on `red`; color-mix examples interpolate
 // between distinct hues to exercise oklch path selection.
-const RED = RING_PALETTE[0];        // h=28
-const GREEN = RING_PALETTE[6];      // h=136
-const BLUE = RING_PALETTE[13];      // h=263
-const VIOLET = RING_PALETTE[14];    // h=278
+const RED = RING_PALETTE[0]; // h=28
+const GREEN = RING_PALETTE[6]; // h=136
+const BLUE = RING_PALETTE[13]; // h=263
+const VIOLET = RING_PALETTE[14]; // h=278
 
 /**
  * Modern color functions: `oklch()`, `oklab()`, `lch()`, `lab()`, and

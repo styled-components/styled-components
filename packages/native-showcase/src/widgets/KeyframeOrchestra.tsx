@@ -5,7 +5,7 @@ import { theme as t } from '@/theme/tokens';
 /**
  * Demonstrates the v7 @keyframes animation adapter on React Native.
  *
- * Every row uses CSS `animation` with inline `@keyframes` definitions —
+ * Every row uses CSS `animation` with inline `@keyframes` definitions -
  * no manual Animated.Value, no useRef, no imperative start/stop. The
  * engine wires Animated.timing / loop / sequence under the hood.
  *
@@ -418,8 +418,8 @@ export function KeyframeOrchestra() {
 
       <Caption>
         {env.reduceMotion
-          ? 'Reduce-motion is on — animations skip to their final state.'
-          : 'Pure CSS @keyframes — no Animated API at the component layer. All native-thread.'}
+          ? 'Reduce-motion is on - animations skip to their final state.'
+          : 'Pure CSS @keyframes - no Animated API at the component layer. All native-thread.'}
       </Caption>
     </Stack>
   );

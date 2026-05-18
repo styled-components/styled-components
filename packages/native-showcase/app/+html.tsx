@@ -6,7 +6,7 @@ import { type PropsWithChildren } from 'react';
  * resolves theme tokens to literal hex on rn-web, so dark-mode chrome
  * relies on the browser-native `light-dark()` CSS function. That
  * function only honors `prefers-color-scheme` when the document opts
- * into dark via `color-scheme` — without this meta, `light-dark()`
+ * into dark via `color-scheme` - without this meta, `light-dark()`
  * silently falls back to its first (light) argument.
  */
 export default function Root({ children }: PropsWithChildren) {

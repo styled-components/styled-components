@@ -5,7 +5,7 @@ import { theme as t } from '@/theme/tokens';
 /**
  * Standalone `translate`, `rotate`, `scale` properties (CSS Transforms
  * Module Level 2 §3). These are independent of the `transform`
- * shorthand — they cascade separately and don't need the array syntax
+ * shorthand - they cascade separately and don't need the array syntax
  * RN's runtime expects. The v7 native polyfill lowers each declaration
  * to the equivalent `transform:` string at compile time.
  *
@@ -58,7 +58,7 @@ const Idle = styled.View`
 `;
 
 // Each cell is the same baseline shape, with one standalone property
-// applied. Keeping shape + colour constant isolates the property under
+// applied. Keeping shape + color constant isolates the property under
 // test.
 const Cell = styled.View`
   width: 24px;

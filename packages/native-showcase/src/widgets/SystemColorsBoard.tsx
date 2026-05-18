@@ -3,7 +3,7 @@ import styled from 'styled-components/native';
 import { theme as t } from '@/theme/tokens';
 
 /**
- * CSS Color 4 §6.2 — UA / platform system colors. Each keyword folds
+ * CSS Color 4 §6.2 - UA / platform system colors. Each keyword folds
  * to the native platform color surface on iOS / Android, and rn-web
  * hands the keyword to the browser directly.
  */

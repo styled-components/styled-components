@@ -172,8 +172,7 @@ const EmptyLabel = styled.Text`
 
 type Row = { kind: 'group'; label: string } | { kind: 'item'; item: JumpItem };
 
-const keyExtractor = (r: Row): string =>
-  r.kind === 'group' ? `g:${r.label}` : `i:${r.item.slug}`;
+const keyExtractor = (r: Row): string => (r.kind === 'group' ? `g:${r.label}` : `i:${r.item.slug}`);
 
 function filterGroups(
   groups: ReadonlyArray<JumpGroup>,
@@ -334,12 +333,7 @@ export function FeatureJumpSelect({ groups, onJump }: Props) {
           );
         }}
       </Trigger>
-      <Modal
-        visible={open}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setOpen(false)}
-      >
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <ModalRoot>
           <BackdropPress
             style={StyleSheet.absoluteFill}

@@ -21,14 +21,14 @@ Requirements for iOS:
 
 Requirements for Android:
 
-- Android Studio (provides JDK 21 at `/Applications/Android Studio.app/Contents/jbr/Contents/Home` on macOS — set as `JAVA_HOME` for the build session)
+- Android Studio (provides JDK 21 at `/Applications/Android Studio.app/Contents/jbr/Contents/Home` on macOS - set as `JAVA_HOME` for the build session)
 - Android SDK platform 36 + build-tools 36 + NDK 27 + CMake 3.22 (auto-installed on first build)
 - An emulator or attached device. Create a Pixel-class AVD via Android Studio and boot it before running.
 - The wrapper is pinned to Gradle 8.13. Expo SDK 56 canary's templated wrapper (Gradle 9.3.1) is incompatible with the Kotlin Gradle Plugin 2.1.20 that React Native 0.85 ships, so `prebuild` regeneration must be followed by re-pinning the wrapper to 8.13 in `android/gradle/wrapper/gradle-wrapper.properties` until upstream lands the Kotlin 2.2.x bump.
 
 If `ios/` or `android/` doesn't exist yet, run `pnpm --filter native-showcase prebuild` once to generate them.
 
-If you are iterating on styled-components source while the showcase is running, run `pnpm --filter styled-components build --watch` in a second terminal — Metro watches the dist output, not the source tree.
+If you are iterating on styled-components source while the showcase is running, run `pnpm --filter styled-components build --watch` in a second terminal - Metro watches the dist output, not the source tree.
 
 ### Android dev-client connection
 
@@ -50,6 +50,6 @@ Each entry sits in one broad CSS category. Add new categories to `FidgetCategory
 - Layout: grid / aspect-ratio / @container / logical spacing
 - Math & units: vw / cqw / calc / min / max / clamp
 - Typography: font-variant / line-clamp / text-decoration
-- Responsive environment: env() / @media / prefers-*
+- Responsive environment: env() / @media / prefers-\*
 - Selectors & state: &:hover / &[attr] / @media + :state
 - Theming: createTheme + ThemeProvider

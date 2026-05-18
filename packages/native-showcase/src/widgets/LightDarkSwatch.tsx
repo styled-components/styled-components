@@ -85,8 +85,8 @@ export function LightDarkSwatch() {
         </MediaSwatch>
       </Row>
       <Hint>
-        Both branches follow the OS color scheme. In the iOS simulator press ⇧⌘A to toggle, or
-        flip Settings → Developer → Dark Appearance.
+        Both branches follow the OS color scheme. In the iOS simulator press ⇧⌘A to toggle, or flip
+        Settings → Developer → Dark Appearance.
       </Hint>
     </>
   );

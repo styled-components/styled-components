@@ -4,7 +4,7 @@ import { theme as t } from '@/theme/tokens';
 import { Markdown } from '@/components/Markdown';
 
 /**
- * CSS Values 4 §10 — `calc()`, `min()`, `max()`, `clamp()` plus the
+ * CSS Values 4 §10 - `calc()`, `min()`, `max()`, `clamp()` plus the
  * L4 expansion (`round`, `mod`, `rem`, trig, `pow`, `sqrt`, `hypot`,
  * `abs`, `sign`). Each row renders a single bar whose `width` is the
  * formula in question; the bar's rendered length IS the proof of the
@@ -46,7 +46,7 @@ const Bar = styled.View`
   background-color: ${t.colors.ink};
 `;
 
-// Static folds — resolved to a fixed pixel value at compile time.
+// Static folds - resolved to a fixed pixel value at compile time.
 const SumFold = styled(Bar)`
   width: calc(120px + 80px);
 `;
@@ -75,7 +75,7 @@ const ModFold = styled(Bar)`
   width: mod(127, 30);
 `;
 
-// Runtime — re-resolves against viewport on each render.
+// Runtime - re-resolves against viewport on each render.
 const RuntimeBar = styled(Bar)`
   background-color: ${t.colors.pass};
 `;
@@ -133,7 +133,7 @@ export function MathFunctionsLab() {
         <SectionTitle>Viewport-aware (runtime)</SectionTitle>
         <Markdown variant="hint">
           {
-            'Each green bar mixes static and viewport arms. Rotate the device or resize the window — these re-resolve every render against `Dimensions.get(window)`.'
+            'Each green bar mixes static and viewport arms. Rotate the device or resize the window - these re-resolve every render against `Dimensions.get(window)`.'
           }
         </Markdown>
         <Baseline>

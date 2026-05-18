@@ -18,7 +18,7 @@ const Stack = styled.View`
  * v7's native engine supports single (`&[a]`), compound (`&[a][b]`),
  * and comma-grouped (`&[a], &[b]`) attribute selectors. The compound
  * rule below only fires when BOTH `data-variant='ghost'` AND
- * `aria-pressed='true'` are set on the rendered element — every
+ * `aria-pressed='true'` are set on the rendered element - every
  * other path is a single-attr selector that cascades by source order.
  */
 const Pill = styled.Pressable`
@@ -57,15 +57,27 @@ const Pill = styled.Pressable`
     border-color: ${t.colors.pass};
   }
 
-  /* CSS Selectors 4 §6.2 operators */
-  &[data-tone^='pa'] {
-    /* Prefix-match: tones starting with "pa" (pass) */
+  /* Selectors 4 §6.2 - operator showcase. Each rule adds a side rail
+     in its own color so the operator is visually attributable. */
+  &[data-channel^='ux-'] {
+    border-left-width: 4px;
+    border-left-color: ${t.colors.pass};
   }
-  &[data-tone*='ai'] {
-    /* Substring-match: tones containing "ai" (fail) */
+  &[data-channel$='-eng'] {
+    border-right-width: 4px;
+    border-right-color: ${t.colors.fail};
+  }
+  &[data-channel*='ops'] {
+    border-top-width: 4px;
+    border-top-color: ${t.colors.ink};
+  }
+  &[data-channel|='design'] {
+    border-bottom-width: 4px;
+    border-bottom-color: ${t.colors.ink};
   }
 
-  /* CSS Selectors 4 §4.3 :not — flips back to default when pressed */
+  /* Selectors 4 §4.3 - :not flips the default border back when no
+     other attribute matched. */
   &:not([aria-pressed='true']):not([data-tone='pass']):not([data-tone='fail']) {
     border-color: ${t.colors.fgMuted};
   }
@@ -131,6 +143,30 @@ const VARIANTS: ReadonlyArray<Variant> = [
     label: 'Ghost',
     attrs: { 'data-variant': 'ghost' },
     selector: "[data-variant='ghost']",
+  },
+  {
+    id: 'prefix',
+    label: 'ux-research',
+    attrs: { 'data-channel': 'ux-research' },
+    selector: "[data-channel^='ux-']",
+  },
+  {
+    id: 'suffix',
+    label: 'platform-eng',
+    attrs: { 'data-channel': 'platform-eng' },
+    selector: "[data-channel$='-eng']",
+  },
+  {
+    id: 'substring',
+    label: 'devops',
+    attrs: { 'data-channel': 'devops' },
+    selector: "[data-channel*='ops']",
+  },
+  {
+    id: 'dashed',
+    label: 'design-systems',
+    attrs: { 'data-channel': 'design-systems' },
+    selector: "[data-channel|='design']",
   },
 ];
 

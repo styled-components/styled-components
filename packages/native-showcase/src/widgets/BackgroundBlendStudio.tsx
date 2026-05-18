@@ -83,7 +83,8 @@ const StackedCard = styled.View<{ $blend: string }>`
   width: 168px;
   height: 112px;
   background-color: ${t.colors.pass};
-  background-image: linear-gradient(135deg, transparent 0%, #000 100%),
+  background-image:
+    linear-gradient(135deg, transparent 0%, #000 100%),
     linear-gradient(45deg, #ff8a00 0%, transparent 60%);
   background-blend-mode: ${p => p.$blend};
   border: ${t.borderWidth.hairline}px solid ${t.colors.border};
@@ -103,8 +104,8 @@ export function BackgroundBlendStudio() {
       </Stack>
 
       <Markdown variant="hint">
-        Same photo + bubble-gum `background-color`, only
-        `background-blend-mode` changes between cards.
+        Same photo + bubble-gum `background-color`, only `background-blend-mode` changes between
+        cards.
       </Markdown>
 
       <StackedRow>
@@ -120,20 +121,17 @@ export function BackgroundBlendStudio() {
       </StackedRow>
 
       <Markdown variant="hint">
-        Multi-layer: two stacked gradients with paired blend modes
-        (first comma applies to the top gradient).
+        Multi-layer: two stacked gradients with paired blend modes (first comma applies to the top
+        gradient).
       </Markdown>
 
       <Markdown variant="hint">
-        On rn-web the browser handles `background-blend-mode` natively. On
-        iOS / Android styled-components synthesizes the spec by injecting
-        absolutely-positioned blend layers + `isolation: isolate`.
-        Linear-friendly modes (multiply / screen / darken / lighten /
-        difference / exclusion) match browsers. Gamma-sensitive modes
-        (color-burn / color-dodge / soft-light / overlay / hard-light)
-        render with more saturation on native because platform compositors
-        blend in linear-light while browsers blend in gamma-encoded sRGB
-        per CSS spec.
+        On rn-web the browser handles `background-blend-mode` natively. On iOS / Android
+        styled-components synthesizes the spec by injecting absolutely-positioned blend layers +
+        `isolation: isolate`. Linear-friendly modes (multiply / screen / darken / lighten /
+        difference / exclusion) match browsers. Gamma-sensitive modes (color-burn / color-dodge /
+        soft-light / overlay / hard-light) render with more saturation on native because platform
+        compositors blend in linear-light while browsers blend in gamma-encoded sRGB per CSS spec.
       </Markdown>
     </>
   );

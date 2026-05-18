@@ -4,7 +4,7 @@ import { theme as t } from '@/theme/tokens';
 import { Markdown } from '@/components/Markdown';
 
 /**
- * CSS Selectors 4 §15 — descendant (`${Card} &`) and child (`${Card} > &`)
+ * CSS Selectors 4 §15 - descendant (`${Card} &`) and child (`${Card} > &`)
  * combinators against an interpolated styled-component reference.
  *
  * Each probe sits as a direct child of its row container so the child
@@ -44,7 +44,7 @@ const Card = styled.View`
 `;
 
 const StyledWrapper = styled.View`
-  /* Styled intermediary — takes over as the immediate styled parent
+  /* Styled intermediary - takes over as the immediate styled parent
      and intercepts the child combinator. */
   flex: 1;
   flex-direction: row;
@@ -147,7 +147,7 @@ export function SelectorComboBoard() {
           <ProbeLabel>{'${Card} > &'}</ProbeLabel>
         </LabelsRowFlush>
         <Markdown variant="hint">
-          {'1. Standalone — no `${Card}` ancestor. Both probes stay OFF.'}
+          {'1. Standalone - no `${Card}` ancestor. Both probes stay OFF.'}
         </Markdown>
       </Row>
 
@@ -162,7 +162,7 @@ export function SelectorComboBoard() {
         </LabelsRow>
         <Markdown variant="hint">
           {
-            '2. Direct child of `${Card}` — both probes light up. Descendant and child rules both fire.'
+            '2. Direct child of `${Card}` - both probes light up. Descendant and child rules both fire.'
           }
         </Markdown>
       </Row>

@@ -24,7 +24,7 @@
  *   `;
  *
  * Hex literals (not theme tokens) because `t.colors.ink` / `t.colors.bg`
- * resolve to the *active* theme's palette — swapping them would invert
+ * resolve to the *active* theme's palette - swapping them would invert
  * the chip and defeat the symmetric design. Alignment is intentionally
  * *not* part of this mixin; each call site owns where the chip sits.
  */

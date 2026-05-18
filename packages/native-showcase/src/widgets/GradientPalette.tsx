@@ -39,7 +39,7 @@ const Radial = styled(Card)`
 `;
 
 // Stars-and-stripes:
-//   - Background paints two layers — the navy canton (40% × 53.85%
+//   - Background paints two layers - the navy canton (40% × 53.85%
 //     of the box, pinned to the upper-left via per-layer size +
 //     position + no-repeat) plus a 13-stripe linear gradient with
 //     hard stops at every 1/13.
@@ -61,7 +61,7 @@ const Radial = styled(Card)`
 //     platform without any extra runtime prop.
 //   - Star glyph: U+2605 (★ BLACK STAR). U+2B51 (⭑) has sharper
 //     points but is a Unicode 5.1 codepoint with patchy font
-//     coverage — Android's Roboto renders it at ~0.45em while
+//     coverage - Android's Roboto renders it at ~0.45em while
 //     iOS's SF Pro renders ~0.6em, and a CSS font-family
 //     fallback stack can't equalize that because RN matches font
 //     availability, not glyph metrics. ★ is from Unicode 1.1 and
@@ -83,7 +83,7 @@ const CANTON_H = '53.85%';
 
 const STAR_ROW_COUNTS = [6, 5, 6, 5, 6, 5, 6, 5, 6] as const;
 
-// Flag breaks away from Card to drop the padding — backgrounds
+// Flag breaks away from Card to drop the padding - backgrounds
 // paint to the border-box while absolute children anchor to the
 // padding-box, so any non-zero padding offsets the canton image
 // from the StarField that sits over it.
@@ -123,7 +123,9 @@ const Flag = styled.View`
       ${RED} 92.31%,
       ${RED} 100%
     );
-  background-size: ${CANTON_W} ${CANTON_H}, 100% 100%;
+  background-size:
+    ${CANTON_W} ${CANTON_H},
+    100% 100%;
   background-repeat: no-repeat, no-repeat;
 `;
 
@@ -156,7 +158,7 @@ const StarRow = styled.View<{ $idx: number; $isShort: boolean }>`
 // always resolves it. RN matches the FIRST family that's
 // available on the platform, so the chain reads as "iOS picks
 // Helvetica, Android picks system default (Roboto), web picks
-// whichever is present" — and all three render U+2605 with
+// whichever is present" - and all three render U+2605 with
 // near-identical ~85% em-box coverage. line-height ≈ 1.2× the
 // font-size gives the glyph ascender/descender room and fixes
 // iOS bottom-clipping.

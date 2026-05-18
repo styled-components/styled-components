@@ -14,7 +14,7 @@ const Stage = styled.View`
 /**
  * Pure-CSS pulse: opacity + scale ping-pong between two states via the
  * v7 transition adapter. No `Animated.Value`, no manual `Easing`,
- * no `useRef` — the engine wires Animated.timing under the hood when
+ * no `useRef` - the engine wires Animated.timing under the hood when
  * `$expanded` flips.
  *
  * The widget gates the interval on `prefers-reduced-motion` so the
@@ -24,7 +24,7 @@ const Stage = styled.View`
  * it's belt-and-braces.
  */
 // `cubic-bezier(0.37, 0, 0.63, 1)` is the easeInOutCubic curve. It
-// dwells gently at the extremes and accelerates through the middle —
+// dwells gently at the extremes and accelerates through the middle -
 // the closest CSS keyword analogue to a calm inhale/exhale.
 const Dot = styled.View<{ $expanded: boolean }>`
   width: 24px;

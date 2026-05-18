@@ -54,7 +54,7 @@ const VARIANT_FONT: Record<
   hint: theme => ({ fontSize: 12, lineHeight: 17, color: theme.colors.fgFaint }),
 };
 
-// Inline span styled components — they route through the v7 engine, so
+// Inline span styled components - they route through the v7 engine, so
 // dark-mode token swaps land automatically when these are used.
 const InlineCode = styled.Text`
   font-family: ${t.fontFamily.mono};
@@ -129,7 +129,7 @@ function variantStyles(
     text,
     paragraph: text,
     // Inline code routes through `InlineCode` (override above), so this
-    // is redundant — but kept as a safety net for callers that disable
+    // is redundant - but kept as a safety net for callers that disable
     // the `code` override.
     codeInline: {
       fontFamily: theme.fontFamily.mono,
@@ -200,16 +200,13 @@ export function Markdown({
   const scheme = useColorScheme() ?? 'light';
   const activeTheme = scheme === 'dark' ? darkTheme : lightTheme;
   const text = flatten(children).trim();
-  const styles = React.useMemo(
-    () => variantStyles(variant, activeTheme),
-    [variant, activeTheme]
-  );
+  const styles = React.useMemo(() => variantStyles(variant, activeTheme), [variant, activeTheme]);
   // `markdown-to-jsx/native` only applies `styles.text` / `.paragraph`
   // to its semantic node types. Plain inline text falls through to the
   // outer wrapper, which rn-web renders as a `<Text>` with a hardcoded
   // `color: 'black'` baseline (see `react-native-web/Text/styles.text$raw`).
   // The baseline wins because `wrapperProps.style` is the *only* style
-  // applied to the wrapper — without an explicit color here, the brief
+  // applied to the wrapper - without an explicit color here, the brief
   // is unreadable on a dark background. Pass the full text style so
   // typography (font, size, line-height, color) inherits to all plain
   // descendants via `textHasAncestor$raw`.
