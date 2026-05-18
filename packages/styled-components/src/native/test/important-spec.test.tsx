@@ -143,9 +143,11 @@ describe('native !important spec compliance (CSS Cascade L4 §3 + §6.2)', () =>
 
   // Case insensitivity: `!IMPORTANT` and `! important` are equivalent
   // per CSS Syntax 3 tokenization.
-  it('matches !IMPORTANT case-insensitively', () => {
+  // Inputs are interpolated so the linter doesn't normalize the
+  // canonical-vs-variant token form away.
+  it('matches `!IMPORTANT` case-insensitively', () => {
     const Box = styled(View)`
-      color: red !important;
+      color: red ${'!IMPORTANT'};
       color: blue;
     `;
     expect(styleOf(Box).color).toBe('red');
@@ -153,7 +155,7 @@ describe('native !important spec compliance (CSS Cascade L4 §3 + §6.2)', () =>
 
   it('tolerates whitespace between `!` and `important`', () => {
     const Box = styled(View)`
-      color: red !important;
+      color: red ${'! important'};
       color: blue;
     `;
     expect(styleOf(Box).color).toBe('red');

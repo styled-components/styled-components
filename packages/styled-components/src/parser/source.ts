@@ -457,7 +457,15 @@ function shouldRecoverFragmentSlot(prefix: string, interpolation: unknown): bool
       }
     }
   }
-  (interpolation as unknown as { [BLOCK_LIKE]: boolean })[BLOCK_LIKE] = blockLike;
+  // Non-enumerable so the cached flag stays invisible to `toEqual` /
+  // `Object.keys` / JSON walks, matching the documented pattern used by
+  // {@link DYN} and the parser's NATIVE_RULE_CLASS / NATIVE_AT_CLASS
+  // symbol slots.
+  Object.defineProperty(interpolation, BLOCK_LIKE, {
+    value: blockLike,
+    enumerable: false,
+    configurable: true,
+  });
   return blockLike;
 }
 

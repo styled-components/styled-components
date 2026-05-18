@@ -18,7 +18,12 @@ import { classifyAtRuleNow, classifyRuleNow } from '../parser/nativePlan';
 import { camelize, transformDecl } from '../native/transform';
 import { warnIfNativeCssVar, warnIfSentinelLeak, warnOnce } from '../native/transform/dev';
 import { getPrimaryPassthroughKey } from '../native/transform/passthrough';
-import { buildResolver, Resolver, substituteVars } from '../native/transform/polyfills/resolvers';
+import {
+  buildResolver,
+  indexOfUnquotedSubstring,
+  Resolver,
+  substituteVars,
+} from '../native/transform/polyfills/resolvers';
 import { PERSPECTIVE_SENTINEL_KEY } from '../native/transform/polyfills/standaloneTransform';
 import {
   ANIMATION_LONGHAND_KEYS,
@@ -112,10 +117,10 @@ export interface ConditionalStyle {
    */
   resolvers?: Array<[string, Resolver]>;
   /**
-   * CSS Cascade L4 §6.2: declarations marked `!important` are tracked
-   * separately so they can be layered AFTER all normal declarations
-   * (including any later bucket's normal values) at render time. Only
-   * set when the bucket carries at least one `!important` decl.
+   * Declarations marked `!important` are tracked separately so they can
+   * be layered AFTER all normal declarations (including any later
+   * bucket's normal values) at render time. Only set when the bucket
+   * carries at least one `!important` decl.
    */
   important?: Dict<any>;
   /** Render-time resolvers attached to `important` declarations. */
@@ -276,12 +281,12 @@ export interface NativeStyles {
    */
   customProperties?: ReadonlyMap<string, string>;
   /**
-   * CSS Cascade L4 §6.2 — declarations marked `!important` are tracked
-   * separately so they can be overlayed AFTER all normal merging
-   * (including matched conditional buckets) at render time. `important`
-   * is the resolver-stripped static partial; `importantResolvers` holds
-   * the per-key render-time resolvers for important declarations.
-   * Within-component cascade only; cross-component is out of scope.
+   * Declarations marked `!important` tracked separately so they can be
+   * overlayed AFTER all normal merging (including matched conditional
+   * buckets) at render time. `important` is the resolver-stripped
+   * static partial; `importantResolvers` holds the per-key render-time
+   * resolvers for important declarations. Within-component only;
+   * cross-component cascade of importance is not modeled.
    */
   important?: Dict<any>;
   importantResolvers?: Array<[string, Resolver]>;
@@ -948,13 +953,15 @@ function hasOwnKeys(o: object): boolean {
 const IMPORTANT_LOWER = [0x69, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x61, 0x6e, 0x74];
 
 /**
- * Locate the `!` delimiter of a trailing `!important` annotation. Per
- * CSS Syntax 3 §4.2, the `!` and the `important` ident are separate
- * tokens with optional whitespace (and comments — pre-stripped) between
- * them. Returns the index of `!`, or `-1` when the value does not end
- * in `!important`. Case-insensitive on the ident, no allocation.
+ * Locate the `!` delimiter of a trailing `!important` annotation. The
+ * `!` and the `important` ident are separate tokens with optional
+ * whitespace between them. Returns the index of `!`, or `-1` when
+ * absent. Case-insensitive on the ident, no allocation.
  */
 function findImportantStart(value: string): number {
+  // Fast bail: most decl values don't contain `!`. One string indexOf
+  // skips the whitespace trim + case-folded compare for the common case.
+  if (value.indexOf('!') === -1) return -1;
   let end = value.length;
   while (end > 0 && isWS(value.charCodeAt(end - 1))) end--;
   if (end < 9) return -1;
@@ -970,11 +977,8 @@ function findImportantStart(value: string): number {
   return bangPos;
 }
 
-/**
- * Strip a trailing `!important` annotation (and surrounding whitespace)
- * plus trim leading/trailing whitespace. Returns the original `value`
- * reference when no change is needed.
- */
+/** Strip a trailing `!important` and trim whitespace. Returns the
+ *  original `value` reference when no change is needed. */
 function stripImportant(value: string): string {
   const bangPos = findImportantStart(value);
   let end;
@@ -990,62 +994,19 @@ function stripImportant(value: string): string {
   return start === 0 && end === value.length ? value : value.substring(start, end);
 }
 
-/**
- * Quote-aware scan for a `var(--` token. Skips occurrences inside
- * `'...'` or `"..."` strings (CSS Syntax 3 §4.3.4 / §4.3.5). The
- * unquoted scan keeps a literal `var(--brand)` substring inside a
- * value like `content: "var(--brand)"` from being mistakenly deferred
- * and rewritten through the cascade.
- */
-function hasUnquotedVarRef(value: string): boolean {
-  const len = value.length;
-  if (len < 7) return false;
-  // Coarse fast path: if there is no `var(--` anywhere (including inside
-  // quotes), there is certainly no UNQUOTED `var(--`. Skips the per-char
-  // quote-tracking walk for the overwhelmingly common case of values
-  // without var references.
-  const firstHit = value.indexOf('var(--');
-  if (firstHit === -1) return false;
-  // No quote characters before the hit means the first var(--) is
-  // already unquoted — no need to track string state.
-  if (value.lastIndexOf('"', firstHit) === -1 && value.lastIndexOf("'", firstHit) === -1) {
-    return true;
+/** Attach optional resolvers + important + importantResolvers from a
+ *  processDecls output to a freshly-built bucket entry. */
+function attachBucketExtras(
+  entry: ConditionalStyle,
+  resolvers: Array<[string, Resolver]>,
+  important: Dict<any> | null,
+  importantResolvers: Array<[string, Resolver]> | null
+): void {
+  if (resolvers.length > 0) entry.resolvers = resolvers;
+  if (important !== null) entry.important = important;
+  if (importantResolvers !== null && importantResolvers.length > 0) {
+    entry.importantResolvers = importantResolvers;
   }
-  let i = 0;
-  while (i < len) {
-    const c = value.charCodeAt(i);
-    if (c === 0x22 || c === 0x27) {
-      const quote = c;
-      i++;
-      while (i < len) {
-        const d = value.charCodeAt(i);
-        if (d === 0x5c) {
-          // Backslash escape: skip the next char regardless of what it is.
-          i += 2;
-          continue;
-        }
-        if (d === quote) {
-          i++;
-          break;
-        }
-        i++;
-      }
-      continue;
-    }
-    if (
-      c === 0x76 && // v
-      i + 5 < len &&
-      value.charCodeAt(i + 1) === 0x61 && // a
-      value.charCodeAt(i + 2) === 0x72 && // r
-      value.charCodeAt(i + 3) === 0x28 && // (
-      value.charCodeAt(i + 4) === 0x2d && // -
-      value.charCodeAt(i + 5) === 0x2d // -
-    ) {
-      return true;
-    }
-    i++;
-  }
-  return false;
 }
 
 function processDecls(decls: StaticDeclNode[]): {
@@ -1070,40 +1031,31 @@ function processDecls(decls: StaticDeclNode[]): {
     const { prop } = decl;
     let { value } = decl;
     if (!__NATIVE_WEB__ && prop.charCodeAt(0) === 0x2d && prop.charCodeAt(1) === 0x2d) {
-      // CSS Custom Properties L1 §2: `--name` is a custom property
-      // declaration. Bare `--` (length 2) is reserved for future use and
-      // must not be treated as a custom property; drop it silently so it
-      // never lands on the host element either.
+      // Bare `--` is reserved for future use and must not become a
+      // custom property; drop silently so it never lands on the host.
       if (prop.length === 2) continue;
-      // `initial` resets the custom property to the guaranteed-invalid
-      // value (§2.2 + §2 "CSS-wide keywords"). Strip a trailing
-      // `!important` per §2.1; the native cascade is order-based (nearer
-      // ancestor wins) so the importance marker has no further role and
-      // must not leak into the value passed to substituteVars.
+      // `initial` resets a custom property to the guaranteed-invalid
+      // value, so it should never populate the cascade map.
       const cleaned = stripImportant(value);
       if (cleaned === 'initial') continue;
       if (customProperties === null) customProperties = new Map();
       customProperties.set(prop, cleaned);
       continue;
     }
-    // CSS Cascade L4 §6.2: detect `!important` on every regular decl.
-    // Stripping early lets cache keys (pairCache by (prop, strippedValue)
-    // / staticDeclCache by decl-node) reuse the partial across same-
-    // value normal + important decls without duplication.
+    // Stripping `!important` early lets the cache keys (pairCache by
+    // (prop, strippedValue) / staticDeclCache by decl-node) reuse the
+    // partial across same-value normal + important decls.
     const bangPos = !__NATIVE_WEB__ ? findImportantStart(value) : -1;
     const isImportant = bangPos !== -1;
     if (isImportant) {
       value = stripImportant(value);
     }
-    if (!__NATIVE_WEB__ && hasUnquotedVarRef(value)) {
-      // CSS Custom Properties L1 §3: var() substitutes a custom property
-      // value into the surrounding declaration. Defer to render time so
-      // the cascade map can supply the substitution; transformDecl reruns
-      // on the substituted text (with shorthand expansion intact).
-      // Quote-aware scan keeps a literal `var(--` inside a CSS string
-      // value (e.g. `content: "var(--brand)"`) from being mistakenly
-      // deferred and rewritten. The importance flag rides on the deferred
-      // tuple so the runtime can route to the important overlay.
+    if (!__NATIVE_WEB__ && indexOfUnquotedSubstring(value, 'var(--', 0) !== -1) {
+      // Defer to render time so the cascade map can supply the
+      // substitution; the runtime re-runs transformDecl on the
+      // substituted text so shorthand expansion still fires. The
+      // quote-aware scan keeps a literal `var(--` inside a CSS string
+      // (e.g. `content: "var(--brand)"`) from being mistakenly deferred.
       if (varDeferred === null) varDeferred = [];
       varDeferred.push([prop, value, isImportant]);
       continue;
@@ -1200,10 +1152,8 @@ export function applyVarDeferred(
       if (__DEV__) warnIfNativeCssVar(prop, rawValue);
       continue;
     }
-    // CSS Variables L1 §2.2: a custom property whose substituted value is
-    // empty produces an empty value on the consuming property, which is
-    // invalid at computed-value time. Drop the decl rather than landing a
-    // bare `''` on the host element.
+    // An empty substituted value invalidates the consuming property;
+    // drop rather than landing a bare `''` on the host element.
     if (substituted === '' || substituted.trim() === '') continue;
     const partial = transformDecl(prop, substituted);
     if (isImportant) {
@@ -1293,10 +1243,9 @@ function walkRoot(
           // resolve at render time when the animation adapter applies
           // them.
           const decls = frame.children;
-          // @keyframes: per CSS Animations L1, `!important` inside keyframe
-          // bodies is invalid and must be ignored. processDecls strips it
-          // from the value, then routes to `important`; we drop that
-          // partial here so the frame ignores the marker entirely.
+          // `!important` inside a keyframe body is invalid; processDecls
+          // strips the marker and routes to `important`, which we then
+          // discard so the frame ignores the marker entirely.
           const { base, resolvers } =
             decls.length > 0 ? processDecls(decls) : { base: {}, resolvers: [] };
           const out: {
@@ -1446,10 +1395,7 @@ function pushNthChildBucket(
   };
   if (cls.pseudo) entry.pseudo = cls.pseudo;
   if (cls.negate === true) entry.negate = true;
-  if (resolvers.length > 0) entry.resolvers = resolvers;
-  if (important !== null) entry.important = important;
-  if (importantResolvers !== null && importantResolvers.length > 0)
-    entry.importantResolvers = importantResolvers;
+  attachBucketExtras(entry, resolvers, important, importantResolvers);
   conditional.push(entry);
 }
 
@@ -1509,10 +1455,7 @@ function pushHasBucket(
   };
   if (cls.pseudo) entry.pseudo = cls.pseudo;
   if (cls.negate === true) entry.negate = true;
-  if (resolvers.length > 0) entry.resolvers = resolvers;
-  if (important !== null) entry.important = important;
-  if (importantResolvers !== null && importantResolvers.length > 0)
-    entry.importantResolvers = importantResolvers;
+  attachBucketExtras(entry, resolvers, important, importantResolvers);
   conditional.push(entry);
 }
 
@@ -1554,10 +1497,7 @@ function pushCombinatorBucket(
     styles: base,
   };
   if (cls.pseudo) entry.pseudo = cls.pseudo;
-  if (resolvers.length > 0) entry.resolvers = resolvers;
-  if (important !== null) entry.important = important;
-  if (importantResolvers !== null && importantResolvers.length > 0)
-    entry.importantResolvers = importantResolvers;
+  attachBucketExtras(entry, resolvers, important, importantResolvers);
   conditional.push(entry);
 }
 
@@ -1607,10 +1547,7 @@ function pushBucket(
   }
   if (negate === true) entry.negate = true;
   entry.styles = stripSpecialCasesFromConditional(base, entry);
-  if (resolvers.length > 0) entry.resolvers = resolvers;
-  if (important !== null) entry.important = important;
-  if (importantResolvers !== null && importantResolvers.length > 0)
-    entry.importantResolvers = importantResolvers;
+  attachBucketExtras(entry, resolvers, important, importantResolvers);
   conditional.push(entry);
 }
 
@@ -1684,10 +1621,7 @@ function handleAtRule(
       };
       if (outer.containerName) entry.containerName = outer.containerName;
       entry.styles = stripSpecialCasesFromConditional(base, entry);
-      if (resolvers.length > 0) entry.resolvers = resolvers;
-      if (important !== null) entry.important = important;
-      if (importantResolvers !== null && importantResolvers.length > 0)
-        entry.importantResolvers = importantResolvers;
+      attachBucketExtras(entry, resolvers, important, importantResolvers);
       conditional.push(entry);
     }
 

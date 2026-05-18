@@ -1431,24 +1431,22 @@ function applyResolversWithCache(
 }
 
 /**
- * CSS Custom Properties Module Level 1 §3 — replace `var(--name, fallback?)`
- * occurrences in a property value against the cascade-published map. When
- * a referenced property is the guaranteed-invalid value (missing or
- * caught in a cycle) and a fallback is provided, the fallback substitutes;
- * otherwise the whole declaration is invalid (`null`) and the render
- * path drops it. Cycle-safe via a visited set carried through recursion.
+ * Replace `var(--name, fallback?)` occurrences against the cascade-
+ * published map. Missing target or cycle ⇒ fallback if provided,
+ * otherwise `null` (the consuming declaration is invalid and dropped).
+ * Cycle-safe via a visited set carried through recursion.
  */
 export function substituteVars(
   value: string,
   customProperties: ReadonlyMap<string, string> | null,
   visited?: Set<string>
 ): string | null {
-  if (indexOfUnquotedVarCall(value, 0) === -1) return value;
+  if (indexOfUnquotedSubstring(value, 'var(', 0) === -1) return value;
   let out = '';
   let i = 0;
   const len = value.length;
   while (i < len) {
-    const idx = indexOfUnquotedVarCall(value, i);
+    const idx = indexOfUnquotedSubstring(value, 'var(', i);
     if (idx === -1) {
       out += value.substring(i);
       break;
@@ -1461,13 +1459,10 @@ export function substituteVars(
     const rawName = (commaIdx === -1 ? args : args.substring(0, commaIdx)).trim();
     const hasFallback = commaIdx !== -1;
     const fallback = hasFallback ? args.substring(commaIdx + 1).trim() : '';
-    // §3 — the first argument can itself be an arbitrary substitution
-    // function. Substitute any nested var() inside the name before
-    // looking it up as a `<custom-property-name>`. Spec example:
-    //   --myvar: --other; --other: 10px; --result: var(var(--myvar));
-    // → --result computes to `10px`.
+    // The first argument can itself be a `var()` call (recursive
+    // substitution). Resolve it before looking up the resulting name.
     let name = rawName;
-    if (indexOfUnquotedVarCall(name, 0) !== -1) {
+    if (indexOfUnquotedSubstring(name, 'var(', 0) !== -1) {
       const resolvedName = substituteVars(name, customProperties, visited);
       if (resolvedName === null) {
         name = '';
@@ -1491,9 +1486,9 @@ export function substituteVars(
       localVisited.delete(name);
     }
     if (resolved === null) {
-      // §3: bare trailing comma is valid and means "empty fallback"; if the
-      // fallback is empty or itself fails to substitute, the var() makes
-      // the surrounding declaration invalid (caller drops it).
+      // Bare trailing comma is a valid "empty fallback"; if the fallback
+      // is empty (or itself fails to substitute) the consuming
+      // declaration is invalid and the caller drops it.
       if (!hasFallback || fallback === '') return null;
       const substitutedFallback = substituteVars(fallback, customProperties, localVisited);
       if (substitutedFallback === null) return null;
@@ -1507,21 +1502,19 @@ export function substituteVars(
 }
 
 /**
- * Quote-aware `var(` finder. Skips occurrences inside `"…"` / `'…'`
- * CSS string literals (CSS Syntax 3 §4.3.4 / §4.3.5). Matches both
- * `var(--name)` and `var(var(--name))` outer forms; the caller
- * resolves any nested substitution function in the first argument
- * before looking up the resulting `<custom-property-name>`.
+ * Quote-aware substring finder. Skips matches inside `"…"` / `'…'`
+ * string literals (treating `\<x>` inside as an escape). Used to find
+ * unquoted `var(--` (compile-time defer gate) and unquoted `var(`
+ * (runtime walk that also catches `var(var(--name))` wrappers).
  */
-function indexOfUnquotedVarCall(value: string, from: number): number {
-  const len = value.length;
-  // Coarse fast path: no `var(` anywhere ⇒ no UNQUOTED `var(`.
-  const firstHit = value.indexOf('var(', from);
+export function indexOfUnquotedSubstring(value: string, needle: string, from: number): number {
+  const firstHit = value.indexOf(needle, from);
   if (firstHit === -1) return -1;
-  // No quote chars before the first hit ⇒ already unquoted.
+  // No quotes between `from` and the first hit ⇒ definitely unquoted.
   if (value.lastIndexOf('"', firstHit) < from && value.lastIndexOf("'", firstHit) < from) {
     return firstHit;
   }
+  const len = value.length;
   let i = from;
   while (i < len) {
     const c = value.charCodeAt(i);
@@ -1542,15 +1535,7 @@ function indexOfUnquotedVarCall(value: string, from: number): number {
       }
       continue;
     }
-    if (
-      c === 0x76 &&
-      i + 3 < len &&
-      value.charCodeAt(i + 1) === 0x61 &&
-      value.charCodeAt(i + 2) === 0x72 &&
-      value.charCodeAt(i + 3) === 0x28
-    ) {
-      return i;
-    }
+    if (value.startsWith(needle, i)) return i;
     i++;
   }
   return -1;
