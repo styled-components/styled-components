@@ -3,6 +3,7 @@ import { Image, Text, TextInput, View, ViewProps } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider, css, toStyleSheet } from '../';
 import { resetStyleCache, RN_UNSUPPORTED_VALUES } from '../../models/NativeStyle';
+import { describeOnRnWeb } from '../transform/describeOnRnWeb';
 
 // NOTE: These tests are like the ones for Web but a "light-version" of them
 // This is mostly due to the similar logic
@@ -1717,6 +1718,22 @@ describe('native', () => {
       const root = tree.root.findByType(View);
       expect(root.props.pointerEvents).toBe('auto');
       expect(root.props.focusable).toBeUndefined();
+    });
+
+    describeOnRnWeb(() => {
+      // rn-web deprecated `props.pointerEvents` in favor of
+      // `style.pointerEvents`; the lift would trigger a runtime
+      // deprecation warning on every render.
+      it('pointer-events stays in style on rn-web (no prop lift)', () => {
+        const NoTouch = styled.View`
+          pointer-events: none;
+        `;
+        const tree = TestRenderer.create(<NoTouch />);
+        const root = tree.root.findByType(View);
+        expect(root.props.pointerEvents).toBeUndefined();
+        const flat = mergeStyle(root.props.style);
+        expect(flat.pointerEvents).toBe('none');
+      });
     });
   });
 
