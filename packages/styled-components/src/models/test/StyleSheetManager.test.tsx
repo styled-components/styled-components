@@ -300,7 +300,7 @@ describe('StyleSheetManager', () => {
     `);
   });
 
-  it('passing stylis plugins via StyleSheetManager works', () => {
+  it('passing plugins via StyleSheetManager works', () => {
     const Test = styled.div`
       padding-left: 5px;
     `;
@@ -319,7 +319,7 @@ describe('StyleSheetManager', () => {
     `);
   });
 
-  it('changing stylis plugins via StyleSheetManager works', () => {
+  it('changing plugins via StyleSheetManager works', () => {
     const Test = styled.div`
       padding-left: 5px;
     `;
@@ -400,7 +400,7 @@ describe('StyleSheetManager', () => {
     `);
   });
 
-  it('subtrees with different stylis configs should not conflict', () => {
+  it('subtrees with different StyleSheetManager configs should not conflict', () => {
     const Test = styled.div`
       padding-left: 5px;
     `;

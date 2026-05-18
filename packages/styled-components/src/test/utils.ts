@@ -92,7 +92,7 @@ export const expectCSSMatches = (
   _expectation: string,
   opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true }
 ) => {
-  // NOTE: This should normalise both CSS strings to make irrelevant mismatches less likely
+  // NOTE: This should normalize both CSS strings to make irrelevant mismatches less likely
   const expectation = _expectation
     .replace(/ {/g, '{')
     .replace(/:\s+/g, ':')

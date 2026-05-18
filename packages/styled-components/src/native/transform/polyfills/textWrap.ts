@@ -5,7 +5,7 @@ import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
 
 /**
- * `text-wrap` shorthand (CSS Text 4 §5.5). Verified against RN 0.85.2:
+ * `text-wrap` shorthand. Verified against RN 0.85.2:
  * `numberOfLines` is the nowrap analogue; `textBreakStrategy` (Android
  * API 23+) maps to balance / pretty; iOS has no platform line-breaking
  * control. Both Text props are lifted via SPECIAL_CASE_PROPS.
@@ -57,10 +57,10 @@ function textWrapShorthand(tokens: Token[]): Dict<any> | null {
 
   const out: Dict<any> = { textWrap: value };
   if (mode === 'nowrap') {
-    // `numberOfLines: 1` + `ellipsizeMode: 'clip'` is the closest spec
+    // `numberOfLines: 1` + `ellipsizeMode: 'clip'` is the closest
     // approximation RN exposes (the line cannot truly overflow
     // horizontally; we clip instead of ellipsise). Applied silently
-    // because the user-observed behavior matches the spec intent.
+    // because the user-observed behavior matches the intent.
     out.numberOfLines = 1;
     out.ellipsizeMode = 'clip';
   }
@@ -82,9 +82,8 @@ function textWrapShorthand(tokens: Token[]): Dict<any> | null {
 }
 
 /**
- * `text-wrap-mode: wrap | nowrap` (CSS Text 4 §5.4). Initial `wrap`,
- * inherited. The `nowrap` value is mirrored to `numberOfLines: 1` for
- * RN's Text lift.
+ * `text-wrap-mode: wrap | nowrap`. Initial `wrap`, inherited. The
+ * `nowrap` value is mirrored to `numberOfLines: 1` for RN's Text lift.
  */
 function textWrapModeLonghand(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(tokens);
@@ -103,10 +102,10 @@ function textWrapModeLonghand(tokens: Token[]): Dict<any> | null {
 }
 
 /**
- * `text-wrap-style: auto | balance | stable | pretty` (CSS Text 4 §5.5).
- * Initial `auto`, inherited. `balance` and `pretty` map to Android's
- * `textBreakStrategy`; iOS has no equivalent (warns once). `stable` has
- * no native equivalent at all (warns once).
+ * `text-wrap-style: auto | balance | stable | pretty`. Initial `auto`,
+ * inherited. `balance` and `pretty` map to Android's `textBreakStrategy`;
+ * iOS has no equivalent (warns once). `stable` has no native equivalent
+ * at all (warns once).
  */
 function textWrapStyleLonghand(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(tokens);

@@ -367,7 +367,7 @@ describe('applyBackgroundBlendModePolyfill (pure)', () => {
       expect(top.props.style.mixBlendMode).toBe('multiply');
     });
 
-    it('honours background-size: contain on photo layers', () => {
+    it('honors background-size: contain on photo layers', () => {
       const props = {
         style: {
           backgroundColor: 'red',

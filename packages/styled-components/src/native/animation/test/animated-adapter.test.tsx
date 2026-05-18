@@ -174,7 +174,7 @@ describe('Animated adapter;transitions', () => {
   it('does not emit an Animated override on first render', () => {
     // Initial render: `border-radius: ${theme.x}px` should resolve to a
     // plain numeric value in the rendered style, NOT an
-    // `AnimatedInterpolation`. RN Android Fabric's prop-set serialiser
+    // `AnimatedInterpolation`. RN Android Fabric's prop-set serializer
     // doesn't unwrap Animated nodes for length-percentage props (radii,
     // paddings, margins, widths) and logs a per-commit warning when it
     // sees one;even on Animated.View. Skipping the override at-rest
@@ -305,7 +305,7 @@ describe('Animated adapter;transitions', () => {
     // `background-image` camelizes to `backgroundImage`, but the
     // passthrough map renames the RN-side key to
     // `experimental_backgroundImage`. The transition descriptor's
-    // `property` is normalised through `toRuntimeKey` at compile so
+    // `property` is normalized through `toRuntimeKey` at compile so
     // the adapter can match it against the renamed `baseValues` key
     // directly. Without that, the prop change just snaps.
     //
@@ -422,6 +422,44 @@ describe('Animated adapter;transitions', () => {
       __captureCurrentValueForTests('10px', '20%', progress, { kind: 'linear' })
     ).toBeUndefined();
     expect(__captureCurrentValueForTests('10px', 5, progress, { kind: 'linear' })).toBeUndefined();
+  });
+
+  it('does not start transition timing when prefers-reduced-motion is active', async () => {
+    const { AccessibilityInfo } = require('react-native');
+    const origEnabled = AccessibilityInfo.isReduceMotionEnabled;
+    AccessibilityInfo.isReduceMotionEnabled = jest.fn(() => Promise.resolve(true));
+    resetResponsiveCache();
+
+    const Dummy = styled.View`
+      color: red;
+      transition: color 1ms ease;
+    `;
+    act(() => {
+      track(TestRenderer.create(<Dummy />));
+    });
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    timingSpy.mockClear();
+
+    try {
+      const Box = styled.View<{ $c: string }>`
+        color: ${p => p.$c};
+        transition: color 500ms ease;
+      `;
+      let renderer!: TestRenderer.ReactTestRenderer;
+      act(() => {
+        renderer = track(TestRenderer.create(<Box $c="red" />));
+      });
+      act(() => {
+        renderer.update(<Box $c="blue" />);
+      });
+      expect(timingSpy).not.toHaveBeenCalled();
+    } finally {
+      AccessibilityInfo.isReduceMotionEnabled = origEnabled;
+      resetResponsiveCache();
+    }
   });
 });
 
@@ -559,7 +597,7 @@ describe('Animated adapter;transition-behavior: allow-discrete', () => {
   it('cancels a pending discrete flip when the target changes again', () => {
     // Toggling rapidly: $d goes flex → none → flex within 80ms. The
     // first flip would have fired at 100ms; it should have been
-    // cancelled, and the new round picks up against the new target.
+    // canceled, and the new round picks up against the new target.
     jest.useFakeTimers();
     try {
       const Card = styled.View<{ $d: 'flex' | 'none' }>`
@@ -881,7 +919,7 @@ describe('Animated adapter;@keyframes', () => {
       });
       expect(sequenceSpy).toHaveBeenCalled();
       // For iter=4 (even), the existing code emits one loop of 2
-      // pairs. Either a loop or an explicit sequence — both are valid.
+      // pairs. Either a loop or an explicit sequence; both are valid.
       expect(loopSpy.mock.calls.length + sequenceSpy.mock.calls.length).toBeGreaterThan(0);
     } finally {
       loopSpy.mockRestore();
@@ -1284,7 +1322,7 @@ describe('Animated adapter;@keyframes', () => {
 
     // black + red = red (black has L=a=b=0, so the sum equals
     // the frame value). α=1 is emitted as the bare `1` for hot-path
-    // perf — the canonical form `1.0000` is only used when α isn't a
+    // perf; the canonical form `1.0000` is only used when α isn't a
     // boundary value.
     expect(__additiveCombineForTests('#000', '#f00')).toBe('rgba(255,0,0,1)');
     // black + named color also passes through normalize-colors.
@@ -1360,8 +1398,8 @@ describe('Animated adapter;@keyframes', () => {
     // `accumulate` differ only for list-valued properties (the spec
     // says addition extends the list while accumulation pads + adds
     // componentwise). For every value type the Animated adapter
-    // currently handles — numbers, lengths/angles/percentages, colors,
-    // and per-kind transform components — the two operations produce
+    // currently handles: numbers, lengths/angles/percentages, colors,
+    // and per-kind transform components; the two operations produce
     // identical results. Mount path validates that `accumulate` flows
     // through the descriptor and renders without throwing, mirroring
     // the `add` smoke above.
@@ -1588,7 +1626,7 @@ describe('Animated adapter;@keyframes', () => {
   });
 });
 
-describe('Animated adapter — lifecycle events (CSS Animations §5.1 / Transitions §6.1)', () => {
+describe('Animated adapter: lifecycle events (CSS Animations §5.1 / Transitions §6.1)', () => {
   let renderers: TestRenderer.ReactTestRenderer[] = [];
 
   function track(r: TestRenderer.ReactTestRenderer): TestRenderer.ReactTestRenderer {
@@ -1639,6 +1677,35 @@ describe('Animated adapter — lifecycle events (CSS Animations §5.1 / Transiti
           propertyName: 'backgroundColor',
           // elapsedTime is duration + delay in seconds.
           elapsedTime: 0.1,
+        })
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('onTransitionEnd elapsedTime includes transition-delay', () => {
+    jest.useFakeTimers();
+    try {
+      const onTransitionEnd = jest.fn();
+      const Card = styled.View<{ $bg: string }>`
+        background-color: ${p => p.$bg};
+        transition: background-color 100ms linear 50ms;
+      `;
+      let renderer!: TestRenderer.ReactTestRenderer;
+      act(() => {
+        renderer = track(TestRenderer.create(<Card $bg="red" onTransitionEnd={onTransitionEnd} />));
+      });
+      act(() => {
+        renderer.update(<Card $bg="blue" onTransitionEnd={onTransitionEnd} />);
+      });
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+      expect(onTransitionEnd).toHaveBeenCalledWith(
+        expect.objectContaining({
+          propertyName: 'backgroundColor',
+          elapsedTime: 0.15,
         })
       );
     } finally {
@@ -1724,7 +1791,7 @@ describe('Animated adapter — lifecycle events (CSS Animations §5.1 / Transiti
   it('keeps full duration when retargeting to a third (non-reversal) value', () => {
     // CSS Transitions §3.1 case 4: when the new target is not the
     // previous start value, the transition is "retargeted" rather than
-    // "reversed" — duration stays at the full descriptor value.
+    // "reversed"; duration stays at the full descriptor value.
     const localSpy = jest.spyOn(Animated, 'timing');
     const interpSpy = jest.spyOn(Animated.Value.prototype, 'interpolate');
     try {
@@ -1745,7 +1812,7 @@ describe('Animated adapter — lifecycle events (CSS Animations §5.1 / Transiti
       act(() => {
         progressArg.setValue(0.5);
       });
-      // Retarget to 100 (different value — NOT a reversal to 0).
+      // Retarget to 100 (different value; NOT a reversal to 0).
       act(() => {
         renderer.update(<Box $w={100} />);
       });
@@ -1808,7 +1875,7 @@ describe('Animated adapter — lifecycle events (CSS Animations §5.1 / Transiti
 
   it('interpolates colors in oklab space per CSS Color L4 §13', () => {
     // Oklab(0.5, 0, 0) is the spec's perceptual midpoint of black and
-    // white. Maps to ~rgb(99, 99, 99) in display sRGB — measurably
+    // white. Maps to ~rgb(99, 99, 99) in display sRGB; measurably
     // distinct from a naive RGB lerp at 128, which is why CSS Color 4
     // replaced linear-light sRGB with oklab as the default interpolation
     // space. The exact value depends on Bottosson's matrices + sRGB
@@ -1840,7 +1907,7 @@ describe('Animated adapter — lifecycle events (CSS Animations §5.1 / Transiti
     // Hue interpolation: red (255,0,0) → blue (0,0,255) midpoint in
     // oklab is meaningfully different from a naive sRGB lerp at
     // (128,0,128). Oklab walks through Lab space which sweeps through
-    // non-zero green chroma along the way, so green > 0 at midpoint —
+    // non-zero green chroma along the way, so green > 0 at midpoint;
     // the visible signature of the perceptual path.
     const redBlueMid = __interpolateColorOklabForTests(
       { r: 255, g: 0, b: 0, a: 1 },
@@ -1855,7 +1922,7 @@ describe('Animated adapter — lifecycle events (CSS Animations §5.1 / Transiti
 
   it('rgbaToCss serializes RGBA channels in the canonical form', () => {
     // α=1 / α=0 take the boundary fast path (skipping toFixed(4)) since
-    // they're the dominant case in real-world colour transitions; only
+    // they're the dominant case in real-world color transitions; only
     // fractional alpha uses the 4-decimal form.
     expect(__rgbaToCssForTests({ r: 255, g: 128, b: 0, a: 1 })).toBe('rgba(255,128,0,1)');
     expect(__rgbaToCssForTests({ r: 0.3, g: 127.5, b: 255.4, a: 0.5 })).toBe(

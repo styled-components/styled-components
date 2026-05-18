@@ -744,7 +744,7 @@ describe('ssr', () => {
     }
   );
 
-  it('emits a dev warning when a legacy stylis plugin is passed (v7)', () => {
+  it('emits a dev warning when a legacy v6 plugin package is passed (v7)', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const Heading = styled.h1`
       padding-left: 5px;
@@ -774,7 +774,7 @@ describe('ssr', () => {
       </style>
     `);
     expect(warnSpy.mock.calls[0][0]).toMatchInlineSnapshot(
-      `"[sc] plugin "stylisRTLPlugin" is not supported in v7. Only the first-party plugins from \`styled-components/plugins\` are recognised; legacy stylis plugins (prefixer, RTL, etc.) must migrate to a build-time transform or use the v7 plugin shape."`
+      `"[sc] plugin "stylisRTLPlugin" is not supported in v7. Only the first-party plugins from \`styled-components/plugins\` are recognized; legacy stylis plugins (prefixer, RTL, etc.) must migrate to a build-time transform or use the v7 plugin shape."`
     );
     warnSpy.mockRestore();
   });

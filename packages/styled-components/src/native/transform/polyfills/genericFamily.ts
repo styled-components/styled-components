@@ -1,10 +1,9 @@
 /**
- * CSS Fonts 4 §2.1.5 — generic font-family keywords. RN exposes no
- * concept of "system serif" / "system mono" / etc.; each platform
- * registers concrete font names that ship with the OS. We resolve the
- * spec keyword to a per-platform face name at the v7 transform
- * boundary so a single CSS declaration produces the right glyphs on
- * iOS, Android, and rn-web.
+ * Generic font-family keywords. RN exposes no concept of "system serif"
+ * / "system mono" / etc.; each platform registers concrete font names
+ * that ship with the OS. We resolve the keyword to a per-platform face
+ * name at the v7 transform boundary so a single CSS declaration produces
+ * the right glyphs on iOS, Android, and rn-web.
  *
  * rn-web hands the keyword to the browser unchanged (the CSS engine
  * resolves it against the user-agent stylesheet).
@@ -90,10 +89,10 @@ function getPlatformOS(): 'ios' | 'android' | 'unknown' {
 }
 
 /**
- * True when the identifier is a CSS generic font-family keyword. Per
- * CSS Fonts 4 §3.1.1 generic family names match ASCII-case-insensitively,
- * so the input is lowercased before lookup. Callers must NOT pass quoted
- * strings; quotes opt the family out of generic resolution by definition.
+ * True when the identifier is a CSS generic font-family keyword.
+ * Generic family names match ASCII-case-insensitively, so the input is
+ * lowercased before lookup. Callers must NOT pass quoted strings;
+ * quotes opt the family out of generic resolution by definition.
  */
 export function isGenericFamily(name: string): boolean {
   return GENERIC_KEYWORDS.has(name.toLowerCase());
@@ -101,12 +100,12 @@ export function isGenericFamily(name: string): boolean {
 
 /**
  * Resolve a generic font-family keyword to the platform-specific face
- * name. Input is lowercased before lookup (per CSS Fonts 4 §3.1.1) so
- * `Sans-Serif` and `SANS-SERIF` resolve identically. Returns the input
- * string unchanged when the keyword is unknown (defensive — callers
- * gate on {@link isGenericFamily} first).
+ * name. Input is lowercased before lookup so `Sans-Serif` and
+ * `SANS-SERIF` resolve identically. Returns the input string unchanged
+ * when the keyword is unknown (defensive; callers gate on
+ * {@link isGenericFamily} first).
  *
- * rn-web callers should NOT use this — pass the keyword through so
+ * rn-web callers should NOT use this; pass the keyword through so
  * the browser resolves it via the user-agent stylesheet.
  */
 export function resolveGenericFamily(keyword: string): string {

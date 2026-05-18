@@ -22,7 +22,7 @@
  *     changed.
  *
  * Theme stays in `ThemeContext` (`models/ThemeProvider`): it's the
- * public ergonomic surface — `<ThemeProvider theme={…}>` — and the
+ * public ergonomic surface (`<ThemeProvider theme={…}>`) and the
  * public-API contract is worth preserving across the v7 reshape.
  *
  * Media + viewport env (width, color scheme, reduce-motion, font

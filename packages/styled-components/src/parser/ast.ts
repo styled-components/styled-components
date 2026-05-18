@@ -56,15 +56,15 @@ export interface ConditionalAttr {
   name: string;
   value?: string;
   /**
-   * Attribute-selector operator per CSS Selectors 4 §6.2. Defaults to
-   * `'='` (exact match) when omitted. Listed so the render-time matcher
-   * dispatches the right substring / list-contains / prefix-match logic.
+   * Attribute-selector operator. Defaults to `'='` (exact match) when
+   * omitted. Listed so the render-time matcher dispatches the right
+   * substring / list-contains / prefix-match logic.
    */
   operator?: AttrOperator;
   /**
-   * CSS Selectors 4 §6.3 case-sensitivity flag. `'i'` forces ASCII
-   * case-insensitive matching; `'s'` is the default (case-sensitive)
-   * and is left unset for size. Only meaningful when `value` is set.
+   * Case-sensitivity flag. `'i'` forces ASCII case-insensitive matching;
+   * `'s'` is the default (case-sensitive) and is left unset for size.
+   * Only meaningful when `value` is set.
    */
   caseFlag?: 'i';
 }
@@ -75,9 +75,9 @@ export interface AttrSelector {
 }
 
 /**
- * CSS Selectors 4 §9 nth pseudo-class parsed representation. `pos = a*n + b`
- * iterates n = 0, 1, 2, …; the matcher uses 1-based position in the CSS
- * sense. `fromEnd` swaps the counting direction (`:nth-last-child`).
+ * nth pseudo-class parsed representation. `pos = a*n + b` iterates
+ * n = 0, 1, 2, …; the matcher uses 1-based position in the CSS sense.
+ * `fromEnd` swaps the counting direction (`:nth-last-child`).
  * `ofType` restricts to same-target siblings (`:nth-of-type`).
  * `onlyChild` adds an extra gate of total siblings === 1 (or total
  * same-target siblings === 1 when combined with `ofType`).
@@ -88,7 +88,18 @@ export interface NthSpec {
   fromEnd: boolean;
   ofType: boolean;
   onlyChild?: boolean;
+  /**
+   * Inner simple selector for `:nth-child(an+b of S)` and
+   * `:nth-last-child(an+b of S)`. Same shape as `:has(<simple>)` inner;
+   * the matcher counts the formula position among siblings that satisfy
+   * this inner, not among all siblings.
+   */
+  of?: NthOfBranch;
 }
+
+export type NthOfBranch =
+  | { kind: 'component'; id: string }
+  | { kind: 'attr'; attr: ConditionalAttr };
 
 export type NativeRuleClass =
   | { kind: 'pseudo'; pseudo: PseudoState; negate?: boolean }
@@ -96,15 +107,15 @@ export type NativeRuleClass =
   | { kind: 'attr'; selectors: AttrSelector[]; negate?: boolean }
   | {
       /**
-       * CSS Selectors 4 §15 combinator selector against a referenced
-       * styled component. `descendant` matches when `ancestorId` is
-       * anywhere on the ParentContext.ancestors chain; `child` matches
-       * only when ParentContext.parentId === ancestorId;
-       * `adjacent-sibling` matches when ParentContext.prevSiblingId ===
-       * ancestorId; `general-sibling` matches when ancestorId is
-       * anywhere in ParentContext.prevSiblings. Authored as
-       * `${StyledFoo} &` (descendant), `${StyledFoo} > &` (child),
-       * `${StyledFoo} + &` (adjacent), `${StyledFoo} ~ &` (general).
+       * Combinator selector against a referenced styled component.
+       * `descendant` matches when `ancestorId` is anywhere on the
+       * ParentContext.ancestors chain; `child` matches only when
+       * ParentContext.parentId === ancestorId; `adjacent-sibling`
+       * matches when ParentContext.prevSiblingId === ancestorId;
+       * `general-sibling` matches when ancestorId is anywhere in
+       * ParentContext.prevSiblings. Authored as `${StyledFoo} &`
+       * (descendant), `${StyledFoo} > &` (child), `${StyledFoo} + &`
+       * (adjacent), `${StyledFoo} ~ &` (general).
        */
       kind: 'combinator';
       combinator: 'descendant' | 'child' | 'adjacent-sibling' | 'general-sibling';
@@ -115,10 +126,9 @@ export type NativeRuleClass =
     }
   | {
       /**
-       * CSS Selectors 4 §9 tree-structural pseudo (`&:nth-child(an+b)`,
-       * `&:first-child`, `&:last-child`, `&:only-child`,
-       * `&:nth-of-type`, etc.). Match runs against
-       * ParentContext.siblingIndex / totalSiblings /
+       * Tree-structural pseudo (`&:nth-child(an+b)`, `&:first-child`,
+       * `&:last-child`, `&:only-child`, `&:nth-of-type`, etc.). Match
+       * runs against ParentContext.siblingIndex / totalSiblings /
        * siblingIndexOfType per `spec`.
        */
       kind: 'nthChild';
@@ -130,10 +140,10 @@ export type NativeRuleClass =
     }
   | {
       /**
-       * CSS Selectors 4 §13.1 — `&:has(<simple>)`. The match fires when
-       * the styled component has a descendant in its own `children`
-       * subtree that satisfies the inner simple selector. Two inner
-       * forms are supported on native:
+       * `&:has(<simple>)`. The match fires when the styled component
+       * has a descendant in its own `children` subtree that satisfies
+       * the inner simple selector. Two inner forms are supported on
+       * native:
        *  - `&:has(${Component})`: any descendant whose `type` is the
        *    referenced styled component.
        *  - `&:has([attr])` / `&:has([attr='value'])`: any descendant

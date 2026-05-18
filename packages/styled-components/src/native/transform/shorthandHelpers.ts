@@ -1,5 +1,7 @@
 import { Dict } from '../../types';
+import { getSystemColorPlatformColor, isCssSystemColorKeyword } from './polyfills/systemColors';
 import { Token, TokenKind } from './tokens';
+import { tokenize } from './tokenize';
 import { TokenStream } from './tokenStream';
 
 /**
@@ -23,7 +25,7 @@ export function withoutSlashes(tokens: Token[]): Token[] {
 /**
  * Read the next "value" token that counts as a length-like unit for
  * directional shorthands (margin/padding/border*): LENGTH (inc. 0),
- * NUMBER (bare; stylis/cssTN behavior, emits as-is), PERCENT, theme
+ * NUMBER (bare; css-to-react-native style, emits as-is), PERCENT, theme
  * SENTINEL (resolved at render time), or a deferred CSS Function (`env`,
  * `calc`, `min`, `max`, `clamp`, `light-dark`) that the runtime resolver
  * pipeline picks up after shorthand expansion.
@@ -37,8 +39,9 @@ export function consumeDimensionLike(stream: TokenStream): Token | null {
 }
 
 /**
- * Read the next "color-like" token: hex, color keyword, color function,
- * `currentColor`. Conservative; anything RN's normalize-colors accepts.
+ * Read the next "color-like" token: hex, color keyword, CSS Color 4 system
+ * color keyword, color function, `currentColor`. Conservative; anything RN's
+ * normalize-colors accepts.
  */
 export function consumeColor(stream: TokenStream): Token | null {
   const t = stream.peek();
@@ -70,7 +73,12 @@ export function consumeColor(stream: TokenStream): Token | null {
   }
   if (t.kind === TokenKind.Ident) {
     const n = t.name || '';
-    if (n === 'currentcolor' || n === 'transparent' || NAMED_COLORS.has(n)) {
+    if (
+      n === 'currentcolor' ||
+      n === 'transparent' ||
+      NAMED_COLORS.has(n) ||
+      isCssSystemColorKeyword(n)
+    ) {
       stream.consume();
       return t;
     }
@@ -82,6 +90,27 @@ export function consumeColor(stream: TokenStream): Token | null {
     return t;
   }
   return null;
+}
+
+/** True when `arg` tokenizes as exactly one {@link consumeColor} atom. */
+export function isSingleTokenColorArg(arg: string): boolean {
+  const tokens = tokenize(arg);
+  if (tokens.length === 0) return false;
+  const stream = new TokenStream(tokens);
+  if (consumeColor(stream) === null) return false;
+  return stream.eof();
+}
+
+/** Map a color token's authored substring to an RN color value; rn-web keeps CSS keywords. */
+export function colorTokenToRnStyleValue(t: Token): unknown {
+  return cssColorRawToRnStyleValue(t.raw);
+}
+
+/** Same as {@link colorTokenToRnStyleValue} for raw declaration substrings. */
+export function cssColorRawToRnStyleValue(raw: string): unknown {
+  if (__NATIVE_WEB__) return raw;
+  const folded = getSystemColorPlatformColor(raw);
+  return folded !== null ? folded : raw;
 }
 
 /**
@@ -153,15 +182,15 @@ export function directionalColor(
   if (!stream.eof() || values.length === 0) return null;
 
   if (values.length === 1) {
-    return { [bareKey]: values[0].raw };
+    return { [bareKey]: colorTokenToRnStyleValue(values[0]) };
   }
 
   const [top, right = top, bottom = top, left = right] = values;
   const out: Dict<any> = {};
-  out[keys[0]] = top.raw;
-  out[keys[1]] = right.raw;
-  out[keys[2]] = bottom.raw;
-  out[keys[3]] = left.raw;
+  out[keys[0]] = colorTokenToRnStyleValue(top);
+  out[keys[1]] = colorTokenToRnStyleValue(right);
+  out[keys[2]] = colorTokenToRnStyleValue(bottom);
+  out[keys[3]] = colorTokenToRnStyleValue(left);
   return out;
 }
 

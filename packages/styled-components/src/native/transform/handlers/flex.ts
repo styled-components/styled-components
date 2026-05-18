@@ -14,10 +14,10 @@ const FLEX_DIRECTION = new Set(['row', 'row-reverse', 'column', 'column-reverse'
 export function flexShorthand(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
 
-  // `flex: none`
   if (stream.tokens.length === 1) {
     const t = stream.peek()!;
     if (t.kind === TokenKind.Ident) {
+      if (t.name === 'initial') return { flexGrow: 0, flexShrink: 1, flexBasis: 'auto' };
       if (t.name === 'none') return { flexGrow: 0, flexShrink: 0, flexBasis: 'auto' };
       if (t.name === 'auto') return { flexGrow: 1, flexShrink: 1, flexBasis: 'auto' };
     }
@@ -30,11 +30,13 @@ export function flexShorthand(tokens: Token[]): Dict<any> | null {
   while (!stream.eof()) {
     const t = stream.peek()!;
     if (flexGrow === undefined && t.kind === TokenKind.Number) {
+      if (t.value! < 0) return null;
       flexGrow = t.value!;
       stream.consume();
       // Second Number in sequence → flexShrink
       const next = stream.peek();
       if (next && next.kind === TokenKind.Number) {
+        if (next.value! < 0) return null;
         flexShrink = next.value!;
         stream.consume();
       }
@@ -46,7 +48,18 @@ export function flexShorthand(tokens: Token[]): Dict<any> | null {
         stream.consume();
         continue;
       }
+      if (
+        t.kind === TokenKind.Number &&
+        t.value === 0 &&
+        flexGrow !== undefined &&
+        flexShrink !== undefined
+      ) {
+        flexBasis = 0;
+        stream.consume();
+        continue;
+      }
       if (t.kind === TokenKind.Length || t.kind === TokenKind.Percent) {
+        if (t.value! < 0) return null;
         flexBasis = tokenToValue(t) as number | string;
         stream.consume();
         continue;
@@ -95,62 +108,62 @@ const ALIGN_CONTENT = new Set([
   'flex-start',
   'flex-end',
   'center',
+  'start',
+  'end',
   'stretch',
   'space-between',
   'space-around',
+  'space-evenly',
 ]);
 const JUSTIFY_CONTENT = new Set([
   'flex-start',
   'flex-end',
   'center',
+  'start',
+  'end',
   'space-between',
   'space-around',
   'space-evenly',
 ]);
+const CONTENT_POSITION_NORMALIZE: Record<string, string> = {
+  start: 'flex-start',
+  end: 'flex-end',
+};
 
 /**
- * `place-content: <align-content> <justify-content>?`. Per CSS Box
- * Alignment 3 §6.3, when the second value is omitted the first is
- * copied to both longhands (the baseline-position carve-out — "start"
- * is used when the first value is a `<baseline-position>` — is moot
- * here because our align-content keyword set doesn't admit baselines).
+ * `place-content: <align-content> <justify-content>?`. Native branch
+ * normalizes start/end to the flex- forms; rn-web passes through.
  */
 export function placeContentShorthand(tokens: Token[]): Dict<any> | null {
+  if (__NATIVE_WEB__) {
+    const raw = tokens
+      .map(t => t.raw)
+      .join(' ')
+      .trim();
+    return raw.length === 0 ? null : { placeContent: raw };
+  }
   const stream = new TokenStream(withoutSlashes(tokens));
   const first = stream.consume();
   if (!first || first.kind !== TokenKind.Ident || !ALIGN_CONTENT.has(first.name!)) return null;
-  const alignContent = first.name!;
+  const alignContent = CONTENT_POSITION_NORMALIZE[first.name!] ?? first.name!;
   let justifyContent = alignContent;
   if (!stream.eof()) {
     const second = stream.consume();
     if (!second || second.kind !== TokenKind.Ident || !JUSTIFY_CONTENT.has(second.name!))
       return null;
-    justifyContent = second.name!;
+    justifyContent = CONTENT_POSITION_NORMALIZE[second.name!] ?? second.name!;
   }
   if (!stream.eof()) return null;
   return { alignContent, justifyContent };
 }
 
 /**
- * Spec-keyword set for `align-items` / `justify-items` / `align-self` /
- * `justify-self`, per CSS Box Alignment 3 §4.3, §6.2, §7.1, §7.2.
- *
- * Authors writing the CSS-spec forms (`start`, `end`, `self-start`,
- * `self-end`) get normalized to RN's flex-prefixed enum since Yoga and
- * react-native-web (per `Style.js`) both accept only the flex forms.
- * See `knowledge_rnweb_alignment_enum.md`. `self-start` / `self-end`
- * fall back to `flex-start` / `flex-end` — exact under flex; deviates
- * for grid which RN doesn't implement.
- *
- * `normal` and `stretch` reach RN unchanged (RN ignores `normal` on
- * align-items; both honor `stretch`). `baseline` works on Text-rooted
- * align-items via the experimental_baseline matcher.
- *
- * `<baseline-position>` two-token forms (`first baseline`, `last baseline`)
- * map to RN's `baseline` (RN has no first/last surface; the disambiguation
- * drops with a dev warn). `<overflow-position>` prefixes (`safe`, `unsafe`)
- * are accepted before any `<self-position>` keyword and stripped (RN has
- * no overflow alignment surface; the prefix drops with a dev warn).
+ * Keyword set for `align-items` / `justify-items` / `align-self` / `justify-self`.
+ * Authors writing `start` / `end` / `self-start` / `self-end` get normalized to
+ * RN's flex-prefixed enum since Yoga and rn-web both accept only those forms
+ * (see `knowledge_rnweb_alignment_enum.md`). `first baseline` / `last baseline`
+ * collapse to `baseline` (with a dev warn); `safe` / `unsafe` overflow prefixes
+ * are stripped (with a dev warn).
  */
 const SELF_POSITION_NORMALIZE: Record<string, string> = {
   start: 'flex-start',
@@ -213,14 +226,10 @@ function readItemsKeyword(stream: TokenStream): string | null {
 }
 
 /**
- * `place-items: <'align-items'> <'justify-items'>?` (CSS Box Alignment 3
- * §7.3). The first value goes to align-items; the second (or, if
- * omitted, the first) goes to justify-items. `justify-items` is a
- * no-op under RN's flex-only Yoga but rn-web honors it.
- *
- * rn-web emits the shorthand untouched so the browser parses the full
- * grammar (including `<baseline-position>` two-token forms and
- * `<overflow-position>` prefixes the native branch normalizes away).
+ * `place-items: <'align-items'> <'justify-items'>?`. First value is align-items,
+ * second (or repeated first) is justify-items. `justify-items` is a no-op under
+ * Yoga but rn-web honors it; the rn-web branch emits the shorthand untouched
+ * so the browser parses the full grammar.
  */
 export function placeItemsShorthand(tokens: Token[]): Dict<any> | null {
   if (__NATIVE_WEB__) {
@@ -244,9 +253,8 @@ export function placeItemsShorthand(tokens: Token[]): Dict<any> | null {
 }
 
 /**
- * `place-self: <'align-self'> <'justify-self'>?` (CSS Box Alignment 3
- * §6.3). Same expansion rule as `place-items`; additionally accepts
- * `auto` since align-self / justify-self both default to `auto`.
+ * `place-self: <'align-self'> <'justify-self'>?`. Same expansion as `place-items`,
+ * plus `auto` since both longhands default to `auto`.
  */
 const SELF_KEYWORDS_WITH_AUTO = new Set([...ITEMS_SELF_KEYWORDS, 'auto']);
 

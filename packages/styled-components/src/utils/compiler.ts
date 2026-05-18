@@ -64,7 +64,7 @@ export default function createCompiler({
     }
   }
 
-  // Byte-identical to v6 stylis output for hash + SSR rehydration stability.
+  // Byte-identical to the v7 web emit path for hash + SSR rehydration stability.
   const compileString = (css: string, selector = '', prefix = '', componentId = '&'): string[] => {
     const flatCSS = normalize(css);
     const wrapSelector = prefix || selector ? (prefix ? prefix + ' ' : '') + selector : '';

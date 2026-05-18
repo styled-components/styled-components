@@ -377,9 +377,9 @@ function resolveInterpolation(
     // Source-aware splicing (e.g. tagged `css\`...\`` fragments inside an
     // object value); the caller bails on null.
     if (t === 'object' && isPlainObject(slot)) {
-      // Design-token shape — an own `toString` on the object means the
+      // Design-token shape; an own `toString` on the object means the
       // author wants a stringified value, not iteration of every key as a
-      // CSS declaration. Honour the explicit override before iterating.
+      // CSS declaration. Honor the explicit override before iterating.
       if (Object.prototype.hasOwnProperty.call(slot, 'toString')) {
         return String(slot);
       }

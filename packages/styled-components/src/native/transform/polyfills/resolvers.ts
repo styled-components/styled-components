@@ -111,19 +111,19 @@ function unescapeSentinelFallback(s: string): string {
 // and the negatives. Unambiguous (no overlap between branches) so the
 // engine can't backtrack on long digit runs;closes CodeQL polynomial
 // redos finding from PR #5735.
-// CSS Values 4 §6.1.2.2 viewport-percentage length units. Default `v*`
-// maps to the large viewport size per spec; on RN small/large/dynamic
-// all collapse to env.media (no URL-bar surface to differentiate). The
-// inline / block forms (vi / vb) resolve to width / height in
-// horizontal-tb (Yoga's only writing-mode).
+// Viewport-percentage length units. Default `v*` maps to the large
+// viewport size; on RN small/large/dynamic all collapse to env.media
+// (no URL-bar surface to differentiate). The inline / block forms (vi /
+// vb) resolve to width / height in horizontal-tb (Yoga's only
+// writing-mode).
 const VP_UNIT_RE =
   /^(-?(?:\d+(?:\.\d+)?|\.\d+))(vw|vh|vi|vb|vmin|vmax|svw|svh|svi|svb|svmin|svmax|lvw|lvh|lvi|lvb|lvmin|lvmax|dvw|dvh|dvi|dvb|dvmin|dvmax)$/i;
 const CQ_UNIT_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(cqw|cqh|cqmin|cqmax|cqi|cqb)$/i;
-// CSS Values 4 §6.1.1 — font-relative lengths. `rem` and `rlh` anchor
-// at the root; `em` and `lh` at the parent. RN has no DOM cascade —
-// values come from {@link ResolveEnv.rootFontSize / fontSize /
-// lineHeight}, populated by NativeStyleContext at render time. rn-web
-// passes them through to the browser unchanged.
+// Font-relative lengths. `rem` and `rlh` anchor at the root; `em` and
+// `lh` at the parent. RN has no DOM cascade; values come from
+// {@link ResolveEnv.rootFontSize / fontSize / lineHeight}, populated by
+// NativeStyleContext at render time. rn-web passes them through to the
+// browser unchanged.
 //
 // `rem` / `rlh` must come BEFORE `em` / `lh` in the alternation so
 // `12rem` matches as rem rather than `12r` + `em`. The regex anchors
@@ -148,35 +148,13 @@ export function buildResolver(value: unknown): Resolver | null {
 
   const c0 = value.charCodeAt(0);
 
-  // Direction-aware `text-align: start | end | match-parent` per
-  // CSS Text 4 §7.1. The handler emits `\0scta:<keyword>`; the
-  // resolver here maps it to `'left'` or `'right'` against the
-  // cascade direction inherited from the parent. Checked BEFORE the
-  // theme-sentinel dispatch so `findSentinelTerminator` doesn't
-  // accidentally claim the value. The 4-character tag `scta`
-  // differentiates from the theme sentinel `\0sc:` at the fourth
-  // code point (`t` vs `:`).
-  if (
-    c0 === 0 &&
-    value.charCodeAt(3) === 0x74 /* t */ &&
-    value.charCodeAt(4) === 0x61 /* a */ &&
-    value.startsWith('\0scta:')
-  ) {
-    const keyword = value.slice('\0scta:'.length);
-    return env => {
-      // `match-parent` resolves like `start` in horizontal-tb because
-      // there's no orthogonal parent writing mode in Yoga.
-      const startsWithLeft = env.direction === 'ltr';
-      if (keyword === 'start' || keyword === 'match-parent') {
-        return startsWithLeft ? 'left' : 'right';
-      }
-      if (keyword === 'end') {
-        return startsWithLeft ? 'right' : 'left';
-      }
-      // Unrecognised marker shouldn't happen at runtime; defer to
-      // `'auto'` so RN's natural-direction default kicks in.
-      return 'auto';
-    };
+  // Relative-size font-size sentinel emitted by the font shorthand.
+  // `\0+` = larger, `\0-` = smaller. Resolved against env.fontSize at
+  // render time so the same value lands on web, iOS, and Android.
+  if (value.length === 2 && c0 === 0) {
+    const c1 = value.charCodeAt(1);
+    if (c1 === 0x2b /* + */) return env => relativeSize(env.fontSize, 1);
+    if (c1 === 0x2d /* - */) return env => relativeSize(env.fontSize, -1);
   }
 
   // createTheme sentinel; `\0<prefix>:<path>:<fallback>`. Full-value single
@@ -254,6 +232,13 @@ export function buildResolver(value: unknown): Resolver | null {
   }
   if (c0 === 0x65 /* e */ && value.startsWith('env(')) return envResolver(value);
 
+  // round(line-width, A): CSS Values 4 §10.3 + "snap a length as a line
+  // width" (§6). The static fold can't run because the device pixel ratio
+  // isn't known at compile time; defer to a runtime resolver here.
+  if (c0 === 0x72 /* r */ && value.startsWith('round(line-width,')) {
+    return lineWidthRoundResolver(value);
+  }
+
   // Multi-token values containing one or more clean sentinels: assemble
   // the resolved string at render time. Catches pass-through props with
   // theme tokens embedded mid-value (`box-shadow: 0 1px 2px ${t.colors.x}`,
@@ -313,8 +298,8 @@ function tokensNeedRuntimeResolution(tokens: Token[]): boolean {
 /**
  * RN dimensions can't carry ±∞ or NaN;they would silently collapse to
  * 0, which is the worst kind of bug to debug. Catch the spec-defined
- * Values 4 §10.7.2 keywords at math-fn entry, warn the developer, and
- * drop the declaration. The regex requires non-ident-char boundaries so
+ * keywords at math-fn entry, warn the developer, and drop the
+ * declaration. The regex requires non-ident-char boundaries so
  * substrings like `infinityPlanet` or `infinity-mode` don't trigger.
  */
 const UNSUPPORTED_MATH_KEYWORD_RE = /(?:^|[^a-z0-9_-])(-?infinity|nan)(?![a-z0-9_-])/i;
@@ -334,12 +319,12 @@ function bailOnUnsupportedKeyword(value: string): boolean {
 
 function resolveMathFn(value: string): Resolver | null {
   if (bailOnUnsupportedKeyword(value)) return null;
-  // Spec §10.1: "Parentheses and nesting additional calc() functions are
-  // equivalent". Our tokenizer doesn't emit Paren tokens; the cheapest
-  // path to grouping support is to rewrite bare `(...)` as `calc(...)`
-  // before tokenization so the existing nested-calc support handles them.
-  // The web passthrough must keep the original string (the browser parses
-  // grouping natively), so this rewrite only runs for the native path.
+  // Bare grouping parens are equivalent to nested `calc()`. Our tokenizer
+  // doesn't emit Paren tokens; the cheapest path to grouping support is
+  // to rewrite bare `(...)` as `calc(...)` before tokenization so the
+  // existing nested-calc support handles them. The web passthrough must
+  // keep the original string (the browser parses grouping natively), so
+  // this rewrite only runs for the native path.
   if (__NATIVE_WEB__) {
     if (tokensNeedRuntimeResolution(tokenize(value))) return mathFnResolver(value);
     // Static-mixed: passthrough raw. `mathFnResolver(value, undefined)`
@@ -427,7 +412,7 @@ const NATIVE_MATH_OPTS: BuildOpts = {
       // Container exists but is pending its first measurement
       // (width === 0). Return null to drop the calc declaration for
       // one frame so the descendant auto-sizes rather than resolving
-      // against the viewport — viewport-fallback over-sized
+      // against the viewport; viewport-fallback over-sized
       // descendants and triggered un-recoverable flex-wrap overflow
       // on Android (Yoga didn't re-flow after the published width
       // arrived). After the first onLayout publishes, width is
@@ -440,12 +425,11 @@ const NATIVE_MATH_OPTS: BuildOpts = {
 };
 
 /**
- * Resolve a viewport-percentage length. Per Values 4 §6.1.2.2, the four
- * variants (default v*, sv*, lv*, dv*) are independent on the web but
- * collapse to a single value on RN;no URL-bar surface, so dynamic =
- * small = large = layout viewport. Inline (`vi`) and block (`vb`)
- * resolve to width / height respectively in horizontal-tb writing-mode
- * (Yoga's only mode).
+ * Resolve a viewport-percentage length. The four variants (default v*,
+ * sv*, lv*, dv*) are independent on the web but collapse to a single
+ * value on RN;no URL-bar surface, so dynamic = small = large = layout
+ * viewport. Inline (`vi`) and block (`vb`) resolve to width / height
+ * respectively in horizontal-tb writing-mode (Yoga's only mode).
  */
 function viewportResolver(n: number, unit: string): Resolver {
   // Strip the variant prefix so the suffix decides the axis. `vmin`
@@ -506,18 +490,53 @@ function fontRelativeResolver(n: number, unit: string): Resolver {
   }
 }
 
+const ABSOLUTE_SIZE_RAMP = [9, 10, 13, 16, 18, 24, 32, 48];
+const RELATIVE_SIZE_FACTOR = 1.2;
+
+// With-B form is intentionally unmatched; falls through to string passthrough.
+const LINE_WIDTH_RE = /^round\(\s*line-width\s*,\s*([+-]?\d+(?:\.\d+)?)(px)?\s*\)$/i;
+
+function lineWidthRoundResolver(value: string): Resolver | null {
+  const m = LINE_WIDTH_RE.exec(value);
+  if (m === null) return null;
+  const n = parseFloat(m[1]);
+  if (!Number.isFinite(n)) return null;
+  return env => snapAsLineWidth(n, env.media.pixelRatio);
+}
+
+// CSS Values 4 §6 snap-as-line-width: integer device pixels pass through;
+// sub-device-pixel snaps to ±1 device pixel preserving sign; otherwise
+// truncates toward zero to the nearest integer device pixel.
+function snapAsLineWidth(cssPx: number, pixelRatio: number): number {
+  const devicePx = cssPx * pixelRatio;
+  if (Number.isInteger(devicePx)) return cssPx;
+  const absDev = devicePx < 0 ? -devicePx : devicePx;
+  if (absDev < 1) return (devicePx < 0 ? -1 : 1) / pixelRatio;
+  return Math.trunc(devicePx) / pixelRatio;
+}
+
+function relativeSize(inherited: number, direction: 1 | -1): number {
+  for (let i = 0; i < ABSOLUTE_SIZE_RAMP.length; i++) {
+    if (ABSOLUTE_SIZE_RAMP[i] === inherited) {
+      const next = i + direction;
+      if (next >= 0 && next < ABSOLUTE_SIZE_RAMP.length) return ABSOLUTE_SIZE_RAMP[next];
+      break;
+    }
+  }
+  return direction === 1 ? inherited * RELATIVE_SIZE_FACTOR : inherited / RELATIVE_SIZE_FACTOR;
+}
+
 function containerResolver(n: number, unit: string): Resolver {
   return env => {
-    // Spec (CSS Conditional 5 §7): "If no eligible query container is
-    // available, then use the small viewport size for that axis." On RN
-    // the layout viewport is the small viewport (no URL-bar surface to
-    // produce dvh/svh divergence), so env.media is the spec-correct
-    // fallback container size.
+    // No eligible query container falls back to the small viewport size
+    // for that axis. On RN the layout viewport is the small viewport (no
+    // URL-bar surface to produce dvh/svh divergence), so env.media is
+    // the correct fallback container size.
     //
     // Pending containers (width === 0 && height === 0, set by
     // `ContainerPublisher` before its first onLayout) defer to null so
     // the cq-bearing declaration drops for one frame, mirroring the
-    // calc(%) defer behaviour in `NATIVE_MATH_OPTS`.
+    // calc(%) defer behavior in `NATIVE_MATH_OPTS`.
     const c = env.container;
     if (c !== null && c.width === 0 && c.height === 0) return null;
     const w = c !== null ? c.width : env.media.width;
@@ -540,16 +559,11 @@ function containerResolver(n: number, unit: string): Resolver {
 }
 
 /**
- * Resolver for `light-dark()` per CSS Color Module Level 5 §7.
- * Spec grammar:
- *   light-dark() = <light-dark-color> | <light-dark-image>
- *   <light-dark-color> = light-dark(<color>, <color>)
- *   <light-dark-image> = light-dark( [ <image> | none ] , [ <image> | none ] )
+ * Resolver for `light-dark()`.
  *
- * Both forms are accepted; mixing one image and one color is a
- * parse-time error per spec ("Attempting to use one image and one
- * color will result in a parse-time error.") and we return null so
- * the caller drops the declaration.
+ * Both color and image forms are accepted; mixing one image and one
+ * color is a parse-time error and we return null so the caller drops
+ * the declaration.
  *
  * Used color scheme determines the branch: "light or unknown" → first
  * arg, "dark" → second arg. We treat any non-`dark` value (including
@@ -568,7 +582,7 @@ function lightDarkResolver(value: string): Resolver | null {
   const light = inner.slice(0, commaIdx).trim();
   const dark = inner.slice(commaIdx + 1).trim();
   if (light.length === 0 || dark.length === 0) return null;
-  // Spec: mixing image + color forms is a parse-time error.
+  // Mixing image + color forms is a parse-time error.
   if (isImageBranch(light) !== isImageBranch(dark)) return null;
   const lightR = buildResolver(light);
   const darkR = buildResolver(dark);
@@ -591,13 +605,12 @@ function lightDarkResolver(value: string): Resolver | null {
 }
 
 /**
- * Categorize a `light-dark()` branch as <image>-form. Per CSS Color
- * Module Level 5, the image form accepts `<image> | none` where
- * `<image>` is any value matching the CSS Image type: `url()`,
- * gradient functions (linear / radial / conic, plus repeating-*),
- * `image-set()`, `image()`, `cross-fade()`, `element()`, `paint()`.
- * Any other value (named color, hex, rgb, sentinel, calc, etc.) is
- * treated as the color form.
+ * Categorize a `light-dark()` branch as <image>-form. The image form
+ * accepts `<image> | none` where `<image>` is any value matching the
+ * CSS Image type: `url()`, gradient functions (linear / radial / conic,
+ * plus repeating-*), `image-set()`, `image()`, `cross-fade()`,
+ * `element()`, `paint()`. Any other value (named color, hex, rgb,
+ * sentinel, calc, etc.) is treated as the color form.
  *
  * Nested `light-dark()` calls are currently classified as color form
  * (the common case); a nested light-dark whose own branches are
@@ -703,7 +716,7 @@ function embeddedLightDarkResolver(value: string): Resolver | null {
 }
 
 /**
- * `env(<name>[, <fallback>])`. Currently recognises the safe-area-inset
+ * `env(<name>[, <fallback>])`. Currently recognizes the safe-area-inset
  * family. Falls back to the literal fallback (if provided) or null for
  * everything else, which the caller interprets as "drop".
  */
@@ -711,10 +724,10 @@ function envResolver(value: string): Resolver | null {
   const inner = value.slice('env('.length, -1).trim();
   const commaIdx = topLevelCommaIdx(inner);
   const name = (commaIdx === -1 ? inner : inner.slice(0, commaIdx)).trim();
-  // Per Env 1 §3, a bare comma signals "fallback was passed as empty".
-  // An empty fallback substitutes the empty value, which makes the
-  // declaration invalid at computed-value time;drop it instead of
-  // shipping an empty string to RN. `null` here marks "no fallback".
+  // A bare comma signals "fallback was passed as empty". An empty
+  // fallback substitutes the empty value, which makes the declaration
+  // invalid at computed-value time;drop it instead of shipping an
+  // empty string to RN. `null` here marks "no fallback".
   let fallback = commaIdx === -1 ? null : inner.slice(commaIdx + 1).trim();
   if (fallback === '') fallback = null;
 
@@ -1010,8 +1023,8 @@ function minMaxClampResolverFromFn(name: string, fn: Token, opts?: BuildOpts): R
   if (groups.length === 0) return null;
   if (name === 'clamp' && groups.length !== 3) return null;
 
-  // Spec §10.2: clamp's MIN and MAX arms accept the keyword `none`,
-  // disabling that side of the clamp:
+  // clamp's MIN and MAX arms accept the keyword `none`, disabling that
+  // side of the clamp:
   //   clamp(none, VAL, MAX) === min(VAL, MAX)
   //   clamp(MIN, VAL, none) === max(MIN, VAL)
   //   clamp(none, VAL, none) === calc(VAL)
@@ -1020,9 +1033,9 @@ function minMaxClampResolverFromFn(name: string, fn: Token, opts?: BuildOpts): R
   const armResolvers: Array<((env: ResolveEnv) => NumericResult | null) | null> = [];
   for (let i = 0; i < groups.length; i++) {
     const g = groups[i];
-    // Spec §10.2: clamp's MIN (arm 0) and MAX (arm 2) accept `none`, which
-    // disables that side. `none` is invalid in VAL (arm 1), min(), max(),
-    // or any sub-expression.
+    // clamp's MIN (arm 0) and MAX (arm 2) accept `none`, which disables
+    // that side. `none` is invalid in VAL (arm 1), min(), max(), or any
+    // sub-expression.
     if (
       name === 'clamp' &&
       (i === 0 || i === 2) &&
@@ -1076,9 +1089,8 @@ function minMaxClampResolverFromFn(name: string, fn: Token, opts?: BuildOpts): R
         if (realOperands[i].value > result) result = realOperands[i].value;
       }
     } else {
-      // Spec: clamp(MIN, VAL, MAX) === max(MIN, min(VAL, MAX)). MIN wins
-      // when MIN > MAX (per CSS Values Level 4 §10.2). `none` arms drop
-      // out of the comparison.
+      // clamp(MIN, VAL, MAX) === max(MIN, min(VAL, MAX)). MIN wins
+      // when MIN > MAX. `none` arms drop out of the comparison.
       const lo = operands[0];
       const val = operands[1]!;
       const hi = operands[2];
@@ -1104,11 +1116,11 @@ function buildExpression(
 ): ((env: ResolveEnv) => NumericResult | null) | null {
   if (tokens.length === 0) return null;
 
-  // Spec §10.9 type checking: `<number> + <length|percent>` is invalid
-  // ("unitless 0 lengths aren't supported in math functions"). Catch
-  // statically-typed mismatches at construction time. Sentinels and
-  // nested function tokens can resolve to either kind, so they defer to
-  // runtime where the produced NumericResult's unit fights it out.
+  // Type checking: `<number> + <length|percent>` is invalid (unitless 0
+  // lengths aren't supported in math functions). Catch statically-typed
+  // mismatches at construction time. Sentinels and nested function
+  // tokens can resolve to either kind, so they defer to runtime where
+  // the produced NumericResult's unit fights it out.
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
     if (t.kind !== TokenKind.Op) continue;
@@ -1224,8 +1236,8 @@ function buildOperand(
     return env => valueToNumeric(r(env), '');
   }
   if (t.kind === TokenKind.Ident) {
-    // Math-context numeric constants (Values 4 §10.7). `pi` / `e` are
-    // <number>s. `infinity` / `-infinity` / `NaN` warn + drop.
+    // Math-context numeric constants. `pi` / `e` are <number>s.
+    // `infinity` / `-infinity` / `NaN` warn + drop.
     const num = identToNumeric(t.name!, t.raw);
     if (num === null) return null;
     return () => num;
@@ -1308,7 +1320,7 @@ function reduceMath(items: Array<NumericResult | string>): NumericResult | null 
     if (op === '+' || op === '-') {
       const a = items[i - 1] as NumericResult;
       const b = items[i + 1] as NumericResult;
-      // Runtime relaxation (deviating from Spec §10.9 strict typing): a
+      // Runtime relaxation (deviating from strict type checking): a
       // sentinel-derived operand often surfaces unitless because the
       // theme value doesn't carry a CSS unit. Tolerate `<unitless> +/-
       // <typed>` here so `calc(${t.space.xl} + 47px)` still works at

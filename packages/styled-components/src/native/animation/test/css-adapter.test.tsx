@@ -93,6 +93,23 @@ describe('cssAdapter (rn-web)', () => {
     expect(view.props.style).not.toHaveProperty('transitionBehavior');
   });
 
+  it('emits comma-separated transitionBehavior when any entry uses allow-discrete', () => {
+    const Card = styled.View`
+      transition-property: opacity, display;
+      transition-duration: 100ms, 200ms;
+      transition-timing-function: linear, linear;
+      transition-delay: 0ms, 0ms;
+      transition-behavior: normal, allow-discrete;
+    `;
+    const tree = TestRenderer.create(<Card />);
+    const view = tree.root.findByType(View);
+    expect(view.props.style).toMatchObject({
+      transitionProperty: 'opacity, display',
+      transitionDuration: '100ms, 200ms',
+      transitionBehavior: 'normal, allow-discrete',
+    });
+  });
+
   it('emits animation longhands and injects @keyframes once', () => {
     const Spinner = styled.View`
       @keyframes spin {
@@ -131,6 +148,88 @@ describe('cssAdapter (rn-web)', () => {
     expect(tag?.sheet.insertRule).toHaveBeenCalledTimes(1);
   });
 
+  it('emits comma-separated animation longhands for two parallel animations', () => {
+    const Box = styled.View`
+      @keyframes a {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes b {
+        from {
+          opacity: 1;
+        }
+        to {
+          opacity: 0;
+        }
+      }
+      animation:
+        a 100ms linear,
+        b 200ms ease-in;
+    `;
+    const tree = TestRenderer.create(<Box />);
+    const view = tree.root.findByType(View);
+    expect(view.props.style.animationName).toMatch(/a/);
+    expect(view.props.style.animationName).toMatch(/b/);
+    expect(view.props.style.animationDuration).toBe('100ms, 200ms');
+    expect(view.props.style.animationTimingFunction).toContain('linear');
+    expect(view.props.style.animationTimingFunction).toContain('cubic-bezier');
+
+    const doc = (global as { document: MockDocument }).document;
+    const tag = doc.createElement.mock.results[0]?.value as MockStyleTag | undefined;
+    expect(tag?.sheet.insertRule).toHaveBeenCalledTimes(2);
+  });
+
+  it('omits animationComposition when every effect uses replace (initial)', () => {
+    const Box = styled.View`
+      @keyframes x {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      animation: x 200ms linear;
+    `;
+    const tree = TestRenderer.create(<Box />);
+    const view = tree.root.findByType(View);
+    expect(view.props.style).not.toHaveProperty('animationComposition');
+  });
+
+  it('emits comma-separated animationComposition when any effect uses add or accumulate', () => {
+    const Box = styled.View`
+      @keyframes a {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 0.5;
+        }
+      }
+      @keyframes b {
+        from {
+          opacity: 0.5;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      animation-name: a, b;
+      animation-duration: 100ms, 100ms;
+      animation-timing-function: linear, linear;
+      animation-composition: add, accumulate;
+    `;
+    const tree = TestRenderer.create(<Box />);
+    const view = tree.root.findByType(View);
+    expect(view.props.style).toMatchObject({
+      animationComposition: 'add, accumulate',
+    });
+  });
+
   it('serializes cubic-bezier timing functions verbatim', () => {
     const Box = styled.View`
       transition: opacity 200ms cubic-bezier(0.42, 0, 0.58, 1);
@@ -154,7 +253,7 @@ describe('cssAdapter (rn-web)', () => {
     // returns `[base, conditionalBucket]`. The adapter must merge those
     // layers into one object; spreading the array directly would yield
     // numeric keys (`{0: ..., 1: ...}`) that React DOM then writes to
-    // CSSStyleDeclaration's read-only indexed accessor — which throws
+    // CSSStyleDeclaration's read-only indexed accessor, which throws
     // "Attempted to assign to readonly property" in WebKit.
     const Btn = styled.View`
       background-color: red;

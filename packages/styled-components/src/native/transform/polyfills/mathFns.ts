@@ -13,11 +13,11 @@ import { tokenizeFunctionArgs } from '../tokenize';
  * runtime resolver or passes through the original source.
  *
  * `permitNonFinite` (default `false`) controls handling of CSS math
- * keywords `infinity` / `-infinity` / `NaN` (Values 4 §10.7). RN can't
- * represent these in dimensions, so the dimension callers leave it
- * `false`: the resolver warns and returns null. The color polyfill
- * passes `true`: channels clamp to valid range, so propagating ±∞ / NaN
- * is fine (and matches browser behaviour for `rgb(calc(infinity) …)`).
+ * keywords `infinity` / `-infinity` / `NaN`. RN can't represent these in
+ * dimensions, so the dimension callers leave it `false`: the resolver
+ * warns and returns null. The color polyfill passes `true`: channels
+ * clamp to valid range, so propagating ±∞ / NaN is fine (and matches
+ * browser behavior for `rgb(calc(infinity) …)`).
  */
 export interface NumericResult {
   value: number;
@@ -35,11 +35,9 @@ export function resolveStaticMathFunction(
   if (name === 'min' || name === 'max' || name === 'clamp') {
     return resolveMinMaxClamp(name, fn, permitNonFinite);
   }
-  // CSS Values 4 §10.3 stepped-value functions.
   if (name === 'round' || name === 'mod' || name === 'rem') {
     return resolveStepped(name, fn, permitNonFinite);
   }
-  // CSS Values 4 §10.4 trigonometric functions.
   if (
     name === 'sin' ||
     name === 'cos' ||
@@ -51,11 +49,9 @@ export function resolveStaticMathFunction(
   ) {
     return resolveTrig(name, fn, permitNonFinite);
   }
-  // CSS Values 4 §10.5 exponential functions.
   if (name === 'pow' || name === 'sqrt' || name === 'hypot' || name === 'log' || name === 'exp') {
     return resolveExpLog(name, fn, permitNonFinite);
   }
-  // CSS Values 4 §10.6 sign-related functions.
   if (name === 'abs' || name === 'sign') {
     return resolveAbsSign(name, fn, permitNonFinite);
   }
@@ -63,14 +59,14 @@ export function resolveStaticMathFunction(
 }
 
 /**
- * CSS Values 4 §10.3 — stepped-value functions.
+ * Stepped-value functions.
  *
  *   round(<rounding-strategy>?, A, B?)
  *   mod(A, B)   → sign of B (math mod; result has divisor's sign)
  *   rem(A, B)   → sign of A (remainder, like JS `%`)
  *
- * `round()` strategy keywords (Values 4 §10.3.1): `nearest` (default),
- * `up`, `down`, `to-zero`. B defaults to 1 when omitted.
+ * `round()` strategy keywords: `nearest` (default), `up`, `down`,
+ * `to-zero`. B defaults to 1 when omitted.
  */
 const ROUND_STRATEGIES = new Set(['nearest', 'up', 'down', 'to-zero']);
 
@@ -81,22 +77,18 @@ function resolveStepped(name: string, fn: Token, permitNonFinite: boolean): Nume
 
   if (name === 'round') {
     if (keyword === 'line-width') {
-      if (__DEV__) {
-        warnOnce(
-          'native-math-round-line-width',
-          '`round(line-width, ...)` needs the device pixel ratio, which is not available while converting static styles. Use an explicit step such as `round(nearest, 10px, 1px)`, or calculate the value in a function interpolation with `PixelRatio.get()`.',
-          fn.raw
-        );
-      }
+      // Defer to the runtime resolver path (resolvers.ts) so
+      // `env.media.pixelRatio` can snap A at render time per the
+      // "snap a length as a line width" algorithm in CSS Values 4.
       return null;
     }
     const strategy = keyword ?? 'nearest';
     if (!ROUND_STRATEGIES.has(strategy)) return null;
     if (args.length < 1 || args.length > 2) return null;
     const a = args[0];
-    // CSS Values 4 §10.3: "If the type of A matches <number>, then B may
-    // be omitted." For <length> / <angle> / <percent> A, B must be present
-    // and share A's type. A mismatch between A and B is also invalid.
+    // If A matches <number>, B may be omitted. For <length> / <angle> /
+    // <percent> A, B must be present and share A's type. A mismatch
+    // between A and B is also invalid.
     let b: NumericResult;
     if (args.length === 2) {
       b = args[1];
@@ -131,16 +123,16 @@ function resolveStepped(name: string, fn: Token, permitNonFinite: boolean): Nume
     return { value: NaN, unit };
   }
   if (name === 'mod') {
-    // Math mod: ((a % b) + b) % b — result carries b's sign.
+    // Math mod: ((a % b) + b) % b; result carries b's sign.
     const m = ((a.value % b.value) + b.value) % b.value;
     return { value: m, unit };
   }
-  // rem: JS `%` — result carries a's sign.
+  // rem: JS `%`; result carries a's sign.
   return { value: a.value % b.value, unit };
 }
 
 /**
- * CSS Values 4 §10.4 — trigonometric functions.
+ * Trigonometric functions.
  *
  *   sin / cos / tan: `<angle> | <number>` (numbers in radians)
  *   asin / acos / atan: returns <angle> in degrees
@@ -153,7 +145,7 @@ function resolveTrig(name: string, fn: Token, permitNonFinite: boolean): Numeric
   if (name === 'sin' || name === 'cos' || name === 'tan') {
     if (operands.length !== 1) return null;
     const t = operands[0];
-    // Angles arrive as `deg` (normalised by toNumeric); numbers as ''.
+    // Angles arrive as `deg` (normalized by toNumeric); numbers as ''.
     let radians: number;
     if (t.unit === 'deg') radians = (t.value * Math.PI) / 180;
     else if (t.unit === '') radians = t.value;
@@ -196,7 +188,7 @@ function resolveTrig(name: string, fn: Token, permitNonFinite: boolean): Numeric
 }
 
 /**
- * CSS Values 4 §10.5 — exponential functions.
+ * Exponential functions.
  *
  *   pow(base, exp), sqrt(A), hypot(A1, A2, ...), log(A, base?), exp(A)
  */
@@ -256,10 +248,10 @@ function resolveExpLog(name: string, fn: Token, permitNonFinite: boolean): Numer
 }
 
 /**
- * CSS Values 4 §10.6 — sign-related functions.
+ * Sign-related functions.
  *
  *   abs(A)  preserves unit
- *   sign(A) returns -1 / 0 / 1, unit-stripped per spec (still a number
+ *   sign(A) returns -1 / 0 / 1, unit-stripped (still a number
  *           even when A had a length unit)
  */
 function resolveAbsSign(name: string, fn: Token, permitNonFinite: boolean): NumericResult | null {
@@ -386,10 +378,10 @@ function resolveMinMaxClamp(
   if (name === 'clamp') {
     if (operands.length !== 3) return null;
     const [lo, val, hi] = operands;
-    // Spec: clamp(MIN, VAL, MAX) === max(MIN, min(VAL, MAX)). MIN wins
-    // when MIN > MAX. (Naïve `val<lo ? lo : val>hi ? hi : val` returns
-    // the wrong answer for clamp(100, 200, 50): hits the val>hi branch
-    // and returns 50 instead of MIN-wins 100.)
+    // clamp(MIN, VAL, MAX) === max(MIN, min(VAL, MAX)). MIN wins when
+    // MIN > MAX. (Naïve `val<lo ? lo : val>hi ? hi : val` returns the
+    // wrong answer for clamp(100, 200, 50): hits the val>hi branch and
+    // returns 50 instead of MIN-wins 100.)
     const clamped = Math.max(lo.value, Math.min(val.value, hi.value));
     return { value: clamped, unit };
   }
@@ -474,9 +466,9 @@ function evalSequence(tokens: Token[], permitNonFinite: boolean): NumericResult 
       const a = toNumeric(resolved[i - 1], permitNonFinite);
       const b = toNumeric(resolved[i + 1], permitNonFinite);
       if (a === null || b === null) return null;
-      // Spec §10.9: <number> + <length> is invalid (the unitless `0` in
-      // `calc(0 + 5px)` is a <number>, not a "unitless 0 length"). Reject
-      // when exactly one operand carries a unit.
+      // <number> + <length> is invalid (the unitless `0` in
+      // `calc(0 + 5px)` is a <number>, not a "unitless 0 length").
+      // Reject when exactly one operand carries a unit.
       if ((a.unit === '') !== (b.unit === '')) return null;
       if (a.unit && b.unit && a.unit !== b.unit) return null;
       const v = opTok.op === '+' ? a.value + b.value : a.value - b.value;
@@ -519,13 +511,13 @@ function toNumeric(
 }
 
 /**
- * Resolve a CSS math-context identifier to a numeric value per Values 4
- * §10.7. `pi` / `e` are <number>s. `infinity` / `-infinity` / `NaN` are
- * valid in math contexts but RN dimensions can't represent them — for
- * dimension callers (default), we warnOnce and drop the declaration;
- * for color callers (`permitNonFinite = true`), we return the IEEE value
- * since channel clamping will handle ±∞ and `usedValue` collapses NaN.
- * Returns null for unrecognised idents.
+ * Resolve a CSS math-context identifier to a numeric value. `pi` / `e`
+ * are <number>s. `infinity` / `-infinity` / `NaN` are valid in math
+ * contexts but RN dimensions can't represent them; for dimension
+ * callers (default), we warnOnce and drop the declaration; for color
+ * callers (`permitNonFinite = true`), we return the IEEE value since
+ * channel clamping will handle ±∞ and `usedValue` collapses NaN.
+ * Returns null for unrecognized idents.
  */
 export function identToNumeric(
   nameLower: string,

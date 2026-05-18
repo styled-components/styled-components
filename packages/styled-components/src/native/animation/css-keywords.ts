@@ -214,11 +214,9 @@ export function evaluateCubicBezier(
 }
 
 /**
- * Step easing evaluator: returns y(progress) per spec for
- * `steps(n, jump-type)`.
- *
- * Spec (CSS Easing L1 §3.2): determine the current step S as
- * floor(progress * n), then map S to an output level based on jump-type.
+ * Step easing evaluator: returns y(progress) for `steps(n, jump-type)`.
+ * Determines the current step S as floor(progress * n), then maps S to
+ * an output level based on jump-type.
  */
 export function evaluateSteps(
   n: number,

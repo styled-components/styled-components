@@ -7,6 +7,14 @@ import { resetStyleCache, RN_UNSUPPORTED_VALUES } from '../../models/NativeStyle
 // NOTE: These tests are like the ones for Web but a "light-version" of them
 // This is mostly due to the similar logic
 
+function flattenStyle(style: unknown): Array<Record<string, any>> {
+  return [style].flat(Infinity).filter(Boolean) as Array<Record<string, any>>;
+}
+
+function mergeStyle(style: unknown): Record<string, any> {
+  return Object.assign({}, ...flattenStyle(style));
+}
+
 describe('native', () => {
   let warnSpy: jest.SpyInstance;
 
@@ -569,6 +577,25 @@ describe('native', () => {
         );
         expect(cb).toHaveBeenCalledTimes(1);
       });
+
+      // Recipe: route `accent-color` onto an arbitrary tint prop of a wrapped
+      // third-party component. The accent-color polyfill keeps the resolved
+      // value in `accentColor` alongside the Switch trackColor lift, so
+      // ast.pop('accentColor') folds straight into whatever prop the wrapped
+      // component reads (Slider thumbTintColor, Checkbox color, ...).
+      it('attrs routes accent-color to a custom prop on a wrapped component', () => {
+        const Slider = (props: { thumbTintColor?: string }) => <View {...(props as object)} />;
+        Slider.displayName = 'Slider';
+        const ThemedSlider = styled(Slider).attrs<{ thumbTintColor?: string }>((_p, ast) => ({
+          thumbTintColor: ast.pop('accentColor'),
+        }))`
+          accent-color: red;
+        `;
+        const wrapper = TestRenderer.create(<ThemedSlider />);
+        const slider = wrapper.root.findByType(Slider);
+        expect(slider.props.thumbTintColor).toBe('red');
+        expect(slider.props.style).not.toHaveProperty('accentColor');
+      });
     });
   });
 
@@ -928,8 +955,7 @@ describe('native', () => {
         </Parent>
       );
       const text = tree.root.findByType(Text);
-      const flat = ([] as any[]).concat(text.props.style).flat(Infinity);
-      const merged: Record<string, any> = Object.assign({}, ...flat.filter(Boolean));
+      const merged = mergeStyle(text.props.style);
       expect(merged.fontSize).toBe(24);
     });
 
@@ -946,9 +972,106 @@ describe('native', () => {
         </Parent>
       );
       const text = tree.root.findByType(Text);
-      const flat = ([] as any[]).concat(text.props.style).flat(Infinity);
-      const merged: Record<string, any> = Object.assign({}, ...flat.filter(Boolean));
+      const merged = mergeStyle(text.props.style);
       expect(merged.height).toBe(32);
+    });
+
+    // Cascade-publish via a conditional bucket: when a parent declares
+    // `font-size` inside an `@media` block that matches at render time,
+    // descendants resolving `1em` must pick up the active value. This
+    // exercises the case where the cascade-publishing decl lives in the
+    // resolved style array (not the base object), so the compile-time
+    // publish flag must consider conditional buckets too.
+    it('font-size declared inside @media publishes to descendants when matched', () => {
+      // The default jsdom-test window is 1024x768 so this @media matches.
+      const Parent = styled.View`
+        font-size: 12px;
+        @media (min-width: 100px) {
+          font-size: 24px;
+        }
+      `;
+      const Child = styled.Text`
+        font-size: 1em;
+      `;
+      const tree = TestRenderer.create(
+        <Parent>
+          <Child>hi</Child>
+        </Parent>
+      );
+      const text = tree.root.findByType(Text);
+      const merged = mergeStyle(text.props.style);
+      expect(merged.fontSize).toBe(24);
+    });
+
+    // Cascade-publish via a resolver: a font-size value that has to
+    // resolve at render time (theme sentinel, viewport unit, env(),
+    // light-dark()) still publishes. The flag must consider compiled
+    // resolvers, not only the static base.
+    it('font-size that lives in resolvers publishes to descendants', () => {
+      const Parent = styled.View`
+        font-size: 2rem;
+      `;
+      const Child = styled.Text`
+        font-size: 1em;
+      `;
+      const tree = TestRenderer.create(
+        <Parent>
+          <Child>hi</Child>
+        </Parent>
+      );
+      const text = tree.root.findByType(Text);
+      const merged = mergeStyle(text.props.style);
+      // 2rem against the default 16px root font-size = 32.
+      expect(merged.fontSize).toBe(32);
+    });
+
+    // The cascade is derived from the assembled style (which includes
+    // user style), not the compiled output alone, so a user-supplied
+    // fontSize on a dynamic parent must still publish even when the
+    // parent's CSS declares no cascade keys.
+    it('user-supplied fontSize on a dynamic parent with no compiled cascade publishes to descendants', () => {
+      const Parent = styled.View<{ $tag: string }>`
+        padding: ${p => p.$tag};
+      `;
+      expect(Parent.nativeStyle.staticEligible).toBe(false);
+      const Child = styled.Text`
+        font-size: 1em;
+      `;
+      const tree = TestRenderer.create(
+        <Parent $tag="4px" style={{ fontSize: 40 }}>
+          <Child>hi</Child>
+        </Parent>
+      );
+      const text = tree.root.findByType(Text);
+      const merged = mergeStyle(text.props.style);
+      expect(merged.fontSize).toBe(40);
+    });
+
+    // A dynamic-eligible component (forced via function interpolation)
+    // that has no cascade keys must still pass the inherited cascade
+    // through unchanged: descendants resolving `1em` see the value from
+    // an ancestor that DOES publish, not the default 16.
+    it('dynamic component without cascade keys passes inherited cascade through', () => {
+      const Outer = styled.View`
+        font-size: 24px;
+      `;
+      // Force dynamic with a function interpolation.
+      const Middle = styled.View<{ $tag: string }>`
+        padding: ${p => p.$tag};
+      `;
+      const Child = styled.Text`
+        font-size: 1em;
+      `;
+      const tree = TestRenderer.create(
+        <Outer>
+          <Middle $tag="4px">
+            <Child>hi</Child>
+          </Middle>
+        </Outer>
+      );
+      const text = tree.root.findByType(Text);
+      const merged = mergeStyle(text.props.style);
+      expect(merged.fontSize).toBe(24);
     });
   });
 
@@ -1029,6 +1152,180 @@ describe('native', () => {
     });
   });
 
+  // Locks the user-style composition contract on both the static and
+  // dynamic paths, including auto-`container-name` injection when CSS
+  // declares `container-type` without an explicit name.
+  describe('style composition', () => {
+    describe('static path (useStaticImpl)', () => {
+      it('returns the compiled base as a plain object when no user style is supplied', () => {
+        const Comp = styled.View`
+          padding-top: 10px;
+        `;
+        expect(Comp.nativeStyle.staticEligible).toBe(true);
+        const wrapper = TestRenderer.create(<Comp />);
+        const view = wrapper.root.findByType(View);
+        expect(view.props.style).toEqual({ paddingTop: 10 });
+      });
+
+      it('wraps base + object user style as [base, user]', () => {
+        const Comp = styled.View`
+          padding-top: 10px;
+        `;
+        const userStyle = { opacity: 0.5 };
+        const wrapper = TestRenderer.create(<Comp style={userStyle} />);
+        const view = wrapper.root.findByType(View);
+        expect(view.props.style).toEqual([{ paddingTop: 10 }, userStyle]);
+      });
+
+      it('flattens base + array user style as [base, ...user]', () => {
+        const Comp = styled.View`
+          padding-top: 10px;
+        `;
+        const userStyle = [{ opacity: 0.5 }, { margin: 4 }];
+        const wrapper = TestRenderer.create(<Comp style={userStyle} />);
+        const view = wrapper.root.findByType(View);
+        expect(view.props.style).toEqual([{ paddingTop: 10 }, { opacity: 0.5 }, { margin: 4 }]);
+      });
+
+      it('passes through base unchanged when user style is null', () => {
+        const Comp = styled.View`
+          padding-top: 10px;
+        `;
+        // @ts-expect-error: testing runtime null handling
+        const wrapper = TestRenderer.create(<Comp style={null} />);
+        const view = wrapper.root.findByType(View);
+        expect(view.props.style).toEqual({ paddingTop: 10 });
+      });
+
+      it('auto-injects containerName when container-type is declared without container-name', () => {
+        const Card = styled.View.withConfig({ displayName: 'AutoNameCard' })`
+          container-type: size;
+        `;
+        const wrapper = TestRenderer.create(<Card />);
+        const view = wrapper.root.findByType(View);
+        const merged = mergeStyle(view.props.style);
+        expect(merged.containerName).toBe(Card.styledComponentId);
+      });
+
+      it('does NOT auto-inject containerName when container-name was supplied explicitly', () => {
+        const Card = styled.View`
+          container-type: size;
+          container-name: explicit;
+        `;
+        const wrapper = TestRenderer.create(<Card />);
+        const view = wrapper.root.findByType(View);
+        const merged = mergeStyle(view.props.style);
+        // The author-supplied name is what the runtime resolves to; the
+        // styledComponentId never appears as a containerName injection.
+        expect(merged.containerName).toBe('explicit');
+      });
+
+      it('auto-injects containerName alongside an object user style', () => {
+        const Card = styled.View.withConfig({ displayName: 'AutoNameUserCard' })`
+          container-type: size;
+        `;
+        const wrapper = TestRenderer.create(<Card style={{ opacity: 0.7 }} />);
+        const view = wrapper.root.findByType(View);
+        const merged = mergeStyle(view.props.style);
+        expect(merged.opacity).toBe(0.7);
+        expect(merged.containerName).toBe(Card.styledComponentId);
+      });
+
+      it('layers function-form user style as a state callback returning [base, callbackResult]', () => {
+        const Comp = styled.View`
+          padding-top: 10px;
+        `;
+        const userStyle = (state: { pressed?: boolean }) =>
+          state.pressed ? { opacity: 0.5 } : { opacity: 1 };
+        const wrapper = TestRenderer.create(<Comp style={userStyle} />);
+        const view = wrapper.root.findByType(View);
+        expect(typeof view.props.style).toBe('function');
+        expect(view.props.style({ pressed: true })).toEqual([{ paddingTop: 10 }, { opacity: 0.5 }]);
+        expect(view.props.style({ pressed: false })).toEqual([{ paddingTop: 10 }, { opacity: 1 }]);
+      });
+
+      it('layers function-form user style returning an array result', () => {
+        const Comp = styled.View`
+          padding-top: 10px;
+        `;
+        const userStyle = () => [{ opacity: 0.5 }, { margin: 4 }];
+        const wrapper = TestRenderer.create(<Comp style={userStyle} />);
+        const view = wrapper.root.findByType(View);
+        expect(typeof view.props.style).toBe('function');
+        expect(view.props.style({})).toEqual([{ paddingTop: 10 }, { opacity: 0.5 }, { margin: 4 }]);
+      });
+
+      it('layers auto-containerName ON TOP OF a function-form user style', () => {
+        const Card = styled.View.withConfig({ displayName: 'AutoNameFnCard' })`
+          container-type: size;
+        `;
+        const userStyle = (state: { pressed?: boolean }) =>
+          state.pressed ? { opacity: 0.5 } : { opacity: 1 };
+        const wrapper = TestRenderer.create(<Card style={userStyle} />);
+        const view = wrapper.root.findByType(View);
+        // Function form preserved; container name appended as a static layer
+        // after the callback result.
+        expect(typeof view.props.style).toBe('function');
+        const result = view.props.style({ pressed: true });
+        const merged = mergeStyle(result);
+        expect(merged.opacity).toBe(0.5);
+        expect(merged.containerName).toBe(Card.styledComponentId);
+      });
+    });
+
+    describe('dynamic path (useDynamicImpl)', () => {
+      // Force a dynamic path with a function interpolation; the cascade
+      // and conditional code is then exercised but the user-style
+      // composition contract is the same shape.
+      it('composes base + object user style', () => {
+        const Comp = styled.View<{ $color: string }>`
+          color: ${p => p.$color};
+          padding-top: 10px;
+        `;
+        expect(Comp.nativeStyle.staticEligible).toBe(false);
+        const wrapper = TestRenderer.create(<Comp $color="red" style={{ opacity: 0.5 }} />);
+        const view = wrapper.root.findByType(View);
+        // Dynamic path returns merged-object form when there's no
+        // active conditional; the structural contract is the same:
+        // user style is layered after base.
+        const merged = mergeStyle(view.props.style);
+        expect(merged.color).toBe('red');
+        expect(merged.paddingTop).toBe(10);
+        expect(merged.opacity).toBe(0.5);
+      });
+
+      it('auto-injects containerName on the dynamic path', () => {
+        const Card = styled.View.withConfig({ displayName: 'DynAutoNameCard' })<{ $w: number }>`
+          width: ${p => p.$w}px;
+          container-type: size;
+        `;
+        expect(Card.nativeStyle.staticEligible).toBe(false);
+        const wrapper = TestRenderer.create(<Card $w={200} />);
+        const view = wrapper.root.findByType(View);
+        const merged = mergeStyle(view.props.style);
+        expect(merged.containerName).toBe(Card.styledComponentId);
+        expect(merged.width).toBe(200);
+      });
+
+      it('layers function-form user style with auto-container-name on the dynamic path', () => {
+        const Card = styled.View.withConfig({ displayName: 'DynAutoNameFnCard' })<{ $w: number }>`
+          width: ${p => p.$w}px;
+          container-type: size;
+        `;
+        const userStyle = (state: { pressed?: boolean }) =>
+          state.pressed ? { opacity: 0.5 } : { opacity: 1 };
+        const wrapper = TestRenderer.create(<Card $w={200} style={userStyle} />);
+        const view = wrapper.root.findByType(View);
+        expect(typeof view.props.style).toBe('function');
+        const result = view.props.style({ pressed: true });
+        const merged = mergeStyle(result);
+        expect(merged.opacity).toBe(0.5);
+        expect(merged.containerName).toBe(Card.styledComponentId);
+        expect(merged.width).toBe(200);
+      });
+    });
+  });
+
   describe('HMR memo invalidation (dev injector)', () => {
     // Without the injector, `React.memo` bails out when the user-props
     // bag is shallow-equal across renders. After HMR, a new `NativeStyle`
@@ -1098,10 +1395,7 @@ describe('native', () => {
       const tree = TestRenderer.create(<Clamped>long text</Clamped>);
       const text = tree.root.findByType(Text);
       expect(text.props.numberOfLines).toBe(2);
-      const flat = ([] as any[])
-        .concat(text.props.style ?? [])
-        .flat(Infinity)
-        .filter(Boolean);
+      const flat = flattenStyle(text.props.style);
       expect(flat).toContainEqual({ overflow: 'hidden' });
       for (const entry of flat) expect(entry.numberOfLines).toBeUndefined();
     });
@@ -1190,13 +1484,121 @@ describe('native', () => {
       `;
       const tree = TestRenderer.create(<Comp>x</Comp>);
       const text = tree.root.findByType(Text);
-      const flat = ([] as any[])
-        .concat(text.props.style ?? [])
-        .flat(Infinity)
-        .filter(Boolean);
+      const flat = flattenStyle(text.props.style);
       for (const entry of flat) {
         expect(entry.numberOfLines).toBeUndefined();
       }
+    });
+  });
+
+  // CSS Text 4 §7.1 - text-align: start / end / match-parent.
+  // RN's platform text engine flips left ↔ right when the inherited
+  // paragraph direction is rtl, so the compile output is the same in both
+  // directions; the visual flip happens in iOS RCTTextAttributes and
+  // Android TextLayoutManager.
+  describe('text-align: start / end / match-parent', () => {
+    beforeEach(() => {
+      resetStyleCache();
+    });
+
+    it('text-align: start compiles to textAlign: left under direction: ltr', () => {
+      const Card = styled.View<{ $dir: 'ltr' | 'rtl' }>`
+        direction: ${p => p.$dir};
+      `;
+      const Label = styled.Text`
+        text-align: start;
+      `;
+      const tree = TestRenderer.create(
+        <Card $dir="ltr">
+          <Label>start edge</Label>
+        </Card>
+      );
+      const merged = mergeStyle(tree.root.findByType(Text).props.style);
+      expect(merged.textAlign).toBe('left');
+    });
+
+    it('text-align: start still compiles to textAlign: left under direction: rtl', () => {
+      const Card = styled.View<{ $dir: 'ltr' | 'rtl' }>`
+        direction: ${p => p.$dir};
+      `;
+      const Label = styled.Text`
+        text-align: start;
+      `;
+      const tree = TestRenderer.create(
+        <Card $dir="rtl">
+          <Label>start edge</Label>
+        </Card>
+      );
+      const merged = mergeStyle(tree.root.findByType(Text).props.style);
+      // RN's platform layer flips left → right when the inherited
+      // paragraph direction is rtl, so emitting `left` here is what
+      // makes the visual start edge land in the right spot.
+      expect(merged.textAlign).toBe('left');
+    });
+
+    it('text-align: end compiles to textAlign: right', () => {
+      const Label = styled.Text`
+        text-align: end;
+      `;
+      const tree = TestRenderer.create(<Label>end edge</Label>);
+      const merged = mergeStyle(tree.root.findByType(Text).props.style);
+      expect(merged.textAlign).toBe('right');
+    });
+
+    it('text-align: match-parent compiles to textAlign: left', () => {
+      const Label = styled.Text`
+        text-align: match-parent;
+      `;
+      const tree = TestRenderer.create(<Label>match</Label>);
+      const merged = mergeStyle(tree.root.findByType(Text).props.style);
+      expect(merged.textAlign).toBe('left');
+    });
+  });
+
+  describe('hyphens lift', () => {
+    beforeEach(() => {
+      resetStyleCache();
+    });
+
+    it('lifts hyphens: auto to android_hyphenationFrequency: "normal" on Text', () => {
+      const Hyph = styled.Text`
+        hyphens: auto;
+      `;
+      const tree = TestRenderer.create(<Hyph>antidisestablishmentarianism</Hyph>);
+      const text = tree.root.findByType(Text);
+      expect(text.props.android_hyphenationFrequency).toBe('normal');
+      const flat = flattenStyle(text.props.style);
+      for (const entry of flat) expect(entry.android_hyphenationFrequency).toBeUndefined();
+    });
+
+    it('lifts hyphens: none to android_hyphenationFrequency: "none" on Text', () => {
+      const Hyph = styled.Text`
+        hyphens: none;
+      `;
+      const tree = TestRenderer.create(<Hyph>x</Hyph>);
+      const text = tree.root.findByType(Text);
+      expect(text.props.android_hyphenationFrequency).toBe('none');
+    });
+
+    it('lifts hyphens: manual to android_hyphenationFrequency: "none" on Text', () => {
+      const Hyph = styled.Text`
+        hyphens: manual;
+      `;
+      const tree = TestRenderer.create(<Hyph>x</Hyph>);
+      const text = tree.root.findByType(Text);
+      expect(text.props.android_hyphenationFrequency).toBe('none');
+    });
+
+    it('user android_hyphenationFrequency prop wins over compiled hyphens', () => {
+      const Hyph = styled.Text`
+        hyphens: auto;
+      `;
+      const tree = TestRenderer.create(
+        // @ts-expect-error RN's prop typing for this is Android-only and not in the public Text props
+        <Hyph android_hyphenationFrequency="full">x</Hyph>
+      );
+      const text = tree.root.findByType(Text);
+      expect(text.props.android_hyphenationFrequency).toBe('full');
     });
   });
 
@@ -1225,11 +1627,7 @@ describe('native', () => {
       const tree = TestRenderer.create(<Auto value="" onChangeText={() => {}} />);
       const input = tree.root.findByType(TextInput);
       expect(input.props.onContentSizeChange).toBeUndefined();
-      const flat = ([] as any[])
-        .concat(input.props.style ?? [])
-        .flat(Infinity)
-        .filter(Boolean);
-      const merged = flat.reduce((acc, layer) => Object.assign(acc, layer), {});
+      const merged = mergeStyle(input.props.style);
       expect(merged.height).toBeUndefined();
       expect(merged.minHeight).toBe(44);
     });
@@ -1324,11 +1722,7 @@ describe('native', () => {
 
   // https://drafts.csswg.org/css-transforms-2/#perspective-property
   describe('perspective composition (CSS Transforms 2 §8)', () => {
-    function getMergedStyle(node: TestRenderer.ReactTestInstance): Record<string, any> {
-      const style = node.props.style;
-      const flat = [style].flat(Infinity).filter(Boolean) as Array<Record<string, any>>;
-      return Object.assign({}, ...flat);
-    }
+    const getMergedStyle = (node: TestRenderer.ReactTestInstance) => mergeStyle(node.props.style);
 
     it('perspective alone emits a perspective() transform', () => {
       const View3d = styled.View`

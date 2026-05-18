@@ -1,4 +1,3 @@
-import { warnOnce } from '../native/transform/dev';
 import * as $ from '../utils/charCodes';
 import {
   AtRuleNode,
@@ -8,12 +7,21 @@ import {
   NATIVE_RULE_CLASS,
   NativeAtClass,
   NativeRuleClass,
+  NthOfBranch,
   NthSpec,
   PseudoState,
   RuleNode,
 } from './ast';
 
-export type { AttrSelector, ConditionalAttr, NativeAtClass, NativeRuleClass, NthSpec, PseudoState };
+export type {
+  AttrSelector,
+  ConditionalAttr,
+  NativeAtClass,
+  NativeRuleClass,
+  NthOfBranch,
+  NthSpec,
+  PseudoState,
+};
 export { NATIVE_AT_CLASS, NATIVE_RULE_CLASS };
 
 /**
@@ -127,44 +135,37 @@ export function classifyRuleNow(selectors: string[]): NativeRuleClass {
   if (fanOut) return { kind: 'pseudoFanOut', pseudos: fanOut };
   const attrSels = detectAttrSelectors(selectors);
   if (attrSels) return { kind: 'attr', selectors: attrSels };
-  // CSS Selectors 4 §4.3 — `:not(<simple-selector>)`. Current scope is
-  // simple-arg only; complex/compound arguments fall through to the
-  // generic complex-selector warn.
+  // `:not(<simple-selector>)`. Current scope is simple-arg only;
+  // complex/compound arguments fall through to the generic
+  // complex-selector warn.
   const notCls = detectNot(selectors);
   if (notCls !== null) return notCls;
-  // CSS Selectors 4 §15 — descendant / child / adjacent-sibling /
-  // general-sibling combinator against an interpolated styled
-  // component reference. `${Foo} &` / `> &` / `+ &` / `~ &` compile
-  // to `.sc-FooId &` / `.sc-FooId > &` / `.sc-FooId + &` / `.sc-FooId
-  // ~ &` after `${StyledComponent}.toString()`.
+  // Descendant / child / adjacent-sibling / general-sibling combinator
+  // against an interpolated styled component reference. `${Foo} &` /
+  // `> &` / `+ &` / `~ &` compile to `.sc-FooId &` / `.sc-FooId > &` /
+  // `.sc-FooId + &` / `.sc-FooId ~ &` after
+  // `${StyledComponent}.toString()`.
   const combinator = detectCombinator(selectors);
   if (combinator !== null) return combinator;
-  // CSS Selectors 4 §9 — tree-structural pseudo-classes that match by
-  // sibling position. `&:first-child`, `&:last-child`,
-  // `&:only-child`, `&:nth-child(an+b)`, `&:nth-last-child(...)`,
-  // `&:nth-of-type(...)`, `&:nth-last-of-type(...)`.
+  // Tree-structural pseudo-classes that match by sibling position.
+  // `&:first-child`, `&:last-child`, `&:only-child`,
+  // `&:nth-child(an+b)`, `&:nth-last-child(...)`, `&:nth-of-type(...)`,
+  // `&:nth-last-of-type(...)`.
   const nth = detectNthChild(selectors);
   if (nth !== null) return nth;
-  // CSS Selectors 4 §13.1 — `&:has(<simple>)`. Inner restricted to a
-  // single class selector (`${Component}`) or a single attribute
-  // selector for the v7 scope.
+  // `&:has(<simple>)`. Inner restricted to a single class selector
+  // (`${Component}`) or a single attribute selector for the v7 scope.
   const has = detectHas(selectors);
   if (has !== null) return has;
   return { kind: 'unsupported' };
 }
 
 /**
- * `&:has(<inner>)` — match when the element has a descendant matching
- * the inner simple selector. v7 scope: a styled-component reference
- * (post-fillAst class selector `.sc-FooId`) or a single attribute
- * selector. Compound / complex inner forms fall through.
+ * Parse a single simple-selector inner shared by `:has(<simple>)` and
+ * `:nth-child(an+b of <simple>)`. Returns null on compound / complex
+ * inner forms (with combinators, comma lists, or pseudo-states).
  */
-function detectHas(selectors: string[]): NativeRuleClass | null {
-  if (selectors.length !== 1) return null;
-  const sel = selectors[0];
-  const prefix = '&:has(';
-  if (!sel.startsWith(prefix) || sel.charCodeAt(sel.length - 1) !== $.CLOSE_PAREN) return null;
-  const inner = sel.substring(prefix.length, sel.length - 1).trim();
+function parseSimpleInner(inner: string): NthOfBranch | null {
   if (inner.length === 0) return null;
 
   // Component reference: `.sc-<id>` produced by `${Component}.toString()`.
@@ -183,7 +184,7 @@ function detectHas(selectors: string[]): NativeRuleClass | null {
     }
     if (i !== inner.length) return null;
     if (i === 1) return null;
-    return { kind: 'has', inner: { kind: 'component', id: inner.substring(1) } };
+    return { kind: 'component', id: inner.substring(1) };
   }
 
   // Attribute selector: `[attr]`, `[attr=value]`, `[attr='value']`.
@@ -192,10 +193,27 @@ function detectHas(selectors: string[]): NativeRuleClass | null {
     if (end !== inner.length - 1) return null;
     const attr = parseAttrInner(inner.substring(1, end));
     if (attr === null) return null;
-    return { kind: 'has', inner: { kind: 'attr', attr } };
+    return { kind: 'attr', attr };
   }
 
   return null;
+}
+
+/**
+ * `&:has(<inner>)`: match when the element has a descendant matching
+ * the inner simple selector. v7 scope: a styled-component reference
+ * (post-fillAst class selector `.sc-FooId`) or a single attribute
+ * selector. Compound / complex inner forms fall through.
+ */
+function detectHas(selectors: string[]): NativeRuleClass | null {
+  if (selectors.length !== 1) return null;
+  const sel = selectors[0];
+  const prefix = '&:has(';
+  if (!sel.startsWith(prefix) || sel.charCodeAt(sel.length - 1) !== $.CLOSE_PAREN) return null;
+  const inner = sel.substring(prefix.length, sel.length - 1).trim();
+  const parsed = parseSimpleInner(inner);
+  if (parsed === null) return null;
+  return { kind: 'has', inner: parsed };
 }
 
 /**
@@ -203,7 +221,7 @@ function detectHas(selectors: string[]): NativeRuleClass | null {
  * null on unrecognized forms (keeps caller bailing to generic
  * "complex selector" treatment). Supports literal integers (`3`),
  * keyword shortcuts (`odd`, `even`), and the full `[+-]?(\d*)n([+-]\d+)?`
- * grammar with whitespace tolerance per CSS Syntax 3 §6.
+ * grammar with whitespace tolerance.
  */
 function parseAnPlusB(raw: string): { a: number; b: number } | null {
   const s = raw.trim().toLowerCase();
@@ -242,14 +260,60 @@ function parseAnPlusB(raw: string): { a: number; b: number } | null {
   return { a, b };
 }
 
-function warnOfSelectorForm(inner: string): void {
-  if (!__DEV__) return;
-  if (inner.indexOf(' of ') === -1) return;
-  warnOnce(
-    'native-nth-child-of-selector',
-    "The CSS Selectors 4 `:nth-child(<formula> of <selector>)` syntax — passing a selector list to scope the structural count — isn't supported on native because evaluating the inner selector against each sibling requires React tree introspection. The plain `:nth-child(<formula>)` form (`:nth-child(2n+1)`, `:nth-child(odd)`) is supported.",
-    inner
-  );
+/**
+ * Split `:nth-child(an+b of S)` style inner into formula + of-selector.
+ * Returns null when no ` of ` keyword is present. The split is
+ * bracket-depth-aware so attribute values containing literal ` of `
+ * substrings inside `[...]` don't trigger a false split.
+ */
+function splitNthInner(inner: string): { formula: string; ofRaw: string } | null {
+  let depth = 0;
+  for (let i = 0; i < inner.length - 3; i++) {
+    const c = inner.charCodeAt(i);
+    if (c === $.OPEN_BRACKET) {
+      depth++;
+      continue;
+    }
+    if (c === $.CLOSE_BRACKET) {
+      depth--;
+      continue;
+    }
+    if (depth !== 0) continue;
+    if (
+      c === 0x20 /* space */ &&
+      (inner.charCodeAt(i + 1) === 0x6f /* o */ || inner.charCodeAt(i + 1) === 0x4f) /* O */ &&
+      (inner.charCodeAt(i + 2) === 0x66 /* f */ || inner.charCodeAt(i + 2) === 0x46) /* F */ &&
+      inner.charCodeAt(i + 3) === 0x20 /* space */
+    ) {
+      return { formula: inner.substring(0, i), ofRaw: inner.substring(i + 4) };
+    }
+  }
+  return null;
+}
+
+/**
+ * Parse the contents of `:nth-child(...)` / `:nth-last-child(...)` /
+ * `:nth-of-type(...)` / `:nth-last-of-type(...)`. The `acceptOf`
+ * argument controls whether ` of S` suffixes are permitted (only the
+ * `:nth-child` and `:nth-last-child` forms accept it per spec).
+ * Returns null on unrecognized forms; the caller routes a complex
+ * inner that contains ` of ` to the generic complex-selector warn.
+ */
+function parseNthInner(
+  raw: string,
+  acceptOf: boolean
+): { a: number; b: number; of?: NthOfBranch } | null {
+  const split = splitNthInner(raw);
+  if (split === null) {
+    const ab = parseAnPlusB(raw);
+    return ab === null ? null : ab;
+  }
+  if (!acceptOf) return null;
+  const ab = parseAnPlusB(split.formula);
+  if (ab === null) return null;
+  const of = parseSimpleInner(split.ofRaw.trim());
+  if (of === null) return null;
+  return { a: ab.a, b: ab.b, of };
 }
 
 /**
@@ -303,36 +367,26 @@ function detectNthChild(selectors: string[]): NativeRuleClass | null {
     spec = { a: 0, b: 1, fromEnd: false, ofType: true, onlyChild: true };
   else if (head.startsWith('nth-child(') && head.endsWith(')')) {
     const inner = head.substring('nth-child('.length, head.length - 1);
-    const ab = parseAnPlusB(inner);
-    if (ab === null) {
-      warnOfSelectorForm(inner);
-      return null;
-    }
-    spec = { a: ab.a, b: ab.b, fromEnd: false, ofType: false };
+    const parsed = parseNthInner(inner, true);
+    if (parsed === null) return null;
+    spec = { a: parsed.a, b: parsed.b, fromEnd: false, ofType: false };
+    if (parsed.of !== undefined) spec.of = parsed.of;
   } else if (head.startsWith('nth-last-child(') && head.endsWith(')')) {
     const inner = head.substring('nth-last-child('.length, head.length - 1);
-    const ab = parseAnPlusB(inner);
-    if (ab === null) {
-      warnOfSelectorForm(inner);
-      return null;
-    }
-    spec = { a: ab.a, b: ab.b, fromEnd: true, ofType: false };
+    const parsed = parseNthInner(inner, true);
+    if (parsed === null) return null;
+    spec = { a: parsed.a, b: parsed.b, fromEnd: true, ofType: false };
+    if (parsed.of !== undefined) spec.of = parsed.of;
   } else if (head.startsWith('nth-of-type(') && head.endsWith(')')) {
     const inner = head.substring('nth-of-type('.length, head.length - 1);
-    const ab = parseAnPlusB(inner);
-    if (ab === null) {
-      warnOfSelectorForm(inner);
-      return null;
-    }
-    spec = { a: ab.a, b: ab.b, fromEnd: false, ofType: true };
+    const parsed = parseNthInner(inner, false);
+    if (parsed === null) return null;
+    spec = { a: parsed.a, b: parsed.b, fromEnd: false, ofType: true };
   } else if (head.startsWith('nth-last-of-type(') && head.endsWith(')')) {
     const inner = head.substring('nth-last-of-type('.length, head.length - 1);
-    const ab = parseAnPlusB(inner);
-    if (ab === null) {
-      warnOfSelectorForm(inner);
-      return null;
-    }
-    spec = { a: ab.a, b: ab.b, fromEnd: true, ofType: true };
+    const parsed = parseNthInner(inner, false);
+    if (parsed === null) return null;
+    spec = { a: parsed.a, b: parsed.b, fromEnd: true, ofType: true };
   }
 
   if (spec === null) return null;
@@ -355,7 +409,7 @@ function findClosingParen(s: string, openIdx: number): number {
 }
 
 /**
- * `&:not(<simple-selector>)` — fire the bucket when the inner selector
+ * `&:not(<simple-selector>)`: fire the bucket when the inner selector
  * does NOT match. Supports a single pseudo-state (`&:not(:hover)`), a
  * single attribute selector (`&:not([disabled])`), and the compound
  * trailing-pseudo form `&:not([attr]):pseudo`. Complex / multi-arg
@@ -414,9 +468,9 @@ function detectPseudoSelector(sel: string): PseudoState | null {
 }
 
 /**
- * `${StyledFoo} &` (descendant) or `${StyledFoo} > &` (child) per CSS
- * Selectors 4 §15. After `${StyledComponent}.toString()` interpolates
- * to `.<styledComponentId>`, the selector string lands here as
+ * `${StyledFoo} &` (descendant) or `${StyledFoo} > &` (child). After
+ * `${StyledComponent}.toString()` interpolates to
+ * `.<styledComponentId>`, the selector string lands here as
  * `.sc-FooId &` / `.sc-FooId > &`. Optional pseudo on `&`
  * (`${Foo} &:hover`) is captured for composite matching.
  *
@@ -637,8 +691,8 @@ function parseAttrInner(inner: string): ConditionalAttr | null {
     const name = inner.trim();
     return isAttrName(name) ? { name } : null;
   }
-  // CSS Selectors 4 §6.2 — operator detection. The operator char sits
-  // immediately before `=`. `=` alone is the default exact-match.
+  // Operator detection. The operator char sits immediately before `=`.
+  // `=` alone is the default exact-match.
   let operator: '=' | '~=' | '|=' | '^=' | '$=' | '*=' = '=';
   let nameEnd = eqIdx;
   if (eqIdx > 0) {
@@ -663,9 +717,9 @@ function parseAttrInner(inner: string): ConditionalAttr | null {
   const name = inner.substring(0, nameEnd).trim();
   if (!isAttrName(name)) return null;
   let raw = inner.substring(eqIdx + 1).trim();
-  // CSS Selectors 4 §6.3 case-sensitivity flag suffix (` i` / ` s`).
-  // `i` makes the comparison ASCII case-insensitive;`s` is the
-  // (default) sensitive form and is dropped.
+  // Case-sensitivity flag suffix (` i` / ` s`). `i` makes the
+  // comparison ASCII case-insensitive; `s` is the (default) sensitive
+  // form and is dropped.
   let caseFlag: 'i' | undefined;
   if (raw.length >= 2 && raw.charCodeAt(raw.length - 2) === $.SPACE) {
     const flag = raw.charCodeAt(raw.length - 1);

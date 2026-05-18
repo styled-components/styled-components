@@ -4,8 +4,7 @@ import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
 
 /**
- * CSS Form Control Styling 1 §7.1 (`field-sizing`).
- * Syntax: `fixed | content`. Initial: `fixed`. Inherited: no.
+ * `field-sizing: fixed | content`. Initial: `fixed`. Inherited: no.
  *
  * `content` makes form controls autosize to their content; `fixed` keeps
  * the author-specified dimensions (the default).
@@ -14,7 +13,7 @@ import { TokenStream } from '../tokenStream';
  * RN's shadow-view measure callback (`RCTBaseTextInputShadowView.sizeThatFits`)
  * returns the natural text content size with `maximumSize.height = CGFLOAT_MAX`
  * for multiline inputs, so Yoga sizes the view to its text. As the user types
- * the shadow view dirties, Yoga re-measures, and the view grows on its own —
+ * the shadow view dirties, Yoga re-measures, and the view grows on its own;
  * no JS-side `onContentSizeChange` wiring required. Setting an explicit
  * `height` on the input would defeat that natural growth, so the polyfill
  * intentionally only flips `multiline`. Author-declared `min-height` and

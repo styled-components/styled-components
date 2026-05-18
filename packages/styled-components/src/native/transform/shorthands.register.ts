@@ -2,6 +2,7 @@ import {
   animationDelayLonghand,
   animationDirectionLonghand,
   animationDurationLonghand,
+  animationCompositionLonghand,
   animationFillModeLonghand,
   animationIterationCountLonghand,
   animationNameLonghand,
@@ -15,7 +16,12 @@ import {
   transitionShorthand,
   transitionTimingFunctionLonghand,
 } from '../animation/parse-shorthand';
-import { backgroundShorthand } from './handlers/background';
+import {
+  backgroundAttachmentLonghand,
+  backgroundClipLonghand,
+  backgroundOriginLonghand,
+  backgroundShorthand,
+} from './handlers/background';
 import {
   borderColorShorthand,
   borderShorthand,
@@ -26,6 +32,7 @@ import {
   aspectRatioShorthand,
   fontFamilyShorthand,
   fontShorthand,
+  fontSizeHandler,
   fontStyleHandler,
   fontVariantShorthand,
   letterSpacingHandler,
@@ -71,6 +78,7 @@ register('placeItems', placeItemsShorthand);
 register('placeSelf', placeSelfShorthand);
 register('font', fontShorthand);
 register('fontFamily', fontFamilyShorthand);
+register('fontSize', fontSizeHandler);
 register('fontStyle', fontStyleHandler);
 register('fontVariant', fontVariantShorthand);
 register('lineHeight', lineHeightHandler);
@@ -84,6 +92,9 @@ register('textShadowOffset', textShadowOffsetShorthand);
 register('shadowOffset', shadowOffsetShorthand);
 
 register('background', backgroundShorthand);
+register('backgroundAttachment', backgroundAttachmentLonghand);
+register('backgroundOrigin', backgroundOriginLonghand);
+register('backgroundClip', backgroundClipLonghand);
 
 register('animation', animationShorthand);
 register('animationName', animationNameLonghand);
@@ -94,6 +105,7 @@ register('animationIterationCount', animationIterationCountLonghand);
 register('animationDirection', animationDirectionLonghand);
 register('animationFillMode', animationFillModeLonghand);
 register('animationPlayState', animationPlayStateLonghand);
+register('animationComposition', animationCompositionLonghand);
 register('transition', transitionShorthand);
 register('transitionProperty', transitionPropertyLonghand);
 register('transitionDuration', transitionDurationLonghand);
@@ -105,7 +117,10 @@ register('transitionBehavior', transitionBehaviorLonghand);
 import './polyfills/logicalShorthand';
 import './polyfills/logicalBorder';
 import './polyfills/interactivity';
+import './polyfills/accentColor';
 import './polyfills/lineClamp';
+import './polyfills/scroll';
+import './polyfills/textOverflow';
 import './polyfills/textWrap';
 import './polyfills/hyphens';
 import './polyfills/caretColor';

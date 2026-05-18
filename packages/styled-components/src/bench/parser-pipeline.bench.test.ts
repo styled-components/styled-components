@@ -1,19 +1,9 @@
 /**
- * Full pipeline (parse + emit) vs stylis (compile + serialize).
- *
- * Baseline-comparison bench: tracks throughput of the in-house compiler
- * relative to the displaced library. Stylis is retained as a
- * devDependency to back this comparison and the byte-parity corpus.
- *
- * Output is a changelog / marketing signal, not a v7-internal regression
- * detector;for those see `src/bench/web.test.js` (stress + render
- * throughput) and `src/bench/v6-vs-v7.bench.test.js` (cross-major head
- * to head).
+ * Full parse + emit pipeline throughput (in-house compiler).
  *
  * Run: pnpm --filter styled-components bench:web -- parser-pipeline
  */
 
-import * as stylis from 'stylis';
 import { emitWeb } from '../parser/emit-web';
 import { parse } from '../parser/parser';
 import { normalize } from '../utils/compiler';
@@ -205,88 +195,57 @@ font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'He
 animation: slide 0.3s ease-out, fade 0.5s linear, bounce 0.8s cubic-bezier(0.2, 0, 0, 1);
 `;
 
-// Full stylis pipeline (preprocess + compile + serialize with rulesheet)
-function stylisFull(css: string): string[] {
-  const out: string[] = [];
-  stylis.serialize(
-    stylis.compile(`.a{${normalize(css)}}`),
-    stylis.middleware([stylis.stringify, stylis.rulesheet(v => out.push(v))])
-  );
-  return out;
-}
-
 function parserFull(css: string): string[] {
   return emitWeb(parse(normalize(css)), '.a');
 }
 
-describe('parser pipeline vs stylis pipeline', () => {
+describe('parser pipeline (parse + emit)', () => {
   it('parses + emits CSS_TINY', () => {
     console.log('\n--- CSS_TINY ---');
-    bench('parser AST path             ', 50000, () => {
+    bench('parser AST path', 50000, () => {
       parserFull(CSS_TINY);
-    });
-    bench('stylis (compile + serialize)', 50000, () => {
-      stylisFull(CSS_TINY);
     });
   });
 
   it('parses + emits CSS_SMALL', () => {
     console.log('\n--- CSS_SMALL ---');
-    bench('parser AST path             ', 30000, () => {
+    bench('parser AST path', 30000, () => {
       parserFull(CSS_SMALL);
-    });
-    bench('stylis (compile + serialize)', 30000, () => {
-      stylisFull(CSS_SMALL);
     });
   });
 
   it('parses + emits CSS_MEDIUM', () => {
     console.log('\n--- CSS_MEDIUM ---');
-    bench('parser AST path             ', 10000, () => {
+    bench('parser AST path', 10000, () => {
       parserFull(CSS_MEDIUM);
-    });
-    bench('stylis (compile + serialize)', 10000, () => {
-      stylisFull(CSS_MEDIUM);
     });
   });
 
   it('parses + emits CSS_MEDIA_NESTED', () => {
     console.log('\n--- CSS_MEDIA_NESTED ---');
-    bench('parser AST path             ', 10000, () => {
+    bench('parser AST path', 10000, () => {
       parserFull(CSS_MEDIA_NESTED);
-    });
-    bench('stylis (compile + serialize)', 10000, () => {
-      stylisFull(CSS_MEDIA_NESTED);
     });
   });
 
   it('parses + emits CSS_KEYFRAMES', () => {
     console.log('\n--- CSS_KEYFRAMES ---');
-    bench('parser AST path             ', 10000, () => {
+    bench('parser AST path', 10000, () => {
       parserFull(CSS_KEYFRAMES);
-    });
-    bench('stylis (compile + serialize)', 10000, () => {
-      stylisFull(CSS_KEYFRAMES);
     });
   });
 
   it('parses + emits CSS_LARGE', () => {
     console.log(`\n--- CSS_LARGE (${CSS_LARGE.length}B, real-world component) ---`);
-    bench('parser AST path             ', 2000, () => {
+    bench('parser AST path', 2000, () => {
       parserFull(CSS_LARGE);
-    });
-    bench('stylis (compile + serialize)', 2000, () => {
-      stylisFull(CSS_LARGE);
     });
   });
 
   it('parses + emits CSS_HUGE', () => {
     console.log(`\n--- CSS_HUGE (${CSS_HUGE.length}B, library-scale bundle) ---`);
-    bench('parser AST path             ', 500, () => {
+    bench('parser AST path', 500, () => {
       parserFull(CSS_HUGE);
-    });
-    bench('stylis (compile + serialize)', 500, () => {
-      stylisFull(CSS_HUGE);
     });
   });
 
@@ -294,17 +253,12 @@ describe('parser pipeline vs stylis pipeline', () => {
     console.log(
       `\n--- CSS_COMMA_HEAVY (${CSS_COMMA_HEAVY.length}B, stresses comma normalization) ---`
     );
-    bench('parser AST path             ', 10000, () => {
+    bench('parser AST path', 10000, () => {
       parserFull(CSS_COMMA_HEAVY);
-    });
-    bench('stylis (compile + serialize)', 10000, () => {
-      stylisFull(CSS_COMMA_HEAVY);
     });
   });
 
-  it('produces equivalent output', () => {
-    // Sanity check: for each sample, both pipelines return byte-identical output.
-    // This is the parity guarantee the full parity.test.ts enforces more broadly.
+  it('returns non-empty rules for each corpus sample', () => {
     for (const css of [
       CSS_TINY,
       CSS_SMALL,
@@ -315,7 +269,9 @@ describe('parser pipeline vs stylis pipeline', () => {
       CSS_HUGE,
       CSS_COMMA_HEAVY,
     ]) {
-      expect(parserFull(css)).toEqual(stylisFull(css));
+      const out = parserFull(css);
+      expect(out.length).toBeGreaterThan(0);
+      expect(out.every(r => r.length > 0)).toBe(true);
     }
   });
 });

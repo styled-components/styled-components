@@ -1,5 +1,5 @@
 ---
-"styled-components": minor
+'styled-components': minor
 ---
 
 React Native: descendant and child combinator selectors now work across styled components.

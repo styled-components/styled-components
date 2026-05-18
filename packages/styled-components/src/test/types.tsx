@@ -619,6 +619,58 @@ type ForwardedAsTypeWithCustom = ExtractedPropsWithCustom['forwardedAs'];
 type CustomPropType = ExtractedPropsWithCustom['customProp']; // Should be string
 
 /**
+ * Wrapping a component whose own `as` prop has a non-WebTarget type (e.g.
+ * Next.js `Link` with `as?: Url`) must not produce an `as`-type conflict
+ * (#5734). The styled-components `as` overrides the wrapped component's `as`.
+ */
+// Match the shape of Next.js's `UrlObject` (required `pathname`) so the
+// intersection check below has real bite.
+type FakeUrl = string | { pathname: string };
+interface FakeLinkProps {
+  href: FakeUrl;
+  as?: FakeUrl;
+  children?: React.ReactNode;
+}
+const FakeLink: React.FC<FakeLinkProps> = () => null;
+const StyledFakeLink = styled(FakeLink)`
+  color: red;
+`;
+<StyledFakeLink href="/foo">ok</StyledFakeLink>;
+<StyledFakeLink href={{ pathname: '/foo' }}>also ok</StyledFakeLink>;
+// `as` here is the styled-components polymorphism prop, not the FakeLink one.
+<StyledFakeLink as="section" href="/foo">
+  poly
+</StyledFakeLink>;
+// `React.ComponentProps` extraction must surface the styled-components `as`
+// shape directly, not an intersection of both. Without the fix `as` resolves
+// to `FakeUrl & WebTarget`, so a plain component reference (`KnownTarget`,
+// without a `pathname`) is rejected.
+type ExtractedFakeLink = React.ComponentProps<typeof StyledFakeLink>;
+const FakeLinkAlt: React.FC<{}> = () => null;
+const _fakeLinkAsTag: ExtractedFakeLink['as'] = 'a';
+const _fakeLinkAsComp: ExtractedFakeLink['as'] = FakeLinkAlt;
+// Without FastOmit on the extends clause, `as` would resolve to
+// `(FakeUrl & WebTarget) | undefined` and reject the bare string `'div'`
+// because the intersection requires a `pathname`. The fix makes `as`
+// resolve to `WebTarget | undefined` so a plain SupportedHTMLElement
+// tag name is accepted.
+const _fakeLinkAsDiv: ExtractedFakeLink['as'] = 'div';
+const _fakeLinkAsSpan: ExtractedFakeLink['as'] = 'span';
+
+// Spreading props that include a wrapped-component-shaped `as` (Url-typed) must
+// not fail. This mirrors the actual user scenario reported in #5734.
+const fakeLinkProps: FakeLinkProps = { href: '/foo', as: { pathname: '/bar' } };
+<StyledFakeLink {...fakeLinkProps}>Click</StyledFakeLink>;
+// Same shape, explicit `as`.
+<StyledFakeLink href="/foo" as={{ pathname: '/bar' }}>
+  Click
+</StyledFakeLink>;
+// styled-components polymorphism still works with a component target.
+<StyledFakeLink as={FakeLinkAlt} href="/foo">
+  poly
+</StyledFakeLink>;
+
+/**
  * attrs should make provided props optional (#4076)
  */
 const AttrsBase: React.FC<{ foo: number; bar: string }> = () => null;

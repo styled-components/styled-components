@@ -1,6 +1,4 @@
-// CSS Color 4 §6.2 system colors, mapped to React Native's platform
-// color surface where a useful native semantic exists. rn-web keeps
-// the native CSS keyword form.
+// CSS Color 4 system keywords → RN PlatformColor; rn-web preserves the authored keyword string.
 
 type PlatformColorFn = (...names: string[]) => unknown;
 type PlatformOS = 'ios' | 'android' | 'unknown';
@@ -78,7 +76,7 @@ const SYSTEM_COLOR_PLATFORM: Record<string, readonly string[]> = {
   ],
   // Highlighted text background (`<mark>`, search hits).
   mark: ['systemYellow', '@android:color/holo_orange_light'],
-  // Accent surface — drives controls, toggles, focus rings.
+  // Accent surface: drives controls, toggles, focus rings.
   accentcolor: ['systemBlue', '?attr/colorAccent', '?attr/colorControlActivated'],
 };
 
@@ -91,7 +89,6 @@ const ANDROID_SYSTEM_COLOR_PLATFORM: Record<string, readonly string[]> = {
   selecteditemtext: ['?attr/colorForeground', '@android:color/black'],
 };
 
-// CSS Color 4 Appendix A deprecated aliases.
 const DEPRECATED_SYSTEM_COLOR_ALIAS: Record<string, string> = {
   activeborder: 'buttonborder',
   activecaption: 'canvastext',
@@ -117,6 +114,20 @@ const DEPRECATED_SYSTEM_COLOR_ALIAS: Record<string, string> = {
   windowframe: 'buttonborder',
   windowtext: 'canvastext',
 };
+
+/** True for CSS system color identifiers and deprecated Appendix A aliases (ASCII case-insensitive). */
+export function isCssSystemColorKeyword(ident: string): boolean {
+  const key = ident.toLowerCase();
+  const canonical = DEPRECATED_SYSTEM_COLOR_ALIAS[key] ?? key;
+  return (
+    canonical in SYSTEM_COLOR_LITERAL ||
+    canonical in IOS_SYSTEM_COLOR_LITERAL ||
+    canonical in ANDROID_SYSTEM_COLOR_LITERAL ||
+    canonical in SYSTEM_COLOR_PLATFORM ||
+    canonical in IOS_SYSTEM_COLOR_PLATFORM ||
+    canonical in ANDROID_SYSTEM_COLOR_PLATFORM
+  );
+}
 
 export function getSystemColorPlatformColor(keyword: string): unknown | null {
   const key = keyword.toLowerCase();

@@ -1,6 +1,7 @@
 import { Dict } from '../../../types';
 import { getReactNativePlatformOS, warnOnce } from '../dev';
 import {
+  colorTokenToRnStyleValue,
   consumeColor,
   consumeDimensionLike,
   tokenToValue,
@@ -10,37 +11,17 @@ import { register } from '../shorthands';
 import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
 
-/**
- * Compile-time marker for `text-align: start | end | match-parent`.
- * The runtime resolver in `polyfills/resolvers.ts` reads
- * `env.direction` to map the keyword to `'left'` or `'right'`.
- *
- * Format: `\0scta:<start|end|match-parent>`. The 4-character tag
- * `scta` differentiates from the theme sentinel `\0sc:<path>:<fallback>`
- * at the fourth code point (`t` vs `:`).
- */
-export const TEXT_ALIGN_DIRECTION_PREFIX = '\0scta:';
-
 const DECORATION_LINES = new Set(['none', 'underline', 'line-through', 'overline', 'blink']);
 const DECORATION_STYLES = new Set(['solid', 'double', 'dotted', 'dashed', 'wavy']);
 
 /**
- * CSS Text 4 §7.1 (`text-align`). Initial value is `start`.
- *
- * RN's `textAlign` only accepts `'auto' | 'left' | 'right' | 'center' |
- * 'justify'` (per `TextStyleIOS.js` / `TextStyleAndroid.js`); `start` /
- * `end` / `match-parent` are spec values RN doesn't recognise and
- * would silently drop. rn-web honors the full spec set.
- *
- * Direction-aware resolution: v7 plumbs `cascade.direction` through
- * NativeStyleContext, so `start` and `end` resolve to `'left'` or
- * `'right'` at render time based on the inherited writing direction.
- * `match-parent` is an alias of `start` in horizontal-tb (which is
- * Yoga's only writing mode), so it maps identically.
- *
- * `justify-all` (CSS Text 4 §7.1) forces justification on the last
- * line; RN has no last-line surface so it degrades to `justify`
- * with a one-time dev warn.
+ * `text-align` handler. RN's `textAlign` accepts only `auto | left | right |
+ * center | justify`. `start` / `match-parent` compile to `'left'` and `end`
+ * compiles to `'right'`; RN's platform text engine (Android TextLayoutManager
+ * + iOS RCTTextAttributes) re-swaps the visual edge when the inherited
+ * paragraph direction is rtl, so pre-flipping here would double-correct and
+ * land the text on the wrong edge. `justify-all` degrades to `justify` with a
+ * dev warn. rn-web passes the full grammar through.
  */
 const TEXT_ALIGN_NATIVE_PASS = new Set(['auto', 'left', 'right', 'center', 'justify']);
 
@@ -54,8 +35,11 @@ export function textAlignHandler(tokens: Token[]): Dict<any> | null {
     return { textAlign: value };
   }
 
-  if (value === 'start' || value === 'end' || value === 'match-parent') {
-    return { textAlign: TEXT_ALIGN_DIRECTION_PREFIX + value };
+  if (value === 'start' || value === 'match-parent') {
+    return { textAlign: 'left' };
+  }
+  if (value === 'end') {
+    return { textAlign: 'right' };
   }
   if (value === 'justify-all') {
     if (__DEV__) {
@@ -73,12 +57,8 @@ export function textAlignHandler(tokens: Token[]): Dict<any> | null {
   return null;
 }
 
-/**
- * CSS Text 4 §7.3 — `text-align-all` is the descendant-applying base
- * property; `text-align` is a shorthand over it plus `text-align-last`.
- * Routes through the same handler so direction-aware folding and
- * `justify-all` degradation apply uniformly.
- */
+// `text-align-all` shares the `text-align` grammar; route through the same
+// handler so direction-aware folding and `justify-all` degradation match.
 register('textAlignAll', textAlignHandler);
 
 /**
@@ -100,15 +80,12 @@ export function textDecorationShorthand(tokens: Token[]): Dict<any> | null {
       stream.consume();
       while (!stream.eof()) {
         const next = stream.peek()!;
-        if (
-          next.kind === TokenKind.Ident &&
-          DECORATION_LINES.has(next.name!) &&
-          collected[0] !== 'none'
-        ) {
+        if (next.kind === TokenKind.Ident && DECORATION_LINES.has(next.name!)) {
           collected.push(next.name!);
           stream.consume();
         } else break;
       }
+      if (collected.length > 1 && collected.indexOf('none') !== -1) return null;
       collected.sort().reverse();
       line = collected.join(' ');
       continue;
@@ -117,6 +94,16 @@ export function textDecorationShorthand(tokens: Token[]): Dict<any> | null {
       if (style !== null) return null;
       style = t.name!;
       stream.consume();
+      if (!__NATIVE_WEB__ && style === 'wavy') {
+        if (__DEV__) {
+          warnOnce(
+            'native-text-decoration-style-wavy',
+            '`text-decoration-style: wavy` is ignored on React Native because iOS and Android cannot draw wavy underlines. Falling back to solid; rn-web keeps the authored value.',
+            style
+          );
+        }
+        style = 'solid';
+      }
       continue;
     }
     const c = consumeColor(stream);
@@ -138,14 +125,13 @@ export function textDecorationShorthand(tokens: Token[]): Dict<any> | null {
   return {
     textDecorationLine: line !== null ? line : 'none',
     textDecorationStyle: style !== null ? style : 'solid',
-    textDecorationColor: color !== null ? color.raw : 'black',
+    textDecorationColor: color !== null ? colorTokenToRnStyleValue(color) : 'black',
   };
 }
 
 /**
- * `text-decoration-line: <line>{1,4}`. Per CSS Text Decoration 4 §3.1
- * the `none` keyword is exclusive — it can't be combined with any
- * other line keyword.
+ * `text-decoration-line: <line>{1,4}`. The `none` keyword is exclusive; it
+ * can't combine with any other line keyword.
  */
 export function textDecorationLineShorthand(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
@@ -194,7 +180,7 @@ export function textShadowOffsetShorthand(tokens: Token[]): Dict<any> | null {
 interface ParsedShadow {
   offset: { width: number | string; height: number | string };
   radius: number | string;
-  color: string;
+  color: unknown;
 }
 
 function parseShadow(tokens: Token[]): ParsedShadow | null {
@@ -243,6 +229,6 @@ function parseShadow(tokens: Token[]): ParsedShadow | null {
   return {
     offset: { width: tokenToValue(offsetX), height: tokenToValue(offsetY) },
     radius: radius !== null ? tokenToValue(radius) : 0,
-    color: color !== null ? color.raw : 'black',
+    color: color !== null ? colorTokenToRnStyleValue(color) : 'black',
   };
 }

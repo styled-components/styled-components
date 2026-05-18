@@ -5,24 +5,7 @@ import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
 
 /**
- * `hyphens` per CSS Text Module Level 4 §6.3.1
- * (drafts.csswg.org/css-text-4/#hyphens-property):
- *
- *   Name:        hyphens
- *   Value:       none | manual | auto
- *   Initial:     manual
- *   Applies to:  text
- *
- * Spec values (verbatim):
- *   none  ;"Words are not hyphenated, even if characters inside the
- *            word explicitly define hyphenation opportunities."
- *   manual;"Words are only hyphenated where there are characters
- *            inside the word that explicitly suggest hyphenation
- *            opportunities."
- *   auto  ;"Words may be broken at hyphenation opportunities
- *            determined automatically by a language-appropriate
- *            hyphenation resource in addition to those indicated
- *            explicitly by a conditional hyphen."
+ * `hyphens: none | manual | auto`. Initial: `manual`. Applies to text.
  *
  * RN 0.85 mapping (verified against Text.d.ts):
  *   - Android exposes `android_hyphenationFrequency: 'none' | 'normal' | 'full'`
@@ -30,14 +13,13 @@ import { TokenStream } from '../tokenStream';
  *     special-case-props mechanism, identical to how `numberOfLines` is
  *     lifted by line-clamp / text-wrap polyfills.
  *   - iOS has no equivalent style or prop in 0.85. Soft-hyphens (U+00AD)
- *     in source text still hyphenate naturally on both platforms; spec
+ *     in source text still hyphenate naturally on both platforms;
  *     `manual` therefore matches iOS native behavior with no extra work.
  *   - rn-web honors the `hyphens` style key natively (browser CSS).
  *
- * Spec → Android prop:
+ * Mapping to Android prop:
  *   none   → 'none'     (no automatic hyphenation; conditional hyphens
- *                        in source still create soft-wrap opportunities
- *                        per spec note about U+002D and U+2010)
+ *                        in source still create soft-wrap opportunities)
  *   manual → 'none'     (UA hyphenates only at explicit U+00AD; Android's
  *                        text engine does this regardless of the
  *                        `android_hyphenationFrequency` setting)

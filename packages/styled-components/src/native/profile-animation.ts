@@ -2,7 +2,7 @@
  * Focused microbench + CPU-profile harness for the native animation
  * pipeline (`animation/index.ts`). Targets the per-segment color +
  * value interpolation build path and the per-call color/transform
- * parse helpers — the work that runs every time a transition or
+ * parse helpers; the work that runs every time a transition or
  * @keyframes animation kicks in.
  *
  * Run (from `packages/styled-components`):
@@ -33,7 +33,7 @@ const additiveCombine = __additiveCombineForTests;
 const bench = (name: string, iters: number, fn: () => void) =>
   benchBase(name, iters, fn, { format: 'ns' });
 
-// ── Color parse / serialise ────────────────────────────────────────
+// ── Color parse / serialize ────────────────────────────────────────
 console.log('\n=== parseAnimColor ===');
 bench('hex #ff0000', 1_000_000, () => parseAnimColor('#ff0000'));
 bench('hex #f00', 1_000_000, () => parseAnimColor('#f00'));
@@ -110,7 +110,7 @@ bench('matrix3d (16 nums)', 500_000, () =>
 );
 
 // ── Additive combine ───────────────────────────────────────────────
-console.log('\n=== additiveCombine (CSS Animations L2 §4.3.2) ===');
+console.log('\n=== additiveCombine ===');
 bench('additive numeric', 2_000_000, () => additiveCombine(10, 5));
 bench('additive color', 500_000, () => additiveCombine('#ff0000', '#0000ff'));
 bench('additive transform', 500_000, () =>

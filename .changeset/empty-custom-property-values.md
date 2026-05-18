@@ -1,5 +1,5 @@
 ---
-"styled-components": patch
+'styled-components': patch
 ---
 
 Empty CSS custom property values are now preserved.
@@ -8,7 +8,10 @@ Empty CSS custom property values are now preserved.
 
 ```css
 @keyframes shadow-toggle {
-  from, to { --shadow: ; }
+  from,
+  to {
+    --shadow: ;
+  }
 }
 ```
 

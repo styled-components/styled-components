@@ -80,6 +80,49 @@ describe('animation adapter integration', () => {
     }
   });
 
+  it('passes multiple animation descriptors and keyframes through the adapter hook', () => {
+    const captured: AnimatedStyleInput[] = [];
+    const stub: AnimationAdapter = {
+      id: 'capture-multi-anim',
+      useAnimatedStyle: input => {
+        captured.push(input);
+        return { style: input.resolved, elementType: input.target };
+      },
+    };
+    const prior = getAnimationAdapter();
+    setAnimationAdapter(stub);
+    try {
+      const Box = styled.View`
+        animation:
+          a 100ms linear,
+          b 100ms linear;
+        @keyframes a {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        @keyframes b {
+          from {
+            opacity: 1;
+          }
+          to {
+            opacity: 0;
+          }
+        }
+      `;
+      TestRenderer.create(<Box />);
+      expect(captured).toHaveLength(1);
+      expect(captured[0].compiled.animations).toHaveLength(2);
+      expect(captured[0].compiled.animations!.map(a => a.name)).toEqual(['a', 'b']);
+      expect(captured[0].compiled.keyframes.map(k => k.name).sort()).toEqual(['a', 'b']);
+    } finally {
+      setAnimationAdapter(prior);
+    }
+  });
+
   it('passes resolved env (including reduceMotion) to the adapter', () => {
     const seen: boolean[] = [];
     const stub: AnimationAdapter = {

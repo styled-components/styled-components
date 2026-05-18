@@ -1,5 +1,5 @@
 ---
-"styled-components": minor
+'styled-components': minor
 ---
 
 Added cross-platform support for several CSS properties on React Native: `caret-color`, `object-fit`, `vertical-align`, `backface-visibility`, and `outline-offset`.

@@ -63,6 +63,8 @@ describe('toNativeStyles', () => {
   });
 
   describe('@media → conditional bucket', () => {
+    // https://drafts.csswg.org/css-conditional-3/#at-ruledef-media
+    // "@media = @media <media-query-list> { <rule-list> }"
     it('extracts media prelude + body into a bucket', () => {
       const r = compile('color: red; @media (min-width: 400px) { color: blue; }');
       expect(r.base).toEqual({ color: 'red' });
@@ -89,6 +91,8 @@ describe('toNativeStyles', () => {
   });
 
   describe('@container → conditional bucket with containerName', () => {
+    // https://drafts.csswg.org/css-conditional-5/#at-ruledef-container
+    // "@container = @container [ <container-name> ]? <container-condition> { <rule-list> }"
     it('extracts named container', () => {
       const r = compile('@container card (min-width: 300px) { color: red; }');
       expect(r.conditional[0]).toEqual({
@@ -120,6 +124,8 @@ describe('toNativeStyles', () => {
   });
 
   describe('@supports → conditional bucket', () => {
+    // https://drafts.csswg.org/css-conditional-3/#at-ruledef-supports
+    // "@supports = @supports <supports-condition> { <rule-list> }"
     it('extracts supports prelude', () => {
       const r = compile('@supports (display: grid) { color: red; }');
       expect(r.conditional[0]).toEqual({
@@ -317,6 +323,8 @@ describe('toNativeStyles', () => {
   });
 
   describe(':is() / :where() pseudo-enumeration polyfill', () => {
+    // https://drafts.csswg.org/selectors-4/#the-is-pseudo
+    // https://drafts.csswg.org/selectors-4/#the-where-pseudo
     it('fans out &:is(:hover, :focus) into two pseudo buckets with identical styles', () => {
       const r = compile(`
         &:is(:hover, :focus) {
@@ -427,6 +435,55 @@ describe('toNativeStyles', () => {
       expect(kf.frames[0].resolvers).toBeUndefined();
       expect(kf.frames[1].decls).toEqual({ opacity: 1 });
       expect(kf.frames[1].resolvers).toBeUndefined();
+    });
+  });
+
+  // https://drafts.csswg.org/css-animations-1/#animation-definition
+  describe('animation descriptor extraction (CSS Animations 1 §4 coordinating lists)', () => {
+    // "These list-valued properties, which are all longhands of the animation shorthand,
+    // form a coordinating list property group with animation-name as the coordinating list base property
+    // and each item in the coordinated value list defining the properties of a single animation effect."
+    it('cycles a shorter animation-delay list to match animation-name length', () => {
+      const r = compile('animation: a 1s, b 2s; animation-delay: 80ms;');
+      expect(r.animations).toHaveLength(2);
+      expect(r.animations![0].delayMs).toBe(80);
+      expect(r.animations![1].delayMs).toBe(80);
+    });
+
+    it('pairs animation-timing-function list items with animation-name when lengths match', () => {
+      const r = compile('animation: a 1s, b 1s; animation-timing-function: ease-in, ease-out;');
+      expect(r.animations).toHaveLength(2);
+      expect(r.animations![0].timingFunction).toEqual({
+        kind: 'cubic-bezier',
+        p: [0.42, 0, 1, 1],
+      });
+      expect(r.animations![1].timingFunction).toEqual({
+        kind: 'cubic-bezier',
+        p: [0, 0, 0.58, 1],
+      });
+    });
+
+    it('repeats a shorter animation-timing-function list to match animation-name length', () => {
+      const r = compile(
+        'animation: a 1s, b 1s, c 1s; animation-timing-function: linear, steps(2, jump-end);'
+      );
+      expect(r.animations).toHaveLength(3);
+      expect(r.animations![0].timingFunction).toEqual({ kind: 'linear' });
+      expect(r.animations![1].timingFunction).toEqual({
+        kind: 'steps',
+        n: 2,
+        jump: 'jump-end',
+      });
+      expect(r.animations![2].timingFunction).toEqual({ kind: 'linear' });
+    });
+
+    it('pairs animation-composition list items with animation-name when lengths match', () => {
+      const r = compile(
+        'animation-name: a, b; animation-duration: 1s, 1s; animation-composition: add, accumulate;'
+      );
+      expect(r.animations).toHaveLength(2);
+      expect(r.animations![0].composition).toBe('add');
+      expect(r.animations![1].composition).toBe('accumulate');
     });
   });
 

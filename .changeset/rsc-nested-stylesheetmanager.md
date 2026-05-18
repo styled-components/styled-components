@@ -1,5 +1,5 @@
 ---
-"styled-components": patch
+'styled-components': patch
 ---
 
 Fixed a styling leak when a nested `<StyleSheetManager>` sits beside other children of an outer `<StyleSheetManager>` in a server component tree.

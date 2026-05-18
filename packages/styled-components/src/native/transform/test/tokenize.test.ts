@@ -123,7 +123,7 @@ describe('native transform tokenizer', () => {
     expect(tokens[0].text).toBe('Arial');
   });
 
-  it('recognises calc operators', () => {
+  it('recognizes calc operators', () => {
     const tokens = tokenize('100% - 20px');
     const ops = tokens.filter(t => t.kind === TokenKind.Op);
     expect(ops).toHaveLength(1);

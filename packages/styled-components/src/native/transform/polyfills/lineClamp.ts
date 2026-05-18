@@ -4,7 +4,7 @@ import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
 
 /**
- * `line-clamp` / `-webkit-line-clamp` → RN `numberOfLines` (Overflow 4 §5.1).
+ * `line-clamp` / `-webkit-line-clamp` → RN `numberOfLines`.
  * RN's Text only renders the default `…` ellipsis; `<block-ellipsis>` and
  * `-webkit-legacy` parse-accept but emit nothing. `numberOfLines: 0` is
  * RN's sentinel for unlimited.
@@ -29,7 +29,7 @@ function lineClampShorthand(tokens: Token[]): Dict<any> | null {
       if (!Number.isInteger(n) || n < 1) return null;
       lines = n;
     } else if (cur.kind === TokenKind.String) {
-      // <block-ellipsis>; accepted for spec compliance, dropped on emit.
+      // <block-ellipsis>; accepted for compliance, dropped on emit.
     } else if (cur.kind === TokenKind.Op && cur.op === '-') {
       // Tokenizer splits `-webkit-legacy` as `Op(-) Ident(webkit-legacy)`.
       const next = stream.consume();

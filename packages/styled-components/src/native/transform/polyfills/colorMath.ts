@@ -4,25 +4,10 @@ import { tokenizeFunctionArgs } from '../tokenize';
 import { resolveStaticMathFunction } from './mathFns';
 
 /**
- * Static color-math polyfills: convert `oklch()` / `oklab()` / `lch()` /
- * `lab()` / `color-mix()` to hex when all operands are literal.
+ * Static fold for oklch/oklab/lch/lab, color(), color-mix(), and relative-color
+ * when operands are literals. Returns null → runtime resolver / RN normalize.
  *
- * RN 0.85's `@react-native/normalize-colors` doesn't yet recognise these
- * notations. We compute the sRGB equivalent at transform time and emit
- * hex. When any operand is a `var()` token, the `from` keyword for
- * relative-color-syntax, or otherwise dynamic, we return null and the
- * caller falls back to either a runtime resolver or passes the string
- * through (RN will reject but the dev warning is the user's signal).
- *
- * Out-of-gamut input (e.g. `oklch(0.7 0.4 130)`) routes through the
- * CSS Color 4 §13 OKLCh chroma-reduction bisection: L and h held
- * constant, C bisected on [0, oklch.C] for the largest in-gamut C.
- * A final per-channel clamp absorbs sub-epsilon float noise.
- *
- * References:
- * - https://www.w3.org/TR/css-color-4/#rgb-to-lab
- * - https://bottosson.github.io/posts/oklab/
- * - https://www.w3.org/TR/css-color-5/#color-mix
+ * Gamut: OKLCh chroma bisection to sRGB.
  */
 
 export interface RGB {
@@ -37,11 +22,8 @@ export function staticColorFunctionToHex(tok: Token): string | null {
   return rgb === null ? null : rgbToHex(rgb);
 }
 
-/** Internal version that returns the RGB directly. Mix-operand and
- *  animation paths consume RGB; routing through a hex string + re-parse
- *  is pure waste (both the serialisation and the re-parse allocate).
- *  Exported for `animation/index.ts` which interpolates in oklab and
- *  needs to seed from the same parse pipeline. */
+/** Returns RGB directly. Mix-operand and animation paths consume RGB;
+ *  routing through hex + re-parse allocates needlessly. */
 export function staticColorFunctionToRgb(tok: Token): RGB | null {
   if (tok.kind !== TokenKind.Function) return null;
   switch (tok.name) {
@@ -95,19 +77,7 @@ function toByte(x: number): number {
   return Math.max(0, Math.min(255, Math.round(x * 255)));
 }
 
-/**
- * Polar `(c, hDeg)` → Cartesian `(a, b)` for L*a*b* / Oklab spaces.
- * Returning a tuple from the previous form allocated a fresh array
- * per oklch / lch call; callers now inline the two `Math.cos` /
- * `Math.sin` multiplications directly on locals so the hot color-fold
- * path stays allocation-free apart from the final RGB object.
- *
- * Kept exported in case future polyfill code wants the abstraction,
- * but currently no callers — the inlined form is the fast path.
- */
-
 function parseOklch(tok: Token): RGB | null {
-  // CSS Color L4: oklch L percent → 0..1, C percent → 0..0.4, hue rejects percent.
   const args = readChannels(tok, OKLCH_SCALES, 'oklch');
   if (args === null) return null;
   const [l, c, h, alpha] = args;
@@ -121,7 +91,6 @@ function parseOklch(tok: Token): RGB | null {
 }
 
 function parseOklab(tok: Token): RGB | null {
-  // CSS Color L4: oklab L percent → 0..1, a/b percent → ±0.4.
   const args = readChannels(tok, OKLAB_SCALES, 'oklab');
   if (args === null) return null;
   const [l, a, b, alpha] = args;
@@ -182,13 +151,10 @@ function inSrgbGamut(c: LinearRGB): boolean {
 }
 
 /**
- * OKLab → sRGB. In-gamut input goes straight through {@link finalizeSrgb}
- * for the common case. Out-of-gamut input runs the CSS Color 4 §13 OKLCh
- * chroma-reduction bisection (see {@link mapOklchToSrgb}) so hue and
- * lightness are preserved at the cost of reduced chroma.
+ * OKLab → sRGB. In-gamut input goes straight through {@link finalizeSrgb}.
+ * Out-of-gamut input runs OKLCh chroma bisection (see {@link mapOklchToSrgb}).
  *
- * Exported so the animation runtime can interpolate keyframe colors in
- * oklab — the modern default interpolation space per CSS Color L4 §13 —
+ * Exported so the animation runtime can interpolate keyframe colors in oklab
  * without duplicating Bottosson's matrices.
  */
 export function oklabToRgb(L: number, a: number, b: number, alpha: number): RGB {
@@ -200,11 +166,9 @@ export function oklabToRgb(L: number, a: number, b: number, alpha: number): RGB 
 }
 
 /**
- * CSS Color 4 §13 OKLCh chroma-reduction gamut mapping
- * (https://drafts.csswg.org/css-color-4/#binsearch). Holds L and h
- * constant, bisects C on [0, |chroma|] for the largest C whose sRGB
- * conversion fits in [0, 1]³. Returns sRGB at the in-gamut bound;
- * {@link linearToSrgb} clamps any sub-epsilon residual.
+ * OKLCh chroma-reduction toward sRGB. Holds L and hue direction constant,
+ * bisects C on [0, |chroma|] for the largest C whose linear sRGB conversion
+ * fits in gamut. {@link linearToSrgb} clamps any sub-epsilon residual.
  */
 function mapOklchToSrgb(L: number, a: number, b: number, alpha: number): RGB {
   const cHi = Math.hypot(a, b);
@@ -241,7 +205,6 @@ function linearToSrgb(v: number): number {
 }
 
 function parseLch(tok: Token): RGB | null {
-  // CSS Color L4: lch L percent → 0..100, C percent → 0..150, hue rejects percent.
   const args = readChannels(tok, LCH_SCALES, 'lch');
   if (args === null) return null;
   const [l, c, h, alpha] = args;
@@ -254,7 +217,6 @@ function parseLch(tok: Token): RGB | null {
 }
 
 function parseLab(tok: Token): RGB | null {
-  // CSS Color L4: lab L percent → 0..100, a/b percent → ±125.
   const args = readChannels(tok, LAB_SCALES, 'lab');
   if (args === null) return null;
   const [l, a, b, alpha] = args;
@@ -266,10 +228,7 @@ function parseLab(tok: Token): RGB | null {
   );
 }
 
-/**
- * `hsl(h s% l% [ / a])` / `hsl(h, s%, l% [, a])` per CSS Color 4 §6.
- * Returns null if the function shape can't be parsed statically.
- */
+/** Returns null when the callee shape isn't static-parseable. */
 function parseHsl(tok: Token): RGB | null {
   const channels = readHsParts(tok);
   if (channels === null) return null;
@@ -278,11 +237,7 @@ function parseHsl(tok: Token): RGB | null {
   return { r: rgb.r, g: rgb.g, b: rgb.b, a: usedValue(alpha) };
 }
 
-/**
- * `hwb(h w% b% [ / a])` per CSS Color 4 §7. When `w + b >= 100` the
- * result is a single gray; otherwise the hue is fully saturated and
- * then scaled by whiteness / blackness toward white / black.
- */
+/** Gray when w+b>=100%. */
 function parseHwb(tok: Token): RGB | null {
   const channels = readHsParts(tok);
   if (channels === null) return null;
@@ -313,16 +268,11 @@ function parseRgbFn(tok: Token): RGB | null {
 }
 
 /**
- * Standalone `color(<colorspace> c1 c2 c3 [ / a])` → display-space sRGB
- * per CSS Color L4 §10. All predefined RGB spaces share the algorithm:
- * decode gamma → linear-light → matrix to linear sRGB → gamma-encode
- * for display. XYZ variants skip the gamma step. Out-of-gamut wide-
- * space inputs route through the OKLCh bisection mapper just like
- * `lab()` / `oklch()` do.
- *
- * Collapses `none` to 0 (used value) and clamps alpha to 0..1. The mix
- * paths call `readColorFn` directly to preserve NaN through §3.3 carry-
- * forward.
+ * Standalone `color(<colorspace> c1 c2 c3 [ / a])` → display-space sRGB.
+ * Predefined RGB spaces share the pipeline: decode gamma → linear-light →
+ * matrix to linear sRGB → gamma-encode. XYZ skips the gamma step. Out-of-gamut
+ * inputs route through the OKLCh bisection mapper. Collapses `none` to 0 and
+ * clamps alpha; mix paths call `readColorFn` directly to preserve NaN.
  */
 function parseColorFn(tok: Token): RGB | null {
   const native = readColorFn(tok);
@@ -336,11 +286,10 @@ function parseColorFn(tok: Token): RGB | null {
   );
 }
 
-/** Decode a color() colorspace to sRGB display. Returns null when the
- *  space identifier isn't one of the CSS Color L4 §10 predefined set.
- *  Linear-light intermediates flow through {@link finalizeSrgb} so out-
- *  of-gamut values route through the same OKLCh bisection mapper used
- *  by `lab()` / `oklch()`. */
+/** Decode a color() colorspace to sRGB display. Returns null when the space
+ *  identifier isn't a predefined one. Linear-light intermediates flow through
+ *  {@link finalizeSrgb} so out-of-gamut values route through the OKLCh
+ *  bisection mapper used by `lab()` / `oklch()`. */
 function colorSpaceToRgb(
   space: string,
   c1: number,
@@ -389,9 +338,9 @@ function colorSpaceToRgb(
   }
 }
 
-/** Common tail for all color() linear-sRGB intermediates. Routes out-of-
- *  gamut triples through the OKLCh bisection mapper (CSS Color 4 §13).
- *  In-gamut path skips that and goes straight to display gamma. */
+/** Common tail for all color() linear-sRGB intermediates. Routes out-of-gamut
+ *  triples through the OKLCh bisection mapper (chroma reduction; see
+ *  {@link mapOklchToSrgb}); in-gamut goes straight to display gamma. */
 function finalizeOrMap(c: LinearRGB, alpha: number): RGB {
   if (inSrgbGamut(c)) return finalizeSrgb(c, alpha);
   const ok = linearRgbToOklab(c.r, c.g, c.b);
@@ -428,9 +377,8 @@ function rec2020Gamma(v: number): number {
   return s * (a < beta * 4.5 ? a / 4.5 : Math.pow((a + alpha - 1) / alpha, 1 / 0.45));
 }
 
-// Conversion matrices below are from CSS Color L4 §17 (precomputed
-// linear-light → linear sRGB via XYZ D65). Numbers match the W3C
-// reference values to 7 decimal places.
+// Conversion matrices below run linear-light → XYZ D65 → linear sRGB. Numbers
+// match the W3C reference values to 7 decimal places.
 
 function displayP3ToLinearSrgb(r: number, g: number, b: number): LinearRGB {
   return {
@@ -486,10 +434,8 @@ function xyzD50ToLinearSrgb(X: number, Y: number, Z: number): LinearRGB {
 }
 
 // ─── Inverse conversions (linear sRGB → wide-gamut space) ─────────────
-// Coefficients from CSS Color L4 §17 (W3C reference matrices). These
-// are the matrix inverses of the forward functions above; we keep both
-// expanded rather than computing inverses at runtime so the hot path
-// stays branch-free and monomorphic.
+// Matrix inverses of the forward functions above; we keep both expanded rather
+// than inverting at runtime so the hot path stays branch-free and monomorphic.
 
 function linearSrgbToDisplayP3(r: number, g: number, b: number): LinearRGB {
   return {
@@ -617,9 +563,8 @@ function readHsParts(tok: Token): [number, number, number, number] | null {
       else if (h === null) return null;
       else sb.push(v);
     } else if (t.kind === TokenKind.Ident && t.name === 'none') {
-      // Missing channel per CSS Color 4 §4.4. Encoded as NaN; standalone
-      // parsers collapse to 0, color-mix carries forward from the other
-      // operand.
+      // `none` ⇒ missing channel, encoded as NaN. Standalone parsers collapse
+      // it to 0; color-mix carries the channel forward from the other operand.
       if (inAlpha) alpha = NaN;
       else if (h === null) h = NaN;
       else sb.push(NaN);
@@ -718,8 +663,9 @@ interface HsTriple {
   alpha: number;
 }
 
-/** Mix two HSL/HWB triples per CSS Color 4 §13.1 with premultiplied
- * alpha and the requested hue interpolation method. */
+/** Mix two HSL/HWB triples with premultiplied alpha. Hue is powerless when HSL
+ *  saturation is 0% or at the L extremes (HWB: when w+b ≥ 100%); a powerless
+ *  operand's hue carries from the other side. */
 function mixHs(
   A: HsTriple,
   B: HsTriple,
@@ -732,9 +678,6 @@ function mixHs(
   const [As, Bs] = carryPair(A.s, B.s);
   const [Al, Bl] = carryPair(A.l, B.l);
   const [Aalpha, Balpha] = carryPair(A.alpha, B.alpha);
-  // CSS Color 4 §12.3 powerless hue. HSL: saturation 0 or lightness at
-  // an extreme. HWB: whiteness + blackness >= 100%. When one operand's
-  // hue is powerless the other's hue carries forward.
   const Apower = isHsPowerless(As, Al, isHsl);
   const Bpower = isHsPowerless(Bs, Bl, isHsl);
   const Ah = Apower ? (Bpower ? 0 : Bh0) : Ah0;
@@ -822,10 +765,9 @@ function labToRgb(L: number, a: number, b: number, alpha: number): RGB {
   };
   // Already in gamut: gamma-correct and ship. Common case.
   if (inSrgbGamut(direct)) return finalizeSrgb(direct, alpha);
-  // Out of sRGB: re-derive an OKLab triple from the (out-of-gamut)
-  // linear-light representation and route through the OKLCh bisection
-  // gamut mapper. Per CSS Color 4 §13 the algorithm uses OKLCh
-  // regardless of source space.
+  // Out of sRGB: re-derive an OKLab triple from the (out-of-gamut) linear-light
+  // representation and route through the OKLCh bisection gamut mapper.
+  // OKLCh is the cylindrical form for chroma-focused mapping to narrower gamuts.
   const ok = linearRgbToOklab(direct.r, direct.g, direct.b);
   return oklabToRgb(ok.L, ok.a, ok.b, alpha);
 }
@@ -842,10 +784,9 @@ export interface LabTriple {
   alpha: number;
 }
 
-/** Polar form of a Lab-family color: (L, C, h, alpha). Preserved as
- *  native (rather than collapsed to (L, a, b)) for `oklch` / `lch`
- *  interpolation so missing-channel carry-forward operates on the
- *  user-visible chroma and hue per CSS Color 5 §3.3. */
+/** Polar form of a Lab-family color: (L, C, h, alpha). Preserved as native
+ *  (rather than collapsed to (L, a, b)) for `oklch` / `lch` interpolation so
+ *  missing-channel carry-forward operates on the user-visible chroma and hue. */
 interface LchTriple {
   L: number;
   C: number;
@@ -854,10 +795,9 @@ interface LchTriple {
 }
 
 /**
- * sRGB display-space → Oklab. Inputs are 0..1 channels; alpha passes
- * through unchanged. Exported alongside {@link oklabToRgb} for the
- * animation runtime; together they form the conversion pair for the
- * modern keyframe color interpolation space (CSS Color L4 §13).
+ * sRGB display-space → Oklab. Inputs are 0..1 channels; alpha passes through
+ * unchanged. Exported alongside {@link oklabToRgb} for the animation runtime as
+ * the conversion pair for the modern keyframe color interpolation space.
  */
 export function srgbToOklab(r: number, g: number, b: number, alpha: number): LabTriple {
   const ok = linearRgbToOklab(srgbToLinear(r), srgbToLinear(g), srgbToLinear(b));
@@ -890,10 +830,9 @@ function srgbToCieLab(r: number, g: number, b: number, alpha: number): LabTriple
   return { L: 116 * fy - 16, a: 500 * (fx - fy), b: 200 * (fy - fz), alpha };
 }
 
-/** Rectangular RGB-family interpolation spaces (Color L4 §17). All
- *  follow the same shape: per-channel lerp with NaN carry-forward,
- *  premultiplied alpha, and conversion back through `colorSpaceToRgb`.
- *  `xyz` is an alias of `xyz-d65` per the spec. */
+/** Rectangular RGB-family interpolation spaces. Per-channel lerp with NaN
+ *  carry-forward, premultiplied alpha, then back through `colorSpaceToRgb`.
+ *  `xyz` aliases `xyz-d65`. */
 const RGB_LIKE_MIX_SPACES = new Set([
   'srgb',
   'srgb-linear',
@@ -929,7 +868,7 @@ const LAB_POWERLESS_CHROMA = 0.1;
 const HS_POWERLESS_EPS = 0.01;
 
 /** Linear scan for the function operand in a color-mix slot. Slots are
- *  short (1-3 tokens — pct prefix + function); the loop is intentionally
+ *  short (1-3 tokens: pct prefix + function); the loop is intentionally
  *  inlined rather than expanded to `find` so the lab/lch/hs operand
  *  extractors all share the same pattern without each carrying its own
  *  imperative scan. */
@@ -940,9 +879,9 @@ function findFunctionToken(tokens: Token[]): Token | null {
   return null;
 }
 
-/** CSS Color 4 §13.4 hue-interpolation method. Returns the adjusted
- *  `(hA, hB)` so the per-component lerp `hA + (hB - hA) * wB` lands on
- *  the desired arc. Shared by every polar mix path. */
+/** Hue-interpolation method. Returns the adjusted `(hA, hB)` so the per-channel
+ *  lerp `hA + (hB - hA) * wB` lands on the desired arc; shared by every polar
+ *  mix path. */
 function adjustHueArc(hA: number, hB: number, method: HueMethod): [number, number] {
   const dh = hB - hA;
   if (method === 'shorter') {
@@ -959,9 +898,8 @@ function adjustHueArc(hA: number, hB: number, method: HueMethod): [number, numbe
   return [hA, hB];
 }
 
-/** Resolve a missing-channel pair per CSS Color 5 §3.3 carry-forward.
- *  If one channel is NaN, return the other for both. If both are NaN,
- *  return 0 for both. Pure; no mutation. */
+/** Missing-channel carry-forward. If one channel is NaN, return the other for
+ *  both; if both are NaN, return (0, 0). Pure. */
 function carryPair(a: number, b: number): [number, number] {
   const aNaN = Number.isNaN(a);
   const bNaN = Number.isNaN(b);
@@ -1018,12 +956,10 @@ const NAMED_TO_RGB: Record<string, RGB> = (() => {
 type HueMethod = 'shorter' | 'longer' | 'increasing' | 'decreasing';
 
 /**
- * A native triple in any CSS Color L4 §17 rectangular RGB-family space.
- * For srgb / display-p3 / a98-rgb / prophoto-rgb / rec2020, the channels
- * are display-encoded (gamma applied) since interpolation per the spec
- * happens in those coordinates. For *-linear and xyz / xyz-d50, they're
- * linear-light. `none` channels propagate as NaN so the carry-forward
- * pass keeps source-space identity through the mix.
+ * A native triple in any RGB-family rectangular interpolation space. For srgb /
+ * display-p3 / a98-rgb / prophoto-rgb / rec2020 the channels are display-encoded;
+ * for *-linear and xyz / xyz-d50 they're linear-light. `none` channels propagate
+ * as NaN so the carry-forward pass keeps source-space identity through the mix.
  */
 interface RgbSpaceTriple {
   c1: number;
@@ -1035,10 +971,9 @@ interface RgbSpaceTriple {
 /**
  * Read a `color(<space> c1 c2 c3 [/ a])` function preserving NaN for
  * `none` channels and leaving alpha unclamped. `parseColorFn` wraps
- * this with `usedValue` + alpha clamp + space conversion; the mix
- * paths consume raw channels so §3.3 carry-forward sees the missing-
- * component flag (NaN) intact. Returns null on unknown space or
- * malformed channel count.
+ * this with `usedValue` + alpha clamp + space conversion; the mix paths
+ * consume raw channels so carry-forward sees the missing-component flag (NaN)
+ * intact. Returns null on unknown space or malformed channel count.
  */
 function readColorFn(
   tok: Token
@@ -1089,11 +1024,10 @@ function readColorFn(
   return { space, c1: vals[0], c2: vals[1], c3: vals[2], alpha };
 }
 
-/** Read rgb()/rgba() channels preserving NaN for `none` and leaving
- *  alpha unclamped. Channel slot: number-form is 0..255, percent-form
- *  is 0..1. Alpha slot: both forms 0..1. Comma-form and slash-form
- *  both accepted. `parseRgbFn` wraps this with `usedValue` + clamp;
- *  the mix path uses the raw output so §3.3 carry-forward sees NaN. */
+/** Read rgb()/rgba() channels preserving NaN for `none` and leaving alpha
+ *  unclamped. Number-form channels are 0..255, percent-form 0..1; alpha is 0..1
+ *  in both forms. Comma- and slash-form both accepted. `parseRgbFn` wraps this
+ *  with `usedValue` + clamp; the mix path uses raw output to preserve NaN. */
 function readRgbFn(tok: Token): [number, number, number, number] | null {
   const args = tokenizeFunctionArgs(tok);
   const channels: number[] = [];
@@ -1285,11 +1219,9 @@ function linearSrgbToSpaceNative(
  *   4. Display-sRGB operand with any other target → gamma-decode once,
  *      pivot, re-encode.
  *
- * `rgb()` operands with `none` channels preserve their NaN through
- * paths 3 and 4; other display-sRGB sources (hex / hsl / oklab / …)
- * have already collapsed `none` to 0 by the time the parsed `RGB`
- * reaches us, which matches CSS Color 4 §4.4 (R/G/B channels are not
- * analogous to H/S/L or L/a/b).
+ * `rgb()` operands with `none` channels preserve their NaN through paths 3 and
+ * 4; other display-sRGB sources (hex / hsl / oklab / …) have already collapsed
+ * `none` to 0 by the time the parsed `RGB` reaches us.
  */
 function rgbSpaceTripleFromOperand(
   opTokens: Token[],
@@ -1319,7 +1251,7 @@ function rgbSpaceTripleFromOperand(
   const rgbFnChannels =
     func !== null && (func.name === 'rgb' || func.name === 'rgba') ? readRgbFn(func) : null;
   if (targetSpace === 'srgb') {
-    // sRGB IS the display encoding — skip the gamma round-trip.
+    // sRGB IS the display encoding; skip the gamma round-trip.
     return rgbFnChannels !== null
       ? {
           c1: rgbFnChannels[0],
@@ -1348,18 +1280,15 @@ function rgbSpaceTripleFromOperand(
 }
 
 /**
- * Per-channel rectangular mix with §3.3 carry-forward, premultiplied
- * alpha, and §12 `transparent` substitution. Shape mirrors `mixLab` /
- * `mixHs`; the only family-specific bit is the absence of a polar axis.
+ * Per-channel rectangular mix with NaN carry-forward, premultiplied alpha, and
+ * `transparent` substitution. Mirrors `mixLab` / `mixHs`; no polar axis.
  */
 function mixRgbSpace(A: RgbSpaceTriple, B: RgbSpaceTriple, wA: number, wB: number): RgbSpaceTriple {
   let [Ac1, Bc1] = carryPair(A.c1, B.c1);
   let [Ac2, Bc2] = carryPair(A.c2, B.c2);
   let [Ac3, Bc3] = carryPair(A.c3, B.c3);
   const [Aalpha, Balpha] = carryPair(A.alpha, B.alpha);
-  // CSS Color 4 §12 — `transparent` operand: substitute peer's
-  // components, keep alpha 0. `transparent` materialises as (0,0,0,0)
-  // after carry-forward, so detect that exact shape.
+  // `transparent` (0,0,0,0) substitutes its rectangular channels with the peer.
   if (isRgbAlphaZero(Ac1, Ac2, Ac3, Aalpha) && !isRgbAlphaZero(Bc1, Bc2, Bc3, Balpha)) {
     Ac1 = Bc1;
     Ac2 = Bc2;
@@ -1413,9 +1342,8 @@ function parseColorMix(tok: Token): RGB | null {
   if (current.length > 0) parts.push(current);
   if (parts.length === 0) return null;
 
-  // Detect optional interpolation-method prefix:
-  //   `in <colorspace> [<hue-method> hue]?`
-  // Default per spec §3.1: oklab when the prefix is omitted entirely.
+  // Detect optional interpolation-method prefix `in <colorspace> [<hue-method>
+  // hue]?`. Default is `oklab` when the prefix is omitted entirely.
   let space = 'oklab';
   let hueMethod: HueMethod = 'shorter';
   let colorParts = parts;
@@ -1427,9 +1355,8 @@ function parseColorMix(tok: Token): RGB | null {
     if (!SUPPORTED_MIX_SPACES.has(sp)) return null;
     space = sp;
     if (head.length === 4) {
-      // `<hue-method> hue` form. Per Color 4 §13.4, only meaningful for
-      // cylindrical spaces; rectangular spaces accept and silently
-      // ignore the method.
+      // `<hue-method> hue` form. Only meaningful for cylindrical spaces;
+      // rectangular spaces accept and silently ignore the method.
       if (head[2].kind !== TokenKind.Ident) return null;
       if (head[3].kind !== TokenKind.Ident || head[3].name !== 'hue') return null;
       const m = head[2].name!;
@@ -1451,13 +1378,12 @@ function parseColorMix(tok: Token): RGB | null {
     const [c, p] = parseColorPct(colorParts[i]);
     if (c === null) return null;
     if (p !== null && p < 0) return null; // negative % is disallowed
-    // Clamp > 100 per Values 5 §6.1 ("clamped to 100%").
+    // Clamp percentages > 100.
     items.push({ color: c, pct: p === null ? null : Math.min(p, 100) });
   }
 
-  // Normalize-mix-percentages (Values 5 §6.1) with `force normalization`
-  // false (color-mix uses the non-forced form per Color 5 §3.2;sums
-  // > 100 still scale, sums < 100 leave a leftover that drives alpha).
+  // color-mix uses non-forced normalization: sums > 100 still scale, sums < 100
+  // leave a leftover that drives alpha.
   let specifiedSum = 0;
   let omittedCount = 0;
   for (const it of items) {
@@ -1478,9 +1404,8 @@ function parseColorMix(tok: Token): RGB | null {
   }
   const leftover = total < 100 ? 100 - total : 0;
 
-  // Spec §3.3: "If leftover is 100%, return transparent black, converted
-  // to the specified interpolation <color-space>." Transparent black in
-  // any of our supported spaces round-trips to {0,0,0,0} in display sRGB.
+  // Leftover at 100% means transparent black, which round-trips to {0,0,0,0}
+  // in display sRGB from every supported interpolation space.
   if (leftover === 100) return { r: 0, g: 0, b: 0, a: 0 };
   const alphaMult = 1 - leftover / 100;
 
@@ -1653,11 +1578,10 @@ function labFromRGBForMix(opTokens: Token[], rgb: RGB, useOklab: boolean): LabTr
       }
     }
   }
-  // Non-matching operand (hex, named, rgb, or cross-space like lab() in
-  // an oklab mix). Convert from the RGB representation. sRGB is the
-  // lowest gamut so this path doesn't lose data; cross-space inputs
-  // (lab into oklab) do lose precision when out of sRGB, which matches
-  // the CSS Color 4 §13.1 algorithm regardless.
+  // Non-matching operand (hex / named / rgb, or cross-space like lab() into an
+  // oklab mix). Convert from the RGB representation. sRGB is the lowest gamut
+  // so this path doesn't lose data; cross-space inputs lose precision out of
+  // sRGB regardless of the interpolation space.
   return useOklab
     ? srgbToOklab(rgb.r, rgb.g, rgb.b, rgb.a)
     : srgbToCieLab(rgb.r, rgb.g, rgb.b, rgb.a);
@@ -1698,8 +1622,7 @@ function lchFromRGBForMix(opTokens: Token[], rgb: RGB, useOklch: boolean): LchTr
 }
 
 function lchToRgb(t: LchTriple, useOklch: boolean): RGB {
-  // NaN that survived (both operands missing in single-operand case)
-  // collapses to 0 per CSS Color 4 §4.4.
+  // NaN that survived (both operands missing) collapses to 0.
   const L = usedValue(t.L);
   const C = usedValue(t.C);
   const h = usedValue(t.h);
@@ -1719,19 +1642,19 @@ function labABToLch(L: number, a: number, b: number, alpha: number): LchTriple {
     return { L, C: NaN, h: NaN, alpha };
   }
   const C = Math.hypot(a, b);
-  // CSS Color 4 §12.3: hue is powerless when chroma is 0.
+  // At chroma 0, hue is powerless ⇒ encode as NaN so carry-forward applies.
   const h = C < LAB_POWERLESS_CHROMA ? NaN : ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360;
   return { L, C, h, alpha };
 }
 
-/** Mix two LCH/OkLCH triples natively per CSS Color 5 §3.3. */
+/** Mix two LCH/OkLCH triples natively. */
 function mixLch(A: LchTriple, B: LchTriple, wA: number, wB: number, hue: HueMethod): LchTriple {
   let [Al, Bl] = carryPair(A.L, B.L);
   let [Ac, Bc] = carryPair(A.C, B.C);
   let [Ah, Bh] = carryPair(A.h, B.h);
   const [Aalpha, Balpha] = carryPair(A.alpha, B.alpha);
-  // CSS Color 4 §12: `transparent` operand substitutes the other
-  // operand's components, keeping alpha 0.
+  // `transparent` (Lab origin at black / zero alpha) substitutes the peer's
+  // components, keeping alpha 0.
   if (isLchAlphaZero(Al, Ac, Aalpha) && !isLchAlphaZero(Bl, Bc, Balpha)) {
     Al = Bl;
     Ac = Bc;
@@ -1763,18 +1686,16 @@ function isLchAlphaZero(L: number, C: number, alpha: number): boolean {
 }
 
 /**
- * Mix two `lab` / `oklab` triples per CSS Color 4 §13.1 (premultiplied
- * alpha) with §3.3 missing-channel carry-forward and §12 `transparent`
- * substitution. The polar Lab spaces (`lch`, `oklch`) have a dedicated
- * `mixLch` path so the (L, C, h) form is preserved through the mix.
+ * Mix two `lab` / `oklab` triples premultiplied in rectangular space with
+ * NaN carry-forward and `transparent` substitution. The polar siblings
+ * (`lch`, `oklch`) use `mixLch` so (L, C, h) is preserved through the mix.
  */
 function mixLab(A: LabTriple, B: LabTriple, wA: number, wB: number): LabTriple {
   let [Al, Bl] = carryPair(A.L, B.L);
   let [Aa, Ba] = carryPair(A.a, B.a);
   let [Ab, Bb] = carryPair(A.b, B.b);
   const [Aalpha, Balpha] = carryPair(A.alpha, B.alpha);
-  // CSS Color 4 §12: `transparent` operand (Lab(0,0,0,0)) substitutes
-  // the other operand's components, keeping alpha 0.
+  // `transparent` substitutes the peer's components, keeping alpha 0.
   if (isLabAlphaZero(Al, Aa, Ab, Aalpha) && !isLabAlphaZero(Bl, Ba, Bb, Balpha)) {
     Al = Bl;
     Aa = Ba;
@@ -1883,16 +1804,11 @@ function srgbToLinear(v: number): number {
 }
 
 /**
- * CSS Color 5 §4 relative-color binding map for the four modern
- * color-space forms. Maps each form's channel-keyword identifier to
- * the array index it occupies in `bindings` (where bindings[3] is
- * always `alpha`).
- *
- * Per CSS Color 5 §4.1: "All operations take part in the color space
- * of the relative color function; if the originally specified color
- * space for the origin color used a different color function, it's
- * first converted into the chosen color function." So `oklch(from
- * red l c h)` resolves `l, c, h` against red's OKLCh coordinates.
+ * Relative-color binding map for the four modern color-space forms. Maps each
+ * form's channel-keyword identifier to its index in `bindings` (where
+ * `bindings[3]` is always `alpha`). All operations happen in the relative
+ * color's space: `oklch(from red l c h)` resolves `l, c, h` against red's
+ * OKLCh coordinates.
  */
 const RELATIVE_CHANNEL_KEYWORDS: Record<string, Record<string, number>> = {
   oklch: { l: 0, c: 1, h: 2, alpha: 3 },
@@ -1904,7 +1820,7 @@ const RELATIVE_CHANNEL_KEYWORDS: Record<string, Record<string, number>> = {
 /**
  * Walk an args tree (Function token contents) and return true if any
  * Sentinel token is reachable. Used to detect "sentinel-base relative
- * color" — `oklch(from \0sc:colors.brand:#abc l c h)` — which v7 can't
+ * color", e.g. `oklch(from \0sc:colors.brand:#abc l c h)`, which v7 can't
  * statically fold without cascade-direction visibility plumbed to the
  * render-time resolver.
  */
@@ -1920,17 +1836,13 @@ function containsSentinel(tok: Token): boolean {
 }
 
 /**
- * Parse the `from <color>` prefix per CSS Color 5 §4. Returns the
- * origin color as RGB along with the number of args consumed, or a
- * `sentinelBail` sentinel if the base contains an unresolvable theme
- * reference (cascade-consolidation gates static fold for that path —
- * see project_native_theme_reactivity memory). Returns null if the
- * `from` token isn't present (caller stays on the non-relative path)
- * or the base isn't statically resolvable.
+ * Parse the `from <color>` prefix. Returns the origin color as RGB along with
+ * the args consumed, or a `sentinelBail` marker if the base contains an
+ * unresolvable theme reference (see `project_native_theme_reactivity` memory).
+ * Returns null if `from` isn't present or the base isn't statically resolvable.
  *
- * `outerFn` (e.g. `'oklch'`) feeds the dev warning emitted when the
- * origin is `currentColor`, which can't be folded because the cascaded
- * `color` value isn't visible at compile time on native.
+ * `outerFn` (e.g. `'oklch'`) feeds the dev warning emitted when the origin is
+ * `currentColor`, which can't be folded without compile-time cascade visibility.
  */
 function parseRelativeFrom(
   args: Token[],
@@ -1953,12 +1865,9 @@ function parseRelativeFrom(
     rgb = parseHex(baseTok.name!);
   } else if (baseTok.kind === TokenKind.Ident) {
     const name = baseTok.name!;
-    // CSS Color 5 §4: origin may be `currentColor`, which resolves
-    // against the cascaded `color` value at used-value time. The
-    // static fold has no cascade visibility on native, so warn the
-    // author once and drop the declaration. On rn-web the browser
-    // resolves the relative color natively; let the function form
-    // pass through unchanged.
+    // `currentColor` origin needs cascade visibility; the static fold has none
+    // on native, so warn and drop. rn-web passes the function through so the
+    // browser resolves it.
     if (name === 'currentcolor') {
       if (__NATIVE_WEB__) return null;
       if (__DEV__) {
@@ -1982,12 +1891,10 @@ function parseRelativeFrom(
 }
 
 /**
- * Convert origin RGB → target-space coordinate bindings per CSS Color
- * 5 §4.1 ("first converted into the chosen color function"). Returns
- * a four-tuple [c1, c2, c3, alpha] using each form's component ranges
- * per spec §4.6-4.9: lab L in 0..100, lab a/b in ±125; lch L in
- * 0..100, c in 0..150, h in 0..360; oklab L in 0..1, a/b in ±0.4;
- * oklch L in 0..1, c in 0..0.4, h in 0..360.
+ * Convert origin RGB → target-space coordinate bindings as a four-tuple
+ * [c1, c2, c3, alpha]. Component ranges: lab L 0..100 / a, b ±125; lch L 0..100
+ * / c 0..150 / h 0..360; oklab L 0..1 / a, b ±0.4; oklch L 0..1 / c 0..0.4 /
+ * h 0..360.
  */
 function rgbToTargetBindings(
   rgb: RGB,
@@ -2017,17 +1924,13 @@ function rgbToTargetBindings(
 }
 
 /**
- * Walk a calc-tree's tokens recursively and substitute any ident
- * matching a binding keyword with a number token carrying the bound
- * value. Per CSS Color 5 §4.2: "By using the component keywords in a
- * math function, an origin color can be manipulated in more advanced
- * ways" — `oklch(from var(--color) calc(l / 2) c h)` darkens. The
- * substitution lets the existing static-math evaluator resolve the
- * expression without teaching it about color-space variables.
+ * Walk a calc-tree's tokens and replace any ident matching a binding keyword
+ * with a number token carrying the bound value (e.g. `oklch(from var(--color)
+ * calc(l / 2) c h)` halves lightness). Substitution lets the existing
+ * static-math evaluator handle the expression without color-space awareness.
  *
- * Mutates the token array in place; safe because each transformDecl
- * pass tokenizes fresh, and each function token's `argTokens` is
- * read at most once per channel slot.
+ * Mutates in place; safe because each transformDecl pass tokenizes fresh and
+ * each function's argTokens is read at most once per channel slot.
  */
 function substituteCalcBindings(
   fnTok: Token,
@@ -2041,10 +1944,8 @@ function substituteCalcBindings(
       const bIdx = keywords[t.name];
       if (bIdx !== undefined) {
         const v = bindings[bIdx];
-        // CSS Color 5 §4.1: "if calculations are done on missing
-        // values, none is treated as 0." NaN reflects a missing
-        // origin component (sRGB → polar conversion of hue can leave
-        // hue indeterminate when chroma is 0); collapse to 0 here.
+        // Missing origin components (NaN, e.g. hue at chroma 0) collapse to 0
+        // inside calc().
         inner[i] = numberToken(String(v !== v ? 0 : v), v !== v ? 0 : v);
       }
     } else if (t.kind === TokenKind.Function) {
@@ -2055,18 +1956,18 @@ function substituteCalcBindings(
 
 /**
  * Read three channel values + optional alpha from an `oklab`/`oklch`/`lab`/`lch`
- * function token. Each color space scales percents differently per CSS Color L4:
+ * function token. Each color space scales percents differently:
  * `scales[i]` is what `100%` maps to for channel `i`. Pass `NaN` to reject
  * percent for that channel (used for hue, where percent isn't valid).
  *
- * Number form (no `%`) is taken as-is. Alpha after `/` is normalised to 0..1
+ * Number form (no `%`) is taken as-is. Alpha after `/` is normalized to 0..1
  * regardless of input form.
  *
- * `relativeSpace`, when provided, enables CSS Color 5 §4 relative-color
- * syntax: detects a `from <color>` prefix, binds the origin's channels
- * in the target space, and substitutes channel keywords (l/c/h/a/b,
- * alpha) in any slot, including inside `calc()`. Per §4.1, omitted
- * alpha defaults to the origin's alpha (not 1).
+ * `relativeSpace`, when provided, enables relative-color syntax: detects
+ * a `from <color>` prefix, binds the origin's channels in the target
+ * space, and substitutes channel keywords (l/c/h/a/b, alpha) in any
+ * slot, including inside `calc()`. Omitted alpha defaults to the
+ * origin's alpha (not 1).
  */
 function readChannels(
   tok: Token,
@@ -2085,19 +1986,15 @@ function readChannels(
     const from = parseRelativeFrom(args, 0, tok.name || relativeSpace);
     if (from !== null) {
       if ('sentinelBail' in from) {
-        // Sentinel-base relative color (e.g. `oklch(from <theme-token> l c
-        // h)`) defers to `colorFnResolver`'s render-time substitution: the
-        // assembled string after sentinel substitution contains a literal
-        // hex base, which re-enters readChannels and folds via the
-        // bindings branch below. Bail the static fold attempt silently —
-        // the warning that used to fire here predates the runtime path.
+        // Sentinel-base relative color (`oklch(from <theme-token> l c h)`)
+        // defers to `colorFnResolver`'s render-time substitution; the
+        // post-substitution string re-enters readChannels with a literal hex
+        // base. Bail the static fold silently.
         return null;
       }
       bindings = rgbToTargetBindings(from.rgb, relativeSpace);
       keywords = RELATIVE_CHANNEL_KEYWORDS[relativeSpace];
-      // CSS Color 5 §4.1: "If the alpha value of the relative color is
-      // omitted, it defaults to that of the origin color (rather than
-      // defaulting to 100%, as it does in the absolute syntax)."
+      // Relative-color alpha omitted ⇒ defaults to the origin's alpha (not 100%).
       alpha = bindings[3];
       startIdx = from.consumed;
     }
@@ -2131,15 +2028,14 @@ function readChannels(
         vals.push((t.value! / 100) * scale);
       }
     } else if (t.kind === TokenKind.Function) {
-      // CSS Color 5 §4.2: substitute channel keywords inside `calc()`
-      // with their bound numeric values before the static math
-      // evaluator runs.
+      // Substitute channel keywords inside `calc()` with their bound numeric
+      // values before the static math evaluator runs.
       if (bindings !== null && keywords !== null) {
         substituteCalcBindings(t, keywords, bindings);
       }
       // Static-foldable math fns (`calc`, `min`, `max`, `clamp`) are
       // valid channel sources when the result is a bare number, a
-      // percentage, or — only in the hue slot of lch/oklch — a degree
+      // percentage, or (only in the hue slot of lch/oklch) a degree
       // angle. Other units (px / em / vw / …) don't make sense as a
       // color channel and bail back to null.
       const numeric = resolveStaticMathFunction(t, true);
@@ -2168,17 +2064,13 @@ function readChannels(
         return null;
       }
     } else if (t.kind === TokenKind.Ident && t.name === 'none') {
-      // CSS Color 4 §4.4: `none` represents a missing component.
-      // Standalone parsing computes the "used value" (treating none as
-      // 0); color-mix preserves the NaN flag to drive carry-forward
-      // per Color 5 §3.3.
+      // Standalone parsing collapses missing channels to 0; color-mix preserves
+      // the NaN flag to drive carry-forward.
       if (sawSlash) alpha = NaN;
       else vals.push(NaN);
     } else if (t.kind === TokenKind.Ident && t.name !== undefined && keywords !== null) {
-      // CSS Color 5 §4.2: channel keyword bound from the origin color.
-      // `oklch(from #f00 l c h)` substitutes `l/c/h` with red's OKLCh
-      // coordinates; the keywords are accepted in any slot order (so
-      // `oklch(from #f00 c l h)` is also valid).
+      // Channel keyword bound from the origin color. Keywords are accepted in
+      // any slot order so `oklch(from #f00 c l h)` works too.
       const bIdx = keywords[t.name];
       if (bIdx === undefined) return null;
       const v = bindings![bIdx];
@@ -2192,9 +2084,9 @@ function readChannels(
   return [vals[0], vals[1], vals[2], alpha];
 }
 
-/** "Used value" of a possibly-missing channel: NaN collapses to 0 per
- *  CSS Color 4 §4.4. Standalone color parsers use this; the color-mix
- *  pipeline preserves NaN until carry-forward runs. */
+/** "Used value" of a possibly-missing channel: NaN collapses to 0.
+ *  Standalone color parsers use this; the color-mix pipeline preserves
+ *  NaN until carry-forward runs. */
 function usedValue(v: number): number {
   return v !== v ? 0 : v;
 }

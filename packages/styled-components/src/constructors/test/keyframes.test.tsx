@@ -7,7 +7,7 @@ import { getRenderedCSS, resetStyled } from '../../test/utils';
 import css from '../css';
 import keyframes from '../keyframes';
 
-// Disable isStaticRules optimisation since we're not
+// Disable isStaticRules optimization since we're not
 // testing for WebStyle specifics here
 jest.mock('../../utils/isStaticRules', () => () => false);
 
@@ -285,7 +285,7 @@ describe('keyframes', () => {
     expect(() => `animation-name: ${animation};`).toThrow();
   });
 
-  it('should use the local stylis instance', () => {
+  it('should apply StyleSheetManager plugins to injected keyframes', () => {
     const rules = `
       0% {
         left: 0%;
@@ -323,7 +323,7 @@ describe('keyframes', () => {
     `);
   });
 
-  it('should reinject if used in different stylis contexts', () => {
+  it('should reinject if used in different StyleSheetManager plugin contexts', () => {
     const rules = `
       0% {
         left: 0%;

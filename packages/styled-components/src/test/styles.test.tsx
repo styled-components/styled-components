@@ -206,8 +206,8 @@ describe('with styles', () => {
     `);
   });
 
-  it('honours a custom toString on a value inside an inline style object (#5740)', () => {
-    // Design-token shape — `toString` returns the canonical value while
+  it('honors a custom toString on a value inside an inline style object (#5740)', () => {
+    // Design-token shape; `toString` returns the canonical value while
     // the alternates ride along for explicit lookups (`token.subtle`).
     const ink = {
       default: '#000',
@@ -228,7 +228,7 @@ describe('with styles', () => {
     `);
   });
 
-  it('honours a custom toString on a value-position interpolation in a template literal (#5740)', () => {
+  it('honors a custom toString on a value-position interpolation in a template literal (#5740)', () => {
     // Same design-token shape, but interpolated directly into a value
     // slot (the reporter's original repro). Verifies the `resolveInterpolation`
     // path, separate from the inline-object path covered above.

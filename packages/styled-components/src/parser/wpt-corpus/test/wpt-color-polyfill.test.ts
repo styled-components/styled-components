@@ -41,7 +41,7 @@ const assertions = corpus as Assertion[];
  * Returns RGB channels in 0..255 byte space, alpha in 0..1.
  *
  * Routing function-form expected values through `staticColorFunctionToHex`
- * exercises the same conversion math on both sides — a bug in oklab→sRGB
+ * exercises the same conversion math on both sides; a bug in oklab→sRGB
  * would mask as a self-consistent zero diff rather than surfacing here.
  * The browser's computed-value oracle still validates the mix math itself
  * (which only runs on the input side), and the conversion paths are

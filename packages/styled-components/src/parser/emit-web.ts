@@ -28,8 +28,8 @@ const DECL_BODY_AT_RULES = new Set([
 ]);
 
 /**
- * At-rules that stylis silently drops (no effect at the location they appear in
- * styled-components templates). We match the behavior for hash stability.
+ * At-rules that are ignored at the template root (no emitted effect in this
+ * pipeline). Dropping them keeps emitted CSS and class hashes stable.
  */
 const DROPPED_AT_RULES = new Set(['charset']);
 
@@ -102,14 +102,13 @@ export interface EmitOptions {
    * `selfRefSelector` in a self-reference position (e.g., `X + X`, `X > X`)
    * have that token rewritten to `.${componentId}` so the combinator refers
    * to the STATIC component class rather than the current render's hashed
-   * class. Matches stylis' selfReferenceReplacementPlugin behavior.
+   * class.
    */
   componentId?: string | undefined;
   selfRefSelector?: string | undefined;
   /**
-   * Prepended to every emitted rule selector AFTER `&` resolution. Matches
-   * stylis' `recursivelySetNamespace` behavior for `StyleSheetManager namespace`.
-   * Skipped for @keyframes.
+   * Prepended to every emitted rule selector AFTER `&` resolution (namespace
+   * from `StyleSheetManager`). Skipped for @keyframes.
    */
   namespace?: string | undefined;
   /**
@@ -131,8 +130,8 @@ export interface EmitOptions {
 }
 
 /**
- * Emit CSS strings from a parser AST, targeting stylis output format
- * byte-for-byte so existing class-name hashes remain stable.
+ * Emit minified CSS rule strings from a parser AST for web injection.
+ * Shape is stable for a given AST so class-name hashes stay deterministic.
  *
  * @param root         Parsed AST from `parse()`.
  * @param parentSelector  Pre-composed parent selector (namespace + prefix + selector).
@@ -303,7 +302,7 @@ function emitKeyframes(node: StaticKeyframesNode, options: EmitOptions | undefin
   const frames: string[] = [];
   for (let i = 0; i < node.frames.length; i++) {
     const frame = node.frames[i];
-    // Empty frames (`from { }`) drop; matches stylis output for v6→v7 hash stability.
+    // Empty frames (`from { }`) are omitted (no declarations to emit).
     if (frame.children.length === 0) continue;
     frames.push(emitFrame(frame, options));
   }
@@ -327,7 +326,7 @@ function emitFrame(frame: StaticKeyframeFrame, options: EmitOptions | undefined)
 /**
  * Resolve nested selectors against a parent selector.
  *
- * Stylis semantics:
+ * Template nesting semantics:
  *   - `&` and `& + &` etc.: replace `&` with the parent selector
  *   - bare selectors like `.foo` or `p`: prepend parent + space
  *   - comma-separated list: each selector resolved independently, joined with `,`
@@ -359,9 +358,9 @@ function resolveSingle(selector: string, parent: string): string {
 }
 
 /**
- * Mirrors stylis' selfReferenceReplacementPlugin.
+ * Self-reference rewrite for combinator patterns like `X + X` on the static class.
  *
- * Gate condition (per stylis): the COMPILED selector starts AND ends with
+ * Gate condition: the COMPILED selector starts AND ends with
  * `selfRefSelector`, AND removing all occurrences of `selfRefSelector` leaves
  * non-empty content. Examples for `selfRefSelector=".a"`:
  *   `.a`              → FAIL (removing leaves "")

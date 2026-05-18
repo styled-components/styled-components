@@ -658,7 +658,7 @@ describe('parseCSSDeclarations', () => {
       ]);
     });
 
-    it('unclosed parens consume remainder (matches stylis semantics)', () => {
+    it('unclosed parens consume remainder (tokenizer semantics)', () => {
       expect(parseCSSDeclarations('color: rgb(; font-size: calc(; opacity: 1;')).toEqual([
         ['color', 'rgb(; font-size: calc(; opacity: 1;'],
       ]);
@@ -1346,7 +1346,7 @@ describe('parseCSSDeclarations', () => {
       `);
     });
 
-    it('unclosed paren consumes remainder (stylis semantics)', () => {
+    it('unclosed paren consumes remainder (tokenizer semantics)', () => {
       expect(parseCSSDeclarations('transform: rotate(45deg; color: red; margin: 10px;'))
         .toMatchInlineSnapshot(`
         [

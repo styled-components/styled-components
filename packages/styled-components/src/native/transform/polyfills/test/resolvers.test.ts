@@ -1,4 +1,5 @@
 import { applyResolvers, buildResolver, escapeSentinelFallback, ResolveEnv } from '../resolvers';
+import { describeOnRnWeb } from '../../describeOnRnWeb';
 
 const baseEnv: ResolveEnv = {
   media: {
@@ -34,7 +35,7 @@ describe('runtime resolvers', () => {
     expect(buildResolver('10vmax')!(baseEnv)).toBe(80);
   });
 
-  // CSS Values 4 §6.1.1 — https://drafts.csswg.org/css-values-4/#rem
+  // CSS Values 4 §6.1.1: https://drafts.csswg.org/css-values-4/#rem
   describe('rem (CSS Values 4 §6.1.1)', () => {
     // "Equal to the computed value of font-size on the root element."
     it('resolves to rootFontSize × n', () => {
@@ -69,7 +70,7 @@ describe('runtime resolvers', () => {
     });
   });
 
-  // CSS Values 4 §6.1.1 — https://drafts.csswg.org/css-values-4/#em
+  // CSS Values 4 §6.1.1: https://drafts.csswg.org/css-values-4/#em
   describe('em / lh / rlh (CSS Values 4 §6.1.1)', () => {
     // "Equal to the computed value of the font-size property of the
     // element on which it is used."
@@ -99,36 +100,109 @@ describe('runtime resolvers', () => {
     });
   });
 
-  // https://drafts.csswg.org/css-text-4/#text-align-property
-  describe('text-align direction-aware sentinel (CSS Text 4 §7.1)', () => {
-    // "start: aligns to the inline start edge of the line box."
-    it('text-align: start resolves to `left` under ltr', () => {
-      const env: ResolveEnv = { ...baseEnv, direction: 'ltr' };
-      expect(buildResolver('\0scta:start')!(env)).toBe('left');
+  // https://drafts.csswg.org/css-fonts-4/#valdef-font-size-larger
+  // CSS Fonts 4 §2.3.2 relative-size keywords. The font handler emits
+  // a 2-byte sentinel (`\0+` for `larger`, `\0-` for `smaller`); this
+  // resolver steps along the absolute-size ramp when the inherited
+  // font-size matches a keyword entry, falling back to a 1.2
+  // multiplicative factor otherwise.
+  describe('relative-size sentinel (CSS Fonts 4 §2.3.2)', () => {
+    // Ramp navigation when the inherited size matches a keyword:
+    // medium (16) → large (18) under `larger`.
+    it('larger steps from medium (16) to large (18)', () => {
+      const env: ResolveEnv = { ...baseEnv, fontSize: 16 };
+      expect(buildResolver('\0+')!(env)).toBe(18);
     });
 
-    it('text-align: start resolves to `right` under rtl', () => {
-      const env: ResolveEnv = { ...baseEnv, direction: 'rtl' };
-      expect(buildResolver('\0scta:start')!(env)).toBe('right');
+    // small (13) → x-small (10) under `smaller`.
+    it('smaller steps from small (13) to x-small (10)', () => {
+      const env: ResolveEnv = { ...baseEnv, fontSize: 13 };
+      expect(buildResolver('\0-')!(env)).toBe(10);
     });
 
-    // "end: aligns to the inline end edge."
-    it('text-align: end resolves to `right` under ltr', () => {
-      const env: ResolveEnv = { ...baseEnv, direction: 'ltr' };
-      expect(buildResolver('\0scta:end')!(env)).toBe('right');
+    // xx-large (32) → xxx-large (48) under `larger` (highest non-cap).
+    it('larger steps from xx-large (32) to xxx-large (48)', () => {
+      const env: ResolveEnv = { ...baseEnv, fontSize: 32 };
+      expect(buildResolver('\0+')!(env)).toBe(48);
     });
 
-    it('text-align: end resolves to `left` under rtl', () => {
-      const env: ResolveEnv = { ...baseEnv, direction: 'rtl' };
-      expect(buildResolver('\0scta:end')!(env)).toBe('left');
+    // At the top of the ramp, larger applies the 1.2 factor.
+    it('larger at the top of the ramp scales by 1.2', () => {
+      const env: ResolveEnv = { ...baseEnv, fontSize: 48 };
+      expect(buildResolver('\0+')!(env)).toBe(48 * 1.2);
     });
 
-    // match-parent collapses to start in horizontal-tb (Yoga's only mode).
-    it('text-align: match-parent resolves like start', () => {
-      const env: ResolveEnv = { ...baseEnv, direction: 'ltr' };
-      expect(buildResolver('\0scta:match-parent')!(env)).toBe('left');
-      const rtl: ResolveEnv = { ...baseEnv, direction: 'rtl' };
-      expect(buildResolver('\0scta:match-parent')!(rtl)).toBe('right');
+    // At the bottom of the ramp, smaller applies the 1/1.2 factor.
+    it('smaller at the bottom of the ramp scales by 1/1.2', () => {
+      const env: ResolveEnv = { ...baseEnv, fontSize: 9 };
+      expect(buildResolver('\0-')!(env)).toBe(9 / 1.2);
+    });
+
+    // Off-ramp inherited sizes use the multiplicative fallback.
+    it('larger from an off-ramp size scales by 1.2', () => {
+      const env: ResolveEnv = { ...baseEnv, fontSize: 14 };
+      expect(buildResolver('\0+')!(env)).toBe(14 * 1.2);
+    });
+
+    it('smaller from an off-ramp size scales by 1/1.2', () => {
+      const env: ResolveEnv = { ...baseEnv, fontSize: 14 };
+      expect(buildResolver('\0-')!(env)).toBe(14 / 1.2);
+    });
+  });
+
+  // https://drafts.csswg.org/css-values-4/#snap-as-a-line-width
+  // CSS Values 4 §10.3 + "snap a length as a line width" algorithm in §6:
+  //   "If len is an integer number of device pixels, do nothing.
+  //    If |len| > 0 but < 1 device pixel, round it away from zero to ±1
+  //    device pixel.
+  //    If |len| > 1 device pixel, round it towards zero to the nearest
+  //    integer number of device pixels."
+  describe('round(line-width, A): snap-as-line-width (CSS Values 4 §10.3 + §6)', () => {
+    // A in CSS px is multiplied by pixelRatio to land in device pixels.
+    it('already on the device-pixel grid passes through unchanged', () => {
+      // At @2x, 0.5 CSS px = 1 device pixel; passes through.
+      const env: ResolveEnv = { ...baseEnv, media: { ...baseEnv.media, pixelRatio: 2 } };
+      expect(buildResolver('round(line-width, 0.5px)')!(env)).toBe(0.5);
+    });
+
+    it('snaps to ±1 device pixel when |A| < 1 device pixel', () => {
+      // At @1x, 0.3 CSS px < 1 device pixel → snap to 1 CSS px (= 1 device pixel).
+      const env: ResolveEnv = { ...baseEnv, media: { ...baseEnv.media, pixelRatio: 1 } };
+      expect(buildResolver('round(line-width, 0.3px)')!(env)).toBe(1);
+    });
+
+    it('negative sub-device-pixel A snaps to -1 device pixel preserving sign', () => {
+      const env: ResolveEnv = { ...baseEnv, media: { ...baseEnv.media, pixelRatio: 2 } };
+      // At @2x, -0.2 CSS px is -0.4 device pixels → snap to -0.5 CSS px (-1 device px).
+      expect(buildResolver('round(line-width, -0.2px)')!(env)).toBe(-0.5);
+    });
+
+    it('rounds towards zero when |A| > 1 device pixel', () => {
+      const env: ResolveEnv = { ...baseEnv, media: { ...baseEnv.media, pixelRatio: 2 } };
+      // 1.6 CSS px == 3.2 device pixels → trunc to 3 → 1.5 CSS px.
+      expect(buildResolver('round(line-width, 1.6px)')!(env)).toBe(1.5);
+    });
+
+    it('@1x: integer CSS px is the device-pixel grid', () => {
+      const env: ResolveEnv = { ...baseEnv, media: { ...baseEnv.media, pixelRatio: 1 } };
+      expect(buildResolver('round(line-width, 3px)')!(env)).toBe(3);
+    });
+
+    it('@3x: A snaps to the nearest 1/3 CSS px', () => {
+      const env: ResolveEnv = { ...baseEnv, media: { ...baseEnv.media, pixelRatio: 3 } };
+      // 2.5 CSS px == 7.5 device pixels → trunc to 7 → 7/3 CSS px.
+      expect(buildResolver('round(line-width, 2.5px)')!(env)).toBe(7 / 3);
+    });
+
+    it('unitless A is treated as px (RN convention)', () => {
+      const env: ResolveEnv = { ...baseEnv, media: { ...baseEnv.media, pixelRatio: 2 } };
+      expect(buildResolver('round(line-width, 1.6)')!(env)).toBe(1.5);
+    });
+
+    it('with-B form is not handled by the resolver (returns null)', () => {
+      // The compile-time path passes the value through as a string; the
+      // resolver opts out so the value never lands as a number.
+      expect(buildResolver('round(line-width, 1.5px, 1px)')).toBeNull();
     });
   });
 
@@ -712,7 +786,7 @@ describe('light-dark with sentinel branches', () => {
 // ──────────────────────────────────────────────────────────────────────
 
 describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
-  //;Form: <light-dark-color> ;
+  // Form: `<light-dark-color> = light-dark(<color>, <color>)`.
 
   it('color form: both branches are colors, returns first when light, second when dark', () => {
     const r = buildResolver('light-dark(red, blue)')!;
@@ -720,7 +794,7 @@ describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
     expect(r({ ...baseEnv, media: { ...baseEnv.media, colorScheme: 'dark' } })).toBe('blue');
   });
 
-  //;Form: <light-dark-image> ;
+  // Form: `<light-dark-image> = light-dark([<image>|none],[<image>|none])`.
 
   it('image form: url() in both branches resolves per scheme', () => {
     const r = buildResolver('light-dark(url("a.png"), url("b.png"))')!;
@@ -758,7 +832,8 @@ describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
     expect(r({ ...baseEnv, media: { ...baseEnv.media, colorScheme: 'dark' } })).toBe('none');
   });
 
-  //;Mixed form rejection (parse-time error per spec) ;
+  // Mixed-form rejection; parse-time error per spec ("Attempting to use one
+  // image and one color will result in a parse-time error.").
 
   it('rejects mixed form: image in light branch, color in dark branch', () => {
     expect(buildResolver('light-dark(url("a.png"), red)')).toBeNull();
@@ -776,7 +851,7 @@ describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
     expect(buildResolver('light-dark(red, none)')).toBeNull();
   });
 
-  //;Used color scheme determination ;
+  // Used color scheme determination.
 
   it('used color scheme `light` selects the first branch', () => {
     const r = buildResolver('light-dark(red, blue)')!;
@@ -799,7 +874,7 @@ describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
     expect(r({ ...baseEnv, media: { ...baseEnv.media, colorScheme: null as any } })).toBe('red');
   });
 
-  //;Argument count (grammar enforces exactly two) ;
+  // Grammar: exactly two comma-separated branches.
 
   it('grammar: rejects zero arguments', () => {
     expect(buildResolver('light-dark()')).toBeNull();
@@ -820,7 +895,7 @@ describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
     expect(buildResolver('light-dark(,)')).toBeNull();
   });
 
-  //;Color value forms allowed in branches (any <color>) ;
+  // Allowed branch values: any <color>.
 
   it('accepts named colors in branches', () => {
     expect(
@@ -868,7 +943,7 @@ describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
     ).toBe('#1a1a1a');
   });
 
-  //;Composition / nesting ;
+  // Composition / nesting (`<color>` may itself contain nested functions).
 
   it('accepts nested light-dark in a branch (recursive)', () => {
     // Spec implication: <color> in a branch can itself be a light-dark()
@@ -920,10 +995,34 @@ describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
     expect(r({ ...baseEnv, media: { ...baseEnv.media, colorScheme: 'dark' } })).toBe(25);
   });
 
-  //;Identifier-substring / boundary behavior ;
+  // Identifier-boundary rejection (substring `mylight-dark` must not parse).
 
   it('rejects identifier substrings ending in light-dark (no boundary before paren)', () => {
     expect(buildResolver('1px solid mylight-dark(red, blue)')).toBeNull();
+  });
+
+  describeOnRnWeb(() => {
+    // Mirrors rn-web bundle (`__NATIVE_WEB__`); browsers resolve several values statically,
+    // so omit resolvers. See `describeOnRnWeb` and `resolvers.ts`. rn-web `@react-native/normalize-colors`
+    // rejects literal `light-dark(...)` strings; `buildResolver(null)` pairs with custom-property wrapping
+    // in `polyfills.test.ts`.
+
+    it('pure-static light-dark returns null so transformDecl can wrap it', () => {
+      // `buildResolver(null)`: authored `light-dark(...)` survives for CSS indirection path.
+      expect(buildResolver('light-dark(red, blue)')).toBeNull();
+      expect(buildResolver('light-dark(#fafafa, #1a1a1a)')).toBeNull();
+    });
+
+    it('dynamic light-dark (sentinel branches) still resolves at render time', () => {
+      const r = buildResolver('light-dark(\0sc:colors.bg:#fff, #111)')!;
+      const env = { ...baseEnv, theme: { colors: { bg: '#fafafa' } } };
+      expect(r(env)).toBe('#fafafa');
+      expect(r({ ...env, media: { ...env.media, colorScheme: 'dark' } })).toBe('#111');
+    });
+
+    it('rejects mixed image + color forms regardless of host', () => {
+      expect(buildResolver('light-dark(red, linear-gradient(black, white))')).toBeNull();
+    });
   });
 });
 
@@ -1118,6 +1217,16 @@ describe('cross-feature integrations', () => {
       const r = buildResolver('color-mix(in srgb, \0sc:colors.fg:#000 calc(100% - 30%), white)')!;
       expect(r({ ...baseEnv, theme: { colors: { fg: '#0000ff' } } })).toMatch(/^#[0-9a-f]{6,8}$/);
     });
+
+    describeOnRnWeb(() => {
+      // Wide-gamut `<color>` functions stay as authored CSS strings on rn-web (`__NATIVE_WEB__`).
+      // Sentinels only splice resolved numbers into those strings.
+      it('pure-static sentinel oklch substitutes to assembled function text (passthrough)', () => {
+        const r = buildResolver('oklch(\0sc:c.l:.7 \0sc:c.c:.2 \0sc:c.h:200)')!;
+        const env = { ...baseEnv, theme: { c: { l: '0.7', c: '0.2', h: '200' } } };
+        expect(r(env)).toBe('oklch(0.7 0.2 200)');
+      });
+    });
   });
 
   it('light-dark with calc inner is not supported (calc returns numeric, light-dark expects string output)', () => {
@@ -1272,7 +1381,7 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
     // <dimension>, or <percentage>, but must have a consistent type or
     // else the function is invalid"
     it('mixes px with em now that em resolves against cascade.fontSize', () => {
-      // em is a font-relative length (CSS Values 4 §6.1.1) — same
+      // em is a font-relative length (CSS Values 4 §6.1.1); same
       // "length" type as px, so min() / max() accept the mix once
       // the cascade is plumbed.
       const env: ResolveEnv = { ...baseEnv, fontSize: 12 };
@@ -1528,6 +1637,24 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
       ).toBeNull();
     });
   });
+
+  describeOnRnWeb(() => {
+    // CSS Values §10 (calc/min/max/clamp): browsers resolve percentages against real layouts.
+    // Return null resolver so stylesheet text stays intact unless a sentinel needs substitution.
+    it('passes through static-mixed-unit calc/clamp/min/max expressions raw', () => {
+      expect(buildResolver('calc(33% - 5px)')!(baseEnv)).toBe('calc(33% - 5px)');
+      expect(buildResolver('clamp(10px, 50%, 100px)')!(baseEnv)).toBe('clamp(10px, 50%, 100px)');
+    });
+
+    it('still substitutes sentinels in calc arms that need runtime values', () => {
+      const r = buildResolver('calc(\0sc:gap:10 + 5px)')!;
+      expect(r({ ...baseEnv, theme: { gap: 12 } })).toBe(17);
+    });
+
+    it('rejects malformed calc so nothing invalid reaches CSS', () => {
+      expect(buildResolver('calc(10px +)')).toBeNull();
+    });
+  });
 });
 
 describe('env() spec compliance (CSS Environment Variables Level 1 §3)', () => {
@@ -1561,14 +1688,14 @@ describe('env() spec compliance (CSS Environment Variables Level 1 §3)', () => 
 
     // Spec: "if the env() function has a fallback value as its second
     // argument, replace the env() function by the fallback value."
-    it('unrecognised name with fallback returns the fallback', () => {
+    it('unrecognized name with fallback returns the fallback', () => {
       const r = buildResolver('env(unknown-name, 5px)')!;
       expect(r(baseEnv)).toBe(5);
     });
 
     // Spec: "Otherwise, the property or descriptor containing the env()
     // function is invalid at computed-value time."
-    it('unrecognised name without fallback drops the declaration', () => {
+    it('unrecognized name without fallback drops the declaration', () => {
       const r = buildResolver('env(unknown-name)')!;
       expect(r(baseEnv)).toBeNull();
     });
@@ -1587,7 +1714,7 @@ describe('env() spec compliance (CSS Environment Variables Level 1 §3)', () => 
 
     // Recognised names ignore their fallback per spec;substitution is
     // by the variable's value, not the fallback.
-    it('recognised name ignores fallback', () => {
+    it('recognized name ignores fallback', () => {
       const r = buildResolver('env(safe-area-inset-top, 999px)')!;
       expect(r(baseEnv)).toBe(44);
     });
@@ -1652,6 +1779,18 @@ describe('env() spec compliance (CSS Environment Variables Level 1 §3)', () => 
     it('custom property without fallback drops', () => {
       const r = buildResolver('env(--my-token)')!;
       expect(r(baseEnv)).toBeNull();
+    });
+  });
+
+  describeOnRnWeb(() => {
+    // `buildResolver('env(...)')` is not gated behind `__NATIVE_WEB__`;
+    // safe-area substitutions still read ResolveEnv.insets on rn-web.
+    it('parity: safe-area-inset-top resolves from env.insets', () => {
+      expect(buildResolver('env(safe-area-inset-top)')!(baseEnv)).toBe(44);
+    });
+
+    it('parity: unknown UA name + px fallback substitutes the fallback', () => {
+      expect(buildResolver('env(keyboard-height, 20px)')!(baseEnv)).toBe(20);
     });
   });
 });
@@ -1780,6 +1919,18 @@ describe('container units spec compliance (CSS Conditional 5 §7)', () => {
       // min(150, 100cqmin=100) = 100
       const r = buildResolver('min(150px, 100cqmin)')!;
       expect(r(baseEnv)).toBe(100);
+    });
+  });
+
+  describeOnRnWeb(() => {
+    // Viewport-relative units bypass resolvers on rn-web (`buildResolver → null`).
+    // Container cq* still resolve numerically against the RN layout probe.
+    it('parity: cqw resolves against registered container width', () => {
+      expect(buildResolver('50cqw')!(baseEnv)).toBe(100);
+    });
+
+    it('parity: cqmin resolves against smaller of cqi / cqb', () => {
+      expect(buildResolver('100cqmin')!(baseEnv)).toBe(100);
     });
   });
 });
@@ -1932,20 +2083,8 @@ describe('viewport units spec compliance (CSS Values Level 4 §6.1.2)', () => {
       expect(buildResolver('min(500px, 50vmin)')!(baseEnv)).toBe(200);
     });
   });
-});
 
-describe('rn-web bundle path (__NATIVE_WEB__ true)', () => {
-  // `__NATIVE_WEB__` defaults to false in `src/test/globals.ts`. Flip it for
-  // this block so the resolvers exercise the branch the rn-web bundle would
-  // ship; restore in afterAll so subsequent suites stay on the native path.
-  beforeAll(() => {
-    (global as { __NATIVE_WEB__?: boolean }).__NATIVE_WEB__ = true;
-  });
-  afterAll(() => {
-    (global as { __NATIVE_WEB__?: boolean }).__NATIVE_WEB__ = false;
-  });
-
-  describe('viewport units', () => {
+  describeOnRnWeb(() => {
     it('passes through static viewport values without a resolver', () => {
       // Returning null from buildResolver leaves the raw `<n><unit>` in
       // base so react-native-web forwards it to CSS unchanged. The browser
@@ -1957,72 +2096,6 @@ describe('rn-web bundle path (__NATIVE_WEB__ true)', () => {
       expect(buildResolver('100lvh')).toBeNull();
       expect(buildResolver('50vmin')).toBeNull();
       expect(buildResolver('50vmax')).toBeNull();
-    });
-  });
-
-  describe('light-dark()', () => {
-    // rn-web's `normalizeColor` (via `@react-native/normalize-colors`)
-    // rejects `light-dark(...)` and would normalize to `undefined`
-    // (transparent) before the browser sees it. To preserve native
-    // browser theme reactivity, pure-static values bypass the resolver
-    // entirely; `transformDecl` wraps them in a CSS custom-property
-    // indirection so the browser does the work. Dynamic branches with
-    // theme sentinels still resolve at render time.
-    it('pure-static light-dark returns null so transformDecl can wrap it', () => {
-      // null = no resolver; the literal `light-dark(...)` reaches the
-      // DOM via the custom-property indirection.
-      expect(buildResolver('light-dark(red, blue)')).toBeNull();
-      expect(buildResolver('light-dark(#fafafa, #1a1a1a)')).toBeNull();
-    });
-
-    it('dynamic light-dark (sentinel branches) still resolves at render time', () => {
-      // The browser doesn't know our theme tokens; we substitute them in
-      // JS and pick the branch ourselves. Color-scheme changes still
-      // re-render via the Appearance listener.
-      const r = buildResolver('light-dark(\0sc:colors.bg:#fff, #111)')!;
-      const env = { ...baseEnv, theme: { colors: { bg: '#fafafa' } } };
-      expect(r(env)).toBe('#fafafa');
-      expect(r({ ...env, media: { ...env.media, colorScheme: 'dark' } })).toBe('#111');
-    });
-
-    it('rejects mixed image + color forms regardless of host', () => {
-      // Spec parse-time error; result must drop the declaration on both
-      // hosts so styling stays predictable across iOS / Android / rn-web.
-      expect(buildResolver('light-dark(red, linear-gradient(black, white))')).toBeNull();
-    });
-  });
-
-  describe('color functions (oklch / oklab / lch / lab / color-mix)', () => {
-    it('substitutes sentinels and emits the assembled function call', () => {
-      // No conversion to sRGB hex on web; the browser handles wide gamut
-      // (Display P3 / Rec. 2020) when the monitor supports it.
-      const r = buildResolver('oklch(\0sc:c.l:.7 \0sc:c.c:.2 \0sc:c.h:200)')!;
-      const env = { ...baseEnv, theme: { c: { l: '0.7', c: '0.2', h: '200' } } };
-      expect(r(env)).toBe('oklch(0.7 0.2 200)');
-    });
-  });
-
-  describe('calc() / clamp() / min() / max()', () => {
-    it('passes through static-mixed-unit math expressions raw', () => {
-      // The browser resolves `%` against the real containing block at
-      // paint time, which is strictly more accurate than evaluating
-      // against env.container.width on Yoga.
-      const r = buildResolver('calc(33% - 5px)')!;
-      expect(r(baseEnv)).toBe('calc(33% - 5px)');
-      expect(buildResolver('clamp(10px, 50%, 100px)')!(baseEnv)).toBe('clamp(10px, 50%, 100px)');
-    });
-
-    it('still emits a runtime resolver when a calc arm needs substitution', () => {
-      // Sentinels, env(), and viewport units have to be substituted
-      // before the browser sees the value (the browser doesn't know
-      // about our theme tokens or safe-area context). The resolver
-      // substitutes and evaluates at render time.
-      const r = buildResolver('calc(\0sc:gap:10 + 5px)')!;
-      expect(r({ ...baseEnv, theme: { gap: 12 } })).toBe(17);
-    });
-
-    it('drops malformed math expressions instead of shipping garbage', () => {
-      expect(buildResolver('calc(10px +)')).toBeNull();
     });
   });
 });

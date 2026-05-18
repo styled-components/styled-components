@@ -10,7 +10,7 @@
  * (`document`, `getComputedStyle`, …) that swallow side-effects. The
  * stubs push to a collector. Because we let JS execute the script,
  * template literals (`color(${colorSpace} ...)`) and `for (const x of
- * [...])` loops expand naturally — yielding the real assertions, not
+ * [...])` loops expand naturally; yielding the real assertions, not
  * literal `${...}` placeholders.
  *
  * For each assertion we emit:
@@ -90,7 +90,7 @@ function extractFromScript(script, source) {
 
   // Chainable Proxy used for `document`, `window`, return values from
   // `getComputedStyle`, etc. Any get / set / call / construct returns the
-  // same proxy — covers `document.getElementById('x').style.width = '10px'`
+  // same proxy; covers `document.getElementById('x').style.width = '10px'`
   // and friends without modeling them.
   const dom = (() => {
     const handler = {
@@ -175,7 +175,7 @@ function extractFromScript(script, source) {
       }
       pushAssertion('computed', prop, value, expected, '');
     },
-    // Rule-level tests (e.g. css-cascade `@layer`) — currently not modelled
+    // Rule-level tests (e.g. css-cascade `@layer`); currently not modeled
     // in the corpus since the parser sees declarations, not at-rules.
     test_valid_rule() {},
     test_invalid_rule() {},
@@ -185,7 +185,7 @@ function extractFromScript(script, source) {
       try {
         if (typeof fn === 'function') fn(testharness);
       } catch {
-        /* assertion failed inside body — ignore */
+        /* assertion failed inside body; ignore */
       }
     },
     promise_test(fn) {
@@ -269,7 +269,7 @@ function extractFromScript(script, source) {
   try {
     vm.runInContext(wrapped, sandbox, { timeout: 30_000, displayErrors: false });
   } catch {
-    /* timeout / parse error — keep what we have */
+    /* timeout / parse error; keep what we have */
   }
 
   return collected;

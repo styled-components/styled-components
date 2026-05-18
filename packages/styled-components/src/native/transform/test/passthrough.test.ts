@@ -1,5 +1,7 @@
+import { resetWarningsForTest } from '../dev';
 import { transformDecl } from '../index';
 import { getPassthroughKeys, getPrimaryPassthroughKey } from '../passthrough';
+import { describeOnRnWeb } from '../describeOnRnWeb';
 
 describe('passthrough mapping', () => {
   describe('single-key passthroughs', () => {
@@ -29,8 +31,6 @@ describe('passthrough mapping', () => {
       ['backface-visibility', 'visible', 'backfaceVisibility'],
       ['outline-offset', '4px', 'outlineOffset'],
       ['outline-offset', '0', 'outlineOffset'],
-      ['direction', 'ltr', 'direction'],
-      ['direction', 'rtl', 'direction'],
     ])('%s emits a single %s key', (cssProp, value, expectedKey) => {
       const out = transformDecl(cssProp, value);
       expect(out).toEqual({ [expectedKey]: value });
@@ -42,21 +42,33 @@ describe('passthrough mapping', () => {
   describe('CSS Writing Modes 4 §2.1 (direction)', () => {
     // "Name: direction; Value: ltr | rtl; Initial: ltr; Applies to: all
     // elements; Inherited: yes; Animation type: not animatable."
-    it('accepts `ltr` (initial value)', () => {
-      expect(transformDecl('direction', 'ltr')).toEqual({ direction: 'ltr' });
+    //
+    // The native build also emits `writingDirection` (a TextStyle key on
+    // iOS / Android) so bidi text inside Text components matches the
+    // cascaded Yoga direction without the user setting the prop twice.
+    it('accepts `ltr` (initial value) and mirrors writingDirection on native', () => {
+      expect(transformDecl('direction', 'ltr')).toEqual({
+        direction: 'ltr',
+        writingDirection: 'ltr',
+      });
     });
 
-    // "ltr: This value sets inline base direction (bidi directionality) to
-    // line-left-to-line-right."
-    it('accepts `rtl`', () => {
-      expect(transformDecl('direction', 'rtl')).toEqual({ direction: 'rtl' });
+    // "rtl: This value sets inline base direction (bidi directionality) to
+    // line-right-to-line-left."
+    it('accepts `rtl` and mirrors writingDirection on native', () => {
+      expect(transformDecl('direction', 'rtl')).toEqual({
+        direction: 'rtl',
+        writingDirection: 'rtl',
+      });
     });
 
-    // Identity passthrough; value reaches Yoga (RN native) or the browser
-    // (rn-web) unchanged. Yoga uses `direction` to drive logical
-    // `*-inline-*` mapping under horizontal-tb.
-    it('passes the value through to the runtime key without translation', () => {
-      expect(transformDecl('direction', 'rtl')).toEqual({ direction: 'rtl' });
+    describeOnRnWeb(() => {
+      // rn-web: the browser already drives Text bidi from the cascaded
+      // `direction` value; we skip the writingDirection mirror so the
+      // passthrough stays a single declaration.
+      it('emits only the direction key on rn-web (browser drives bidi)', () => {
+        expect(transformDecl('direction', 'rtl')).toEqual({ direction: 'rtl' });
+      });
     });
   });
 
@@ -165,6 +177,21 @@ describe('passthrough mapping', () => {
       });
     });
 
+    it('background-position collapses equivalent center keyword pairs before dual emit', () => {
+      expect(transformDecl('background-position', 'center top')).toEqual({
+        experimental_backgroundPosition: 'top',
+        backgroundPosition: 'top',
+      });
+      expect(transformDecl('background-position', 'left center')).toEqual({
+        experimental_backgroundPosition: 'left',
+        backgroundPosition: 'left',
+      });
+      expect(transformDecl('background-position', 'center center')).toEqual({
+        experimental_backgroundPosition: 'center',
+        backgroundPosition: 'center',
+      });
+    });
+
     it('preserves dual-emit through theme-token resolution path', () => {
       // A multi-token gradient with sentinels reaches transformDecl as a
       // raw string; resolvers run downstream. The passthrough boundary
@@ -225,18 +252,258 @@ describe('passthrough mapping', () => {
         });
       });
     });
+
+    describe('CSS Backgrounds 3 longhand grammar validation', () => {
+      let warnSpy: jest.SpyInstance;
+      beforeEach(() => {
+        resetWarningsForTest();
+        warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      });
+      afterEach(() => {
+        warnSpy.mockRestore();
+      });
+
+      // "<bg-position> = [ [ left | center | right | top | bottom |
+      // <length-percentage> ] | [ left | center | right |
+      // <length-percentage> ] [ top | center | bottom |
+      // <length-percentage> ] | [ center | [ left | right ]
+      // <length-percentage>? ] && [ center | [ top | bottom ]
+      // <length-percentage>? ] ]"
+      it('background-position accepts edge-offset forms', () => {
+        expect(transformDecl('background-position', 'right 3em bottom 10px')).toEqual({
+          experimental_backgroundPosition: 'right 3em bottom 10px',
+        });
+        expect(warnSpy).not.toHaveBeenCalled();
+      });
+
+      // "A pair of keywords can be reordered, while a combination of
+      // keyword and length or percentage cannot. So center left is valid
+      // while 50% left is not."
+      it('background-position rejects length/percentage before a horizontal keyword', () => {
+        expect(transformDecl('background-position', '50% left')).toEqual({});
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+        expect(warnSpy.mock.calls[0][0]).toMatch(
+          /could not be parsed for property "background-position"/
+        );
+      });
+
+      // Unitless zero is allowed as a <length>; non-zero numbers are not
+      // <length-percentage>.
+      it('background-position rejects unitless non-zero numbers', () => {
+        expect(transformDecl('background-position', '10 15')).toEqual({});
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+      });
+
+      // "<bg-size> = [ <length-percentage [0,∞]> | auto ]{1,2} |
+      // cover | contain"
+      it('background-size rejects negative dimensions', () => {
+        expect(transformDecl('background-size', '-1px')).toEqual({});
+        expect(transformDecl('background-size', '50% -2px')).toEqual({});
+        expect(warnSpy).toHaveBeenCalledTimes(2);
+      });
+
+      it('background-size rejects unitless non-zero dimensions', () => {
+        expect(transformDecl('background-size', '10')).toEqual({});
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+      });
+
+      // "`cover`" and "`contain`" are whole-value alternatives, not
+      // members of the two-value length/auto form.
+      it('background-size rejects cover/contain mixed with another size token', () => {
+        expect(transformDecl('background-size', 'cover auto')).toEqual({});
+        expect(transformDecl('background-size', '10px contain')).toEqual({});
+        expect(warnSpy).toHaveBeenCalledTimes(2);
+      });
+
+      // "<repeat-style> = repeat-x | repeat-y | [repeat | space |
+      // round | no-repeat]{1,2}"
+      it('background-repeat rejects mixed single-form repeat keywords', () => {
+        expect(transformDecl('background-repeat', 'repeat-x repeat-y')).toEqual({});
+        expect(transformDecl('background-repeat', 'repeat-x space')).toEqual({});
+        expect(warnSpy).toHaveBeenCalledTimes(2);
+      });
+
+      // "If a value has two keywords, the first one applies to the
+      // horizontal axis, the second to the vertical one..."
+      it('background-repeat accepts two-value repeat-style keywords', () => {
+        expect(transformDecl('background-repeat', 'space round')).toEqual({
+          experimental_backgroundRepeat: 'space round',
+          backgroundRepeat: 'space round',
+        });
+        expect(warnSpy).not.toHaveBeenCalled();
+      });
+    });
   });
 
-  describe('vertical-align align-content polyfill on rn-web', () => {
+  // RN `processBoxShadow` only recognizes colors `processColor` accepts.
+  // CSS system keywords fail that probe and break string parsing; fold to
+  // object layers so `color` can be a PlatformColor object.
+  describe('box-shadow: CSS Color 4 system keywords', () => {
+    it('expands to RN boxShadow array when a system color keyword appears', () => {
+      const out = transformDecl('box-shadow', '1px 2px Highlight');
+      expect(Array.isArray(out.boxShadow)).toBe(true);
+      expect(out.boxShadow).toHaveLength(1);
+      expect(out.boxShadow![0]).toMatchObject({
+        offsetX: '1px',
+        offsetY: '2px',
+        color: expect.objectContaining({
+          semantic: expect.arrayContaining(['quaternarySystemFill', '?attr/colorControlHighlight']),
+        }),
+      });
+    });
+
+    it('accepts system color before offsets (RN string form does not)', () => {
+      const out = transformDecl('box-shadow', 'Highlight 1px 2px');
+      expect(Array.isArray(out.boxShadow)).toBe(true);
+      expect(out.boxShadow![0]).toMatchObject({
+        offsetX: '1px',
+        offsetY: '2px',
+        color: expect.objectContaining({
+          semantic: expect.arrayContaining(['quaternarySystemFill', '?attr/colorControlHighlight']),
+        }),
+      });
+    });
+
+    it('leaves named colors as a CSS string', () => {
+      expect(transformDecl('box-shadow', '1px 2px red')).toEqual({
+        boxShadow: '1px 2px red',
+      });
+    });
+
+    it('supports inset with a system color', () => {
+      const out = transformDecl('box-shadow', 'inset 1px 2px Canvas');
+      expect(Array.isArray(out.boxShadow)).toBe(true);
+      expect(out.boxShadow![0]).toMatchObject({
+        inset: true,
+        offsetX: '1px',
+        offsetY: '2px',
+        color: expect.objectContaining({
+          semantic: expect.arrayContaining(['systemBackground']),
+        }),
+      });
+    });
+
+    it('uses array form for every layer when any layer folds a system color', () => {
+      const out = transformDecl('box-shadow', '1px 2px Highlight, 3px 4px rgba(0,0,0,0.5)');
+      expect(Array.isArray(out.boxShadow)).toBe(true);
+      expect(out.boxShadow).toHaveLength(2);
+      expect(out.boxShadow![0].color).toEqual(
+        expect.objectContaining({
+          semantic: expect.arrayContaining(['quaternarySystemFill', '?attr/colorControlHighlight']),
+        })
+      );
+      expect(out.boxShadow![1].color).toBe('rgba(0,0,0,0.5)');
+    });
+
+    it('does not rewrite values containing theme sentinels', () => {
+      const v = '1px 2px \0sc:colors.shadow:#000';
+      expect(transformDecl('box-shadow', v)).toEqual({ boxShadow: v });
+    });
+
+    it('normalizes newlines like RN before parsing', () => {
+      const out = transformDecl('box-shadow', '1px\n2px\nHighlight');
+      expect(Array.isArray(out.boxShadow)).toBe(true);
+      expect(out.boxShadow![0]).toMatchObject({
+        offsetX: '1px',
+        offsetY: '2px',
+      });
+    });
+  });
+
+  // RN `processFilter` delegates `drop-shadow(...)` to `parseDropShadowString`,
+  // which uses the same `processColor` probe as `box-shadow`.
+  describe('filter: drop-shadow() + CSS Color 4 system keywords', () => {
+    it('expands to RN filter array when drop-shadow uses a system color', () => {
+      const out = transformDecl('filter', 'drop-shadow(1px 2px Highlight)');
+      expect(Array.isArray(out.filter)).toBe(true);
+      expect(out.filter).toHaveLength(1);
+      expect(out.filter![0]).toEqual({
+        dropShadow: expect.objectContaining({
+          offsetX: '1px',
+          offsetY: '2px',
+          color: expect.objectContaining({
+            semantic: expect.arrayContaining([
+              'quaternarySystemFill',
+              '?attr/colorControlHighlight',
+            ]),
+          }),
+        }),
+      });
+    });
+
+    it('accepts system color before offsets inside drop-shadow', () => {
+      const out = transformDecl('filter', 'drop-shadow(Canvas 1px 2px)');
+      expect(Array.isArray(out.filter)).toBe(true);
+      expect(out.filter![0].dropShadow).toMatchObject({
+        offsetX: '1px',
+        offsetY: '2px',
+        color: expect.objectContaining({
+          semantic: expect.arrayContaining(['systemBackground']),
+        }),
+      });
+    });
+
+    it('leaves drop-shadow() with only named colors as a CSS string', () => {
+      expect(transformDecl('filter', 'drop-shadow(1px 2px red)')).toEqual({
+        filter: 'drop-shadow(1px 2px red)',
+      });
+    });
+
+    it('rewrites the full filter list when a drop-shadow uses a system color', () => {
+      const out = transformDecl('filter', 'brightness(50%) drop-shadow(1px 2px Highlight)');
+      expect(Array.isArray(out.filter)).toBe(true);
+      expect(out.filter).toHaveLength(2);
+      expect(out.filter![0]).toEqual({ brightness: 0.5 });
+      expect(out.filter![1].dropShadow.color).toEqual(
+        expect.objectContaining({
+          semantic: expect.arrayContaining(['quaternarySystemFill', '?attr/colorControlHighlight']),
+        })
+      );
+    });
+
+    it('does not rewrite filter values containing theme sentinels', () => {
+      const v = 'drop-shadow(1px 2px \0sc:colors.shadow:#000)';
+      expect(transformDecl('filter', v)).toEqual({ filter: v });
+    });
+  });
+
+  describeOnRnWeb('box-shadow on rn-web', () => {
+    it('passes system color keywords through as a CSS string', () => {
+      expect(transformDecl('box-shadow', '1px 2px Highlight')).toEqual({
+        boxShadow: '1px 2px Highlight',
+      });
+    });
+  });
+
+  describeOnRnWeb('filter on rn-web', () => {
+    it('passes drop-shadow() with system colors through as a CSS string', () => {
+      expect(transformDecl('filter', 'drop-shadow(1px 2px Highlight)')).toEqual({
+        filter: 'drop-shadow(1px 2px Highlight)',
+      });
+    });
+  });
+
+  // Dual-emit background longhands do not branch on `__NATIVE_WEB__`; this
+  // subtree locks parity so a future rn-web-only shortcut cannot diverge
+  // from the Hermes path for structured stacks (see `index.ts` passthrough
+  // block + `substituteBackgroundSizeKeywordsForNative`).
+  describeOnRnWeb('dual-emit background longhands on rn-web', () => {
+    it('background-size cover keeps keyword on standard key and folds native key', () => {
+      expect(transformDecl('background-size', 'cover')).toEqual({
+        experimental_backgroundSize: 'auto',
+        backgroundSize: 'cover',
+      });
+    });
+
+    it('background-position multi-token still skips the rn-web key', () => {
+      expect(transformDecl('background-position', '0 0')).toEqual({
+        experimental_backgroundPosition: '0 0',
+      });
+    });
+  });
+
+  describeOnRnWeb('vertical-align align-content polyfill on rn-web', () => {
     // CSS Box Alignment L3 §5.3.
-    const g = global as { __NATIVE_WEB__?: boolean };
-    const originalNativeWeb = g.__NATIVE_WEB__;
-    beforeAll(() => {
-      g.__NATIVE_WEB__ = true;
-    });
-    afterAll(() => {
-      g.__NATIVE_WEB__ = originalNativeWeb;
-    });
 
     it.each([
       ['top', 'flex-start'],

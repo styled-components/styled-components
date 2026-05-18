@@ -1,5 +1,5 @@
 ---
-"styled-components": major
+'styled-components': major
 ---
 
 Styled components no longer honor `defaultProps`. React 19 removed `defaultProps` support from function components, so styled components can no longer inherit a parent's `defaultProps` either.

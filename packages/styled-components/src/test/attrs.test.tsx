@@ -6,7 +6,7 @@ import ThemeProvider from '../models/ThemeProvider';
 import { AnyComponent, DataAttributes } from '../types';
 import { getRenderedCSS, resetStyled } from './utils';
 
-// Disable isStaticRules optimisation since we're not
+// Disable isStaticRules optimization since we're not
 // testing for WebStyle specifics here
 jest.mock('../utils/isStaticRules', () => () => false);
 

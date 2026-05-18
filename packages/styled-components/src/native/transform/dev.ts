@@ -4,7 +4,7 @@ import { hasWarned, resetWarnOnce, warnOnce as baseWarnOnce, warnKey } from '../
  * Walk an `Error().stack` and return the first frame that lives outside
  * of styled-components' own source tree (e.g.
  * `at Tile (.../user/widgets/TransformPlayground.tsx:24:12)`). Returns
- * `null` when there's no recognisable user frame.
+ * `null` when there's no recognizable user frame.
  *
  * In Metro/Hermes dev bundles, frame URLs point into the concatenated
  * `.bundle` file with no source path or function name (`at anonymous

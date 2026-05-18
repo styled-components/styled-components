@@ -152,23 +152,23 @@ interface PropAnim {
    */
   transformKinds?: string[];
   /**
-   * `transition-behavior: allow-discrete` flip state. CSS Transitions L2
-   * §3.1: when the property's animation type is discrete (e.g. `display`,
-   * `visibility`) and `allow-discrete` is set, the new value swaps in at
-   * the 50% mark of the duration. The override emits `shown` (= prev
-   * before the flip, next after); `flipTimeout` schedules the swap and
-   * the bumpTick state setter triggers the re-render.
+   * `transition-behavior: allow-discrete` flip state. When the
+   * property's animation type is discrete (e.g. `display`,
+   * `visibility`) and `allow-discrete` is set, the new value swaps in
+   * at the 50% mark of the duration. The override emits `shown`
+   * (= prev before the flip, next after); `flipTimeout` schedules the
+   * swap and the bumpTick state setter triggers the re-render.
    */
   discrete?: {
     flipTimeout: ReturnType<typeof setTimeout> | null;
     shown: any;
   };
   /**
-   * Reversing-shortening-factor for the current transition, per CSS
-   * Transitions §3.1. Carries forward across interruptions so a hover-
-   * out at 30% takes 30% of the duration, then a re-reverse at 50% of
-   * that takes the proportional remainder, and so on. `1` at rest /
-   * after a fresh start (no prior interruption).
+   * Reversing-shortening-factor for the current transition. Carries
+   * forward across interruptions so a hover-out at 30% takes 30% of
+   * the duration, then a re-reverse at 50% of that takes the
+   * proportional remainder, and so on. `1` at rest / after a fresh
+   * start (no prior interruption).
    */
   reversingFactor?: number;
   /**
@@ -210,9 +210,8 @@ interface AnimScratch {
   /**
    * `animation-play-state: paused` captures the linear timing progress
    * (0..1) at pause so `running` can resume with the remaining duration
-   * instead of re-timing the full cycle. Cleared on resume. Per CSS
-   * Animations §4.6, pausing freezes the current progress; resume must
-   * continue from there.
+   * instead of re-timing the full cycle. Cleared on resume. Pausing
+   * freezes the current progress; resume must continue from there.
    */
   pausedAt?: number;
   /**
@@ -224,9 +223,9 @@ interface AnimScratch {
   pausedIterIndex?: number;
   /**
    * `Date.now()` when the active timing started, plus the effective
-   * `animation-delay` in ms. CSS Animations §4.8 fill-mode semantics
-   * compare wall-clock time against these to decide whether the
-   * override layer should be visible during the delay window.
+   * `animation-delay` in ms. Fill-mode semantics compare wall-clock
+   * time against these to decide whether the override layer should be
+   * visible during the delay window.
    */
   startedAt?: number;
   delayMs?: number;
@@ -310,7 +309,7 @@ const LINEAR_EASING = (t: number): number => t;
 /** ~60fps frame budget. Used to size sample counts so the resampled curve
  *  carries at least one stop per displayed frame. */
 const FRAME_MS = 1000 / 60;
-/** Lower bound for cheap, short-duration transitions (matches v6 behaviour). */
+/** Lower bound for cheap, short-duration transitions (matches v6 behavior). */
 const MIN_SAMPLES = 32;
 /** Upper bound. Caps memory/CPU on multi-second animations; the eye stops
  *  resolving extra stops well before this point. */
@@ -528,7 +527,7 @@ function isSmoothlyInterpolable(prev: unknown, next: unknown, isTransform: boole
   // color name for.
   if (/\d/.test(prev) && /\d/.test(next)) return true;
   if (DISCRETE_KEYWORDS.has(prev) && DISCRETE_KEYWORDS.has(next)) return false;
-  // Conservative: any other digit-free string pair (incl. unrecognised
+  // Conservative: any other digit-free string pair (incl. unrecognized
   // values) routes through the existing string-string path. RN's
   // interpolate either accepts both as colors or surfaces a dev warning.
   return true;
@@ -536,14 +535,13 @@ function isSmoothlyInterpolable(prev: unknown, next: unknown, isTransform: boole
 
 /**
  * Capture the current visible value of a transitioning prop at the
- * moment of an interruption. Per CSS Transitions §3 ("Starting and
- * Stopping a Transition"), an interrupted transition's new round
- * starts from the *currently animated value*, not the prior end target.
+ * moment of an interruption. An interrupted transition's new round
+ * starts from the currently animated value, not the prior end target.
  *
  * Returns `undefined` for value shapes we can't reconstruct (compound
  * transforms mid-flight, color strings beyond simple unit-parsing).
  * The caller falls back to `state.next` (= the prior end target),
- * which is the v6/v7-pre-fix behaviour.
+ * which is the v6/v7-pre-fix behavior.
  */
 function captureCurrentValue(
   prev: unknown,
@@ -759,11 +757,11 @@ function startTiming(
       state.reversingFactor = 1;
     }
     if (debugEnabled) dbg('timing-end', prop, `finished=${result?.finished ?? '?'}`);
-    // Per CSS Transitions §6.1, `transitionend` fires once per
-    // completing property after the timing reaches its endpoint.
-    // Interrupted transitions (`result.finished === false`, or a stale
-    // completion arriving after a newer timing took over the same prop)
-    // do not dispatch — the spec calls this "cancelling" the transition.
+    // `transitionend` fires once per completing property after the
+    // timing reaches its endpoint. Interrupted transitions
+    // (`result.finished === false`, or a stale completion arriving
+    // after a newer timing took over the same prop) do not dispatch;
+    // the transition is "cancelled" instead.
     if (onTransitionEnd !== undefined && wasActive && result?.finished === true) {
       onTransitionEnd({ propertyName: prop, elapsedTime: (duration + delay) / 1000 });
     }
@@ -915,11 +913,11 @@ function applyTransitions(
       }
     } else if (state.next !== next) {
       changeStarted = true;
-      // CSS Transitions §3.1 reversing-shortening-factor — true reversal
-      // is determined against the ORIGINAL `state.prev` (the previous
-      // transition's start value), before the mid-flight capture below
-      // overwrites it. Retargeted transitions (different third value)
-      // keep factor 1.
+      // Reversing-shortening-factor: true reversal is determined
+      // against the ORIGINAL `state.prev` (the previous transition's
+      // start value), before the mid-flight capture below overwrites
+      // it. Retargeted transitions (different third value) keep
+      // factor 1.
       const wasPrev = state.prev;
       let reverseFactor = 1;
       const isReversal =
@@ -940,11 +938,11 @@ function applyTransitions(
           }
         }
       }
-      // CSS Transitions §3: an interrupted transition's new round
-      // starts from the *currently animated value*, not from the prior
-      // end target. Try to capture the mid-flight value; fall back to
-      // the prior end target for shapes the helper can't reconstruct
-      // (transforms, color strings, unit-mismatched strings).
+      // An interrupted transition's new round starts from the
+      // currently animated value, not from the prior end target. Try
+      // to capture the mid-flight value; fall back to the prior end
+      // target for shapes the helper can't reconstruct (transforms,
+      // color strings, unit-mismatched strings).
       const wasNext = state.next;
       let newPrev: unknown = state.next;
       if (!isTransform) {
@@ -1207,7 +1205,7 @@ function __resetNormalizeColorCacheForTests(): void {
  * Parse any CSS color string accepted by the spec into 8-bit RGB + 0..1
  * alpha. Tries paths in cost order:
  *
- *  1. Inline hex / `rgb()` / `rgba()` regex — covers the overwhelming
+ *  1. Inline hex / `rgb()` / `rgba()` regex; covers the overwhelming
  *     majority of CSS-in-JS output without tokenization cost.
  *  2. Modern color functions (`oklch`, `oklab`, `lab`, `lch`, `hsl`,
  *     `hwb`, `color-mix`) via the static color-math polyfill. Falls
@@ -1215,9 +1213,9 @@ function __resetNormalizeColorCacheForTests(): void {
  *  3. RN's `@react-native/normalize-colors` for named keywords. Same
  *     table RN's StyleSheet pipeline consults at apply time.
  *
- * Returns null when none of the paths match — the caller snaps at 50%
- * per CSS Animations §3 discrete interpolation as the documented
- * fallback for genuinely unparseable colors.
+ * Returns null when none of the paths match; the caller snaps at 50%
+ * (discrete interpolation) as the documented fallback for genuinely
+ * unparseable colors.
  */
 function parseAnimColor(s: string): RGBA255 | null {
   const t = s.trim();
@@ -1349,14 +1347,7 @@ function oklabToRgbaCss(L: number, a: number, b: number, alpha: number): string 
 }
 
 /**
- * Interpolate two parsed sRGB colors in oklab space. CSS Color L4 §13
- * defines oklab as the modern default keyframe interpolation space;
- * uniform perceptual lightness keeps the gradient from going muddy
- * through neutral midpoints (the classic linear-light sRGB failure).
- *
- * Used standalone by tests. The per-sample inner in
- * `buildSegmentedInterpolation` inlines the math and hoists the
- * sRGB → oklab conversion out of the sample loop for hot-path perf.
+ * Linearly interpolate parsed sRGBA in Oklab (CSS Color default interpolation space for color).
  */
 function interpolateColorOklab(from: RGBA255, to: RGBA255, t: number): RGBA255 {
   const fromOk = srgbToOklab(from.r / 255, from.g / 255, from.b / 255, from.a);
@@ -1405,7 +1396,7 @@ function buildSegmentedInterpolation(
     const segDurationMs = segLen * totalDurationMs;
     const samples = easingToInterpolation(easing, samplesForDuration(segDurationMs));
     // Per-segment color parse (hoisted out of the sample loop). Accepts
-    // anything `parseAnimColor` recognises — hex, `rgb()`/`rgba()`,
+    // anything `parseAnimColor` recognizes: hex, `rgb()`/`rgba()`,
     // `hsl()`, `hwb()`, modern function forms (`oklch`, `lab`,
     // `color-mix`), and named keywords via `@react-native/normalize-colors`.
     // Falls through to the snap only when one side genuinely can't be
@@ -1423,10 +1414,7 @@ function buildSegmentedInterpolation(
       segFromColor = parseAnimColor(from.value);
       segToColor = parseAnimColor(to.value);
       if (segFromColor !== null && segToColor !== null) {
-        // Pre-convert to oklab once per segment so the per-sample inner
-        // is a Lab lerp + one matrix multiply rather than two full
-        // sRGB↔oklab round trips. CSS Color L4 §13 defines oklab as the
-        // default keyframe interpolation space (was linear-light sRGB).
+        // Precompute oklab endpoints once per segment (default color interpolation space).
         segFromOklab = srgbToOklab(
           segFromColor.r / 255,
           segFromColor.g / 255,
@@ -1460,8 +1448,7 @@ function buildSegmentedInterpolation(
         v = oklabToRgbaCss(L, a, b, alpha);
       } else {
         // Genuinely discrete pair (e.g. `display: block` → `none`,
-        // mixed shapes). CSS Animations §3 calls this discrete
-        // interpolation and uses 50% as the swap point.
+        // mixed shapes): discrete interpolation, 50% swap point.
         v = eased < 0.5 ? from.value : to.value;
       }
       if (inputRange.length > 0 && inputRange[inputRange.length - 1] === inp) {
@@ -1486,15 +1473,7 @@ function buildSegmentedInterpolation(
   return progress.interpolate({ inputRange, outputRange, extrapolate: 'clamp' });
 }
 
-/**
- * Sum two parsed sRGB colors componentwise in oklab. CSS Color L4 §13
- * defines oklab as the modern default keyframe interpolation space; the
- * same space is the natural choice for "perceptual" addition so summed
- * lightness/chroma match what a designer expects from a paint mix. L is
- * clamped to [0, 1]; a/b are unbounded by design (out-of-gamut summed
- * triples gamut-map via `oklabToRgb`'s per-channel clip). Alpha is
- * additively combined and clamped to [0, 1].
- */
+/** Add two parsed sRGB colors as Oklab component sums; alpha summed and clamped. */
 function additiveCombineColor(base: RGBA255, frame: RGBA255): string {
   const baseOk = srgbToOklab(base.r / 255, base.g / 255, base.b / 255, base.a);
   const frameOk = srgbToOklab(frame.r / 255, frame.g / 255, frame.b / 255, frame.a);
@@ -1507,12 +1486,9 @@ function additiveCombineColor(base: RGBA255, frame: RGBA255): string {
 }
 
 /**
- * Combine a base value and a frame value per CSS Animations L2 §4.3.2
- * additive composition. Tries in cost order: numeric+numeric, two
- * unit-strings sharing a unit, then a color-pair path via `parseAnimColor`
- * → oklab sum (CSS Color L4 §13). Returns the frame value unchanged
- * when none of the paths match — complex transform strings, mixed
- * shapes, or `currentColor` are replace-only.
+ * Additive composition (`add`): numeric pairs, matching-unit sums,
+ * else oklab color sum when both parse as colors. Falls back to the
+ * frame value otherwise (e.g. `currentColor`).
  */
 function additiveCombine(base: any, frame: any): any {
   if (typeof base === 'number' && typeof frame === 'number') return base + frame;
@@ -1534,9 +1510,8 @@ function additiveCombine(base: any, frame: any): any {
  * both sides combine numerically (numeric+numeric or matching-unit
  * strings via {@link additiveCombine}). Kinds present only in the
  * base are emitted as-is; kinds present only in the frame are emitted
- * with the base contributing its identity (which keeps semantics in
- * line with CSS Transforms L2 §3 where an absent transform function
- * contributes its identity).
+ * with the base contributing its identity (an absent transform
+ * function contributes its identity).
  */
 function additiveCombineTransform(base: any, frame: any): any {
   const baseComps =
@@ -1577,13 +1552,12 @@ function buildKeyframeInterpolations(
   durationMs: number,
   composition: AnimationDescriptor['composition'] = 'replace'
 ): { overrides: Record<string, any>; drivenProps: Set<string>; transformKinds?: string[] } {
-  // CSS Animations L2 §4.3.2 + CSS Values 4 §6.1. `add` and `accumulate`
-  // are spec-distinguished only for list-valued properties: addition
-  // extends the list (concatenation), accumulation pads to equal length
-  // and combines componentwise. For everything the adapter currently
-  // animates — numbers, lengths/angles/percentages, colors, and
-  // per-kind transform components — the two operations produce
-  // identical results, so both flow through the same combiner.
+  // `add` and `accumulate` are spec-distinguished only for list-valued
+  // properties: addition extends the list (concatenation), accumulation
+  // pads to equal length and combines componentwise. For everything the
+  // adapter currently animates (numbers, lengths/angles/percentages,
+  // colors, and per-kind transform components) the two operations
+  // produce identical results, so both flow through the same combiner.
   const isAdditive = composition === 'add' || composition === 'accumulate';
   const allProps = new Set<string>();
   for (let i = 0; i < frames.length; i++) {
@@ -1681,11 +1655,11 @@ function buildKeyframeInterpolations(
       const baseVal = baseValues ? baseValues[prop] : undefined;
       for (let i = 0; i < frames.length; i++) {
         if (frames[i].decls[prop] !== undefined) {
-          // Additive composition (CSS Animations L2 §4.3.2): explicit
-          // keyframe values are added on top of the underlying value.
-          // Synthetic offset 0/1 endpoints below remain base-only
-          // (base + 0 = base), which preserves the documented
-          // "underlying value seen at endpoints" semantics.
+          // Additive composition: explicit keyframe values are added
+          // on top of the underlying value. Synthetic offset 0/1
+          // endpoints below remain base-only (base + 0 = base), which
+          // preserves the documented "underlying value seen at
+          // endpoints" semantics.
           const raw = frames[i].decls[prop];
           const value = isAdditive && baseVal !== undefined ? additiveCombine(baseVal, raw) : raw;
           const entry: { offset: number; value: any; easing?: EasingDescriptor } = {
@@ -1755,10 +1729,10 @@ function startKeyframeAnimation(
     delay = 0;
   }
 
-  // Resuming from `animation-play-state: paused`. Per CSS Animations
-  // §4.6 the spec requires resume to continue from the captured
-  // progress, both within the current iteration AND from the current
-  // iteration index. Three resume tracks:
+  // Resuming from `animation-play-state: paused`. Resume must
+  // continue from the captured progress, both within the current
+  // iteration AND from the current iteration index. Three resume
+  // tracks:
   //
   //  1. Single iteration (iterCount===1, non-alternate): shrink the
   //     timing to the remaining segment and let the main body
@@ -1768,7 +1742,7 @@ function startKeyframeAnimation(
   //     loop(remaining)])` so the adapter resumes at the captured
   //     iteration rather than restarting from cycle 0. Reverse
   //     loops route through `loopableIter` which prepends a duration-0
-  //     reset-to-1 step before each iteration — `Animated.loop` calls
+  //     reset-to-1 step before each iteration; `Animated.loop` calls
   //     `resetAnimation()` between iterations, which restores the
   //     AnimatedValue to its construction-time starting value (0) and
   //     would otherwise leave reverse iters animating 0→0.
@@ -1780,7 +1754,7 @@ function startKeyframeAnimation(
   //     issue from track 2 doesn't apply here.
   //
   //  Infinite alternate is the one remaining shape on the restart
-  //  fallback — loop-of-pairs with parity-aware first-pair direction
+  //  fallback; loop-of-pairs with parity-aware first-pair direction
   //  needs another reset wrapper that this round doesn't tackle.
   const resumeAt = animS.pausedAt;
   const pausedIter = animS.pausedIterIndex ?? 0;
@@ -2053,7 +2027,7 @@ function startKeyframeAnimation(
       body = isReverse ? makeReverse(duration, delay) : makeForward(duration, delay);
     } else if (iterCount === Infinity || iterCount % 1 === 0) {
       // Looped iterations. Route through `loopableIter` so reverse
-      // direction snaps value back to 1 before each inner timing —
+      // direction snaps value back to 1 before each inner timing;
       // `Animated.loop`'s between-iteration reset otherwise leaves
       // reverse loops animating 0→0 after the first iteration.
       const inner = loopableIter(duration);
@@ -2134,9 +2108,8 @@ function startKeyframeAnimation(
     (desc.delayMs + duration * (iterCount === Infinity ? 1 : iterCount)) / 1000;
   // Track when the timing began so the override-merge can distinguish
   // the delay window (animS.startedAt + delayMs > now) from the actual
-  // animation phase. CSS Animations §4.8 fill-mode `backwards` / `both`
-  // apply the 0% keyframe during delay; `none` / `forwards` apply
-  // nothing.
+  // animation phase. Fill-mode `backwards` / `both` apply the 0%
+  // keyframe during delay; `none` / `forwards` apply nothing.
   animS.startedAt = Date.now();
   animS.delayMs = delay;
   body.start((result?: { finished: boolean }) => {
@@ -2152,17 +2125,17 @@ function startKeyframeAnimation(
     // was still current ends a finite iteration chain.
     if (wasActive && result && result.finished === true) {
       animS.finished = true;
-      // CSS Animations §4.8: `none` and `backwards` drop overrides after
-      // the animation ends; `forwards` and `both` keep the final values.
+      // Fill-mode `none` and `backwards` drop overrides after the
+      // animation ends; `forwards` and `both` keep the final values.
       if (desc.fillMode === 'none' || desc.fillMode === 'backwards') {
         animS.overrides = {};
       }
-      // Per CSS Animations §5.1, `animationend` fires once when the
-      // animation completes successfully. Interrupted animations
+      // `animationend` fires once when the animation completes
+      // successfully. Interrupted animations
       // (`result.finished === false`, or a stale completion arriving
-      // after a newer animation took over the same slot) do not dispatch
-      // — the spec calls this "cancel" and uses `animationcancel`, which
-      // we don't yet surface.
+      // after a newer animation took over the same slot) do not
+      // dispatch; that is "cancel" / `animationcancel`, which we don't
+      // yet surface.
       if (onAnimationEnd !== undefined) {
         onAnimationEnd({ animationName: desc.name, elapsedTime: totalElapsedSec });
       }
@@ -2298,11 +2271,11 @@ function applyAnimations(
               animS.pausedIterIndex = 0;
             }
           }
-          // Stop the composite timing first so native-driven progress is
-          // quiescent. Reading `__getValue()` before stop (or without a
-          // native flush) leaves the JS mirror stale while the native
-          // driver runs — resume then restarts from the wrong phase
-          // (CSS Animations §4.6: pause must freeze actual progress).
+          // Stop the composite timing first so native-driven progress
+          // is quiescent. Reading `__getValue()` before stop (or
+          // without a native flush) leaves the JS mirror stale while
+          // the native driver runs; resume then restarts from the
+          // wrong phase (pause must freeze actual progress).
           animS.handle.stop();
           scratch.running.delete(animS.handle);
           animS.handle = null;
@@ -2340,7 +2313,7 @@ function applyAnimations(
       }
     }
 
-    // Merge overrides per CSS Animations §4.8 fill-mode rules.
+    // Merge overrides per fill-mode rules.
     //  - `none`: no override before start or after end.
     //  - `forwards`: override after end; nothing during delay.
     //  - `backwards`: override during delay; cleared after end.

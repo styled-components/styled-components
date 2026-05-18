@@ -1,19 +1,13 @@
 import { Dict } from '../../../types';
 import { getReactNativePlatformOS, warnOnce } from '../dev';
-import { consumeColor } from '../shorthandHelpers';
+import { colorTokenToRnStyleValue, consumeColor } from '../shorthandHelpers';
 import { register } from '../shorthands';
 import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
 
 /**
- * `caret-color` per CSS UI Module Level 4 §5.2.1
- * (drafts.csswg.org/css-ui-4/#caret-color).
- *
- *   Value: auto | <color> [auto | <color>]?
- *
- * Spec verbatim (first-value definitions):
- *   auto:    "User agents should use currentColor."
- *   <color>: "The caret is colored with the specified color."
+ * `caret-color: auto | <color> [auto | <color>]?`. `auto` resolves to
+ * currentColor.
  */
 
 function caretColorShorthand(tokens: Token[]): Dict<any> | null {
@@ -49,13 +43,17 @@ function caretColorShorthand(tokens: Token[]): Dict<any> | null {
 
   if (__NATIVE_WEB__) return { caretColor: first.raw };
 
-  if (__DEV__ && getReactNativePlatformOS() === 'ios') {
-    warnOnce(
-      'native-caret-color-ios',
-      '`caret-color` has no caret-only mapping on iOS. iOS will use its default caret color; Android and rn-web keep the authored value.'
-    );
+  const v = colorTokenToRnStyleValue(first);
+  if (getReactNativePlatformOS() === 'ios') {
+    if (__DEV__) {
+      warnOnce(
+        'native-caret-color-ios',
+        '`caret-color` also tints the text-selection highlight on iOS because iOS exposes a single `selectionColor` for both surfaces. Android and rn-web keep the spec semantics where only the caret is colored.'
+      );
+    }
+    return { caretColor: v, cursorColor: v, selectionColor: v };
   }
-  return { caretColor: first.raw, cursorColor: first.raw };
+  return { caretColor: v, cursorColor: v };
 }
 
 register('caretColor', caretColorShorthand);

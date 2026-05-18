@@ -368,7 +368,7 @@ function createBlendLayer(
  * Cycle a layered `background-*` value into the per-layer style at
  * index `i`. Mirrors CSS shorthand semantics: when there are fewer
  * commas than image layers, values cycle by `i % length`. Empty-string
- * values are dropped (no behavioural difference vs. unset).
+ * values are dropped (no behavioral difference vs. unset).
  */
 function applyLayered(
   out: Record<string, unknown>,
@@ -440,7 +440,7 @@ function readLayered(
 }
 
 /**
- * Recognise `url(...)` background layers and extract the URL. Strips
+ * Recognize `url(...)` background layers and extract the URL. Strips
  * surrounding single or double quotes per the CSS Values spec. Returns
  * `null` for anything that isn't a `url()` reference (gradient, color,
  * keyword) so the caller can fall back to the gradient render path.
@@ -464,7 +464,7 @@ function parseUrlLayer(image: string): string | null {
  * Map a `background-size` keyword to the `Image` `resizeMode` prop.
  * `cover` and `contain` map directly; the percentage / pixel forms,
  * `auto`, and unset all default to `'cover'` (the most common photo-
- * background expectation, matching CSS's `cover` keyword behaviour).
+ * background expectation, matching CSS's `cover` keyword behavior).
  */
 function parseResizeMode(size: string | undefined): 'cover' | 'contain' | 'stretch' | 'center' {
   if (size === 'contain') return 'contain';
