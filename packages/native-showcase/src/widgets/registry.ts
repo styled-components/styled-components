@@ -11,6 +11,7 @@ import { ColorFunctionsLab } from './ColorFunctionsLab';
 import { CompositeRules } from './CompositeRules';
 import { ContainerQueryCard } from './ContainerQueryCard';
 import { ContainerUnitsKnob } from './ContainerUnitsKnob';
+import { CssVariablesBoard } from './CssVariablesBoard';
 import { DirectionBoard } from './DirectionBoard';
 import { EmLhCascadeBoard } from './EmLhCascadeBoard';
 import { FieldSizingBoard } from './FieldSizingBoard';
@@ -31,6 +32,7 @@ import { ScrollSurfacesBoard } from './ScrollSurfacesBoard';
 import { SelectorComboBoard } from './SelectorComboBoard';
 import { SiblingNthBoard } from './SiblingNthBoard';
 import { HasSelectorBoard } from './HasSelectorBoard';
+import { ImportantBoard } from './ImportantBoard';
 import { ReducedMotionBeacon } from './ReducedMotionBeacon';
 import { SafeAreaInsetsBadge } from './SafeAreaInsetsBadge';
 import { ShadowComposer } from './ShadowComposer';
@@ -469,6 +471,24 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     feature: 'createTheme + ThemeProvider',
     category: 'Theming',
     Widget: ThemeOverrides,
+  },
+  {
+    slug: 'css-variables-board',
+    title: 'CSS custom properties',
+    summary:
+      'Declare `--name: value;` on any styled component, read it back through `var(--name, fallback?)` from any descendant. Honors the full CSS Variables L1 contract: cascade (nearer ancestor wins), fallback chains, nested `var()` in the fallback, and shorthand expansion of the substituted text.',
+    feature: '--* / var()',
+    category: 'Theming',
+    Widget: CssVariablesBoard,
+  },
+  {
+    slug: 'important-board',
+    title: '!important',
+    summary:
+      'Within a single styled component, `!important` beats normal declarations from any matched bucket regardless of source order: base, `@media`, attribute, pseudo state, `:has()`, combinators. Shorthand `!important` propagates to every longhand. Web-aligned: a styled `!important` beats the runtime `style={{}}` prop.',
+    feature: '!important',
+    category: 'Selectors & state',
+    Widget: ImportantBoard,
   },
 ];
 
