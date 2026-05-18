@@ -1,7 +1,16 @@
 import React from 'react';
 import { font } from './constants';
 
-export default function Button({ accessibilityLabel, color, disabled, onPress, style, testID, title, variant }) {
+export default function Button({
+  accessibilityLabel,
+  color,
+  disabled,
+  onPress,
+  style,
+  testID,
+  title,
+  variant,
+}) {
   const isStop = variant === 'stop';
   const isMuted = variant === 'muted';
 
@@ -21,12 +30,16 @@ export default function Button({ accessibilityLabel, color, disabled, onPress, s
       aria-label={accessibilityLabel}
       aria-disabled={disabled || undefined}
       onClick={disabled ? undefined : onPress}
-      onKeyDown={disabled ? undefined : e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onPress();
-        }
-      }}
+      onKeyDown={
+        disabled
+          ? undefined
+          : e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onPress();
+              }
+            }
+      }
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -38,11 +51,7 @@ export default function Button({ accessibilityLabel, color, disabled, onPress, s
         ...style,
       }}
     >
-      <span
-        style={spanStyle}
-      >
-        {title}
-      </span>
+      <span style={spanStyle}>{title}</span>
     </div>
   );
 }

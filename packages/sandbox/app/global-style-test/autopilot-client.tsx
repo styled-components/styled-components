@@ -60,7 +60,7 @@ export default function AutopilotClient() {
         return;
       }
 
-      // We're on the right route — check gradient
+      // We're on the right route - check gradient
       const tid = setTimeout(() => {
         const bg = getComputedStyle(document.body).backgroundImage;
         r.push({
@@ -193,7 +193,10 @@ const PhaseBar = styled.div<{ $color: string }>`
   background: ${p => p.$color}12;
   border: 1px solid ${p => p.$color}30;
   margin-bottom: 16px;
-  transition: color 0.2s, background 0.2s, border-color 0.2s;
+  transition:
+    color 0.2s,
+    background 0.2s,
+    border-color 0.2s;
 `;
 
 const PhaseDot = styled.span<{ $color: string; $animate: boolean }>`

@@ -42,7 +42,9 @@ export function printTable(result, opts = {}) {
 
   if (showHeaders) {
     console.log(`cpu: ${context.cpu.name}`);
-    console.log(`runtime: ${context.runtime}${context.version ? ` ${context.version}` : ''} (${context.arch})`);
+    console.log(
+      `runtime: ${context.runtime}${context.version ? ` ${context.version}` : ''} (${context.arch})`
+    );
     console.log('');
   }
 
@@ -63,10 +65,7 @@ export function printTable(result, opts = {}) {
 
     const groupName = layout[gid]?.name ?? null;
 
-    const slowest = group.reduce(
-      (max, b) => Math.max(max, b.runs?.[0]?.stats?.avg ?? 0),
-      0
-    );
+    const slowest = group.reduce((max, b) => Math.max(max, b.runs?.[0]?.stats?.avg ?? 0), 0);
     const unit = opts.unit ?? pickUnit(slowest);
 
     const nameWidth = Math.max(

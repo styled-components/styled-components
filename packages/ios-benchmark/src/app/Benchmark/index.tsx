@@ -179,7 +179,10 @@ export default class Benchmark extends React.Component<BenchmarkProps, State> {
     };
   }
 
-  static getDerivedStateFromProps(nextProps: BenchmarkProps, prevState: State): Partial<State> | null {
+  static getDerivedStateFromProps(
+    nextProps: BenchmarkProps,
+    prevState: State
+  ): Partial<State> | null {
     if (
       nextProps.getComponentProps &&
       nextProps.getComponentProps !== prevState._lastGetComponentProps
@@ -253,7 +256,7 @@ export default class Benchmark extends React.Component<BenchmarkProps, State> {
     }
 
     this._raf = requestAnimationFrame(() => {
-      this.setState((state) => ({
+      this.setState(state => ({
         cycle: state.cycle + 1,
         componentProps,
       }));

@@ -286,7 +286,9 @@ const NavItem = styled(Link).attrs<{ $active: boolean }>(({ $active }) => ({
   color: ${p => (p.$active ? p.theme.colors.primary : p.theme.colors.textMuted)};
   background: ${p => (p.$active ? p.theme.colors.background : 'transparent')};
   text-decoration: none;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
 
   &:hover {
     background: ${p => p.theme.colors.background};

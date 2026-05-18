@@ -292,15 +292,15 @@ export default function RSCTestPage() {
           <Row>
             <CardA data-testid="card-a">
               <RSCCardTitle>Card A</RSCCardTitle>
-              <p>Blue left border — base card style.</p>
+              <p>Blue left border - base card style.</p>
             </CardA>
             <CardB data-testid="card-b">
               <RSCCardTitle>Card B</RSCCardTitle>
-              <p>Purple left border — second variant.</p>
+              <p>Purple left border - second variant.</p>
             </CardB>
             <CardC data-testid="card-c">
               <RSCCardTitle>Card C</RSCCardTitle>
-              <p>Green left border, italic text — third variant.</p>
+              <p>Green left border, italic text - third variant.</p>
             </CardC>
           </Row>
         </Demo>
@@ -367,18 +367,18 @@ export default function RSCTestPage() {
           <Row>
             <Column>
               <ColumnLabel>BaseBox (blue bg, 16px pad):</ColumnLabel>
-              <BaseBox data-testid="base-box">Base — blue background, standard padding</BaseBox>
+              <BaseBox data-testid="base-box">Base - blue background, standard padding</BaseBox>
             </Column>
             <Column>
               <ColumnLabel>AccentBox (orange bg):</ColumnLabel>
               <AccentBox data-testid="accent-box">
-                Accent — orange background, inherited padding
+                Accent - orange background, inherited padding
               </AccentBox>
             </Column>
             <Column>
               <ColumnLabel>CompactAccentBox (small):</ColumnLabel>
               <CompactAccentBox data-testid="compact-box">
-                Compact — orange bg, smaller padding + text
+                Compact - orange bg, smaller padding + text
               </CompactAccentBox>
             </Column>
           </Row>
@@ -622,7 +622,7 @@ export default function RSCTestPage() {
               </ColumnLabel>
               <LayeredGlobalStyle />
               <LayeredBox data-layer-target="" data-testid="layered-target">
-                base layer red, accent layer green — accent declared later wins
+                base layer red, accent layer green - accent declared later wins
               </LayeredBox>
             </Column>
           </Row>
@@ -1008,7 +1008,7 @@ const DedupMarker = styled.div`
 `;
 
 // ---------------------------------------------------------------------------
-// 10. Modern CSS — @container, @layer, :has()
+// 10. Modern CSS - @container, @layer, :has()
 // ---------------------------------------------------------------------------
 
 const ContainerHost = styled.div`

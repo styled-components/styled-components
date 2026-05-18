@@ -6,13 +6,13 @@ export default function ContainerQueriesPage() {
   return (
     <Page>
       <Header>
-        <H1>Container queries — zero coordination</H1>
+        <H1>Container queries - zero coordination</H1>
         <Lede>
-          Declare <Code>container-type: size</Code> on a component. styled-components auto-names
-          the container with the styled-component&apos;s id, so descendants can use{' '}
-          <Code>cqh</Code> / <Code>cqw</Code> units, anonymous <Code>@container (…)</Code>{' '}
-          queries, or cross-component <Code>@container ${'{Card}'} (…)</Code> queries — without
-          ever writing a <Code>container-name</Code>.
+          Declare <Code>container-type: size</Code> on a component. styled-components auto-names the
+          container with the styled-component&apos;s id, so descendants can use <Code>cqh</Code> /{' '}
+          <Code>cqw</Code> units, anonymous <Code>@container (…)</Code> queries, or cross-component{' '}
+          <Code>@container ${'{Card}'} (…)</Code> queries - without ever writing a{' '}
+          <Code>container-name</Code>.
         </Lede>
       </Header>
       <ContainerQueriesHarness />

@@ -265,8 +265,8 @@ const FieldLabel = styled.label<TransientFieldProps>`
     p.$hasError
       ? p.theme.colors.danger
       : p.$isFocused
-      ? p.theme.colors.primary
-      : p.theme.colors.text};
+        ? p.theme.colors.primary
+        : p.theme.colors.text};
   transition: color 0.15s;
 `;
 
@@ -286,8 +286,8 @@ const BaseInput = styled.input.attrs({ type: 'text' })<TransientFieldProps>`
       p.$hasError
         ? p.theme.colors.danger
         : p.$isFocused
-        ? p.theme.colors.primary
-        : p.theme.colors.border};
+          ? p.theme.colors.primary
+          : p.theme.colors.border};
   border-radius: 6px;
   padding: 7px 10px;
   width: 100%;

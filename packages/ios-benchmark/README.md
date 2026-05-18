@@ -54,7 +54,7 @@ src/
 ├── app/
 │   ├── App.tsx              runner UI: case + library picker, Run / Run-all, results
 │   └── Benchmark/           class-based runner (warmup, gc, trimmed mean, IQR)
-├── cases/                   Tree, ParentRerender — parameterized by Box/Wrapper
+├── cases/                   Tree, ParentRerender - parameterized by Box/Wrapper
 ├── implementations/
 │   ├── vanilla-stylesheet/  raw RN <View> + StyleSheet.create (baseline)
 │   ├── styled-components-native/      workspace v7
@@ -63,7 +63,7 @@ src/
 └── tests.ts                 case configs
 ios/                         RN-generated, gitignored
 scripts/
-├── run-bench.mjs            driver — orchestrates one pass
+├── run-bench.mjs            driver - orchestrates one pass
 ├── bench-receiver.mjs       HTTP receiver, writes results-*.json
 ├── format-report.mjs        pretty-prints captured results
 └── add-native-files.mjs     adds SCProfiler.{h,mm} to the Xcode project
@@ -73,7 +73,7 @@ ios/iosbench/
 
 ## Variance characterization
 
-Numbers from this hardware are NOT representative of real device — Mac silicon executes the simulator JS faster than an iPhone CPU does. Only **relative** v7-vs-v6-vs-vanilla deltas are meaningful here.
+Numbers from this hardware are NOT representative of real device - Mac silicon executes the simulator JS faster than an iPhone CPU does. Only **relative** v7-vs-v6-vs-vanilla deltas are meaningful here.
 
 After Release-mode tuning (warmup samples = 10% of sampleCount, `HermesInternal.gc()` between cases, `RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD` profile toggle), Mount-case stddev is sub-millisecond on a 25-35 ms baseline, parent-rerender stddev sits in the 1-2 ms range.
 

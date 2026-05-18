@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 export default class Layout extends Component {
   state = {
-    widescreen: false
+    widescreen: false,
   };
 
   render() {
@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'var(--bench-bg)',
   },
   row: {
-    flexDirection: 'row'
+    flexDirection: 'row',
   },
   controlSide: {
     backgroundColor: 'var(--bench-surface)',
@@ -50,12 +50,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'var(--bench-border)',
   },
   grow: {
-    flex: 1
+    flex: 1,
   },
   stackPanel: {
-    height: '33.33%'
+    height: '33.33%',
   },
   layer: {
-    transform: [{ translateZ: '0' }]
-  }
+    transform: [{ translateZ: '0' }],
+  },
 });

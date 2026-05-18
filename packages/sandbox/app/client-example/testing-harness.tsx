@@ -281,7 +281,7 @@ export function ClientTestingHarness() {
           <code>ChainedValidated</code>. Each level adds <code>attrs()</code> entries; the deepest
           uses the function form to read the transient <code>$hasError</code> prop and emit a
           corresponding <code>aria-invalid</code>. Each attrs layer paints a different side of the
-          input — left=green (base), bottom=blue (labeled), right=orange (validated), top=red
+          input - left=green (base), bottom=blue (labeled), right=orange (validated), top=red
           (aria-invalid from $hasError).
         </SectionDesc>
         <HintText>
@@ -362,16 +362,16 @@ const VariantCard = styled.div<{ $variant: Variant }>`
           border: 1px solid ${p.theme.colors.primary};
         `
       : p.$variant === 'error'
-      ? css`
-          background: ${p.theme.colors.danger}15;
-          color: ${p.theme.colors.danger};
-          border: 1px solid ${p.theme.colors.danger};
-        `
-      : css`
-          background: ${p.theme.colors.surface};
-          color: ${p.theme.colors.text};
-          border: 1px solid ${p.theme.colors.border};
-        `}
+        ? css`
+            background: ${p.theme.colors.danger}15;
+            color: ${p.theme.colors.danger};
+            border: 1px solid ${p.theme.colors.danger};
+          `
+        : css`
+            background: ${p.theme.colors.surface};
+            color: ${p.theme.colors.text};
+            border: 1px solid ${p.theme.colors.border};
+          `}
 `;
 
 const ColorText = styled.p<{ $color: string }>`
@@ -451,7 +451,9 @@ const Swatch = styled.div<{
   height: 64px;
   border-radius: 8px;
   background: ${p => swatchColors.light[p.$color]};
-  transition: background 0.6s, transform 0.6s;
+  transition:
+    background 0.6s,
+    transform 0.6s;
   transform: perspective(400px) rotateY(${p => p.$flip * 180}deg);
 
   @media (prefers-color-scheme: dark) {

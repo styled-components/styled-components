@@ -12,7 +12,13 @@ const Overlay = () => <View style={[StyleSheet.absoluteFill, { zIndex: 2 }]} />;
 
 const Chevron = () => (
   <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ flexShrink: 0 }}>
-    <path d="M1 1l4 4 4-4" stroke="var(--bench-text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path
+      d="M1 1l4 4 4-4"
+      stroke="var(--bench-text-muted)"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   </svg>
 );
 
@@ -29,14 +35,17 @@ function loadSettings() {
 
 function saveSettings(state) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      currentBenchmarkName: state.currentBenchmarkName,
-      currentLibraryName: state.currentLibraryName,
-      sortBy: state.sortBy,
-      groupByBenchmark: state.groupByBenchmark,
-      autoSelectedLibraries: state.autoSelectedLibraries,
-      autoSelectedBenchmarks: state.autoSelectedBenchmarks,
-    }));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        currentBenchmarkName: state.currentBenchmarkName,
+        currentLibraryName: state.currentLibraryName,
+        sortBy: state.sortBy,
+        groupByBenchmark: state.groupByBenchmark,
+        autoSelectedLibraries: state.autoSelectedLibraries,
+        autoSelectedBenchmarks: state.autoSelectedBenchmarks,
+      })
+    );
   } catch (e) {
     // ignore
   }
@@ -86,7 +95,8 @@ export default class App extends Component {
 
   render() {
     const { tests } = this.props;
-    const { currentBenchmarkName, status, currentLibraryName, results, autoQueue, dialogMode } = this.state;
+    const { currentBenchmarkName, status, currentLibraryName, results, autoQueue, dialogMode } =
+      this.state;
     const currentImplementation = tests[currentBenchmarkName][currentLibraryName];
     const { Component, Provider, getComponentProps, sampleCount } = currentImplementation;
     const isRunning = status === 'running';
@@ -94,148 +104,148 @@ export default class App extends Component {
 
     return (
       <React.Fragment>
-      <Layout
-        actionPanel={
-          <div style={actionStyles.root}>
-            <div style={actionStyles.pickers}>
-              <div style={actionStyles.pickerGroup}>
-                <div style={actionStyles.pickerLabel}>Library</div>
-                <div data-bench-picker="" style={actionStyles.pickerSelect}>
-                  <div style={actionStyles.pickerValue}>{currentLibraryName}</div>
-                  <Chevron />
-                  <Picker
-                    enabled={!isRunning}
-                    onValueChange={this._handleChangeLibrary}
-                    selectedValue={currentLibraryName}
-                    style={pickerOverlayStyle}
-                  >
-                    {Object.keys(tests[currentBenchmarkName]).map(libraryName => (
-                      <Picker.Item key={libraryName} label={libraryName} value={libraryName} />
-                    ))}
-                  </Picker>
-                </div>
-              </div>
-              <div style={actionStyles.pickerGroup}>
-                <div style={actionStyles.pickerLabel}>Benchmark</div>
-                <div data-bench-picker="" style={actionStyles.pickerSelect}>
-                  <div style={actionStyles.pickerValue}>{currentBenchmarkName}</div>
-                  <Chevron />
-                  <Picker
-                    enabled={!isRunning}
-                    onValueChange={this._handleChangeBenchmark}
-                    selectedValue={currentBenchmarkName}
-                    style={pickerOverlayStyle}
-                    testID="benchmark-picker"
-                  >
-                    {Object.keys(tests).map(test => (
-                      <Picker.Item key={test} label={test} value={test} />
-                    ))}
-                  </Picker>
-                </div>
-              </div>
-            </div>
-
-            <div style={actionStyles.buttons}>
-              {isRunning ? (
-                <Button
-                  onPress={this._handleStop}
-                  style={actionStyles.button}
-                  variant="stop"
-                  title={
-                    isAutoRunning ? 'Stop (' + autoQueue.length + ' remaining)' : 'Stop'
-                  }
-                  testID="stop-button"
-                />
-              ) : (
-                <React.Fragment>
-                  <Button
-                    onPress={this._handleStart}
-                    style={actionStyles.button}
-                    title="Run"
-                    testID="run-button"
-                  />
-                  <Button
-                    onPress={this._handleShowAutoBenchmarkDialog}
-                    style={actionStyles.button}
-                    title="Auto Benchmark"
-                    testID="auto-benchmark-button"
-                  />
-                  <Button
-                    onPress={this._handleShowAutoSuiteDialog}
-                    style={actionStyles.button}
-                    variant="muted"
-                    title="Auto Suite"
-                    testID="auto-suite-button"
-                  />
-                </React.Fragment>
-              )}
-            </div>
-          </div>
-        }
-        listPanel={
-          <View style={styles.listPanel}>
-            <View style={styles.grow}>
-              <div style={listBarStyles.root}>
-                <div style={listBarStyles.left}>
-                  <div style={listBarStyles.title}>Results</div>
-                  <TouchableOpacity onPress={this._handleClear}>
-                    <IconClear />
-                  </TouchableOpacity>
-                </div>
-                <div style={listBarStyles.controls}>
-                  <div
-                    data-bench-btn=""
-                    style={{
-                      ...listBarStyles.toggle,
-                      ...(this.state.groupByBenchmark ? listBarStyles.toggleActive : {}),
-                    }}
-                    onClick={this._handleToggleGroup}
-                  >
-                    Group
-                  </div>
-                  <div style={listBarStyles.sortWrap}>
-                    <select
-                      style={listBarStyles.select}
-                      value={this.state.sortBy}
-                      onChange={this._handleSortChange}
-                    >
-                      <option value="none">Insertion order</option>
-                      <option value="fastest">Fastest first</option>
-                      <option value="slowest">Slowest first</option>
-                      <option value="name">By name</option>
-                    </select>
+        <Layout
+          actionPanel={
+            <div style={actionStyles.root}>
+              <div style={actionStyles.pickers}>
+                <div style={actionStyles.pickerGroup}>
+                  <div style={actionStyles.pickerLabel}>Library</div>
+                  <div data-bench-picker="" style={actionStyles.pickerSelect}>
+                    <div style={actionStyles.pickerValue}>{currentLibraryName}</div>
                     <Chevron />
+                    <Picker
+                      enabled={!isRunning}
+                      onValueChange={this._handleChangeLibrary}
+                      selectedValue={currentLibraryName}
+                      style={pickerOverlayStyle}
+                    >
+                      {Object.keys(tests[currentBenchmarkName]).map(libraryName => (
+                        <Picker.Item key={libraryName} label={libraryName} value={libraryName} />
+                      ))}
+                    </Picker>
+                  </div>
+                </div>
+                <div style={actionStyles.pickerGroup}>
+                  <div style={actionStyles.pickerLabel}>Benchmark</div>
+                  <div data-bench-picker="" style={actionStyles.pickerSelect}>
+                    <div style={actionStyles.pickerValue}>{currentBenchmarkName}</div>
+                    <Chevron />
+                    <Picker
+                      enabled={!isRunning}
+                      onValueChange={this._handleChangeBenchmark}
+                      selectedValue={currentBenchmarkName}
+                      style={pickerOverlayStyle}
+                      testID="benchmark-picker"
+                    >
+                      {Object.keys(tests).map(test => (
+                        <Picker.Item key={test} label={test} value={test} />
+                      ))}
+                    </Picker>
                   </div>
                 </div>
               </div>
-              <ScrollView ref={this._setScrollRef} style={styles.grow}>
-                {results.length === 0 && !isRunning ? (
-                  <div style={emptyStyles.root}>
-                    <div style={emptyStyles.text}>No results yet. Run a benchmark to get started.</div>
-                  </div>
-                ) : null}
-                {this._renderResults()}
-                {isRunning ? (
-                  <ReportCard
-                    benchmarkName={currentBenchmarkName}
-                    libraryName={currentLibraryName}
-                  />
-                ) : null}
-              </ScrollView>
-            </View>
-            {isRunning ? <Overlay /> : null}
-          </View>
-        }
-        viewPanel={
-          <View style={styles.viewPanel}>
-            <View style={styles.iconEyeContainer}>
-              <TouchableOpacity onPress={this._handleVisuallyHideBenchmark}>
-                <IconEye style={styles.iconEye} />
-              </TouchableOpacity>
-            </View>
 
-            <Provider key={currentLibraryName + ':' + currentBenchmarkName}>
-              {isRunning ? (
+              <div style={actionStyles.buttons}>
+                {isRunning ? (
+                  <Button
+                    onPress={this._handleStop}
+                    style={actionStyles.button}
+                    variant="stop"
+                    title={isAutoRunning ? 'Stop (' + autoQueue.length + ' remaining)' : 'Stop'}
+                    testID="stop-button"
+                  />
+                ) : (
+                  <React.Fragment>
+                    <Button
+                      onPress={this._handleStart}
+                      style={actionStyles.button}
+                      title="Run"
+                      testID="run-button"
+                    />
+                    <Button
+                      onPress={this._handleShowAutoBenchmarkDialog}
+                      style={actionStyles.button}
+                      title="Auto Benchmark"
+                      testID="auto-benchmark-button"
+                    />
+                    <Button
+                      onPress={this._handleShowAutoSuiteDialog}
+                      style={actionStyles.button}
+                      variant="muted"
+                      title="Auto Suite"
+                      testID="auto-suite-button"
+                    />
+                  </React.Fragment>
+                )}
+              </div>
+            </div>
+          }
+          listPanel={
+            <View style={styles.listPanel}>
+              <View style={styles.grow}>
+                <div style={listBarStyles.root}>
+                  <div style={listBarStyles.left}>
+                    <div style={listBarStyles.title}>Results</div>
+                    <TouchableOpacity onPress={this._handleClear}>
+                      <IconClear />
+                    </TouchableOpacity>
+                  </div>
+                  <div style={listBarStyles.controls}>
+                    <div
+                      data-bench-btn=""
+                      style={{
+                        ...listBarStyles.toggle,
+                        ...(this.state.groupByBenchmark ? listBarStyles.toggleActive : {}),
+                      }}
+                      onClick={this._handleToggleGroup}
+                    >
+                      Group
+                    </div>
+                    <div style={listBarStyles.sortWrap}>
+                      <select
+                        style={listBarStyles.select}
+                        value={this.state.sortBy}
+                        onChange={this._handleSortChange}
+                      >
+                        <option value="none">Insertion order</option>
+                        <option value="fastest">Fastest first</option>
+                        <option value="slowest">Slowest first</option>
+                        <option value="name">By name</option>
+                      </select>
+                      <Chevron />
+                    </div>
+                  </div>
+                </div>
+                <ScrollView ref={this._setScrollRef} style={styles.grow}>
+                  {results.length === 0 && !isRunning ? (
+                    <div style={emptyStyles.root}>
+                      <div style={emptyStyles.text}>
+                        No results yet. Run a benchmark to get started.
+                      </div>
+                    </div>
+                  ) : null}
+                  {this._renderResults()}
+                  {isRunning ? (
+                    <ReportCard
+                      benchmarkName={currentBenchmarkName}
+                      libraryName={currentLibraryName}
+                    />
+                  ) : null}
+                </ScrollView>
+              </View>
+              {isRunning ? <Overlay /> : null}
+            </View>
+          }
+          viewPanel={
+            <View style={styles.viewPanel}>
+              <View style={styles.iconEyeContainer}>
+                <TouchableOpacity onPress={this._handleVisuallyHideBenchmark}>
+                  <IconEye style={styles.iconEye} />
+                </TouchableOpacity>
+              </View>
+
+              <Provider key={currentLibraryName + ':' + currentBenchmarkName}>
+                {isRunning ? (
                   <View ref={this._setBenchWrapperRef}>
                     <Benchmark
                       component={Component}
@@ -252,17 +262,17 @@ export default class App extends Component {
                       type={Component.benchmarkType}
                     />
                   </View>
-              ) : (
-                <Component {...getComponentProps({ cycle: 10 })} />
-              )}
-            </Provider>
+                ) : (
+                  <Component {...getComponentProps({ cycle: 10 })} />
+                )}
+              </Provider>
 
-            {isRunning ? <Overlay /> : null}
-          </View>
-        }
-      />
-      {dialogMode ? this._renderAutoDialog() : null}
-    </React.Fragment>
+              {isRunning ? <Overlay /> : null}
+            </View>
+          }
+        />
+        {dialogMode ? this._renderAutoDialog() : null}
+      </React.Fragment>
     );
   }
 
@@ -472,12 +482,8 @@ export default class App extends Component {
 
   _handleStartAuto = () => {
     const { tests } = this.props;
-    const {
-      dialogMode,
-      autoSelectedLibraries,
-      autoSelectedBenchmarks,
-      currentBenchmarkName,
-    } = this.state;
+    const { dialogMode, autoSelectedLibraries, autoSelectedBenchmarks, currentBenchmarkName } =
+      this.state;
 
     const allBenchmarks = Object.keys(tests);
     const allLibraries = Object.keys(tests[allBenchmarks[0]]);
@@ -600,10 +606,7 @@ export default class App extends Component {
   };
 
   _handleSortChange = e => {
-    this.setState(
-      { sortBy: e.target.value },
-      () => saveSettings(this.state)
-    );
+    this.setState({ sortBy: e.target.value }, () => saveSettings(this.state));
   };
 
   _handleToggleGroup = () => {

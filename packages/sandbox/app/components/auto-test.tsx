@@ -12,9 +12,9 @@ export interface TestCheck {
   type: 'style' | 'style-not' | 'element' | 'attr' | 'attr-absent' | 'count' | 'exists';
   /** CSS property name (for style checks) or attribute name (for attr checks) */
   prop?: string;
-  /** Expected value — for style checks, compared case-insensitively; for element checks, compared against tagName */
+  /** Expected value - for style checks, compared case-insensitively; for element checks, compared against tagName */
   expected?: string;
-  /** CSS var name (e.g. '--sc-colors-primary') — resolved at runtime as the expected value */
+  /** CSS var name (e.g. '--sc-colors-primary') - resolved at runtime as the expected value */
   expectedVar?: string;
 }
 

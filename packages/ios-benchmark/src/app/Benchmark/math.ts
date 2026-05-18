@@ -1,6 +1,6 @@
 export const getStdDev = (values: number[]): number => {
   const avg = getMean(values);
-  const squareDiffs = values.map((value) => {
+  const squareDiffs = values.map(value => {
     const diff = value - avg;
     return diff * diff;
   });

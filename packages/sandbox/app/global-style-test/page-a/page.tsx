@@ -10,7 +10,7 @@ export default function PageA() {
         the layout&apos;s <code>createGlobalStyle</code> should still be active.
       </Text>
       <HintText>
-        If broken: gradient or top border disappear — the layout&apos;s global style was removed
+        If broken: gradient or top border disappear - the layout&apos;s global style was removed
         during navigation.
       </HintText>
     </Card>

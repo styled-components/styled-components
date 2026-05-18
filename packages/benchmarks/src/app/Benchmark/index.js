@@ -146,7 +146,7 @@ export default class Benchmark extends React.Component {
     }
   }
 
-  /** Cancel a running benchmark. Emits no `onComplete` — the caller is
+  /** Cancel a running benchmark. Emits no `onComplete` - the caller is
    *  responsible for restoring app state (status, autoQueue, etc). */
   stop() {
     if (this._raf) {

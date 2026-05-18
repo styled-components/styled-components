@@ -15,10 +15,10 @@ export function ContainerQueriesHarness() {
           <DemoNum>1.</DemoNum> Headline scales with the container, not the viewport
         </DemoTitle>
         <DemoNote>
-          Drag the handle to resize the box. The font-size rule is{' '}
-          <code>font-size: 11cqw</code> — when <code>cqw</code> resolves against the wrapper
-          (correct), the headline grows / shrinks with the slider. If <code>cqw</code> falls
-          back to viewport (broken), the text size won&apos;t change as you drag.
+          Drag the handle to resize the box. The font-size rule is <code>font-size: 11cqw</code> -
+          when <code>cqw</code> resolves against the wrapper (correct), the headline grows / shrinks
+          with the slider. If <code>cqw</code> falls back to viewport (broken), the text size
+          won&apos;t change as you drag.
         </DemoNote>
         <Resizable initialWidth={300}>
           <UnitsWrapper>
@@ -33,11 +33,11 @@ export function ContainerQueriesHarness() {
           <DemoNum>2.</DemoNum> Anonymous <code>@container</code> query against nearest
         </DemoTitle>
         <DemoNote>
-          The box starts wide and reads <strong>QUERY ACTIVE</strong> in green. Drag the handle
-          left below 360px and the anonymous <code>@container</code> query stops matching — the
-          box turns slate and reads <strong>QUERY IDLE</strong>. Cross back over 360px and it
-          flips green again. If the color stays put through the whole drag range, anonymous-query
-          resolution is broken.
+          The box starts wide and reads <strong>QUERY ACTIVE</strong> in green. Drag the handle left
+          below 360px and the anonymous <code>@container</code> query stops matching - the box turns
+          slate and reads <strong>QUERY IDLE</strong>. Cross back over 360px and it flips green
+          again. If the color stays put through the whole drag range, anonymous-query resolution is
+          broken.
         </DemoNote>
         <Resizable initialWidth={440} threshold={360}>
           <AnonShell>
@@ -46,7 +46,9 @@ export function ContainerQueriesHarness() {
                 <AnonOnSmall>QUERY IDLE</AnonOnSmall>
                 <AnonOnLarge>QUERY ACTIVE</AnonOnLarge>
               </AnonStatus>
-              <AnonHint>@container (min-width: 360px) {'{'} background: green {'}'}</AnonHint>
+              <AnonHint>
+                @container (min-width: 360px) {'{'} background: green {'}'}
+              </AnonHint>
             </AnonInner>
           </AnonShell>
         </Resizable>
@@ -57,13 +59,12 @@ export function ContainerQueriesHarness() {
           <DemoNum>3.</DemoNum> Cross-component query via <code>${'${Component}'}</code>
         </DemoTitle>
         <DemoNote>
-          The card uses <code>@container ${'${ProductCard}'}</code> from descendants — naming
-          the wrapper styled-component directly, no string identifier in the CSS. The card
-          starts wide with the layout horizontal, the price big, and the badge green reading{' '}
-          <strong>QUERY ACTIVE</strong>. Drag below 420px and three things flip at once:
-          layout stacks vertically, price shrinks, badge turns slate reading <strong>QUERY
-          IDLE</strong>. If any of those three don&apos;t happen together, the named-component
-          reference is broken.
+          The card uses <code>@container ${'${ProductCard}'}</code> from descendants - naming the
+          wrapper styled-component directly, no string identifier in the CSS. The card starts wide
+          with the layout horizontal, the price big, and the badge green reading{' '}
+          <strong>QUERY ACTIVE</strong>. Drag below 420px and three things flip at once: layout
+          stacks vertically, price shrinks, badge turns slate reading <strong>QUERY IDLE</strong>.
+          If any of those three don&apos;t happen together, the named-component reference is broken.
         </DemoNote>
         <Resizable initialWidth={500} threshold={420}>
           <ProductCard>
@@ -89,12 +90,11 @@ export function ContainerQueriesHarness() {
         <DemoNote>
           Two siblings inside one resizable container. Both bars use the same rule:{' '}
           <code>width: 10cqw</code>. The LEFT outer box declares{' '}
-          <code>container-type: inline-size</code>, so its bar scales with the surrounding
-          box. The RIGHT outer box doesn&apos;t, so <code>cqw</code> falls back to{' '}
-          <code>vw</code> and the bar inside stays a constant pixel width. As you drag, the
-          left bar squishes along with its parent; the right bar refuses to shrink — it
-          eventually overflows its parent because its width is anchored to the browser
-          window, not the container.
+          <code>container-type: inline-size</code>, so its bar scales with the surrounding box. The
+          RIGHT outer box doesn&apos;t, so <code>cqw</code> falls back to <code>vw</code> and the
+          bar inside stays a constant pixel width. As you drag, the left bar squishes along with its
+          parent; the right bar refuses to shrink - it eventually overflows its parent because its
+          width is anchored to the browser window, not the container.
         </DemoNote>
         <Resizable initialWidth={500}>
           <SanityRow>
@@ -120,7 +120,7 @@ export function ContainerQueriesHarness() {
 }
 
 // ───────────────────────────────────────────────────────────────────
-// Resizable — wraps a single demo with a right-edge drag handle.
+// Resizable - wraps a single demo with a right-edge drag handle.
 // Width readout + threshold pill make pass/fail obvious at a glance.
 // ───────────────────────────────────────────────────────────────────
 
@@ -150,15 +150,12 @@ function Resizable({ initialWidth, threshold, children }: ResizableProps) {
     setWidth(next);
   }, []);
 
-  const onPointerUp = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-      draggingRef.current = null;
-    },
-    []
-  );
+  const onPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    draggingRef.current = null;
+  }, []);
 
-  // Pause text selection during drag (defensive — pointer capture should suffice).
+  // Pause text selection during drag (defensive - pointer capture should suffice).
   useEffect(() => {
     const onSelectStart = (e: Event) => {
       if (draggingRef.current) e.preventDefault();
@@ -189,7 +186,7 @@ function Resizable({ initialWidth, threshold, children }: ResizableProps) {
         </Readout>
         {threshold !== undefined && (
           <Verdict $pass={aboveThreshold}>
-            {aboveThreshold ? `≥ ${threshold}px — query ACTIVE` : `< ${threshold}px — query IDLE`}
+            {aboveThreshold ? `≥ ${threshold}px - query ACTIVE` : `< ${threshold}px - query IDLE`}
           </Verdict>
         )}
       </ResizableMeta>
@@ -355,7 +352,7 @@ const Verdict = styled.div<{ $pass: boolean }>`
 `;
 
 // ───────────────────────────────────────────────────────────────────
-// Demo 1 — cq-units scaling
+// Demo 1 - cq-units scaling
 // ───────────────────────────────────────────────────────────────────
 
 const UnitsWrapper = styled.div`
@@ -390,9 +387,9 @@ const UnitsFootnote = styled.p`
 `;
 
 // ───────────────────────────────────────────────────────────────────
-// Demo 2 — anonymous @container query: dramatic color flip
+// Demo 2 - anonymous @container query: dramatic color flip
 // (CSS container queries match against ANCESTOR containers, not the
-// element itself — so the container-type declaration goes on an outer
+// element itself - so the container-type declaration goes on an outer
 // shell and the responsive rules go on an inner child.)
 // ───────────────────────────────────────────────────────────────────
 
@@ -410,7 +407,7 @@ const AnonInner = styled.div`
   gap: 10px;
   min-height: 120px;
 
-  /* Default (below threshold) is neutral slate, not alarming red — */
+  /* Default (below threshold) is neutral slate, not alarming red - */
   /* below threshold is just "query hasn't fired yet", not a failure. */
   background: #475569;
   color: white;
@@ -452,7 +449,7 @@ const AnonHint = styled.div`
 `;
 
 // ───────────────────────────────────────────────────────────────────
-// Demo 3 — cross-component query via ${ProductCard}
+// Demo 3 - cross-component query via ${ProductCard}
 // ProductCard is the bare container (declares container-type only).
 // ProductLayout + ProductPrice are descendants that query upward by
 // naming ProductCard explicitly via `${Component}` interpolation.
@@ -473,7 +470,7 @@ const ProductLayout = styled.div`
   align-items: flex-start;
   gap: 10px;
 
-  /* Cross-component query — descendant queries the named ProductCard ancestor. */
+  /* Cross-component query - descendant queries the named ProductCard ancestor. */
   @container ${ProductCard} (min-width: 420px) {
     flex-direction: row;
     align-items: center;
@@ -485,7 +482,7 @@ const ProductLayout = styled.div`
 
 /* Badge sits in the top-right corner. The two child spans toggle visibility */
 /* via cross-component @container queries, so above the threshold "QUERY ACTIVE" */
-/* shows on a green background and below it "QUERY IDLE" shows on grey. */
+/* shows on a green background and below it "QUERY IDLE" shows on gray. */
 const ProductBadge = styled.div`
   position: absolute;
   top: -10px;
@@ -554,11 +551,11 @@ const ProductPeriod = styled.div`
 `;
 
 // ───────────────────────────────────────────────────────────────────
-// Demo 4 — side-by-side scoped vs unscoped (visual control + bug)
+// Demo 4 - side-by-side scoped vs unscoped (visual control + bug)
 // Two siblings inside ONE Resizable. As the user drags, both outer
 // boxes shrink (flex:1). Inside, the LEFT bar uses cqw (resolves
 // against its container, so it scales) and the RIGHT bar uses cqw
-// without container-type (falls back to vw — fixed pixel width that
+// without container-type (falls back to vw - fixed pixel width that
 // won't shrink even when its parent does).
 // ───────────────────────────────────────────────────────────────────
 
@@ -576,7 +573,7 @@ const SanityColFluid = styled.div`
   min-width: 0;
 `;
 
-/* Right column refuses to shrink — its inner bar has a fixed pixel
+/* Right column refuses to shrink - its inner bar has a fixed pixel
    width (vw fallback) and we want that width to push back against
    the Resizable, not get clipped. flex: 0 0 auto sizes the column
    to content; flex-shrink: 0 below stops the wrapper from being
@@ -604,7 +601,7 @@ const ScopedWrapper = styled.div`
 `;
 
 const UnscopedWrapper = styled.div`
-  /* deliberately no container-type — cqw falls back to vw per CSS spec */
+  /* deliberately no container-type - cqw falls back to vw per CSS spec */
   background: #6b7280;
   border-radius: 6px;
   padding: 12px;
@@ -615,7 +612,7 @@ const UnscopedWrapper = styled.div`
   flex-shrink: 0;
   gap: 8px;
   min-height: 84px;
-  /* No overflow: hidden — let the bar's natural pixel width drive the */
+  /* No overflow: hidden - let the bar's natural pixel width drive the */
   /* wrapper's natural width so it pushes back against drag. */
 `;
 

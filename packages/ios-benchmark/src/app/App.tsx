@@ -128,21 +128,23 @@ export default class App extends React.Component<{}, State> {
   };
 
   private handleRunOne = () => {
-    const impl = implementations.find((i) => i.name === this.state.selectedImpl);
+    const impl = implementations.find(i => i.name === this.state.selectedImpl);
     if (!impl) return;
     this.runJob({ caseName: this.state.selectedCase, impl });
   };
 
   private handleRunAll = () => {
     const allowedLibs = this.runConfig.libs;
-    const filteredImpls = allowedLibs.length === 0
-      ? implementations
-      : implementations.filter((i) => allowedLibs.includes(i.name));
+    const filteredImpls =
+      allowedLibs.length === 0
+        ? implementations
+        : implementations.filter(i => allowedLibs.includes(i.name));
 
     const allowedCases = this.runConfig.cases ?? [];
-    const filteredCases = allowedCases.length === 0
-      ? Object.keys(tests)
-      : Object.keys(tests).filter((c) => allowedCases.includes(c));
+    const filteredCases =
+      allowedCases.length === 0
+        ? Object.keys(tests)
+        : Object.keys(tests).filter(c => allowedCases.includes(c));
 
     const jobs: Job[] = [];
     for (const caseName of filteredCases) {
@@ -151,8 +153,9 @@ export default class App extends React.Component<{}, State> {
       }
     }
     if (jobs.length === 0) return;
-    this.setState({ queue: jobs.slice(1), selectedCase: jobs[0].caseName, selectedImpl: jobs[0].impl.name }, () =>
-      this.runJob(jobs[0])
+    this.setState(
+      { queue: jobs.slice(1), selectedCase: jobs[0].caseName, selectedImpl: jobs[0].impl.name },
+      () => this.runJob(jobs[0])
     );
   };
 
@@ -169,7 +172,12 @@ export default class App extends React.Component<{}, State> {
 
   private handleComplete = (result: BenchmarkResult) => {
     const { selectedCase, selectedImpl, queue, results, autoMode } = this.state;
-    const newResult: Result = { caseName: selectedCase, implName: selectedImpl, result, ts: Date.now() };
+    const newResult: Result = {
+      caseName: selectedCase,
+      implName: selectedImpl,
+      result,
+      ts: Date.now(),
+    };
 
     if (this.profilingActive) {
       const safe = `${selectedImpl}-${selectedCase.replace(/[^a-z0-9]+/gi, '-')}.cpuprofile`;
@@ -186,7 +194,12 @@ export default class App extends React.Component<{}, State> {
     }
 
     if (autoMode === 'on') {
-      postReceiver('/result', { caseName: newResult.caseName, implName: newResult.implName, result, ts: newResult.ts });
+      postReceiver('/result', {
+        caseName: newResult.caseName,
+        implName: newResult.implName,
+        result,
+        ts: newResult.ts,
+      });
     }
 
     if (queue.length === 0) {
@@ -223,7 +236,7 @@ export default class App extends React.Component<{}, State> {
 
   private getActiveCase(): { caseName: string; testCase: BenchCase; impl: Implementation } | null {
     const testCase = tests[this.state.selectedCase];
-    const impl = implementations.find((i) => i.name === this.state.selectedImpl);
+    const impl = implementations.find(i => i.name === this.state.selectedImpl);
     if (!testCase || !impl) return null;
     return { caseName: this.state.selectedCase, testCase, impl };
   }
@@ -241,7 +254,7 @@ export default class App extends React.Component<{}, State> {
 
           <Text style={styles.sectionLabel}>Case</Text>
           <View style={styles.row}>
-            {Object.keys(tests).map((name) => (
+            {Object.keys(tests).map(name => (
               <Pressable
                 key={name}
                 onPress={() => !isRunning && this.setState({ selectedCase: name })}
@@ -261,7 +274,7 @@ export default class App extends React.Component<{}, State> {
 
           <Text style={styles.sectionLabel}>Library</Text>
           <View style={styles.row}>
-            {implementations.map((i) => (
+            {implementations.map(i => (
               <Pressable
                 key={i.name}
                 onPress={() => !isRunning && this.setState({ selectedImpl: i.name })}
@@ -284,7 +297,11 @@ export default class App extends React.Component<{}, State> {
               <>
                 <Pressable
                   onPress={this.handleRunOne}
-                  style={({ pressed }) => [styles.button, styles.buttonPrimary, pressed && styles.buttonPressed]}
+                  style={({ pressed }) => [
+                    styles.button,
+                    styles.buttonPrimary,
+                    pressed && styles.buttonPressed,
+                  ]}
                 >
                   <Text style={styles.buttonTextPrimary}>Run</Text>
                 </Pressable>
@@ -305,9 +322,15 @@ export default class App extends React.Component<{}, State> {
             {isRunning && (
               <Pressable
                 onPress={this.handleStop}
-                style={({ pressed }) => [styles.button, styles.buttonDanger, pressed && styles.buttonPressed]}
+                style={({ pressed }) => [
+                  styles.button,
+                  styles.buttonDanger,
+                  pressed && styles.buttonPressed,
+                ]}
               >
-                <Text style={styles.buttonTextPrimary}>Stop{queue.length > 0 ? ` (${queue.length} queued)` : ''}</Text>
+                <Text style={styles.buttonTextPrimary}>
+                  Stop{queue.length > 0 ? ` (${queue.length} queued)` : ''}
+                </Text>
               </Pressable>
             )}
           </View>
@@ -331,7 +354,9 @@ export default class App extends React.Component<{}, State> {
                   type={active.testCase.type}
                   sampleCount={active.testCase.sampleCount}
                   timeout={active.testCase.timeout}
-                  getComponentProps={(info) => active.testCase.getComponentProps(info, active.impl.components)}
+                  getComponentProps={info =>
+                    active.testCase.getComponentProps(info, active.impl.components)
+                  }
                   onComplete={this.handleComplete}
                 />
               )}
@@ -350,7 +375,9 @@ export default class App extends React.Component<{}, State> {
                     <Text style={styles.resultMedian}>{r.result.median.toFixed(2)} ms</Text>
                   </View>
                   <Text style={styles.resultBody}>
-                    mean {r.result.mean.toFixed(2)} ± {r.result.stdDev.toFixed(2)}  ·  min {r.result.min.toFixed(2)}  ·  max {r.result.max.toFixed(2)}  ·  n={r.result.sampleCount}
+                    mean {r.result.mean.toFixed(2)} ± {r.result.stdDev.toFixed(2)} · min{' '}
+                    {r.result.min.toFixed(2)} · max {r.result.max.toFixed(2)} · n=
+                    {r.result.sampleCount}
                   </Text>
                 </View>
               ))}
@@ -382,16 +409,38 @@ const styles = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 80 },
   title: { color: '#fff', fontSize: 22, fontWeight: '600' },
   subtle: { color: '#7a8390', fontSize: 12, marginTop: 4 },
-  sectionLabel: { color: '#a0a8b4', fontSize: 11, fontWeight: '600', textTransform: 'uppercase', marginTop: 16, marginBottom: 6, letterSpacing: 0.5 },
+  sectionLabel: {
+    color: '#a0a8b4',
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    marginTop: 16,
+    marginBottom: 6,
+    letterSpacing: 0.5,
+  },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, backgroundColor: '#1a1f26', borderWidth: 1, borderColor: '#2a313b' },
+  chip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#1a1f26',
+    borderWidth: 1,
+    borderColor: '#2a313b',
+  },
   chipActive: { backgroundColor: '#2a3a5e', borderColor: '#3b5489' },
   chipPressed: { opacity: 0.6 },
   chipDisabled: { opacity: 0.5 },
   chipText: { color: '#cbd2dd', fontSize: 12 },
   chipTextActive: { color: '#fff', fontWeight: '600' },
   controls: { flexDirection: 'row', gap: 8, marginTop: 16 },
-  button: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, backgroundColor: '#1a1f26', borderWidth: 1, borderColor: '#2a313b' },
+  button: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: '#1a1f26',
+    borderWidth: 1,
+    borderColor: '#2a313b',
+  },
   buttonPrimary: { backgroundColor: '#2563eb', borderColor: '#3b82f6' },
   buttonDanger: { backgroundColor: '#b91c1c', borderColor: '#dc2626' },
   buttonPressed: { opacity: 0.7 },
@@ -418,7 +467,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   result: { backgroundColor: '#161a20', padding: 10, borderRadius: 6, marginBottom: 4 },
-  resultRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 },
+  resultRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 2,
+  },
   resultLib: { color: '#cbd2dd', fontSize: 12, fontWeight: '600' },
   resultMedian: { color: '#22c55e', fontSize: 13, fontWeight: '700', fontFamily: 'Menlo' },
   resultBody: { color: '#9aa5b3', fontSize: 11, fontFamily: 'Menlo' },

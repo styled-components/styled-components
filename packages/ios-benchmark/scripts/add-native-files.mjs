@@ -20,7 +20,7 @@ project.parseSync();
 const groupKey = project.findPBXGroupKey({ name: TARGET_NAME });
 if (!groupKey) throw new Error(`group ${TARGET_NAME} not found`);
 const groupObj = project.getPBXGroupByKey(groupKey);
-const existing = new Set((groupObj.children ?? []).map((c) => c.comment));
+const existing = new Set((groupObj.children ?? []).map(c => c.comment));
 
 let added = 0;
 for (const { path: filePath, kind } of FILES) {

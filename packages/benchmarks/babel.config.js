@@ -1,5 +1,5 @@
 module.exports = {
-  presets: ['../../babel-preset.js'],
+  presets: ['../../babel-preset.cjs'],
   plugins: [
     'babel-plugin-react-native-web',
     ['styled-jsx/babel', { optimizeForSpeed: true }],

@@ -6,7 +6,7 @@ import NavClient from './nav-client';
 /**
  * Persistent global style living in a shared layout.
  * Should remain applied while navigating between child routes.
- * Uses a subtle stripe pattern and border — works in both light and dark mode
+ * Uses a subtle stripe pattern and border - works in both light and dark mode
  * without overriding theme colors.
  */
 const LayoutGlobalStyle = createGlobalStyle`

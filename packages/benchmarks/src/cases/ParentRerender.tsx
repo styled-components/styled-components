@@ -49,7 +49,7 @@ export default function ParentRerender({ components, count, childCount }: IParen
   const { Box } = components;
 
   // Parent renders with a changing `count` prop (drives the re-render).
-  // All children receive STABLE props — color is determined by index only,
+  // All children receive STABLE props - color is determined by index only,
   // layout alternates by position, never changes between renders.
   const children = [];
   for (let i = 0; i < childCount; i++) {
