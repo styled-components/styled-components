@@ -12,7 +12,13 @@ function overscrollBehaviorShorthand(tokens: Token[]): Dict<any> | null {
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
   if (name === undefined || !OVERSCROLL_KEYWORDS.has(name)) return null;
-  if (__NATIVE_WEB__) return { overscrollBehavior: name };
+  if (__NATIVE_WEB__) {
+    // `auto` is the initial value; skip the emit so rn-web's compiled
+    // ScrollView styles (`overflow*`, `WebkitOverflowScrolling`) keep
+    // their declared precedence. Explicit `auto` from author code
+    // becomes a no-op, which matches the spec ("initial behavior").
+    return name === 'auto' ? {} : { overscrollBehavior: name };
+  }
   const suppress = name === 'contain' || name === 'none';
   return {
     bounces: !suppress,
@@ -26,7 +32,11 @@ function scrollbarWidthHandler(tokens: Token[]): Dict<any> | null {
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
   if (name === undefined || !SCROLLBAR_WIDTH_KEYWORDS.has(name)) return null;
-  if (__NATIVE_WEB__) return { scrollbarWidth: name };
+  if (__NATIVE_WEB__) {
+    // `auto` is the initial value; skip the emit (same rationale as
+    // overscroll-behavior).
+    return name === 'auto' ? {} : { scrollbarWidth: name };
+  }
   const hide = name === 'none';
   return {
     showsVerticalScrollIndicator: !hide,

@@ -333,6 +333,16 @@ export const SPECIAL_CASE_PROPS: Record<string, SpecialCaseMeta> = {
   // auto` reaches Android's system hyphenator instead of being dropped as
   // an unknown style key.
   android_hyphenationFrequency: { validOn: ['Text', 'VirtualText'], source: 'hyphens' },
+  // <Image> only. On rn-web `objectFit` is ignored as a style key; the
+  // polyfill lifts a `resizeMode` prop carrying the spec-mapped value.
+  resizeMode: { validOn: ['Image'], source: 'object-fit' },
+  // rn-web LocaleContext lift. rn-web reads `props.dir` to derive its
+  // writingDirection context (which the BiDi-aware compiler uses to
+  // resolve `text-align: start | end` against). The `direction`
+  // polyfill emits this on rn-web so the cascaded direction reaches
+  // descendants. On native this entry never fires (the polyfill is
+  // gated by `__NATIVE_WEB__`).
+  dir: { validOn: [...VIEW_LIKE_TARGETS, 'TextInput', 'Image'], source: 'direction' },
   // Android-only TextInput prop. iOS drops; rationale in
   // `native/transform/polyfills/caretColor.ts`.
   cursorColor: { validOn: ['TextInput'], source: 'caret-color' },

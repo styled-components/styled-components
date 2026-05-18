@@ -63,11 +63,17 @@ describe('passthrough mapping', () => {
     });
 
     describeOnRnWeb(() => {
-      // rn-web: the browser already drives Text bidi from the cascaded
-      // `direction` value; we skip the writingDirection mirror so the
-      // passthrough stays a single declaration.
-      it('emits only the direction key on rn-web (browser drives bidi)', () => {
-        expect(transformDecl('direction', 'rtl')).toEqual({ direction: 'rtl' });
+      // rn-web emits `writingDirection` (translates to CSS `direction`
+      // so the browser flips bidi rendering) AND lifts a `dir` prop
+      // through SPECIAL_CASE_PROPS - rn-web's LocaleContext / BiDi
+      // compiler reads `props.dir`, not the CSS direction, so a
+      // descendant `text-align: start | end` only flips when the prop
+      // reaches the host element.
+      it('emits writingDirection style + dir prop on rn-web', () => {
+        expect(transformDecl('direction', 'rtl')).toEqual({
+          writingDirection: 'rtl',
+          dir: 'rtl',
+        });
       });
     });
   });
