@@ -57,7 +57,6 @@
   Re-renders that don't change styling now skip style resolution entirely. Components sharing the same CSS (e.g., list items) benefit from cross-sibling caching. Hot-path changes include `forEach` → `for`/`for...of`, template literal → manual concat, and reduced allocations.
 
   Benchmarks vs 6.3.12:
-
   - **Parent re-render (most common):** 3.3x faster
   - **First mount:** 1.7-2.5x faster
   - **Prop cycling:** 2.3-2.4x faster
@@ -113,7 +112,6 @@
 ### Patch Changes
 
 - f674224: fix: RSC style tags for extended components have correct href and include base CSS (#5663)
-
   - Fix spaces in `<style href>` attribute that caused React 19 hydration failures when using `styled()` inheritance
   - Fix missing base component CSS in RSC output when only the extended component renders
   - Emit a separate `<style>` tag per inheritance level with content-aware hrefs, enabling React 19 deduplication of shared base styles
@@ -146,7 +144,6 @@
 - 51ffa9c: Fix createGlobalStyle compatibility with React StrictMode and RSC
 
   This fix addresses issues where global styles would disappear or behave incorrectly in React StrictMode and RSC:
-
   1. **Static styles optimization**: Static global styles (without props/interpolations) are now only injected once and won't be removed/re-added on every render. This prevents the style flickering that could occur during concurrent rendering.
 
   2. **StrictMode-aware cleanup**: Style cleanup now uses `queueMicrotask` to coordinate with React's effect lifecycle. In StrictMode's simulated unmount/remount cycle, styles are preserved. On real unmount, styles are properly removed.
@@ -156,7 +153,6 @@
   4. **RSC inline style tag cleanup**: Fix bug where server-defined `createGlobalStyle` rendered in client components would leave behind accumulated SSR-rendered inline `<style data-styled-global>` tags. The cleanup effect now removes these hoisted style tags when the component unmounts or re-renders with different CSS.
 
   These changes ensure `createGlobalStyle` works correctly with:
-
   - React StrictMode's double-render behavior
   - React 18/19's concurrent rendering features
   - React 19's style hoisting with the `precedence` attribute
@@ -241,14 +237,12 @@
 - 28fd502: Add React Server Components (RSC) support
 
   styled-components now automatically detects RSC environments and handles CSS delivery appropriately:
-
   - **No `'use client'` directive required**: Components work in RSC without any wrapper or directive
   - **Automatic CSS injection**: In RSC mode, styled components emit inline `<style>` tags that React 19 automatically hoists and deduplicates
   - **Zero configuration**: Works out of the box with Next.js App Router and other RSC-enabled frameworks
   - **Backward compatible**: Existing SSR patterns with `ServerStyleSheet` continue to work unchanged
 
   RSC best practices:
-
   - Prefer static styles over dynamic interpolations to avoid serialization overhead
   - Use data attributes for discrete variants (e.g., `&[data-size='lg']`)
   - CSS custom properties work perfectly in styled-components, can be set via inline `style`, and cascade to children:
@@ -268,7 +262,6 @@
   - Use build-time CSS variable generation for theming since `ThemeProvider` is a no-op in RSC
 
   Technical details:
-
   - RSC detection via `typeof React.createContext === 'undefined'`
   - `ThemeProvider` and `StyleSheetManager` become no-ops in RSC (children pass-through)
   - React hooks are conditionally accessed via runtime guards
@@ -279,13 +272,11 @@
   Added support for modern HTML and SVG elements that were previously missing:
 
   HTML elements:
-
   - `search` - HTML5 search element
   - `slot` - Web Components slot element
   - `template` - HTML template element
 
   SVG filter elements:
-
   - All `fe*` filter primitive elements (feBlend, feColorMatrix, feComponentTransfer, etc.)
   - `clipPath`, `linearGradient`, `radialGradient` - gradient and clipping elements
   - `textPath` - SVG text path element
@@ -298,7 +289,6 @@
 - 418adbe: fix(types): add CSS custom properties (variables) support to style prop
 
   CSS custom properties (CSS variables like `--primary-color`) are now fully supported in TypeScript without errors:
-
   - `.attrs({ style: { '--var': 'value' } })` - CSS variables in attrs
   - `<Component style={{ '--var': 'value' }} />` - CSS variables in component props
   - Mixed usage with regular CSS properties works seamlessly

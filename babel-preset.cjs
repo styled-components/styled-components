@@ -21,7 +21,7 @@ module.exports = () => ({
   overrides: [
     // Our own build uses `add-module-exports` so CJS consumers get the default
     // export at `require(...)` directly. RN's source assumes native ESM->CJS
-    // semantics (`.default` access) — applying `add-module-exports` there
+    // semantics (`.default` access) - applying `add-module-exports` there
     // collapses `module.exports = exports.default` and breaks `require('.../PixelRatio').default`.
     // Gate it to SC's own sources only.
     modules === 'commonjs' && {
@@ -29,7 +29,7 @@ module.exports = () => ({
       plugins: ['add-module-exports'],
     },
     // RN source ships as a mix of Flow, TypeScript, and JSX. Route its
-    // files to @react-native/babel-preset — the canonical parser for RN source.
+    // files to @react-native/babel-preset - the canonical parser for RN source.
     {
       test: filepath => isReactNativeFile(filepath),
       presets: [['@react-native/babel-preset', { disableImportExportTransform: false }]],

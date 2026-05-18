@@ -3,10 +3,10 @@ const baseConfig = require('./jest.config.base');
 /**
  * Native jest config uses react-native's own jest preset so tests run against
  * the real RN runtime (no DOM). React 19's react-test-renderer requires `act`
- * wrapping around every create/update/unmount call — `native-setup.ts` installs
+ * wrapping around every create/update/unmount call - `native-setup.ts` installs
  * that wrap globally so existing `TestRenderer.create(...)` sites keep working.
  *
- * RN's source mixes Flow + TypeScript + JSX. The project-root `babel-preset.js`
+ * RN's source mixes Flow + TypeScript + JSX. The project-root `babel-preset.cjs`
  * has an `overrides` entry that routes react-native/* files to
  * `@react-native/babel-preset`, so babel-jest parses them correctly without
  * affecting the non-RN build.

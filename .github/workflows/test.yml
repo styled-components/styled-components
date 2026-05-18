@@ -3,7 +3,7 @@ name: test
 on:
   push:
     branches:
-      - "main"
+      - 'main'
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -20,8 +20,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          cache: "pnpm"
-          node-version-file: ".nvmrc"
+          cache: 'pnpm'
+          node-version-file: '.nvmrc'
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -34,8 +34,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          cache: "pnpm"
-          node-version-file: ".nvmrc"
+          cache: 'pnpm'
+          node-version-file: '.nvmrc'
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm test

@@ -25,9 +25,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          cache: "pnpm"
-          node-version-file: ".nvmrc"
-          registry-url: "https://registry.npmjs.org"
+          cache: 'pnpm'
+          node-version-file: '.nvmrc'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
@@ -56,9 +56,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          cache: "pnpm"
-          node-version-file: ".nvmrc"
-          registry-url: "https://registry.npmjs.org"
+          cache: 'pnpm'
+          node-version-file: '.nvmrc'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
@@ -109,110 +109,11 @@ jobs:
       - name: Build release notes per package
         if: steps.changesets.outputs.has_pending == 'true'
         shell: bash
+        env:
+          RELEASE_NOTES_OUTPUT_DIR: /tmp/release-notes
         run: |
-          mkdir -p /tmp/release-notes
-          node - <<'NODE'
-          (async () => {
-            const fs = require('fs');
-            const path = require('path');
-            const { execSync } = require('child_process');
-            const readChangesets = require('@changesets/read').default;
-            const git = require('@changesets/git');
-            const { getReleaseLine } = require('@changesets/cli/changelog').default;
-
-            const cwd = process.cwd();
-            const repo = process.env.GITHUB_REPOSITORY;
-
-            const packagesDir = path.join(cwd, 'packages');
-            const packages = [];
-            for (const d of fs.readdirSync(packagesDir)) {
-              const jsonPath = path.join(packagesDir, d, 'package.json');
-              if (!fs.existsSync(jsonPath)) continue;
-              const pkg = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-              if (pkg.private) continue;
-              packages.push(pkg);
-            }
-
-            const changesets = await readChangesets(cwd);
-            if (changesets.length) {
-              const paths = changesets.map(c => `.changeset/${c.id}.md`);
-              // `@changesets/git`'s getCommitsThatAddFiles returns an array
-              // aligned with `paths`, not a Map keyed by path.
-              const shaList = await git.getCommitsThatAddFiles(paths, { cwd, short: true });
-              for (let i = 0; i < changesets.length; i++) {
-                changesets[i].commit = shaList[i] || undefined;
-              }
-            }
-
-            // Per-package previous tag. Snapshot publishes don't consume
-            // `.changeset/*.md`, so without this filter every prerelease
-            // re-emits the full pending pile — including changesets that
-            // were already announced in earlier prereleases.
-            const prevTagByPkg = new Map();
-            for (const pkg of packages) {
-              let prevTag = '';
-              try {
-                prevTag = execSync(`git tag --list '${pkg.name}@*' --sort=-v:refname`, { encoding: 'utf8' })
-                  .split('\n').filter(Boolean)[0] || '';
-              } catch {}
-              prevTagByPkg.set(pkg.name, prevTag);
-            }
-
-            // True when `commit` is reachable from `tag` (i.e. already
-            // shipped in that release). Conservatively returns false on
-            // any error so unknown commits surface in the next release.
-            function isCommitInTag(commit, tag) {
-              if (!commit || !tag) return false;
-              try {
-                execSync(`git merge-base --is-ancestor ${commit} ${tag}`, { stdio: 'ignore' });
-                return true;
-              } catch {
-                return false;
-              }
-            }
-
-            const byPkg = new Map();
-            for (const cs of changesets) {
-              for (const release of cs.releases) {
-                if (release.type === 'none') continue;
-                if (isCommitInTag(cs.commit, prevTagByPkg.get(release.name))) continue;
-                let groups = byPkg.get(release.name);
-                if (!groups) {
-                  groups = { major: [], minor: [], patch: [] };
-                  byPkg.set(release.name, groups);
-                }
-                groups[release.type].push({ changeset: cs, type: release.type });
-              }
-            }
-
-            const labels = { major: 'Major Changes', minor: 'Minor Changes', patch: 'Patch Changes' };
-            for (const pkg of packages) {
-              const groups = byPkg.get(pkg.name);
-              const parts = [];
-              if (groups) {
-                for (const t of ['major', 'minor', 'patch']) {
-                  if (groups[t].length === 0) continue;
-                  parts.push(`### ${labels[t]}`, '');
-                  for (const { changeset, type } of groups[t]) {
-                    parts.push(await getReleaseLine(changeset, type));
-                  }
-                  parts.push('');
-                }
-              }
-              if (parts.length === 0) parts.push('No new changes since the previous release.', '');
-
-              const prevTag = prevTagByPkg.get(pkg.name);
-              if (prevTag) {
-                const currentTag = `${pkg.name}@${pkg.version}`;
-                const compareUrl = `https://github.com/${repo}/compare/${encodeURIComponent(prevTag)}...${encodeURIComponent(currentTag)}`;
-                parts.push(`**Full Changelog**: ${compareUrl}`);
-              }
-
-              const safe = pkg.name.replace(/[@/]/g, '_');
-              fs.writeFileSync(`/tmp/release-notes/${safe}.md`, parts.join('\n'));
-            }
-          })().catch(err => { console.error(err); process.exit(1); });
-          NODE
+          mkdir -p "$RELEASE_NOTES_OUTPUT_DIR"
+          node scripts/release-notes/build-prerelease-release-notes.ts
 
       - name: Publish to npm test tag
         if: steps.changesets.outputs.has_pending == 'true'

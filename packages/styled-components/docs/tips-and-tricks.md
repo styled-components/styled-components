@@ -84,7 +84,7 @@ const Box = styled.div`
 `;
 ```
 
-Does this remind you of anything? Exactly, this is kind of like a mixin in Sass – except it's not an arbitrarily added construct on top of CSS, it's just JavaScript! 👍
+Does this remind you of anything? Exactly, this is kind of like a mixin in Sass, except it's not an arbitrarily added construct on top of CSS, it's just JavaScript! 👍
 
 ## More powerful example
 
@@ -109,7 +109,7 @@ Now we have javascript, we can do 🌟 _more powerful things_ 🌟
 
 ```js
 // style-utils.js
-import { css } from 'styled-components'
+import { css } from 'styled-components';
 
 export const media = {
   handheld: (...args) => css`
@@ -117,11 +117,11 @@ export const media = {
       ${css(...args)};
     }
   `,
-}
+};
 ```
 
 ```js
-import { media } from '../style-utils'
+import { media } from '../style-utils';
 
 // Make the text smaller on handheld devices
 const Box = styled.div`
@@ -129,7 +129,7 @@ const Box = styled.div`
   ${media.handheld`
     font-size: 14px;
   `};
-`
+`;
 ```
 
 And voila! 💅
@@ -142,27 +142,27 @@ Due to the functional nature of javascript, you can easily define your own tagge
 
 ```js
 // these sizes are arbitrary and you can set them to whatever you wish
-import { css } from 'styled-components'
+import { css } from 'styled-components';
 
 const sizes = {
   giant: 1170,
   desktop: 992,
   tablet: 768,
   phone: 376,
-}
+};
 
 // iterate through the sizes and create a media template
 export const media = Object.keys(sizes).reduce((accumulator, label) => {
   // use em in breakpoints to work properly cross-browser and support users
   // changing their browsers font-size: https://zellwk.com/blog/media-query-units/
-  const emSize = sizes[label] / 16
+  const emSize = sizes[label] / 16;
   accumulator[label] = (...args) => css`
     @media (max-width: ${emSize}em) {
       ${css(...args)};
     }
-  `
-  return accumulator
-}, {})
+  `;
+  return accumulator;
+}, {});
 ```
 
 Great! Now that you've defined your media templates, you can use them like this:
@@ -173,7 +173,7 @@ const Container = styled.div`
   ${media.desktop`padding: 0 20px;`}
   ${media.tablet`padding: 0 10px;`}
   ${media.phone`padding: 0 5px;`}
-`
+`;
 ```
 
 Pretty easy, huh?

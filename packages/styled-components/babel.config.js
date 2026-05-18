@@ -1,3 +1,3 @@
 module.exports = {
-  presets: ['../../babel-preset.js'],
+  presets: ['../../babel-preset.cjs'],
 };

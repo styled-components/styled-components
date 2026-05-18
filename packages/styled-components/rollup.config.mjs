@@ -31,36 +31,34 @@ const esm = {
 const getCJS = override => ({ ...cjs, ...override });
 const getESM = override => ({ ...esm, ...override });
 
-const defaultTypescriptPlugin =
-  typescript({
-    // The build breaks if the tests are included by the typescript plugin.
-    // Since un-excluding them in tsconfig.json, we must explicitly exclude them
-    // here.
-    exclude: ['**/*.test.ts', '**/*.test.tsx', 'dist', 'src/test/types.tsx'],
-    outputToFilesystem: true,
-    tsconfig: './tsconfig.json',
-    compilerOptions: {
-      noEmit: false,
-      declaration: true,
-      declarationMap: false,
-    }
-  });
+const defaultTypescriptPlugin = typescript({
+  // The build breaks if the tests are included by the typescript plugin.
+  // Since un-excluding them in tsconfig.json, we must explicitly exclude them
+  // here.
+  exclude: ['**/*.test.ts', '**/*.test.tsx', 'dist', 'src/test/types.tsx'],
+  outputToFilesystem: true,
+  tsconfig: './tsconfig.json',
+  compilerOptions: {
+    noEmit: false,
+    declaration: true,
+    declarationMap: false,
+  },
+});
 
-const nativeTypescriptPlugin =
-  typescript({
-    // The build breaks if the tests are included by the typescript plugin.
-    // Since un-excluding them in tsconfig.json, we must explicitly exclude them
-    // here.
-    exclude: ['**/*.test.ts', '**/*.test.tsx', 'dist', 'src/test/types.tsx'],
-    outputToFilesystem: true,
-    tsconfig: './tsconfig.json',
-    compilerOptions: {
-      outDir: 'native/dist',
-      noEmit: false,
-      declaration: true,
-      declarationMap: false,
-    }
-  });
+const nativeTypescriptPlugin = typescript({
+  // The build breaks if the tests are included by the typescript plugin.
+  // Since un-excluding them in tsconfig.json, we must explicitly exclude them
+  // here.
+  exclude: ['**/*.test.ts', '**/*.test.tsx', 'dist', 'src/test/types.tsx'],
+  outputToFilesystem: true,
+  tsconfig: './tsconfig.json',
+  compilerOptions: {
+    outDir: 'native/dist',
+    noEmit: false,
+    declaration: true,
+    declarationMap: false,
+  },
+});
 
 const basePlugins = [
   sourceMaps(),
@@ -112,10 +110,7 @@ const minifierPlugin = terser({
   },
 });
 
-const commonPlugins = [
-  defaultTypescriptPlugin,
-  basePlugins
-];
+const commonPlugins = [defaultTypescriptPlugin, basePlugins];
 
 const configBase = {
   input: './src/index.ts',
@@ -242,7 +237,7 @@ const nativeConfig = {
   // The native build runs only `nativeTypescriptPlugin` so declarations land
   // in `native/dist/` once. Concatenating `commonPlugins` previously
   // included `defaultTypescriptPlugin` too, which wrote a parallel d.ts tree
-  // into `native/dist/dist/` and `native/dist/native/` — those shadow trees
+  // into `native/dist/dist/` and `native/dist/native/` - those shadow trees
   // shipped to npm.
   plugins: [
     ...nativeBasePlugins,
@@ -252,7 +247,7 @@ const nativeConfig = {
       __NATIVE_WEB__: JSON.stringify(false),
       __DEV__: "process.env.NODE_ENV !== 'production'",
     }),
-    minifierPlugin
+    minifierPlugin,
   ],
 };
 
@@ -277,17 +272,14 @@ const nativeWebConfig = {
       __NATIVE_WEB__: JSON.stringify(true),
       __DEV__: "process.env.NODE_ENV !== 'production'",
     }),
-    minifierPlugin
+    minifierPlugin,
   ],
 };
 
 const pluginsConfig = {
   ...configBase,
   input: './src/plugins/index.ts',
-  output: [
-    getESM({ file: 'dist/plugins.esm.js' }),
-    getCJS({ file: 'dist/plugins.cjs.js' }),
-  ],
+  output: [getESM({ file: 'dist/plugins.esm.js' }), getCJS({ file: 'dist/plugins.cjs.js' })],
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(false),
@@ -324,7 +316,7 @@ const reanimatedConfig = {
       __NATIVE_WEB__: JSON.stringify(false),
       __DEV__: "process.env.NODE_ENV !== 'production'",
     }),
-    minifierPlugin
+    minifierPlugin,
   ],
 };
 

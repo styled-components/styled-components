@@ -1,1 +1,16 @@
 **/__snapshots__
+**/node_modules
+**/dist
+**/native/dist
+**/plugins/dist
+**/coverage
+**/CHANGELOG.md
+pnpm-lock.yaml
+packages/styled-components/src/utils/errors.ts
+packages/styled-components/src/parser/wpt-corpus/raw
+packages/styled-components/src/parser/wpt-corpus/corpus.json
+**/vendor/bundle
+**/.bundle
+**/ios/build
+**/android/build
+**/.gradle

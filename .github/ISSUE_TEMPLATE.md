@@ -28,13 +28,17 @@ Please keep it product-centric.
 -->
 
 <!-- BUG TEMPLATE -->
+
 ## Environment
+
 <!-- Please run this command inside your project and paste its contents here (it automatically copies to your clipboard) -->
+
 `npx envinfo --system --binaries --npmPackages styled-components,babel-plugin-styled-components --markdown`
 
 ## Reproduction
 
 <!-- If you can't reproduce your bug, make sure to add details on how you've set up your project -->
+
 https://codesandbox.io/s/styled-components-base-gc367
 
 ## Steps to reproduce
