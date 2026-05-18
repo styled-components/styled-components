@@ -68,6 +68,13 @@ export interface NativeCascadeValues {
    * resolution under horizontal-tb.
    */
   direction: 'ltr' | 'rtl';
+  /**
+   * CSS custom properties contributed by every ancestor on the path to
+   * the root, deep-merged so the nearest ancestor wins. Anchors `var()`
+   * substitution at render time. Native bundles only; rn-web defers to
+   * the browser's cascade.
+   */
+  customProperties?: ReadonlyMap<string, string>;
 }
 
 export interface NativeStyleContextValue {

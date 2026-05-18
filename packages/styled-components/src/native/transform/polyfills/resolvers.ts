@@ -36,6 +36,12 @@ export interface ResolveEnv {
    * Sourced from NativeStyleContext.cascade.direction.
    */
   direction: 'ltr' | 'rtl';
+  /**
+   * Cascade-published CSS custom properties keyed by their `--name`.
+   * Sourced from NativeStyleContext.cascade.customProperties. `null` when
+   * no ancestor has declared any.
+   */
+  customProperties: ReadonlyMap<string, string> | null;
 }
 
 /**
@@ -1422,4 +1428,130 @@ function applyResolversWithCache(
   }
   (resolvers as ResolversWithCache)[APPLY_CACHE] = { base, env, result: out };
   return out;
+}
+
+/**
+ * CSS Custom Properties Module Level 1 §3 — replace `var(--name, fallback?)`
+ * occurrences in a property value against the cascade-published map. When
+ * a referenced property is the guaranteed-invalid value (missing or
+ * caught in a cycle) and a fallback is provided, the fallback substitutes;
+ * otherwise the whole declaration is invalid (`null`) and the render
+ * path drops it. Cycle-safe via a visited set carried through recursion.
+ */
+export function substituteVars(
+  value: string,
+  customProperties: ReadonlyMap<string, string> | null,
+  visited?: Set<string>
+): string | null {
+  if (indexOfUnquotedVarCall(value, 0) === -1) return value;
+  let out = '';
+  let i = 0;
+  const len = value.length;
+  while (i < len) {
+    const idx = indexOfUnquotedVarCall(value, i);
+    if (idx === -1) {
+      out += value.substring(i);
+      break;
+    }
+    out += value.substring(i, idx);
+    const callEnd = findMatchingClose(value, idx + 3);
+    if (callEnd === -1) return null;
+    const args = value.substring(idx + 4, callEnd);
+    const commaIdx = topLevelCommaIdx(args);
+    const rawName = (commaIdx === -1 ? args : args.substring(0, commaIdx)).trim();
+    const hasFallback = commaIdx !== -1;
+    const fallback = hasFallback ? args.substring(commaIdx + 1).trim() : '';
+    // §3 — the first argument can itself be an arbitrary substitution
+    // function. Substitute any nested var() inside the name before
+    // looking it up as a `<custom-property-name>`. Spec example:
+    //   --myvar: --other; --other: 10px; --result: var(var(--myvar));
+    // → --result computes to `10px`.
+    let name = rawName;
+    if (indexOfUnquotedVarCall(name, 0) !== -1) {
+      const resolvedName = substituteVars(name, customProperties, visited);
+      if (resolvedName === null) {
+        name = '';
+      } else {
+        name = resolvedName.trim();
+      }
+    }
+    const localVisited = visited ?? new Set<string>();
+    let resolved: string | null;
+    if (name.length < 3 || name.charCodeAt(0) !== 0x2d || name.charCodeAt(1) !== 0x2d) {
+      // Not a valid <custom-property-name>; treat the var() as referring
+      // to the guaranteed-invalid value and let the fallback handle it.
+      resolved = null;
+    } else if (localVisited.has(name)) {
+      resolved = null;
+    } else {
+      localVisited.add(name);
+      const direct = customProperties !== null ? customProperties.get(name) : undefined;
+      resolved =
+        direct !== undefined ? substituteVars(direct, customProperties, localVisited) : null;
+      localVisited.delete(name);
+    }
+    if (resolved === null) {
+      // §3: bare trailing comma is valid and means "empty fallback"; if the
+      // fallback is empty or itself fails to substitute, the var() makes
+      // the surrounding declaration invalid (caller drops it).
+      if (!hasFallback || fallback === '') return null;
+      const substitutedFallback = substituteVars(fallback, customProperties, localVisited);
+      if (substitutedFallback === null) return null;
+      out += substitutedFallback;
+    } else {
+      out += resolved;
+    }
+    i = callEnd + 1;
+  }
+  return out;
+}
+
+/**
+ * Quote-aware `var(` finder. Skips occurrences inside `"…"` / `'…'`
+ * CSS string literals (CSS Syntax 3 §4.3.4 / §4.3.5). Matches both
+ * `var(--name)` and `var(var(--name))` outer forms; the caller
+ * resolves any nested substitution function in the first argument
+ * before looking up the resulting `<custom-property-name>`.
+ */
+function indexOfUnquotedVarCall(value: string, from: number): number {
+  const len = value.length;
+  // Coarse fast path: no `var(` anywhere ⇒ no UNQUOTED `var(`.
+  const firstHit = value.indexOf('var(', from);
+  if (firstHit === -1) return -1;
+  // No quote chars before the first hit ⇒ already unquoted.
+  if (value.lastIndexOf('"', firstHit) < from && value.lastIndexOf("'", firstHit) < from) {
+    return firstHit;
+  }
+  let i = from;
+  while (i < len) {
+    const c = value.charCodeAt(i);
+    if (c === 0x22 || c === 0x27) {
+      const quote = c;
+      i++;
+      while (i < len) {
+        const d = value.charCodeAt(i);
+        if (d === 0x5c) {
+          i += 2;
+          continue;
+        }
+        if (d === quote) {
+          i++;
+          break;
+        }
+        i++;
+      }
+      continue;
+    }
+    if (
+      c === 0x76 &&
+      i + 3 < len &&
+      value.charCodeAt(i + 1) === 0x61 &&
+      value.charCodeAt(i + 2) === 0x72 &&
+      value.charCodeAt(i + 3) === 0x28
+    ) {
+      return i;
+    }
+    i++;
+  }
+  return -1;
 }
