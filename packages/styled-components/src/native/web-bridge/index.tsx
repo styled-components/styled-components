@@ -22,6 +22,25 @@
  */
 
 import * as React from 'react';
+
+// Side-effect: opt the document into both color schemes so
+// `light-dark()` resolves to its dark argument under OS preference and
+// `useColorScheme()` reflects the OS choice. Without this opt-in the
+// browser locks the document to light for legacy compatibility, and
+// `matchMedia('(prefers-color-scheme: dark)')` reports false even on
+// dark systems, which propagates through React Native Web's
+// `useColorScheme()` into every theme-aware component. Set as an
+// inline style on `<html>` so it beats anything a host stylesheet
+// declares at lower specificity. The `if (!colorScheme)` guard
+// preserves an explicit author choice (e.g.
+// `style="color-scheme: only light"` to force light).
+if (typeof document !== 'undefined') {
+  const docEl = document.documentElement;
+  if (docEl && !docEl.style.colorScheme) {
+    docEl.style.colorScheme = 'light dark';
+  }
+}
+
 // react-native ships its own types; react-native-web is the runtime
 // substrate when the host bundler maps `react-native` → `react-native-web`.
 // rn-web mirrors RN's component API so the types apply cleanly.
@@ -201,6 +220,17 @@ type BridgedNamespace = {
  */
 const styled = styledWeb as typeof styledWeb & BridgedNamespace;
 
+/**
+ * Per-alias baseline styles. Pressable renders as `<div>` (or
+ * `<button>` when a role is set) on rn-web and inherits the default
+ * text cursor; users can't tell at a glance which elements are
+ * interactive. The baseline restores web affordance. Authored CSS in
+ * downstream components overrides as usual.
+ */
+const baselineCss: Partial<Record<KnownAlias, string>> = {
+  Pressable: 'cursor: pointer;',
+};
+
 const bridgedCache = new Map<KnownAlias, ReturnType<typeof styledWeb>>();
 aliases.forEach(alias => {
   Object.defineProperty(styled, alias, {
@@ -219,12 +249,36 @@ aliases.forEach(alias => {
         primitive as React.ComponentType<BridgedProps>,
         'Bridged' + alias
       );
-      const styledBridged = styledWeb(bridged);
+      const baseline = baselineCss[alias];
+      const base = baseline
+        ? styledWeb(bridged)`
+            ${baseline}
+          `
+        : bridged;
+      const styledBridged = styledWeb(base as React.ComponentType);
       bridgedCache.set(alias, styledBridged);
       return styledBridged;
     },
   });
 });
+
+/**
+ * `toStyleSheet` mirrors the native entry's helper for evaluating a `css`
+ * tagged template into a flat RN-style object. On the bridge there is
+ * no RN StyleSheet to map onto; consumers wanting the equivalent
+ * web-side primitive should use `css` directly. We export a stub so
+ * the named symbol exists, matching the native module surface for
+ * drop-in replacement.
+ */
+function toStyleSheet(): Record<string, unknown> {
+  if (__DEV__) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '`toStyleSheet` is a no-op on the rn-web bridge; the web pipeline emits CSS through CSSOM rather than RN style objects.'
+    );
+  }
+  return {};
+}
 
 export default styled;
 export {
@@ -238,7 +292,53 @@ export {
   ThemeProvider,
   ThemeConsumer,
   ThemeContext,
+  toStyleSheet,
   useTheme,
   StyleSheetManager,
   ServerStyleSheet,
 };
+
+// Mirror the responsive + native-context surface so consumers calling
+// these from `styled-components/native` on rn-web keep getting the
+// same module-level identifiers. `useContainer` family returns null /
+// false on the bridge because container queries are handled natively
+// by the browser via `@container` CSS — there's no need for a JS
+// hook to mirror them.
+export {
+  matchMedia,
+  useBreakpoint,
+  useContainer,
+  useContainerQuery,
+  useMediaEnv,
+  useMediaQuery,
+} from '../responsive';
+export type { ContainerEntry, MediaQueryEnv } from '../responsive';
+export { NativeStyleContext, useNativeStyleContext } from '../NativeStyleContext';
+export type {
+  ContainerContextValue,
+  NativeCascadeValues,
+  NativeStyleContextValue,
+} from '../NativeStyleContext';
+export { ParentContext, useParentContext } from '../ParentContext';
+export type { ParentContextValue } from '../ParentContext';
+
+export type {
+  CompiledAst,
+  CSSKeyframes,
+  CSSObject,
+  CSSProperties,
+  CSSPseudos,
+  DefaultTheme,
+  ExecutionContext,
+  ExecutionProps,
+  IStyledComponent,
+  IStyledComponentFactory,
+  IStyledStatics,
+  NativeTarget,
+  PolymorphicComponent,
+  PolymorphicComponentProps,
+  RuleSet,
+  Runtime,
+  StyledObject,
+  StyledOptions,
+} from '../../types';

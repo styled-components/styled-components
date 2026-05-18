@@ -251,31 +251,6 @@ const nativeConfig = {
   ],
 };
 
-// react-native-web variant. Consumers reach this entry through
-// `native/package.json`'s `browser` field.
-const nativeWebConfig = {
-  ...configBase,
-  input: './src/native/index.ts',
-  output: [
-    getCJS({
-      file: 'native/dist/styled-components.native.browser.cjs.js',
-    }),
-    getESM({
-      file: 'native/dist/styled-components.native.browser.esm.js',
-    }),
-  ],
-  plugins: [
-    ...nativeBasePlugins,
-    replace({
-      __SERVER__: JSON.stringify(false),
-      __NATIVE__: JSON.stringify(true),
-      __NATIVE_WEB__: JSON.stringify(true),
-      __DEV__: "process.env.NODE_ENV !== 'production'",
-    }),
-    minifierPlugin,
-  ],
-};
-
 const pluginsConfig = {
   ...configBase,
   input: './src/plugins/index.ts',
@@ -355,7 +330,6 @@ export default [
   serverConfig,
   browserConfig,
   nativeConfig,
-  nativeWebConfig,
   pluginsConfig,
   reanimatedConfig,
   webBridgeConfig,

@@ -20,7 +20,7 @@
     "wpt:extract": "node src/parser/wpt-corpus/scripts/extract.mjs",
     "wpt:refresh": "pnpm run wpt:fetch && pnpm run wpt:extract",
     "typecheck": "tsc --noEmit",
-    "prebuild": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && pnpm run generateErrors && pnpm run typecheck",
+    "prebuild": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true}); require('fs').rmSync('native/dist',{recursive:true,force:true})\" && pnpm run generateErrors && pnpm run typecheck",
     "build": "rollup -c",
     "postbuild": "pnpm run test:build",
     "test:build": "jest -c jest.config.build.js",

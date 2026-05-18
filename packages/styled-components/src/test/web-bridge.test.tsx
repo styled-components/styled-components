@@ -299,6 +299,51 @@ describe('rn-web bridge: web-native primitives and arbitrary components', () => 
   });
 });
 
+describe('rn-web bridge: baselines that match the native rn-web variant', () => {
+  it('opts the document into both color schemes so light-dark() and useColorScheme resolve', () => {
+    // Importing the bridge module set this at evaluation time; check it.
+    expect(document.documentElement.style.colorScheme).toBe('light dark');
+  });
+
+  it('declares cursor: pointer on Pressable so web affordance survives', () => {
+    const Btn = styled.Pressable`
+      background-color: gray;
+    `;
+    render(<Btn testID="cursor-probe" />);
+    const css = readAllCss();
+    expect(css).toMatch(/cursor:\s*pointer/);
+  });
+});
+
+describe('rn-web bridge: CSS surfaces that needed polyfills on native pass through to the browser', () => {
+  // The native rn-web variant lifts a set of CSS properties to React Native
+  // component props (numberOfLines from text-overflow, resizeMode from
+  // object-fit, etc.) because rn-web filters unknown style keys. On the
+  // bridge those styles go through the web pipeline → CSSOM, so the
+  // browser sees the spec property names directly.
+  const surfaces: ReadonlyArray<[string, string, RegExp]> = [
+    ['text-overflow', 'text-overflow: ellipsis; white-space: nowrap;', /text-overflow:\s*ellipsis/],
+    ['object-fit', 'object-fit: cover;', /object-fit:\s*cover/],
+    ['overscroll-behavior', 'overscroll-behavior: contain;', /overscroll-behavior:\s*contain/],
+    ['scrollbar-width', 'scrollbar-width: thin;', /scrollbar-width:\s*thin/],
+    ['accent-color', 'accent-color: rgb(20, 30, 40);', /accent-color:\s*rgb\(20,\s*30,\s*40\)/],
+    ['caret-color', 'caret-color: rgb(50, 60, 70);', /caret-color:\s*rgb\(50,\s*60,\s*70\)/],
+    ['hyphens', 'hyphens: auto;', /hyphens:\s*auto/],
+    ['pointer-events', 'pointer-events: none;', /pointer-events:\s*none/],
+    ['text-wrap', 'text-wrap: balance;', /text-wrap:\s*balance/],
+    ['field-sizing', 'field-sizing: content;', /field-sizing:\s*content/],
+  ];
+  for (const [name, decl, expected] of surfaces) {
+    it(`emits ${name} declarations through to the CSSOM`, () => {
+      const Box = styled.View`
+        ${decl}
+      `;
+      render(<Box testID={`probe-${name}`} />);
+      expect(readAllCss()).toMatch(expected);
+    });
+  }
+});
+
 describe('rn-web bridge: createTheme integration', () => {
   // The bridge unblocks the createTheme native unification spike from
   // 2026-05-18: with the bridge, themes go through the web pipeline so
