@@ -286,7 +286,9 @@ describe('bundle size', () => {
     // Bumped from 15kB after the arity-2 attrs feature shipped (CompiledAst
     // pop/peek): adds ~0.7kB of always-shipped trace + runtime-fallback
     // scaffolding. Worth it for the third-party-component bridge ergonomics.
-    expect(sizeKB).toBeLessThan(15.2);
+    // Bumped again for the fragment-slot missing-`;` recovery in the parser
+    // (~0.1kB of charCode imports + the cssProduct structure check).
+    expect(sizeKB).toBeLessThan(15.4);
   });
 
   it('production bundle size with real bundler tree-shaking', async () => {
@@ -358,8 +360,8 @@ describe('bundle size', () => {
       // sentinel-shaped byte patterns. Plus arity-2 attrs (CompiledAst
       // pop/peek) trace + runtime-fallback scaffolding: ~0.6kB. Net
       // ~2.5kB above v6.4.1 baseline after scanQP/isWS scan-primitive
-      // unification.
-      expect(sizeKB).toBeLessThan(14.0);
+      // unification. Plus fragment-slot missing-`;` recovery: ~0.1kB.
+      expect(sizeKB).toBeLessThan(14.2);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
@@ -419,7 +421,8 @@ describe('bundle size', () => {
       // scaffolding (Source-everywhere, AST-direct emit, fragment splicing,
       // shared `warnOnce` + `[sc]` taxonomy) plus the arity-2 attrs
       // bridge (CompiledAst trace + runtime fallback) for net ~2.5kB.
-      expect(sizeKB).toBeLessThan(14.0);
+      // Plus fragment-slot missing-`;` recovery: ~0.1kB.
+      expect(sizeKB).toBeLessThan(14.2);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }

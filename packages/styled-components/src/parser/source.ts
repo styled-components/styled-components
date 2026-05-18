@@ -3,14 +3,17 @@ import {
   ASTERISK,
   CLOSE_BRACE,
   COLON,
+  COMMA,
   DOT,
   GT,
   HASH,
   isWS,
   OPEN_BRACE,
   OPEN_BRACKET,
+  OPEN_PAREN,
   PLUS,
   SEMICOLON,
+  SLASH,
   TILDE,
 } from '../utils/charCodes';
 import type { RuleSet } from '../types';
@@ -92,7 +95,7 @@ export function parseSource(
   interpolations: ReadonlyArray<unknown>,
   options?: ParseOptions
 ): Source {
-  const css = interleaveWithSentinels(strings, interpolations.length);
+  const css = interleaveWithSentinels(strings, interpolations);
   const preprocessed = normalize(css);
   // `templates: true` widens the parse() return type to
   // `Root<string | TemplateValue>` since `interleaveWithSentinels` may
@@ -280,8 +283,15 @@ type SourceSlot = [
  *  `Object.getOwnPropertySymbols`, so the slot is invisible to typical
  *  consumers (iteration, spread, JSON, for..in). */
 const SOURCE_SLOT: unique symbol = Symbol('sc.source');
+/** Memoizes `shouldRecoverFragmentSlot`'s scan of the fragment's source
+ *  strings. A `css\`\`` product reused across many outer templates only
+ *  needs the scan once. */
+const BLOCK_LIKE: unique symbol = Symbol('sc.blocklike');
 
-type RulesWithSlot = ReadonlyArray<unknown> & { [SOURCE_SLOT]?: SourceSlot };
+type RulesWithSlot = ReadonlyArray<unknown> & {
+  [SOURCE_SLOT]?: SourceSlot;
+  [BLOCK_LIKE]?: boolean;
+};
 
 /**
  * Record a `RuleSet`'s template inputs. The `Source` is lazily produced on
@@ -386,7 +396,11 @@ export function concatSourceInputs(
   return combinedRules;
 }
 
-function interleaveWithSentinels(strings: ReadonlyArray<string>, count: number): string {
+function interleaveWithSentinels(
+  strings: ReadonlyArray<string>,
+  interpolations: ReadonlyArray<unknown>
+): string {
+  const count = interpolations.length;
   if (count === 0) return strings.length > 0 ? strings[0] : '';
 
   let prevWasStandalone = true; // start of input is a statement boundary
@@ -394,7 +408,17 @@ function interleaveWithSentinels(strings: ReadonlyArray<string>, count: number):
   for (let i = 0; i < count; i++) {
     const prefix = strings[i] || '';
     const suffix = strings[i + 1] || '';
-    const standalone = isStandaloneSlot(prefix, suffix, prevWasStandalone);
+    let standalone = isStandaloneSlot(prefix, suffix, prevWasStandalone);
+    if (!standalone && shouldRecoverFragmentSlot(prefix, interpolations[i])) {
+      // User forgot a `;` before what is clearly a block-style fragment
+      // (its source carries top-level `;`/`{`/`}`). Inject the missing
+      // terminator and promote the slot to standalone so the pending
+      // decl closes instead of swallowing the fragment as part of its
+      // value. Value-position fragments (prefix ends in `:`, `,`, `(`,
+      // `/`) are out of scope.
+      out += ';';
+      standalone = true;
+    }
     out += standalone ? '\0J' : '\0I';
     out += i;
     out += '\0';
@@ -402,6 +426,39 @@ function interleaveWithSentinels(strings: ReadonlyArray<string>, count: number):
     prevWasStandalone = standalone;
   }
   return out;
+}
+
+/**
+ * Return `true` when an embedded-classified slot should be flipped to
+ * standalone with a `;` injected before its sentinel. Triggers only
+ * when the interpolation is a `css\`...\`` fragment whose source
+ * strings carry top-level `;`/`{`/`}` (so it can't be just a value)
+ * AND the prefix does not end in a value-continuation character
+ * (`:` `,` `(` `/`).
+ */
+function shouldRecoverFragmentSlot(prefix: string, interpolation: unknown): boolean {
+  const last = nonWsCharCode(prefix, prefix.length - 1, -1);
+  if (last === COLON || last === COMMA || last === OPEN_PAREN || last === SLASH) return false;
+  if (!Array.isArray(interpolation)) return false;
+  const slot = (interpolation as RulesWithSlot)[SOURCE_SLOT];
+  if (slot === undefined) return false;
+  const cached = (interpolation as RulesWithSlot)[BLOCK_LIKE];
+  if (cached !== undefined) return cached;
+  const strings = slot[2] !== null ? slot[2].strings : slot[0];
+  if (strings === null) return false;
+  let blockLike = false;
+  outer: for (let i = 0; i < strings.length; i++) {
+    const s = strings[i];
+    for (let j = 0; j < s.length; j++) {
+      const c = s.charCodeAt(j);
+      if (c === SEMICOLON || c === OPEN_BRACE || c === CLOSE_BRACE) {
+        blockLike = true;
+        break outer;
+      }
+    }
+  }
+  (interpolation as unknown as { [BLOCK_LIKE]: boolean })[BLOCK_LIKE] = blockLike;
+  return blockLike;
 }
 
 /**
