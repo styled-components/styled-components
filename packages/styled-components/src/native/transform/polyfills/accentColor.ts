@@ -4,26 +4,15 @@ import { register } from '../shorthands';
 import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
 import { staticColorFunctionToHex } from './colorMath';
-import { getSystemColorPlatformColor, isCssSystemColorKeyword } from './systemColors';
+import { getSystemColorPlatformColor } from './systemColors';
 
-/**
- * Fold a color token to a value rn-web's track-color pipeline accepts.
- * rn-web's `normalizeColor` only understands hex, rgb/rgba, hsl, named
- * keywords, `currentcolor` / `inherit`, and anything starting with
- * `var(`. Modern color functions (`oklch`, `color-mix`, `lab`, `lch`)
- * fall through and get dropped, so we fold them to a hex statically.
- * CSS system color keywords (`LinkText`, `Canvas`, ...) ride through
- * via `var(--unset, <keyword>)` so the browser resolves them
- * dynamically against the OS theme.
- */
+// rn-web's track-color pipeline rejects modern color functions; fold them
+// to hex up front. Other token kinds reuse `colorTokenToRnStyleValue`,
+// which already handles the system-keyword var() wrap.
 function foldForRnWebTrackColor(tok: Token): string | null {
-  if (tok.kind === TokenKind.Hash) return tok.raw;
-  if (tok.kind === TokenKind.Ident) {
-    if (isCssSystemColorKeyword(tok.name!)) return `var(--unset, ${tok.raw})`;
-    return tok.raw;
-  }
-  if (tok.kind === TokenKind.Function) {
-    return staticColorFunctionToHex(tok);
+  if (tok.kind === TokenKind.Function) return staticColorFunctionToHex(tok);
+  if (tok.kind === TokenKind.Hash || tok.kind === TokenKind.Ident) {
+    return colorTokenToRnStyleValue(tok) as string;
   }
   return null;
 }
@@ -46,17 +35,13 @@ function accentColorHandler(tokens: Token[]): Dict<any> | null {
 
   const colorTok = consumeColor(stream);
   if (colorTok === null || !stream.eof()) return null;
-  // rn-web's Switch renders its visible track via overlaid Views, not
-  // the underlying <input type="checkbox">, so CSS `accent-color`
-  // alone doesn't tint the visible surface. Lift `trackColor.true` on
-  // both paths, routing modern color functions and system keywords
-  // through values rn-web's color pipeline accepts.
+  // rn-web's Switch paints its visible track via overlaid Views (not the
+  // underlying <input>), so CSS `accent-color` alone doesn't tint it.
+  // Lift `trackColor.true` on both paths, routing through values rn-web's
+  // color pipeline accepts.
   if (__NATIVE_WEB__) {
+    const cssAccent = colorTokenToRnStyleValue(colorTok) as string;
     const folded = foldForRnWebTrackColor(colorTok);
-    const cssAccent =
-      colorTok.kind === TokenKind.Ident && isCssSystemColorKeyword(colorTok.name!)
-        ? `var(--unset, ${colorTok.raw})`
-        : colorTok.raw;
     if (folded === null) return { accentColor: cssAccent };
     return { accentColor: cssAccent, trackColor: { true: folded } };
   }

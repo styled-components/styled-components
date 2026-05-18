@@ -115,18 +115,24 @@ const DEPRECATED_SYSTEM_COLOR_ALIAS: Record<string, string> = {
   windowtext: 'canvastext',
 };
 
+const ALL_SYSTEM_COLOR_KEYS: ReadonlySet<string> = new Set([
+  ...Object.keys(SYSTEM_COLOR_LITERAL),
+  ...Object.keys(IOS_SYSTEM_COLOR_LITERAL),
+  ...Object.keys(ANDROID_SYSTEM_COLOR_LITERAL),
+  ...Object.keys(SYSTEM_COLOR_PLATFORM),
+  ...Object.keys(IOS_SYSTEM_COLOR_PLATFORM),
+  ...Object.keys(ANDROID_SYSTEM_COLOR_PLATFORM),
+  ...Object.keys(DEPRECATED_SYSTEM_COLOR_ALIAS),
+]);
+
 /** True for CSS system color identifiers and deprecated Appendix A aliases (ASCII case-insensitive). */
 export function isCssSystemColorKeyword(ident: string): boolean {
-  const key = ident.toLowerCase();
-  const canonical = DEPRECATED_SYSTEM_COLOR_ALIAS[key] ?? key;
-  return (
-    canonical in SYSTEM_COLOR_LITERAL ||
-    canonical in IOS_SYSTEM_COLOR_LITERAL ||
-    canonical in ANDROID_SYSTEM_COLOR_LITERAL ||
-    canonical in SYSTEM_COLOR_PLATFORM ||
-    canonical in IOS_SYSTEM_COLOR_PLATFORM ||
-    canonical in ANDROID_SYSTEM_COLOR_PLATFORM
-  );
+  return ALL_SYSTEM_COLOR_KEYS.has(ident.toLowerCase());
+}
+
+/** Wrap a system-color keyword in `var(--unset, kw)` so rn-web's color allowlist forwards it to CSS. */
+export function wrapSystemColorForRnWeb(keyword: string): string {
+  return 'var(--unset, ' + keyword + ')';
 }
 
 export function getSystemColorPlatformColor(keyword: string): unknown | null {

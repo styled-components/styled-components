@@ -97,19 +97,11 @@ const styled = baseStyled as typeof baseStyled & {
   [E in KnownComponents]: Styled<'native', RNComponents[E], React.ComponentProps<RNComponents[E]>>;
 };
 
-// ScrollView baseline. iOS / Android RN's ScrollView ships with
-// `flex-shrink: 1`, inconsistent with View (`flex-shrink: 0`). In
-// flex-row/flex-column parents, that default silently overrides explicit
-// `width:` / `height:` declarations and surprises consumers. Applying
-// `flex-shrink: 0` as a baseline makes explicit dimensions pin reliably;
-// user CSS can still override by declaring `flex-shrink:` in their own
-// template.
-//
-// rn-web is the opposite: rn-web's ScrollView depends on `flex-shrink: 1`
-// to shrink within a constrained parent so its content overflow becomes
-// scrollable. Pinning `flex-shrink: 0` there would let the ScrollView
-// grow to its content size and overflow the parent (items burst out of
-// the scroll box). Skip the baseline on the rn-web bundle.
+// ScrollView baseline. Native ships `flex-shrink: 1` (vs View's `0`);
+// pin to `0` so explicit `width:` / `height:` declarations aren't
+// silently overridden in flex parents. rn-web depends on `flex-shrink: 1`
+// to make content scrollable within a constrained parent, so the
+// baseline is omitted there.
 let cachedScrollViewBase: NativeTarget | undefined;
 function getScrollViewBase(): NativeTarget {
   if (cachedScrollViewBase) return cachedScrollViewBase;

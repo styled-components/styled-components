@@ -1,5 +1,9 @@
 import { Dict } from '../../types';
-import { getSystemColorPlatformColor, isCssSystemColorKeyword } from './polyfills/systemColors';
+import {
+  getSystemColorPlatformColor,
+  isCssSystemColorKeyword,
+  wrapSystemColorForRnWeb,
+} from './polyfills/systemColors';
 import { Token, TokenKind } from './tokens';
 import { tokenize } from './tokenize';
 import { TokenStream } from './tokenStream';
@@ -109,13 +113,7 @@ export function colorTokenToRnStyleValue(t: Token): unknown {
 /** Same as {@link colorTokenToRnStyleValue} for raw declaration substrings. */
 export function cssColorRawToRnStyleValue(raw: string): unknown {
   if (__NATIVE_WEB__) {
-    // rn-web's `normalizeColor` drops CSS system color keywords
-    // (`LinkText`, `Canvas`, etc.) because they aren't in the
-    // RN color table. Wrap them in `var(--unset, <keyword>)` so the
-    // value flows through rn-web's `isWebColor` (matches the `var(`
-    // prefix) and reaches CSS verbatim; the browser then resolves
-    // the var() fallback to the system color.
-    return isCssSystemColorKeyword(raw) ? `var(--unset, ${raw})` : raw;
+    return isCssSystemColorKeyword(raw) ? wrapSystemColorForRnWeb(raw) : raw;
   }
   const folded = getSystemColorPlatformColor(raw);
   return folded !== null ? folded : raw;
