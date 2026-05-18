@@ -54,12 +54,18 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
         const compiled = toNativeStyles(this.staticCSS, styleSheet);
         this.staticCompiled = compiled;
         // Static rendering is hookless, so cascade publishers and live outputs
-        // must stay on the dynamic path.
+        // must stay on the dynamic path. Custom property declarations and
+        // var() references publish / consume cascade values, so they also
+        // disqualify a component from the hookless static fast path.
         this.staticEligible =
           !hasResponsiveOutput(compiled) &&
           compiled.startingStyle === undefined &&
           compiled.animations === undefined &&
           compiled.transitions === undefined &&
+          compiled.customProperties === undefined &&
+          compiled.varDeferred === undefined &&
+          compiled.important === undefined &&
+          compiled.importantResolvers === undefined &&
           !hasCascadeKey(compiled.base);
       }
     }

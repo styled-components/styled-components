@@ -16,9 +16,9 @@ import {
 } from '../parser/ast';
 import { classifyAtRuleNow, classifyRuleNow } from '../parser/nativePlan';
 import { camelize, transformDecl } from '../native/transform';
-import { warnIfSentinelLeak, warnOnce } from '../native/transform/dev';
+import { warnIfNativeCssVar, warnIfSentinelLeak, warnOnce } from '../native/transform/dev';
 import { getPrimaryPassthroughKey } from '../native/transform/passthrough';
-import { buildResolver, Resolver } from '../native/transform/polyfills/resolvers';
+import { buildResolver, Resolver, substituteVars } from '../native/transform/polyfills/resolvers';
 import { PERSPECTIVE_SENTINEL_KEY } from '../native/transform/polyfills/standaloneTransform';
 import {
   ANIMATION_LONGHAND_KEYS,
@@ -33,6 +33,7 @@ import { parse } from '../parser/parser';
 import { Dict, StyleSheet } from '../types';
 import { normalize } from '../utils/normalize';
 import { fifoSet } from '../utils/fifoMap';
+import { isWS, UPPER_TO_LOWER } from '../utils/charCodes';
 
 export const RN_UNSUPPORTED_VALUES = ['fit-content', 'min-content', 'max-content'];
 
@@ -110,6 +111,15 @@ export interface ConditionalStyle {
    * bucket's condition matches.
    */
   resolvers?: Array<[string, Resolver]>;
+  /**
+   * CSS Cascade L4 §6.2: declarations marked `!important` are tracked
+   * separately so they can be layered AFTER all normal declarations
+   * (including any later bucket's normal values) at render time. Only
+   * set when the bucket carries at least one `!important` decl.
+   */
+  important?: Dict<any>;
+  /** Render-time resolvers attached to `important` declarations. */
+  importantResolvers?: Array<[string, Resolver]>;
 }
 
 /** Partition slice for {@link NativeStyles.nonPseudoEntries}: never `type: 'pseudo'`. */
@@ -257,6 +267,32 @@ export interface NativeStyles {
    * cascade keys is a `style={{ fontSize: ... }}` prop).
    */
   publishesCascade: boolean;
+  /**
+   * CSS custom property declarations (`--name: value;`) collected from
+   * the base styles. Published to descendants via NativeStyleContext so
+   * a child's `var(--name)` references resolve through the cascade. Set
+   * only when at least one `--xxx` decl appears; rn-web leaves these in
+   * the base so the browser's own cascade handles them.
+   */
+  customProperties?: ReadonlyMap<string, string>;
+  /**
+   * CSS Cascade L4 §6.2 — declarations marked `!important` are tracked
+   * separately so they can be overlayed AFTER all normal merging
+   * (including matched conditional buckets) at render time. `important`
+   * is the resolver-stripped static partial; `importantResolvers` holds
+   * the per-key render-time resolvers for important declarations.
+   * Within-component cascade only; cross-component is out of scope.
+   */
+  important?: Dict<any>;
+  importantResolvers?: Array<[string, Resolver]>;
+  /**
+   * Declarations whose raw value contains a `var(--name)` reference,
+   * deferred from `transformDecl` so the runtime can substitute against
+   * the inherited custom-property map and then re-tokenize the result
+   * (preserving shorthand expansion of the substituted text). Each
+   * entry is `[prop, rawValue]` exactly as authored.
+   */
+  varDeferred?: ReadonlyArray<readonly [string, string, boolean]>;
 }
 
 /**
@@ -411,6 +447,8 @@ export function hasResponsiveOutput(compiled: NativeStyles): boolean {
   return (
     compiled.conditional.length > 0 ||
     compiled.resolvers !== undefined ||
+    compiled.important !== undefined ||
+    compiled.importantResolvers !== undefined ||
     compiled.fieldSizing === 'content'
   );
 }
@@ -480,7 +518,21 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
     raw: baseRaw,
     base: resolvedBase,
     resolvers,
-  } = baseDecls.length > 0 ? processDecls(baseDecls) : { raw: {}, base: {}, resolvers: [] };
+    important,
+    importantResolvers,
+    customProperties,
+    varDeferred,
+  } = baseDecls.length > 0
+    ? processDecls(baseDecls)
+    : {
+        raw: {},
+        base: {},
+        resolvers: [],
+        important: null as Dict<any> | null,
+        importantResolvers: null as Array<[string, Resolver]> | null,
+        customProperties: null as Map<string, string> | null,
+        varDeferred: null as Array<[string, string, boolean]> | null,
+      };
   const specialCases = extractSpecialCases(resolvedBase);
   const animations = extractAnimations(resolvedBase);
   const transitions = extractTransitions(resolvedBase);
@@ -558,6 +610,12 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   if (resolvers.length > 0) {
     out.resolvers = resolvers;
   }
+  if (important !== null) out.important = important;
+  if (importantResolvers !== null && importantResolvers.length > 0) {
+    out.importantResolvers = importantResolvers;
+  }
+  if (customProperties !== null) out.customProperties = customProperties;
+  if (varDeferred !== null && varDeferred.length > 0) out.varDeferred = varDeferred;
   if (containerInfo !== null) out.containerInfo = containerInfo;
   if (fieldSizing !== null) out.fieldSizing = fieldSizing;
   out.publishesCascade = computePublishesCascade(out);
@@ -886,20 +944,173 @@ function hasOwnKeys(o: object): boolean {
  * - `resolvers` is the per-key resolver list; the render path applies
  *   each against the active `ResolveEnv` and overlays onto `base`.
  */
+// `important` lowercase char codes for the case-insensitive tail compare.
+const IMPORTANT_LOWER = [0x69, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x61, 0x6e, 0x74];
+
+/**
+ * Locate the `!` delimiter of a trailing `!important` annotation. Per
+ * CSS Syntax 3 §4.2, the `!` and the `important` ident are separate
+ * tokens with optional whitespace (and comments — pre-stripped) between
+ * them. Returns the index of `!`, or `-1` when the value does not end
+ * in `!important`. Case-insensitive on the ident, no allocation.
+ */
+function findImportantStart(value: string): number {
+  let end = value.length;
+  while (end > 0 && isWS(value.charCodeAt(end - 1))) end--;
+  if (end < 9) return -1;
+  for (let k = 0; k < 9; k++) {
+    let c = value.charCodeAt(end - 9 + k);
+    if (c >= 0x41 && c <= 0x5a) c += UPPER_TO_LOWER;
+    if (c !== IMPORTANT_LOWER[k]) return -1;
+  }
+  // Skip any whitespace between `!` and `important`.
+  let bangPos = end - 10;
+  while (bangPos >= 0 && isWS(value.charCodeAt(bangPos))) bangPos--;
+  if (bangPos < 0 || value.charCodeAt(bangPos) !== 0x21) return -1;
+  return bangPos;
+}
+
+/**
+ * Strip a trailing `!important` annotation (and surrounding whitespace)
+ * plus trim leading/trailing whitespace. Returns the original `value`
+ * reference when no change is needed.
+ */
+function stripImportant(value: string): string {
+  const bangPos = findImportantStart(value);
+  let end;
+  if (bangPos !== -1) {
+    end = bangPos;
+    while (end > 0 && isWS(value.charCodeAt(end - 1))) end--;
+  } else {
+    end = value.length;
+    while (end > 0 && isWS(value.charCodeAt(end - 1))) end--;
+  }
+  let start = 0;
+  while (start < end && isWS(value.charCodeAt(start))) start++;
+  return start === 0 && end === value.length ? value : value.substring(start, end);
+}
+
+/**
+ * Quote-aware scan for a `var(--` token. Skips occurrences inside
+ * `'...'` or `"..."` strings (CSS Syntax 3 §4.3.4 / §4.3.5). The
+ * unquoted scan keeps a literal `var(--brand)` substring inside a
+ * value like `content: "var(--brand)"` from being mistakenly deferred
+ * and rewritten through the cascade.
+ */
+function hasUnquotedVarRef(value: string): boolean {
+  const len = value.length;
+  if (len < 7) return false;
+  // Coarse fast path: if there is no `var(--` anywhere (including inside
+  // quotes), there is certainly no UNQUOTED `var(--`. Skips the per-char
+  // quote-tracking walk for the overwhelmingly common case of values
+  // without var references.
+  const firstHit = value.indexOf('var(--');
+  if (firstHit === -1) return false;
+  // No quote characters before the hit means the first var(--) is
+  // already unquoted — no need to track string state.
+  if (value.lastIndexOf('"', firstHit) === -1 && value.lastIndexOf("'", firstHit) === -1) {
+    return true;
+  }
+  let i = 0;
+  while (i < len) {
+    const c = value.charCodeAt(i);
+    if (c === 0x22 || c === 0x27) {
+      const quote = c;
+      i++;
+      while (i < len) {
+        const d = value.charCodeAt(i);
+        if (d === 0x5c) {
+          // Backslash escape: skip the next char regardless of what it is.
+          i += 2;
+          continue;
+        }
+        if (d === quote) {
+          i++;
+          break;
+        }
+        i++;
+      }
+      continue;
+    }
+    if (
+      c === 0x76 && // v
+      i + 5 < len &&
+      value.charCodeAt(i + 1) === 0x61 && // a
+      value.charCodeAt(i + 2) === 0x72 && // r
+      value.charCodeAt(i + 3) === 0x28 && // (
+      value.charCodeAt(i + 4) === 0x2d && // -
+      value.charCodeAt(i + 5) === 0x2d // -
+    ) {
+      return true;
+    }
+    i++;
+  }
+  return false;
+}
+
 function processDecls(decls: StaticDeclNode[]): {
   raw: Dict<any>;
   base: Dict<any>;
   resolvers: Array<[string, Resolver]>;
+  important: Dict<any> | null;
+  importantResolvers: Array<[string, Resolver]> | null;
+  customProperties: Map<string, string> | null;
+  varDeferred: Array<[string, string, boolean]> | null;
 } {
   const raw: Dict<any> = {};
   const base: Dict<any> = {};
   const resolvers: Array<[string, Resolver]> = [];
+  let important: Dict<any> | null = null;
+  let importantResolvers: Array<[string, Resolver]> | null = null;
+  let customProperties: Map<string, string> | null = null;
+  let varDeferred: Array<[string, string, boolean]> | null = null;
   for (let i = 0; i < decls.length; i++) {
     const decl = decls[i];
     let partial: Record<string, any>;
-    const { prop, value } = decl;
+    const { prop } = decl;
+    let { value } = decl;
+    if (!__NATIVE_WEB__ && prop.charCodeAt(0) === 0x2d && prop.charCodeAt(1) === 0x2d) {
+      // CSS Custom Properties L1 §2: `--name` is a custom property
+      // declaration. Bare `--` (length 2) is reserved for future use and
+      // must not be treated as a custom property; drop it silently so it
+      // never lands on the host element either.
+      if (prop.length === 2) continue;
+      // `initial` resets the custom property to the guaranteed-invalid
+      // value (§2.2 + §2 "CSS-wide keywords"). Strip a trailing
+      // `!important` per §2.1; the native cascade is order-based (nearer
+      // ancestor wins) so the importance marker has no further role and
+      // must not leak into the value passed to substituteVars.
+      const cleaned = stripImportant(value);
+      if (cleaned === 'initial') continue;
+      if (customProperties === null) customProperties = new Map();
+      customProperties.set(prop, cleaned);
+      continue;
+    }
+    // CSS Cascade L4 §6.2: detect `!important` on every regular decl.
+    // Stripping early lets cache keys (pairCache by (prop, strippedValue)
+    // / staticDeclCache by decl-node) reuse the partial across same-
+    // value normal + important decls without duplication.
+    const bangPos = !__NATIVE_WEB__ ? findImportantStart(value) : -1;
+    const isImportant = bangPos !== -1;
+    if (isImportant) {
+      value = stripImportant(value);
+    }
+    if (!__NATIVE_WEB__ && hasUnquotedVarRef(value)) {
+      // CSS Custom Properties L1 §3: var() substitutes a custom property
+      // value into the surrounding declaration. Defer to render time so
+      // the cascade map can supply the substitution; transformDecl reruns
+      // on the substituted text (with shorthand expansion intact).
+      // Quote-aware scan keeps a literal `var(--` inside a CSS string
+      // value (e.g. `content: "var(--brand)"`) from being mistakenly
+      // deferred and rewritten. The importance flag rides on the deferred
+      // tuple so the runtime can route to the important overlay.
+      if (varDeferred === null) varDeferred = [];
+      varDeferred.push([prop, value, isImportant]);
+      continue;
+    }
     if (decl[DYN] === true) {
       // Dynamic-decl path: pairCache (string-keyed, whole-flush eviction).
+      // Key on the stripped value so importance is metadata, not storage.
       let inner = pairCache.get(prop);
       const hit = inner !== undefined ? inner.get(value) : undefined;
       if (hit !== undefined) {
@@ -919,7 +1130,10 @@ function processDecls(decls: StaticDeclNode[]): {
         pairCacheSize++;
       }
     } else {
-      // Static-decl path: per-node WeakMap, primed lazily.
+      // Static-decl path: per-node WeakMap, primed lazily. Cache the
+      // partial for the STRIPPED value so two decl nodes (one important,
+      // one normal) with the same authored value share the partial.
+      // Important is then layered separately via the routing below.
       const cached = staticDeclCache.get(decl);
       if (cached !== undefined) {
         partial = cached;
@@ -932,6 +1146,17 @@ function processDecls(decls: StaticDeclNode[]): {
       const v = partial[k];
       raw[k] = v;
       const r = buildResolver(v);
+      if (isImportant) {
+        if (important === null) important = {};
+        if (r !== null) {
+          if (importantResolvers === null) importantResolvers = [];
+          importantResolvers.push([k, r]);
+        } else {
+          if (__DEV__) warnIfSentinelLeak(k, v);
+          important[k] = v;
+        }
+        continue;
+      }
       if (r !== null) {
         resolvers.push([k, r]);
       } else {
@@ -947,7 +1172,49 @@ function processDecls(decls: StaticDeclNode[]): {
   // the post-merge fold is dead. Gate the call so terser can DCE both the
   // helper and the sentinel string on the rn-web bundle.
   if (!__NATIVE_WEB__) foldPerspectiveSentinel(raw, base);
-  return { raw, base, resolvers };
+  return { raw, base, resolvers, important, importantResolvers, customProperties, varDeferred };
+}
+
+/**
+ * Render-time companion to {@link buildResolver}. Walks every
+ * `[prop, rawValue]` pair in `compiled.varDeferred`, substitutes
+ * `var()` references against the cascade-published custom-property map,
+ * and re-runs `transformDecl` on the substituted text so shorthands
+ * expand exactly as if the substituted value had been authored
+ * literally. Returns the merged partial dict; the caller layers it on
+ * top of the static base before composing user style.
+ */
+export function applyVarDeferred(
+  varDeferred: ReadonlyArray<readonly [string, string, boolean?]>,
+  customProperties: ReadonlyMap<string, string> | null
+): { normal: Dict<any> | null; important: Dict<any> | null } {
+  let normal: Dict<any> | null = null;
+  let important: Dict<any> | null = null;
+  for (let i = 0; i < varDeferred.length; i++) {
+    const entry = varDeferred[i];
+    const prop = entry[0];
+    const rawValue = entry[1];
+    const isImportant = entry[2] === true;
+    const substituted = substituteVars(rawValue, customProperties);
+    if (substituted === null) {
+      if (__DEV__) warnIfNativeCssVar(prop, rawValue);
+      continue;
+    }
+    // CSS Variables L1 §2.2: a custom property whose substituted value is
+    // empty produces an empty value on the consuming property, which is
+    // invalid at computed-value time. Drop the decl rather than landing a
+    // bare `''` on the host element.
+    if (substituted === '' || substituted.trim() === '') continue;
+    const partial = transformDecl(prop, substituted);
+    if (isImportant) {
+      if (important === null) important = {};
+      for (const k in partial) important[k] = partial[k];
+    } else {
+      if (normal === null) normal = {};
+      for (const k in partial) normal[k] = partial[k];
+    }
+  }
+  return { normal, important };
 }
 
 /**
@@ -1026,6 +1293,10 @@ function walkRoot(
           // resolve at render time when the animation adapter applies
           // them.
           const decls = frame.children;
+          // @keyframes: per CSS Animations L1, `!important` inside keyframe
+          // bodies is invalid and must be ignored. processDecls strips it
+          // from the value, then routes to `important`; we drop that
+          // partial here so the frame ignores the marker entirely.
           const { base, resolvers } =
             decls.length > 0 ? processDecls(decls) : { base: {}, resolvers: [] };
           const out: {
@@ -1093,20 +1364,40 @@ function applyRuleClass(
   }
   const decls = collectDecls(node.children);
   if (decls.length === 0) return;
-  const { base, resolvers } = processDecls(decls);
+  const { base, resolvers, important, importantResolvers } = processDecls(decls);
 
   if (cls.kind === 'pseudo') {
-    pushBucket(conditional, base, resolvers, outer, cls.pseudo, undefined, cls.negate);
+    pushBucket(
+      conditional,
+      base,
+      resolvers,
+      important,
+      importantResolvers,
+      outer,
+      cls.pseudo,
+      undefined,
+      cls.negate
+    );
   } else if (cls.kind === 'pseudoFanOut') {
     for (let i = 0; i < cls.pseudos.length; i++) {
-      pushBucket(conditional, base, resolvers, outer, cls.pseudos[i], undefined, undefined);
+      pushBucket(
+        conditional,
+        base,
+        resolvers,
+        important,
+        importantResolvers,
+        outer,
+        cls.pseudos[i],
+        undefined,
+        undefined
+      );
     }
   } else if (cls.kind === 'combinator') {
-    pushCombinatorBucket(conditional, base, resolvers, outer, cls);
+    pushCombinatorBucket(conditional, base, resolvers, important, importantResolvers, outer, cls);
   } else if (cls.kind === 'nthChild') {
-    pushNthChildBucket(conditional, base, resolvers, outer, cls);
+    pushNthChildBucket(conditional, base, resolvers, important, importantResolvers, outer, cls);
   } else if (cls.kind === 'has') {
-    pushHasBucket(conditional, base, resolvers, outer, cls);
+    pushHasBucket(conditional, base, resolvers, important, importantResolvers, outer, cls);
   } else {
     // attr
     for (let i = 0; i < cls.selectors.length; i++) {
@@ -1114,6 +1405,8 @@ function applyRuleClass(
         conditional,
         base,
         resolvers,
+        important,
+        importantResolvers,
         outer,
         cls.selectors[i].pseudo,
         cls.selectors[i],
@@ -1133,6 +1426,8 @@ function pushNthChildBucket(
   conditional: ConditionalStyle[],
   base: Dict<any>,
   resolvers: Array<[string, Resolver]>,
+  important: Dict<any> | null,
+  importantResolvers: Array<[string, Resolver]> | null,
   outer:
     | {
         type: 'media' | 'container' | 'supports';
@@ -1152,6 +1447,9 @@ function pushNthChildBucket(
   if (cls.pseudo) entry.pseudo = cls.pseudo;
   if (cls.negate === true) entry.negate = true;
   if (resolvers.length > 0) entry.resolvers = resolvers;
+  if (important !== null) entry.important = important;
+  if (importantResolvers !== null && importantResolvers.length > 0)
+    entry.importantResolvers = importantResolvers;
   conditional.push(entry);
 }
 
@@ -1182,6 +1480,8 @@ function pushHasBucket(
   conditional: ConditionalStyle[],
   base: Dict<any>,
   resolvers: Array<[string, Resolver]>,
+  important: Dict<any> | null,
+  importantResolvers: Array<[string, Resolver]> | null,
   outer:
     | {
         type: 'media' | 'container' | 'supports';
@@ -1210,6 +1510,9 @@ function pushHasBucket(
   if (cls.pseudo) entry.pseudo = cls.pseudo;
   if (cls.negate === true) entry.negate = true;
   if (resolvers.length > 0) entry.resolvers = resolvers;
+  if (important !== null) entry.important = important;
+  if (importantResolvers !== null && importantResolvers.length > 0)
+    entry.importantResolvers = importantResolvers;
   conditional.push(entry);
 }
 
@@ -1228,6 +1531,8 @@ function pushCombinatorBucket(
   conditional: ConditionalStyle[],
   base: Dict<any>,
   resolvers: Array<[string, Resolver]>,
+  important: Dict<any> | null,
+  importantResolvers: Array<[string, Resolver]> | null,
   outer:
     | {
         type: 'media' | 'container' | 'supports';
@@ -1250,6 +1555,9 @@ function pushCombinatorBucket(
   };
   if (cls.pseudo) entry.pseudo = cls.pseudo;
   if (resolvers.length > 0) entry.resolvers = resolvers;
+  if (important !== null) entry.important = important;
+  if (importantResolvers !== null && importantResolvers.length > 0)
+    entry.importantResolvers = importantResolvers;
   conditional.push(entry);
 }
 
@@ -1263,6 +1571,8 @@ function pushBucket(
   conditional: ConditionalStyle[],
   base: Dict<any>,
   resolvers: Array<[string, Resolver]>,
+  important: Dict<any> | null,
+  importantResolvers: Array<[string, Resolver]> | null,
   outer:
     | {
         type: 'media' | 'container' | 'supports';
@@ -1298,6 +1608,9 @@ function pushBucket(
   if (negate === true) entry.negate = true;
   entry.styles = stripSpecialCasesFromConditional(base, entry);
   if (resolvers.length > 0) entry.resolvers = resolvers;
+  if (important !== null) entry.important = important;
+  if (importantResolvers !== null && importantResolvers.length > 0)
+    entry.importantResolvers = importantResolvers;
   conditional.push(entry);
 }
 
@@ -1363,7 +1676,7 @@ function handleAtRule(
     // Direct declarations inside the at-rule body apply to the component itself.
     const decls = collectDecls(node.children);
     if (decls.length > 0) {
-      const { base, resolvers } = processDecls(decls);
+      const { base, resolvers, important, importantResolvers } = processDecls(decls);
       const entry: ConditionalStyle = {
         type: outer.type,
         condition: outer.condition,
@@ -1372,6 +1685,9 @@ function handleAtRule(
       if (outer.containerName) entry.containerName = outer.containerName;
       entry.styles = stripSpecialCasesFromConditional(base, entry);
       if (resolvers.length > 0) entry.resolvers = resolvers;
+      if (important !== null) entry.important = important;
+      if (importantResolvers !== null && importantResolvers.length > 0)
+        entry.importantResolvers = importantResolvers;
       conditional.push(entry);
     }
 

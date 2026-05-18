@@ -69,7 +69,7 @@ import type {
   PseudoState,
 } from './compileNative';
 import type { NthOfBranch } from '../parser/ast';
-import { hasResponsiveOutput, SPECIAL_CASE_PROPS } from './compileNative';
+import { applyVarDeferred, hasResponsiveOutput, SPECIAL_CASE_PROPS } from './compileNative';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
 let _View: any;
@@ -369,6 +369,7 @@ function buildResolveEnv(
     fontSize: cascade.fontSize,
     lineHeight: cascade.lineHeight,
     direction: cascade.direction,
+    customProperties: cascade.customProperties ?? null,
   };
 }
 
@@ -412,7 +413,40 @@ function computePublishedCascade(
   ) {
     return inherited;
   }
-  return { fontSize, lineHeight, rootFontSize: inherited.rootFontSize, direction };
+  const next: NativeCascadeValues = {
+    fontSize,
+    lineHeight,
+    rootFontSize: inherited.rootFontSize,
+    direction,
+  };
+  if (inherited.customProperties !== undefined) next.customProperties = inherited.customProperties;
+  return next;
+}
+
+/**
+ * Merge own custom property declarations into the inherited cascade map.
+ * Returns the inherited reference unchanged when there is nothing to add,
+ * otherwise a fresh `NativeCascadeValues` with a merged `customProperties`
+ * Map (own keys win over inherited keys to match CSS cascade order).
+ */
+function mergeCustomPropertiesIntoCascade(
+  inherited: NativeCascadeValues,
+  own: ReadonlyMap<string, string> | undefined
+): NativeCascadeValues {
+  if (own === undefined || own.size === 0) return inherited;
+  const inheritedMap = inherited.customProperties;
+  const merged = new Map<string, string>();
+  if (inheritedMap !== undefined) {
+    inheritedMap.forEach((v, k) => merged.set(k, v));
+  }
+  own.forEach((v, k) => merged.set(k, v));
+  return {
+    fontSize: inherited.fontSize,
+    lineHeight: inherited.lineHeight,
+    rootFontSize: inherited.rootFontSize,
+    direction: inherited.direction,
+    customProperties: merged,
+  };
 }
 
 function collectCascadeSlots(style: any, slots: [unknown, unknown, unknown]): boolean {
@@ -471,6 +505,34 @@ function conditionMatches(
 // Pseudo-gated buckets are owned by the state callback; this walker
 // is fed a precomputed `nonPseudoEntries` subset from compileNative so
 // the per-render loop never iterates pseudo entries.
+interface MatchedLayers {
+  normal: object[];
+  /** Important overlay produced by matched buckets that carry an
+   *  `!important` declaration. Empty when no matched bucket flagged any
+   *  property; populated in source order so the later wins per CSS
+   *  Cascade L4 §6.2 ("an important declaration takes precedence"). */
+  important: object[];
+}
+
+const EMPTY_MATCHED: MatchedLayers = {
+  normal: EMPTY_ARRAY as unknown as object[],
+  important: EMPTY_ARRAY as unknown as object[],
+};
+
+function pushMatched(out: MatchedLayers, entry: ConditionalStyle, env: ResolveEnv): void {
+  out.normal.push(resolveBucket(entry, env));
+  if (entry.important !== undefined || entry.importantResolvers !== undefined) {
+    out.important.push(resolveImportantBucket(entry, env));
+  }
+}
+
+function resolveImportantBucket(entry: ConditionalStyle, env: ResolveEnv): object {
+  const imp = entry.important ?? EMPTY_OBJECT;
+  return entry.importantResolvers
+    ? applyResolvers(imp as Record<string, any>, entry.importantResolvers, env)
+    : imp;
+}
+
 function matchConditionals(
   entries: ConditionalStyle[],
   env: MediaQueryEnv,
@@ -478,35 +540,35 @@ function matchConditionals(
   props: Record<string, unknown>,
   resolveEnv: ResolveEnv,
   parentCtx: ParentContextValue
-): object[] {
-  const out: object[] = [];
+): MatchedLayers {
+  const out: MatchedLayers = { normal: [], important: [] };
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
     if (entry.type === 'attr') {
       const matches = attrMatches(entry, props);
-      if (entry.negate ? !matches : matches) out.push(resolveBucket(entry, resolveEnv));
+      if (entry.negate ? !matches : matches) pushMatched(out, entry, resolveEnv);
       continue;
     }
     if (entry.type === 'combinator') {
       if (!combinatorMatches(entry, parentCtx)) continue;
-      out.push(resolveBucket(entry, resolveEnv));
+      pushMatched(out, entry, resolveEnv);
       continue;
     }
     if (entry.type === 'nthChild') {
       const matches = nthChildMatches(entry, parentCtx);
-      if (entry.negate ? !matches : matches) out.push(resolveBucket(entry, resolveEnv));
+      if (entry.negate ? !matches : matches) pushMatched(out, entry, resolveEnv);
       continue;
     }
     if (entry.type === 'has') {
       const matches = hasMatches(entry, props.children as React.ReactNode);
-      if (entry.negate ? !matches : matches) out.push(resolveBucket(entry, resolveEnv));
+      if (entry.negate ? !matches : matches) pushMatched(out, entry, resolveEnv);
       continue;
     }
     // media / container / supports;optionally gated on attrs too
     // when the at-rule body contained a nested attribute selector.
     if (!conditionMatches(entry, env, containerCtx)) continue;
     if (entry.attrs && !attrMatches(entry, props)) continue;
-    out.push(resolveBucket(entry, resolveEnv));
+    pushMatched(out, entry, resolveEnv);
   }
   return out;
 }
@@ -802,17 +864,17 @@ function pseudoStylesForState(
   props: Record<string, unknown>,
   resolveEnv: ResolveEnv,
   parentCtx: ParentContextValue
-): object[] {
+): MatchedLayers {
   // Caller passes the precomputed `pseudoEntries` subset; every entry
   // is guaranteed pseudo-bearing (either `type==='pseudo'` or a
   // compound carrying `entry.pseudo`), so the inner branches skip the
   // membership re-check.
-  const out: object[] = [];
+  const out: MatchedLayers = { normal: [], important: [] };
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
     if (entry.type === 'pseudo') {
       const active = pseudoActive(entry.condition as PseudoState, state);
-      if (entry.negate ? !active : active) out.push(resolveBucket(entry, resolveEnv));
+      if (entry.negate ? !active : active) pushMatched(out, entry, resolveEnv);
       continue;
     }
     // Compound: entry.pseudo is guaranteed set here.
@@ -836,7 +898,7 @@ function pseudoStylesForState(
       // media / container / supports environmental gate.
       continue;
     }
-    out.push(resolveBucket(entry, resolveEnv));
+    pushMatched(out, entry, resolveEnv);
   }
   return out;
 }
@@ -1167,12 +1229,23 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
         effectiveBase = compiled.base;
       }
     }
-    resolveEnv = buildResolveEnv(
-      env,
-      containerCtx,
-      theme as Record<string, any>,
-      nativeStyleCtx.cascade
-    );
+    const renderCascade =
+      compiled.customProperties !== undefined
+        ? mergeCustomPropertiesIntoCascade(nativeStyleCtx.cascade, compiled.customProperties)
+        : nativeStyleCtx.cascade;
+    resolveEnv = buildResolveEnv(env, containerCtx, theme as Record<string, any>, renderCascade);
+    let varImportant: Dict<any> | undefined;
+    if (!__NATIVE_WEB__ && compiled.varDeferred !== undefined) {
+      const varOut = applyVarDeferred(compiled.varDeferred, renderCascade.customProperties ?? null);
+      if (varOut.normal !== null) {
+        if (effectiveBase === compiled.base) {
+          effectiveBase = { ...compiled.base, ...varOut.normal };
+        } else {
+          Object.assign(effectiveBase, varOut.normal);
+        }
+      }
+      if (varOut.important !== null) varImportant = varOut.important;
+    }
     const baseOverride = effectiveBase !== compiled.base ? effectiveBase : undefined;
     const baseComposed = hasResponsiveOutput(compiled)
       ? assembleFinalStyle(
@@ -1186,7 +1259,8 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
           props as Record<string, unknown>,
           baseOverride,
           nativeStyleCtx.cascade,
-          parentCtx
+          parentCtx,
+          varImportant
         )
       : composeBase(effectiveBase, props.style);
     composedStyle = injectAutoContainerName(
@@ -1277,10 +1351,18 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // keeps that function's IC monomorphic on its two-arg signature; an
   // earlier version that took a boolean third arg regressed the
   // must-walk path by ~25%.
+  // The cascade we publish to descendants reuses the merged cascade built
+  // for own var() resolution (above) so the same Map allocation backs both
+  // surfaces. When the component declares no custom properties the merge
+  // is a no-op and the inherited reference flows through.
+  const publishCascadeBase =
+    compiled.customProperties !== undefined
+      ? mergeCustomPropertiesIntoCascade(nativeStyleCtx.cascade, compiled.customProperties)
+      : nativeStyleCtx.cascade;
   const publishedCascade =
     compiled.publishesCascade || props.style != null
-      ? computePublishedCascade(nativeStyleCtx.cascade, composedStyle)
-      : nativeStyleCtx.cascade;
+      ? computePublishedCascade(publishCascadeBase, composedStyle)
+      : publishCascadeBase;
   const cascadeChanged = publishedCascade !== nativeStyleCtx.cascade;
 
   // Publish this component's identity to descendants so Tier 2
@@ -1783,7 +1865,8 @@ export function assembleFinalStyle(
   props: Record<string, unknown>,
   baseOverride?: Dict<any>,
   cascade: NativeCascadeValues = DEFAULT_CASCADE,
-  parentCtx: ParentContextValue = DEFAULT_PARENT_CONTEXT
+  parentCtx: ParentContextValue = DEFAULT_PARENT_CONTEXT,
+  varImportant?: Dict<any>
 ): any {
   // Patch around rn-web translation gaps before merging (no-op on native).
   // Function-form userStyle is normalized at call time inside the closures
@@ -1795,9 +1878,10 @@ export function assembleFinalStyle(
   const hasPseudoState = compiled.hasPseudo;
   const resolveEnv = buildResolveEnv(env, containerCtx, theme, cascade);
 
-  const activeConditional = hasConditional
+  const activeMatched: MatchedLayers = hasConditional
     ? matchConditionals(nonPseudoEntries, env, containerCtx, props, resolveEnv, parentCtx)
-    : EMPTY_ARRAY;
+    : EMPTY_MATCHED;
+  const activeConditional = activeMatched.normal;
 
   // Use post-attrs `effectiveBase` (clone with pops applied) when supplied;
   // otherwise the canonical compiled base.
@@ -1805,6 +1889,14 @@ export function assembleFinalStyle(
   const base = compiled.resolvers
     ? applyResolvers(sourceBase, compiled.resolvers, resolveEnv)
     : sourceBase;
+
+  // CSS Cascade L4 §6.2: important declarations win over normal ones.
+  // Build a per-render "important suffix" once and re-append it after
+  // the normal layers + user style so RN's array merge prefers it.
+  // The suffix carries the base !important values + resolver outputs +
+  // any var() deferred decls flagged important. The matched buckets'
+  // importants are appended per-state to keep state callbacks correct.
+  const baseImportantLayer = buildBaseImportantLayer(compiled, resolveEnv, varImportant);
 
   if (hasPseudoState) {
     const preStateStyles: object[] =
@@ -1820,7 +1912,7 @@ export function assembleFinalStyle(
         resolveEnv,
         parentCtx
       );
-      for (let i = 0; i < matched.length; i++) styles.push(matched[i]);
+      for (let i = 0; i < matched.normal.length; i++) styles.push(matched.normal[i]);
       if (isFunction(userStyle)) {
         const userResolved = normalizeStyleForWeb(userStyle(state));
         Array.isArray(userResolved)
@@ -1829,6 +1921,16 @@ export function assembleFinalStyle(
       } else if (userStyle) {
         Array.isArray(userStyle) ? styles.push.apply(styles, userStyle) : styles.push(userStyle);
       }
+      // Important overlay (after user style; beats it per CSS Cascade L4
+      // §6.2). Within importants, source-later wins: base first, then
+      // non-pseudo bucket importants (in their source order), then
+      // pseudo-bucket importants (effectively the latest layer because
+      // they're gated on runtime state).
+      if (baseImportantLayer !== null) styles.push(baseImportantLayer);
+      for (let i = 0; i < activeMatched.important.length; i++) {
+        styles.push(activeMatched.important[i]);
+      }
+      for (let i = 0; i < matched.important.length; i++) styles.push(matched.important[i]);
       return styles;
     };
   }
@@ -1836,17 +1938,77 @@ export function assembleFinalStyle(
   if (isFunction(userStyle)) {
     const preStateStyles: object[] =
       activeConditional.length > 0 ? [base as object].concat(activeConditional) : [base as object];
-    return (state: any) => preStateStyles.concat(normalizeStyleForWeb(userStyle(state)));
+    return (state: any) => {
+      const out: any[] = preStateStyles.concat(normalizeStyleForWeb(userStyle(state)));
+      if (baseImportantLayer !== null) out.push(baseImportantLayer);
+      for (let i = 0; i < activeMatched.important.length; i++) {
+        out.push(activeMatched.important[i]);
+      }
+      return out;
+    };
   }
+  const importantTail =
+    activeMatched.important.length > 0 || baseImportantLayer !== null
+      ? baseImportantLayer !== null
+        ? ([baseImportantLayer as object] as object[]).concat(activeMatched.important)
+        : activeMatched.important
+      : EMPTY_ARRAY;
   if (userStyle) {
+    if (importantTail.length > 0) {
+      return activeConditional.length > 0
+        ? [base as object].concat(activeConditional, [userStyle], importantTail)
+        : [base as object, userStyle].concat(importantTail);
+    }
     return activeConditional.length > 0
       ? [base as object].concat(activeConditional, userStyle)
       : [base as object, userStyle];
+  }
+  if (importantTail.length > 0) {
+    return activeConditional.length > 0
+      ? [base as object].concat(activeConditional, importantTail)
+      : [base as object].concat(importantTail);
   }
   if (activeConditional.length > 0) {
     return [base as object].concat(activeConditional);
   }
   return base;
+}
+
+/**
+ * Build the base-level important overlay layer that beats every normal
+ * declaration (including the user `style` prop). Returns `null` when
+ * the compiled output has no base important values, no important
+ * resolvers, and no var-deferred important partial.
+ */
+function buildBaseImportantLayer(
+  compiled: NativeStyles,
+  resolveEnv: ResolveEnv,
+  varImportant: Dict<any> | undefined
+): object | null {
+  const baseImp = compiled.important;
+  const impRes = compiled.importantResolvers;
+  if (baseImp === undefined && impRes === undefined && varImportant === undefined) {
+    return null;
+  }
+  let layer: Record<string, any>;
+  if (baseImp !== undefined && impRes !== undefined) {
+    layer = applyResolvers(baseImp as Record<string, any>, impRes, resolveEnv);
+  } else if (baseImp !== undefined) {
+    layer = baseImp as Record<string, any>;
+  } else if (impRes !== undefined) {
+    layer = applyResolvers({}, impRes, resolveEnv);
+  } else {
+    layer = {};
+  }
+  if (varImportant !== undefined) {
+    // Avoid mutating compiled.important (which is shared across renders);
+    // clone before merging the var-substituted important values in.
+    layer =
+      layer === compiled.important
+        ? { ...layer, ...varImportant }
+        : Object.assign(layer, varImportant);
+  }
+  return layer;
 }
 
 export default (NativeStyle: INativeStyleConstructor<any>) => {

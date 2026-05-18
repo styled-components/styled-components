@@ -43,9 +43,16 @@ describe('toNativeStyles', () => {
       expect(r.conditional).toEqual([]);
     });
 
-    it('preserves custom-property declarations', () => {
+    it('lifts custom-property declarations into the cascade map (not base)', () => {
       const r = compile('--brand: hotpink;');
-      expect(r.base).toEqual({ '--brand': 'hotpink' });
+      // CSS Custom Properties L1 §2: `--name` declarations publish to
+      // descendants through the cascade rather than landing on the host
+      // element. The render path threads `customProperties` through
+      // NativeStyleContext.cascade so child components' `var(--name)`
+      // references resolve.
+      expect(r.base).toEqual({});
+      expect(r.customProperties).toBeDefined();
+      expect(r.customProperties!.get('--brand')).toBe('hotpink');
     });
   });
 

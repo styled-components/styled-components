@@ -4,6 +4,7 @@ import {
   resetWarningsForTest,
   warnIfAndroidSkew,
   warnIfIosVerticalAlign,
+  warnIfNativeCssVar,
   warnIfSentinelLeak,
 } from '../dev';
 
@@ -228,6 +229,51 @@ describe('warnIfIosVerticalAlign', () => {
     warnIfIosVerticalAlign('bottom');
     warnIfIosVerticalAlign('bottom');
     expect(warnSpy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('warnIfNativeCssVar', () => {
+  let warnSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    resetWarningsForTest();
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  it('warns when a var() reference is unresolved at render time', () => {
+    warnIfNativeCssVar('color', 'var(--brand)');
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/var\(--brand\)/);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/Declare it on an ancestor/);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/createTheme/);
+  });
+
+  it('warns once per (prop, ref) pair', () => {
+    warnIfNativeCssVar('color', 'var(--brand)');
+    warnIfNativeCssVar('color', 'var(--brand)');
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('warns separately for different var() references', () => {
+    warnIfNativeCssVar('color', 'var(--brand)');
+    warnIfNativeCssVar('color', 'var(--accent)');
+    expect(warnSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('does NOT warn for declarations without var()', () => {
+    warnIfNativeCssVar('color', '#fff');
+    warnIfNativeCssVar('padding', '10px');
+    warnIfNativeCssVar('margin', '0 16px');
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('does NOT warn for createTheme sentinel values', () => {
+    warnIfNativeCssVar('color', '\0sc:colors.fg:#000');
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });
 

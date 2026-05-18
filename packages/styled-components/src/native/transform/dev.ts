@@ -113,6 +113,28 @@ export function warnIfSentinelLeak(prop: string, value: unknown): void {
   }
 }
 
+/**
+ * Warn when a `var(--name)` reference cannot be resolved against the
+ * inherited custom-property map AND no fallback was supplied. The native
+ * pipeline runs a CSS Variables L1-style cascade through
+ * `NativeStyleContext`, so an ancestor that declares the property OR a
+ * fallback argument both keep the declaration alive without warning. The
+ * call is gated at every site with `__DEV__ && !__NATIVE_WEB__`; the
+ * rn-web bundle defers `var()` to the browser, so this never fires there.
+ */
+export function warnIfNativeCssVar(prop: string, value: string): void {
+  if (!__DEV__) return;
+  const idx = value.indexOf('var(--');
+  if (idx === -1) return;
+  const end = value.indexOf(')', idx);
+  const ref = end === -1 ? value.substring(idx) : value.substring(idx, end + 1);
+  warnOnce(
+    'native-css-var-unresolved',
+    `\`${prop}: ${value}\` couldn't resolve ${ref}: no ancestor styled component declared it and no fallback was provided. Declare it on an ancestor (\`\${'--' + 'name'}: value;\`), pass a fallback (\`var(--name, default)\`), or use \`createTheme({ ... })\` for typed design tokens. See https://styled-components.com/docs/api#createtheme.`,
+    prop + ':' + ref
+  );
+}
+
 const SKEW_RE = /\bskew[XY]?\s*\(/;
 
 export function getReactNativePlatformOS(): string | undefined {
