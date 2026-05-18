@@ -7,6 +7,8 @@ import {
   getPassthroughKeys,
   isLayeredCommaProp,
   isMultiTokenPosition,
+  isValidLayeredBackgroundValue,
+  normalizeBackgroundPositionValue,
   substituteBackgroundSizeKeywordsForNative,
 } from './passthrough';
 import { staticColorFunctionToHex } from './polyfills/colorMath';
@@ -15,6 +17,9 @@ import { getSystemColorPlatformColor } from './polyfills/systemColors';
 import { getShorthand } from './shorthands';
 import { tokenize } from './tokenize';
 import { Token, TokenKind } from './tokens';
+import { maybeExpandBackgroundImageSystemColors } from './backgroundGradientNative';
+import { maybeExpandBoxShadowSystemColors } from './boxShadowSystemColors';
+import { maybeExpandFilterDropShadowSystemColors } from './filterSystemColors';
 import { coerceRawValue } from './units';
 
 /**
@@ -92,16 +97,18 @@ const VERTICAL_ALIGN_TO_ALIGN_CONTENT: Record<
 export function transformDecl(prop: string, rawValue: string): Dict<any> {
   const camel = camelize(prop);
 
-  // CSS Color 4 §6.2 system colors: a bare keyword (no whitespace, no
-  // parens, no comma) becomes an RN PlatformColor so iOS / Android
-  // resolve through native semantic colors. rn-web skips the expansion
-  // so the browser handles the system keyword natively (including
-  // forced-colors mode and high-contrast settings).
-  // Composite uses (`border: 1px solid Canvas`) aren't covered yet —
-  // they need parser-level token rewriting.
+  // System color keywords: a bare keyword (no whitespace, parens, comma)
+  // becomes an RN PlatformColor so native resolves through semantic colors.
+  // rn-web skips the expansion so the browser handles forced-colors mode and
+  // high-contrast settings natively. Composite shorthands fold the same
+  // keywords via `consumeColor` / `colorTokenToRnStyleValue`.
   if (
     !__NATIVE_WEB__ &&
     (camel === 'color' || camel.endsWith('Color')) &&
+    // `accentColor` is not a direct color prop on native; the polyfill
+    // lifts it onto `Switch.trackColor.true` and needs the keyword to
+    // reach its own handler intact.
+    camel !== 'accentColor' &&
     rawValue.length > 0 &&
     rawValue.indexOf(' ') === -1 &&
     rawValue.indexOf('(') === -1 &&
@@ -121,7 +128,18 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
         warnIfIosVerticalAlign(rawValue);
       }
     }
-    const value = isLayeredCommaProp(camel) ? collapseIdenticalCommas(rawValue) : rawValue;
+    if (!isValidLayeredBackgroundValue(camel, rawValue)) {
+      if (__DEV__) {
+        warnOnce(
+          'native-shorthand-parse',
+          `the value "${rawValue}" could not be parsed for property "${prop}". The declaration was ignored.`,
+          camel + ':' + rawValue
+        );
+      }
+      return {};
+    }
+    let value = isLayeredCommaProp(camel) ? collapseIdenticalCommas(rawValue) : rawValue;
+    if (camel === 'backgroundPosition') value = normalizeBackgroundPositionValue(value);
     if (passthroughKeys.length === 1) {
       // rn-web's `vertical-align` is baseline-only; emit `align-content`
       // for the box-positioning keywords so they reposition content
@@ -132,6 +150,18 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
         if (alignContent !== undefined) {
           return { verticalAlign: value, alignContent };
         }
+      }
+      if (camel === 'boxShadow') {
+        return { boxShadow: maybeExpandBoxShadowSystemColors(value) };
+      }
+      if (camel === 'filter') {
+        return { filter: maybeExpandFilterDropShadowSystemColors(value) };
+      }
+      // Mirror `direction` onto `writingDirection` on native so RN's Text
+      // honors the cascaded bidi value without the user setting the prop
+      // twice. rn-web defers to the browser.
+      if (camel === 'direction' && !__NATIVE_WEB__) {
+        return { direction: value, writingDirection: value };
       }
       return { [passthroughKeys[0]]: value };
     }
@@ -144,11 +174,21 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     // `backgroundPosition` skips the rn-web key when the value is
     // multi-token (rn-web's validator drops it anyway with a
     // console.error); see `isMultiTokenPosition`.
+    // Pre-fold gradient stops carrying system colors so RN's array form
+    // ships a PlatformColor object. rn-web keeps the raw string.
+    const nativeImage =
+      camel === 'backgroundImage' && !__NATIVE_WEB__
+        ? maybeExpandBackgroundImageSystemColors(value)
+        : value;
     const out: Dict<any> = {};
     const dropRnWebPosition = camel === 'backgroundPosition' && isMultiTokenPosition(value);
     for (let i = 0; i < passthroughKeys.length; i++) {
       const key = passthroughKeys[i];
       if (dropRnWebPosition && key === 'backgroundPosition') continue;
+      if (key === 'experimental_backgroundImage') {
+        out[key] = nativeImage;
+        continue;
+      }
       out[key] =
         key === 'experimental_backgroundSize'
           ? substituteBackgroundSizeKeywordsForNative(value)
@@ -226,7 +266,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
 
   // Polyfill: static math fn (`clamp` / `min` / `max` / `calc`) over
   // resolvable arms. Cheap prefix gate before tokenizing. rn-web skips
-  // the fold entirely — the browser parses these natively and rn-web's
+  // the fold entirely; the browser parses these natively and rn-web's
   // `normalizeValueWithProperty` passes string values through unchanged,
   // so the raw CSS expression reaches the CSS engine intact.
   if (!__NATIVE_WEB__ && mightBeMathFn(rawValue)) {
@@ -239,7 +279,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
 
   // Polyfill: static color fn (`oklch` / `oklab` / `lch` / `lab` /
   // `color-mix` / `color`) → hex. Same prefix-then-tokenize pattern. The
-  // fold runs on every host: rn-web's `normalizeColor` only recognises
+  // fold runs on every host: rn-web's `normalizeColor` only recognizes
   // hex / rgb / hsl / hwb (`@react-native/normalize-colors`), so the
   // modern function forms get stripped to `undefined` (transparent)
   // before the browser sees them. Folding to hex up front guarantees a
@@ -255,7 +295,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     // sentinel-bearing dynamics (theme tokens). Anything else here is
     // either relative-color syntax (`oklch(from red l c h)`), a
     // `calc()` with dynamic units in a channel (`sign(1em - 10px)`),
-    // or an unrecognised colorspace — none of which RN's normalizeColor
+    // or an unrecognized colorspace; none of which RN's normalizeColor
     // can interpret. Flag the value before it silently renders as
     // transparent. The dedupeSuffix is the value itself so repeat
     // declarations don't spam.
@@ -308,11 +348,9 @@ function hasUpperInPrefix(v: string, endExclusive: number): boolean {
 }
 
 function mightBeMathFn(v: string): boolean {
-  // Cheap prefix check before tokenizing; avoids work on `10px` etc. CSS
-  // function names are ASCII case-insensitive (Syntax 3 §4.3.10), so we
-  // scan the leading prefix for any uppercase letter and lowercase only
-  // when one is found. Longest math-fn-name with paren is `atan2(` (6),
-  // so a 6-char scan covers every supported function.
+  // Cheap prefix check before tokenizing; avoids work on `10px` etc. Function
+  // names are ASCII case-insensitive, so scan a 6-char prefix for any uppercase
+  // letter and lowercase only when one is found (longest fn name is `atan2(`).
   if (v.length <= 4) return false;
   const haystack = hasUpperInPrefix(v, 6) ? v.toLowerCase() : v;
   const c0 = haystack.charCodeAt(0);

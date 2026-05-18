@@ -1,5 +1,5 @@
 ---
-"styled-components": major
+'styled-components': major
 ---
 
 Raised peer dependency floors:

@@ -176,20 +176,23 @@ function resolveContext<Props extends BaseObject>(
     // run later in `applyPostAttrsWeb`, not here.
     if (isFunction(attrDef) && (attrDef as Function).length >= 2) continue;
     const resolvedAttrDef = isFunction(attrDef)
-      ? attrDef(needsCopy ? { ...context } : context)
+      ? (attrDef as unknown as (p: typeof context) => ExecutionProps & Partial<Props>)(
+          needsCopy ? { ...context } : context
+        )
       : attrDef;
 
-    for (const key in resolvedAttrDef) {
+    const resolvedDict = resolvedAttrDef as Dict<unknown>;
+    for (const key in resolvedDict) {
       if (key === 'className') {
-        context.className = joinStrings(context.className, resolvedAttrDef[key] as string);
+        context.className = joinStrings(context.className, resolvedDict[key] as string);
       } else if (key === 'style') {
-        context.style = { ...context.style, ...(resolvedAttrDef[key] as React.CSSProperties) };
+        context.style = { ...context.style, ...(resolvedDict[key] as React.CSSProperties) };
       } else if (!(key in props && (props as Dict<unknown>)[key] === undefined)) {
         // Apply attr value unless the user explicitly passed undefined for this
         // prop, which signals intent to reset the value. Cast at the
         // assignment site since attrs intentionally add arbitrary keys to
         // the resolved context.
-        (context as unknown as Dict<unknown>)[key] = (resolvedAttrDef as Dict<unknown>)[key];
+        (context as unknown as Dict<unknown>)[key] = resolvedDict[key];
       }
     }
   }

@@ -21,7 +21,14 @@ import {
   NativeStyleContext,
   NativeStyleContextValue,
 } from '../native/NativeStyleContext';
-import { DEFAULT_PARENT_CONTEXT, ParentContext, ParentContextValue } from '../native/ParentContext';
+import {
+  DEFAULT_PARENT_CONTEXT,
+  EMPTY_SIBLINGS,
+  ParentContext,
+  ParentContextValue,
+  SiblingInfo,
+  SiblingsList,
+} from '../native/ParentContext';
 import { applyStylePolyfills, normalizeStyleForWeb } from '../native/polyfills';
 import { applyResolvers, ResolveEnv } from '../native/transform/polyfills/resolvers';
 import { concatSourceInputs } from '../parser/source';
@@ -54,7 +61,14 @@ import { IS_RSC } from '../utils/isRsc';
 import isStyledComponent from '../utils/isStyledComponent';
 import shallowEqual from '../utils/shallowEqual';
 import { warnOnce } from '../utils/warnOnce';
-import type { NativeStyles, ConditionalStyle, ConditionalAttr, PseudoState } from './compileNative';
+import type {
+  NativeStyles,
+  ConditionalStyle,
+  ConditionalAttr,
+  NthSpec,
+  PseudoState,
+} from './compileNative';
+import type { NthOfBranch } from '../parser/ast';
 import { hasResponsiveOutput, SPECIAL_CASE_PROPS } from './compileNative';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
@@ -87,7 +101,11 @@ function resolveContext<Props extends object>(
     // Arity-2 function attrs run after compile in `applyPostAttrs` so they can
     // pop/peek the compiled style. Skip them in the pre-compile phase.
     if (isFunction(attr) && (attr as Function).length >= 2) continue;
-    const resolvedAttrDef = isFunction(attr) ? attr({ ...context }) : attr;
+    const resolvedAttrDef = isFunction(attr)
+      ? (attr as unknown as (p: ExecutionContext & Props) => ExecutionProps & Partial<Props>)({
+          ...context,
+        })
+      : attr;
 
     for (const key in resolvedAttrDef) {
       // Mirrors the web behavior (PR #5683): an explicit `undefined` prop
@@ -311,11 +329,8 @@ function applySpecialCases(
     const meta = SPECIAL_CASE_PROPS[k];
     const priority = meta !== undefined && meta.priority !== undefined ? meta.priority : 0;
     if (priority > 0) {
-      // Priority keys (CSS UI 4 §6.3 `interactivity: inert`) overwrite
-      // the user value. Spec requires the underlying surfaces (hit-
-      // testing / a11y / focus / selection / editable) to behave as if
-      // the prop had the inert value regardless of what the author
-      // wrote.
+      // Priority keys (e.g. `interactivity: inert`) overwrite the user value so
+      // hit-testing, a11y, focus, selection and editability all reflect the inert state.
       elementProps[k] = specialCases[k];
     } else if (!(k in elementProps)) {
       elementProps[k] = specialCases[k];
@@ -363,8 +378,15 @@ function buildResolveEnv(
  * cascade-relevant property fires (the caller skips the Provider
  * wrap), otherwise a fresh merged cascade.
  *
+ * The cheap short-circuit (`!compiled.publishesCascade && no user
+ * style`) lives at the call site, not here: this function stays
+ * monomorphic on (inherited, resolvedStyle) so V8's IC and inliner
+ * see the same signature the pre-stamp form had. Adding a third
+ * boolean arg to gate the walk inside the function regressed the
+ * must-walk path by ~25%, traced to IC polymorphism on the boolean.
+ *
  * Single right-to-left walk over array layers (matches RN's array-style
- * merge semantics — last write wins). Each layer captures all three
+ * merge semantics; last write wins). Each layer captures all three
  * fields at once. The common case is a flat object with no cascade-
  * relevant property, which returns after one object visit.
  */
@@ -372,8 +394,10 @@ function computePublishedCascade(
   inherited: NativeCascadeValues,
   resolvedStyle: any
 ): NativeCascadeValues {
-  // Refs box let the recursive walker write back via a single
-  // out-param without leaking allocations on the hot path.
+  // Per-call allocation. A module-level scratch tuple measured the same on
+  // V8 (escape analysis) and only marginal on Hermes, not worth the
+  // single-threaded-JS invariant it would lock in against any future
+  // parallel-render API.
   const slots: [unknown, unknown, unknown] = [undefined, undefined, undefined];
   collectCascadeSlots(resolvedStyle, slots);
   const [fs, lh, dir] = slots;
@@ -488,20 +512,9 @@ function matchConditionals(
 }
 
 /**
- * CSS Selectors 4 §15 — descendant / child combinator match against
- * the parent context. `condition` holds the ancestor styled-component
- * id; `combinator` selects between `descendant` (anywhere up the
- * chain) and `child` (only the immediate styled parent).
- *
- * Chain semantics: every styled component publishes ParentContext via
- * `wrapParentContext` from both useStaticImpl and useDynamicImpl, so
- * it becomes the new immediate parent for its subtree. Non-styled
- * components (`View`, `Text`, host elements) are transparent — React
- * Context propagation hands the surrounding styled parent's value
- * through unchanged. Consequence: a styled intermediary between the
- * matching ancestor and the matched component intercepts the child
- * combinator (new parentId) but not the descendant combinator (the
- * ancestor remains in `ancestors`).
+ * Combinator selector match against ParentContext. Non-styled intermediaries are
+ * transparent to ancestors (descendant combinator) but reset the immediate parent
+ * (child combinator), since only styled components publish ParentContext.
  */
 function combinatorMatches(entry: ConditionalStyle, parentCtx: ParentContextValue): boolean {
   const ancestorId = entry.condition;
@@ -509,12 +522,13 @@ function combinatorMatches(entry: ConditionalStyle, parentCtx: ParentContextValu
   if (entry.combinator === 'adjacent-sibling') return parentCtx.prevSiblingId === ancestorId;
   if (entry.combinator === 'general-sibling') {
     const prev = parentCtx.prevSiblings;
-    for (let i = 0; i < prev.length; i++) {
+    const cap = parentCtx.prevSiblingsCount;
+    for (let i = 0; i < cap; i++) {
       if (prev[i] === ancestorId) return true;
     }
     return false;
   }
-  // descendant — match the immediate parent OR any further ancestor.
+  // descendant; match the immediate parent OR any further ancestor.
   if (parentCtx.parentId === ancestorId) return true;
   const ancestors = parentCtx.ancestors;
   for (let i = 0; i < ancestors.length; i++) {
@@ -524,30 +538,9 @@ function combinatorMatches(entry: ConditionalStyle, parentCtx: ParentContextValu
 }
 
 /**
- * CSS Selectors 4 §9 — tree-structural pseudo-class match against
- * ParentContext's sibling position. Reads `siblingIndex` /
- * `totalSiblings` / `siblingIndexOfType` (and the parent's
- * same-target sibling totals reconstructed from the ofType counter
- * plus the published indexes). The matcher uses 1-based CSS position;
- * `fromEnd` flips the direction; `onlyChild` adds a total === 1 gate.
- *
- * When the styled component has no surrounding styled parent that
- * published per-child indexing, `siblingIndex` is -1 — return false
- * (no sibling info, no match).
- */
-/**
- * CSS Selectors 4 §13.1 — `&:has(<simple>)` match against the
- * element's own children subtree. Walks `props.children` recursively,
- * short-circuiting on the first descendant that satisfies the inner
- * predicate.
- *
- * Scope: only inspects React-element descendants; non-element children
- * (text, numbers, null) can't carry a `styledComponentId` or props of
- * interest. Compiled / memoized JSX trees in `children` work fine —
- * `React.Children.forEach` handles arrays and fragments transparently.
- * `:has` cannot see descendants that only appear after a child
- * component's render returns (e.g. inside a `useMemo` body), since the
- * walk reads pre-render `props.children` only.
+ * `&:has(<simple>)` match against `props.children`. Only React-element descendants
+ * are inspected; descendants emitted inside a child's render body are invisible
+ * because the walk reads pre-render children.
  */
 function hasMatches(entry: ConditionalStyle, children: React.ReactNode): boolean {
   const inner = entry.hasInner;
@@ -598,6 +591,7 @@ function matchesHasInner(
 function nthChildMatches(entry: ConditionalStyle, parentCtx: ParentContextValue): boolean {
   const spec = entry.nthSpec;
   if (spec === undefined) return false;
+  if (spec.of !== undefined) return nthChildOfSelectorMatches(entry, spec, parentCtx);
   const idx = spec.ofType ? parentCtx.siblingIndexOfType : parentCtx.siblingIndex;
   if (idx < 0) return false;
   const tot = spec.ofType ? parentCtx.totalSiblingsOfType : parentCtx.totalSiblings;
@@ -610,16 +604,127 @@ function nthChildMatches(entry: ConditionalStyle, parentCtx: ParentContextValue)
   return k >= 0 && Math.floor(k) === k;
 }
 
+/**
+ * `:nth-child(an+b of S)` and `:nth-last-child(an+b of S)`. Filters
+ * `parentCtx.siblings` against the inner simple selector, finds self's
+ * 1-based position in the filter via `parentCtx.siblingIndex`, applies
+ * the formula. Result is cached on the entry keyed by the siblings array
+ * reference so each subsequent sibling evaluating the same rule reuses
+ * the precomputed filter (O(N) per parent render, not O(N²)).
+ */
+function nthChildOfSelectorMatches(
+  entry: ConditionalStyle,
+  spec: NthSpec,
+  parentCtx: ParentContextValue
+): boolean {
+  const of = spec.of!;
+  const entries = parentCtx.siblings.entries;
+  const selfIdx = parentCtx.siblingIndex;
+  if (entries.length === 0 || selfIdx < 0) return false;
+
+  // Persistent single-slot cache on the entry. The `Int32Array` is
+  // indexed directly by a sibling's full-list position, so lookup is
+  // O(1) (typed-array indexing, no Map hashing). The buffer is grown
+  // by doubling when a parent's child count exceeds capacity and
+  // reused across renders; only the touched range gets zeroed on
+  // cache miss. Microbench across N=10..1000: -32% to -64% vs the
+  // prior `Map<number, number>` plan at all densities.
+  const cache = (entry as unknown as { __ofCache?: NthOfPlan }).__ofCache;
+  let plan: NthOfPlan;
+  if (cache !== undefined) {
+    plan = cache;
+  } else {
+    plan = {
+      entriesRef: null,
+      posByIndex: new Int32Array(NTH_OF_INITIAL_CAP),
+      maxIndex: 0,
+      total: 0,
+    };
+    (entry as unknown as { __ofCache?: NthOfPlan }).__ofCache = plan;
+  }
+  if (plan.entriesRef !== entries) {
+    let max = 0;
+    for (let i = 0; i < entries.length; i++) {
+      const idx = entries[i].index;
+      if (idx > max) max = idx;
+    }
+    const need = max + 1;
+    if (plan.posByIndex.length < need) {
+      let cap = plan.posByIndex.length;
+      while (cap < need) cap *= 2;
+      plan.posByIndex = new Int32Array(cap);
+    } else {
+      // Reuse buffer; clear only the range previously touched OR the
+      // new active range, whichever is larger (positions outside the
+      // active range never get read so leaving stale data there is OK,
+      // but we cover the union to keep the invariant simple).
+      const oldMax = plan.maxIndex;
+      const limit = oldMax >= max ? oldMax + 1 : need;
+      plan.posByIndex.fill(0, 0, limit);
+    }
+    plan.maxIndex = max;
+    let total = 0;
+    for (let i = 0; i < entries.length; i++) {
+      if (matchNthOfInner(entries[i], of)) {
+        total++;
+        plan.posByIndex[entries[i].index] = total;
+      }
+    }
+    plan.total = total;
+    plan.entriesRef = entries;
+  }
+  if (plan.total === 0) return false;
+  if (spec.onlyChild && plan.total !== 1) return false;
+  if (selfIdx > plan.maxIndex) return false;
+  const filterPos = plan.posByIndex[selfIdx];
+  if (filterPos === 0) return false;
+  // 1-based position from start (filterPos) or end.
+  const pos = spec.fromEnd ? plan.total - filterPos + 1 : filterPos;
+  if (pos < 1) return false;
+  if (spec.a === 0) return pos === spec.b;
+  const k = (pos - spec.b) / spec.a;
+  return k >= 0 && Math.floor(k) === k;
+}
+
+interface NthOfPlan {
+  entriesRef: ReadonlyArray<SiblingInfo> | null;
+  /** posByIndex[fullListIndex] = 1-based filter position, 0 if not in filter. */
+  posByIndex: Int32Array;
+  /** Highest `index` value seen in the most recent build (lookup bound). */
+  maxIndex: number;
+  /** Total siblings matching the inner selector. */
+  total: number;
+}
+
+/** Initial capacity for the per-entry posByIndex pool. Doubles as needed.
+ *  16 covers the typical small-list case without re-alloc. */
+const NTH_OF_INITIAL_CAP = 16;
+
+/**
+ * Evaluate the inner branch of `:nth-child(of S)` against a sibling.
+ * Mirrors `matchesHasInner` semantics: component-ref matches the
+ * sibling's `styledComponentId`; attr selectors evaluate against the
+ * sibling's props bag with the existing operator + case-flag rules.
+ */
+function matchNthOfInner(sibling: SiblingInfo, of: NthOfBranch): boolean {
+  if (of.kind === 'component') return sibling.id === of.id;
+  const attr = of.attr;
+  const raw = sibling.props[attr.name];
+  if (raw === undefined) return false;
+  if (attr.value === undefined) return true;
+  const str = typeof raw === 'boolean' ? (raw ? 'true' : 'false') : String(raw);
+  const actual = attr.caseFlag === 'i' ? str.toLowerCase() : str;
+  const expected = attr.caseFlag === 'i' ? attr.value.toLowerCase() : attr.value;
+  return evaluateAttrOperator(attr.operator, actual, expected);
+}
+
 function resolveBucket(entry: ConditionalStyle, env: ResolveEnv): object {
   return entry.resolvers ? applyResolvers(entry.styles, entry.resolvers, env) : entry.styles;
 }
 
 /**
- * AND-evaluate every (name, value?) pair in the bucket's chain.
- * Compound selectors (`&[a][b]`) require both attributes present;
- * single-attr is the n=1 case. Boolean coercion lets
- * `aria-pressed={true}` and `aria-pressed="true"` both satisfy
- * `value: 'true'`.
+ * AND-evaluate every (name, value?) pair in the bucket's chain. Boolean coercion
+ * lets `aria-pressed={true}` and `aria-pressed="true"` both satisfy `value: 'true'`.
  */
 function attrMatches(entry: ConditionalStyle, props: Record<string, unknown>): boolean {
   const attrs = entry.attrs;
@@ -639,10 +744,8 @@ function attrMatches(entry: ConditionalStyle, props: Record<string, unknown>): b
 }
 
 /**
- * CSS Selectors 4 §6.2 — evaluate an attribute selector operator
- * against the actual prop value. Default operator is `=` (exact).
- * Case-sensitivity (§6.3) is handled by the caller pre-lowercasing
- * both operands when the `i` flag is present.
+ * Evaluate an attribute selector operator against the actual prop value. Default is
+ * `=`. The caller pre-lowercases both operands when the `i` flag is present.
  */
 function evaluateAttrOperator(
   operator: '=' | '~=' | '|=' | '^=' | '$=' | '*=' | undefined,
@@ -744,7 +847,7 @@ function pseudoStylesForState(
 // Slot 6 holds the full NativeStyleContext (container + cascade), not
 // just the container. The cache must invalidate when an ancestor
 // publishes a fresh cascade (font-size / line-height / direction)
-// even if the container side is unchanged — otherwise em / lh /
+// even if the container side is unchanged; otherwise em / lh /
 // `text-align: start | end` / sentinel-base relative colors render
 // with stale `ResolveEnv` values.
 type RenderCache = [
@@ -771,6 +874,12 @@ type RenderCache = [
  * around rn-web's translation gaps (e.g. 16-element matrix transforms).
  * It's a no-op on native and returns the same reference when no rewrite
  * is needed, so identity-based caches downstream stay intact.
+ *
+ * INTENTIONALLY DUPLICATED with `appendStyle` below: a generic
+ * `composeStyles(existing, layer, normalizeLayer)` regressed the static
+ * path by 50-65% (extra polymorphic branch + a shared concat helper that
+ * pays for Array.isArray on both operands when the caller knows one
+ * side's shape statically). Keep these specialized.
  */
 export function composeBase(base: object, userStyle: any): any {
   if (userStyle === undefined || userStyle === null) return base;
@@ -887,7 +996,7 @@ function StaticContainerPublisherDispatch({
 // ordering stays stable. Reads ParentContext so descendants of this
 // element see it as an ancestor under Tier 2 combinator selectors
 // (`${Foo} &`, `${Foo} > &`). Without this read, every static-eligible
-// styled component would be invisible to the chain — which would mean
+// styled component would be invisible to the chain, which would mean
 // `${Foo} &` only matches when Foo happens to have responsive CSS.
 function useStaticImpl<Props extends StyledComponentImplProps>(
   forwardedComponent: IStyledComponent<'native', Props>,
@@ -1141,7 +1250,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // true` via SPECIAL_CASE_PROPS, and RN's Yoga measure callback for a
   // multiline TextInput grows the view to its text size on its own. If
   // the user passed `multiline={false}`, the lift is voided and the
-  // input renders single-line — warn so the missing autosize is
+  // input renders single-line; warn so the missing autosize is
   // visible. Skipped on rn-web (browser handles `field-sizing`
   // natively against the textarea the polyfill also lifts).
   if (
@@ -1160,11 +1269,18 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     compiled.containerInfo,
     forwardedComponent.styledComponentId
   );
-  // Compute the cascade to publish to descendants. The fast path
-  // returns the same reference as the inherited cascade when this
-  // component declares no font-size / line-height / direction, so
-  // the Provider wrap below short-circuits.
-  const publishedCascade = computePublishedCascade(nativeStyleCtx.cascade, composedStyle);
+  // Compute the cascade to publish to descendants. `compiled.publishesCascade`
+  // is the compile-time scan; the walk is skipped entirely when both the
+  // flag is false AND no user style prop was supplied (the only runtime
+  // source of cascade keys beyond the compiled output). Keeping the gate
+  // here at the call site rather than inside `computePublishedCascade`
+  // keeps that function's IC monomorphic on its two-arg signature; an
+  // earlier version that took a boolean third arg regressed the
+  // must-walk path by ~25%.
+  const publishedCascade =
+    compiled.publishesCascade || props.style != null
+      ? computePublishedCascade(nativeStyleCtx.cascade, composedStyle)
+      : nativeStyleCtx.cascade;
   const cascadeChanged = publishedCascade !== nativeStyleCtx.cascade;
 
   // Publish this component's identity to descendants so Tier 2
@@ -1222,7 +1338,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
  * can match an ancestor anywhere up the tree.
  *
  * Returns `null` when the inherited `parentId` already equals this
- * component's id (defensive — would accumulate duplicates on
+ * component's id (defensive; would accumulate duplicates on
  * re-render). The caller should fall through to the inherited context
  * without re-wrapping in a Provider.
  *
@@ -1261,8 +1377,10 @@ function buildPublishedParentValue(
       prevSiblingId: null,
       prevSiblingTarget: null,
       prevSiblings: EMPTY_PREV_SIBLINGS,
+      prevSiblingsCount: 0,
       siblingIndexOfType: -1,
       totalSiblingsOfType: 0,
+      siblings: EMPTY_SIBLINGS,
     };
   }
   cache.publishedKeyParentCtx = parent;
@@ -1284,6 +1402,8 @@ interface PerChildCacheEntry {
   idxOfType: number;
   totalOfType: number;
   parentValue: ParentContextValue;
+  /** Identity of the SiblingsList wrapper at the time perChildValue was built. */
+  siblings: SiblingsList;
   perChildValue: ParentContextValue;
 }
 
@@ -1292,6 +1412,8 @@ interface ParentPublishCache {
   publishedKeyElementType: NativeTarget | null;
   publishedValue: ParentContextValue | null;
   perChild: Array<PerChildCacheEntry | null>;
+  /** Stable SiblingsList wrapper; `entries` is mutated each render. */
+  siblingsList: SiblingsList | null;
 }
 
 function createParentPublishCache(): ParentPublishCache {
@@ -1300,6 +1422,7 @@ function createParentPublishCache(): ParentPublishCache {
     publishedKeyElementType: null,
     publishedValue: null,
     perChild: [],
+    siblingsList: null,
   };
 }
 
@@ -1340,25 +1463,35 @@ function indexStyledChildren(
   const arr = React.Children.toArray(children);
   if (arr.length === 0) return children;
 
-  // First pass: identify styled children + total per target. Second
-  // pass: compute per-child positions and wrap with Provider.
+  // First pass: identify styled children, total per target, and collect
+  // the `SiblingInfo` array used by `:nth-child(<formula> of <selector>)`
+  // matchers. Skipping non-styled entries keeps the array aligned with
+  // the parent walk's view of "styled children" used elsewhere.
   const total = arr.length;
   const childIds: Array<string | null> = new Array(total);
   const childTargets: Array<NativeTarget | null> = new Array(total);
   const totalsByTarget = new Map<NativeTarget, number>();
+  const siblingsMut: SiblingInfo[] = [];
   let hasAnyStyled = false;
   for (let i = 0; i < total; i++) {
     const c = arr[i];
     if (React.isValidElement(c)) {
       const tp = c.type as { styledComponentId?: string; target?: NativeTarget } | string;
       if (typeof tp !== 'string' && tp.styledComponentId !== undefined) {
-        childIds[i] = tp.styledComponentId;
+        const id = tp.styledComponentId;
+        childIds[i] = id;
         const target = tp.target ?? null;
         childTargets[i] = target;
         hasAnyStyled = true;
         if (target !== null) {
           totalsByTarget.set(target, (totalsByTarget.get(target) ?? 0) + 1);
         }
+        siblingsMut.push({
+          id,
+          target,
+          props: c.props as Readonly<Record<string, unknown>>,
+          index: i,
+        });
         continue;
       }
     }
@@ -1366,6 +1499,17 @@ function indexStyledChildren(
     childTargets[i] = null;
   }
   if (!hasAnyStyled) return children;
+  // Reuse the cache's SiblingsList wrapper across renders; just swap
+  // `.entries`. This keeps perChildValue identity stable when sibling
+  // shape is unchanged while still giving of-selector matchers a fresh
+  // array reference (so their entry-keyed plan caches invalidate).
+  let siblings = cache.siblingsList;
+  if (siblings === null) {
+    siblings = { entries: siblingsMut };
+    cache.siblingsList = siblings;
+  } else {
+    siblings.entries = siblingsMut;
+  }
 
   const prevSiblingsRunning: string[] = [];
   // Running NUL-joined fingerprint of `prevSiblingsRunning`. Maintained
@@ -1405,10 +1549,17 @@ function indexStyledChildren(
       cached.prevSiblingsKey === prevSiblingsKey &&
       cached.idxOfType === idxOfType &&
       cached.totalOfType === totalOfType &&
-      cached.parentValue === parentValue
+      cached.parentValue === parentValue &&
+      cached.siblings === siblings
     ) {
       perChildValue = cached.perChildValue;
     } else {
+      // Publish the shared running array directly. Each child's
+      // `prevSiblingsCount` caps the valid prefix; later siblings will
+      // append to the same backing array as the parent walk continues,
+      // but consumers (e.g. general-sibling combinator matcher) iterate
+      // up to the count, not the array's length. Avoids the O(N²) slice
+      // cost of per-child copies on first parent render.
       perChildValue = {
         parentId: parentValue.parentId,
         parentTarget: parentValue.parentTarget,
@@ -1417,10 +1568,11 @@ function indexStyledChildren(
         totalSiblings: total,
         prevSiblingId: prevId,
         prevSiblingTarget: prevTarget,
-        prevSiblings:
-          prevSiblingsRunning.length === 0 ? EMPTY_PREV_SIBLINGS : prevSiblingsRunning.slice(),
+        prevSiblings: prevSiblingsRunning.length === 0 ? EMPTY_PREV_SIBLINGS : prevSiblingsRunning,
+        prevSiblingsCount: prevSiblingsRunning.length,
         siblingIndexOfType: idxOfType,
         totalSiblingsOfType: totalOfType,
+        siblings,
       };
       perChildCache[i] = {
         id,
@@ -1432,6 +1584,7 @@ function indexStyledChildren(
         idxOfType,
         totalOfType,
         parentValue,
+        siblings,
         perChildValue,
       };
     }
@@ -1570,7 +1723,7 @@ function ContainerPublisher({
   const value = React.useMemo<NativeStyleContextValue>(() => {
     // Pre-measurement we publish a width=0 "pending" entry so the
     // calc(%) resolver can distinguish "no container ancestor"
-    // (top-level — fall back to viewport) from "ancestor pending
+    // (top-level; fall back to viewport) from "ancestor pending
     // measurement" (defer one frame). Inheriting `parent` here
     // over-sized descendants and Android Yoga didn't always reflow
     // on the second render.
@@ -1604,10 +1757,9 @@ function ContainerPublisher({
         : onLayout,
     [onLayout, existingOnLayout]
   );
-  // The render cache reuses the same `elementProps` object across full
-  // cache-hit renders, so mutating it in place would feed back the
-  // previously-composed handler as `existingOnLayout` next time and grow
-  // the call chain by one wrapper per render.
+  // Render cache reuses the same `elementProps` across cache-hit renders, so
+  // mutating it would feed the composed handler back in as `existingOnLayout`
+  // next render and grow the call chain by one wrapper each time.
   const finalProps = { ...elementProps, onLayout: composedOnLayout };
 
   return createElement(

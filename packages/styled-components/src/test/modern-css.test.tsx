@@ -13,7 +13,7 @@ describe('modern CSS', () => {
 
   describe('@layer', () => {
     // Block-less `@layer reset, framework, utilities;` is exercised by the
-    // parser parity suite (src/parser/parity.test.ts);jsdom's CSSOM drops
+    // emit-web and WPT parser coverage; jsdom's CSSOM drops
     // the declaration on round-trip so an integration test here would just
     // re-test jsdom, not styled-components.
 
@@ -54,7 +54,7 @@ describe('modern CSS', () => {
     });
   });
 
-  // @scope is exercised by the parser parity suite (src/parser/parity.test.ts);
+  // @scope is exercised by parser / emit-web tests;
   // jsdom's CSSOM doesn't support it so an integration test here would just
   // re-test jsdom, not styled-components.
 
@@ -123,7 +123,7 @@ describe('modern CSS', () => {
   });
 
   describe(':has() / :where() / :is() with self-reference', () => {
-    // Regression: stylis#350;multiple `&` inside :is()/:where()/:has() dropped some
+    // Regression: multiple `&` inside :is()/:where()/:has() once dropped some
     // instances. The in-house parser walks paren depth explicitly and preserves every
     // ampersand. These tests lock that behavior from a styled() entry point.
 

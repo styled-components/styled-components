@@ -25,7 +25,7 @@ export { setAnimationDebug } from './animation';
 // Side-effect (rn-web only): opt the document into both color schemes so
 // `light-dark()` resolves to its dark argument under OS preference and
 // `useColorScheme()` reflects the OS choice. Without this opt-in the
-// browser locks the document to light for legacy compatibility — and
+// browser locks the document to light for legacy compatibility, and
 // `matchMedia('(prefers-color-scheme: dark)')` reports false even on
 // dark systems, which propagates through React Native Web's
 // `useColorScheme()` into every theme-aware component.
@@ -33,7 +33,7 @@ export { setAnimationDebug } from './animation';
 // Set as an inline style on `<html>` so it beats anything a host
 // stylesheet declares at lower specificity. The `if (!colorScheme)`
 // guard preserves an explicit author choice (e.g. `style="color-scheme:
-// only light"` to force light) — we only set when the document has no
+// only light"` to force light); we only set when the document has no
 // inline declaration yet. Tree-shakes out on Hermes via `__NATIVE_WEB__`.
 if (__NATIVE_WEB__ && typeof document !== 'undefined') {
   const docEl = document.documentElement;

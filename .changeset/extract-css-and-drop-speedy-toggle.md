@@ -1,5 +1,5 @@
 ---
-"styled-components": major
+'styled-components': major
 ---
 
 Removed the `disableCSSOMInjection` prop on `<StyleSheetManager>` and the `SC_DISABLE_SPEEDY` / `REACT_APP_SC_DISABLE_SPEEDY` environment variables. Added a new `extractCSS` export.

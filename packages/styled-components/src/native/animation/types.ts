@@ -47,16 +47,12 @@ export interface AnimationDescriptor {
   fillMode: 'none' | 'forwards' | 'backwards' | 'both';
   playState: 'running' | 'paused';
   /**
-   * Per CSS Animations L2 §4.3.2. `replace` (default) overwrites the
-   * underlying value with the animation's effect value. `add` sums the
-   * animation's effect value with the underlying value, leaving the
-   * keyframe sequence as a delta. `accumulate` extends `add` across
-   * iteration boundaries so each iteration starts from the previous
-   * iteration's end value.
+   * `replace` overwrites the underlying value; `add` sums the effect value with
+   * the underlying value; `accumulate` extends `add` across iteration boundaries.
    *
-   * Adapter support: numeric props and transform components flow
-   * through `add` via outputRange offset; other types (colors, mixed
-   * units) and `accumulate` fall back to `replace` semantics.
+   * Adapter support: numeric props and transform components flow through `add`
+   * via outputRange offset. Colors, mixed units, and `accumulate` fall back to
+   * `replace`.
    */
   composition: 'replace' | 'add' | 'accumulate';
 }
@@ -82,13 +78,13 @@ export interface TransitionDescriptor {
  */
 export interface NativeAnimationEvent {
   animationName: string;
-  /** Elapsed time in seconds, per CSS Animations §5.1. */
+  /** Elapsed time in seconds. */
   elapsedTime: number;
 }
 
 export interface NativeTransitionEvent {
   propertyName: string;
-  /** Elapsed time in seconds, per CSS Transitions §6.1. */
+  /** Elapsed time in seconds. */
   elapsedTime: number;
 }
 
@@ -106,16 +102,17 @@ export interface AnimatedStyleInput {
   env: ResolveEnv;
   /**
    * User-supplied `onAnimationEnd` callback, lifted off the styled
-   * component's React props. Adapters MUST invoke this for each
-   * animation completion. The Hermes Animated adapter fires from
-   * `Animated.timing.start`'s callback; the CSS-emit adapter lets the
-   * browser dispatch `animationend` directly to the underlying DOM
-   * element via react-native-web's event mapping.
+   * component's React props. The Hermes adapter fires from
+   * `Animated.timing.start`'s completion; the rn-web CSS adapter relies on
+   * browser `animationend`. The Reanimated 4 CSS-layer path does not yet
+   * receive native completion events from upstream, so this callback is
+   * not invoked there until Reanimated exposes equivalent hooks.
    */
   onAnimationEnd?: (event: NativeAnimationEvent) => void;
   /**
    * User-supplied `onTransitionEnd` callback. Same shape as
-   * `onAnimationEnd`; fires per completing property.
+   * `onAnimationEnd`; fires per completing property. Not invoked on the
+   * Reanimated 4 CSS-layer path for the same reason as `onAnimationEnd`.
    */
   onTransitionEnd?: (event: NativeTransitionEvent) => void;
 }

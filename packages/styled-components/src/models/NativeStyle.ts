@@ -19,6 +19,7 @@ import { fifoSet } from '../utils/fifoMap';
 import {
   toNativeStyles,
   astToNativeStyles,
+  hasCascadeKey,
   hasResponsiveOutput,
   NativeStyles,
   cssToStyleObject,
@@ -59,7 +60,7 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
           compiled.startingStyle === undefined &&
           compiled.animations === undefined &&
           compiled.transitions === undefined &&
-          !publishesCascade(compiled.base);
+          !hasCascadeKey(compiled.base);
       }
     }
 
@@ -147,19 +148,6 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
   };
 
   return NativeStyle;
-}
-
-/**
- * Cascade-significant property check: a component declaring `font-size`,
- * `line-height`, or `direction` in its base must publish a fresh
- * cascade so descendants resolving `1em`, `1lh`, or direction-aware
- * keywords see the override. Only useDynamicImpl publishes the
- * cascade; useStaticImpl is hookless.
- */
-function publishesCascade(base: Record<string, unknown>): boolean {
-  return (
-    base.fontSize !== undefined || base.lineHeight !== undefined || base.direction !== undefined
-  );
 }
 
 function isAllStaticStrings(rules: ReadonlyArray<unknown>): boolean {

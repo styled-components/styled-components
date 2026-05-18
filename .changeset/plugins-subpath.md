@@ -1,5 +1,5 @@
 ---
-"styled-components": major
+'styled-components': major
 ---
 
 Plugins moved to a dedicated `styled-components/plugins` subpath, and a first-party RTL plugin ships with the library.
@@ -10,7 +10,7 @@ import { rtlPlugin, rscPlugin } from 'styled-components/plugins';
 
 <StyleSheetManager plugins={[rtlPlugin]}>
   <App />
-</StyleSheetManager>
+</StyleSheetManager>;
 ```
 
 `rtlPlugin` replaces `stylis-plugin-rtl` for users coming from v6: it swaps physical side properties (`padding-left` ↔ `padding-right`), flips `left`/`right` keyword values on `float` / `clear` / `text-align` / `caption-side`, and mirrors 4-value shorthand positions. Logical properties like `margin-inline-start` pass through unchanged.

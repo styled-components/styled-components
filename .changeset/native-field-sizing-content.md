@@ -1,5 +1,5 @@
 ---
-"styled-components": minor
+'styled-components': minor
 ---
 
 React Native: `field-sizing: content` makes a `TextInput` autosize to its content.
@@ -12,7 +12,7 @@ const Note = styled.TextInput`
   border: 1px solid #ddd;
 `;
 
-<Note placeholder="Start typing…" />
+<Note placeholder="Start typing…" />;
 ```
 
 The field grows in height as the user types, no controlled height state, no `onContentSizeChange` wiring. Pass `multiline={false}` explicitly to keep a fixed single-line field (a dev-time message points out that autosize is off in that case).

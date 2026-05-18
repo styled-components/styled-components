@@ -1,5 +1,5 @@
 ---
-"styled-components": patch
+'styled-components': patch
 ---
 
 Fixed selector resolution for nested rules whose parent contains a comma inside `:is()`, `:where()`, `:has()`, or an attribute selector.
@@ -10,7 +10,9 @@ Previously a parent like `:is(&:hover, .parent:hover &) .child` containing a nes
 const Card = styled.div`
   :is(&:hover, .parent:hover &) .child {
     color: red;
-    .grandchild { color: blue; }
+    .grandchild {
+      color: blue;
+    }
   }
 `;
 ```

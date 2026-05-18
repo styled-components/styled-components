@@ -34,20 +34,48 @@ export interface PostAttrsPlan {
   popped: ReadonlySet<string> | null;
 }
 
+/** Convert a kebab-case CSS prop to its camelCase form (no allocation when already camel). */
+function camelizeProp(prop: string): string {
+  if (prop.indexOf('-') === -1) return prop;
+  let out = '';
+  let toUpper = false;
+  for (let i = 0; i < prop.length; i++) {
+    const c = prop[i];
+    if (c === '-') {
+      toUpper = true;
+      continue;
+    }
+    out += toUpper ? c.toUpperCase() : c;
+    toUpper = false;
+  }
+  return out;
+}
+
 /**
  * Returns the literal value of a top-level decl matching `prop`.
  * - `string`: the static value
  * - `undefined`: decl absent
- * - `null`: decl exists but its value is templated (cannot pre-resolve)
+ * - `null`: decl exists but its value is templated, OR the source prop name
+ *           differs from the user's argument (kebab vs camel rename) which
+ *           signals a polyfilled prop whose runtime value may be transformed.
+ *           Either case forces the runtime fallback.
  */
 function findStaticBaseDecl(ast: Root, prop: string): string | undefined | null {
+  const camelTarget = camelizeProp(prop);
   for (let i = 0; i < ast.length; i++) {
     const node = ast[i];
     if (node.kind !== NodeKind.Decl) continue;
-    if (typeof node.prop !== 'string' || node.prop !== prop) continue;
+    if (typeof node.prop !== 'string') continue;
+    const exact = node.prop === prop;
+    const camelMatch = !exact && camelizeProp(node.prop) === camelTarget;
+    if (!exact && !camelMatch) continue;
     const v = node.value;
-    if (typeof v === 'string') return v;
-    return null;
+    if (typeof v !== 'string') return null;
+    // Kebab-vs-camel mismatch: the runtime value may have been
+    // transformed by a polyfill (e.g. `accent-color: auto` resolves to a
+    // PlatformColor). Bail so the render path uses the resolved value.
+    if (camelMatch) return null;
+    return v;
   }
   return undefined;
 }
@@ -83,6 +111,8 @@ export function tracePostAttr<Props extends BaseObject>(
   // narrow to `string` when fallback is supplied. Theme paths (any string
   // containing `.`) are unresolvable at construction (theme is a render-
   // time input);bail to runtime fallback.
+  // The popped set stores the camelized key so the render path can delete
+  // the matching entry from `effectiveBase` (whose keys are camelized).
   const recordingAst = {
     pop(keyOrPath: string, fallback?: string): string | undefined {
       if (keyOrPath.indexOf('.') !== -1) {
@@ -96,7 +126,7 @@ export function tracePostAttr<Props extends BaseObject>(
       }
       if (v !== undefined) {
         if (popped === null) popped = new Set();
-        popped.add(keyOrPath);
+        popped.add(camelizeProp(keyOrPath));
       }
       return v !== undefined ? v : fallback;
     },

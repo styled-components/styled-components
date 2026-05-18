@@ -144,7 +144,7 @@ export function tokenize(value: string): Token[] {
     // Slash (context-dependent; rgb(r g b / a) uses it, calc uses / as op.
     // We emit as Slash; calc consumers remap to Op.) `/* … */` block
     // comments are valid CSS inside function args (WPT exercises this in
-    // `rgb(/* R */ 0, /* G */ 51, /* B */ 255)`) — strip and continue.
+    // `rgb(/* R */ 0, /* G */ 51, /* B */ 255)`); strip and continue.
     if (c === $.SLASH) {
       if (i + 1 < len && value.charCodeAt(i + 1) === $.ASTERISK) {
         const close = value.indexOf('*/', i + 2);
@@ -236,12 +236,9 @@ export function tokenize(value: string): Token[] {
       if (identEnd < len && value.charCodeAt(identEnd) === $.OPEN_PAREN) {
         const argsEnd = findMatchingParen(value, identEnd);
         if (argsEnd !== -1) {
-          // CSS Syntax 3 §4.3.10: function names match
-          // ASCII case-insensitively. Lowercase at tokenization so every
-          // downstream consumer (math fold, color fold, resolvers,
-          // shorthand helpers) can compare against literal lowercase
-          // names without re-normalizing. The `raw` slice still carries
-          // the author's original casing for round-trip emission paths.
+          // Function names are ASCII case-insensitive; lowercase here so every
+          // downstream consumer compares against literal lowercase names. `raw`
+          // keeps the author casing for round-trip emission paths.
           const name = toLowerIfMixed(value.substring(i, identEnd));
           const args = value.substring(identEnd + 1, argsEnd);
           tokens.push(functionToken(value.substring(i, argsEnd + 1), name, args));

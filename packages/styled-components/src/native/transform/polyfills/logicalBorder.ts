@@ -2,6 +2,7 @@ import { Dict } from '../../../types';
 import { warnOnce } from '../dev';
 import { register } from '../shorthands';
 import {
+  colorTokenToRnStyleValue,
   consumeColor,
   consumeDimensionLike,
   tokenToValue,
@@ -11,8 +12,8 @@ import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
 
 /**
- * CSS Logical Properties 1 §4.5 — `border-inline-*` and `border-block-*`
- * longhands + shorthands. Under RN's horizontal-tb writing mode:
+ * `border-inline-*` and `border-block-*` longhands + shorthands. Under
+ * RN's horizontal-tb writing mode:
  *
  *   inline-start → RN `borderStart*`
  *   inline-end   → RN `borderEnd*`
@@ -25,7 +26,18 @@ import { TokenStream } from '../tokenStream';
  * so the atomic-CSS pipeline hyphenates and the browser parses it).
  */
 
-const VALID_BORDER_STYLES = new Set(['solid', 'dotted', 'dashed', 'none']);
+const CSS_LINE_STYLES = new Set([
+  'none',
+  'hidden',
+  'dotted',
+  'dashed',
+  'solid',
+  'double',
+  'groove',
+  'ridge',
+  'inset',
+  'outset',
+]);
 
 interface EdgeMapping {
   width: string;
@@ -65,7 +77,7 @@ function singleColor(tokens: Token[], rnKey: string): Dict<any> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const c = consumeColor(stream);
   if (c === null || !stream.eof()) return null;
-  return { [rnKey]: c.raw };
+  return { [rnKey]: colorTokenToRnStyleValue(c) };
 }
 
 function singleWidth(tokens: Token[], rnKey: string): Dict<any> | null {
@@ -80,7 +92,7 @@ function singleStyle(tokens: Token[], edge: string): Dict<any> | null {
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
-  if (name === undefined || !VALID_BORDER_STYLES.has(name)) return null;
+  if (name === undefined || !CSS_LINE_STYLES.has(name)) return null;
   if (__NATIVE_WEB__) {
     return { ['border' + camelEdge(edge) + 'Style']: name };
   }
@@ -104,8 +116,8 @@ function axisColor(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | null 
   const startEdge = axis === 'inline' ? 'inline-start' : 'block-start';
   const endEdge = axis === 'inline' ? 'inline-end' : 'block-end';
   return {
-    [EDGE_MAP[startEdge].color]: first.raw,
-    [EDGE_MAP[endEdge].color]: second.raw,
+    [EDGE_MAP[startEdge].color]: colorTokenToRnStyleValue(first),
+    [EDGE_MAP[endEdge].color]: colorTokenToRnStyleValue(second),
   };
 }
 
@@ -133,14 +145,14 @@ function axisStyle(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | null 
   const first = stream.consume();
   if (!first || first.kind !== TokenKind.Ident) return null;
   const firstName = first.name;
-  if (firstName === undefined || !VALID_BORDER_STYLES.has(firstName)) return null;
+  if (firstName === undefined || !CSS_LINE_STYLES.has(firstName)) return null;
 
   let secondName = firstName;
   if (!stream.eof()) {
     const second = stream.consume();
     if (!second || second.kind !== TokenKind.Ident) return null;
     const sn = second.name;
-    if (sn === undefined || !VALID_BORDER_STYLES.has(sn)) return null;
+    if (sn === undefined || !CSS_LINE_STYLES.has(sn)) return null;
     secondName = sn;
   }
   if (!stream.eof()) return null;
@@ -172,7 +184,7 @@ function compositeEdge(
   while (!stream.eof()) {
     const t = stream.peek();
     if (!t) break;
-    if (t.kind === TokenKind.Ident && t.name !== undefined && VALID_BORDER_STYLES.has(t.name)) {
+    if (t.kind === TokenKind.Ident && t.name !== undefined && CSS_LINE_STYLES.has(t.name)) {
       if (style !== null) return null;
       style = t.name;
       stream.consume();
@@ -200,7 +212,7 @@ function compositeEdge(
   const out: Dict<any> = {};
   const map = EDGE_MAP[edge];
   if (width !== null) out[map.width] = tokenToValue(width);
-  if (color !== null) out[map.color] = color.raw;
+  if (color !== null) out[map.color] = colorTokenToRnStyleValue(color);
   if (style !== null) {
     if (__NATIVE_WEB__) {
       out['border' + camelEdge(edge) + 'Style'] = style;
@@ -224,7 +236,7 @@ function modeSpanning(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | nu
   while (!stream.eof()) {
     const t = stream.peek();
     if (!t) break;
-    if (t.kind === TokenKind.Ident && t.name !== undefined && VALID_BORDER_STYLES.has(t.name)) {
+    if (t.kind === TokenKind.Ident && t.name !== undefined && CSS_LINE_STYLES.has(t.name)) {
       if (style !== null) return null;
       style = t.name;
       stream.consume();
@@ -258,8 +270,9 @@ function modeSpanning(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | nu
     out[endMap.width] = v;
   }
   if (color !== null) {
-    out[startMap.color] = color.raw;
-    out[endMap.color] = color.raw;
+    const cv = colorTokenToRnStyleValue(color);
+    out[startMap.color] = cv;
+    out[endMap.color] = cv;
   }
   if (style !== null) {
     if (__NATIVE_WEB__) {
@@ -284,8 +297,8 @@ function outlineStyleHandler(tokens: Token[]): Dict<any> | null {
   const name = t.name;
   if (name === undefined) return null;
 
-  // CSS UI 4 §3.3: `outline-style: hidden` is invalid per spec (the
-  // `hidden` keyword only applies to `border-style`, not outline).
+  // `outline-style: hidden` is invalid (the `hidden` keyword only
+  // applies to `border-style`, not outline).
   if (name === 'hidden') {
     if (__DEV__) {
       warnOnce(

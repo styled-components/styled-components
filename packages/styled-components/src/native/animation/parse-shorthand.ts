@@ -7,6 +7,7 @@ import { parseEasing } from './css-keywords';
 const DIRECTION_KEYWORDS = new Set(['normal', 'reverse', 'alternate', 'alternate-reverse']);
 const FILL_MODE_KEYWORDS = new Set(['none', 'forwards', 'backwards', 'both']);
 const PLAY_STATE_KEYWORDS = new Set(['running', 'paused']);
+const COMPOSITION_KEYWORDS = new Set(['replace', 'add', 'accumulate']);
 const TIMING_KEYWORDS = new Set([
   'linear',
   'ease',
@@ -73,12 +74,8 @@ function tokenToMs(t: Token): number | null {
 
 /**
  * Parse a single `<single-animation>` token sequence into a partial
- * AnimationDescriptor. Spec disambiguation (CSS Animations L1 §3.10):
- * - The first parseable `<time>` is duration; the second is delay.
- * - Keywords valid for non-name longhands take precedence over name.
- *
- * Returns the partial; missing fields fall back to spec defaults at
- * the L1 longhand-collection layer (the caller fills them in).
+ * AnimationDescriptor. First `<time>` is duration, second is delay; keywords
+ * valid for non-name longhands take precedence over name. Caller fills defaults.
  */
 function parseSingleAnimation(tokens: Token[]): Partial<AnimationDescriptor> | null {
   const out: Partial<AnimationDescriptor> = {};
@@ -110,10 +107,8 @@ function parseSingleAnimation(tokens: Token[]): Partial<AnimationDescriptor> | n
       continue;
     }
     if (t.kind === TokenKind.Function && t.name === 'calc') {
-      // calc() in the animation shorthand only makes sense for the
-      // iteration-count slot (per Values 4 §10.7.2 `infinity`). Other
-      // numeric slots in the shorthand (`<time>`) carry units that
-      // can't survive a calc → number reduction here without context.
+      // calc() in the animation shorthand only resolves to iteration-count
+      // (`infinity`). Time slots carry units that can't reduce without context.
       const iter = calcToIterationCount(t.args || '');
       if (iter === null) return null;
       out.iterationCount = iter;
@@ -122,8 +117,6 @@ function parseSingleAnimation(tokens: Token[]): Partial<AnimationDescriptor> | n
     if (t.kind === TokenKind.Ident) {
       const name = t.name!;
       if (name === 'infinite' || name === 'infinity') {
-        // CSS3 keyword + Values 4 §10.7.2 numeric constant. Both map to
-        // JS Infinity for the iteration-count slot.
         out.iterationCount = Infinity;
         continue;
       }
@@ -291,7 +284,36 @@ function parseSingleTransition(tokens: Token[]): Partial<TransitionDescriptor> |
  * transitionTimingFunction | transitionDelay | transitionBehavior`.
  */
 export function transitionShorthand(tokens: Token[]): Dict<any> | null {
-  return shorthand(tokens, parseSingleTransition, TRANSITION_LONGHAND_MAPPING, DEFAULT_TRANSITION);
+  const groups = splitTopLevelCommas(tokens);
+  if (groups.length === 0) return null;
+  const parsed: Partial<TransitionDescriptor>[] = [];
+  for (let i = 0; i < groups.length; i++) {
+    const single = parseSingleTransition(groups[i]);
+    if (single === null) return null;
+    parsed.push(single);
+  }
+  // `none` as transition-property in a comma list invalidates the whole shorthand.
+  if (
+    parsed.length > 1 &&
+    parsed.some(p => typeof p.property === 'string' && p.property.toLowerCase() === 'none')
+  ) {
+    return null;
+  }
+  const out: Dict<any> = {};
+  const single = parsed.length === 1;
+  for (let i = 0; i < TRANSITION_LONGHAND_MAPPING.length; i++) {
+    const [key, field] = TRANSITION_LONGHAND_MAPPING[i];
+    if (single) {
+      out[key] = parsed[0][field] ?? DEFAULT_TRANSITION[field];
+    } else {
+      const arr = new Array(parsed.length);
+      for (let j = 0; j < parsed.length; j++) {
+        arr[j] = parsed[j][field] ?? DEFAULT_TRANSITION[field];
+      }
+      out[key] = arr;
+    }
+  }
+  return out;
 }
 
 const TRANSITION_LONGHAND_MAPPING: ReadonlyArray<[string, keyof TransitionDescriptor]> = [
@@ -324,10 +346,9 @@ export function animationTimingFunctionLonghand(tokens: Token[]): Dict<any> | nu
   return listLonghand(tokens, 'animationTimingFunction', tokenToEasing);
 }
 
-// Positive `infinity` from CSS Values 4 §10.7.2 inside a calc() body
-// maps to JS Infinity for the iteration-count slot. The boundary class
-// `[^\w-]` excludes `-`, so `-infinity` doesn't match (and `NaN` of
-// course doesn't either);both fall through to the null path.
+// Positive `infinity` inside a calc() body maps to JS Infinity for the
+// iteration-count slot. The boundary class `[^\w-]` excludes `-`, so
+// `-infinity` and `NaN` fall through to the null path.
 const CALC_HAS_INFINITY_RE = /(?:^|[^\w-])infinity(?:[^\w-]|$)/i;
 
 function calcToIterationCount(args: string): number | null {
@@ -338,9 +359,6 @@ export function animationIterationCountLonghand(tokens: Token[]): Dict<any> | nu
   return listLonghand(tokens, 'animationIterationCount', t => {
     if (t.kind === TokenKind.Number) return t.value!;
     if (t.kind === TokenKind.Ident) {
-      // `infinite` is the CSS3 keyword form; `infinity` is the
-      // CSS Values 4 §10.7.2 numeric constant. Both map to JS Infinity
-      // so the downstream animation engine can drive an unbounded loop.
       if (t.name === 'infinite' || t.name === 'infinity') return Infinity;
     }
     if (t.kind === TokenKind.Function && t.name === 'calc') {
@@ -360,6 +378,10 @@ export function animationFillModeLonghand(tokens: Token[]): Dict<any> | null {
 
 export function animationPlayStateLonghand(tokens: Token[]): Dict<any> | null {
   return listLonghand(tokens, 'animationPlayState', enumValidator(PLAY_STATE_KEYWORDS));
+}
+
+export function animationCompositionLonghand(tokens: Token[]): Dict<any> | null {
+  return listLonghand(tokens, 'animationComposition', enumValidator(COMPOSITION_KEYWORDS));
 }
 
 export function transitionPropertyLonghand(tokens: Token[]): Dict<any> | null {
@@ -430,6 +452,7 @@ export const ANIMATION_LONGHAND_KEYS = new Set([
   'animationDirection',
   'animationFillMode',
   'animationPlayState',
+  'animationComposition',
 ]);
 
 export const TRANSITION_LONGHAND_KEYS = new Set([

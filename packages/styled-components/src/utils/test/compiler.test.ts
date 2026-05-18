@@ -1147,6 +1147,26 @@ background-color: green;`)
     });
   });
 
+  describe('normalize block-comment whitespace', () => {
+    it('a /* foo */ b collapses surrounding whitespace to a single space', () => {
+      expect(normalize('a /* foo */ b { color: red; }')).toEqual('a b { color: red; }');
+    });
+
+    it('a/* foo */b strips just the comment when no surrounding whitespace', () => {
+      expect(normalize('a/* foo */b { color: red; }')).toEqual('ab { color: red; }');
+    });
+
+    it('comment between two declarations leaves only a single space', () => {
+      expect(normalize('color: red; /* note */ background: blue;')).toEqual(
+        'color: red; background: blue;'
+      );
+    });
+
+    it('comment at start of value strips without leaving double space', () => {
+      expect(normalize('color: /* note */ red;')).toEqual('color: red;');
+    });
+  });
+
   describe('normalize unified-path edge cases', () => {
     // Path 3j: comment stripping + brace imbalance fire together
     it('handles comment stripping that reveals brace imbalance', () => {
@@ -1213,9 +1233,8 @@ background-color: green;`)
     // Orphaned */;only stripped when the full tokenizer runs (// present)
     it('passes orphaned */ through when no // present (fast path)', () => {
       // Orphan `*/` (without matching `/*`) is a pathological input. The v7
-      // parser preserves whitespace as-is (`*/ background`), stylis collapsed
-      // it (`*/background`). Either behavior is acceptable;the input is
-      // malformed. This test locks v7 behavior.
+      // parser preserves whitespace as-is (`*/ background`). This test locks v7
+      // behavior for the fast path when no `//` comment triggers the full tokenizer.
       expect(
         runCssCompile(`
         color: red;

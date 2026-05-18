@@ -131,11 +131,20 @@ export interface CompiledAst {
   peek(key: string, fallback: string): string;
 }
 
+/**
+ * Attrs accepts a literal bag, an arity-1 callback (`(props) => ...`),
+ * or an arity-2 callback (`(props, ast) => ...`). The arity-2 form
+ * receives a non-optional `CompiledAst`, so authors don't need to
+ * optional-chain when they reach for `ast.pop` / `ast.peek`. Authoring
+ * the arity-1 form is just TypeScript's standard fewer-params-allowed
+ * rule, no extra union member needed; keeping the union to a single
+ * callable preserves contextual typing for `() => ({ as: 'label' })`.
+ */
 export type Attrs<Props extends BaseObject = BaseObject> =
   | (ExecutionProps & Partial<OverrideStyle<Props>>)
   | ((
       props: ExecutionContext & Props,
-      ast?: CompiledAst
+      ast: CompiledAst
     ) => ExecutionProps & Partial<OverrideStyle<Props>>);
 
 export type RuleSet<Props extends BaseObject = BaseObject> = Interpolation<Props>[];
@@ -166,8 +175,8 @@ export interface Compiler {
    * Wraps the input in `prefix + selector { css }`, runs `normalize +
    * parser + emit-web` with the active plugin set + namespace, and returns
    * the resulting rule strings ready for `insertRules`. Output is
-   * byte-identical to v6 stylis output for hash + SSR rehydration
-   * stability.
+   * deterministic for a given input so class hashes and SSR rehydration
+   * stay stable across renders.
    *
    * `prefix` carries at-rule wrapping (e.g. `'@keyframes'` for keyframe
    * registration). When both `selector` and `prefix` are empty the input
@@ -290,11 +299,35 @@ export interface PolymorphicComponent<
   out R extends Runtime,
   in out BaseProps extends BaseObject,
 > extends React.ForwardRefExoticComponent<
-  BaseProps & {
+  // FastOmit ahead of the intersection so a wrapped component's own `as` /
+  // `forwardedAs` props (e.g. Next.js Link's `as?: Url`) don't intersect with
+  // our `WebTarget`-typed versions and produce a conflicting required-shape
+  // type (#5734). `React.ComponentProps<typeof StyledComponent>` still
+  // surfaces our `as` / `forwardedAs` (the original #5654 fix).
+  FastOmit<BaseProps, 'as' | 'forwardedAs'> & {
     as?: StyledTarget<R> | undefined;
     forwardedAs?: StyledTarget<R> | undefined;
   }
 > {
+  // Default overload (no `as`/`forwardedAs`) is listed first so TypeScript's JSX
+  // attribute completion resolves to it for plain `<StyledComponent ... />`
+  // usage. The generic overloads below introduce unsolved type parameters that,
+  // when visited first, suppress JSX attribute name completions for keys
+  // carried by `BaseProps` (#5741). Avoids `Substitute` so ref callbacks get
+  // contextual typing even with spread props (#5687). `as` / `forwardedAs` here
+  // widen to also accept the wrapped component's own `as` / `forwardedAs` type
+  // when present (e.g. Next.js Link's `as?: Url`), so spreading the wrapped
+  // component's props onto the styled component remains assignable (#5734).
+  (
+    props: OverrideStyle<
+      NoInfer<FastOmit<BaseProps, keyof ExecutionProps>> & {
+        theme?: DefaultTheme | undefined;
+        as?: BaseProps extends { as?: infer A } ? A : void;
+        forwardedAs?: BaseProps extends { forwardedAs?: infer A } ? A : void;
+      }
+    >
+  ): React.JSX.Element;
+
   // Overload for `as` polymorphism. `as` is required here to prevent TS from
   // falling back to the constraint type (`StyledTarget<R>`) which is too wide.
   <AsTarget extends StyledTarget<R>, ForwardedAsTarget extends StyledTarget<R> | void = void>(
@@ -306,17 +339,6 @@ export interface PolymorphicComponent<
     props: PolymorphicComponentProps<R, BaseProps, void, ForwardedAsTarget> & {
       forwardedAs: ForwardedAsTarget;
     }
-  ): React.JSX.Element;
-
-  // Default overload: avoids Substitute for ref-callback typing under spread (#5687).
-  (
-    props: OverrideStyle<
-      NoInfer<FastOmit<BaseProps, keyof ExecutionProps>> & {
-        theme?: DefaultTheme | undefined;
-        as?: void;
-        forwardedAs?: void;
-      }
-    >
   ): React.JSX.Element;
 }
 
@@ -408,6 +430,8 @@ interface CompileOutput {
   specialCases?: Dict<any>;
   /** Container-query metadata extracted from the source CSS at compile time. */
   containerInfo?: { type: string; explicitName?: string };
+  /** `true` when this compile output could publish a cascade value (font-size / line-height / direction) to descendants. */
+  publishesCascade: boolean;
 }
 
 export interface INativeStyle<Props extends BaseObject> {

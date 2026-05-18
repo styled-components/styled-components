@@ -6,7 +6,7 @@ function emit(css: string, selector = '.a'): string[] {
   return emitWeb(parse(normalize(css)), selector);
 }
 
-describe('web emitter;output parity with stylis', () => {
+describe('web emitter', () => {
   it('emits simple declarations', () => {
     expect(emit(`color: red; background: blue;`)).toMatchInlineSnapshot(`
       [

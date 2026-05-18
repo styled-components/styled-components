@@ -39,7 +39,7 @@ function warnUnsupportedPlugins(plugins: SCPlugin[] | undefined): void {
     if (!name || name === 'rsc' || name === 'rtl') continue;
     warnOnce(
       'unsupported-plugin',
-      `plugin "${name}" is not supported in v7. Only the first-party plugins from \`styled-components/plugins\` are recognised; legacy stylis plugins (prefixer, RTL, etc.) must migrate to a build-time transform or use the v7 plugin shape.`,
+      `plugin "${name}" is not supported in v7. Only the first-party plugins from \`styled-components/plugins\` are recognized; legacy stylis plugins (prefixer, RTL, etc.) must migrate to a build-time transform or use the v7 plugin shape.`,
       name
     );
   }
@@ -129,10 +129,9 @@ export type IStyleSheetManager = React.PropsWithChildren<{
    */
   shouldForwardProp?: undefined | IStyleSheetContext['shouldForwardProp'];
   /**
-   * Plugins to apply during CSS emission. v7 ships first-party plugins via
+   * Plugins to apply during CSS emission. First-party plugins ship via
    * `styled-components/plugins` (`rscPlugin`, `rtlPlugin`); other plugins must
-   * implement the v7 `SCPlugin` shape (`{ name, rw?, decl? }`). Legacy stylis
-   * plugins are not supported.
+   * implement the `SCPlugin` shape (`{ name, rw?, decl? }`).
    *
    * When nested inside another `StyleSheetManager`, omitting this prop inherits
    * the parent's plugins. Pass an empty array (`[]`) to explicitly disable

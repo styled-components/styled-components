@@ -23,6 +23,70 @@ const FONT_WEIGHTS = new Set([
 ]);
 const FONT_VARIANTS = new Set(['small-caps']);
 
+const FONT_WIDTH_KEYWORDS = new Set([
+  'ultra-condensed',
+  'extra-condensed',
+  'condensed',
+  'semi-condensed',
+  'semi-expanded',
+  'expanded',
+  'extra-expanded',
+  'ultra-expanded',
+]);
+const ABSOLUTE_SIZE_PX: Record<string, number> = {
+  'xx-small': 9,
+  'x-small': 10,
+  small: 13,
+  medium: 16,
+  large: 18,
+  'x-large': 24,
+  'xx-large': 32,
+  'xxx-large': 48,
+};
+const RELATIVE_SIZE_SENTINELS: Record<string, string> = {
+  larger: '\0+',
+  smaller: '\0-',
+};
+const SYSTEM_FONT_KEYWORDS = new Set([
+  'caption',
+  'icon',
+  'menu',
+  'message-box',
+  'small-caption',
+  'status-bar',
+]);
+
+function warnFontUnsupported(reason: 'width' | 'relative' | 'system', value: string): void {
+  if (!__DEV__) return;
+  if (reason === 'width') {
+    warnOnce(
+      'native-font-width-unsupported',
+      '`font: ' +
+        value +
+        '` uses a font-width / font-stretch keyword. React Native does not control glyph width; the declaration is ignored. rn-web keeps the authored value.',
+      value
+    );
+    return;
+  }
+  if (reason === 'relative') {
+    warnOnce(
+      'native-font-relative-size-unsupported',
+      '`font: ' +
+        value +
+        '` uses a relative-size keyword (smaller / larger). The cascade does not track which keyword produced the inherited size, so the browser ramp navigation cannot be matched. Use a specific length such as `14px`.',
+      value
+    );
+    return;
+  }
+  warnOnce(
+    'native-font-system-name-unsupported',
+    '`font: ' +
+      value +
+      '` is a system font name. There is no cross-platform mapping; pick a font-family explicitly.',
+    value
+  );
+}
+
 function rawTokens(tokens: Token[]): string {
   let out = '';
   for (let i = 0; i < tokens.length; i++) {
@@ -37,12 +101,47 @@ function rawTokens(tokens: Token[]): string {
   return out;
 }
 
-/**
- * `font: [<style>] [<weight>] [<variant>] <size>[/<line-height>] <family>`
- * Slash handled inline; pre-stripping loses line-height association.
- */
+/** `font: [<style>] [<weight>] [<variant>] <size>[/<line-height>] <family>`. */
 export function fontShorthand(tokens: Token[]): Dict<any> | null {
-  const stream = new TokenStream(tokens);
+  if (tokens.length === 1 && tokens[0].kind === TokenKind.Ident) {
+    const name = tokens[0].name!;
+    if (SYSTEM_FONT_KEYWORDS.has(name)) {
+      warnFontUnsupported('system', name);
+      return {};
+    }
+  }
+  // Substitute keyword font-sizes with deterministic values so web,
+  // iOS, and Android resolve identically. Absolute-size keywords fold
+  // to the CSS reference pixel value; relative-size keywords emit a
+  // sentinel string the cascade resolver turns into the next ramp
+  // entry (or a 1.2 / 1/1.2 factor) at render time.
+  const normalized: Token[] = new Array(tokens.length);
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t.kind === TokenKind.Ident && t.name !== undefined) {
+      if (FONT_WIDTH_KEYWORDS.has(t.name)) {
+        warnFontUnsupported('width', rawTokens(tokens));
+        return {};
+      }
+      const sentinel = RELATIVE_SIZE_SENTINELS[t.name];
+      if (sentinel !== undefined) {
+        normalized[i] = { kind: TokenKind.Sentinel, raw: sentinel } as Token;
+        continue;
+      }
+      const px = ABSOLUTE_SIZE_PX[t.name];
+      if (px !== undefined) {
+        normalized[i] = {
+          kind: TokenKind.Length,
+          raw: px + 'px',
+          value: px,
+          unit: 'px',
+        } as Token;
+        continue;
+      }
+    }
+    normalized[i] = t;
+  }
+  const stream = new TokenStream(normalized);
 
   let fontStyle: string | undefined;
   let fontWeight: string | number | undefined;
@@ -79,10 +178,16 @@ export function fontShorthand(tokens: Token[]): Dict<any> | null {
 
   // Required: font-size
   const sizeTok = stream.consume();
-  if (!sizeTok || (sizeTok.kind !== TokenKind.Length && sizeTok.kind !== TokenKind.Percent)) {
+  if (
+    !sizeTok ||
+    (sizeTok.kind !== TokenKind.Length &&
+      sizeTok.kind !== TokenKind.Percent &&
+      sizeTok.kind !== TokenKind.Sentinel)
+  ) {
     return null;
   }
-  const fontSize = tokenToValue(sizeTok);
+  const fontSize: number | string =
+    sizeTok.kind === TokenKind.Sentinel ? sizeTok.raw : (tokenToValue(sizeTok) as number | string);
 
   let lineHeight: number | string | undefined;
   if (!stream.eof() && stream.peek()!.kind === TokenKind.Slash) {
@@ -91,7 +196,11 @@ export function fontShorthand(tokens: Token[]): Dict<any> | null {
     if (!lhTok) return null;
     if (lhTok.kind === TokenKind.Number) lineHeight = lhTok.value!;
     else if (lhTok.kind === TokenKind.Length || lhTok.kind === TokenKind.Percent) {
-      lineHeight = tokenToValue(lhTok);
+      if (!__NATIVE_WEB__ && lhTok.kind === TokenKind.Percent && typeof fontSize === 'number') {
+        lineHeight = (fontSize * lhTok.value!) / 100;
+      } else {
+        lineHeight = tokenToValue(lhTok);
+      }
     } else return null;
   }
 
@@ -127,16 +236,10 @@ export function fontShorthand(tokens: Token[]): Dict<any> | null {
 }
 
 /**
- * `font-family: <family-name>+, …` (CSS Fonts 4 §2.1).
- *
- * RN's `fontFamily` is a single string — comma-separated fallback lists
- * collapse to just the first family. We warn once per truncated list so
- * the silent narrowing surfaces; rn-web hands the full list to the
- * browser and its CSS engine selects.
- *
- * Generic family keywords (`serif`, `sans-serif`, `system-ui`,
- * `ui-monospace`, etc., per §2.1.5) resolve to a platform-specific
- * face name on native; rn-web passes them through.
+ * `font-family: <family-name>+, …`. RN's `fontFamily` is a single string, so
+ * comma-separated fallback lists collapse to the first family with a one-time
+ * warn. Generic keywords (`serif`, `system-ui`, etc.) resolve to a platform
+ * face on native; rn-web passes the full list through.
  */
 export function fontFamilyShorthand(tokens: Token[]): Dict<any> | null {
   if (__NATIVE_WEB__) return tokens.length === 0 ? null : { fontFamily: rawTokens(tokens) };
@@ -154,9 +257,8 @@ export function fontFamilyShorthand(tokens: Token[]): Dict<any> | null {
     );
   }
 
-  // Generic keyword resolution — only on native, only for bare idents;
-  // quoted strings opt out per CSS Fonts 4 §3.1.1, and rn-web keeps the
-  // keyword so the browser's user-agent stylesheet resolves.
+  // Generic keyword resolution: native-only, bare idents only (quoted strings
+  // are author-supplied face names). rn-web keeps the keyword for the browser.
   if (!__NATIVE_WEB__ && !family.quoted && isGenericFamily(family.name)) {
     return { fontFamily: resolveGenericFamily(family.name) };
   }
@@ -164,17 +266,11 @@ export function fontFamilyShorthand(tokens: Token[]): Dict<any> | null {
 }
 
 /**
- * `font-style: normal | italic | oblique [ <angle [-90deg,90deg]> | left | right ]?`
- * per CSS Fonts 4 §2.4. RN's fontStyle only accepts `normal | italic`;
- * the `oblique` keyword (and its `left` / `right` italic-direction
- * shorthands) map to `italic` on native. The optional angle is dropped
- * on RN with a one-time dev warn that names the angle. A `transform:
- * skewX` polyfill was considered but rejected — element-level skew
- * shears the whole box (kerning, descenders, background, padding) which
- * is not the same as the browser's per-glyph font synthesis. rn-web
- * passes the declaration through so the browser handles the slant axis
- * natively. Angles outside the spec range [-90deg, 90deg] are rejected
- * on both branches (`null` → declaration drops).
+ * `font-style: normal | italic | oblique [ <angle [-90deg,90deg]> | left | right ]?`.
+ * RN's fontStyle only accepts `normal | italic`, so `oblique` (and its angle /
+ * direction arguments) collapses to `italic` on native with a dev warn naming
+ * the dropped argument. rn-web passes the declaration through. Out-of-range
+ * angles are rejected on both branches.
  */
 const OBLIQUE_DIRECTION = new Set(['left', 'right']);
 
@@ -232,10 +328,8 @@ function degreesOf(t: Token): number | null {
 }
 
 /**
- * `line-height` characterization lock per CSS Inline 3. RN accepts
- * unitless multipliers and px lengths; percentage and em / rem values
- * silently drop. We warn once at the property boundary so the gap
- * surfaces. rn-web defers to the browser.
+ * `line-height` handler. RN accepts unitless multipliers and px lengths;
+ * percentage and em / rem drop with a dev warn. rn-web defers to the browser.
  */
 export function lineHeightHandler(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(tokens);
@@ -249,35 +343,34 @@ export function lineHeightHandler(tokens: Token[]): Dict<any> | null {
   if (t.kind === TokenKind.Number) return { lineHeight: t.value };
   if (t.kind === TokenKind.Length) {
     if (t.unit === 'px' || t.unit === '') return { lineHeight: t.value };
+    if (t.unit === 'em' || t.unit === 'rem' || t.unit === 'lh' || t.unit === 'rlh') {
+      return { lineHeight: t.raw };
+    }
     if (__DEV__) {
       warnOnce(
         'native-line-height-unit-unsupported',
         '`line-height: ' +
           t.raw +
-          '` is ignored on React Native. Use a unitless multiplier (`line-height: 1.4`) or px (`line-height: 20px`) on iOS and Android.',
+          '` is ignored on React Native. Use a unitless multiplier (`line-height: 1.4`), px (`line-height: 20px`), or a font-relative unit (em / rem / lh / rlh).',
         t.unit
       );
     }
     return {};
   }
   if (t.kind === TokenKind.Percent) {
-    if (__DEV__) {
-      warnOnce(
-        'native-line-height-percent-unsupported',
-        '`line-height` percentages are ignored on React Native. Use a unitless multiplier instead; `line-height: 1.4` is equivalent to `140%`.',
-        t.raw
-      );
-    }
-    return {};
+    // Defer to the cascade-resolver em path; percent and em both anchor
+    // at the inherited font-size.
+    if (t.value === undefined) return null;
+    return { lineHeight: t.value / 100 + 'em' };
   }
   if (t.kind === TokenKind.Ident && t.name === 'normal') return {};
   return null;
 }
 
 /**
- * `letter-spacing` characterization lock per CSS Text 3 §11.1. RN's
- * letterSpacing accepts unitless numbers and px lengths only; em / rem /
- * percentage values silently drop on native. rn-web defers to the browser.
+ * `letter-spacing` handler. Numeric and px values resolve at compile time;
+ * font-relative units (em / rem / lh / rlh) defer to the cascade resolver so
+ * the inherited font-size folds in at render time. rn-web passes through.
  */
 export function letterSpacingHandler(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(tokens);
@@ -291,18 +384,65 @@ export function letterSpacingHandler(tokens: Token[]): Dict<any> | null {
   if (t.kind === TokenKind.Number) return { letterSpacing: t.value };
   if (t.kind === TokenKind.Length) {
     if (t.unit === 'px' || t.unit === '') return { letterSpacing: t.value };
+    if (t.unit === 'em' || t.unit === 'rem' || t.unit === 'lh' || t.unit === 'rlh') {
+      return { letterSpacing: t.raw };
+    }
     if (__DEV__) {
       warnOnce(
         'native-letter-spacing-unit-unsupported',
         '`letter-spacing: ' +
           t.raw +
-          '` is ignored on React Native. Use a number or px value on iOS and Android.',
+          '` is ignored on React Native. Use a number, px, or font-relative unit (em / rem / lh).',
         t.unit
       );
     }
     return {};
   }
   if (t.kind === TokenKind.Ident && t.name === 'normal') return { letterSpacing: 0 };
+  return null;
+}
+
+/**
+ * Standalone `font-size` handler. Routes through the same sentinels the
+ * `font:` shorthand emits so the cascade resolver can fold relative-size
+ * keywords and percentages at render time.
+ */
+export function fontSizeHandler(tokens: Token[]): Dict<any> | null {
+  const stream = new TokenStream(tokens);
+  const t = stream.consume();
+  if (!t || !stream.eof()) return null;
+
+  if (__NATIVE_WEB__) {
+    return { fontSize: t.raw };
+  }
+
+  if (t.kind === TokenKind.Ident && t.name !== undefined) {
+    const name = t.name;
+    const sentinel = RELATIVE_SIZE_SENTINELS[name];
+    if (sentinel !== undefined) return { fontSize: sentinel };
+    const px = ABSOLUTE_SIZE_PX[name];
+    if (px !== undefined) return { fontSize: px };
+    return null;
+  }
+
+  if (t.kind === TokenKind.Number && t.value === 0) {
+    return { fontSize: 0 };
+  }
+
+  if (t.kind === TokenKind.Length) {
+    if (t.value === undefined || t.value < 0) return null;
+    if (t.unit === 'px' || t.unit === '') return { fontSize: t.value };
+    if (t.unit === 'em' || t.unit === 'rem' || t.unit === 'lh' || t.unit === 'rlh') {
+      return { fontSize: t.raw };
+    }
+    return null;
+  }
+
+  if (t.kind === TokenKind.Percent) {
+    if (t.value === undefined || t.value < 0) return null;
+    return { fontSize: t.value / 100 + 'em' };
+  }
+
   return null;
 }
 
@@ -320,18 +460,10 @@ export function fontVariantShorthand(tokens: Token[]): Dict<any> | null {
 }
 
 /**
- * CSS Sizing 4 §4.1 (`aspect-ratio`). Syntax: `auto || <ratio>`. The
- * shorthand accepts `auto`, a `<ratio>`, or both in any order.
- *
- * - `auto` alone: emits `aspectRatio: 'auto'`. Replaced elements
- *   (`<Image>`) use their intrinsic ratio; other styled views see no
- *   constraint (matches the initial value).
- * - `<ratio>` alone: emits the resolved number.
- * - `auto <ratio>` / `<ratio> auto`: emits the ratio. On replaced
- *   elements the intrinsic ratio is used if available, falling back to
- *   the explicit number; on non-replaced views the `auto` half is a
- *   no-op (RN has no intrinsic ratio surface). Emits a dev warn so the
- *   author knows the auto half doesn't carry on styled views.
+ * `aspect-ratio: auto || <ratio>`. `auto` alone yields `'auto'` (replaced
+ * elements like `<Image>` use intrinsic ratio; styled views have none).
+ * `<ratio>` alone emits the number. Combined forms emit the ratio plus a dev
+ * warn since RN has no intrinsic-ratio surface on non-replaced views.
  */
 export function aspectRatioShorthand(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(tokens);
@@ -388,7 +520,7 @@ function readFontFamily(stream: TokenStream): FontFamilyName | null {
   // return the first family and document the limitation. Use `raw` not
   // `name` for the bare-ident path so the family's original casing is
   // preserved (RN is case-sensitive when matching platform fonts). The
-  // `quoted` flag flows back to the generic-family gate — quotes opt the
+  // `quoted` flag flows back to the generic-family gate; quotes opt the
   // family out of generic resolution regardless of the spelling inside.
   const t = stream.consume();
   if (!t) return null;

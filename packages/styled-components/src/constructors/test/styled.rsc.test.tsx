@@ -787,7 +787,7 @@ describe('styled RSC mode', () => {
       `;
 
       // The wrapper must not have inherited the client-reference markers,
-      // otherwise React serialises it as a reference and skips our render.
+      // otherwise React serializes it as a reference and skips our render.
       expect((DangerButton as any).$$typeof).not.toBe(Symbol.for('react.client.reference'));
       expect((DangerButton as any).$$id).toBeUndefined();
       expect((DangerButton as any).$$async).toBeUndefined();
@@ -1155,7 +1155,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       // !important should be preserved on the :where()-wrapped base rule
-      // (stylis minifies the space before !important)
+      // (minified output omits the space before !important)
       expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*color:red\s?!important/);
       expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*display:flex/);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:blue/);
@@ -1600,7 +1600,7 @@ describe('styled RSC mode', () => {
       expect(byTag.C).toEqual(['innerplug']);
     });
 
-    it('should use default stylis when no plugins provided', () => {
+    it('should omit RSC child-index rewrite when no plugins are provided', () => {
       const Item = styled.li`
         &:first-child {
           color: red;

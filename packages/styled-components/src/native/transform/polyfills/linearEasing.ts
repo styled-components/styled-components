@@ -41,7 +41,7 @@ function parseStop(tokens: Token[]): LinearEasingStop[] | null {
     if (t.kind !== TokenKind.Percent) return null;
     ts.push(t.value! / 100);
   }
-  // Spec §2.1 grammar: `<number> && <percentage>{0,2}`; 3+ percents invalid.
+  // Grammar: `<number> && <percentage>{0,2}`; 3+ percents invalid.
   if (ts.length > 2) return null;
   if (ts.length === 0) return [{ t: NaN, v }];
   return ts.map(t => ({ t, v }));
@@ -53,8 +53,8 @@ function distributeStops(stops: LinearEasingStop[]): LinearEasingStop[] {
   if (Number.isNaN(out[out.length - 1].t)) {
     out[out.length - 1] = { t: 1, v: out[out.length - 1].v };
   }
-  // -Infinity so the first explicit input survives if negative (spec
-  // §2.1 step 3 allows extrapolation; running max bookkeeping otherwise).
+  // -Infinity so the first explicit input survives if negative
+  // (extrapolation is allowed; running max bookkeeping otherwise).
   let lastExplicit = -Infinity;
   for (let i = 0; i < out.length; i++) {
     if (!Number.isNaN(out[i].t) && out[i].t < lastExplicit) {

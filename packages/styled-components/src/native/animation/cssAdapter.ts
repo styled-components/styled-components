@@ -159,7 +159,7 @@ const cssAdapter: AnimationAdapter = {
     }
 
     // `resolved` may be a plain object (the canonical compiled base) or an
-    // array of style layers when `assembleFinalStyle` produced one — the
+    // array of style layers when `assembleFinalStyle` produced one; the
     // array form appears as soon as a conditional bucket (attr selector,
     // @media, @container, etc.) matches. Object-spreading an array yields
     // numeric keys (`{0: ..., 1: ...}`), and React DOM later assigns each
@@ -210,6 +210,8 @@ const cssAdapter: AnimationAdapter = {
       const fills: string[] = [];
       const states: string[] = [];
       const tims: string[] = [];
+      const comps: string[] = [];
+      let anyNonReplaceComposition = false;
       for (const a of animations!) {
         names.push(ensureKeyframes(a.name, compiled.keyframes, env));
         durs.push(a.durationMs + 'ms');
@@ -219,6 +221,8 @@ const cssAdapter: AnimationAdapter = {
         fills.push(a.fillMode);
         states.push(a.playState);
         tims.push(easingToCss(a.timingFunction));
+        comps.push(a.composition);
+        if (a.composition !== 'replace') anyNonReplaceComposition = true;
       }
       style.animationName = names.join(', ');
       style.animationDuration = durs.join(', ');
@@ -228,6 +232,12 @@ const cssAdapter: AnimationAdapter = {
       style.animationFillMode = fills.join(', ');
       style.animationPlayState = states.join(', ');
       style.animationTimingFunction = tims.join(', ');
+      // CSS Animations 2 `animation-composition`: browsers honor add /
+      // accumulate on the compositor. Omit when every effect is `replace`
+      // so authored styles that never opt into composition stay unchanged.
+      if (anyNonReplaceComposition) {
+        style.animationComposition = comps.join(', ');
+      }
     }
 
     return { style, elementType: target };

@@ -32,7 +32,7 @@ interface Assertion {
 const assertions = corpus as Assertion[];
 
 /**
- * Compare with whitespace collapsed;our parser may normalise
+ * Compare with whitespace collapsed; our parser may normalize
  * intra-value whitespace differently from source, but the token content
  * should be preserved.
  */
@@ -93,7 +93,7 @@ describe('WPT parity;web parser roundtrip', () => {
       const actualOut = normalizeWhitespace(out);
       // Loose containment: the raw value tokens must appear in the
       // emitted output (modulo whitespace / case). Allows the emitter
-      // to normalise around the edges.
+      // to normalize around the edges.
       if (!actualOut.includes(expectedValue)) {
         // Many computed tests have `expected !== value` (e.g.
         // `hwb(120 30% 50%)` → `rgb(77, 128, 77)`). Our output mirrors
@@ -114,7 +114,7 @@ describe('WPT parity;web parser roundtrip', () => {
       );
     }
     // Budget: allow a handful of genuinely exotic values to differ
-    // (e.g. calc() with sign()/cqw that we serialise differently).
+    // (e.g. calc() with sign()/cqw that we serialize differently).
     // Tighten as we find + fix specific cases.
     expect(mangled).toBeLessThan(assertions.length * 0.05);
   });

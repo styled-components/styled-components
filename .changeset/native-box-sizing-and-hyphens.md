@@ -1,5 +1,5 @@
 ---
-"styled-components": minor
+'styled-components': minor
 ---
 
 Added `box-sizing` and `hyphens` support to React Native styles.

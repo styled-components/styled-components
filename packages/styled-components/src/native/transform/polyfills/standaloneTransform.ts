@@ -1,15 +1,15 @@
 import { Dict } from '../../../types';
-import { getReactNativePlatformOS, warnOnce } from '../dev';
+import { warnOnce } from '../dev';
 import { consumeDimensionLike, tokenToValue, withoutSlashes } from '../shorthandHelpers';
 import { register } from '../shorthands';
 import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
 
 /**
- * Standalone `translate` / `rotate` / `scale` (CSS Transforms 2 §3).
- * RN 0.85 has these names only inside the `transform` array; we lower
- * to a CSS transform string (parsed by RN 0.74+). Composition with an
- * authored `transform:` is cascade-last-wins; not merged here.
+ * Standalone `translate` / `rotate` / `scale`. RN 0.85 has these names
+ * only inside the `transform` array; we lower to a CSS transform string
+ * (parsed by RN 0.74+). Composition with an authored `transform:` is
+ * cascade-last-wins; not merged here.
  */
 
 function dimToCss(t: Token): string {
@@ -48,8 +48,11 @@ function translateShorthand(tokens: Token[]): Dict<any> | null {
   if (__NATIVE_WEB__) {
     return { translate: dimToCss(x) + ' ' + dimToCss(y) + ' ' + dimToCss(z) };
   }
-  warn3DDrop('native-translate-3d', 'translate');
-  return { transform: 'translate(' + dimToCss(x) + ', ' + dimToCss(y) + ')' };
+  // RN's processTransform supports the 3-arg `translate(x, y, z)` form
+  // (parses to `{ translate: [x, y, z] }`), so Z survives.
+  return {
+    transform: 'translate(' + dimToCss(x) + ', ' + dimToCss(y) + ', ' + dimToCss(z) + ')',
+  };
 }
 
 const ROTATE_AXIS = new Set(['x', 'y', 'z']);
@@ -114,9 +117,9 @@ register('rotate', rotateShorthand);
 register('scale', scaleShorthand);
 
 /**
- * `transform-box` (CSS Transforms 1 §5). RN has no transform-box surface
- * — the pivot is fixed at the view's center (`transform-origin` shifts
- * the origin point relative to that). The keyword set
+ * `transform-box`. RN has no transform-box surface; the pivot is fixed
+ * at the view's center (`transform-origin` shifts the origin point
+ * relative to that). The keyword set
  * `content-box | border-box | fill-box | stroke-box | view-box` has no
  * mapping; the declaration emits a one-time dev warn and drops.
  *
@@ -154,8 +157,8 @@ function transformBoxHandler(tokens: Token[]): Dict<any> | null {
 register('transformBox', transformBoxHandler);
 
 /**
- * `perspective` standalone property (CSS Transforms 2 §8). Syntax:
- * `none | <length [0,∞]>`. Initial: `none`.
+ * `perspective` standalone property. Syntax: `none | <length [0,∞]>`.
+ * Initial: `none`.
  *
  * RN has no separate perspective-for-descendants attribute; the
  * closest mapping is to prepend `perspective(<length>)` to this
@@ -166,7 +169,7 @@ register('transformBox', transformBoxHandler);
  * `perspective: none` clears the value; emitted as `transform: 'none'`
  * which RN treats as the identity transform.
  *
- * Lengths < 1px clamp at 1px for rendering per the spec note (Transforms 2 §8).
+ * Lengths < 1px clamp at 1px for rendering.
  *
  * Composition with author transforms: the handler emits the sentinel
  * key `PERSPECTIVE_SENTINEL_KEY` instead of `transform` directly so a
@@ -204,7 +207,7 @@ function perspectiveHandler(tokens: Token[]): Dict<any> | null {
     const clamped = v < 1 ? 1 : v;
     return { [PERSPECTIVE_SENTINEL_KEY]: 'perspective(' + clamped + 'px)' };
   }
-  // Bare zero is a <number>, not a length; spec says >=0px only — reject.
+  // Bare zero is a <number>, not a length; only >=0px lengths are valid; reject.
   if (t.kind === TokenKind.Number && t.value === 0) {
     return { [PERSPECTIVE_SENTINEL_KEY]: 'perspective(1px)' };
   }
@@ -214,11 +217,10 @@ function perspectiveHandler(tokens: Token[]): Dict<any> | null {
 register('perspective', perspectiveHandler);
 
 /**
- * `perspective-origin: <position>` (CSS Transforms 2 §9). Sets the
- * vanishing point that perspective-transformed descendants converge
- * toward. RN 0.85 has no perspective-origin surface; the vanishing
- * point is fixed at the parent's center. Drops with a one-time dev
- * warn on iOS / Android.
+ * `perspective-origin: <position>`. Sets the vanishing point that
+ * perspective-transformed descendants converge toward. RN 0.85 has no
+ * perspective-origin surface; the vanishing point is fixed at the
+ * parent's center. Drops with a one-time dev warn on iOS / Android.
  *
  * rn-web honors the property natively (browser handles the position
  * grammar end-to-end).
@@ -244,11 +246,11 @@ function perspectiveOriginHandler(tokens: Token[]): Dict<any> | null {
 register('perspectiveOrigin', perspectiveOriginHandler);
 
 /**
- * `transform-style: flat | preserve-3d` (CSS Transforms 2 §7).
- * RN 0.85 has no transformStyle prop; `preserve-3d` is silently
- * dropped on iOS / Android. The iOS 3D-bleed memory documents a
- * known compositor side-effect when nested 3D transforms appear
- * without preserve-3d. rn-web honors the property natively.
+ * `transform-style: flat | preserve-3d`. RN 0.85 has no transformStyle
+ * prop; `preserve-3d` is silently dropped on iOS / Android. The iOS
+ * 3D-bleed memory documents a known compositor side-effect when nested
+ * 3D transforms appear without preserve-3d. rn-web honors the property
+ * natively.
  */
 function transformStyleHandler(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(tokens);
@@ -260,15 +262,9 @@ function transformStyleHandler(tokens: Token[]): Dict<any> | null {
   if (__NATIVE_WEB__) return { transformStyle: value };
 
   if (__DEV__ && value === 'preserve-3d') {
-    const iosHint =
-      getReactNativePlatformOS() === 'ios'
-        ? ' On iOS, `collapsable={false}` on the wrapper can avoid 3D rendering bleed across siblings.'
-        : '';
     warnOnce(
       'native-transform-style-preserve-3d',
-      '`transform-style: preserve-3d` is ignored on React Native because iOS and Android expose no matching style property.' +
-        iosHint +
-        ' rn-web keeps the property.',
+      "`transform-style: preserve-3d` is ignored on React Native because iOS and Android expose no matching style property; descendants of a 3D-transformed element composite into the parent's 2D plane. Animated 3D transforms (`rotateX` / `rotateY` / `rotateZ`) are already isolated automatically. rn-web keeps the property.",
       value
     );
   }

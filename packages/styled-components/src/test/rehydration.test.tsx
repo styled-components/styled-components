@@ -7,7 +7,7 @@ declare const __VERSION__: string;
 
 /* NOTE:
    Sometimes we add an empty function interpolation into some
-   styled-components to skip the static optimisation in
+   styled-components to skip the static optimization in
    WebStyle. This will look like this:
    ${() => ''}
    */

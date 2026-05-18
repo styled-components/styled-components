@@ -1,5 +1,5 @@
 ---
-"styled-components": minor
+'styled-components': minor
 ---
 
 React Native: sibling combinator selectors and the `:nth-child` family now work.

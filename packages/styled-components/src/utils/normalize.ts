@@ -90,9 +90,8 @@ export function normalize(css: string): string {
       }
       i += 2;
       // When the comment is bordered by whitespace on both sides, collapse the
-      // pair to a single space; matches stylis output so v6→v7 hash is stable
-      // for templates that interleave selectors with annotative comments
-      // (`a /* foo */ b`).
+      // pair to a single space so selector templates with annotative comments
+      // (`a /* foo */ b`) hash consistently.
       const prevCh = out.length > 0 ? out.charCodeAt(out.length - 1) : 0;
       if (isWS(prevCh) && i < len && isWS(css.charCodeAt(i))) {
         while (i < len && isWS(css.charCodeAt(i))) i++;

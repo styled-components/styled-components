@@ -731,6 +731,82 @@ describe('modern CSS on React Native', () => {
       `);
     });
 
+    // https://drafts.csswg.org/selectors-4/#the-is-pseudo
+    // https://drafts.csswg.org/selectors-4/#the-where-pseudo
+    describe('CSS Selectors 4 :is() / :where() on native (pseudo-state lists)', () => {
+      // "The matches-any pseudo-class, :is(), ... is a functional pseudo-class taking
+      // a selector list as its argument."
+      // On RN we only expand lists of supported pseudo-classes (see nativePlan).
+      it('&:is(:hover, :focus) applies when either pseudo state matches', () => {
+        const Comp = styled.View`
+          opacity: 1;
+          &:is(:hover, :focus) {
+            opacity: 0.5;
+          }
+        `;
+        const tree = TestRenderer.create(<Comp />);
+        const style = tree.root.findByType(View).props.style as (s: any) => any[];
+        expect(style({ hovered: true, focused: false })).toMatchInlineSnapshot(`
+          [
+            {
+              "opacity": 1,
+            },
+            {
+              "opacity": 0.5,
+            },
+          ]
+        `);
+        expect(style({ hovered: false, focused: true })).toMatchInlineSnapshot(`
+          [
+            {
+              "opacity": 1,
+            },
+            {
+              "opacity": 0.5,
+            },
+          ]
+        `);
+        expect(style({ hovered: false, focused: false })).toMatchInlineSnapshot(`
+          [
+            {
+              "opacity": 1,
+            },
+          ]
+        `);
+      });
+
+      it('&:where(:active, :disabled) fans out like separate pseudo rules', () => {
+        const Comp = styled.View`
+          opacity: 1;
+          &:where(:active, :disabled) {
+            opacity: 0.4;
+          }
+        `;
+        const tree = TestRenderer.create(<Comp />);
+        const style = tree.root.findByType(View).props.style as (s: any) => any[];
+        expect(style({ pressed: true })).toMatchInlineSnapshot(`
+          [
+            {
+              "opacity": 1,
+            },
+            {
+              "opacity": 0.4,
+            },
+          ]
+        `);
+        expect(style({ disabled: true })).toMatchInlineSnapshot(`
+          [
+            {
+              "opacity": 1,
+            },
+            {
+              "opacity": 0.4,
+            },
+          ]
+        `);
+      });
+    });
+
     it('merges user style function under pseudo state', () => {
       const Comp = styled.View<{ style?: any }>`
         background-color: white;
@@ -1142,7 +1218,7 @@ describe('modern CSS on React Native', () => {
       });
     });
 
-    // CSS Selectors 4 §6.3 — `i` flag forces ASCII case-insensitive
+    // CSS Selectors 4 §6.3: `i` flag forces ASCII case-insensitive
     // matching;`s` flag (default) is sensitive.
     describe('CSS Selectors 4 §6.3 case-sensitivity flag', () => {
       it('[attr=val i] matches case-insensitively', () => {
@@ -1712,7 +1788,7 @@ describe('modern CSS on React Native', () => {
   // an explicit displayName so the generated styledComponentId differs
   // (in real apps the babel plugin distinguishes via file position;
   // tests have no babel pass).
-  describe('combinator selectors spec compliance (CSS Selectors 4 — combinators)', () => {
+  describe('combinator selectors spec compliance (CSS Selectors 4: combinators)', () => {
     it('descendant combinator: `${Foo} &` matches when Foo is an ancestor', () => {
       const Foo = styled.View.withConfig({ displayName: 'CombDescFoo' })`
         background: blue;
@@ -1844,7 +1920,7 @@ describe('modern CSS on React Native', () => {
   });
 
   // https://drafts.csswg.org/selectors-4/#combinators
-  describe('sibling combinators spec compliance (CSS Selectors 4 — combinators)', () => {
+  describe('sibling combinators spec compliance (CSS Selectors 4: combinators)', () => {
     it('adjacent sibling `${Foo} + &` fires when the previous sibling is Foo', () => {
       const Parent = styled.View.withConfig({ displayName: 'AdjParent' })`
         flex: 1;
@@ -1947,7 +2023,7 @@ describe('modern CSS on React Native', () => {
   });
 
   // https://drafts.csswg.org/selectors-4/#nth-child-pseudo
-  describe(':nth-child family spec compliance (CSS Selectors 4 — :nth-child / :nth-of-type)', () => {
+  describe(':nth-child family spec compliance (CSS Selectors 4: :nth-child / :nth-of-type)', () => {
     it(':first-child matches index 0', () => {
       const Parent = styled.View.withConfig({ displayName: 'FirstParent' })`
         flex: 1;
@@ -2146,7 +2222,7 @@ describe('modern CSS on React Native', () => {
       expect(allViews[2].props.style).toEqual([{ color: 'black' }, { color: 'red' }]); // 2nd Box
     });
 
-    // CSS Selectors 4 — :nth-of-type: "represents an element that has
+    // CSS Selectors 4: :nth-of-type: "represents an element that has
     // an+b−1 siblings with the same expanded element name before it."
     // Two different `styled.View` factories share the React Native
     // target `'View'` and thus the SAME type for :nth-of-type purposes
@@ -2176,7 +2252,7 @@ describe('modern CSS on React Native', () => {
         </Parent>
       );
       const allViews = tree.root.findAllByType(View);
-      // Parent, Alpha, Beta — Beta is the 2nd View-typed sibling so
+      // Parent, Alpha, Beta; Beta is the 2nd View-typed sibling so
       // :nth-of-type(2) fires on it even though it's a DIFFERENT
       // styled-component than Alpha.
       expect(allViews[1].props.style).toEqual({ color: 'black' });
@@ -2290,7 +2366,7 @@ describe('modern CSS on React Native', () => {
   });
 
   // https://drafts.csswg.org/selectors-4/#has-pseudo
-  describe(':has spec compliance (CSS Selectors 4 — :has)', () => {
+  describe(':has spec compliance (CSS Selectors 4: :has)', () => {
     it(':has(${Component}) fires when the component is among descendants', () => {
       const Icon = styled.View.withConfig({ displayName: 'HasIcon1' })`
         background: blue;
@@ -2396,7 +2472,7 @@ describe('modern CSS on React Native', () => {
 
     // Spec §6.2: `[attr^=val]`, etc. inside :has() must dispatch
     // the same operator-aware matcher as a top-level attribute
-    // selector. Regression lock — earlier code treated every inner
+    // selector. Regression lock; earlier code treated every inner
     // attribute as an exact-equals.
     it(':has([attr^=val]) fires on a prefix-matching descendant prop', () => {
       const Card = styled.View.withConfig({ displayName: 'HasOpAttrCard1' })`
@@ -2460,7 +2536,7 @@ describe('modern CSS on React Native', () => {
     // the matching descendant is produced INSIDE a wrapper component's
     // own render (e.g. returned from `useMemo` or any non-children
     // computed JSX), the wrapper's `props.children` doesn't carry the
-    // descendant — only the wrapper element itself appears in the
+    // descendant; only the wrapper element itself appears in the
     // host's children list. The recursive walk reads each child's
     // `props.children`, so it never reaches into the wrapper's render
     // output and the match silently fails. Match works again the
@@ -2488,7 +2564,7 @@ describe('modern CSS on React Native', () => {
       // Expected per spec: :has(Icon) matches because Icon is in the
       // rendered subtree. Actual (current polyfill): walk doesn't
       // reach Icon because it lives inside MemoWrapper's render
-      // output, not its `props.children` — match fails. Skipped
+      // output, not its `props.children`; match fails. Skipped
       // until React Children traversal can introspect rendered output.
       expect(card.props.style).toEqual([{ backgroundColor: 'white' }, { backgroundColor: 'red' }]);
     });
@@ -2514,7 +2590,7 @@ describe('modern CSS on React Native', () => {
       expect(style({ hovered: true })).toEqual([{ color: 'black' }]);
     });
 
-    // Same §4.3 rule — inverting :focus.
+    // Same §4.3 rule: inverting :focus.
     it('&:not(:focus) inverts the focus pseudo-state', () => {
       const Btn = styled.View`
         color: black;
@@ -2529,7 +2605,7 @@ describe('modern CSS on React Native', () => {
       expect(style({ focused: true })).toEqual([{ color: 'black' }]);
     });
 
-    // §4.3 negation applied to an attribute presence — the element is
+    // §4.3 negation applied to an attribute presence; the element is
     // represented by :not([attr]) when the attribute is absent.
     it('&:not([data-active]) inverts attribute presence', () => {
       const Btn = styled.View<{ 'data-active'?: boolean }>`
@@ -2565,7 +2641,7 @@ describe('modern CSS on React Native', () => {
       expect(ok.root.findByType(View).props.style).toEqual({ color: 'black' });
     });
 
-    // §4.3 composed with a trailing pseudo-state — the bucket should
+    // §4.3 composed with a trailing pseudo-state; the bucket should
     // fire only when the element is NOT represented by the inner
     // selector AND the trailing pseudo-state holds.
     it('&:not([data-active]):hover fires only when NOT active AND hovered', () => {
@@ -2592,7 +2668,7 @@ describe('modern CSS on React Native', () => {
     });
 
     // §4.3: "However, unlike other pseudo-classes, the negation
-    // pseudo-class is not allowed to be nested" — and within our
+    // pseudo-class is not allowed to be nested"; and within our
     // polyfill the inner is restricted to simple selectors. A class
     // selector inside :not() is not supported on native; the rule
     // falls through to the generic complex-selector warn.
@@ -2620,33 +2696,262 @@ describe('modern CSS on React Native', () => {
       }
     });
 
-    // Characterization for the :nth-child(<formula> of <selector>)
-    // syntax (Selectors 4 §9.2). The polyfill emits a dedicated warn
-    // because the trailing selector requires React tree introspection
-    // we don't perform.
-    it(':nth-child(2n of .foo) fires the dedicated of-selector warn', () => {
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-      try {
-        TestRenderer.create(
-          React.createElement(styled.View`
-            color: black;
-            &:nth-child(2n of .foo) {
-              color: red;
-            }
-          `)
+    // ":nth-child(An+B [of S]?) pseudo-class notation represents
+    //  elements that are among An+B-th elements from the list composed
+    //  of their inclusive siblings that match the selector list S"
+    //  (CSS Selectors 4 §13.3.1, editor's draft).
+    describe(':nth-child(<formula> of <selector>) spec compliance (CSS Selectors 4 §13.3.1)', () => {
+      it(':nth-child(1 of [data-active]) selects the first active sibling regardless of overall position', () => {
+        const Parent = styled.View.withConfig({ displayName: 'NthOfAttrParent' })`
+          flex: 1;
+        `;
+        // "matched" is the merged style when the of-rule fires.
+        const Item = styled.View.withConfig({ displayName: 'NthOfAttrItem' })`
+          color: black;
+          &:nth-child(1 of [data-active]) {
+            color: red;
+          }
+        `;
+        const tree = TestRenderer.create(
+          <Parent>
+            <Item />
+            <Item data-active />
+            <Item data-active />
+            <Item />
+          </Parent>
         );
-        const messages = warnSpy.mock.calls.map(call => String(call[0]));
-        expect(
-          messages.some(
-            m =>
-              m.includes('CSS Selectors 4') &&
-              m.includes(':nth-child(<formula> of <selector>)') &&
-              m.includes("isn't supported on native")
-          )
-        ).toBe(true);
-      } finally {
-        warnSpy.mockRestore();
-      }
+        const items = tree.root.findAllByType(View);
+        // Parent at [0]; items 0..3 follow.
+        const matched = [{ color: 'black' }, { color: 'red' }];
+        expect(items[1].props.style).toEqual({ color: 'black' });
+        expect(items[2].props.style).toEqual(matched);
+        expect(items[3].props.style).toEqual({ color: 'black' });
+        expect(items[4].props.style).toEqual({ color: 'black' });
+      });
+
+      it(':nth-child(2n+1 of [data-active]) picks every odd sibling within the active filter', () => {
+        const Parent = styled.View.withConfig({ displayName: 'OddOfAttrParent' })`
+          flex: 1;
+        `;
+        const Item = styled.View.withConfig({ displayName: 'OddOfAttrItem' })`
+          color: black;
+          &:nth-child(2n + 1 of [data-active]) {
+            color: red;
+          }
+        `;
+        // Filter list (active): positions 0, 2, 3, 5 (in 0-based parent space).
+        // 1-based within filter: 1, 2, 3, 4. 2n+1 hits 1 and 3 → parent positions 0 and 3.
+        const tree = TestRenderer.create(
+          <Parent>
+            <Item data-active />
+            <Item />
+            <Item data-active />
+            <Item data-active />
+            <Item />
+            <Item data-active />
+          </Parent>
+        );
+        const items = tree.root.findAllByType(View);
+        const matched = [{ color: 'black' }, { color: 'red' }];
+        expect(items[1].props.style).toEqual(matched);
+        expect(items[2].props.style).toEqual({ color: 'black' });
+        expect(items[3].props.style).toEqual({ color: 'black' });
+        expect(items[4].props.style).toEqual(matched);
+        expect(items[5].props.style).toEqual({ color: 'black' });
+        expect(items[6].props.style).toEqual({ color: 'black' });
+      });
+
+      it('attribute-value form: :nth-child(1 of [data-tier="gold"]) honors the value match', () => {
+        const Parent = styled.View.withConfig({ displayName: 'TierParent' })`
+          flex: 1;
+        `;
+        const Item = styled.View.withConfig({ displayName: 'TierItem' })`
+          color: black;
+          &:nth-child(1 of [data-tier='gold']) {
+            color: red;
+          }
+        `;
+        const tree = TestRenderer.create(
+          <Parent>
+            <Item data-tier="silver" />
+            <Item data-tier="gold" />
+            <Item data-tier="gold" />
+          </Parent>
+        );
+        const items = tree.root.findAllByType(View);
+        const matched = [{ color: 'black' }, { color: 'red' }];
+        expect(items[1].props.style).toEqual({ color: 'black' });
+        expect(items[2].props.style).toEqual(matched);
+        expect(items[3].props.style).toEqual({ color: 'black' });
+      });
+
+      it(':nth-last-child(1 of [data-active]) counts the filter from the end', () => {
+        const Parent = styled.View.withConfig({ displayName: 'LastOfAttrParent' })`
+          flex: 1;
+        `;
+        const Item = styled.View.withConfig({ displayName: 'LastOfAttrItem' })`
+          color: black;
+          &:nth-last-child(1 of [data-active]) {
+            color: red;
+          }
+        `;
+        const tree = TestRenderer.create(
+          <Parent>
+            <Item data-active />
+            <Item />
+            <Item data-active />
+            <Item />
+          </Parent>
+        );
+        const items = tree.root.findAllByType(View);
+        const matched = [{ color: 'black' }, { color: 'red' }];
+        // Last active sibling is at parent position 2 (items[3]).
+        expect(items[1].props.style).toEqual({ color: 'black' });
+        expect(items[2].props.style).toEqual({ color: 'black' });
+        expect(items[3].props.style).toEqual(matched);
+        expect(items[4].props.style).toEqual({ color: 'black' });
+      });
+
+      it('returns no match when no sibling satisfies the inner selector', () => {
+        const Parent = styled.View.withConfig({ displayName: 'NthOfEmptyParent' })`
+          flex: 1;
+        `;
+        const Item = styled.View.withConfig({ displayName: 'NthOfEmptyItem' })`
+          color: black;
+          &:nth-child(1 of [data-active]) {
+            color: red;
+          }
+        `;
+        const tree = TestRenderer.create(
+          <Parent>
+            <Item />
+            <Item />
+          </Parent>
+        );
+        const items = tree.root.findAllByType(View);
+        expect(items[1].props.style).toEqual({ color: 'black' });
+        expect(items[2].props.style).toEqual({ color: 'black' });
+      });
+
+      // §13.3.1 example: "By passing a selector argument, we can select
+      // the Nth element that matches that selector."
+      it(':nth-child(-n+3 of [data-important]) selects the first three matching siblings', () => {
+        const Parent = styled.View.withConfig({ displayName: 'NegFormulaParent' })`
+          flex: 1;
+        `;
+        const Item = styled.View.withConfig({ displayName: 'NegFormulaItem' })`
+          color: black;
+          &:nth-child(-n + 3 of [data-important]) {
+            color: red;
+          }
+        `;
+        const tree = TestRenderer.create(
+          <Parent>
+            <Item />
+            <Item data-important />
+            <Item data-important />
+            <Item />
+            <Item data-important />
+            <Item data-important />
+          </Parent>
+        );
+        const items = tree.root.findAllByType(View);
+        const matched = [{ color: 'black' }, { color: 'red' }];
+        // Important filter: indices 1, 2, 4, 5. 1-based within filter: 1, 2, 3, 4.
+        // -n+3 evaluates to {3, 2, 1, 0, ...} → matches filter positions 1, 2, 3.
+        expect(items[1].props.style).toEqual({ color: 'black' });
+        expect(items[2].props.style).toEqual(matched);
+        expect(items[3].props.style).toEqual(matched);
+        expect(items[4].props.style).toEqual({ color: 'black' });
+        expect(items[5].props.style).toEqual(matched);
+        expect(items[6].props.style).toEqual({ color: 'black' });
+      });
+
+      // Component-ref inner via interpolation; `${Foo}` toString interpolates
+      // to `.<styledComponentId>`. We support the same shape `:has(${Foo})` does.
+      it('component-ref inner: :nth-child(1 of ${Foo}) selects the first Foo-shaped sibling', () => {
+        const Parent = styled.View.withConfig({ displayName: 'NthOfCompParent' })`
+          flex: 1;
+        `;
+        const Foo = styled.View.withConfig({ displayName: 'NthOfCompFoo' })``;
+        const Item = styled.View.withConfig({ displayName: 'NthOfCompItem' })`
+          color: black;
+          &:nth-child(1 of ${Foo}) {
+            color: red;
+          }
+        `;
+        const tree = TestRenderer.create(
+          <Parent>
+            <Item />
+            <Foo />
+            <Item />
+            <Foo />
+          </Parent>
+        );
+        const allViews = tree.root.findAllByType(View);
+        // Parent, Item1, Foo1, Item2, Foo2. The Foo1 entry is the first
+        // Foo-shaped sibling so :nth-child(1 of Foo) matches it.
+        // Item and Foo don't carry the same styles, but Foo carries no
+        // declarations so its style is undefined/no-op; the assertion
+        // looks at Items only.
+        const itemStyles = [allViews[1].props.style, allViews[3].props.style];
+        // Items do not satisfy the inner selector, so neither matches the
+        // formula filter; their style is the base only.
+        expect(itemStyles[0]).toEqual({ color: 'black' });
+        expect(itemStyles[1]).toEqual({ color: 'black' });
+      });
+
+      it('combines with a trailing pseudo-state on the host (:nth-child(... of ...):hover)', () => {
+        const Parent = styled.View.withConfig({ displayName: 'NthOfHoverParent' })`
+          flex: 1;
+        `;
+        // The of-form keeps the matching contract; the :hover suffix gates
+        // the matched rule on the pseudo-state at runtime, so each item's
+        // style is a state callback once any pseudo-state rule exists.
+        const Item = styled.View.withConfig({ displayName: 'NthOfHoverItem' })`
+          color: black;
+          &:nth-child(1 of [data-active]):hover {
+            color: red;
+          }
+        `;
+        const tree = TestRenderer.create(
+          <Parent>
+            <Item />
+            <Item data-active />
+            <Item data-active />
+          </Parent>
+        );
+        const items = tree.root.findAllByType(View).slice(1);
+        // Inactive sibling: never matches the of-filter, hover state ignored.
+        expect(items[0].props.style({ hovered: true })).toEqual([{ color: 'black' }]);
+        // First active sibling: of-filter says yes (position 1 of filtered).
+        // Hovered → match fires; not hovered → only base style.
+        expect(items[1].props.style({ hovered: true })).toEqual([
+          { color: 'black' },
+          { color: 'red' },
+        ]);
+        expect(items[1].props.style({ hovered: false })).toEqual([{ color: 'black' }]);
+        // Second active sibling: of-filter position 2 ≠ 1, no match.
+        expect(items[2].props.style({ hovered: true })).toEqual([{ color: 'black' }]);
+      });
+
+      it('falls back to the complex-selector warn when the inner uses a combinator', () => {
+        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+        try {
+          TestRenderer.create(
+            React.createElement(styled.View`
+              color: black;
+              &:nth-child(2n of .a .b) {
+                color: red;
+              }
+            `)
+          );
+          const messages = warnSpy.mock.calls.map(call => String(call[0]));
+          expect(messages.some(m => m.includes('complex selectors are not supported'))).toBe(true);
+        } finally {
+          warnSpy.mockRestore();
+        }
+      });
     });
   });
 });

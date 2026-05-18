@@ -42,22 +42,20 @@ export type ConditionType =
   | 'supports'
   | 'pseudo'
   | 'attr'
-  /** CSS Selectors 4 §15 combinator against a referenced styled component
-   *  (`${Foo} &`, `${Foo} > &`, `${Foo} + &`, `${Foo} ~ &`). `condition`
-   *  holds the referenced id; `combinator` distinguishes the four
-   *  forms. */
+  /** Combinator against a referenced styled component (`${Foo} &`,
+   *  `${Foo} > &`, `${Foo} + &`, `${Foo} ~ &`). `condition` holds the
+   *  referenced id; `combinator` distinguishes the four forms. */
   | 'combinator'
-  /** CSS Selectors 4 §9 tree-structural pseudo-classes that match by
-   *  the element's position among its parent's children (`:first-child`,
+  /** Tree-structural pseudo-classes that match by the element's
+   *  position among its parent's children (`:first-child`,
    *  `:last-child`, `:only-child`, `:nth-child(an+b)`,
    *  `:nth-last-child(an+b)`, `:nth-of-type(an+b)`,
    *  `:nth-last-of-type(an+b)`). `nthSpec` carries the structured
    *  `(a, b, fromEnd, ofType)` representation. */
   | 'nthChild'
-  /** CSS Selectors 4 §13.1 — `&:has(<simple>)`. Match runs a recursive
-   *  walk over the element's `props.children` looking for a descendant
-   *  that satisfies the inner simple selector (`${Component}` or
-   *  `[attr]` / `[attr=value]`). */
+  /** `&:has(<simple>)`. Match runs a recursive walk over the element's
+   *  `props.children` looking for a descendant that satisfies the inner
+   *  simple selector (`${Component}` or `[attr]` / `[attr=value]`). */
   | 'has';
 
 export type { PseudoState, ConditionalAttr, NthSpec };
@@ -148,8 +146,8 @@ export interface NativeStyles {
   conditional: ConditionalStyle[];
   /**
    * Subset of `conditional` containing only entries the per-render
-   * `matchConditionals` walks — i.e. buckets without a pseudo-state
-   * gate. Precomputed at compile time so the render path doesn't
+   * `matchConditionals` walks (i.e. buckets without a pseudo-state
+   * gate). Precomputed at compile time so the render path doesn't
    * re-skip pseudo entries on every render.
    */
   nonPseudoEntries: NonPseudoConditionalStyle[];
@@ -237,11 +235,11 @@ export interface NativeStyles {
    */
   containerInfo?: { type: string; explicitName?: string };
   /**
-   * CSS Form Control Styling 1 §7.1 (`field-sizing`). Set when the
-   * source CSS declared `field-sizing: content` on a styled component
-   * targeting `TextInput`. The polyfill itself lifts `multiline: true`
+   * `field-sizing`. Set when the source CSS declared
+   * `field-sizing: content` on a styled component targeting
+   * `TextInput`. The polyfill itself lifts `multiline: true`
    * via SPECIAL_CASE_PROPS and lets RN's shadow-view measure callback
-   * grow the view to its natural text size — no JS-side autosize
+   * grow the view to its natural text size; no JS-side autosize
    * wiring. This flag exists so the render path can dev-warn when the
    * user passes `multiline={false}` explicitly (voiding the lift).
    * On rn-web the polyfill keeps the declaration in `base` so the
@@ -249,6 +247,16 @@ export interface NativeStyles {
    * runs on non-rn-web bundles via `__NATIVE_WEB__` tree-shaking.
    */
   fieldSizing?: 'content';
+  /**
+   * `true` when this compile output COULD publish a cascade value
+   * (font-size / line-height / direction) to descendants. Set when any
+   * of base, resolvers, conditional buckets, starting-style, transitions,
+   * or animation keyframes declare a cascade key. Lets the render path
+   * skip the per-render `collectCascadeSlots` walk when both this flag
+   * is false AND no user style was supplied (the only other source of
+   * cascade keys is a `style={{ fontSize: ... }}` prop).
+   */
+  publishesCascade: boolean;
 }
 
 /**
@@ -264,10 +272,10 @@ export interface SpecialCaseMeta {
   /**
    * Default `0`: user prop wins (the lift fills in only when the prop
    * is absent). Positive values let the compiled value take priority
-   * over an author-supplied prop of the same name; higher wins. CSS UI
-   * 4 §6.3 mandates this for `inert`: hit-testing, text-selection, and
-   * editable suppression act as if their underlying props were the
-   * inert values *regardless of actual value*.
+   * over an author-supplied prop of the same name; higher wins.
+   * Required for `inert`: hit-testing, text-selection, and editable
+   * suppression act as if their underlying props were the inert values
+   * regardless of actual value.
    */
   priority?: number;
 }
@@ -296,16 +304,45 @@ export const SPECIAL_CASE_PROPS: Record<string, SpecialCaseMeta> = {
     validOn: ['Text', 'TextInput', 'VirtualText'],
     source: 'line-clamp / text-wrap: nowrap',
   },
+  ellipsizeMode: {
+    validOn: ['Text', 'TextInput', 'VirtualText'],
+    source: 'text-overflow / text-wrap: nowrap',
+  },
+  bounces: {
+    validOn: ['ScrollView', 'FlatList', 'SectionList', 'VirtualizedList'],
+    source: 'overscroll-behavior',
+  },
+  overScrollMode: {
+    validOn: ['ScrollView', 'FlatList', 'SectionList', 'VirtualizedList'],
+    source: 'overscroll-behavior',
+  },
+  showsVerticalScrollIndicator: {
+    validOn: ['ScrollView', 'FlatList', 'SectionList', 'VirtualizedList'],
+    source: 'scrollbar-width',
+  },
+  showsHorizontalScrollIndicator: {
+    validOn: ['ScrollView', 'FlatList', 'SectionList', 'VirtualizedList'],
+    source: 'scrollbar-width',
+  },
+  trackColor: { validOn: ['Switch'], source: 'accent-color' },
   // Android-only Text prop (API 23+); silently dropped on iOS by RN's own
   // view-prop filter. Maps text-wrap balance / pretty into Android's line-
   // breaking modes; iOS has no equivalent in 0.85.
   textBreakStrategy: { validOn: ['Text', 'VirtualText'], source: 'text-wrap' },
+  // Android-only Text prop. The hyphens polyfill emits this so `hyphens:
+  // auto` reaches Android's system hyphenator instead of being dropped as
+  // an unknown style key.
+  android_hyphenationFrequency: { validOn: ['Text', 'VirtualText'], source: 'hyphens' },
   // Android-only TextInput prop. iOS drops; rationale in
   // `native/transform/polyfills/caretColor.ts`.
   cursorColor: { validOn: ['TextInput'], source: 'caret-color' },
-  // `interactivity: inert` on rn-web — a single HTML `inert` attribute
-  // covers hit-testing, focus, text selection, editable suppression, and
-  // a11y subtree hiding (HTML spec §inert). rn-web's
+  // iOS TextInput tint for the caret and the selection highlight. Emitted
+  // by the caret-color polyfill on iOS only so Android's selection stays
+  // untouched (Android uses `cursorColor` for the caret alone).
+  selectionColor: { validOn: ['TextInput'], source: 'caret-color' },
+  // `interactivity: inert` on rn-web: a single HTML `inert` attribute
+  // covers hit-testing, focus, text selection, editable suppression,
+  // and a11y subtree hiding. rn-web's
   // `forwardedProps.accessibilityProps` whitelists `inert` so the prop
   // reaches the DOM verbatim. On native this entry never fires (the
   // polyfill is gated by `__NATIVE_WEB__`).
@@ -314,12 +351,11 @@ export const SPECIAL_CASE_PROPS: Record<string, SpecialCaseMeta> = {
     source: 'interactivity',
     priority: 1,
   },
-  // `interactivity: inert` on native — RN has no `inert` prop, so the
+  // `interactivity: inert` on native: RN has no `inert` prop, so the
   // polyfill lifts the six underlying surfaces individually. Priority
-  // over author props is required by CSS UI 4 §6.3: hit-testing must
-  // act as if `pointer-events` were `none` regardless of its actual
-  // value, and equivalent for the a11y / focus / selection / editable
-  // surfaces.
+  // over author props is required: hit-testing must act as if
+  // `pointer-events` were `none` regardless of its actual value, and
+  // equivalent for the a11y / focus / selection / editable surfaces.
   pointerEvents: { validOn: VIEW_LIKE_TARGETS, source: 'interactivity', priority: 1 },
   accessibilityElementsHidden: {
     validOn: VIEW_LIKE_TARGETS,
@@ -332,20 +368,20 @@ export const SPECIAL_CASE_PROPS: Record<string, SpecialCaseMeta> = {
     priority: 1,
   },
   focusable: { validOn: VIEW_LIKE_TARGETS, source: 'interactivity', priority: 1 },
-  // Text-selection suppression for `interactivity: inert` — CSS UI 4 §6.3:
-  // "Text selection must act as if `user-select` was `none`."
+  // Text-selection suppression for `interactivity: inert`: text
+  // selection must act as if `user-select` was `none`.
   selectable: {
     validOn: ['Text', 'TextInput', 'VirtualText'],
     source: 'interactivity',
     priority: 1,
   },
-  // Editable suppression — same spec section: "If the element or text
+  // Editable suppression; same spec section: "If the element or text
   // node is editable, it must behave as if it was non-editable." RN's
   // TextInput exposes editability via `editable`.
   editable: { validOn: ['TextInput'], source: 'interactivity', priority: 1 },
   // `field-sizing: content` lifts `multiline: true` so the user can
   // write a single CSS declaration on a single-line `styled.TextInput`
-  // and get an autosizing multiline field — RN's shadow-view measure
+  // and get an autosizing multiline field; RN's shadow-view measure
   // callback then grows the view to its natural text size. Explicit
   // `multiline={false}` from the user still wins (special cases spread
   // with user props winning), and the render path dev-warns when that
@@ -490,6 +526,9 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
     pseudoEntries,
     keyframes,
     hasPseudo,
+    // Filled below after every optional field is attached so the scan
+    // can see startingStyle / resolvers / animations / transitions.
+    publishesCascade: false,
   };
   if (specialCases !== null) out.specialCases = specialCases;
   if (animations !== null) out.animations = animations;
@@ -509,7 +548,66 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   }
   if (containerInfo !== null) out.containerInfo = containerInfo;
   if (fieldSizing !== null) out.fieldSizing = fieldSizing;
+  out.publishesCascade = computePublishesCascade(out);
   return out;
+}
+
+/**
+ * Scan a compiled output for declarations that could publish a cascade
+ * value (font-size / line-height / direction) to descendants. Considers
+ * static base, render-time resolvers, conditional buckets and their
+ * resolvers, `@starting-style`, transitions, and animation keyframes.
+ *
+ * Lets the render path's per-render `collectCascadeSlots` walk
+ * short-circuit when this flag is false AND the consumer didn't supply
+ * a `style={{ fontSize: ... }}` prop (the only other source of cascade
+ * values).
+ */
+function computePublishesCascade(out: NativeStyles): boolean {
+  if (hasCascadeKey(out.base)) return true;
+  if (out.resolvers && resolversWriteCascadeKey(out.resolvers)) return true;
+  for (let i = 0; i < out.conditional.length; i++) {
+    const c = out.conditional[i];
+    if (hasCascadeKey(c.styles)) return true;
+    if (c.resolvers && resolversWriteCascadeKey(c.resolvers)) return true;
+  }
+  if (out.startingStyle && hasCascadeKey(out.startingStyle)) return true;
+  if (out.startingStyleResolvers && resolversWriteCascadeKey(out.startingStyleResolvers)) {
+    return true;
+  }
+  if (out.transitions) {
+    for (let i = 0; i < out.transitions.length; i++) {
+      const p = out.transitions[i].property;
+      if (p === 'all' || isCascadeKey(p)) return true;
+    }
+  }
+  for (let i = 0; i < out.keyframes.length; i++) {
+    const frames = out.keyframes[i].frames;
+    for (let j = 0; j < frames.length; j++) {
+      if (hasCascadeKey(frames[j].decls)) return true;
+    }
+  }
+  return false;
+}
+
+function isCascadeKey(k: string): boolean {
+  return k === 'fontSize' || k === 'lineHeight' || k === 'direction';
+}
+
+/**
+ * `true` when `o` has any cascade-publishing key (font-size / line-height /
+ * direction) set to a defined value. Exported so `NativeStyle.staticEligible`
+ * can use the same set without drift.
+ */
+export function hasCascadeKey(o: Dict<unknown>): boolean {
+  return o.fontSize !== undefined || o.lineHeight !== undefined || o.direction !== undefined;
+}
+
+function resolversWriteCascadeKey(rs: ReadonlyArray<[string, unknown]>): boolean {
+  for (let i = 0; i < rs.length; i++) {
+    if (isCascadeKey(rs[i][0])) return true;
+  }
+  return false;
 }
 
 /**
@@ -576,9 +674,9 @@ const DEFAULT_EASING: EasingDescriptor = {
 /**
  * Per-descriptor extraction recipe: longhand → descriptor field mapping
  * with the spec-default for each field. The driving longhand (the one
- * whose list length determines the descriptor count, per CSS Animations
- * L1 §3.2 list-length cycling) is the FIRST entry; absence of that
- * longhand means "no descriptors."
+ * whose list length determines the descriptor count under coordinating-
+ * list semantics) is the FIRST entry; absence of that longhand means
+ * "no descriptors."
  */
 const ANIMATION_RECIPE: ExtractRecipe<AnimationDescriptor> = [
   ['animationName', 'name', undefined], // required driver
@@ -623,7 +721,7 @@ function extractTransitions(base: Dict<any>): TransitionDescriptor[] | null {
  * Lift CSS longhand keys out of `base` and assemble them into one or
  * more descriptors per the recipe. The first entry in the recipe is
  * the "driver" longhand whose list length determines the descriptor
- * count; the rest cycle to match per CSS Animations L1 §3.2.
+ * count; the rest cycle to match (coordinating-list semantics).
  *
  * `base` is mutated in place (keys are deleted as they're consumed).
  * Returns `null` when no recipe longhand is present.
@@ -738,8 +836,9 @@ function stripSpecialCasesFromConditional(styles: Dict<any>, entry: ConditionalS
 }
 
 function hasOwnKeys(o: object): boolean {
-  for (const k in o) {
-    if (k.length >= 0) return true;
+  for (const _k in o) {
+    void _k;
+    return true;
   }
   return false;
 }
@@ -837,8 +936,8 @@ function processDecls(decls: StaticDeclNode[]): {
  * Compose `perspective: <length>` with any sibling `transform` value in
  * the same declaration block. The perspective polyfill emits a sentinel
  * key so cascade last-wins doesn't drop the perspective when the author
- * also writes `transform:`. Per CSS Transforms 2 §8 the perspective
- * applies to the element's own transform context.
+ * also writes `transform:`. The perspective applies to the element's
+ * own transform context.
  */
 function foldPerspectiveSentinel(raw: Dict<any>, base: Dict<any>): void {
   const persp = base[PERSPECTIVE_SENTINEL_KEY];
@@ -867,10 +966,10 @@ function foldPerspectiveSentinel(raw: Dict<any>, base: Dict<any>): void {
 }
 
 /**
- * CSS Animations 1 §3.1 (Timing functions for keyframes, editor's draft):
- * "A timing function specified on the to or 100% keyframe is ignored."
- * A frame whose every stop is only `to` or `100%` is treated as that end
- * keyframe. Mixed stops such as `0%, 100%` are not end-only.
+ * A timing function specified on the `to` or `100%` keyframe is
+ * ignored. A frame whose every stop is only `to` or `100%` is treated
+ * as that end keyframe. Mixed stops such as `0%, 100%` are not
+ * end-only.
  */
 function isEndOnlyKeyframeStops(stops: string[]): boolean {
   if (stops.length === 0) return false;
@@ -1045,7 +1144,18 @@ function nthSpecKey(spec: NthSpec): string {
   const dir = spec.fromEnd ? 'L' : 'F';
   const ot = spec.ofType ? 't' : 'c';
   const oc = spec.onlyChild ? '!' : '';
-  return `nth:${dir}${ot}${oc}:${spec.a}n+${spec.b}`;
+  let key = `nth:${dir}${ot}${oc}:${spec.a}n+${spec.b}`;
+  if (spec.of !== undefined) {
+    const of = spec.of;
+    if (of.kind === 'component') key += `|ofc:${of.id}`;
+    else
+      key +=
+        `|ofa:${of.attr.name}` +
+        (of.attr.operator !== undefined ? `${of.attr.operator}` : '=') +
+        (of.attr.value !== undefined ? of.attr.value : '') +
+        (of.attr.caseFlag !== undefined ? `/${of.attr.caseFlag}` : '');
+  }
+  return key;
 }
 
 /** `:has(<simple>)` bucket. The match walks props.children at render
@@ -1092,7 +1202,7 @@ function pushHasBucket(
  *
  * Phase 3 scope: top-level combinator selectors only. A combinator
  * nested inside `@media` / `@container` / `@supports` skips the
- * bucket and falls through to the unsupported warn — landing combos
+ * bucket and falls through to the unsupported warn; landing combos
  * is incremental (rare in practice, and the outer-gate bucket shape
  * needs a separate slot for the ancestorId).
  */

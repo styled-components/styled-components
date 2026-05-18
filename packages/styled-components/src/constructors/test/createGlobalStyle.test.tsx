@@ -982,7 +982,7 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
   });
 
   it('rebuilds group when rule count changes', () => {
-    // Use a rule that can produce different numbers of stylis output rules
+    // Use a rule that can produce different numbers of emitted CSS rules
     let extraRule = '';
     const rules = css`
       body {

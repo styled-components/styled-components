@@ -10,7 +10,7 @@
  *
  * The `--cpu-prof-md` flag emits a markdown summary of the heaviest
  * call stacks, which we cross-reference with bench numbers when
- * deciding what to optimise.
+ * deciding what to optimize.
  */
 
 import './bunProfileGlobals';

@@ -7,7 +7,7 @@
  *
  * `--cpu-prof-md` emits a markdown CPU profile; `--cpu-prof` also writes a
  * `.cpuprofile` for Chrome. See AGENTS.md (Profiling / Bun). Targets hot
- * functions in the AST path on large inputs where the parser-vs-stylis margin narrows.
+ * functions in the AST path on large inputs.
  */
 
 import { emitWeb } from './emit-web';

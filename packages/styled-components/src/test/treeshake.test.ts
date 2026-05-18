@@ -165,8 +165,8 @@ describe('native-web (rn-web) build', () => {
 
   it('keeps the colorMath OKLab pipeline (rn-web normalize-colors strips modern color fns)', () => {
     // react-native-web's `normalizeColor` (`@react-native/normalize-colors`)
-    // recognises hex / rgb / hsl / hwb but not `oklch` / `oklab` / `lch` /
-    // `lab` / `color-mix` — unrecognised values normalise to `undefined`
+    // recognizes hex / rgb / hsl / hwb but not `oklch` / `oklab` / `lch` /
+    // `lab` / `color-mix`; unrecognized values normalize to `undefined`
     // (transparent) before the browser sees them. So the static color
     // fold has to run on rn-web too; colorMath ships in this bundle.
     // Re-evaluate when rn-web's color subset catches up to CSS Color 4.
@@ -367,7 +367,7 @@ describe('bundle size', () => {
 
   it('all-in consumer bundle (only react/react-dom external) stays smaller than v6.4.1', async () => {
     // Real consumer cost: what an app actually ships when it imports
-    // styled-components. v6 inlined stylis here; v7 replaced it with the
+    // styled-components. v6 shipped a bundled CSS preprocessor; v7 replaced it with the
     // in-house parser AND inlined the prop-validator (formerly
     // @emotion/is-prop-valid). This test guards against transitive-dep drift
     // and locks in v7's all-in win over v6 so regressions are caught early.

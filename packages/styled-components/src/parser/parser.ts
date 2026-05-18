@@ -134,11 +134,11 @@ export function scanQPB(
 
 export interface ParseOptions {
   /**
-   * When `true`, skips the stylis-parity comma-space stripping inside
-   * declaration values (e.g. `color 0.2s, blue` stays unchanged).
-   * The web emitter relies on the default stripping for byte parity with
-   * stylis; the native transform pipeline sets this to `true` so the
-   * tokenizer sees font-family fallback chains intact.
+   * When `true`, skips comma-space stripping inside declaration values (e.g.
+   * `color 0.2s, blue` stays unchanged). The web path defaults to stripping so
+   * emitted shorthand matches the long-standing minified shape; the native
+   * transform pipeline sets this to `true` so the tokenizer sees font-family
+   * fallback chains intact.
    */
   keepCommaSpaces?: boolean;
   /**
@@ -377,7 +377,7 @@ export function isCustomProperty(prop: string): boolean {
 
 /**
  * Extract, trim, and comma-normalize a declaration value in a single pass.
- * Strips whitespace after top-level commas by default to match stylis output.
+ * Strips whitespace after top-level commas by default for the web emit path.
  * When the context opts out (native path), the raw value is returned so
  * the native transform's tokenizer can parse comma-separated fallback chains.
  */

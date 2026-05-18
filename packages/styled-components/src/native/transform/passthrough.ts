@@ -1,4 +1,6 @@
 import { splitTopLevelCommas } from '../../parser/parser';
+import { tokenize } from './tokenize';
+import { Token, TokenKind } from './tokens';
 
 /**
  * Properties that are handed to the host platform unchanged: the value
@@ -100,6 +102,13 @@ const LAYERED_COMMA_PROPS: ReadonlySet<string> = new Set([
   'backgroundRepeat',
 ]);
 
+const HORIZONTAL_POSITION_KEYWORDS = new Set(['left', 'right']);
+const VERTICAL_POSITION_KEYWORDS = new Set(['top', 'bottom']);
+const POSITION_KEYWORDS = new Set(['left', 'right', 'top', 'bottom', 'center']);
+const SIZE_KEYWORDS = new Set(['auto', 'cover', 'contain']);
+const SINGLE_REPEAT_KEYWORDS = new Set(['repeat-x', 'repeat-y']);
+const TWO_VALUE_REPEAT_KEYWORDS = new Set(['repeat', 'no-repeat', 'space', 'round']);
+
 export function isLayeredCommaProp(camel: string): boolean {
   return LAYERED_COMMA_PROPS.has(camel);
 }
@@ -119,6 +128,170 @@ export function collapseIdenticalCommas(value: string): string {
     if (parts[i] !== first) return value;
   }
   return first;
+}
+
+function isLengthPercentageToken(t: Token): boolean {
+  if (t.kind === TokenKind.Function) {
+    return t.name === 'calc' || t.name === 'min' || t.name === 'max' || t.name === 'clamp';
+  }
+  return (
+    t.kind === TokenKind.Length ||
+    t.kind === TokenKind.Percent ||
+    // CSS accepts unitless zero anywhere a length is allowed; non-zero
+    // numbers are not <length-percentage>.
+    (t.kind === TokenKind.Number && t.value === 0)
+  );
+}
+
+function isNonNegativeLengthPercentageToken(t: Token): boolean {
+  return isLengthPercentageToken(t) && (t.value === undefined || t.value >= 0);
+}
+
+function isIdent(t: Token, values: ReadonlySet<string>): boolean {
+  return t.kind === TokenKind.Ident && t.name !== undefined && values.has(t.name);
+}
+
+function positionAxis(t: Token): 'horizontal' | 'vertical' | 'center' | null {
+  if (t.kind !== TokenKind.Ident || t.name === undefined) return null;
+  if (HORIZONTAL_POSITION_KEYWORDS.has(t.name)) return 'horizontal';
+  if (VERTICAL_POSITION_KEYWORDS.has(t.name)) return 'vertical';
+  return t.name === 'center' ? 'center' : null;
+}
+
+function isValidTwoTokenPosition(first: Token, second: Token): boolean {
+  const firstIsLp = isLengthPercentageToken(first);
+  const secondIsLp = isLengthPercentageToken(second);
+  if (firstIsLp) {
+    const secondAxis = positionAxis(second);
+    return secondIsLp || secondAxis === 'vertical' || secondAxis === 'center';
+  }
+  if (secondIsLp) {
+    const firstAxis = positionAxis(first);
+    return firstAxis === 'horizontal' || firstAxis === 'center';
+  }
+
+  const firstAxis = positionAxis(first);
+  const secondAxis = positionAxis(second);
+  if (firstAxis === null || secondAxis === null) return false;
+  if (firstAxis === 'center' || secondAxis === 'center') return true;
+  return firstAxis !== secondAxis;
+}
+
+function isValidEdgeOffsetPosition(tokens: Token[]): boolean {
+  let sawHorizontal = false;
+  let sawVertical = false;
+  for (let i = 0; i < tokens.length; i++) {
+    const axis = positionAxis(tokens[i]);
+    if (axis === 'center') {
+      if (!sawHorizontal) {
+        sawHorizontal = true;
+      } else if (!sawVertical) {
+        sawVertical = true;
+      } else {
+        return false;
+      }
+      continue;
+    }
+    if (axis === null) return false;
+    if (axis === 'horizontal') {
+      if (sawHorizontal) return false;
+      sawHorizontal = true;
+    } else {
+      if (sawVertical) return false;
+      sawVertical = true;
+    }
+    const next = tokens[i + 1];
+    if (next !== undefined && isLengthPercentageToken(next)) i++;
+  }
+  return sawHorizontal && sawVertical;
+}
+
+function isValidBackgroundPositionLayer(layer: string): boolean {
+  const tokens = tokenize(layer);
+  const len = tokens.length;
+  if (len === 0 || len > 4) return false;
+  if (len === 1) {
+    return isLengthPercentageToken(tokens[0]) || isIdent(tokens[0], POSITION_KEYWORDS);
+  }
+  if (len === 2) return isValidTwoTokenPosition(tokens[0], tokens[1]);
+  return isValidEdgeOffsetPosition(tokens);
+}
+
+function isValidBackgroundSizeLayer(layer: string): boolean {
+  const tokens = tokenize(layer);
+  const len = tokens.length;
+  if (len === 0 || len > 2) return false;
+  if (len === 1) {
+    const t = tokens[0];
+    return isNonNegativeLengthPercentageToken(t) || isIdent(t, SIZE_KEYWORDS);
+  }
+  for (let i = 0; i < len; i++) {
+    const t = tokens[i];
+    if (!isNonNegativeLengthPercentageToken(t) && (t.kind !== TokenKind.Ident || t.name !== 'auto'))
+      return false;
+  }
+  return true;
+}
+
+function isValidBackgroundRepeatLayer(layer: string): boolean {
+  const tokens = tokenize(layer);
+  const len = tokens.length;
+  if (len === 0 || len > 2) return false;
+  if (len === 1) {
+    const t = tokens[0];
+    return isIdent(t, SINGLE_REPEAT_KEYWORDS) || isIdent(t, TWO_VALUE_REPEAT_KEYWORDS);
+  }
+  return (
+    isIdent(tokens[0], TWO_VALUE_REPEAT_KEYWORDS) && isIdent(tokens[1], TWO_VALUE_REPEAT_KEYWORDS)
+  );
+}
+
+function everyLayer(value: string, validate: (layer: string) => boolean): boolean {
+  const parts = splitTopLevelCommas(value, true);
+  if (parts.length === 0) return false;
+  for (let i = 0; i < parts.length; i++) {
+    if (!validate(parts[i])) return false;
+  }
+  return true;
+}
+
+export function isValidLayeredBackgroundValue(camel: string, value: string): boolean {
+  if (camel === 'backgroundPosition') return everyLayer(value, isValidBackgroundPositionLayer);
+  if (camel === 'backgroundSize') return everyLayer(value, isValidBackgroundSizeLayer);
+  if (camel === 'backgroundRepeat') return everyLayer(value, isValidBackgroundRepeatLayer);
+  return true;
+}
+
+function normalizeBackgroundPositionLayer(layer: string): string {
+  const tokens = tokenize(layer);
+  if (tokens.length !== 2) return layer;
+  const first = tokens[0];
+  const second = tokens[1];
+  if (
+    first.kind !== TokenKind.Ident ||
+    second.kind !== TokenKind.Ident ||
+    first.name === undefined ||
+    second.name === undefined
+  ) {
+    return layer;
+  }
+  if (first.name === 'center') return second.name;
+  if (second.name === 'center') return first.name;
+  return layer;
+}
+
+export function normalizeBackgroundPositionValue(value: string): string {
+  if (value.indexOf('center') === -1) return value;
+  const parts = splitTopLevelCommas(value, true);
+  let changed = false;
+  for (let i = 0; i < parts.length; i++) {
+    const normalized = normalizeBackgroundPositionLayer(parts[i]);
+    if (normalized !== parts[i]) {
+      changed = true;
+      parts[i] = normalized;
+    }
+  }
+  return changed ? parts.join(', ') : value;
 }
 
 /**
@@ -144,24 +317,19 @@ export function getPrimaryPassthroughKey(camel: string): string | undefined {
  * does `index % size` on draw → `ArithmeticException: divide by zero`
  * → process self-kills via SIGKILL. The user sees the app vanish.
  *
- * Why `auto` is the spec-correct fold for our gradient-only path:
+ * Why `auto` is the right fold for our gradient-only path:
  *
- * `BackgroundImageDrawable.calculateBackgroundImageSize` is invoked
- * with `imageWidth = containerWidth, imageHeight = containerHeight`
- * for every layer (the native side has no intrinsic dimensions for
- * a gradient and uses the box as the implicit image size). When
- * `backgroundSize` is null or both axes are `auto`, the function
- * skips the override branch and returns `(containerWidth,
- * containerHeight)` — which is exactly what CSS Backgrounds 3 §3.10
- * specifies for cover / contain over an image with no intrinsic
- * dimensions and no preferred aspect ratio. So for a gradient,
- * `cover` ≡ `contain` ≡ `auto` (all three paint over the full area).
+ * `BackgroundImageDrawable.calculateBackgroundImageSize` is invoked with
+ * `imageWidth = containerWidth, imageHeight = containerHeight` for every layer
+ * (gradients have no intrinsic dimensions). When `backgroundSize` is null or
+ * both axes are `auto`, that function skips the override branch and returns
+ * `(containerWidth, containerHeight)`, so `cover ≡ contain ≡ auto` over a
+ * gradient (all three paint over the full area).
  *
- * `auto` is the honest fold here: it asks the renderer for "the
- * image's natural dimensions," which the native side already
- * resolves to container-fill for aspect-less images. A literal
- * `100% 100%` would also paint identically but makes a stronger
- * (and potentially misleading) dimension claim for any future
+ * `auto` is the honest fold: it asks the renderer for the image's natural
+ * dimensions, which the native side already resolves to container-fill for
+ * aspect-less images. A literal `100% 100%` would paint identically but makes
+ * a stronger (and potentially misleading) dimension claim for any future
  * non-gradient image path.
  *
  * The url() image path in v7 doesn't traverse `experimental_*`:
@@ -188,8 +356,8 @@ export function substituteBackgroundSizeKeywordsForNative(value: string): string
  *
  * rn-web's `validate.js` flags `backgroundPosition` whenever the
  * string has more than one top-level value (`valueParser.nodes.length
- * > 1`), so any two-axis position — `0 0`, `0% 0%`, `top left`,
- * `50% 50%` — produces a console.error and the prop is dropped from
+ * > 1`), so any two-axis position (`0 0`, `0% 0%`, `top left`,
+ * `50% 50%`) produces a console.error and the prop is dropped from
  * the style anyway. The native side (iOS / Android) accepts the
  * full two-axis grammar, so the prop is only problematic on the
  * rn-web key.
@@ -197,7 +365,7 @@ export function substituteBackgroundSizeKeywordsForNative(value: string): string
  * The asymmetric dual-emit: any two-axis form skips the
  * `backgroundPosition` (rn-web) emission; the `experimental_*` key
  * still flows so iOS / Android see the value. rn-web therefore
- * falls back to its CSS default (`0% 0%`) silently — the same
+ * falls back to its CSS default (`0% 0%`) silently; the same
  * paint it would have produced after dropping the invalid value,
  * minus the warning. Single-token forms (`center`, `top`, `left`,
  * `0`) pass through to both keys.

@@ -409,14 +409,9 @@ function safeReadColorScheme(RN: any): 'light' | 'dark' | null | undefined {
   }
 }
 
-// Module-level media-env store. A single subscription to Dimensions /
-// Appearance / AccessibilityInfo is shared across every styled component
-// in the tree, instead of each component owning its own useState +
-// useEffect chain. This eliminates the post-mount setState fan-out that
-// used to fire on first render (AccessibilityInfo's async
-// isReduceMotionEnabled().then(setReduceMotion) running once per mounted
-// component) and reduces per-component render work to a single
-// useSyncExternalStore call.
+// Module-level media-env store. One subscription to Dimensions / Appearance /
+// AccessibilityInfo is shared across the tree, so each styled component only
+// pays for a useSyncExternalStore call instead of its own setState fan-out.
 let mediaSnapshot: MediaQueryEnv | null = null;
 const mediaListeners = new Set<() => void>();
 let mediaInitialized = false;
@@ -554,7 +549,7 @@ export function useBreakpoint<T extends Record<string, number>>(
  * Container query state is published by `ContainerPublisher` into the
  * consolidated {@link NativeStyleContext}; this hook reads the
  * `container` field. The standalone `ContainerContext` from earlier
- * v7 prereleases is gone — providers and consumers go through
+ * v7 prereleases is gone; providers and consumers go through
  * `NativeStyleContext.Provider` / `useNativeStyleContext()`.
  *
  * `ContainerEntry` and `ContainerContextValue` are re-exported here

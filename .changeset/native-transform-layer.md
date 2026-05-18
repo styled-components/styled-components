@@ -1,8 +1,8 @@
 ---
-"styled-components": major
+'styled-components': major
 ---
 
-React Native: the CSS-to-style-object translation layer is now built in. Several long-standing limitations go away on the native path.
+React Native: CSS-to-style-object translation is now built in. Several long-standing limitations go away on the native path.
 
 - `transform: matrix(...)` / `matrix3d(...)` work.
 - `transform: translateX(10)` (bare number, no unit) works.
@@ -23,6 +23,6 @@ const Tile = styled.View`
 `;
 ```
 
-The transform layer also fixes `border: none` emitting `border-style: solid` on native; it now emits `border-style: none` to match the rest of the ecosystem.
+`border: none` no longer emits `border-style: solid` on native; it now emits `border-style: none` to match the rest of the ecosystem.
 
 iOS setup note for filters: in React Native 0.85, the `filter` primitives `blur`, `saturate`, `hue-rotate`, `grayscale`, `contrast`, and `drop-shadow` only render when your iOS app opts into the SwiftUI-based filter backend. Set `ReactNativeReleaseLevel` to `experimental` in your iOS `Info.plist` (or `ios.infoPlist` in `app.json` for Expo) to enable it. `brightness` and `opacity` work without this flag.

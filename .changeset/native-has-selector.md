@@ -1,5 +1,5 @@
 ---
-"styled-components": minor
+'styled-components': minor
 ---
 
 React Native: `:has(<simple>)` selector now works.
@@ -17,7 +17,7 @@ const Card = styled.View`
 
 <Card>
   <Icon />
-</Card>
+</Card>;
 ```
 
 The rule checks the component's children at render time and applies when any descendant matches. Two forms are supported on native:

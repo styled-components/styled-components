@@ -1,5 +1,5 @@
 ---
-"styled-components": patch
+'styled-components': patch
 ---
 
 React Native: `lab()` and `lch()` now produce correct colors when channels are written as percentages. `lab(50% 0 0)` resolves to mid-gray as expected, where it previously produced near-black. Per CSS Color L4, each space has its own range:
