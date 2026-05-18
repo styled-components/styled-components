@@ -1,5 +1,4 @@
 import { applyResolvers, buildResolver, escapeSentinelFallback, ResolveEnv } from '../resolvers';
-import { describeOnRnWeb } from '../../describeOnRnWeb';
 
 const baseEnv: ResolveEnv = {
   media: {
@@ -1001,7 +1000,7 @@ describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
     expect(buildResolver('1px solid mylight-dark(red, blue)')).toBeNull();
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // Mirrors rn-web bundle (`__NATIVE_WEB__`); browsers resolve several values statically,
     // so omit resolvers. See `describeOnRnWeb` and `resolvers.ts`. rn-web `@react-native/normalize-colors`
     // rejects literal `light-dark(...)` strings; `buildResolver(null)` pairs with custom-property wrapping
@@ -1218,7 +1217,7 @@ describe('cross-feature integrations', () => {
       expect(r({ ...baseEnv, theme: { colors: { fg: '#0000ff' } } })).toMatch(/^#[0-9a-f]{6,8}$/);
     });
 
-    describeOnRnWeb(() => {
+    describe.skip('on rn-web', () => {
       // Wide-gamut `<color>` functions stay as authored CSS strings on rn-web (`__NATIVE_WEB__`).
       // Sentinels only splice resolved numbers into those strings.
       it('pure-static sentinel oklch substitutes to assembled function text (passthrough)', () => {
@@ -1638,7 +1637,7 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // CSS Values §10 (calc/min/max/clamp): browsers resolve percentages against real layouts.
     // Return null resolver so stylesheet text stays intact unless a sentinel needs substitution.
     it('passes through static-mixed-unit calc/clamp/min/max expressions raw', () => {
@@ -1782,7 +1781,7 @@ describe('env() spec compliance (CSS Environment Variables Level 1 §3)', () => 
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // `buildResolver('env(...)')` is not gated behind `__NATIVE_WEB__`;
     // safe-area substitutions still read ResolveEnv.insets on rn-web.
     it('parity: safe-area-inset-top resolves from env.insets', () => {
@@ -1922,7 +1921,7 @@ describe('container units spec compliance (CSS Conditional 5 §7)', () => {
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // Viewport-relative units bypass resolvers on rn-web (`buildResolver → null`).
     // Container cq* still resolve numerically against the RN layout probe.
     it('parity: cqw resolves against registered container width', () => {
@@ -2084,7 +2083,7 @@ describe('viewport units spec compliance (CSS Values Level 4 §6.1.2)', () => {
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('passes through static viewport values without a resolver', () => {
       // Returning null from buildResolver leaves the raw `<n><unit>` in
       // base so react-native-web forwards it to CSS unchanged. The browser

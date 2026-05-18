@@ -131,17 +131,10 @@ const CONTENT_POSITION_NORMALIZE: Record<string, string> = {
 };
 
 /**
- * `place-content: <align-content> <justify-content>?`. Native branch
- * normalizes start/end to the flex- forms; rn-web passes through.
+ * `place-content: <align-content> <justify-content>?`. Normalizes
+ * start/end to the flex- forms.
  */
 export function placeContentShorthand(tokens: Token[]): Dict<any> | null {
-  if (__NATIVE_WEB__) {
-    const raw = tokens
-      .map(t => t.raw)
-      .join(' ')
-      .trim();
-    return raw.length === 0 ? null : { placeContent: raw };
-  }
   const stream = new TokenStream(withoutSlashes(tokens));
   const first = stream.consume();
   if (!first || first.kind !== TokenKind.Ident || !ALIGN_CONTENT.has(first.name!)) return null;
@@ -228,17 +221,9 @@ function readItemsKeyword(stream: TokenStream): string | null {
 /**
  * `place-items: <'align-items'> <'justify-items'>?`. First value is align-items,
  * second (or repeated first) is justify-items. `justify-items` is a no-op under
- * Yoga but rn-web honors it; the rn-web branch emits the shorthand untouched
- * so the browser parses the full grammar.
+ * Yoga.
  */
 export function placeItemsShorthand(tokens: Token[]): Dict<any> | null {
-  if (__NATIVE_WEB__) {
-    const raw = tokens
-      .map(t => t.raw)
-      .join(' ')
-      .trim();
-    return raw.length === 0 ? null : { placeItems: raw };
-  }
   const stream = new TokenStream(withoutSlashes(tokens));
   const alignItems = readItemsKeyword(stream);
   if (alignItems === null) return null;
@@ -296,13 +281,6 @@ function readSelfKeyword(stream: TokenStream): string | null {
 }
 
 export function placeSelfShorthand(tokens: Token[]): Dict<any> | null {
-  if (__NATIVE_WEB__) {
-    const raw = tokens
-      .map(t => t.raw)
-      .join(' ')
-      .trim();
-    return raw.length === 0 ? null : { placeSelf: raw };
-  }
   const stream = new TokenStream(withoutSlashes(tokens));
   const alignSelf = readSelfKeyword(stream);
   if (alignSelf === null) return null;

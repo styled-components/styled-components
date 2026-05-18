@@ -1,23 +1,17 @@
 import { Dict } from '../../types';
 import * as $ from '../../utils/charCodes';
-import hyphenateStyleName from '../../utils/hyphenateStyleName';
 import { warnIfAndroidSkew, warnIfIosVerticalAlign, warnOnce } from './dev';
 import {
   collapseIdenticalCommas,
   getPassthroughKeys,
   isLayeredCommaProp,
-  isMultiTokenPosition,
   isValidLayeredBackgroundValue,
   normalizeBackgroundPositionValue,
   substituteBackgroundSizeKeywordsForNative,
 } from './passthrough';
 import { staticColorFunctionToHex } from './polyfills/colorMath';
 import { numericResultToRn, resolveStaticMathFunction } from './polyfills/mathFns';
-import {
-  getSystemColorPlatformColor,
-  isCssSystemColorKeyword,
-  wrapSystemColorForRnWeb,
-} from './polyfills/systemColors';
+import { getSystemColorPlatformColor } from './polyfills/systemColors';
 import { getShorthand } from './shorthands';
 import { tokenize } from './tokenize';
 import { Token, TokenKind } from './tokens';
@@ -75,60 +69,18 @@ export function camelize(prop: string): string {
 // full shorthand set).
 import './shorthands.register';
 
-const VERTICAL_ALIGN_TO_ALIGN_CONTENT: Record<
-  string,
-  'flex-start' | 'center' | 'flex-end' | undefined
-> = {
-  top: 'flex-start',
-  middle: 'center',
-  bottom: 'flex-end',
-};
-
-// rn-web's Image ignores `objectFit` and reads `resizeMode`; this table
-// mirrors RN core's internal native conversion so both bars agree.
-const OBJECT_FIT_TO_RN_RESIZE_MODE: Record<string, string | undefined> = {
-  contain: 'contain',
-  cover: 'cover',
-  fill: 'stretch',
-  none: 'none',
-  'scale-down': 'contain',
-};
-
 // Per-property single-passthrough handlers. Properties listed here have
 // either a target-specific lift, a value rewrite, or a dual-emit shape
 // that diverges from the generic identity passthrough. Properties not
 // listed fall through to `{ [passthroughKeys[0]]: value }`.
 type SinglePassthroughHandler = (value: string, rawValue: string) => Dict<any>;
 const SINGLE_PASSTHROUGH_HANDLERS: Record<string, SinglePassthroughHandler> = {
-  verticalAlign: (value, rawValue) => {
-    // rn-web's `vertical-align` is baseline-only; emit `align-content` for
-    // the box-positioning keywords so they reposition content like
-    // Android's `textAlignVertical`. Other values fall through to the
-    // browser's native baseline-shifting semantics.
-    if (__NATIVE_WEB__) {
-      const alignContent = VERTICAL_ALIGN_TO_ALIGN_CONTENT[rawValue];
-      if (alignContent !== undefined) return { verticalAlign: value, alignContent };
-    }
-    return { verticalAlign: value };
-  },
+  verticalAlign: value => ({ verticalAlign: value }),
   boxShadow: value => ({ boxShadow: maybeExpandBoxShadowSystemColors(value) }),
   filter: value => ({ filter: maybeExpandFilterDropShadowSystemColors(value) }),
-  // Native: dual-emit so RN Text honors the cascade. rn-web also lifts a
-  // `dir` prop since rn-web's BiDi-aware text-align reads `props.dir`,
-  // not the CSS direction.
-  direction: value => {
-    if (__NATIVE_WEB__) return { writingDirection: value, dir: value };
-    return { direction: value, writingDirection: value };
-  },
-  // rn-web's Image reads `resizeMode`, not `objectFit`; lift via
-  // SPECIAL_CASE_PROPS using the spec conversion table.
-  objectFit: value => {
-    if (__NATIVE_WEB__) {
-      const mapped = OBJECT_FIT_TO_RN_RESIZE_MODE[value];
-      return mapped !== undefined ? { resizeMode: mapped } : {};
-    }
-    return { objectFit: value };
-  },
+  // Dual-emit so RN Text honors the cascade.
+  direction: value => ({ direction: value, writingDirection: value }),
+  objectFit: value => ({ objectFit: value }),
 };
 
 /**
@@ -148,11 +100,9 @@ const SINGLE_PASSTHROUGH_HANDLERS: Record<string, SinglePassthroughHandler> = {
 export function transformDecl(prop: string, rawValue: string): Dict<any> {
   const camel = camelize(prop);
 
-  // System color keywords. Native: PlatformColor so iOS / Android route
-  // through semantic colors. rn-web: wrap in `var(--sc-unset, kw)` so the
-  // value survives rn-web's color allowlist and the browser resolves
-  // against OS theme. `accentColor` skips here so its handler can lift
-  // `trackColor.true` from the original keyword.
+  // System color keywords. Route through PlatformColor so iOS / Android
+  // use semantic colors. `accentColor` skips here so its handler can
+  // lift `trackColor.true` from the original keyword.
   if (
     (camel === 'color' || camel.endsWith('Color')) &&
     camel !== 'accentColor' &&
@@ -162,14 +112,8 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     rawValue.indexOf(',') === -1 &&
     rawValue.charCodeAt(0) !== $.HASH
   ) {
-    if (__NATIVE_WEB__) {
-      if (isCssSystemColorKeyword(rawValue)) {
-        return { [camel]: wrapSystemColorForRnWeb(rawValue) };
-      }
-    } else {
-      const platformColor = getSystemColorPlatformColor(rawValue);
-      if (platformColor !== null) return { [camel]: platformColor };
-    }
+    const platformColor = getSystemColorPlatformColor(rawValue);
+    if (platformColor !== null) return { [camel]: platformColor };
   }
 
   const passthroughKeys = getPassthroughKeys(camel);
@@ -204,20 +148,13 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     // because RN 0.85's native parser drops the keyword strings and
     // lands an empty list that later crashes the draw pass; see
     // `substituteBackgroundSizeKeywordsForNative` for the spec basis.
-    // `backgroundPosition` skips the rn-web key when the value is
-    // multi-token (rn-web's validator drops it anyway with a
-    // console.error); see `isMultiTokenPosition`.
     // Pre-fold gradient stops carrying system colors so RN's array form
-    // ships a PlatformColor object. rn-web keeps the raw string.
+    // ships a PlatformColor object.
     const nativeImage =
-      camel === 'backgroundImage' && !__NATIVE_WEB__
-        ? maybeExpandBackgroundImageSystemColors(value)
-        : value;
+      camel === 'backgroundImage' ? maybeExpandBackgroundImageSystemColors(value) : value;
     const out: Dict<any> = {};
-    const dropRnWebPosition = camel === 'backgroundPosition' && isMultiTokenPosition(value);
     for (let i = 0; i < passthroughKeys.length; i++) {
       const key = passthroughKeys[i];
-      if (dropRnWebPosition && key === 'backgroundPosition') continue;
       if (key === 'experimental_backgroundImage') {
         out[key] = nativeImage;
         continue;
@@ -241,43 +178,6 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     return { [camel]: rawValue };
   }
 
-  // rn-web bundle path. Pure-static `light-dark(...)` values get wrapped
-  // in a CSS custom-property indirection so the browser handles
-  // `prefers-color-scheme` reactivity natively. rn-web's `normalizeColor`
-  // strips the function form to `undefined` (transparent), but it accepts
-  // `var()` (see its `isWebColor` predicate). Dynamic branches with theme
-  // sentinels fall through to the runtime resolver instead.
-  //
-  // Property names emitted into a CSS class block flow through rn-web's
-  // `hyphenateStyleName` (camelCase → kebab-case), which mangles the
-  // custom-property name without touching the `var()` reference. CSS
-  // custom properties are case-sensitive, so a mismatched name dangles
-  // silently. Pre-hyphenate the suffix here so the declaration and its
-  // reference both end up kebab-case.
-  //
-  // Also emit `color-scheme: light dark` on the same element. The CSS
-  // `light-dark()` function only resolves to its second argument when
-  // the used color-scheme includes `dark`; without an explicit opt-in
-  // it defaults to `normal`, which always picks the first (light) arg.
-  // Declaring it per-element guarantees correct resolution regardless of
-  // whether the host app set `<meta name="color-scheme">` on the
-  // document or applied an inline style on `:root`. The value is
-  // inherited, so a single declaration covers the element's subtree.
-  if (
-    __NATIVE_WEB__ &&
-    rawValue.length > 'light-dark('.length &&
-    rawValue.charCodeAt(0) === 0x6c /* l */ &&
-    rawValue.startsWith('light-dark(') &&
-    rawValue.indexOf('\0') === -1
-  ) {
-    const varName = '--sc-ld-' + hyphenateStyleName(camel);
-    return {
-      [camel]: 'var(' + varName + ')',
-      [varName]: rawValue,
-      colorScheme: 'light dark',
-    };
-  }
-
   // Tokens are needed for shorthand expansion AND for the static math /
   // color polyfill checks below. Tokenize once; reuse across paths.
   let tokens: Token[] | null = null;
@@ -297,19 +197,13 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     return {};
   }
 
-  // Static math fns. Native: always fold. rn-web: fold only when the
-  // result is unitless, where the browser would otherwise drop the
-  // declaration (e.g. `width: pow(8, 2)`); RN's bare-number-is-pixels
-  // convention rescues those at no cost. With-unit forms reach the
-  // browser unchanged so layout-dependent arms compute correctly.
+  // Static math fns: always fold.
   if (mightBeMathFn(rawValue)) {
     tokens = tokens ?? tokenize(rawValue);
     if (tokens.length === 1 && tokens[0].kind === TokenKind.Function) {
       const numeric = resolveStaticMathFunction(tokens[0]);
       if (numeric !== null) {
-        if (!__NATIVE_WEB__ || numeric.unit === '') {
-          return { [camel]: numericResultToRn(numeric) };
-        }
+        return { [camel]: numericResultToRn(numeric) };
       }
     }
   }

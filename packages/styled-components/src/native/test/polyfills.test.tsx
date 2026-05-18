@@ -7,12 +7,10 @@ import {
   applyBackgroundBlendModePolyfill,
   applyStylePolyfills,
   isWebPlatform,
-  normalizeStyleForWeb,
-  rewriteStyleForWebTransport,
 } from '../polyfills';
 
 // ──────────────────────────────────────────────────────────────────
-//  isWebPlatform / normalizeStyleForWeb
+//  isWebPlatform
 // ──────────────────────────────────────────────────────────────────
 
 describe('isWebPlatform', () => {
@@ -20,82 +18,6 @@ describe('isWebPlatform', () => {
 
   it('reports false under the RN jest preset (Platform.OS=ios)', () => {
     expect(isWebPlatform()).toBe(false);
-  });
-});
-
-describe('normalizeStyleForWeb (platform gate)', () => {
-  beforeEach(() => __resetPlatformCacheForTesting());
-
-  it('is a no-op on native', () => {
-    const arr16 = Array(16)
-      .fill(0)
-      .map((_, i) => i);
-    const style = { transform: [{ matrix: arr16 }] };
-    expect(normalizeStyleForWeb(style)).toBe(style);
-  });
-
-  it('returns same reference for null/undefined/primitives', () => {
-    expect(normalizeStyleForWeb(null)).toBe(null);
-    expect(normalizeStyleForWeb(undefined)).toBe(undefined);
-    expect(normalizeStyleForWeb(0)).toBe(0);
-  });
-});
-
-describe('rewriteStyleForWebTransport (pure)', () => {
-  it('rewrites 16-element matrix transform to matrix3d', () => {
-    const arr16 = Array(16)
-      .fill(0)
-      .map((_, i) => i);
-    const style = { transform: [{ matrix: arr16 }], opacity: 1 };
-    const out = rewriteStyleForWebTransport(style);
-    expect(out).not.toBe(style);
-    expect(out.transform).toEqual([{ matrix3d: arr16 }]);
-    expect(out.opacity).toBe(1);
-  });
-
-  it('leaves 6-element 2D matrix transform unchanged', () => {
-    const style = { transform: [{ matrix: [1, 0, 0, 1, 0, 0] }] };
-    expect(rewriteStyleForWebTransport(style)).toBe(style);
-  });
-
-  it('leaves non-matrix transform entries unchanged', () => {
-    const style = { transform: [{ rotate: '45deg' }, { translateX: 10 }] };
-    expect(rewriteStyleForWebTransport(style)).toBe(style);
-  });
-
-  it('handles mixed transform array', () => {
-    const arr16 = Array(16).fill(0);
-    const style = {
-      transform: [{ rotate: '45deg' }, { matrix: arr16 }, { translateX: 10 }],
-    };
-    const out = rewriteStyleForWebTransport(style);
-    expect(out.transform).toEqual([{ rotate: '45deg' }, { matrix3d: arr16 }, { translateX: 10 }]);
-  });
-
-  it('walks into style arrays and rewrites nested matrix transforms', () => {
-    const arr16 = Array(16).fill(0);
-    const style = [{ width: 10 }, { transform: [{ matrix: arr16 }] }];
-    const out = rewriteStyleForWebTransport(style);
-    expect(out).not.toBe(style);
-    expect(out[1].transform).toEqual([{ matrix3d: arr16 }]);
-    expect(out[0]).toBe(style[0]);
-  });
-
-  it('returns same reference when no rewrite needed', () => {
-    const style = { width: 10, opacity: 0.5 };
-    expect(rewriteStyleForWebTransport(style)).toBe(style);
-  });
-
-  it('preserves deeply-nested arrays of unchanged entries by reference', () => {
-    const inner = { width: 10 };
-    const style = [[inner], { opacity: 1 }];
-    const out = rewriteStyleForWebTransport(style);
-    expect(out).toBe(style);
-  });
-
-  it('handles primitives and null inside arrays', () => {
-    const style = [null, undefined, 'unused', { width: 10 }];
-    expect(rewriteStyleForWebTransport(style)).toBe(style);
   });
 });
 

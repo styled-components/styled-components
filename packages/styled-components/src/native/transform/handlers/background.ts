@@ -248,13 +248,13 @@ export function backgroundShorthand(tokens: Token[]): Dict<any> | null {
       if (layer.attachment === 'fixed') {
         warnOnce(
           'native-background-attachment-fixed',
-          '`background-attachment: fixed` is ignored on React Native because iOS and Android do not expose scroll-anchored backgrounds. rn-web keeps it.',
+          '`background-attachment: fixed` is ignored on React Native because iOS and Android do not expose scroll-anchored backgrounds.',
           'fixed'
         );
       } else {
         warnOnce(
           'native-background-attachment-local',
-          '`background-attachment: local` is ignored on React Native because iOS and Android do not expose content-anchored backgrounds. rn-web keeps it.',
+          '`background-attachment: local` is ignored on React Native because iOS and Android do not expose content-anchored backgrounds.',
           'local'
         );
       }
@@ -264,7 +264,7 @@ export function backgroundShorthand(tokens: Token[]): Dict<any> | null {
         'native-background-origin-unsupported',
         '`background-origin: ' +
           layer.origin +
-          '` is ignored on React Native. Native backgrounds paint from the default box on iOS and Android; rn-web keeps the authored value.',
+          '` is ignored on React Native. Native backgrounds paint from the default box on iOS and Android.',
         layer.origin
       );
     }
@@ -400,7 +400,7 @@ export function backgroundOriginLonghand(tokens: Token[]): Dict<any> | null {
       'native-background-origin-unsupported',
       '`background-origin: ' +
         raw +
-        '` is ignored on React Native. Native backgrounds paint from the default box on iOS and Android; rn-web keeps the authored value.',
+        '` is ignored on React Native. Native backgrounds paint from the default box on iOS and Android.',
       raw
     );
   }

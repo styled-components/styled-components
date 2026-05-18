@@ -2490,7 +2490,7 @@ const animatedAdapter: AnimationAdapter = {
   },
 };
 
-if (!__NATIVE_WEB__) setAnimationAdapter(animatedAdapter);
+setAnimationAdapter(animatedAdapter);
 
 /**
  * Toggle animation adapter debug logging. When on, each render and

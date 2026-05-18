@@ -213,7 +213,7 @@ export function fontShorthand(tokens: Token[]): Dict<any> | null {
   if (__DEV__ && hasFamilyFallbacks && !__NATIVE_WEB__) {
     warnOnce(
       'native-font-family-fallbacks-dropped',
-      '`font-family` accepts one family on React Native. Extra comma-separated fallbacks are ignored on iOS and Android; rn-web keeps the full list.',
+      '`font-family` accepts one family on React Native. Extra comma-separated fallbacks are ignored on iOS and Android.',
       fontFamily.name
     );
   }
@@ -252,13 +252,13 @@ export function fontFamilyShorthand(tokens: Token[]): Dict<any> | null {
   if (__DEV__ && hasFallbacks) {
     warnOnce(
       'native-font-family-fallbacks-dropped',
-      '`font-family` accepts one family on React Native. Extra comma-separated fallbacks are ignored on iOS and Android; rn-web keeps the full list.',
+      '`font-family` accepts one family on React Native. Extra comma-separated fallbacks are ignored on iOS and Android.',
       family.name
     );
   }
 
   // Generic keyword resolution: native-only, bare idents only (quoted strings
-  // are author-supplied face names). rn-web keeps the keyword for the browser.
+  // are author-supplied face names).
   if (!__NATIVE_WEB__ && !family.quoted && isGenericFamily(family.name)) {
     return { fontFamily: resolveGenericFamily(family.name) };
   }

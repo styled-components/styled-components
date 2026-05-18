@@ -138,7 +138,6 @@ const standaloneBaseConfig = {
     replace({
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(false),
-      __NATIVE_WEB__: JSON.stringify(false),
     }),
     replace({
       delimiters: ['', ''],
@@ -185,7 +184,6 @@ const serverConfig = {
     replace({
       __SERVER__: JSON.stringify(true),
       __NATIVE__: JSON.stringify(false),
-      __NATIVE_WEB__: JSON.stringify(false),
       __DEV__: "process.env.NODE_ENV !== 'production'",
     }),
     minifierPlugin
@@ -202,7 +200,6 @@ const browserConfig = {
     replace({
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(false),
-      __NATIVE_WEB__: JSON.stringify(false),
       __DEV__: "process.env.NODE_ENV !== 'production'",
     }),
     replace({
@@ -244,7 +241,6 @@ const nativeConfig = {
     replace({
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(true),
-      __NATIVE_WEB__: JSON.stringify(false),
       __DEV__: "process.env.NODE_ENV !== 'production'",
     }),
     minifierPlugin,
@@ -259,7 +255,6 @@ const pluginsConfig = {
     replace({
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(false),
-      __NATIVE_WEB__: JSON.stringify(false),
       __DEV__: "process.env.NODE_ENV !== 'production'",
     }),
     replace({
@@ -288,7 +283,6 @@ const reanimatedConfig = {
     replace({
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(true),
-      __NATIVE_WEB__: JSON.stringify(false),
       __DEV__: "process.env.NODE_ENV !== 'production'",
     }),
     minifierPlugin,
@@ -317,7 +311,6 @@ const webBridgeConfig = {
     replace({
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(false),
-      __NATIVE_WEB__: JSON.stringify(true),
       __DEV__: "process.env.NODE_ENV !== 'production'",
     }),
     minifierPlugin,

@@ -12,7 +12,6 @@ import {
   resolveGenericFamily,
 } from '../genericFamily';
 import { Platform } from 'react-native';
-import { describeOnRnWeb } from '../../describeOnRnWeb';
 
 describe('logical properties spec compliance (CSS Logical Properties Level 1 §4)', () => {
   // Spec source: https://drafts.csswg.org/css-logical-1/
@@ -204,7 +203,7 @@ describe('logical properties spec compliance (CSS Logical Properties Level 1 §4
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // Logical shorthands lower to RN style keys Yoga / rn-web both accept.
     // The browser-facing CSS layer is unchanged; parity keeps omni-bundle
     // widgets honest.
@@ -284,7 +283,7 @@ describe('static math functions', () => {
     expect(out.color).toMatch(/^#[0-9a-f]{6,8}$/i);
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // Layout-dependent math arms stay raw so the browser's used-value
     // pipeline runs at the correct moment (containing block known,
     // viewport / container measured). Unitless static results are the
@@ -711,7 +710,7 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // Layout-dependent math reaches the browser unchanged so used-value
     // evaluation matches the spec. Stepped-value over absolute lengths
     // also passes through (CSS engines compute it correctly).
@@ -839,7 +838,7 @@ describe('static color math', () => {
     expect(out.color).toContain('var');
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // rn-web: `@react-native/normalize-colors` only parses classical hex/rgb/hsl/hwb;
     // modern color functions flatten to transparent unless we emit hex beforehand.
     it('rn-web folds color-mix to hex because normalize-color drops unknown functions', () => {
@@ -964,7 +963,7 @@ describe('rgb hsl hwb fold path (CSS Color 4 §6 / §7 / §8, §4.4 none, Syntax
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('legacy rgba static fold parity (color-mix operand reader)', () => {
       expect(fold('rgba(255, 0, 0, 0.5)')).toBe('#ff000080');
     });
@@ -1149,7 +1148,7 @@ describe('color() spec compliance: predefined spaces (CSS Color Module Level 4 �
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // Same static fold path as Hermes bundles: rn-web bundles still emit
     // hex so `@react-native/normalize-colors` never strips `color()`.
     it('parity: folds color(srgb 1 0 0) via transformDecl', () => {
@@ -1298,7 +1297,7 @@ describe('color-mix() spec compliance (CSS Color Module Level 5 §3)', () => {
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('folds canonical srgb mix to hex (rn-web bundles share the fold path)', () => {
       expect(
         transformDecl('backgroundColor', 'color-mix(in srgb, red, blue)').backgroundColor
@@ -1412,7 +1411,7 @@ describe('out-of-gamut handling (OKLCh chroma bisection, CSS Color 4 §14 area)'
     expect(r).toBeLessThan(0xa0);
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('parity: vivid green out-of-gamut keeps hue bucket after bisection', () => {
       const tok = tokenize('oklch(0.7 0.4 130)')[0];
       const hex = staticColorFunctionToHex(tok)!;
@@ -1538,7 +1537,7 @@ describe('gamut mapping spec compliance (CSS Color 4 §14)', () => {
     expect(g).toBe(b);
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('parity: §14 bisection L/h invariant on vivid green anchor', () => {
       const hex = staticColorFunctionToHex(tokenize('oklch(0.7 0.4 130)')[0])!;
       const back = hexToOklch(hex);
@@ -1639,7 +1638,7 @@ describe('line-clamp spec compliance (CSS Overflow Module Level 4 §5.1)', () =>
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // `lineClamp.ts` has no rn-web branch; Omni bundle emits the same
     // RN Text props consumed by rn-web primitives.
     it('parity: line-clamp integer maps numberOfLines + overflow hidden', () => {
@@ -1826,7 +1825,7 @@ describe('linear() easing spec compliance (CSS Easing Functions Level 2 §2.1)',
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('parity: parses the same easing sample as Hermes bundles', () => {
       expect(stops('linear(0, 0.5, 1)')).toEqual([
         { t: 0, v: 0 },
@@ -2011,7 +2010,7 @@ describe('text-wrap spec compliance (CSS Text Module Level 4 §5.5)', () => {
   // the original property + value so the browser does its own line-
   // breaking; the RN-prop lifts (numberOfLines / ellipsizeMode /
   // textBreakStrategy) would fight the browser's implementation.
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('text-wrap: nowrap emits only the shorthand', () => {
       expect(transformDecl('text-wrap', 'nowrap')).toEqual({ textWrap: 'nowrap' });
       expect(warnSpy).not.toHaveBeenCalled();
@@ -2135,7 +2134,7 @@ describe('hyphens spec compliance (CSS Text Module Level 4 §6.3.1)', () => {
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // Browser handles `hyphens` natively; the Android prop lift and the
     // iOS-limitation warn are meaningless on web.
     it('emits hyphens only, no android_hyphenationFrequency lift', () => {
@@ -2184,7 +2183,7 @@ describe('gap spec compliance (CSS Box Alignment 3 §8.3)', () => {
     expect(transformDecl('gap', 'foo')).toEqual({});
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('gap expansion matches Yoga output on native bundles', () => {
       expect(transformDecl('gap', '8px 12px')).toEqual({ rowGap: 8, columnGap: 12 });
     });
@@ -2257,7 +2256,7 @@ describe('outline spec compliance (CSS UI 4 §6)', () => {
     }
   );
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('web-only outline-style emits without RN-only dev warnings', () => {
       expect(transformDecl('outline', '2px double red')).toEqual({
         outlineWidth: 2,
@@ -2371,7 +2370,7 @@ describe('standalone transform properties (CSS Transforms 2 §3)', () => {
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // rn-web's `preprocess` passes the standalone `translate` / `rotate`
     // / `scale` keys through unchanged; the browser parses each
     // independent CSS property surface (CSS Transforms 2 §3) end-to-end.
@@ -2476,7 +2475,7 @@ describe('interactivity spec compliance (CSS UI 4 §6.3)', () => {
     expect(transformDecl('interactivity', 'banana')).toEqual({});
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // The browser implements every inert surface (hit-test, focus,
     // selection, edit-suppression, a11y) via the HTML `inert`
     // attribute. rn-web forwards `inert` to the DOM verbatim, so a
@@ -2531,7 +2530,7 @@ describe('field-sizing spec compliance (CSS Form Control Styling 1 §7.1)', () =
     expect(transformDecl('field-sizing', 'content fixed')).toEqual({});
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('content passes through to the browser CSS engine + lifts multiline so rn-web renders a textarea', () => {
       expect(transformDecl('field-sizing', 'content')).toEqual({
         multiline: true,
@@ -2601,7 +2600,7 @@ describe('perspective spec compliance (CSS Transforms 2 §8)', () => {
   // we emit the raw `perspective: <length>` property and skip the
   // sentinel-into-transform fold; the browser handles the descendant
   // composition that RN can't natively express.
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('passes raw <length> through as perspective: <length>', () => {
       expect(transformDecl('perspective', '800px')).toEqual({ perspective: '800px' });
     });
@@ -2638,7 +2637,7 @@ describe('transform-style spec compliance (CSS Transforms 2 §7)', () => {
     expect(transformDecl('transform-style', 'banana')).toEqual({});
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('passes preserve-3d through (browser honors)', () => {
       expect(transformDecl('transform-style', 'preserve-3d')).toEqual({
         transformStyle: 'preserve-3d',
@@ -2673,7 +2672,7 @@ describe('transform-box spec compliance (CSS Transforms 1 §5)', () => {
     expect(transformDecl('transform-box', 'banana')).toEqual({});
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('passes the value through (browser honors)', () => {
       expect(transformDecl('transform-box', 'border-box')).toEqual({ transformBox: 'border-box' });
       expect(warnSpy).not.toHaveBeenCalled();
@@ -2845,7 +2844,7 @@ describe('caret-color spec compliance (CSS UI 4 §5.2.1)', () => {
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // The browser handles `caret-color` end-to-end; the Android
     // `cursorColor` TextInput prop is meaningless on web, and the iOS
     // limitation doesn't apply. Emit the style key only.
@@ -3305,7 +3304,7 @@ describe('relative-color spec compliance (CSS Color Module Level 5 §4)', () => 
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('parity: literal-base oklch(from #f00 l c h) still folds', () => {
       const tok = tokenize('oklch(from #f00 l c h)')[0];
       expect(staticColorFunctionToHex(tok)).toMatch(/^#[0-9a-f]{6}$/);
@@ -3712,7 +3711,7 @@ describe('system color spec compliance (CSS Color Module Level 4 §6.2)', () => 
   // `var(--sc-unset, <keyword>)` so rn-web's color pipeline (which drops
   // bare keywords) accepts the value and the browser resolves the var()
   // fallback to the actual system color.
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('wraps Canvas in var() so rn-web forwards it to the browser', () => {
       expect(transformDecl('color', 'Canvas')).toEqual({ color: 'var(--sc-unset, Canvas)' });
     });
@@ -4007,7 +4006,7 @@ describe('logical border spec compliance (CSS Logical Properties Level 1 §4.5)'
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('single-edge style emits border<Edge>Style for the browser', () => {
       expect(transformDecl('border-inline-start-style', 'solid')).toEqual({
         borderInlineStartStyle: 'solid',
@@ -4147,7 +4146,7 @@ describe('generic font-family resolution (CSS Fonts 4 §3.1.1)', () => {
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // On rn-web the browser owns generic-family resolution; the native
     // resolver short-circuits via `__NATIVE_WEB__` in font.ts so the
     // keyword reaches the browser unchanged.
@@ -4197,7 +4196,7 @@ describe('text-overflow spec compliance (CSS Overflow §6.1)', () => {
   // `text-wrap: nowrap` reaches the spec behavior without the user
   // setting overflow themselves; the native path achieves the same
   // shape via numberOfLines + ellipsizeMode.
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('ellipsis emits the keyword + overflow: hidden so the browser truncates', () => {
       expect(transformDecl('text-overflow', 'ellipsis')).toEqual({
         textOverflow: 'ellipsis',
@@ -4260,7 +4259,7 @@ describe('overscroll-behavior spec compliance (CSS Overscroll Behavior 1 §4)', 
     expect(transformDecl('overscroll-behavior', 'bounce')).toEqual({});
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('contain passes through to the browser', () => {
       expect(transformDecl('overscroll-behavior', 'contain')).toEqual({
         overscrollBehavior: 'contain',
@@ -4321,7 +4320,7 @@ describe('scrollbar-width spec compliance (CSS Scrollbars 1 §3)', () => {
     expect(transformDecl('scrollbar-width', 'medium')).toEqual({});
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('none passes through to the browser', () => {
       expect(transformDecl('scrollbar-width', 'none')).toEqual({ scrollbarWidth: 'none' });
     });
@@ -4388,7 +4387,7 @@ describe('accent-color spec compliance (CSS UI 4 §7.1)', () => {
     expect(transformDecl('accent-color', '1px solid red')).toEqual({});
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // rn-web's Switch overlays its visible track with custom Views
     // instead of letting CSS `accent-color` tint the underlying
     // checkbox, so the rn-web path also lifts `trackColor.true` for
@@ -4499,7 +4498,7 @@ describe('font-size standalone spec compliance (CSS Fonts 4 §2.5)', () => {
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('absolute-size keyword passes through to the browser', () => {
       expect(transformDecl('font-size', 'large')).toEqual({ fontSize: 'large' });
     });
@@ -4544,7 +4543,7 @@ describe('line-height font-relative units (CSS Inline 3 §5.1)', () => {
     expect(transformDecl('line-height', 'normal')).toEqual({});
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('em passes through to the browser', () => {
       expect(transformDecl('line-height', '1.5em')).toEqual({ lineHeight: '1.5em' });
     });

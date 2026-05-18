@@ -320,6 +320,17 @@ const Stage = styled.View`
   align-items: center;
   justify-content: center;
   overflow: visible;
+  /* Establishes the perspective viewport so descendant 3D transforms
+     foreshorten correctly. RN flattens transforms (no preserve-3d) and
+     reads perspective only when it appears inside a transform list, so
+     this declaration is web-only - the JS zIndex stamp below carries
+     painter-order on native. */
+  perspective: 1200px;
+  /* Compensate for the multiply blend + per-face alpha, both of which
+     pull colors toward white/grey. The filter runs on the composited
+     scene (after all face blending) so the inner mix-blend-mode
+     interactions still propagate; only the final image is boosted. */
+  filter: saturate(1.4);
 `;
 
 // Stage flex-centers SceneOrigin to (STAGE/2, STAGE/2). All FaceWrappers
@@ -328,6 +339,16 @@ const Stage = styled.View`
 const SceneOrigin = styled.View`
   width: 0;
   height: 0;
+  /* rn-web's View defaults include z-index: 0; opt out so the descendant
+     faces' mix-blend-mode escapes this stacking context and composites
+     against the page background (and against each other where they
+     overlap during the 3D rotation). No-op on native. */
+  z-index: auto;
+  /* Hand 3D composition to the browser where supported. RN ignores
+     transform-style (no preserve-3d in Yoga); on native the matrices
+     still position each face correctly in 2D and zIndex carries the
+     painter order. */
+  transform-style: preserve-3d;
 `;
 
 const FaceWrapper = styled.View`
@@ -336,15 +357,32 @@ const FaceWrapper = styled.View`
   height: 0;
   align-items: center;
   justify-content: center;
+  z-index: auto;
+  transform-style: preserve-3d;
+  /* Back of each face should remain visible during rotation so the
+     stained-glass multiply blend reads through to the rear of the
+     solid. (visible is the CSS default, called out for clarity.) */
+  backface-visibility: visible;
 `;
+
+// Overshoot each face by 1.5% so adjacent faces overlap fractionally
+// at their shared edges; CSS 3D matrix composition snaps pixel-aligned
+// edges with subpixel float drift, leaving hairline gaps where two
+// faces meet exactly. The overlap is symmetric (FaceWrapper centers
+// the shape on the origin) so the geometric edge stays in place.
+const EDGE_OVERLAP = 1.015;
 
 // Square face (cube only) - solid color block. No border: the 3D arrangement
 // already separates faces by their distinct colors, and a 1px ink border
 // would z-fight with neighboring faces along shared cube edges.
 const SquareFace = styled.View<{ $color: string; $size: number }>`
-  width: ${p => p.$size}px;
-  height: ${p => p.$size}px;
-  background-color: ${p => p.$color};
+  width: ${p => p.$size * EDGE_OVERLAP}px;
+  height: ${p => p.$size * EDGE_OVERLAP}px;
+  /* alpha < 1 lets the rear faces show through; rgba (not opacity)
+     so the face does not establish an isolation context, which would
+     prevent mix-blend-mode from propagating across faces. */
+  background-color: color-mix(in srgb, ${p => p.$color} 78%, transparent);
+  mix-blend-mode: multiply;
 `;
 
 /**
@@ -356,12 +394,13 @@ const SquareFace = styled.View<{ $color: string; $size: number }>`
 const TriangleShape = styled.View<{ $color: string; $size: number }>`
   width: 0;
   height: 0;
-  border-left-width: ${p => p.$size / 2}px;
-  border-right-width: ${p => p.$size / 2}px;
-  border-bottom-width: ${p => (p.$size * Math.sqrt(3)) / 2}px;
+  border-left-width: ${p => (p.$size * EDGE_OVERLAP) / 2}px;
+  border-right-width: ${p => (p.$size * EDGE_OVERLAP) / 2}px;
+  border-bottom-width: ${p => (p.$size * EDGE_OVERLAP * Math.sqrt(3)) / 2}px;
   border-left-color: transparent;
   border-right-color: transparent;
-  border-bottom-color: ${p => p.$color};
+  border-bottom-color: color-mix(in srgb, ${p => p.$color} 78%, transparent);
+  mix-blend-mode: multiply;
 `;
 
 function TriangleFace({ size, color }: { size: number; color: string }) {
@@ -391,9 +430,21 @@ function TriangleFace({ size, color }: { size: number; color: string }) {
  * the geometry and per-slice color all change per render, so styled-component
  * compile gives no cache benefit here.
  */
+// Inline styles can't use the CSS `color-mix` function, so derive the
+// rgba equivalent (alpha 0.78) from the hex palette directly. Matches
+// the SquareFace / TriangleShape treatment that lets rear faces show
+// through and keeps mix-blend-mode able to propagate across faces.
+function hexToRgba78(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, 0.78)`;
+}
+
 function PentagonFace({ size, color }: { size: number; color: string }) {
   const half = size / 2;
   const apothem = (size * Math.cos(Math.PI / 5)) / (2 * Math.sin(Math.PI / 5));
+  const fill = hexToRgba78(color);
   return (
     <View style={{ width: 0, height: 0 }}>
       {[0, 1, 2, 3, 4].map(i => (
@@ -410,9 +461,10 @@ function PentagonFace({ size, color }: { size: number; color: string }) {
             borderBottomWidth: apothem,
             borderLeftColor: 'transparent',
             borderRightColor: 'transparent',
-            borderBottomColor: color,
+            borderBottomColor: fill,
             transformOrigin: '50% 0%',
-            transform: [{ rotate: `${i * 72}deg` }, { scale: 1.01 }],
+            transform: [{ rotate: `${i * 72}deg` }, { scale: EDGE_OVERLAP }],
+            mixBlendMode: 'multiply',
           }}
         />
       ))}
@@ -517,7 +569,7 @@ const FLING_SENSITIVITY = 0.01; // pixels → radians factor
 // ProMotion iPhones, etc.).
 const VELOCITY_BLEND_RATE = 0.04;
 const INITIAL_TILT: Quat = qMul(qFromAxisAngle([1, 0, 0], -0.4), qFromAxisAngle([0, 1, 0], 0.5));
-const SOLID_CYCLE_MS = 5000;
+const SOLID_CYCLE_MS = 10000;
 // Total collapse-and-expand duration. Faces shrink to origin then expand
 // back out; the "from" solid renders before peak, the "to" solid after.
 // The swap happens at peak (collapseT=1, fully invisible).
@@ -609,10 +661,22 @@ const HeroColumn = styled.View`
   gap: 6px;
 `;
 
-const Controls = styled.View`
+const CONTROLS_HIDE_MS = 3000;
+
+const Controls = styled.View<{ $visible: boolean }>`
   flex-direction: row;
   gap: 4px;
-  opacity: 0.75;
+  opacity: ${p => (p.$visible ? 0.75 : 0)};
+  pointer-events: ${p => (p.$visible ? 'auto' : 'none')};
+  transition: opacity 240ms ease-out;
+  /* Web-only: keep controls visible while the user hovers the logo's
+     column. The :hover rule on the column class only fires on web; on
+     native the prop-driven opacity carries the state from touch and
+     button interactions. */
+  ${HeroColumn}:hover & {
+    opacity: 0.75;
+    pointer-events: auto;
+  }
 `;
 
 const CtrlBtn = styled.Pressable<{ $dim?: boolean }>`
@@ -664,6 +728,22 @@ export function PlatonicLogo() {
   const [paused, setPaused] = useState(false);
   const [activeSolid, setActiveSolid] = useState(DEFAULT_SOLID_IDX);
   const [restored, setRestored] = useState(false);
+  // Controls hide after a stretch of no interaction so the resting
+  // logo reads as artwork, not chrome. Touch/click on the logo or any
+  // control button bumps; web hover keeps them visible via CSS.
+  const [controlsVisible, setControlsVisible] = useState(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bumpControls = useCallback(() => {
+    setControlsVisible(true);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => setControlsVisible(false), CONTROLS_HIDE_MS);
+  }, []);
+  useEffect(
+    () => () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    },
+    []
+  );
 
   // Restore on mount.
   useEffect(() => {
@@ -725,13 +805,19 @@ export function PlatonicLogo() {
   }, [reduce, paused, startTransition]);
 
   const handlePrev = useCallback(() => {
+    bumpControls();
     startTransition((activeSolidRef.current - 1 + SOLIDS.length) % SOLIDS.length);
-  }, [startTransition]);
+  }, [startTransition, bumpControls]);
   const handleNext = useCallback(() => {
+    bumpControls();
     startTransition((activeSolidRef.current + 1) % SOLIDS.length);
-  }, [startTransition]);
-  const handlePause = useCallback(() => setPaused(true), []);
+  }, [startTransition, bumpControls]);
+  const handlePause = useCallback(() => {
+    bumpControls();
+    setPaused(true);
+  }, [bumpControls]);
   const handlePlay = useCallback(() => {
+    bumpControls();
     // Drop any captured fling velocity so unpause resumes at idle. Without
     // this, a drag-release-pause within one frame leaves the captured fling
     // sitting in velocityRef, and the next tick after unpause replays it as
@@ -739,7 +825,7 @@ export function PlatonicLogo() {
     velocityRef.current.dx = IDLE_VEL.dx;
     velocityRef.current.dy = IDLE_VEL.dy;
     setPaused(false);
-  }, []);
+  }, [bumpControls]);
 
   // Drive idle spin + drag + transition advance via a single rAF loop. The
   // per-frame deltas are scaled by `dt * 60` so visual rate is constant
@@ -811,6 +897,7 @@ export function PlatonicLogo() {
           // pointer instead of inheriting any in-flight fling velocity.
           velocityRef.current.dx = 0;
           velocityRef.current.dy = 0;
+          bumpControls();
         },
         onPanResponderMove: (_, g) => {
           const x = g.moveX;
@@ -840,7 +927,7 @@ export function PlatonicLogo() {
           draggingRef.current = false;
         },
       }),
-    []
+    [bumpControls]
   );
 
   // Resolve which solid is currently visible and how collapsed it is.
@@ -873,7 +960,7 @@ export function PlatonicLogo() {
 
   return (
     <HeroColumn>
-      <Controls>
+      <Controls $visible={controlsVisible}>
         <CtrlBtn
           accessibilityRole="button"
           accessibilityLabel="Previous solid"
@@ -913,25 +1000,19 @@ export function PlatonicLogo() {
               : ALL_LOCAL_MATS[renderSolidIdx][i];
             const composed = mat4Mul(parentMat, localMat);
             // Painter's z-sort: faces farther from the camera (more negative
-            // resolved z) get lower zIndex so closer faces draw on top.
+            // resolved z) get lower zIndex so closer faces draw on top. On
+            // native this also approximates depth ordering since transforms
+            // are flattened (no preserve-3d). On web, transform-style and
+            // perspective on Stage/SceneOrigin/FaceWrapper let the browser
+            // composite in real 3D and the multiply blend reads through to
+            // the rear faces - no JS backface cull needed.
             const z = composed[14];
-            // Backface cull: the face's local +Z basis vector becomes column 2
-            // of the composed matrix (indices 8, 9, 10), scaled by the current
-            // collapse scale. When the unscaled vector points toward the camera
-            // (positive resolved Z) the face is visible. Threshold scales with
-            // `scale` so culling stays consistent during the collapse animation.
-            // Use `display: none` instead of returning null so the face stays
-            // mounted across rotation frames - the React DevTools tree was
-            // unusable while every face mounted/unmounted continuously.
-            const normalZ = composed[10];
-            const culled = normalZ < 0.02 * scale;
             return (
               <FaceWrapper
                 key={i}
                 style={{
                   transform: [{ matrix: composed }],
                   zIndex: Math.round(z * 100) + 1000,
-                  display: culled ? 'none' : 'flex',
                 }}
                 pointerEvents="none"
               >

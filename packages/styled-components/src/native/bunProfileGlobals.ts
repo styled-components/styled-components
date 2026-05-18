@@ -9,5 +9,4 @@ const g: any = globalThis;
 g.__VERSION__ = 'dev';
 g.__SERVER__ = false;
 g.__NATIVE__ = true;
-g.__NATIVE_WEB__ = false;
 g.__DEV__ = false;

@@ -72,13 +72,17 @@ const reactNativeWeb = require('react-native-web') as Record<string, unknown>;
 
 import styledWeb from '../../constructors/styled';
 import createTheme from '../../constructors/createTheme';
-import ThemeProvider, { ThemeConsumer, ThemeContext, useTheme } from '../../models/ThemeProvider';
+import RawThemeProvider, {
+  ThemeConsumer,
+  ThemeContext,
+  useTheme,
+} from '../../models/ThemeProvider';
 import css from '../../constructors/css';
 import keyframes from '../../constructors/keyframes';
 import createGlobalStyle from '../../constructors/createGlobalStyle';
 import withTheme from '../../hoc/withTheme';
 import isStyledComponent from '../../utils/isStyledComponent';
-import { StyleSheetManager } from '../../models/StyleSheetManager';
+import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager';
 import ServerStyleSheet from '../../models/ServerStyleSheet';
 import type { Styled } from '../../constructors/constructWithOptions';
 
@@ -135,6 +139,42 @@ function rewrite3dMatrices(style: unknown): unknown {
 }
 
 /**
+ * Convert any `data-*` props on the bridge shim into rn-web's
+ * `dataSet={{ ... }}` API. rn-web's `createDOMProps` strips raw
+ * `data-*` props from its View output and only re-emits them when
+ * passed through `dataSet`; without this translation, attribute
+ * selectors like `&[data-foo='bar']` in styled CSS never match
+ * because the attribute never reaches the DOM.
+ *
+ * Kebab-case suffixes are camelCased into the dataSet object so the
+ * downstream hyphenation in rn-web's createDOMProps produces the
+ * original `data-foo-bar` attribute on the DOM node.
+ */
+function collectDataProps(rest: Record<string, unknown>): {
+  dataSet: Record<string, unknown> | undefined;
+  other: Record<string, unknown>;
+} {
+  let dataSet: Record<string, unknown> | undefined;
+  const other: Record<string, unknown> = {};
+  for (const key in rest) {
+    if (key.startsWith('data-')) {
+      if (dataSet === undefined) dataSet = {};
+      // `data-place-self` → `placeSelf`
+      const suffix = key.slice(5);
+      const camel = suffix.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+      dataSet[camel] = rest[key];
+    } else {
+      other[key] = rest[key];
+    }
+  }
+  if (dataSet !== undefined && rest.dataSet && typeof rest.dataSet === 'object') {
+    // Fold any explicit dataSet provided by the caller; explicit wins.
+    Object.assign(dataSet, rest.dataSet);
+  }
+  return { dataSet, other };
+}
+
+/**
  * Wrap a rn-web primitive so the web pipeline's `className` prop becomes a
  * styleq `$$css` entry in `style`. rn-web's createDOMProps reads `style`
  * exclusively for className generation, so we must deliver our class
@@ -147,12 +187,32 @@ function bridgePrimitive<P extends BridgedProps>(
   const Bridged = React.forwardRef<unknown, P>((props, ref) => {
     const { className, style, ...rest } = props;
     const fixedStyle = rewrite3dMatrices(style);
+    // RN's `pointerEvents` prop is deprecated on rn-web in favor of
+    // `style.pointerEvents`. Lift the prop into the style array so
+    // consumers writing idiomatic cross-platform RN code don't see a
+    // deprecation warning on web. The values (`auto`, `none`,
+    // `box-none`, `box-only`) pass through identically to rn-web's
+    // own `pointerEventsStyles` map.
+    let pointerEvents: unknown;
+    if ('pointerEvents' in (rest as Record<string, unknown>)) {
+      pointerEvents = (rest as Record<string, unknown>).pointerEvents;
+      delete (rest as Record<string, unknown>).pointerEvents;
+    }
     const merged = className ? [{ $$css: true, sc: className }, fixedStyle] : fixedStyle;
-    return React.createElement(Component, {
-      ...(rest as object),
+    const withPointer =
+      pointerEvents != null
+        ? Array.isArray(merged)
+          ? [...merged, { pointerEvents }]
+          : [merged, { pointerEvents }]
+        : merged;
+    const { dataSet, other } = collectDataProps(rest as Record<string, unknown>);
+    const finalProps: Record<string, unknown> = {
+      ...other,
       ref,
-      style: merged,
-    } as unknown as P);
+      style: withPointer,
+    };
+    if (dataSet !== undefined) finalProps.dataSet = dataSet;
+    return React.createElement(Component, finalProps as unknown as P);
   });
   Bridged.displayName = displayName;
   return Bridged;
@@ -258,14 +318,10 @@ type BridgedNamespace = {
   >;
 };
 
-/**
- * `styled` bound to rn-web primitives. `styled.View\`...\`` produces a
- * styled component that renders rn-web's `<View>` while injecting CSS
- * through the web pipeline. Web-native HTML elements (`styled.a`,
- * `styled.select`, etc.) and arbitrary `styled(Component)` calls work
- * unchanged because the underlying factory IS the web `styled`.
- */
-const styled = styledWeb as typeof styledWeb & BridgedNamespace;
+// `styled` is the bridge's main export. Setup runs further down once
+// `allLifts`, baselines, etc. are defined; we declare the reference
+// here so it can be exported below.
+let styled: typeof styledWeb & BridgedNamespace;
 
 /**
  * Per-alias baseline styles. Pressable renders as `<div>` (or
@@ -321,13 +377,126 @@ const imageLifts: CssLiftMap = {
   },
 };
 
+/**
+ * Canonicalize any browser-recognized color value to the
+ * `rgba(r, g, b, a)` form that rn-web's
+ * `@react-native/normalize-colors` accepts. Paint the value onto a
+ * 1×1 canvas and read back the resulting pixel — modern color
+ * functions (`oklch()`, `color-mix()`, `lab()`, `oklab()`, `lch()`,
+ * `hwb()`) flow through the actual paint pipeline so the result is
+ * always rgba.
+ *
+ * Caveats:
+ * - `AccentColor` system color and `accent-color: auto` both depend
+ *   on the form-control context to resolve their actual value;
+ *   canvas has no such context and falls back to black. We special-
+ *   case those to a sensible cross-platform default (Chrome's
+ *   internal blue) instead of letting them paint as black.
+ * - `getComputedStyle().accentColor` would seem like an alternative,
+ *   but Chrome preserves modern color function syntax in computed
+ *   style and keeps `auto` as a keyword — both still rejected by
+ *   rn-web's normalizer.
+ *
+ * Resolved once at construction time; the resolved value is captured
+ * into the styled-component's attrs.
+ */
+let __bridgeColorCanvas: CanvasRenderingContext2D | null | undefined;
+// Chrome's default form-control accent (close to the spec's
+// recommended UA default). Used when the input is `auto` or
+// `AccentColor` and the browser has no system accent to substitute.
+const BRIDGE_ACCENT_AUTO_FALLBACK = 'rgba(0, 95, 184, 1)';
+function canonicalizeColor(input: string): string {
+  if (typeof document === 'undefined') return input;
+  if (input === 'auto' || input === 'AccentColor') return BRIDGE_ACCENT_AUTO_FALLBACK;
+  if (__bridgeColorCanvas === undefined) {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      // `willReadFrequently` opts into a software-backed canvas so
+      // repeated `getImageData()` reads don't pay the GPU-readback
+      // cost (Canvas2D spec note). Browsers also stop warning about
+      // hot getImageData loops once the flag is set.
+      __bridgeColorCanvas = canvas.getContext('2d', { willReadFrequently: true });
+    } catch {
+      __bridgeColorCanvas = null;
+    }
+  }
+  if (__bridgeColorCanvas === null) return input;
+  try {
+    __bridgeColorCanvas.clearRect(0, 0, 1, 1);
+    __bridgeColorCanvas.fillStyle = '#000';
+    __bridgeColorCanvas.fillStyle = input;
+    __bridgeColorCanvas.fillRect(0, 0, 1, 1);
+  } catch {
+    return input;
+  }
+  const data = __bridgeColorCanvas.getImageData(0, 0, 1, 1).data;
+  const r = data[0];
+  const g = data[1];
+  const b = data[2];
+  const a = data[3] / 255;
+  return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a + ')';
+}
+
+const textLifts: CssLiftMap = {
+  // CSS Text 4 `text-wrap: nowrap`. rn-web's Text only applies its
+  // `textOneLine` baseline (`white-space: nowrap; text-overflow:
+  // ellipsis`) when `numberOfLines={1}`; without it, authored
+  // `text-wrap: nowrap` reaches the DOM but the Text element's
+  // default `pre-wrap` whitespace handling wins anyway. The lift
+  // matches the native engine's `SPECIAL_CASE_PROPS` mapping.
+  // Authored `text-overflow: clip` still works through source-order
+  // specificity, overriding rn-web's baseline ellipsis.
+  'text-wrap': {
+    prop: 'numberOfLines',
+    transform: v => (v === 'nowrap' ? 1 : undefined),
+  },
+  // CSS Overflow 4 `line-clamp: <integer>`. rn-web's Text already
+  // emits the webkit-line-clamp triple (display: -webkit-box;
+  // -webkit-box-orient: vertical; -webkit-line-clamp: N; overflow:
+  // hidden) when `numberOfLines` is set, so the lift just routes the
+  // integer there. Authored CSS `line-clamp: 2` survives in the
+  // rule too, which the browser now ignores in favor of rn-web's
+  // -webkit-* triple. Map iteration order is preserved: `line-clamp`
+  // wins over `text-wrap: nowrap` if both are declared since it's
+  // the more specific intent.
+  'line-clamp': {
+    prop: 'numberOfLines',
+    transform: v => {
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) && n > 0 ? n : 1;
+    },
+  },
+};
+
+const textInputLifts: CssLiftMap = {
+  // CSS Form Control Styling 1 §7.1 `field-sizing: content`. The
+  // browser only honors it on `<textarea>` (and a few input types)
+  // for height auto-grow; rn-web's TextInput only renders to
+  // `<textarea>` when `multiline={true}`. The lift flips multiline
+  // on so the authored CSS actually has a target. Other field-sizing
+  // values (`fixed`, `auto`) are no-ops — leave them alone.
+  'field-sizing': {
+    prop: 'multiline',
+    transform: v => (v === 'content' ? true : undefined),
+  },
+};
+
 const switchLifts: CssLiftMap = {
   'accent-color': {
     prop: 'trackColor',
     // rn-web Switch only consumes color via its `trackColor.true` /
     // `trackColor.false` prop; CSS `accent-color` doesn't reach the
-    // custom-rendered control.
-    transform: v => ({ true: v, false: v }),
+    // custom-rendered control. Also, rn-web's `normalizeColor` only
+    // recognizes hex / rgb / hsl / hwb / named colors; oklch / lab /
+    // color-mix / system colors / `auto` all silently fold to
+    // undefined. Canonicalize via the browser's canvas2d parser so
+    // we hand rn-web a value it understands.
+    transform: v => {
+      const canonical = canonicalizeColor(v);
+      return { true: canonical, false: canonical };
+    },
   },
 };
 
@@ -335,6 +504,401 @@ const liftsByAlias: Partial<Record<KnownAlias, CssLiftMap>> = {
   Image: imageLifts,
   ImageBackground: imageLifts,
   Switch: switchLifts,
+  Text: textLifts,
+  TextInput: textInputLifts,
+};
+
+/**
+ * Union of every per-primitive lift. Applied to every `styled(Component)`
+ * call (including extensions like `styled(MyText)` that wrap a bridged
+ * primitive) so the lift survives even when the consumer doesn't reach
+ * for the alias getter directly. Each lift's prop is consumed only by
+ * the underlying rn-web primitive that expects it; rn-web silently
+ * ignores unknown props on other primitives, so cross-application is
+ * harmless.
+ */
+const allLifts: CssLiftMap = {
+  ...imageLifts,
+  ...switchLifts,
+  ...textLifts,
+  ...textInputLifts,
+};
+
+/**
+ * `styled` bound to rn-web primitives. `styled.View\`...\`` produces a
+ * styled component that renders rn-web's `<View>` while injecting CSS
+ * through the web pipeline. Web-native HTML elements (`styled.a`,
+ * `styled.select`, etc.) and arbitrary `styled(Component)` calls work
+ * unchanged because the underlying factory IS the web `styled`.
+ *
+ * Every call shape — direct invocation `styled(MyComp)` and HTML
+ * shorthand `styled.div` — is wrapped with `wrapBridgeFactory(...,
+ * allLifts)` so the CSS-to-prop lifts (line-clamp → numberOfLines,
+ * object-fit → resizeMode, accent-color → trackColor) fire even on
+ * components that extend a bridged primitive. The alias getters
+ * (`styled.Text`, etc.) further down add per-alias baselines and
+ * lift sets on top.
+ */
+/**
+ * Map raw rn-web component → its bridged variant. When a consumer
+ * writes `styled(TextInput)` (importing TextInput from 'react-native',
+ * which on web resolves to rn-web's TextInput), we want the bridge's
+ * `bridgePrimitive` shim to apply just as if they had written
+ * `styled.TextInput` directly. Otherwise the className the web
+ * pipeline mints never reaches the DOM because rn-web's
+ * createDOMProps only honors `style` (via the `$$css` escape hatch).
+ *
+ * Populated lazily as each alias getter fires the first time.
+ */
+const rawToBridged = new WeakMap<object, React.ComponentType<BridgedProps>>();
+
+function bridgeStyledCall<T>(target: T): unknown {
+  let effectiveTarget = target;
+  if (target !== null && (typeof target === 'function' || typeof target === 'object')) {
+    const bridged = rawToBridged.get(target as object);
+    if (bridged !== undefined) effectiveTarget = bridged as unknown as T;
+  }
+  const result = (styledWeb as unknown as (t: T) => Factoryish)(effectiveTarget);
+  return wrapBridgeFactory(result, allLifts);
+}
+styled = bridgeStyledCall as unknown as typeof styledWeb & BridgedNamespace;
+// Copy properties / HTML-element shortcuts the web `styled` already
+// has (its `domElements.forEach(...)` loop adds `styled.div`,
+// `styled.a`, etc. as pre-built factories). Wrap each so they pick
+// up the lifts too.
+for (const key of Object.keys(styledWeb)) {
+  const value = (styledWeb as unknown as Record<string, unknown>)[key];
+  if (typeof value === 'function') {
+    (styled as unknown as Record<string, unknown>)[key] = wrapBridgeFactory(
+      value as Factoryish,
+      allLifts
+    );
+  } else {
+    (styled as unknown as Record<string, unknown>)[key] = value;
+  }
+}
+
+/**
+ * styled-components' template factory: callable as a tagged template
+ * and exposes `.attrs()` / `.withConfig()` chain methods. The bridge
+ * wraps this so the lift pass survives method chains that
+ * `babel-plugin-styled-components` inserts automatically (every
+ * styled component declaration gets a synthesized `.withConfig({...})`).
+ */
+type Factoryish = ((
+  strings: TemplateStringsArray,
+  ...args: unknown[]
+) => React.ComponentType<unknown>) & {
+  attrs: (a: unknown) => Factoryish;
+  withConfig: (c: unknown) => Factoryish;
+};
+
+/**
+ * Wrap a styled-component template factory with the bridge's
+ * CSS-source preprocessing (var()+unit rewrite for createTheme
+ * sentinels) and optionally a CSS-lift pass (extract specific
+ * properties into rn-web component props).
+ *
+ * `.attrs()` / `.withConfig()` return new factories with the same
+ * wrap applied so chained calls preserve both the chain semantics
+ * AND the bridge transforms. `babel-plugin-styled-components`
+ * synthesizes a `.withConfig({componentId, displayName})` chain on
+ * every styled declaration; that chain must survive the wrap.
+ */
+function wrapBridgeFactory(target: Factoryish, lifts?: CssLiftMap): Factoryish {
+  // No-op wrap when there are no lifts to apply; the var()+unit
+  // rewrite already runs globally via the patched `mainCompiler`.
+  if (lifts === undefined) return target;
+  const wrapped = ((strings: TemplateStringsArray, ...args: unknown[]) => {
+    const liftedAttrs = extractCssLifts(strings, lifts);
+    const withLifts = Object.keys(liftedAttrs).length > 0 ? target.attrs(liftedAttrs) : target;
+    return withLifts(strings, ...args);
+  }) as Factoryish;
+  wrapped.attrs = (a: unknown) => wrapBridgeFactory(target.attrs(a), lifts);
+  wrapped.withConfig = (c: unknown) => wrapBridgeFactory(target.withConfig(c), lifts);
+  return wrapped;
+}
+
+/**
+ * Showcase + idiomatic consumer pattern is `padding: ${t.space.sm}px`
+ * where `t.space.sm` is a `createTheme` sentinel `var(--sc-space-sm, 13)`.
+ * After interpolation that becomes `padding: var(--sc-space-sm, 13)px`,
+ * which the CSS parser drops because the `px` suffix lands outside the
+ * var() boundary and the fallback isn't typed as a length.
+ *
+ * Rewrite the form `var(--<name>, <num>)<unit>` → `calc(var(--<name>, <num>) * 1<unit>)`
+ * so the value parses as a valid <length-percentage> after substitution.
+ * Only fires on var() refs with a bare-number fallback followed by a
+ * known CSS unit identifier; pure color / string / unitless var()s pass
+ * through untouched.
+ *
+ * Applied at the compiler's emit boundary so it sees the FULL CSS
+ * source after all template interpolations are resolved (the var() and
+ * the unit suffix live in different template segments at the
+ * tagged-template level, so the rewrite can't run on the raw input).
+ */
+const VAR_WITH_UNIT_RE = /var\(\s*(--[a-zA-Z0-9_-]+)\s*,\s*([-+\d.]+)\s*\)([a-zA-Z%]+)/g;
+
+/**
+ * CSS Values 4 math functions return `<number>` when all arguments are
+ * unitless. The showcase + idiomatic consumer pattern is `width:
+ * abs(-180)` expecting a pixel value (mirrors RN's number-as-DIP
+ * convention); the browser drops the declaration because `width`
+ * needs `<length-percentage>`.
+ *
+ * Wrap bare-arg math function calls in `calc(<fn> * 1px)` so they
+ * type as length. Only fires when the value consists entirely of a
+ * single math function with unitless numeric arguments — any embedded
+ * unit anywhere in the arg list signals the author already typed
+ * the expression and we leave it alone.
+ */
+const BARE_MATH_FN_RE =
+  /^\s*(abs|hypot|pow|mod|rem|sin|cos|tan|asin|acos|atan|atan2|exp|log|sqrt|sign)\(\s*([-+\d.,\s/*()]+)\s*\)\s*$/i;
+const KNOWN_UNITS = new Set([
+  'px',
+  'em',
+  'rem',
+  'lh',
+  'rlh',
+  'ch',
+  'ex',
+  'cap',
+  'ic',
+  '%',
+  'vh',
+  'vw',
+  'vmin',
+  'vmax',
+  'svh',
+  'svw',
+  'lvh',
+  'lvw',
+  'dvh',
+  'dvw',
+  'cqh',
+  'cqw',
+  'cqmin',
+  'cqmax',
+  'cqi',
+  'cqb',
+  'fr',
+  'deg',
+  'rad',
+  'grad',
+  'turn',
+  's',
+  'ms',
+]);
+function rewriteVarUnitSuffix(input: string): string {
+  return input.replace(VAR_WITH_UNIT_RE, (match, name: string, fallback: string, unit: string) => {
+    if (!KNOWN_UNITS.has(unit.toLowerCase())) return match;
+    return 'calc(var(' + name + ', ' + fallback + ') * 1' + unit + ')';
+  });
+}
+
+/**
+ * Match a CSS declaration whose value is a bare-arg math function in
+ * a length-context property. The capture lets the replacement keep
+ * the prop name and only wrap the value.
+ *
+ * Length-context allowlist is conservative; properties that take
+ * `<number>` (`opacity`, `z-index`, `flex-grow`, etc.) aren't
+ * rewritten so `opacity: pow(0.5, 2)` remains valid.
+ */
+const LENGTH_CONTEXT_PROP_RE =
+  '(?:width|height|min-width|max-width|min-height|max-height|top|left|right|bottom|inset(?:-[a-z]+)?|margin(?:-[a-z]+)?|padding(?:-[a-z]+)?|gap|row-gap|column-gap|border(?:-[a-z]+)?-width|outline-width|outline-offset|font-size|letter-spacing|word-spacing|text-indent|line-height|flex-basis|background-size)';
+// Bare-math source without its anchors so we can splice it into a
+// non-anchored composite regex. Group 1 = fn name; group 2 = args.
+const BARE_MATH_BODY_RE = BARE_MATH_FN_RE.source.slice(1, -1);
+const BARE_MATH_IN_LENGTH_PROP_RE = new RegExp(
+  '(\\b' + LENGTH_CONTEXT_PROP_RE + '\\s*:\\s*)' + BARE_MATH_BODY_RE + '(?=\\s*[;}])',
+  'gi'
+);
+function rewriteBareMathFn(input: string): string {
+  return input.replace(
+    BARE_MATH_IN_LENGTH_PROP_RE,
+    (_match, head: string, fn: string, args: string) => {
+      return head + 'calc(' + fn + '(' + args.trim() + ') * 1px)';
+    }
+  );
+}
+
+/**
+ * `vertical-align: top|middle|bottom` is inert on rn-web's Text because
+ * `Text` renders as a block-laying-out element and `vertical-align`
+ * only applies to inline-level content in an inline formatting
+ * context. The native engine on rn-web translated these keywords to
+ * a flex container with `align-items: <flex-keyword>` so the Text
+ * glyphs land at the requested edge of the parent box.
+ *
+ * Two scoped companion rules cover the two interpretations:
+ * - non form-control elements get `display: flex; align-items: <flex>`
+ *   so their child content lands at the requested edge (matches the
+ *   native engine's TextBlock alignment behavior).
+ * - `<textarea>` / `<input>` get `align-content: <flex>` so the input
+ *   text itself lands at the requested edge inside the control. Block
+ *   `align-content` is the standards-compliant way to vertically
+ *   position text inside a textarea (CSS Box Alignment Module L3 §5).
+ *
+ * The original `vertical-align` declaration is kept so consumers
+ * authoring CSS that runs in a non-rn-web context still see it.
+ */
+const VERT_ALIGN_RULE_RE =
+  /(\.[a-zA-Z0-9_-]+)([^{}]*\{[^{}]*?vertical-align\s*:\s*(top|middle|bottom)[^{}]*\})/gi;
+const VERT_ALIGN_TO_FLEX: Record<string, string> = {
+  top: 'flex-start',
+  middle: 'center',
+  bottom: 'flex-end',
+};
+/**
+ * Returns companion rules for a class that uses `vertical-align: top
+ * | middle | bottom`. Empty array if no match. CSSOM `insertRule`
+ * accepts a single rule per call so companions are inserted as
+ * separate entries by the caller.
+ */
+function verticalAlignCompanions(input: string): string[] {
+  if (input.indexOf('vertical-align') < 0) return [];
+  const m = VERT_ALIGN_RULE_RE.exec(input);
+  VERT_ALIGN_RULE_RE.lastIndex = 0;
+  if (!m) return [];
+  const cls = m[1];
+  const flexValue = VERT_ALIGN_TO_FLEX[m[3].toLowerCase()];
+  if (!flexValue) return [];
+  return [
+    cls + ':not(textarea):not(input) { display: flex; align-items: ' + flexValue + '; }',
+    cls + ':is(textarea, input) { align-content: ' + flexValue + '; }',
+  ];
+}
+
+// Patch the shared `mainCompiler` so EVERY emitted CSS rule runs through
+// the var()+unit rewrite. This catches both static-text declarations
+// and the showcase-idiomatic `${t.space.x}<unit>` interpolation
+// pattern (where the var() and the unit live in different segments of
+// the tagged template). The mutation is contained to the bridge entry
+// import; consumers who reach for the bridge subpath get the rewrite,
+// pure web `styled-components` consumers that don't import the bridge
+// see the unmodified compiler.
+const __bridgeEmitOriginal = mainCompiler.emit;
+const __bridgeCompileOriginal = mainCompiler.compile;
+function applyBridgeRewrites(input: string): string {
+  let out = input;
+  out = rewriteVarUnitSuffix(out);
+  out = rewriteBareMathFn(out);
+  return out;
+}
+/**
+ * Match a rule whose selector starts with `.cls` followed by a
+ * `:not(...)` chain. The chain might be multiple `:not()` calls.
+ * Used both for the catchall reorder AND for the `:where()`
+ * specificity-neutralization rewrite.
+ *
+ * On the native engine there's no CSS specificity — matched rules
+ * simply apply in source order. CSS-spec specificity has each
+ * `:not(<simple>)` contribute the simple's weight, so a catchall
+ * like `:not([a]):not([b]):not([c])` carries weight (0,3,0) and
+ * beats a simple `[data-channel]` rule (weight (0,1,0)) regardless
+ * of source order. The rewrite wraps the `:not(...)` chain in
+ * `:where(...)` to zero it out, restoring native semantics where
+ * source order is the only tiebreaker.
+ */
+const CATCHALL_NOT_RE = /^\.[a-zA-Z0-9_-]+:not\(/;
+const NOT_CHAIN_AFTER_CLASS_RE = /(^\.[a-zA-Z0-9_-]+)((?::not\([^()]*\))+)/;
+
+function applyBridgeRewritesToRules(rules: string[]): void {
+  const extras: Array<{ index: number; rule: string }> = [];
+  for (let i = 0; i < rules.length; i++) {
+    let after = applyBridgeRewrites(rules[i]);
+    // Wrap `:not(...)` chains directly after the class selector in
+    // `:where(...)` so they don't contribute specificity. Matches the
+    // native engine's no-specificity cascade and lets simple
+    // `[attr]` rules override the catchall.
+    const notMatch = NOT_CHAIN_AFTER_CLASS_RE.exec(after);
+    if (notMatch) {
+      after = after.replace(NOT_CHAIN_AFTER_CLASS_RE, notMatch[1] + ':where(' + notMatch[2] + ')');
+    }
+    if (after !== rules[i]) rules[i] = after;
+    const companions = verticalAlignCompanions(after);
+    for (let j = 0; j < companions.length; j++) {
+      // Same `index` for every companion of the same rule. The reverse
+      // splice below pops them off in reverse, which lands them in
+      // their pushed order immediately after the source rule.
+      extras.push({ index: i + 1, rule: companions[j] });
+    }
+  }
+  // Insert companion rules in reverse order so earlier indices stay valid.
+  for (let i = extras.length - 1; i >= 0; i--) {
+    const { index, rule } = extras[i];
+    rules.splice(index, 0, rule);
+  }
+  // Reorder: rules whose selector starts with `.cls:not(` move ahead
+  // of `.cls[attr]` rules for the same class so the catchall acts as
+  // a default that specific-attribute rules can override.
+  const catchallByClass = new Map<string, number[]>();
+  for (let i = 0; i < rules.length; i++) {
+    if (!CATCHALL_NOT_RE.test(rules[i])) continue;
+    const clsMatch = rules[i].match(/^\.([a-zA-Z0-9_-]+)/);
+    if (!clsMatch) continue;
+    const cls = clsMatch[1];
+    let list = catchallByClass.get(cls);
+    if (!list) {
+      list = [];
+      catchallByClass.set(cls, list);
+    }
+    list.push(i);
+  }
+  if (catchallByClass.size === 0) return;
+  // For each catchall, find the earliest attribute-selector rule of
+  // the same class and move the catchall just before it.
+  // Process in descending original-index order so each move keeps
+  // remaining indices stable.
+  const moves: Array<{ from: number; to: number }> = [];
+  for (const [cls, catchallIdxs] of catchallByClass) {
+    const attrRe = new RegExp('^\\.' + cls + '\\[');
+    let earliestAttrIdx = -1;
+    for (let i = 0; i < rules.length; i++) {
+      if (attrRe.test(rules[i])) {
+        earliestAttrIdx = i;
+        break;
+      }
+    }
+    if (earliestAttrIdx < 0) continue;
+    for (const ci of catchallIdxs) {
+      if (ci > earliestAttrIdx) moves.push({ from: ci, to: earliestAttrIdx });
+    }
+  }
+  moves.sort((a, b) => b.from - a.from);
+  for (const { from, to } of moves) {
+    const [rule] = rules.splice(from, 1);
+    rules.splice(to, 0, rule);
+  }
+}
+mainCompiler.emit = function patchedEmit(
+  source: Parameters<typeof __bridgeEmitOriginal>[0],
+  filled: Parameters<typeof __bridgeEmitOriginal>[1],
+  parentSelector: Parameters<typeof __bridgeEmitOriginal>[2],
+  componentId: Parameters<typeof __bridgeEmitOriginal>[3],
+  fragments: Parameters<typeof __bridgeEmitOriginal>[4]
+): string[] {
+  const rules = __bridgeEmitOriginal.call(
+    mainCompiler,
+    source,
+    filled,
+    parentSelector,
+    componentId,
+    fragments
+  );
+  applyBridgeRewritesToRules(rules);
+  return rules;
+};
+mainCompiler.compile = function patchedCompile(
+  css: string,
+  selector?: string,
+  prefix?: string,
+  componentId?: string
+): string[] {
+  const rules = __bridgeCompileOriginal.call(mainCompiler, css, selector, prefix, componentId);
+  applyBridgeRewritesToRules(rules);
+  return rules;
 };
 
 /**
@@ -361,7 +925,11 @@ function extractCssLifts(
           .trim()
           .replace(/!important$/i, '')
           .trim();
-        out[prop] = transform ? transform(value) : value;
+        const lifted = transform ? transform(value) : value;
+        // A transform returning `undefined` means "no lift for this
+        // value" — e.g. `text-wrap: balance` doesn't map to
+        // `numberOfLines`. Skip rather than overwriting.
+        if (lifted !== undefined) out[prop] = lifted;
         break;
       }
     }
@@ -370,6 +938,21 @@ function extractCssLifts(
 }
 
 const bridgedCache = new Map<KnownAlias, unknown>();
+// Eagerly seed `rawToBridged` for every alias so a consumer's
+// `styled(rawPrimitive)` (with the import from 'react-native')
+// always resolves to the bridged shim — even if they never reach
+// for `styled.X` first. Lazy seeding caused a bug where mixing the
+// two forms across widgets depended on render order.
+aliases.forEach(alias => {
+  const primitive = reactNativeWeb[alias];
+  if (primitive) {
+    rawToBridged.set(
+      primitive as object,
+      bridgePrimitive(primitive as React.ComponentType<BridgedProps>, 'Bridged' + alias)
+    );
+  }
+});
+
 aliases.forEach(alias => {
   Object.defineProperty(styled, alias, {
     enumerable: true,
@@ -383,10 +966,10 @@ aliases.forEach(alias => {
           `${alias} is not available in the currently-installed version of react-native-web`
         );
       }
-      const bridged = bridgePrimitive(
-        primitive as React.ComponentType<BridgedProps>,
-        'Bridged' + alias
-      );
+      // `rawToBridged` was seeded for every alias at module load so
+      // `styled(rawPrimitive)` resolves to the same bridged shim
+      // even when the consumer never touches the alias getter first.
+      const bridged = rawToBridged.get(primitive as object)!;
       const baseline = baselineCss[alias];
       const base = baseline
         ? styledWeb(bridged)`
@@ -395,38 +978,63 @@ aliases.forEach(alias => {
         : bridged;
       const styledBridged = styledWeb(base as React.ComponentType);
       const lifts = liftsByAlias[alias];
-      let exposed: unknown = styledBridged;
-      if (lifts !== undefined) {
-        // Wrap as a tagged-template factory that extracts CSS lifts
-        // and forwards them through `.attrs()` so rn-web's component
-        // receives the lifted props at render time. Chain methods
-        // like `.attrs()` directly on the bridge result are NOT
-        // preserved by this wrapper; consumers wanting both lifts
-        // and chained attrs should pass the prop explicitly on the
-        // rendered element instead.
-        const liftedFactory = (
-          strings: TemplateStringsArray,
-          ...args: unknown[]
-        ): React.ComponentType<unknown> => {
-          const liftedAttrs = extractCssLifts(strings, lifts);
-          const target =
-            Object.keys(liftedAttrs).length > 0
-              ? (styledBridged as unknown as { attrs: (a: unknown) => unknown }).attrs(liftedAttrs)
-              : styledBridged;
-          return (
-            target as unknown as (
-              s: TemplateStringsArray,
-              ...a: unknown[]
-            ) => React.ComponentType<unknown>
-          )(strings, ...args);
-        };
-        exposed = liftedFactory;
-      }
+      const exposed = wrapBridgeFactory(styledBridged as Factoryish, lifts);
       bridgedCache.set(alias, exposed);
       return exposed;
     },
   });
 });
+
+/**
+ * Walk an override theme object and emit `{ '--<prefix><path>': value }`
+ * entries for every leaf. `walkTheme` from `createTheme.shared` builds a
+ * nested mirror; this flattens to keys suitable for an inline `style`.
+ */
+function flattenThemeToVars(theme: unknown, out: Record<string, string>, path?: string): void {
+  if (theme == null || typeof theme !== 'object') return;
+  for (const key in theme as Record<string, unknown>) {
+    const val = (theme as Record<string, unknown>)[key];
+    const fullPath = path ? path + '-' + key : key;
+    if (val != null && typeof val === 'object') {
+      flattenThemeToVars(val, out, fullPath);
+    } else if (val !== undefined && typeof val !== 'function') {
+      out['--sc-' + fullPath] = String(val);
+    }
+  }
+}
+
+/**
+ * Bridge ThemeProvider: provides the JS theme context like the upstream
+ * `ThemeProvider`, and additionally publishes the override as CSS custom
+ * properties on a `display: contents` wrapper. createTheme's sentinels
+ * (`var(--sc-<path>, fallback)`) then resolve from the closest ancestor,
+ * giving native-style scoped overrides on rn-web without consumers
+ * mounting `theme.GlobalStyle` per subtree.
+ *
+ * Function-form themes skip the var publish (would need to call the fn
+ * with the outer context); the JS-context path still flows through the
+ * underlying provider, so function-interpolation reads keep working.
+ */
+function BridgeThemeProvider(props: {
+  theme: unknown;
+  children?: React.ReactNode;
+}): React.JSX.Element | null {
+  const wrapperStyle = React.useMemo(() => {
+    if (typeof props.theme !== 'object' || props.theme === null) return null;
+    const cssVars: Record<string, string> = {};
+    flattenThemeToVars(props.theme, cssVars);
+    if (Object.keys(cssVars).length === 0) return null;
+    return { display: 'contents' as const, ...cssVars };
+  }, [props.theme]);
+  if (props.children == null) return null;
+  const inner = React.createElement(
+    RawThemeProvider as React.ComponentType<{ theme: unknown; children?: React.ReactNode }>,
+    { theme: props.theme },
+    props.children
+  );
+  if (wrapperStyle === null) return inner;
+  return React.createElement('div', { style: wrapperStyle }, inner);
+}
 
 /**
  * `toStyleSheet` mirrors the native entry's helper for evaluating a `css`
@@ -455,7 +1063,7 @@ export {
   createGlobalStyle,
   withTheme,
   isStyledComponent,
-  ThemeProvider,
+  BridgeThemeProvider as ThemeProvider,
   ThemeConsumer,
   ThemeContext,
   toStyleSheet,

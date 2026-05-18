@@ -11,36 +11,11 @@ import { getSource, synthesizeSourceForRuleSet } from '../parser/source';
 import { NativeTarget, RuleSet } from '../types';
 import isStyledComponent from '../utils/isStyledComponent';
 
-// Side-effect: registers the active animation adapter. The Animated-based
-// adapter (`./animation`) registers when targeting Hermes; the CSS-emit
-// adapter (`./animation/cssAdapter`) registers when targeting rn-web.
-// Each module gates its own `setAnimationAdapter` call on `__NATIVE_WEB__`
-// so rollup tree-shakes the inactive one from the corresponding bundle.
+// Side-effect: registers the default Animated-based animation adapter.
 // Replace by importing `styled-components/native/reanimated` from the
 // consumer's app entry.
 import './animation';
-import './animation/cssAdapter';
 export { setAnimationDebug } from './animation';
-
-// Side-effect (rn-web only): opt the document into both color schemes so
-// `light-dark()` resolves to its dark argument under OS preference and
-// `useColorScheme()` reflects the OS choice. Without this opt-in the
-// browser locks the document to light for legacy compatibility, and
-// `matchMedia('(prefers-color-scheme: dark)')` reports false even on
-// dark systems, which propagates through React Native Web's
-// `useColorScheme()` into every theme-aware component.
-//
-// Set as an inline style on `<html>` so it beats anything a host
-// stylesheet declares at lower specificity. The `if (!colorScheme)`
-// guard preserves an explicit author choice (e.g. `style="color-scheme:
-// only light"` to force light); we only set when the document has no
-// inline declaration yet. Tree-shakes out on Hermes via `__NATIVE_WEB__`.
-if (__NATIVE_WEB__ && typeof document !== 'undefined') {
-  const docEl = document.documentElement;
-  if (docEl && !docEl.style.colorScheme) {
-    docEl.style.colorScheme = 'light dark';
-  }
-}
 
 const reactNative = require('react-native') as Awaited<typeof import('react-native')>;
 
@@ -99,33 +74,14 @@ const styled = baseStyled as typeof baseStyled & {
 
 // ScrollView baseline. Native ships `flex-shrink: 1` (vs View's `0`);
 // pin to `0` so explicit `width:` / `height:` declarations aren't
-// silently overridden in flex parents. rn-web depends on `flex-shrink: 1`
-// to make content scrollable within a constrained parent, so the
-// baseline is omitted there.
+// silently overridden in flex parents.
 let cachedScrollViewBase: NativeTarget | undefined;
 function getScrollViewBase(): NativeTarget {
   if (cachedScrollViewBase) return cachedScrollViewBase;
-  cachedScrollViewBase = __NATIVE_WEB__
-    ? (reactNative.ScrollView as NativeTarget)
-    : (styled(reactNative.ScrollView as NativeTarget)`
-        flex-shrink: 0;
-      ` as unknown as NativeTarget);
-  return cachedScrollViewBase;
-}
-
-// Pressable baseline. On rn-web, Pressable renders as a `<div>` (or
-// `<button>` when role is set) and inherits the default text cursor ;
-// users can't tell at a glance which elements are interactive. On
-// iOS / Android the `cursor` declaration is silently ignored, so it's
-// purely a web-affordance fix. User CSS can still override (`grab` for
-// draggable cards, `not-allowed` for disabled, etc).
-let cachedPressableBase: NativeTarget | undefined;
-function getPressableBase(): NativeTarget {
-  if (cachedPressableBase) return cachedPressableBase;
-  cachedPressableBase = styled(reactNative.Pressable as NativeTarget)`
-    cursor: pointer;
+  cachedScrollViewBase = styled(reactNative.ScrollView as NativeTarget)`
+    flex-shrink: 0;
   ` as unknown as NativeTarget;
-  return cachedPressableBase;
+  return cachedScrollViewBase;
 }
 
 aliases.forEach(alias =>
@@ -135,7 +91,6 @@ aliases.forEach(alias =>
     get() {
       if (alias in reactNative && reactNative[alias]) {
         if (alias === 'ScrollView') return styled(getScrollViewBase());
-        if (alias === 'Pressable') return styled(getPressableBase());
         return styled(reactNative[alias] as NativeTarget);
       }
 

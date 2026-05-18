@@ -99,10 +99,9 @@ function parseDropShadowInner(inner: string): { layer: Dict<any>; hadSystemColor
  * RN `parseDropShadowString` rejects CSS system color keywords (same
  * `processColor` probe as `box-shadow`). When any `drop-shadow()` layer needs
  * folding, rewrite the whole `filter` string to RN's array form so sibling
- * functions stay composited. rn-web keeps the CSS string.
+ * functions stay composited.
  */
 export function maybeExpandFilterDropShadowSystemColors(rawValue: string): string | Dict<any>[] {
-  if (__NATIVE_WEB__) return rawValue;
   if (rawValue.indexOf('\0') !== -1) return rawValue;
 
   const normalized = rawValue.replace(/\n/g, ' ');

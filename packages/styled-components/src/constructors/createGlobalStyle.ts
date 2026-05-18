@@ -6,12 +6,12 @@ import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
 import { Compiler, ExecutionContext, ExecutionProps, Interpolation, Styles } from '../types';
-import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
 import { joinRules, stripSplitter } from '../utils/joinStrings';
 import { createRSCCache } from '../utils/rscCache';
 import { warnOnce } from '../utils/warnOnce';
+import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import css from './css';
 
 declare const __SERVER__: boolean;
