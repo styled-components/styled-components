@@ -320,6 +320,35 @@ const reanimatedConfig = {
   ],
 };
 
+// Experimental rn-web bridge entry. Routes consumers through the web
+// pipeline (CSSOM insertRule, hashed className) and lifts our class
+// into rn-web's atomic-CSS layer via styleq's `$$css` escape hatch.
+// Builds against the web pipeline (`__NATIVE__: false`) so the native
+// engine code tree-shakes out of this bundle; the only native code
+// pulled in is the bridge shim itself.
+const webBridgeConfig = {
+  ...configBase,
+  input: './src/native/web-bridge/index.tsx',
+  output: [
+    getCJS({
+      file: 'native/dist/styled-components.native.web-bridge.cjs.js',
+    }),
+    getESM({
+      file: 'native/dist/styled-components.native.web-bridge.esm.js',
+    }),
+  ],
+  plugins: [
+    ...nativeBasePlugins,
+    replace({
+      __SERVER__: JSON.stringify(false),
+      __NATIVE__: JSON.stringify(false),
+      __NATIVE_WEB__: JSON.stringify(true),
+      __DEV__: "process.env.NODE_ENV !== 'production'",
+    }),
+    minifierPlugin,
+  ],
+};
+
 export default [
   standaloneConfig,
   standaloneProdConfig,
@@ -329,4 +358,5 @@ export default [
   nativeWebConfig,
   pluginsConfig,
   reanimatedConfig,
+  webBridgeConfig,
 ];
