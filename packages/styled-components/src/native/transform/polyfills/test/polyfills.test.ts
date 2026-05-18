@@ -285,20 +285,20 @@ describe('static math functions', () => {
   });
 
   describeOnRnWeb(() => {
-    // The browser parses `calc()`, `min()`, `max()`, `clamp()`, and the
-    // Math L4 functions natively. rn-web's `normalizeValueWithProperty`
-    // passes string values through unchanged so the raw CSS expression
-    // reaches the engine intact. Folding at transform time would only
-    // duplicate work and discard `var()` / dynamic operand recovery the
-    // browser handles for free.
+    // Layout-dependent math arms stay raw so the browser's used-value
+    // pipeline runs at the correct moment (containing block known,
+    // viewport / container measured). Unitless static results are the
+    // exception: CSS rejects `width: 100` as a unitless number, but
+    // RN's convention is "numbers are pixels". Fold those so the
+    // rn-web cell matches the native cell.
 
-    it('passes calc() through as a string instead of folding', () => {
+    it('passes calc() over absolute lengths through unchanged', () => {
       expect(transformDecl('width', 'calc(100px + 20px)')).toEqual({
         width: 'calc(100px + 20px)',
       });
     });
 
-    it('passes min / max / clamp through as strings', () => {
+    it('passes min / max / clamp over lengths through unchanged', () => {
       expect(transformDecl('width', 'min(100px, 200px)')).toEqual({ width: 'min(100px, 200px)' });
       expect(transformDecl('width', 'max(100px, 200px)')).toEqual({ width: 'max(100px, 200px)' });
       expect(transformDecl('width', 'clamp(100px, 150px, 200px)')).toEqual({
@@ -306,11 +306,20 @@ describe('static math functions', () => {
       });
     });
 
-    it('passes Math L4 trig / exp / sign through as strings', () => {
-      expect(transformDecl('width', 'calc(sin(90deg) * 100px)')).toEqual({
-        width: 'calc(sin(90deg) * 100px)',
+    it('passes mixed-unit calc() with viewport / container arms through', () => {
+      expect(transformDecl('width', 'calc(100% - 20px)')).toEqual({
+        width: 'calc(100% - 20px)',
       });
-      expect(transformDecl('width', 'pow(2, 8)')).toEqual({ width: 'pow(2, 8)' });
+      expect(transformDecl('width', 'min(70vw, 360px)')).toEqual({
+        width: 'min(70vw, 360px)',
+      });
+    });
+
+    it('folds unitless math fns to numeric pixels (RN convention)', () => {
+      expect(transformDecl('width', 'pow(8, 2)')).toEqual({ width: 64 });
+      expect(transformDecl('width', 'hypot(60, 80)')).toEqual({ width: 100 });
+      expect(transformDecl('width', 'abs(-180)')).toEqual({ width: 180 });
+      expect(transformDecl('width', 'mod(127, 30)')).toEqual({ width: 7 });
     });
   });
 });
@@ -703,18 +712,22 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
   });
 
   describeOnRnWeb(() => {
-    // `transformDecl` skips the static math fold when `__NATIVE_WEB__` is
-    // true (`index.ts`): strings reach the RN-web CSS serializer intact.
+    // Layout-dependent math reaches the browser unchanged so used-value
+    // evaluation matches the spec. Stepped-value over absolute lengths
+    // also passes through (CSS engines compute it correctly).
 
-    it('skips static trig fold; authored calc reaches CSS as text', () => {
+    it('passes static trig multiplied by a length through unchanged', () => {
       expect(transformDecl('width', 'calc(sin(90deg) * 100px)')).toEqual({
         width: 'calc(sin(90deg) * 100px)',
       });
     });
 
-    it('does not statically evaluate stepped-value functions on web', () => {
-      expect(transformDecl('opacity', 'round(0.73)')).toEqual({ opacity: 'round(0.73)' });
+    it('passes mod over lengths through unchanged', () => {
       expect(transformDecl('width', 'mod(7px, 3px)')).toEqual({ width: 'mod(7px, 3px)' });
+    });
+
+    it('folds unitless round() so the browser receives a renderable value', () => {
+      expect(transformDecl('opacity', 'round(0.73)')).toEqual({ opacity: 1 });
     });
   });
 });
@@ -3695,50 +3708,56 @@ describe('system color spec compliance (CSS Color Module Level 4 §6.2)', () => 
 
   // Modern browsers track the user's actual system theme, forced-colors
   // mode, and high-contrast settings when resolving CSS Color 4 system
-  // keywords (CSS Color 4 §6.2). On rn-web we skip the expansion so the
-  // browser does the right thing end-to-end.
+  // keywords (CSS Color 4 §6.2). On rn-web we wrap each keyword in
+  // `var(--unset, <keyword>)` so rn-web's color pipeline (which drops
+  // bare keywords) accepts the value and the browser resolves the var()
+  // fallback to the actual system color.
   describeOnRnWeb(() => {
-    it('passes Canvas through unchanged so the browser tracks the system theme', () => {
-      expect(transformDecl('color', 'Canvas')).toEqual({ color: 'Canvas' });
+    it('wraps Canvas in var() so rn-web forwards it to the browser', () => {
+      expect(transformDecl('color', 'Canvas')).toEqual({ color: 'var(--unset, Canvas)' });
     });
 
-    it('passes deprecated keywords through unchanged (browser handles the alias)', () => {
-      expect(transformDecl('color', 'WindowText')).toEqual({ color: 'WindowText' });
+    it('wraps deprecated keywords too (browser handles the alias)', () => {
+      expect(transformDecl('color', 'WindowText')).toEqual({
+        color: 'var(--unset, WindowText)',
+      });
     });
 
-    it('composite shorthands keep system keywords as authored CSS strings', () => {
+    it('composite shorthands wrap system keywords in var() too', () => {
       expect(transformDecl('border', '1px solid Canvas')).toEqual({
         borderWidth: 1,
         borderStyle: 'solid',
-        borderColor: 'Canvas',
+        borderColor: 'var(--unset, Canvas)',
       });
       expect(transformDecl('outline', '2px solid Highlight')).toEqual({
         outlineWidth: 2,
         outlineStyle: 'solid',
-        outlineColor: 'Highlight',
+        outlineColor: 'var(--unset, Highlight)',
       });
-      expect(transformDecl('background', 'Canvas')).toEqual({ backgroundColor: 'Canvas' });
+      expect(transformDecl('background', 'Canvas')).toEqual({
+        backgroundColor: 'var(--unset, Canvas)',
+      });
       expect(
         transformDecl('background', 'linear-gradient(to right, red, blue) Canvas')
       ).toMatchObject({
-        backgroundColor: 'Canvas',
+        backgroundColor: 'var(--unset, Canvas)',
         backgroundImage: expect.stringContaining('linear-gradient'),
       });
       expect(transformDecl('text-decoration', 'underline Canvas')).toEqual({
         textDecorationLine: 'underline',
         textDecorationStyle: 'solid',
-        textDecorationColor: 'Canvas',
+        textDecorationColor: 'var(--unset, Canvas)',
       });
       expect(transformDecl('text-shadow', '1px 2px Highlight')).toEqual({
         textShadowOffset: { width: 1, height: 2 },
         textShadowRadius: 0,
-        textShadowColor: 'Highlight',
+        textShadowColor: 'var(--unset, Highlight)',
       });
       expect(transformDecl('border-color', 'red Highlight')).toEqual({
         borderTopColor: 'red',
-        borderRightColor: 'Highlight',
+        borderRightColor: 'var(--unset, Highlight)',
         borderBottomColor: 'red',
-        borderLeftColor: 'Highlight',
+        borderLeftColor: 'var(--unset, Highlight)',
       });
     });
 
@@ -4174,16 +4193,23 @@ describe('text-overflow spec compliance (CSS Overflow §6.1)', () => {
     expect(transformDecl('text-overflow', '"…"')).toEqual({});
   });
 
-  // rn-web passes the keyword through so the browser's own overflow
-  // handling kicks in once the parent has `overflow: hidden` and
-  // `white-space: nowrap` (or an equivalent constraint).
+  // rn-web emits `overflow: hidden` alongside the keyword so a paired
+  // `text-wrap: nowrap` reaches the spec behavior without the user
+  // setting overflow themselves; the native path achieves the same
+  // shape via numberOfLines + ellipsizeMode.
   describeOnRnWeb(() => {
-    it('ellipsis passes through to the browser', () => {
-      expect(transformDecl('text-overflow', 'ellipsis')).toEqual({ textOverflow: 'ellipsis' });
+    it('ellipsis emits the keyword + overflow: hidden so the browser truncates', () => {
+      expect(transformDecl('text-overflow', 'ellipsis')).toEqual({
+        textOverflow: 'ellipsis',
+        overflow: 'hidden',
+      });
     });
 
-    it('clip passes through to the browser', () => {
-      expect(transformDecl('text-overflow', 'clip')).toEqual({ textOverflow: 'clip' });
+    it('clip emits the keyword + overflow: hidden so the browser clips', () => {
+      expect(transformDecl('text-overflow', 'clip')).toEqual({
+        textOverflow: 'clip',
+        overflow: 'hidden',
+      });
     });
   });
 });
@@ -4246,6 +4272,10 @@ describe('overscroll-behavior spec compliance (CSS Overscroll Behavior 1 §4)', 
         overscrollBehavior: 'none',
       });
     });
+
+    it('auto emits nothing (initial value; defer to ScrollView defaults)', () => {
+      expect(transformDecl('overscroll-behavior', 'auto')).toEqual({});
+    });
   });
 });
 
@@ -4298,8 +4328,8 @@ describe('scrollbar-width spec compliance (CSS Scrollbars 1 §3)', () => {
     it('thin passes through to the browser', () => {
       expect(transformDecl('scrollbar-width', 'thin')).toEqual({ scrollbarWidth: 'thin' });
     });
-    it('auto passes through to the browser', () => {
-      expect(transformDecl('scrollbar-width', 'auto')).toEqual({ scrollbarWidth: 'auto' });
+    it('auto emits nothing (initial value; defer to ScrollView defaults)', () => {
+      expect(transformDecl('scrollbar-width', 'auto')).toEqual({});
     });
   });
 });
@@ -4359,8 +4389,16 @@ describe('accent-color spec compliance (CSS UI 4 §7.1)', () => {
   });
 
   describeOnRnWeb(() => {
-    it('<color> passes through so the browser tints native controls', () => {
-      expect(transformDecl('accent-color', 'red')).toEqual({ accentColor: 'red' });
+    // rn-web's Switch overlays its visible track with custom Views
+    // instead of letting CSS `accent-color` tint the underlying
+    // checkbox, so the rn-web path also lifts `trackColor.true` for
+    // an explicit color. The CSS keyword stays in the bag for any
+    // wrapped real form control.
+    it('<color> lifts trackColor and forwards the CSS value', () => {
+      expect(transformDecl('accent-color', 'red')).toEqual({
+        accentColor: 'red',
+        trackColor: { true: 'red' },
+      });
     });
     it('auto passes through to the browser', () => {
       expect(transformDecl('accent-color', 'auto')).toEqual({ accentColor: 'auto' });

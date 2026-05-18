@@ -97,18 +97,27 @@ const styled = baseStyled as typeof baseStyled & {
   [E in KnownComponents]: Styled<'native', RNComponents[E], React.ComponentProps<RNComponents[E]>>;
 };
 
-// ScrollView baseline. RN's ScrollView ships with `flex-shrink: 1`,
-// inconsistent with View (`flex-shrink: 0`). In flex-row/flex-column
-// parents, that default silently overrides explicit `width:` / `height:`
-// declarations and surprises consumers. Applying `flex-shrink: 0` as a
-// baseline makes explicit dimensions pin reliably; user CSS can still
-// override by declaring `flex-shrink:` in their own template.
+// ScrollView baseline. iOS / Android RN's ScrollView ships with
+// `flex-shrink: 1`, inconsistent with View (`flex-shrink: 0`). In
+// flex-row/flex-column parents, that default silently overrides explicit
+// `width:` / `height:` declarations and surprises consumers. Applying
+// `flex-shrink: 0` as a baseline makes explicit dimensions pin reliably;
+// user CSS can still override by declaring `flex-shrink:` in their own
+// template.
+//
+// rn-web is the opposite: rn-web's ScrollView depends on `flex-shrink: 1`
+// to shrink within a constrained parent so its content overflow becomes
+// scrollable. Pinning `flex-shrink: 0` there would let the ScrollView
+// grow to its content size and overflow the parent (items burst out of
+// the scroll box). Skip the baseline on the rn-web bundle.
 let cachedScrollViewBase: NativeTarget | undefined;
 function getScrollViewBase(): NativeTarget {
   if (cachedScrollViewBase) return cachedScrollViewBase;
-  cachedScrollViewBase = styled(reactNative.ScrollView as NativeTarget)`
-    flex-shrink: 0;
-  ` as unknown as NativeTarget;
+  cachedScrollViewBase = __NATIVE_WEB__
+    ? (reactNative.ScrollView as NativeTarget)
+    : (styled(reactNative.ScrollView as NativeTarget)`
+        flex-shrink: 0;
+      ` as unknown as NativeTarget);
   return cachedScrollViewBase;
 }
 

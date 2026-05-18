@@ -63,7 +63,12 @@ export const PASSTHROUGH_PROPS: ReadonlyMap<string, readonly string[]> = new Map
   // iOS / Android; rn-web maps it onto the browser's bidi engine. Pure
   // identity passthrough.
   ['direction', ['direction']],
-  // CSS Images 4. <Image> only. RN 0.85 registers `objectFit`.
+  // CSS Images 4. <Image> only. RN 0.85's iOS and Android Image
+  // components read `objectFit` from style and convert to resizeMode
+  // internally; rn-web's Image ignores `objectFit` entirely and reads
+  // `resizeMode` instead, so the rn-web branch is handled by a
+  // dedicated handler in `polyfills/objectFit.ts` that lifts a
+  // resizeMode prop. Identity passthrough is correct for native.
   ['objectFit', ['objectFit']],
   // CSS Inline 3. <Text> only. RN 0.85 accepts the keyword grammar
   // (`auto | top | bottom | middle`); length/percent forms are rn-web only.
