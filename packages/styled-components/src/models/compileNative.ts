@@ -366,6 +366,8 @@ export const SPECIAL_CASE_PROPS: Record<string, SpecialCaseMeta> = {
   // over author props is required: hit-testing must act as if
   // `pointer-events` were `none` regardless of its actual value, and
   // equivalent for the a11y / focus / selection / editable surfaces.
+  // The lift is skipped on rn-web (see `shouldLiftSpecialCase`); rn-web
+  // deprecated `props.pointerEvents` in favor of `style.pointerEvents`.
   pointerEvents: { validOn: VIEW_LIKE_TARGETS, source: 'interactivity', priority: 1 },
   accessibilityElementsHidden: {
     validOn: VIEW_LIKE_TARGETS,
@@ -629,13 +631,19 @@ function resolversWriteCascadeKey(rs: ReadonlyArray<[string, unknown]>): boolean
 function extractSpecialCases(base: Dict<any>): Dict<any> | null {
   let lifted: Dict<any> | null = null;
   for (const k in base) {
-    if (SPECIAL_CASE_PROPS[k] !== undefined) {
+    if (SPECIAL_CASE_PROPS[k] !== undefined && shouldLiftSpecialCase(k)) {
       if (lifted === null) lifted = {};
       lifted[k] = base[k];
       delete base[k];
     }
   }
   return lifted;
+}
+
+// `pointerEvents` stays in style on rn-web; rn-web warns when it reaches
+// as a prop. Every other special-case key lifts on both bars.
+function shouldLiftSpecialCase(key: string): boolean {
+  return !(__NATIVE_WEB__ && key === 'pointerEvents');
 }
 
 /**
@@ -828,7 +836,7 @@ function describeCondition(entry: ConditionalStyle): string {
 function stripSpecialCasesFromConditional(styles: Dict<any>, entry: ConditionalStyle): Dict<any> {
   let out: Dict<any> | null = null;
   for (const k in styles) {
-    if (SPECIAL_CASE_PROPS[k] !== undefined) {
+    if (SPECIAL_CASE_PROPS[k] !== undefined && shouldLiftSpecialCase(k)) {
       if (__DEV__) {
         const meta = SPECIAL_CASE_PROPS[k];
         const cond = describeCondition(entry);
