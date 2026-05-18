@@ -94,6 +94,43 @@ const OBJECT_FIT_TO_RN_RESIZE_MODE: Record<string, string | undefined> = {
   'scale-down': 'contain',
 };
 
+// Per-property single-passthrough handlers. Properties listed here have
+// either a target-specific lift, a value rewrite, or a dual-emit shape
+// that diverges from the generic identity passthrough. Properties not
+// listed fall through to `{ [passthroughKeys[0]]: value }`.
+type SinglePassthroughHandler = (value: string, rawValue: string) => Dict<any>;
+const SINGLE_PASSTHROUGH_HANDLERS: Record<string, SinglePassthroughHandler> = {
+  verticalAlign: (value, rawValue) => {
+    // rn-web's `vertical-align` is baseline-only; emit `align-content` for
+    // the box-positioning keywords so they reposition content like
+    // Android's `textAlignVertical`. Other values fall through to the
+    // browser's native baseline-shifting semantics.
+    if (__NATIVE_WEB__) {
+      const alignContent = VERTICAL_ALIGN_TO_ALIGN_CONTENT[rawValue];
+      if (alignContent !== undefined) return { verticalAlign: value, alignContent };
+    }
+    return { verticalAlign: value };
+  },
+  boxShadow: value => ({ boxShadow: maybeExpandBoxShadowSystemColors(value) }),
+  filter: value => ({ filter: maybeExpandFilterDropShadowSystemColors(value) }),
+  // Native: dual-emit so RN Text honors the cascade. rn-web also lifts a
+  // `dir` prop since rn-web's BiDi-aware text-align reads `props.dir`,
+  // not the CSS direction.
+  direction: value => {
+    if (__NATIVE_WEB__) return { writingDirection: value, dir: value };
+    return { direction: value, writingDirection: value };
+  },
+  // rn-web's Image reads `resizeMode`, not `objectFit`; lift via
+  // SPECIAL_CASE_PROPS using the spec conversion table.
+  objectFit: value => {
+    if (__NATIVE_WEB__) {
+      const mapped = OBJECT_FIT_TO_RN_RESIZE_MODE[value];
+      return mapped !== undefined ? { resizeMode: mapped } : {};
+    }
+    return { objectFit: value };
+  },
+};
+
 /**
  * Transform a single CSS declaration into an RN style partial.
  *
@@ -112,7 +149,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
   const camel = camelize(prop);
 
   // System color keywords. Native: PlatformColor so iOS / Android route
-  // through semantic colors. rn-web: wrap in `var(--unset, kw)` so the
+  // through semantic colors. rn-web: wrap in `var(--sc-unset, kw)` so the
   // value survives rn-web's color allowlist and the browser resolves
   // against OS theme. `accentColor` skips here so its handler can lift
   // `trackColor.true` from the original keyword.
@@ -157,38 +194,8 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     let value = isLayeredCommaProp(camel) ? collapseIdenticalCommas(rawValue) : rawValue;
     if (camel === 'backgroundPosition') value = normalizeBackgroundPositionValue(value);
     if (passthroughKeys.length === 1) {
-      // rn-web's `vertical-align` is baseline-only; emit `align-content`
-      // for the box-positioning keywords so they reposition content
-      // like Android's `textAlignVertical`. Other values fall through
-      // to the browser's native baseline-shifting semantics.
-      if (__NATIVE_WEB__ && camel === 'verticalAlign') {
-        const alignContent = VERTICAL_ALIGN_TO_ALIGN_CONTENT[rawValue];
-        if (alignContent !== undefined) {
-          return { verticalAlign: value, alignContent };
-        }
-      }
-      if (camel === 'boxShadow') {
-        return { boxShadow: maybeExpandBoxShadowSystemColors(value) };
-      }
-      if (camel === 'filter') {
-        return { filter: maybeExpandFilterDropShadowSystemColors(value) };
-      }
-      // Native: dual-emit so RN Text honors the cascade. rn-web also
-      // lifts a `dir` prop since rn-web's BiDi-aware text-align reads
-      // `props.dir`, not the CSS direction.
-      if (camel === 'direction') {
-        if (__NATIVE_WEB__) return { writingDirection: value, dir: value };
-        return { direction: value, writingDirection: value };
-      }
-      // rn-web's Image reads `resizeMode`, not `objectFit`; lift via
-      // SPECIAL_CASE_PROPS using the spec conversion table.
-      if (camel === 'objectFit') {
-        if (__NATIVE_WEB__) {
-          const mapped = OBJECT_FIT_TO_RN_RESIZE_MODE[value];
-          return mapped !== undefined ? { resizeMode: mapped } : {};
-        }
-        return { objectFit: value };
-      }
+      const handler = SINGLE_PASSTHROUGH_HANDLERS[camel];
+      if (handler !== undefined) return handler(value, rawValue);
       return { [passthroughKeys[0]]: value };
     }
     // Dual-emit (background props): write every key in order so the
@@ -290,10 +297,11 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     return {};
   }
 
-  // Static math fns: fold on native always. On rn-web only fold unitless
-  // results (RN's "bare number = px" convention); with-unit forms reach
-  // the browser so layout-dependent arms compute against the right
-  // containing block.
+  // Static math fns. Native: always fold. rn-web: fold only when the
+  // result is unitless, where the browser would otherwise drop the
+  // declaration (e.g. `width: pow(8, 2)`); RN's bare-number-is-pixels
+  // convention rescues those at no cost. With-unit forms reach the
+  // browser unchanged so layout-dependent arms compute correctly.
   if (mightBeMathFn(rawValue)) {
     tokens = tokens ?? tokenize(rawValue);
     if (tokens.length === 1 && tokens[0].kind === TokenKind.Function) {

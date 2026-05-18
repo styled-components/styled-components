@@ -130,9 +130,9 @@ export function isCssSystemColorKeyword(ident: string): boolean {
   return ALL_SYSTEM_COLOR_KEYS.has(ident.toLowerCase());
 }
 
-/** Wrap a system-color keyword in `var(--unset, kw)` so rn-web's color allowlist forwards it to CSS. */
+/** Wrap a system-color keyword in `var(--sc-unset, kw)` so rn-web's color allowlist forwards it to CSS. */
 export function wrapSystemColorForRnWeb(keyword: string): string {
-  return 'var(--unset, ' + keyword + ')';
+  return 'var(--sc-unset, ' + keyword + ')';
 }
 
 export function getSystemColorPlatformColor(keyword: string): unknown | null {

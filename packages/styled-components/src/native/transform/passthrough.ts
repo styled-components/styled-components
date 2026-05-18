@@ -57,11 +57,9 @@ export const PASSTHROUGH_PROPS: ReadonlyMap<string, readonly string[]> = new Map
   // and ReactNativeStyleAttributes.js:84 registers `boxSizing: true`. Pure
   // identity passthrough; no transformation needed.
   ['boxSizing', ['boxSizing']],
-  // CSS Writing Modes 4. `direction: ltr | rtl` sets inline base direction
-  // (Unicode bidi level). Inherited, applies to all elements. RN's Yoga
-  // already honors `direction` for the `*-inline-*` logical mapping on
-  // iOS / Android; rn-web maps it onto the browser's bidi engine. Pure
-  // identity passthrough.
+  // CSS Writing Modes 4. Both bars take this branch into transformDecl
+  // and dual-emit (native: `direction` + `writingDirection`; rn-web:
+  // `writingDirection` + `dir` prop lift).
   ['direction', ['direction']],
   // CSS Images 4. <Image> only. Native identity passthrough; rn-web is
   // remapped to `resizeMode` inline in `transformDecl`.

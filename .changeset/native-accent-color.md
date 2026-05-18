@@ -2,7 +2,7 @@
 'styled-components': minor
 ---
 
-CSS `accent-color` now works on React Native. Applied to a `styled.Switch`, it tints `trackColor.true` so the on-state surface picks up the value (the closest analog to the on-web behavior of tinting a checked checkbox). Both `<color>` values and `accent-color: auto` are accepted; `auto` resolves to the platform's `AccentColor` system color. Web builds forward the property unchanged.
+CSS `accent-color` now works on every target. Applied to a `styled.Switch`, it tints the on-state surface so the control picks up the value (the closest analog to the on-web behavior of tinting a checked checkbox). Both `<color>` values and `accent-color: auto` are accepted; `auto` resolves to the platform's accent color.
 
 The same color forms work here as in every other color slot in styled-components: HTML named colors, CSS Color 4 system keywords, hex, modern color functions, and theme tokens.
 

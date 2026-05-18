@@ -3709,17 +3709,17 @@ describe('system color spec compliance (CSS Color Module Level 4 §6.2)', () => 
   // Modern browsers track the user's actual system theme, forced-colors
   // mode, and high-contrast settings when resolving CSS Color 4 system
   // keywords (CSS Color 4 §6.2). On rn-web we wrap each keyword in
-  // `var(--unset, <keyword>)` so rn-web's color pipeline (which drops
+  // `var(--sc-unset, <keyword>)` so rn-web's color pipeline (which drops
   // bare keywords) accepts the value and the browser resolves the var()
   // fallback to the actual system color.
   describeOnRnWeb(() => {
     it('wraps Canvas in var() so rn-web forwards it to the browser', () => {
-      expect(transformDecl('color', 'Canvas')).toEqual({ color: 'var(--unset, Canvas)' });
+      expect(transformDecl('color', 'Canvas')).toEqual({ color: 'var(--sc-unset, Canvas)' });
     });
 
     it('wraps deprecated keywords too (browser handles the alias)', () => {
       expect(transformDecl('color', 'WindowText')).toEqual({
-        color: 'var(--unset, WindowText)',
+        color: 'var(--sc-unset, WindowText)',
       });
     });
 
@@ -3727,37 +3727,37 @@ describe('system color spec compliance (CSS Color Module Level 4 §6.2)', () => 
       expect(transformDecl('border', '1px solid Canvas')).toEqual({
         borderWidth: 1,
         borderStyle: 'solid',
-        borderColor: 'var(--unset, Canvas)',
+        borderColor: 'var(--sc-unset, Canvas)',
       });
       expect(transformDecl('outline', '2px solid Highlight')).toEqual({
         outlineWidth: 2,
         outlineStyle: 'solid',
-        outlineColor: 'var(--unset, Highlight)',
+        outlineColor: 'var(--sc-unset, Highlight)',
       });
       expect(transformDecl('background', 'Canvas')).toEqual({
-        backgroundColor: 'var(--unset, Canvas)',
+        backgroundColor: 'var(--sc-unset, Canvas)',
       });
       expect(
         transformDecl('background', 'linear-gradient(to right, red, blue) Canvas')
       ).toMatchObject({
-        backgroundColor: 'var(--unset, Canvas)',
+        backgroundColor: 'var(--sc-unset, Canvas)',
         backgroundImage: expect.stringContaining('linear-gradient'),
       });
       expect(transformDecl('text-decoration', 'underline Canvas')).toEqual({
         textDecorationLine: 'underline',
         textDecorationStyle: 'solid',
-        textDecorationColor: 'var(--unset, Canvas)',
+        textDecorationColor: 'var(--sc-unset, Canvas)',
       });
       expect(transformDecl('text-shadow', '1px 2px Highlight')).toEqual({
         textShadowOffset: { width: 1, height: 2 },
         textShadowRadius: 0,
-        textShadowColor: 'var(--unset, Highlight)',
+        textShadowColor: 'var(--sc-unset, Highlight)',
       });
       expect(transformDecl('border-color', 'red Highlight')).toEqual({
         borderTopColor: 'red',
-        borderRightColor: 'var(--unset, Highlight)',
+        borderRightColor: 'var(--sc-unset, Highlight)',
         borderBottomColor: 'red',
-        borderLeftColor: 'var(--unset, Highlight)',
+        borderLeftColor: 'var(--sc-unset, Highlight)',
       });
     });
 
