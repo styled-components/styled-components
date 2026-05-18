@@ -327,26 +327,26 @@ function applySpecialCases(
   if (!specialCases) return;
   for (const k in specialCases) {
     const meta = SPECIAL_CASE_PROPS[k];
-    const priority = meta !== undefined && meta.priority !== undefined ? meta.priority : 0;
-    if (priority > 0) {
-      // Priority keys (e.g. `interactivity: inert`) overwrite the user value so
-      // hit-testing, a11y, focus, selection and editability all reflect the inert state.
-      elementProps[k] = specialCases[k];
-    } else if (!(k in elementProps)) {
-      elementProps[k] = specialCases[k];
-    }
-    if (__DEV__) {
-      if (meta && !targetMatchesValidOn(effectiveTarget, meta.validOn)) {
-        if (!specialCaseWarned.has(warningKey)) {
-          specialCaseWarned.add(warningKey);
-          const name = leafName(resolveLeafTarget(effectiveTarget)) ?? 'this component';
-          const validList = meta.validOn.map(n => `<${n}>`).join(' or ');
-          warnOnce(
-            'native-special-case-target',
-            `\`${meta.source}\` only works on ${validList} in React Native, but it's being applied to <${name}>. \`${meta.source}\` maps to React Native's \`${k}\` prop, which ${validList} reads;other components will ignore it.`,
-            meta.source + ':' + name
-          );
-        }
+    const targetValid = meta === undefined || targetMatchesValidOn(effectiveTarget, meta.validOn);
+    if (targetValid) {
+      const priority = meta !== undefined && meta.priority !== undefined ? meta.priority : 0;
+      if (priority > 0) {
+        // Priority keys (e.g. `interactivity: inert`) overwrite the user value so
+        // hit-testing, a11y, focus, selection and editability all reflect the inert state.
+        elementProps[k] = specialCases[k];
+      } else if (!(k in elementProps)) {
+        elementProps[k] = specialCases[k];
+      }
+    } else if (__DEV__ && meta) {
+      if (!specialCaseWarned.has(warningKey)) {
+        specialCaseWarned.add(warningKey);
+        const name = leafName(resolveLeafTarget(effectiveTarget)) ?? 'this component';
+        const validList = meta.validOn.map(n => `<${n}>`).join(' or ');
+        warnOnce(
+          'native-special-case-target',
+          `\`${meta.source}\` only works on ${validList} in React Native, but it's being applied to <${name}>. \`${meta.source}\` maps to React Native's \`${k}\` prop, which ${validList} reads;other components will ignore it.`,
+          meta.source + ':' + name
+        );
       }
     }
   }
