@@ -1,5 +1,4 @@
 import { Dict } from '../../types';
-import { camelize } from './index';
 import { getSystemColorPlatformColor } from './polyfills/systemColors';
 import { cssColorRawToRnStyleValue, isSingleTokenColorArg } from './shorthandHelpers';
 
@@ -8,6 +7,13 @@ const WHITESPACE_SPLIT_REGEX = /\s+(?![^(]*\))/;
 
 /** Same function-scan regex as RN `processFilter` for string input. */
 const FILTER_FN_REGEX = /([\w-]+)\(([^()]*|\([^()]*\)|[^()]*\([^()]*\)[^()]*)\)/g;
+
+// Local camelize: the shared `camelize` in `./index` would create an import
+// cycle (index → filterSystemColors → index). Filter names are a fixed set
+// of ~7 short strings, so the per-call work is negligible without a cache.
+function camelizeFilterName(name: string): string {
+  return name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+}
 
 // Required digit in group 1 prevents a zero-length match. The previous
 // all-optional shape worked for the single `exec()` here (the caller
@@ -127,7 +133,7 @@ export function maybeExpandFilterDropShadowSystemColors(rawValue: string): strin
       if (parsed.hadSystemColor) anySystem = true;
       out.push({ dropShadow: parsed.layer });
     } else {
-      const camel = camelize(filterName);
+      const camel = camelizeFilterName(filterName);
       const amount = parseFilterScalarAmount(camel, inner);
       if (amount === null) return rawValue;
       out.push({ [camel]: amount });

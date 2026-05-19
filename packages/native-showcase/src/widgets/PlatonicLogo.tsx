@@ -321,8 +321,19 @@ const Stage = styled.View`
   justify-content: center;
   overflow: visible;
   perspective: 1200px;
-  /* saturate rebuilds intensity that the per-face multiply blend dims. */
+  /* saturate rebuilds intensity that the per-face soft-light blend dims. */
   filter: saturate(1.4);
+  /* Cursor + selection guards stay scoped to mouse / trackpad inputs so
+     iOS / Android touch surfaces don't try to compile a :active bucket
+     on a non-Pressable View (which can drop the static rule and collapse
+     Stage's explicit width / height). */
+  @media (hover: hover) and (pointer: fine) {
+    cursor: grab;
+    user-select: none;
+    &:active {
+      cursor: grabbing;
+    }
+  }
 `;
 
 // Stage flex-centers SceneOrigin to (STAGE/2, STAGE/2). FaceWrappers are
@@ -336,6 +347,13 @@ const SceneOrigin = styled.View`
   transform-style: preserve-3d;
 `;
 
+// mix-blend-mode lands here (not on the inner shape) because rn-web's
+// View baseline forces `position: relative; z-index: 0`, which gives
+// every styled.View its own stacking context. A blend on the inner
+// shape would composite only against that wrapper's own content (just
+// itself), never sibling faces. Placing it on FaceWrapper lets each
+// face's full composited output blend against the scene backdrop,
+// which carries the already-blended pixels of every earlier sibling.
 const FaceWrapper = styled.View`
   position: absolute;
   width: 0;
@@ -345,6 +363,7 @@ const FaceWrapper = styled.View`
   z-index: auto;
   transform-style: preserve-3d;
   backface-visibility: visible;
+  mix-blend-mode: soft-light;
 `;
 
 // Overshoot each face by 1.5% so adjacent faces overlap fractionally
@@ -352,7 +371,7 @@ const FaceWrapper = styled.View`
 // edges with subpixel float drift, leaving hairline gaps where two
 // faces meet exactly. The overlap is symmetric (FaceWrapper centers
 // the shape on the origin) so the geometric edge stays in place.
-const EDGE_OVERLAP = 1.015;
+const EDGE_OVERLAP = 1.006;
 
 // Square face (cube only) - solid color block. No border: the 3D arrangement
 // already separates faces by their distinct colors, and a 1px ink border
@@ -360,11 +379,7 @@ const EDGE_OVERLAP = 1.015;
 const SquareFace = styled.View<{ $color: string; $size: number }>`
   width: ${p => p.$size * EDGE_OVERLAP}px;
   height: ${p => p.$size * EDGE_OVERLAP}px;
-  /* alpha < 1 lets the rear faces show through; rgba (not opacity)
-     so the face does not establish an isolation context, which would
-     prevent mix-blend-mode from propagating across faces. */
-  background-color: color-mix(in srgb, ${p => p.$color} 78%, transparent);
-  mix-blend-mode: multiply;
+  background-color: ${p => p.$color};
 `;
 
 /**
@@ -381,8 +396,7 @@ const TriangleShape = styled.View<{ $color: string; $size: number }>`
   border-bottom-width: ${p => (p.$size * EDGE_OVERLAP * Math.sqrt(3)) / 2}px;
   border-left-color: transparent;
   border-right-color: transparent;
-  border-bottom-color: color-mix(in srgb, ${p => p.$color} 78%, transparent);
-  mix-blend-mode: multiply;
+  border-bottom-color: ${p => p.$color};
 `;
 
 function TriangleFace({ size, color }: { size: number; color: string }) {
@@ -412,21 +426,10 @@ function TriangleFace({ size, color }: { size: number; color: string }) {
  * the geometry and per-slice color all change per render, so styled-component
  * compile gives no cache benefit here.
  */
-// Inline styles can't use the CSS `color-mix` function, so derive the
-// rgba equivalent (alpha 0.78) from the hex palette directly. Matches
-// the SquareFace / TriangleShape treatment that lets rear faces show
-// through and keeps mix-blend-mode able to propagate across faces.
-function hexToRgba78(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, 0.78)`;
-}
-
 function PentagonFace({ size, color }: { size: number; color: string }) {
   const half = size / 2;
   const apothem = (size * Math.cos(Math.PI / 5)) / (2 * Math.sin(Math.PI / 5));
-  const fill = hexToRgba78(color);
+  const fill = color;
   return (
     <View style={{ width: 0, height: 0 }}>
       {[0, 1, 2, 3, 4].map(i => (
@@ -446,7 +449,6 @@ function PentagonFace({ size, color }: { size: number; color: string }) {
             borderBottomColor: fill,
             transformOrigin: '50% 0%',
             transform: [{ rotate: `${i * 72}deg` }, { scale: EDGE_OVERLAP }],
-            mixBlendMode: 'multiply',
           }}
         />
       ))}
@@ -544,7 +546,13 @@ const SOLID_PALETTE_IDX: number[][] = ALL_FACES.map(paletteAssignmentForFaces);
 // Idle angular velocity, expressed as pixel-equivalent (dx, dy) so it composes
 // with pointer-derived velocity from drag. After a fling, current velocity
 // blends toward this idle target so the logo settles back into its rest spin.
-const IDLE_VEL = { dx: 1.0, dy: -0.4 };
+// Idle tumble: clockwise (viewed from above, the front face slides left
+// while a new face cycles in from the right) with a gentle upward tilt.
+// dx is negative because the drag-direction fix negates dx when building
+// the Y rotation, so a positive idle-rightward velocity would actually
+// turn the cube counter-clockwise. Storing the idle as negative-dx keeps
+// the visible behavior matching the comment.
+const IDLE_VEL = { dx: -1.0, dy: -0.4 };
 const FLING_SENSITIVITY = 0.01; // pixels → radians factor
 // Reference per-frame blend assumed to fire at 60fps; the tick scales it by
 // `dt * 60` so the per-second decay is preserved on 120Hz displays (web,
@@ -834,9 +842,13 @@ export function PlatonicLogo() {
       // each frame.
       if (!draggingRef.current && !paused && !reduce && !transitionRef.current) {
         const vel = velocityRef.current;
+        // CSS Transforms 2 uses a Y-down coordinate system, so rotateY(+θ)
+        // pulls the right edge toward the viewer — visually the front face
+        // moves left. Negate dx so positive pointer-right delta produces the
+        // intuitive "front face follows the finger" direction.
         const dq = qMul(
           qFromAxisAngle([1, 0, 0], -vel.dy * FLING_SENSITIVITY * tickScale),
-          qFromAxisAngle([0, 1, 0], vel.dx * FLING_SENSITIVITY * tickScale)
+          qFromAxisAngle([0, 1, 0], -vel.dx * FLING_SENSITIVITY * tickScale)
         );
         quatRef.current = qNorm(qMul(dq, quatRef.current));
         // Exponential blend toward IDLE_VEL: fast flings decay quickly while
@@ -887,10 +899,11 @@ export function PlatonicLogo() {
           const dx = x - lastTouchRef.current.x;
           const dy = y - lastTouchRef.current.y;
           lastTouchRef.current = { x, y };
-          // Apply rotation directly for instant pointer feedback.
+          // Apply rotation directly for instant pointer feedback. dx is
+          // negated for the same Y-down handedness reason as the tick loop.
           const dq = qMul(
             qFromAxisAngle([1, 0, 0], -dy * FLING_SENSITIVITY),
-            qFromAxisAngle([0, 1, 0], dx * FLING_SENSITIVITY)
+            qFromAxisAngle([0, 1, 0], -dx * FLING_SENSITIVITY)
           );
           quatRef.current = qNorm(qMul(dq, quatRef.current));
           // EMA-smooth pointer delta into velocity. Weighting recent samples
@@ -986,7 +999,7 @@ export function PlatonicLogo() {
             // native this also approximates depth ordering since transforms
             // are flattened (no preserve-3d). On web, transform-style and
             // perspective on Stage/SceneOrigin/FaceWrapper let the browser
-            // composite in real 3D and the multiply blend reads through to
+            // composite in real 3D and the soft-light blend reads through to
             // the rear faces - no JS backface cull needed.
             const z = composed[14];
             return (

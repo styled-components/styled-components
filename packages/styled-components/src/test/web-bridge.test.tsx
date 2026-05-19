@@ -399,6 +399,29 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
     }
   });
 
+  describe('CSS Compositing 1 mix-blend-mode propagation', () => {
+    it('emits mix-blend-mode: multiply to the CSSOM unaltered', () => {
+      const Face = styled.View`
+        background-color: red;
+        mix-blend-mode: multiply;
+      `;
+      render(<Face testID="blend-probe" />);
+      const css = readAllCss();
+      expect(css).toMatch(/mix-blend-mode:\s*multiply/);
+    });
+
+    it('emits mix-blend-mode alongside color-mix backgrounds', () => {
+      const Face = styled.View`
+        background-color: color-mix(in srgb, #4287f5 78%, transparent);
+        mix-blend-mode: multiply;
+      `;
+      render(<Face testID="blend-color-mix" />);
+      const css = readAllCss();
+      expect(css).toMatch(/mix-blend-mode:\s*multiply/);
+      expect(css).toMatch(/color-mix\(in srgb,/);
+    });
+  });
+
   describe('object-fit on Image', () => {
     // rn-web's `<Image>` renders as a `<div>` with `background-image: url(...)`,
     // not as `<img>`. CSS `object-fit` only applies to replaced elements, so a
