@@ -99,6 +99,52 @@ describe('runtime resolvers', () => {
     });
   });
 
+  // CSS Values 4 §6.1.1 font-metric units. RN has no font measurement
+  // API, so we apply the spec's documented approximations: ex ≈ 0.5em,
+  // cap ≈ 0.7em, ch ≈ 0.5em, ic ≈ 1em. The r-prefixed forms anchor
+  // against env.rootFontSize instead of env.fontSize.
+  describe('font-metric units (CSS Values 4 §6.1.1) — approximation fallback', () => {
+    const env: ResolveEnv = { ...baseEnv, fontSize: 20, rootFontSize: 16 };
+
+    it('ex ≈ 0.5em (parent-anchored)', () => {
+      expect(buildResolver('1ex')!(env)).toBe(10);
+      expect(buildResolver('2ex')!(env)).toBe(20);
+    });
+    it('cap ≈ 0.7em (parent-anchored)', () => {
+      expect(buildResolver('1cap')!(env)).toBeCloseTo(14, 5);
+    });
+    it('ch ≈ 0.5em (parent-anchored)', () => {
+      expect(buildResolver('1ch')!(env)).toBe(10);
+      expect(buildResolver('3ch')!(env)).toBe(30);
+    });
+    it('ic ≈ 1em (parent-anchored)', () => {
+      expect(buildResolver('1ic')!(env)).toBe(20);
+    });
+    it('rex anchors at root font-size', () => {
+      expect(buildResolver('1rex')!(env)).toBe(8);
+      expect(buildResolver('2rex')!(env)).toBe(16);
+    });
+    it('rcap anchors at root font-size', () => {
+      expect(buildResolver('1rcap')!(env)).toBeCloseTo(11.2, 5);
+    });
+    it('rch anchors at root font-size', () => {
+      expect(buildResolver('4rch')!(env)).toBe(32);
+    });
+    it('ric anchors at root font-size', () => {
+      expect(buildResolver('1ric')!(env)).toBe(16);
+    });
+    it('handles negative and zero values', () => {
+      expect(buildResolver('-1ex')!(env)).toBe(-10);
+      expect(buildResolver('0ic')!(env)).toBe(0);
+    });
+    it('regex does not collapse rex/rch/rcap/ric into rem/em', () => {
+      // Disambiguation: `1rex` is one rex (=10), not one rem followed by
+      // a stray `x`. Anchored whole-token match guards this.
+      expect(buildResolver('1rex')!(env)).toBe(8);
+      expect(buildResolver('1rem')!(env)).toBe(16);
+    });
+  });
+
   // https://drafts.csswg.org/css-fonts-4/#valdef-font-size-larger
   // CSS Fonts 4 §2.3.2 relative-size keywords. The font handler emits
   // a 2-byte sentinel (`\0+` for `larger`, `\0-` for `smaller`); this

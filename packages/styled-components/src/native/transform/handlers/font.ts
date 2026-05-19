@@ -1,6 +1,7 @@
 import { Dict } from '../../../types';
 import { warnOnce } from '../dev';
 import { isGenericFamily, resolveGenericFamily } from '../polyfills/genericFamily';
+import { buildResolver } from '../polyfills/resolvers';
 import { tokenToValue, withoutSlashes } from '../shorthandHelpers';
 import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
@@ -22,6 +23,17 @@ const FONT_WEIGHTS = new Set([
   'normal',
 ]);
 const FONT_VARIANTS = new Set(['small-caps']);
+
+// CSS Values 4 §5.2 absolute length conversion table. 1in === 96px is the
+// reference anchor; the rest derive from it via the standard relations.
+const ABSOLUTE_LENGTH_PX_PER_UNIT: Record<string, number> = {
+  in: 96,
+  cm: 96 / 2.54,
+  mm: 96 / 25.4,
+  q: 96 / (25.4 * 4),
+  pt: 96 / 72,
+  pc: 16,
+};
 
 const FONT_WIDTH_KEYWORDS = new Set([
   'ultra-condensed',
@@ -432,9 +444,17 @@ export function fontSizeHandler(tokens: Token[]): Dict<any> | null {
   if (t.kind === TokenKind.Length) {
     if (t.value === undefined || t.value < 0) return null;
     if (t.unit === 'px' || t.unit === '') return { fontSize: t.value };
-    if (t.unit === 'em' || t.unit === 'rem' || t.unit === 'lh' || t.unit === 'rlh') {
-      return { fontSize: t.raw };
-    }
+    // Absolute lengths convert statically to px per CSS Values 4 §5.2.
+    // No render-time resolver needed.
+    const absRatio = t.unit !== undefined ? ABSOLUTE_LENGTH_PX_PER_UNIT[t.unit] : undefined;
+    if (absRatio !== undefined) return { fontSize: t.value * absRatio };
+    // Everything else (em / rem / lh / rlh / viewport / container) is
+    // accepted raw iff `buildResolver` knows how to fold it at render
+    // time. Single source of truth — the parser acceptance set tracks
+    // resolver coverage automatically. Remaining rejects are the
+    // font-metric units (ex / cap / ch / ic + r-variants) RN can't
+    // measure cross-platform.
+    if (buildResolver(t.raw) !== null) return { fontSize: t.raw };
     return null;
   }
 

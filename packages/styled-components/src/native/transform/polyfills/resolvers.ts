@@ -134,7 +134,14 @@ const CQ_UNIT_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(cqw|cqh|cqmin|cqmax|cqi|cqb)$/i
 // `rem` / `rlh` must come BEFORE `em` / `lh` in the alternation so
 // `12rem` matches as rem rather than `12r` + `em`. The regex anchors
 // guarantee whole-token consumption regardless.
-const REM_UNIT_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(rem|rlh|em|lh)$/i;
+// Font-relative units: cascade-anchored (em / lh, parent) or
+// root-anchored (rem / rlh, root). The font-metric forms (ex / cap /
+// ch / ic and their r-variants) have no measurable glyph metrics on
+// RN, so they fall through to the spec's documented approximations
+// (CSS Values 4 §6.1.1) — `ex` ≈ 0.5em, `cap` ≈ 0.7em, `ch` ≈ 0.5em,
+// `ic` ≈ 1em. Listed longest-first so e.g. `12rem` matches rem not
+// `12r` + `em`; regex anchors enforce whole-token consumption anyway.
+const REM_UNIT_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(rcap|rch|rex|ric|rem|rlh|cap|ch|em|ex|ic|lh)$/i;
 const FALLBACK_UNIT_RE = /^-?(?:\d+(?:\.\d+)?|\.\d+)([a-z%]+)$/i;
 const LENGTH_LITERAL_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(px)?$/;
 const NUMERIC_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))([a-z%]*)$/i;
@@ -452,6 +459,13 @@ function viewportResolver(n: number, unit: string): Resolver {
  * `project_known_open_issues.md` if the divergence matters for a real
  * use case.
  */
+// CSS Values 4 §6.1.1 font-metric approximations. Used when actual
+// glyph metrics are unavailable, which is always the case on RN.
+const EX_FRACTION = 0.5;
+const CAP_FRACTION = 0.7;
+const CH_FRACTION = 0.5;
+const IC_FRACTION = 1.0;
+
 function fontRelativeResolver(n: number, unit: string): Resolver {
   switch (unit) {
     case 'rem':
@@ -465,6 +479,22 @@ function fontRelativeResolver(n: number, unit: string): Resolver {
       return env => n * env.fontSize;
     case 'lh':
       return env => n * env.lineHeight;
+    case 'ex':
+      return env => n * env.fontSize * EX_FRACTION;
+    case 'cap':
+      return env => n * env.fontSize * CAP_FRACTION;
+    case 'ch':
+      return env => n * env.fontSize * CH_FRACTION;
+    case 'ic':
+      return env => n * env.fontSize * IC_FRACTION;
+    case 'rex':
+      return env => n * env.rootFontSize * EX_FRACTION;
+    case 'rcap':
+      return env => n * env.rootFontSize * CAP_FRACTION;
+    case 'rch':
+      return env => n * env.rootFontSize * CH_FRACTION;
+    case 'ric':
+      return env => n * env.rootFontSize * IC_FRACTION;
     default:
       return env => n;
   }

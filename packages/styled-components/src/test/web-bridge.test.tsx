@@ -823,11 +823,12 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
     // the unit lands outside the var() boundary. The bridge rewrites
     // these to `calc(var(...) * 1<unit>)` so the value survives.
     it('rewrites var()+px in the styled CSS to a calc form the browser accepts', () => {
-      // Literal template form mirrors what `${t.space.sm}px` produces
-      // after template concatenation: var() and the unit suffix
-      // share the same emitted decl without a space between them.
+      // Authored via interpolation so the Prettier CSS plugin doesn't
+      // collapse the no-space form back into `var(...) px`. The runtime
+      // input is identical: `${sentinel}px` joins to `var(...)px`.
+      const sentinel = 'var(--sc-space-sm, 13)';
       const Box = styled.View`
-        padding: var(--sc-space-sm, 13) px;
+        padding: ${sentinel}px;
       `;
       render(<Box testID="px-probe" />);
       const css = readAllCss();
@@ -854,14 +855,22 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
     });
 
     it('rewrites every known length / %% / time / angle unit', () => {
+      // Interpolation form so Prettier preserves the no-space join.
+      const a = 'var(--a, 1)';
+      const b = 'var(--b, 2)';
+      const c = 'var(--c, 3)';
+      const d = 'var(--d, 4)';
+      const e = 'var(--e, 5)';
+      const f = 'var(--f, 100)';
+      const g = 'var(--g, 45)';
       const Box = styled.View`
-        padding: var(--a, 1) em;
-        margin: var(--b, 2) rem;
-        gap: var(--c, 3) vh;
-        flex-basis: var(--d, 4) vw;
-        width: var(--e, 5) %;
-        transition: opacity var(--f, 100) ms;
-        rotate: var(--g, 45) deg;
+        padding: ${a}em;
+        margin: ${b}rem;
+        gap: ${c}vh;
+        flex-basis: ${d}vw;
+        width: ${e}%;
+        transition: opacity ${f}ms;
+        rotate: ${g}deg;
       `;
       render(<Box testID="units-probe" />);
       const css = readAllCss();

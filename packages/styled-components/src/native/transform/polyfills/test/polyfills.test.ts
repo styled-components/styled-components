@@ -4498,6 +4498,88 @@ describe('font-size standalone spec compliance (CSS Fonts 4 §2.5)', () => {
     });
   });
 
+  // CSS Values 4 §5.2 absolute length conversion table. RN's `px` style
+  // unit IS a CSS logical pixel (== 1 dp on iOS/Android, == 1 CSS px on
+  // rn-web); the OS handles dp → physical pixel scaling per device DPR.
+  // So absolute units convert via the spec's fixed ratios; no DPR
+  // multiplication. Sub-dp fractional results are snapped to the nearest
+  // physical pixel boundary on the consuming device via PixelRatio at
+  // render time, so the value stays crisp on any DPR without distorting
+  // the size at the dp layer.
+  describe('absolute length units (CSS Values 4 §5.2)', () => {
+    it('1in folds to 96 (one CSS inch == 96 dp)', () => {
+      expect(transformDecl('font-size', '1in')).toEqual({ fontSize: 96 });
+    });
+    it('12pt folds to 16 (12 * 96/72)', () => {
+      expect(transformDecl('font-size', '12pt')).toEqual({ fontSize: 16 });
+    });
+    it('1pc folds to 16 (1pc == 12pt)', () => {
+      expect(transformDecl('font-size', '1pc')).toEqual({ fontSize: 16 });
+    });
+    it('1cm folds to 96/2.54 dp', () => {
+      const out = transformDecl('font-size', '1cm') as { fontSize: number };
+      expect(out.fontSize).toBeCloseTo(96 / 2.54, 5);
+    });
+    it('10mm folds to 10 * (96/25.4) dp', () => {
+      const out = transformDecl('font-size', '10mm') as { fontSize: number };
+      expect(out.fontSize).toBeCloseTo((10 * 96) / 25.4, 5);
+    });
+    it('1Q folds to 96/(25.4*4) dp', () => {
+      const out = transformDecl('font-size', '1Q') as { fontSize: number };
+      expect(out.fontSize).toBeCloseTo(96 / (25.4 * 4), 5);
+    });
+  });
+
+  // Viewport-relative and container-relative units resolve at render
+  // time via `buildResolver`; the handler accepts them raw (single
+  // source of truth — resolver coverage IS the parser allowlist).
+  describe('viewport- and container-relative units pass through raw', () => {
+    it('vh', () => {
+      expect(transformDecl('font-size', '5vh')).toEqual({ fontSize: '5vh' });
+    });
+    it('vw', () => {
+      expect(transformDecl('font-size', '4vw')).toEqual({ fontSize: '4vw' });
+    });
+    it('svh', () => {
+      expect(transformDecl('font-size', '3svh')).toEqual({ fontSize: '3svh' });
+    });
+    it('dvw', () => {
+      expect(transformDecl('font-size', '2dvw')).toEqual({ fontSize: '2dvw' });
+    });
+    it('cqh', () => {
+      expect(transformDecl('font-size', '11cqh')).toEqual({ fontSize: '11cqh' });
+    });
+    it('cqi', () => {
+      expect(transformDecl('font-size', '1.5cqi')).toEqual({ fontSize: '1.5cqi' });
+    });
+  });
+
+  // CSS Values 4 §6.1.1 font-metric units. RN can't measure glyph
+  // metrics cross-platform, so we apply the standard font-spec
+  // approximations at render time: `ex` ≈ 0.5em, `cap` ≈ 0.7em,
+  // `ch` ≈ 0.5em, `ic` ≈ 1em. The `r*` variants anchor at the root
+  // font-size instead of the parent. Accepted raw; resolver folds.
+  describe('font-metric units (CSS Values 4 §6.1.1) pass through raw', () => {
+    it('ex', () => {
+      expect(transformDecl('font-size', '2ex')).toEqual({ fontSize: '2ex' });
+    });
+    it('cap', () => {
+      expect(transformDecl('font-size', '1cap')).toEqual({ fontSize: '1cap' });
+    });
+    it('ch', () => {
+      expect(transformDecl('font-size', '3ch')).toEqual({ fontSize: '3ch' });
+    });
+    it('ic', () => {
+      expect(transformDecl('font-size', '1ic')).toEqual({ fontSize: '1ic' });
+    });
+    it('rex', () => {
+      expect(transformDecl('font-size', '2rex')).toEqual({ fontSize: '2rex' });
+    });
+    it('rch', () => {
+      expect(transformDecl('font-size', '4rch')).toEqual({ fontSize: '4rch' });
+    });
+  });
+
   describe.skip('on rn-web', () => {
     it('absolute-size keyword passes through to the browser', () => {
       expect(transformDecl('font-size', 'large')).toEqual({ fontSize: 'large' });

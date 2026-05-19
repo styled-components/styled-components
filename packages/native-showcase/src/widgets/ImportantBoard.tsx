@@ -130,13 +130,17 @@ const SwatchBase = styled.View`
 `;
 
 /* Row 6 — pseudo bucket. Press the box; the pressed state declares
-   `color: blue` (normal). The base `color: red !important` still wins
-   so the label stays red under press. */
+   `color: royalblue` (normal). The base `color: tomato !important`
+   still wins so the label stays tomato under press. The :active
+   bucket also flips background-color (no !important on either side)
+   so iOS users can see the bucket fired even though the color demo's
+   intended outcome is "no change". */
 const PressedNormal = styled.Pressable`
   color: tomato !important;
   padding: ${t.space.xs}px ${t.space.sm}px;
   background-color: ${t.colors.surfaceMuted};
   &:active {
+    background-color: ${t.colors.signalSoft};
     color: royalblue;
   }
 `;
