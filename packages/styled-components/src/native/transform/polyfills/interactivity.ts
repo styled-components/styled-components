@@ -24,9 +24,7 @@ import { TokenStream } from '../tokenStream';
  * descendants, so a focusable child inside an inert subtree may still
  * receive D-pad / keyboard focus on Android. A future refactor could
  * traverse the subtree at render time; for now the lift covers the
- * common case. rn-web honors
- * `interactivity: inert` natively via the browser's HTML inert
- * attribute (passes through unchanged).
+ * common case.
  */
 function interactivityHandler(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(tokens);
@@ -34,14 +32,6 @@ function interactivityHandler(tokens: Token[]): Dict<any> | null {
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const value = t.name;
   if (value !== 'auto' && value !== 'inert') return null;
-
-  if (__NATIVE_WEB__) {
-    // Lift the HTML `inert` attribute (forwarded by rn-web via
-    // `accessibilityProps`). The browser handles all five inert
-    // behaviors (hit-testing, focus, selection, edit-suppression, a11y
-    // subtree hiding) in a single attribute. `auto` clears it.
-    return value === 'auto' ? { inert: false } : { inert: true };
-  }
 
   if (value === 'auto') return {};
 

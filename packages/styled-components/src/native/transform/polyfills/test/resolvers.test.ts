@@ -1,5 +1,4 @@
 import { applyResolvers, buildResolver, escapeSentinelFallback, ResolveEnv } from '../resolvers';
-import { describeOnRnWeb } from '../../describeOnRnWeb';
 
 const baseEnv: ResolveEnv = {
   media: {
@@ -97,6 +96,52 @@ describe('runtime resolvers', () => {
       const env: ResolveEnv = { ...baseEnv, lineHeight: 24 };
       expect(buildResolver('1rlh')!(env)).toBe(24);
       expect(buildResolver('2rlh')!(env)).toBe(48);
+    });
+  });
+
+  // CSS Values 4 §6.1.1 font-metric units. RN has no font measurement
+  // API, so we apply the spec's documented approximations: ex ≈ 0.5em,
+  // cap ≈ 0.7em, ch ≈ 0.5em, ic ≈ 1em. The r-prefixed forms anchor
+  // against env.rootFontSize instead of env.fontSize.
+  describe('font-metric units (CSS Values 4 §6.1.1) — approximation fallback', () => {
+    const env: ResolveEnv = { ...baseEnv, fontSize: 20, rootFontSize: 16 };
+
+    it('ex ≈ 0.5em (parent-anchored)', () => {
+      expect(buildResolver('1ex')!(env)).toBe(10);
+      expect(buildResolver('2ex')!(env)).toBe(20);
+    });
+    it('cap ≈ 0.7em (parent-anchored)', () => {
+      expect(buildResolver('1cap')!(env)).toBeCloseTo(14, 5);
+    });
+    it('ch ≈ 0.5em (parent-anchored)', () => {
+      expect(buildResolver('1ch')!(env)).toBe(10);
+      expect(buildResolver('3ch')!(env)).toBe(30);
+    });
+    it('ic ≈ 1em (parent-anchored)', () => {
+      expect(buildResolver('1ic')!(env)).toBe(20);
+    });
+    it('rex anchors at root font-size', () => {
+      expect(buildResolver('1rex')!(env)).toBe(8);
+      expect(buildResolver('2rex')!(env)).toBe(16);
+    });
+    it('rcap anchors at root font-size', () => {
+      expect(buildResolver('1rcap')!(env)).toBeCloseTo(11.2, 5);
+    });
+    it('rch anchors at root font-size', () => {
+      expect(buildResolver('4rch')!(env)).toBe(32);
+    });
+    it('ric anchors at root font-size', () => {
+      expect(buildResolver('1ric')!(env)).toBe(16);
+    });
+    it('handles negative and zero values', () => {
+      expect(buildResolver('-1ex')!(env)).toBe(-10);
+      expect(buildResolver('0ic')!(env)).toBe(0);
+    });
+    it('regex does not collapse rex/rch/rcap/ric into rem/em', () => {
+      // Disambiguation: `1rex` is one rex (=10), not one rem followed by
+      // a stray `x`. Anchored whole-token match guards this.
+      expect(buildResolver('1rex')!(env)).toBe(8);
+      expect(buildResolver('1rem')!(env)).toBe(16);
     });
   });
 
@@ -1001,7 +1046,7 @@ describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
     expect(buildResolver('1px solid mylight-dark(red, blue)')).toBeNull();
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // Mirrors rn-web bundle (`__NATIVE_WEB__`); browsers resolve several values statically,
     // so omit resolvers. See `describeOnRnWeb` and `resolvers.ts`. rn-web `@react-native/normalize-colors`
     // rejects literal `light-dark(...)` strings; `buildResolver(null)` pairs with custom-property wrapping
@@ -1218,7 +1263,7 @@ describe('cross-feature integrations', () => {
       expect(r({ ...baseEnv, theme: { colors: { fg: '#0000ff' } } })).toMatch(/^#[0-9a-f]{6,8}$/);
     });
 
-    describeOnRnWeb(() => {
+    describe.skip('on rn-web', () => {
       // Wide-gamut `<color>` functions stay as authored CSS strings on rn-web (`__NATIVE_WEB__`).
       // Sentinels only splice resolved numbers into those strings.
       it('pure-static sentinel oklch substitutes to assembled function text (passthrough)', () => {
@@ -1638,7 +1683,7 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // CSS Values §10 (calc/min/max/clamp): browsers resolve percentages against real layouts.
     // Return null resolver so stylesheet text stays intact unless a sentinel needs substitution.
     it('passes through static-mixed-unit calc/clamp/min/max expressions raw', () => {
@@ -1782,7 +1827,7 @@ describe('env() spec compliance (CSS Environment Variables Level 1 §3)', () => 
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // `buildResolver('env(...)')` is not gated behind `__NATIVE_WEB__`;
     // safe-area substitutions still read ResolveEnv.insets on rn-web.
     it('parity: safe-area-inset-top resolves from env.insets', () => {
@@ -1922,7 +1967,7 @@ describe('container units spec compliance (CSS Conditional 5 §7)', () => {
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     // Viewport-relative units bypass resolvers on rn-web (`buildResolver → null`).
     // Container cq* still resolve numerically against the RN layout probe.
     it('parity: cqw resolves against registered container width', () => {
@@ -2084,7 +2129,7 @@ describe('viewport units spec compliance (CSS Values Level 4 §6.1.2)', () => {
     });
   });
 
-  describeOnRnWeb(() => {
+  describe.skip('on rn-web', () => {
     it('passes through static viewport values without a resolver', () => {
       // Returning null from buildResolver leaves the raw `<n><unit>` in
       // base so react-native-web forwards it to CSS unchanged. The browser

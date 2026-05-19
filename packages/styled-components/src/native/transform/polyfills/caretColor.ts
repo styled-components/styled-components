@@ -31,24 +31,22 @@ function caretColorShorthand(tokens: Token[]): Dict<any> | null {
       return null;
     }
     if (!stream.eof()) return null;
-    if (__DEV__ && !__NATIVE_WEB__) {
+    if (__DEV__) {
       warnOnce(
         'native-caret-color-block',
-        "`caret-color`'s second value only affects block carets, which React Native does not render on iOS or Android. The first value still applies; rn-web keeps both values."
+        "`caret-color`'s second value only affects block carets, which React Native does not render on iOS or Android. The first value still applies."
       );
     }
   }
 
   if (firstIsAuto) return { caretColor: 'auto' };
 
-  if (__NATIVE_WEB__) return { caretColor: first.raw };
-
   const v = colorTokenToRnStyleValue(first);
   if (getReactNativePlatformOS() === 'ios') {
     if (__DEV__) {
       warnOnce(
         'native-caret-color-ios',
-        '`caret-color` also tints the text-selection highlight on iOS because iOS exposes a single `selectionColor` for both surfaces. Android and rn-web keep the spec semantics where only the caret is colored.'
+        '`caret-color` also tints the text-selection highlight on iOS because iOS exposes a single `selectionColor` for both surfaces. Android keeps the spec semantics where only the caret is colored.'
       );
     }
     return { caretColor: v, cursorColor: v, selectionColor: v };

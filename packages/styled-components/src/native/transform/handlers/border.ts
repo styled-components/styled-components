@@ -39,7 +39,7 @@ function warnUnsupportedBorderStyle(name: string): void {
     'native-border-style-unsupported',
     '`border-style: ' +
       name +
-      "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', 'dashed', or 'none'; rn-web keeps the authored value.",
+      "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', 'dashed', or 'none'.",
     name
   );
 }
@@ -50,7 +50,7 @@ function warnMultipleBorderStyles(value: string): void {
     'native-border-style-multiple',
     '`border-style: ' +
       value +
-      '` uses per-side styles that React Native cannot express. iOS and Android use the first style; rn-web keeps the authored value.',
+      '` uses per-side styles that React Native cannot express. iOS and Android use the first style.',
     value
   );
 }
@@ -165,7 +165,7 @@ export function outlineShorthand(tokens: Token[]): Dict<any> | null {
             'native-outline-style',
             '`outline-style: ' +
               name +
-              "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', or 'dashed'; rn-web keeps the authored value.",
+              "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', or 'dashed'.",
             name
           );
         }

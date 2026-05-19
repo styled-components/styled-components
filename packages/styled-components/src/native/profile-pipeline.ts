@@ -262,6 +262,7 @@ const env: ResolveEnv = {
   fontSize: 16,
   lineHeight: 24,
   direction: 'ltr',
+  customProperties: null,
 };
 
 bench('apply (no resolvers;fast path)', 5_000_000, () => {

@@ -53,7 +53,7 @@ export function borderRadiusShorthand(tokens: Token[]) {
           'native-border-radius-elliptical',
           '`border-radius: ' +
             raw +
-            '` is ignored on React Native because iOS and Android cannot draw separate horizontal and vertical corner radii; rn-web keeps the authored value.',
+            '` is ignored on React Native because iOS and Android cannot draw separate horizontal and vertical corner radii.',
           raw
         );
       }

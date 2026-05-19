@@ -194,7 +194,6 @@ function parseLinearGradientLayer(
  * **Linear gradients only**; `radial-gradient()` passes through unchanged.
  */
 export function maybeExpandBackgroundImageSystemColors(rawValue: string): string | Dict<any>[] {
-  if (__NATIVE_WEB__) return rawValue;
   if (rawValue.indexOf('\0') !== -1) return rawValue;
 
   const normalized = rawValue.replace(/\n/g, ' ');

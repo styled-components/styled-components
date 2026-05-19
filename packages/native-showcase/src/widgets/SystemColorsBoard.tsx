@@ -67,13 +67,6 @@ const HighlightTextLabel = styled(TileLabel)`
   color: HighlightText;
 `;
 
-const AccentTile = styled(Tile)`
-  background-color: AccentColor;
-`;
-const AccentColorTextLabel = styled(TileLabel)`
-  color: AccentColorText;
-`;
-
 const SelectedItemTile = styled(Tile)`
   background-color: SelectedItem;
 `;
@@ -128,9 +121,6 @@ export function SystemColorsBoard() {
           <HighlightTile>
             <HighlightTextLabel>Highlight</HighlightTextLabel>
           </HighlightTile>
-          <AccentTile>
-            <AccentColorTextLabel>Accent</AccentColorTextLabel>
-          </AccentTile>
         </Row>
       </Section>
       <Section>

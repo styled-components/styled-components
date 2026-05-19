@@ -1,25 +1,13 @@
 /**
  * Native-side style polyfills.
  *
- * Two stages, both no-ops on the platform that doesn't need them:
- *
- * 1. {@link normalizeStyleForWeb} - rewrites RN-style shapes that
- *    `react-native-web` translates incorrectly. Called inside
- *    `composeBase` so user-supplied inline styles get patched before
- *    merging. Currently fixes 16-element matrix transforms (rn-web's
- *    `mapTransform` emits invalid `matrix(...16 args)` for 3D matrices;
- *    we rename `matrix` -> `matrix3d` so the emit branch produces the
- *    valid `matrix3d(...)` CSS instead).
- *
- * 2. {@link applyStylePolyfills} - runs at the elementProps boundary,
- *    just before `React.createElement`. Currently synthesizes the
- *    `background-blend-mode` spec on RN native by injecting absolutely-
- *    positioned blend layers + `isolation: isolate` on the wrapper.
+ * {@link applyStylePolyfills} runs at the elementProps boundary, just
+ * before `React.createElement`. Currently synthesizes the
+ * `background-blend-mode` spec on RN native by injecting absolutely-
+ * positioned blend layers + `isolation: isolate` on the wrapper.
  *
  * New polyfills should be added as separate functions in this file and
- * chained into {@link applyStylePolyfills} (or, when the rewrite is on
- * the user-supplied side rather than the merged props, into
- * {@link normalizeStyleForWeb}).
+ * chained into {@link applyStylePolyfills}.
  *
  * Each individual polyfill returns the input reference unchanged when
  * no rewrite applies, so cache identity downstream stays intact.
@@ -39,7 +27,6 @@ let isWebCached: boolean | null = null;
  * Cached after first call. Platform.OS doesn't change at runtime.
  */
 export function isWebPlatform(): boolean {
-  if (__NATIVE_WEB__) return true;
   if (isWebCached !== null) return isWebCached;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -53,7 +40,6 @@ export function isWebPlatform(): boolean {
 
 /** Test-only: clear the cached platform result. */
 export function __resetPlatformCacheForTesting(): void {
-  if (__NATIVE_WEB__) return;
   isWebCached = null;
 }
 
@@ -81,78 +67,7 @@ function getRNComponents(): RNComponentRefs {
 }
 
 // ──────────────────────────────────────────────────────────────────
-//  Stage 1: user-side style normalizer (called from composeBase)
-// ──────────────────────────────────────────────────────────────────
-
-/**
- * Patch RN-style shapes for `react-native-web` translation gaps. No-op
- * on native. Returns the same reference when no rewrite is needed.
- */
-export function normalizeStyleForWeb(style: any): any {
-  if (!__NATIVE_WEB__) return style;
-  if (style == null) return style;
-  return rewriteStyleForWebTransport(style);
-}
-
-/**
- * Pure rewrite (no platform gate). Exported for tests that want to
- * verify the transformation without booting a web runtime. Production
- * callers use {@link normalizeStyleForWeb}, which short-circuits on
- * native.
- *
- * Lazy-allocates the output array: only clones the input when at least
- * one entry rewrites, so the identity-stable hot path costs zero
- * allocations.
- */
-export function rewriteStyleForWebTransport(s: any): any {
-  if (Array.isArray(s)) {
-    let out: any[] | null = null;
-    for (let i = 0; i < s.length; i++) {
-      const w = rewriteStyleForWebTransport(s[i]);
-      if (w !== s[i] && out === null) {
-        out = s.slice(0, i);
-      }
-      if (out !== null) out[i] = w;
-    }
-    return out ?? s;
-  }
-  if (s == null || typeof s !== 'object') return s;
-  const t = s.transform;
-  if (!Array.isArray(t)) return s;
-  const fixed = fixTransformMatrix3d(t);
-  return fixed === t ? s : { ...s, transform: fixed };
-}
-
-/**
- * rn-web `mapTransform` emits `matrix(${arr.join(',')})` for any
- * `{matrix: [...]}` entry, but CSS `matrix()` is the 2D form (6 args).
- * 16-arg input is invalid; the browser drops the entire transform.
- * Renaming to `{matrix3d: arr16}` lets rn-web emit the correct
- * `matrix3d(...)` CSS. RN native rejects `matrix3d` so this is web-only.
- *
- * Lazy-allocates: only clones when an entry actually needs rewriting.
- */
-function fixTransformMatrix3d(arr: any[]): any[] {
-  let out: any[] | null = null;
-  for (let i = 0; i < arr.length; i++) {
-    const entry = arr[i];
-    if (
-      entry !== null &&
-      typeof entry === 'object' &&
-      Array.isArray(entry.matrix) &&
-      entry.matrix.length === 16
-    ) {
-      if (out === null) out = arr.slice(0, i);
-      out[i] = { matrix3d: entry.matrix };
-    } else if (out !== null) {
-      out[i] = entry;
-    }
-  }
-  return out ?? arr;
-}
-
-// ──────────────────────────────────────────────────────────────────
-//  Stage 2: elementProps polyfills (chained at render boundary)
+//  elementProps polyfills (chained at render boundary)
 // ──────────────────────────────────────────────────────────────────
 
 /**
@@ -163,7 +78,6 @@ function fixTransformMatrix3d(arr: any[]): any[] {
 export function applyStylePolyfills(
   elementProps: Record<string, unknown>
 ): Record<string, unknown> {
-  if (__NATIVE_WEB__) return elementProps;
   return applyBackgroundBlendModePolyfill(elementProps);
 }
 
@@ -189,9 +103,6 @@ export function applyStylePolyfills(
  * `background-size`, `-position`, and `-repeat` cycle by index when
  * their comma counts mismatch the layer count, matching CSS shorthand
  * semantics.
- *
- * On rn-web the browser parses `background-blend-mode` natively; the
- * polyfill is a no-op there.
  *
  * COLOR-SPACE PIN. Every blend layer (photo, gradient, bgColor backdrop)
  * sets `shouldRasterizeIOS: true`. iOS rasterizes through Core Graphics
@@ -221,7 +132,6 @@ export function applyStylePolyfills(
 export function applyBackgroundBlendModePolyfill(
   elementProps: Record<string, unknown>
 ): Record<string, unknown> {
-  if (__NATIVE_WEB__) return elementProps;
   if (!hasBackgroundBlendMode(elementProps.style)) return elementProps;
 
   const flat: Record<string, unknown> = {};

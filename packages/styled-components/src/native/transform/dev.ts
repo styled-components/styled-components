@@ -118,9 +118,7 @@ export function warnIfSentinelLeak(prop: string, value: unknown): void {
  * inherited custom-property map AND no fallback was supplied. The native
  * pipeline runs a CSS Variables L1-style cascade through
  * `NativeStyleContext`, so an ancestor that declares the property OR a
- * fallback argument both keep the declaration alive without warning. The
- * call is gated at every site with `__DEV__ && !__NATIVE_WEB__`; the
- * rn-web bundle defers `var()` to the browser, so this never fires there.
+ * fallback argument both keep the declaration alive without warning.
  */
 export function warnIfNativeCssVar(prop: string, value: string): void {
   if (!__DEV__) return;

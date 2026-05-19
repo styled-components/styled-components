@@ -5,11 +5,12 @@
   "main": "./dist/styled-components.native.cjs.js",
   "module": "./dist/styled-components.native.esm.js",
   "browser": {
-    "./dist/styled-components.native.cjs.js": "./dist/styled-components.native.browser.cjs.js",
-    "./dist/styled-components.native.esm.js": "./dist/styled-components.native.browser.esm.js"
+    "./dist/styled-components.native.cjs.js": "./dist/styled-components.native.web-bridge.cjs.js",
+    "./dist/styled-components.native.esm.js": "./dist/styled-components.native.web-bridge.esm.js"
   },
   "devDependencies": {
     "react": "^19",
-    "react-native": "~0.85.2"
+    "react-native": "~0.85.2",
+    "react-native-web": "~0.21.2"
   }
 }

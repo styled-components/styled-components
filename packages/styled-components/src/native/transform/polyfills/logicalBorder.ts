@@ -21,9 +21,7 @@ import { TokenStream } from '../tokenStream';
  *   block-end    → RN `borderBottom*`
  *
  * RN 0.85 has no per-edge `borderStyle`; the whole-element `borderStyle`
- * is the only surface. Style longhands warn on native and drop; rn-web
- * honors the per-edge style via the browser (we emit the camelCase form
- * so the atomic-CSS pipeline hyphenates and the browser parses it).
+ * is the only surface. Style longhands warn and drop.
  */
 
 const CSS_LINE_STYLES = new Set([
@@ -59,7 +57,7 @@ function warnNoPerEdgeStyle(edge: string, value: string): void {
       edge +
       '-style: ' +
       value +
-      '` is ignored on React Native because iOS and Android only support one `border-style` for the whole element. Use `border-style` for a uniform style; rn-web keeps the per-edge value.',
+      '` is ignored on React Native because iOS and Android only support one `border-style` for the whole element. Use `border-style` for a uniform style.',
     edge + ':' + value
   );
 }
@@ -157,10 +155,9 @@ function axisStyle(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | null 
   }
   if (!stream.eof()) return null;
 
-  const startEdge = axis === 'inline' ? 'inline-start' : 'block-start';
-  const endEdge = axis === 'inline' ? 'inline-end' : 'block-end';
-
   if (__NATIVE_WEB__) {
+    const startEdge = axis === 'inline' ? 'inline-start' : 'block-start';
+    const endEdge = axis === 'inline' ? 'inline-end' : 'block-end';
     return {
       ['border' + camelEdge(startEdge) + 'Style']: firstName,
       ['border' + camelEdge(endEdge) + 'Style']: secondName,
@@ -318,7 +315,7 @@ function outlineStyleHandler(tokens: Token[]): Dict<any> | null {
         'native-outline-style',
         '`outline-style: ' +
           name +
-          "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', or 'dashed'; rn-web keeps the authored value.",
+          "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', or 'dashed'.",
         name
       );
     }

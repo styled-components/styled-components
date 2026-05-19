@@ -98,7 +98,7 @@ export function textDecorationShorthand(tokens: Token[]): Dict<any> | null {
         if (__DEV__) {
           warnOnce(
             'native-text-decoration-style-wavy',
-            '`text-decoration-style: wavy` is ignored on React Native because iOS and Android cannot draw wavy underlines. Falling back to solid; rn-web keeps the authored value.',
+            '`text-decoration-style: wavy` is ignored on React Native because iOS and Android cannot draw wavy underlines. Falling back to solid.',
             style
           );
         }

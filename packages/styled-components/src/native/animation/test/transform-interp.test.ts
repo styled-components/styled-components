@@ -82,6 +82,18 @@ describe('parseTransformString', () => {
       ]
     `);
   });
+
+  // Regression guard: the previous /([A-Za-z]+)\s*\(\s*([^)]+?)\s*\)/g
+  // shape exhibited polynomial backtracking. A user-authored value with
+  // a long whitespace run and no closing paren — reachable from any
+  // styled `transform:` animation tick — spun the CPU for ~16 s. The
+  // budget catches any reintroduction of the lazy-quantifier shape.
+  it('rejects whitespace-padded malformed transform within a wall-clock budget', () => {
+    const attack = 'translate(' + ' '.repeat(2000) + 'X';
+    const t0 = Date.now();
+    parseTransformString(attack);
+    expect(Date.now() - t0).toBeLessThan(50);
+  });
 });
 
 describe('transformIdentity', () => {
