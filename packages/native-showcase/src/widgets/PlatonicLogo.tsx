@@ -320,34 +320,19 @@ const Stage = styled.View`
   align-items: center;
   justify-content: center;
   overflow: visible;
-  /* Establishes the perspective viewport so descendant 3D transforms
-     foreshorten correctly. RN flattens transforms (no preserve-3d) and
-     reads perspective only when it appears inside a transform list, so
-     this declaration is web-only - the JS zIndex stamp below carries
-     painter-order on native. */
   perspective: 1200px;
-  /* Compensate for the multiply blend + per-face alpha, both of which
-     pull colors toward white/grey. The filter runs on the composited
-     scene (after all face blending) so the inner mix-blend-mode
-     interactions still propagate; only the final image is boosted. */
+  /* saturate rebuilds intensity that the per-face multiply blend dims. */
   filter: saturate(1.4);
 `;
 
-// Stage flex-centers SceneOrigin to (STAGE/2, STAGE/2). All FaceWrappers
-// are absolute children of SceneOrigin, so their (0, 0) is the scene
-// center - matrix translations then read directly as 3D pixel offsets.
+// Stage flex-centers SceneOrigin to (STAGE/2, STAGE/2). FaceWrappers are
+// absolute children so their (0, 0) is the scene center.
 const SceneOrigin = styled.View`
   width: 0;
   height: 0;
-  /* rn-web's View defaults include z-index: 0; opt out so the descendant
-     faces' mix-blend-mode escapes this stacking context and composites
-     against the page background (and against each other where they
-     overlap during the 3D rotation). No-op on native. */
+  /* z-index: auto escapes rn-web's default View stacking context so
+     descendant mix-blend-mode reaches the page backdrop. */
   z-index: auto;
-  /* Hand 3D composition to the browser where supported. RN ignores
-     transform-style (no preserve-3d in Yoga); on native the matrices
-     still position each face correctly in 2D and zIndex carries the
-     painter order. */
   transform-style: preserve-3d;
 `;
 
@@ -359,9 +344,6 @@ const FaceWrapper = styled.View`
   justify-content: center;
   z-index: auto;
   transform-style: preserve-3d;
-  /* Back of each face should remain visible during rotation so the
-     stained-glass multiply blend reads through to the rear of the
-     solid. (visible is the CSS default, called out for clarity.) */
   backface-visibility: visible;
 `;
 
@@ -732,18 +714,11 @@ export function PlatonicLogo() {
   // logo reads as artwork, not chrome. Touch/click on the logo or any
   // control button bumps; web hover keeps them visible via CSS.
   const [controlsVisible, setControlsVisible] = useState(false);
-  const controlsVisibleRef = useRef(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bumpControls = useCallback(() => {
-    if (!controlsVisibleRef.current) {
-      controlsVisibleRef.current = true;
-      setControlsVisible(true);
-    }
+    setControlsVisible(true);
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = setTimeout(() => {
-      controlsVisibleRef.current = false;
-      setControlsVisible(false);
-    }, CONTROLS_HIDE_MS);
+    hideTimerRef.current = setTimeout(() => setControlsVisible(false), CONTROLS_HIDE_MS);
   }, []);
   useEffect(
     () => () => {
