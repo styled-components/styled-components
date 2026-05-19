@@ -132,15 +132,11 @@ const CQ_UNIT_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(cqw|cqh|cqmin|cqmax|cqi|cqb)$/i
 // browser unchanged.
 //
 // `rem` / `rlh` must come BEFORE `em` / `lh` in the alternation so
-// `12rem` matches as rem rather than `12r` + `em`. The regex anchors
-// guarantee whole-token consumption regardless.
-// Font-relative units: cascade-anchored (em / lh, parent) or
-// root-anchored (rem / rlh, root). The font-metric forms (ex / cap /
-// ch / ic and their r-variants) have no measurable glyph metrics on
-// RN, so they fall through to the spec's documented approximations
-// (CSS Values 4 §6.1.1) — `ex` ≈ 0.5em, `cap` ≈ 0.7em, `ch` ≈ 0.5em,
-// `ic` ≈ 1em. Listed longest-first so e.g. `12rem` matches rem not
-// `12r` + `em`; regex anchors enforce whole-token consumption anyway.
+// Font-relative units: cascade-anchored (em / lh, parent) or root-anchored
+// (rem / rlh, root). Font-metric forms (ex / cap / ch / ic and their
+// r-variants) have no measurable glyph metrics on RN and fall through to
+// fixed approximations in fontRelativeResolver. Alternation listed
+// longest-first so `12rem` matches rem not `12r` + `em`.
 const REM_UNIT_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(rcap|rch|rex|ric|rem|rlh|cap|ch|em|ex|ic|lh)$/i;
 const FALLBACK_UNIT_RE = /^-?(?:\d+(?:\.\d+)?|\.\d+)([a-z%]+)$/i;
 const LENGTH_LITERAL_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(px)?$/;
@@ -240,9 +236,8 @@ export function buildResolver(value: unknown): Resolver | null {
   }
   if (c0 === 0x65 /* e */ && value.startsWith('env(')) return envResolver(value);
 
-  // round(line-width, A): CSS Values 4 §10.3 + "snap a length as a line
-  // width" (§6). The static fold can't run because the device pixel ratio
-  // isn't known at compile time; defer to a runtime resolver here.
+  // round(line-width, A) defers to a runtime resolver because the device
+  // pixel ratio isn't known at compile time.
   if (c0 === 0x72 /* r */ && value.startsWith('round(line-width,')) {
     return lineWidthRoundResolver(value);
   }
@@ -376,7 +371,7 @@ function findMatchingClose(s: string, openIdx: number): number {
 /** Advance past a `'…'` / `"…"` string literal that begins at `i`,
  *  returning the index of the closing quote (`i` if unterminated, in
  *  which case the caller naturally walks to end-of-string). Honors
- *  `\<x>` escapes per CSS Syntax 3 §4.3.5. */
+ *  `\<x>` CSS string escapes. */
 function skipString(s: string, i: number, quote: number): number {
   const len = s.length;
   let j = i + 1;
@@ -459,8 +454,7 @@ function viewportResolver(n: number, unit: string): Resolver {
  * `project_known_open_issues.md` if the divergence matters for a real
  * use case.
  */
-// CSS Values 4 §6.1.1 font-metric approximations. Used when actual
-// glyph metrics are unavailable, which is always the case on RN.
+// Font-metric approximations, used because RN exposes no glyph metrics.
 const EX_FRACTION = 0.5;
 const CAP_FRACTION = 0.7;
 const CH_FRACTION = 0.5;
@@ -514,9 +508,9 @@ function lineWidthRoundResolver(value: string): Resolver | null {
   return env => snapAsLineWidth(n, env.media.pixelRatio);
 }
 
-// CSS Values 4 §6 snap-as-line-width: integer device pixels pass through;
-// sub-device-pixel snaps to ±1 device pixel preserving sign; otherwise
-// truncates toward zero to the nearest integer device pixel.
+// snap-as-line-width: integer device pixels pass through; sub-device-pixel
+// snaps to ±1 device pixel preserving sign; otherwise truncates toward
+// zero to the nearest integer device pixel.
 function snapAsLineWidth(cssPx: number, pixelRatio: number): number {
   const devicePx = cssPx * pixelRatio;
   if (Number.isInteger(devicePx)) return cssPx;

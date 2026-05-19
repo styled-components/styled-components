@@ -194,12 +194,19 @@ register('perspective', perspectiveHandler);
  * `perspective-origin: <position>`. Sets the vanishing point that
  * perspective-transformed descendants converge toward. RN 0.85 has no
  * perspective-origin surface; the vanishing point is fixed at the
- * parent's center. Drops with a one-time dev warn on iOS / Android.
+ * parent's center. Drops with a one-time dev warn on iOS / Android;
+ * passes through on rn-web for the browser to interpret.
  */
 function perspectiveOriginHandler(tokens: Token[]): Dict<any> | null {
   if (tokens.length === 0) return null;
-  // Accept any non-empty input and drop it with a warn so author
-  // intent is observable.
+  if (__NATIVE_WEB__) {
+    let raw = '';
+    for (let i = 0; i < tokens.length; i++) {
+      if (i !== 0) raw += ' ';
+      raw += tokens[i].raw;
+    }
+    return { perspectiveOrigin: raw };
+  }
   if (__DEV__) {
     warnOnce(
       'native-perspective-origin-unsupported',

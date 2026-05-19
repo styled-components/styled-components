@@ -5,6 +5,7 @@ import {
   collapseIdenticalCommas,
   getPassthroughKeys,
   isLayeredCommaProp,
+  isMultiTokenPosition,
   isValidLayeredBackgroundValue,
   normalizeBackgroundPositionValue,
   substituteBackgroundSizeKeywordsForNative,
@@ -152,9 +153,14 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     // ships a PlatformColor object.
     const nativeImage =
       camel === 'backgroundImage' ? maybeExpandBackgroundImageSystemColors(value) : value;
+    // rn-web's validator rejects `backgroundPosition` with more than one
+    // top-level value; emit only the experimental_* key so the native
+    // side still receives the full grammar. See `isMultiTokenPosition`.
+    const skipRnWebPosition = camel === 'backgroundPosition' && isMultiTokenPosition(value);
     const out: Dict<any> = {};
     for (let i = 0; i < passthroughKeys.length; i++) {
       const key = passthroughKeys[i];
+      if (skipRnWebPosition && key === 'backgroundPosition') continue;
       if (key === 'experimental_backgroundImage') {
         out[key] = nativeImage;
         continue;

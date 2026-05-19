@@ -24,8 +24,8 @@ const FONT_WEIGHTS = new Set([
 ]);
 const FONT_VARIANTS = new Set(['small-caps']);
 
-// CSS Values 4 §5.2 absolute length conversion table. 1in === 96px is the
-// reference anchor; the rest derive from it via the standard relations.
+// Absolute length conversion table. 1in === 96px is the anchor; the
+// rest derive from it via the standard relations.
 const ABSOLUTE_LENGTH_PX_PER_UNIT: Record<string, number> = {
   in: 96,
   cm: 96 / 2.54,
@@ -340,8 +340,10 @@ function degreesOf(t: Token): number | null {
 }
 
 /**
- * `line-height` handler. RN accepts unitless multipliers and px lengths;
- * percentage and em / rem drop with a dev warn. rn-web defers to the browser.
+ * `line-height` handler. Numeric multipliers and px resolve at compile
+ * time; absolute lengths fold via §5.2 ratios; everything else delegates
+ * to buildResolver so coverage tracks the resolver automatically. rn-web
+ * defers to the browser.
  */
 export function lineHeightHandler(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(tokens);
@@ -355,24 +357,23 @@ export function lineHeightHandler(tokens: Token[]): Dict<any> | null {
   if (t.kind === TokenKind.Number) return { lineHeight: t.value };
   if (t.kind === TokenKind.Length) {
     if (t.unit === 'px' || t.unit === '') return { lineHeight: t.value };
-    if (t.unit === 'em' || t.unit === 'rem' || t.unit === 'lh' || t.unit === 'rlh') {
-      return { lineHeight: t.raw };
-    }
+    const absRatio = t.unit !== undefined ? ABSOLUTE_LENGTH_PX_PER_UNIT[t.unit] : undefined;
+    if (absRatio !== undefined) return { lineHeight: t.value! * absRatio };
+    if (buildResolver(t.raw) !== null) return { lineHeight: t.raw };
     if (__DEV__) {
       warnOnce(
         'native-line-height-unit-unsupported',
         '`line-height: ' +
           t.raw +
-          '` is ignored on React Native. Use a unitless multiplier (`line-height: 1.4`), px (`line-height: 20px`), or a font-relative unit (em / rem / lh / rlh).',
+          '` is ignored on React Native. Use a unitless multiplier (`line-height: 1.4`), px (`line-height: 20px`), or a font-relative / viewport / container unit.',
         t.unit
       );
     }
     return {};
   }
   if (t.kind === TokenKind.Percent) {
-    // Defer to the cascade-resolver em path; percent and em both anchor
-    // at the inherited font-size.
     if (t.value === undefined) return null;
+    // Percent anchors at the inherited font-size like em.
     return { lineHeight: t.value / 100 + 'em' };
   }
   if (t.kind === TokenKind.Ident && t.name === 'normal') return {};
@@ -381,8 +382,8 @@ export function lineHeightHandler(tokens: Token[]): Dict<any> | null {
 
 /**
  * `letter-spacing` handler. Numeric and px values resolve at compile time;
- * font-relative units (em / rem / lh / rlh) defer to the cascade resolver so
- * the inherited font-size folds in at render time. rn-web passes through.
+ * absolute lengths fold via §5.2 ratios; everything else delegates to
+ * buildResolver. rn-web defers to the browser.
  */
 export function letterSpacingHandler(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(tokens);
@@ -396,15 +397,15 @@ export function letterSpacingHandler(tokens: Token[]): Dict<any> | null {
   if (t.kind === TokenKind.Number) return { letterSpacing: t.value };
   if (t.kind === TokenKind.Length) {
     if (t.unit === 'px' || t.unit === '') return { letterSpacing: t.value };
-    if (t.unit === 'em' || t.unit === 'rem' || t.unit === 'lh' || t.unit === 'rlh') {
-      return { letterSpacing: t.raw };
-    }
+    const absRatio = t.unit !== undefined ? ABSOLUTE_LENGTH_PX_PER_UNIT[t.unit] : undefined;
+    if (absRatio !== undefined) return { letterSpacing: t.value! * absRatio };
+    if (buildResolver(t.raw) !== null) return { letterSpacing: t.raw };
     if (__DEV__) {
       warnOnce(
         'native-letter-spacing-unit-unsupported',
         '`letter-spacing: ' +
           t.raw +
-          '` is ignored on React Native. Use a number, px, or font-relative unit (em / rem / lh).',
+          '` is ignored on React Native. Use a number, px, or a font-relative / viewport / container unit.',
         t.unit
       );
     }
@@ -444,16 +445,11 @@ export function fontSizeHandler(tokens: Token[]): Dict<any> | null {
   if (t.kind === TokenKind.Length) {
     if (t.value === undefined || t.value < 0) return null;
     if (t.unit === 'px' || t.unit === '') return { fontSize: t.value };
-    // Absolute lengths convert statically to px per CSS Values 4 §5.2.
-    // No render-time resolver needed.
     const absRatio = t.unit !== undefined ? ABSOLUTE_LENGTH_PX_PER_UNIT[t.unit] : undefined;
     if (absRatio !== undefined) return { fontSize: t.value * absRatio };
-    // Everything else (em / rem / lh / rlh / viewport / container) is
-    // accepted raw iff `buildResolver` knows how to fold it at render
-    // time. Single source of truth — the parser acceptance set tracks
-    // resolver coverage automatically. Remaining rejects are the
-    // font-metric units (ex / cap / ch / ic + r-variants) RN can't
-    // measure cross-platform.
+    // Everything else (em / rem / lh / rlh / viewport / container)
+    // delegates to buildResolver so parser acceptance tracks resolver
+    // coverage automatically.
     if (buildResolver(t.raw) !== null) return { fontSize: t.raw };
     return null;
   }

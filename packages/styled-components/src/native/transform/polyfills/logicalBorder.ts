@@ -91,6 +91,9 @@ function singleStyle(tokens: Token[], edge: string): Dict<any> | null {
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
   if (name === undefined || !CSS_LINE_STYLES.has(name)) return null;
+  if (__NATIVE_WEB__) {
+    return { ['border' + camelEdge(edge) + 'Style']: name };
+  }
   warnNoPerEdgeStyle(edge, name);
   return {};
 }
@@ -152,6 +155,14 @@ function axisStyle(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | null 
   }
   if (!stream.eof()) return null;
 
+  if (__NATIVE_WEB__) {
+    const startEdge = axis === 'inline' ? 'inline-start' : 'block-start';
+    const endEdge = axis === 'inline' ? 'inline-end' : 'block-end';
+    return {
+      ['border' + camelEdge(startEdge) + 'Style']: firstName,
+      ['border' + camelEdge(endEdge) + 'Style']: secondName,
+    };
+  }
   warnNoPerEdgeStyle(axis, firstName + (firstName !== secondName ? ' ' + secondName : ''));
   return {};
 }
@@ -200,7 +211,11 @@ function compositeEdge(
   if (width !== null) out[map.width] = tokenToValue(width);
   if (color !== null) out[map.color] = colorTokenToRnStyleValue(color);
   if (style !== null) {
-    warnNoPerEdgeStyle(edge, style);
+    if (__NATIVE_WEB__) {
+      out['border' + camelEdge(edge) + 'Style'] = style;
+    } else {
+      warnNoPerEdgeStyle(edge, style);
+    }
   }
   return out;
 }
@@ -257,7 +272,12 @@ function modeSpanning(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | nu
     out[endMap.color] = cv;
   }
   if (style !== null) {
-    warnNoPerEdgeStyle(axis, style);
+    if (__NATIVE_WEB__) {
+      out['border' + camelEdge(startEdge) + 'Style'] = style;
+      out['border' + camelEdge(endEdge) + 'Style'] = style;
+    } else {
+      warnNoPerEdgeStyle(axis, style);
+    }
   }
   return out;
 }

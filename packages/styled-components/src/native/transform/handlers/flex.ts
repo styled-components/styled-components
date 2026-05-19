@@ -130,11 +130,25 @@ const CONTENT_POSITION_NORMALIZE: Record<string, string> = {
   end: 'flex-end',
 };
 
+function joinRaw(tokens: Token[]): string {
+  let raw = '';
+  for (let i = 0; i < tokens.length; i++) {
+    if (i !== 0) raw += ' ';
+    raw += tokens[i].raw;
+  }
+  return raw;
+}
+
 /**
  * `place-content: <align-content> <justify-content>?`. Normalizes
- * start/end to the flex- forms.
+ * start/end to the flex- forms on native; rn-web passes the raw
+ * declaration through so the browser sees the full CSS grammar.
  */
 export function placeContentShorthand(tokens: Token[]): Dict<any> | null {
+  if (__NATIVE_WEB__) {
+    if (tokens.length === 0) return null;
+    return { placeContent: joinRaw(tokens) };
+  }
   const stream = new TokenStream(withoutSlashes(tokens));
   const first = stream.consume();
   if (!first || first.kind !== TokenKind.Ident || !ALIGN_CONTENT.has(first.name!)) return null;
@@ -224,6 +238,10 @@ function readItemsKeyword(stream: TokenStream): string | null {
  * Yoga.
  */
 export function placeItemsShorthand(tokens: Token[]): Dict<any> | null {
+  if (__NATIVE_WEB__) {
+    if (tokens.length === 0) return null;
+    return { placeItems: joinRaw(tokens) };
+  }
   const stream = new TokenStream(withoutSlashes(tokens));
   const alignItems = readItemsKeyword(stream);
   if (alignItems === null) return null;
@@ -281,6 +299,10 @@ function readSelfKeyword(stream: TokenStream): string | null {
 }
 
 export function placeSelfShorthand(tokens: Token[]): Dict<any> | null {
+  if (__NATIVE_WEB__) {
+    if (tokens.length === 0) return null;
+    return { placeSelf: joinRaw(tokens) };
+  }
   const stream = new TokenStream(withoutSlashes(tokens));
   const alignSelf = readSelfKeyword(stream);
   if (alignSelf === null) return null;

@@ -254,7 +254,7 @@ export function backgroundShorthand(tokens: Token[]): Dict<any> | null {
       } else {
         warnOnce(
           'native-background-attachment-local',
-          '`background-attachment: local` is ignored on React Native because iOS and Android do not expose content-anchored backgrounds.',
+          '`background-attachment: local` is ignored on React Native because iOS and Android do not expose content-anchored backgrounds. rn-web keeps it.',
           'local'
         );
       }
