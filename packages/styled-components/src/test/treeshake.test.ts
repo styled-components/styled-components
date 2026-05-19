@@ -140,57 +140,50 @@ describe('native build isolation', () => {
   });
 });
 
-describe('native-web (rn-web) build', () => {
-  let webCJS: string;
-  let webESM: string;
+describe('rn-web bridge build', () => {
+  let bridgeCJS: string;
+  let bridgeESM: string;
 
   beforeAll(() => {
-    webCJS = readNative('styled-components.native.browser.cjs.js');
-    webESM = readNative('styled-components.native.browser.esm.js');
+    bridgeCJS = readNative('styled-components.native.web-bridge.cjs.js');
+    bridgeESM = readNative('styled-components.native.web-bridge.esm.js');
   });
 
   it('exists and is meaningfully smaller than the Hermes native bundle', () => {
     const hermesCJS = readNative('styled-components.native.cjs.js');
-    expect(webCJS.length).toBeGreaterThan(0);
-    expect(webCJS.length).toBeLessThan(hermesCJS.length);
+    expect(bridgeCJS.length).toBeGreaterThan(0);
+    expect(bridgeCJS.length).toBeLessThan(hermesCJS.length);
   });
 
-  it('keeps the rn-web matrix3d transport rewrite', () => {
-    // Without the rewrite, react-native-web emits invalid CSS for
-    // 16-element matrix transforms and the browser drops the entire
-    // transform. The literal is the proof the gate is wired up.
-    expect(webCJS).toContain('matrix3d');
-    expect(webESM).toContain('matrix3d');
+  it('eliminates the native CSS engine (compileNative, native polyfills, color math)', () => {
+    // The bridge routes through the web pipeline; the native engine
+    // and every polyfill it carries (light-dark, oklch synthesis,
+    // viewport-unit collapse, calc, etc.) tree-shakes away. The
+    // colorMath OKLab path's distinctive constant is one proof point.
+    expect(bridgeCJS).not.toContain('4122214708');
+    expect(bridgeESM).not.toContain('4122214708');
+    // Animated bridge has no role on the bridge either; CSS animations
+    // come through the web pipeline.
+    expect(bridgeCJS).not.toContain('createAnimatedComponent');
+    expect(bridgeESM).not.toContain('createAnimatedComponent');
   });
 
-  it('keeps the colorMath OKLab pipeline (rn-web normalize-colors strips modern color fns)', () => {
-    // react-native-web's `normalizeColor` (`@react-native/normalize-colors`)
-    // recognizes hex / rgb / hsl / hwb but not `oklch` / `oklab` / `lch` /
-    // `lab` / `color-mix`; unrecognized values normalize to `undefined`
-    // (transparent) before the browser sees them. So the static color
-    // fold has to run on rn-web too; colorMath ships in this bundle.
-    // Re-evaluate when rn-web's color subset catches up to CSS Color 4.
-    expect(webCJS).toContain('4122214708');
-    expect(webESM).toContain('4122214708');
+  it('keeps the 16-element matrix → matrix3d rewrite for rn-web preprocess', () => {
+    // rn-web's preprocess.js emits `matrix(a,b,c,...,p)` for any
+    // `transform:[{matrix:[...]}]` regardless of element count, which
+    // the browser rejects. The bridge's `rewrite3dMatrices` shim
+    // converts 16-element entries to `{ matrix3d: [...] }` before
+    // rn-web sees them — the property name must survive minification.
+    expect(bridgeCJS).toContain('matrix3d');
+    expect(bridgeESM).toContain('matrix3d');
   });
 
-  it('tree-shakes the background-blend-mode synthesis path', () => {
-    // The iOS raster pin only matters for the layer-synthesis polyfill
-    // we run on Hermes; rn-web lets the browser composite blend modes.
-    expect(webCJS).not.toContain('shouldRasterizeIOS');
-    expect(webESM).not.toContain('shouldRasterizeIOS');
-  });
-
-  it('swaps to the CSS-emit animation adapter (no Animated bridge)', () => {
-    // `Animated.createAnimatedComponent` is the wrapping call only the
-    // Animated-bridge adapter performs. The CSS-emit adapter emits CSS
-    // longhands instead, so the wrapper goes away with the adapter.
-    expect(webCJS).not.toContain('createAnimatedComponent');
-    expect(webESM).not.toContain('createAnimatedComponent');
-    // Conversely, the CSS adapter's managed `<style>` tag attribute
-    // proves the rn-web variant carries the CSS-emit registration.
-    expect(webCJS).toContain('data-sc-anim');
-    expect(webESM).toContain('data-sc-anim');
+  it('uses the styleq $$css escape hatch to compose classNames with rn-web atomic CSS', () => {
+    // The `$$css: true` literal is the bridge's contract with rn-web's
+    // styleq. If this string disappears, the bridge no longer reaches
+    // the DOM through rn-web's createDOMProps path.
+    expect(bridgeCJS).toContain('$$css');
+    expect(bridgeESM).toContain('$$css');
   });
 });
 

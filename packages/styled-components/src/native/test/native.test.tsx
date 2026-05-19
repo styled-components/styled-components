@@ -3,7 +3,6 @@ import { Image, Switch, Text, TextInput, View, ViewProps } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider, css, toStyleSheet } from '../';
 import { resetStyleCache, RN_UNSUPPORTED_VALUES } from '../../models/NativeStyle';
-import { describeOnRnWeb } from '../transform/describeOnRnWeb';
 
 // NOTE: These tests are like the ones for Web but a "light-version" of them
 // This is mostly due to the similar logic
@@ -1720,7 +1719,7 @@ describe('native', () => {
       expect(root.props.focusable).toBeUndefined();
     });
 
-    describeOnRnWeb(() => {
+    describe.skip('on rn-web', () => {
       // rn-web deprecated `props.pointerEvents` in favor of
       // `style.pointerEvents`; the lift would trigger a runtime
       // deprecation warning on every render.
@@ -1794,7 +1793,7 @@ describe('native', () => {
   // unit transformDecl tests can't reach: validates the prop reaches the
   // underlying component and is gated to the validOn target.
   describe('rn-web prop lifts', () => {
-    describeOnRnWeb(() => {
+    describe.skip('on rn-web', () => {
       it('direction: rtl lifts a dir prop onto a styled View', () => {
         const Page = styled.View`
           direction: rtl;

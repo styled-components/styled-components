@@ -130,17 +130,24 @@ const CONTENT_POSITION_NORMALIZE: Record<string, string> = {
   end: 'flex-end',
 };
 
+function joinRaw(tokens: Token[]): string {
+  let raw = '';
+  for (let i = 0; i < tokens.length; i++) {
+    if (i !== 0) raw += ' ';
+    raw += tokens[i].raw;
+  }
+  return raw;
+}
+
 /**
- * `place-content: <align-content> <justify-content>?`. Native branch
- * normalizes start/end to the flex- forms; rn-web passes through.
+ * `place-content: <align-content> <justify-content>?`. Normalizes
+ * start/end to the flex- forms on native; rn-web passes the raw
+ * declaration through so the browser sees the full CSS grammar.
  */
 export function placeContentShorthand(tokens: Token[]): Dict<any> | null {
   if (__NATIVE_WEB__) {
-    const raw = tokens
-      .map(t => t.raw)
-      .join(' ')
-      .trim();
-    return raw.length === 0 ? null : { placeContent: raw };
+    if (tokens.length === 0) return null;
+    return { placeContent: joinRaw(tokens) };
   }
   const stream = new TokenStream(withoutSlashes(tokens));
   const first = stream.consume();
@@ -228,16 +235,12 @@ function readItemsKeyword(stream: TokenStream): string | null {
 /**
  * `place-items: <'align-items'> <'justify-items'>?`. First value is align-items,
  * second (or repeated first) is justify-items. `justify-items` is a no-op under
- * Yoga but rn-web honors it; the rn-web branch emits the shorthand untouched
- * so the browser parses the full grammar.
+ * Yoga.
  */
 export function placeItemsShorthand(tokens: Token[]): Dict<any> | null {
   if (__NATIVE_WEB__) {
-    const raw = tokens
-      .map(t => t.raw)
-      .join(' ')
-      .trim();
-    return raw.length === 0 ? null : { placeItems: raw };
+    if (tokens.length === 0) return null;
+    return { placeItems: joinRaw(tokens) };
   }
   const stream = new TokenStream(withoutSlashes(tokens));
   const alignItems = readItemsKeyword(stream);
@@ -297,11 +300,8 @@ function readSelfKeyword(stream: TokenStream): string | null {
 
 export function placeSelfShorthand(tokens: Token[]): Dict<any> | null {
   if (__NATIVE_WEB__) {
-    const raw = tokens
-      .map(t => t.raw)
-      .join(' ')
-      .trim();
-    return raw.length === 0 ? null : { placeSelf: raw };
+    if (tokens.length === 0) return null;
+    return { placeSelf: joinRaw(tokens) };
   }
   const stream = new TokenStream(withoutSlashes(tokens));
   const alignSelf = readSelfKeyword(stream);

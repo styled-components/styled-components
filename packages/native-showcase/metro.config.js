@@ -12,6 +12,14 @@ const styledNativeSource = path.resolve(
   workspaceRoot,
   'packages/styled-components/src/native/index.ts'
 );
+// On web, route `styled-components/native` imports through the bridge
+// entry instead of the native engine. The bridge re-exports the same
+// surface as the native entry but maps to rn-web primitives via the
+// web pipeline + styleq `$$css` escape hatch.
+const styledWebBridgeSource = path.resolve(
+  workspaceRoot,
+  'packages/styled-components/src/native/web-bridge/index.tsx'
+);
 
 const config = getDefaultConfig(projectRoot);
 
@@ -27,7 +35,8 @@ config.resolver.unstable_enableSymlinks = true;
 const baseResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName === 'styled-components' || moduleName === 'styled-components/native') {
-    return { type: 'sourceFile', filePath: styledNativeSource };
+    const filePath = platform === 'web' ? styledWebBridgeSource : styledNativeSource;
+    return { type: 'sourceFile', filePath };
   }
   return baseResolveRequest
     ? baseResolveRequest(context, moduleName, platform)

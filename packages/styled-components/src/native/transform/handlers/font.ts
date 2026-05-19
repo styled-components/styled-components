@@ -1,6 +1,7 @@
 import { Dict } from '../../../types';
 import { warnOnce } from '../dev';
 import { isGenericFamily, resolveGenericFamily } from '../polyfills/genericFamily';
+import { buildResolver } from '../polyfills/resolvers';
 import { tokenToValue, withoutSlashes } from '../shorthandHelpers';
 import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
@@ -22,6 +23,17 @@ const FONT_WEIGHTS = new Set([
   'normal',
 ]);
 const FONT_VARIANTS = new Set(['small-caps']);
+
+// Absolute length conversion table. 1in === 96px is the anchor; the
+// rest derive from it via the standard relations.
+const ABSOLUTE_LENGTH_PX_PER_UNIT: Record<string, number> = {
+  in: 96,
+  cm: 96 / 2.54,
+  mm: 96 / 25.4,
+  q: 96 / (25.4 * 4),
+  pt: 96 / 72,
+  pc: 16,
+};
 
 const FONT_WIDTH_KEYWORDS = new Set([
   'ultra-condensed',
@@ -213,7 +225,7 @@ export function fontShorthand(tokens: Token[]): Dict<any> | null {
   if (__DEV__ && hasFamilyFallbacks && !__NATIVE_WEB__) {
     warnOnce(
       'native-font-family-fallbacks-dropped',
-      '`font-family` accepts one family on React Native. Extra comma-separated fallbacks are ignored on iOS and Android; rn-web keeps the full list.',
+      '`font-family` accepts one family on React Native. Extra comma-separated fallbacks are ignored on iOS and Android.',
       fontFamily.name
     );
   }
@@ -252,13 +264,13 @@ export function fontFamilyShorthand(tokens: Token[]): Dict<any> | null {
   if (__DEV__ && hasFallbacks) {
     warnOnce(
       'native-font-family-fallbacks-dropped',
-      '`font-family` accepts one family on React Native. Extra comma-separated fallbacks are ignored on iOS and Android; rn-web keeps the full list.',
+      '`font-family` accepts one family on React Native. Extra comma-separated fallbacks are ignored on iOS and Android.',
       family.name
     );
   }
 
   // Generic keyword resolution: native-only, bare idents only (quoted strings
-  // are author-supplied face names). rn-web keeps the keyword for the browser.
+  // are author-supplied face names).
   if (!__NATIVE_WEB__ && !family.quoted && isGenericFamily(family.name)) {
     return { fontFamily: resolveGenericFamily(family.name) };
   }
@@ -328,8 +340,10 @@ function degreesOf(t: Token): number | null {
 }
 
 /**
- * `line-height` handler. RN accepts unitless multipliers and px lengths;
- * percentage and em / rem drop with a dev warn. rn-web defers to the browser.
+ * `line-height` handler. Numeric multipliers and px resolve at compile
+ * time; absolute lengths fold via §5.2 ratios; everything else delegates
+ * to buildResolver so coverage tracks the resolver automatically. rn-web
+ * defers to the browser.
  */
 export function lineHeightHandler(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(tokens);
@@ -343,24 +357,23 @@ export function lineHeightHandler(tokens: Token[]): Dict<any> | null {
   if (t.kind === TokenKind.Number) return { lineHeight: t.value };
   if (t.kind === TokenKind.Length) {
     if (t.unit === 'px' || t.unit === '') return { lineHeight: t.value };
-    if (t.unit === 'em' || t.unit === 'rem' || t.unit === 'lh' || t.unit === 'rlh') {
-      return { lineHeight: t.raw };
-    }
+    const absRatio = t.unit !== undefined ? ABSOLUTE_LENGTH_PX_PER_UNIT[t.unit] : undefined;
+    if (absRatio !== undefined) return { lineHeight: t.value! * absRatio };
+    if (buildResolver(t.raw) !== null) return { lineHeight: t.raw };
     if (__DEV__) {
       warnOnce(
         'native-line-height-unit-unsupported',
         '`line-height: ' +
           t.raw +
-          '` is ignored on React Native. Use a unitless multiplier (`line-height: 1.4`), px (`line-height: 20px`), or a font-relative unit (em / rem / lh / rlh).',
+          '` is ignored on React Native. Use a unitless multiplier (`line-height: 1.4`), px (`line-height: 20px`), or a font-relative / viewport / container unit.',
         t.unit
       );
     }
     return {};
   }
   if (t.kind === TokenKind.Percent) {
-    // Defer to the cascade-resolver em path; percent and em both anchor
-    // at the inherited font-size.
     if (t.value === undefined) return null;
+    // Percent anchors at the inherited font-size like em.
     return { lineHeight: t.value / 100 + 'em' };
   }
   if (t.kind === TokenKind.Ident && t.name === 'normal') return {};
@@ -369,8 +382,8 @@ export function lineHeightHandler(tokens: Token[]): Dict<any> | null {
 
 /**
  * `letter-spacing` handler. Numeric and px values resolve at compile time;
- * font-relative units (em / rem / lh / rlh) defer to the cascade resolver so
- * the inherited font-size folds in at render time. rn-web passes through.
+ * absolute lengths fold via §5.2 ratios; everything else delegates to
+ * buildResolver. rn-web defers to the browser.
  */
 export function letterSpacingHandler(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(tokens);
@@ -384,15 +397,15 @@ export function letterSpacingHandler(tokens: Token[]): Dict<any> | null {
   if (t.kind === TokenKind.Number) return { letterSpacing: t.value };
   if (t.kind === TokenKind.Length) {
     if (t.unit === 'px' || t.unit === '') return { letterSpacing: t.value };
-    if (t.unit === 'em' || t.unit === 'rem' || t.unit === 'lh' || t.unit === 'rlh') {
-      return { letterSpacing: t.raw };
-    }
+    const absRatio = t.unit !== undefined ? ABSOLUTE_LENGTH_PX_PER_UNIT[t.unit] : undefined;
+    if (absRatio !== undefined) return { letterSpacing: t.value! * absRatio };
+    if (buildResolver(t.raw) !== null) return { letterSpacing: t.raw };
     if (__DEV__) {
       warnOnce(
         'native-letter-spacing-unit-unsupported',
         '`letter-spacing: ' +
           t.raw +
-          '` is ignored on React Native. Use a number, px, or font-relative unit (em / rem / lh).',
+          '` is ignored on React Native. Use a number, px, or a font-relative / viewport / container unit.',
         t.unit
       );
     }
@@ -432,9 +445,12 @@ export function fontSizeHandler(tokens: Token[]): Dict<any> | null {
   if (t.kind === TokenKind.Length) {
     if (t.value === undefined || t.value < 0) return null;
     if (t.unit === 'px' || t.unit === '') return { fontSize: t.value };
-    if (t.unit === 'em' || t.unit === 'rem' || t.unit === 'lh' || t.unit === 'rlh') {
-      return { fontSize: t.raw };
-    }
+    const absRatio = t.unit !== undefined ? ABSOLUTE_LENGTH_PX_PER_UNIT[t.unit] : undefined;
+    if (absRatio !== undefined) return { fontSize: t.value * absRatio };
+    // Everything else (em / rem / lh / rlh / viewport / container)
+    // delegates to buildResolver so parser acceptance tracks resolver
+    // coverage automatically.
+    if (buildResolver(t.raw) !== null) return { fontSize: t.raw };
     return null;
   }
 

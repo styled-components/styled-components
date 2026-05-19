@@ -1,10 +1,22 @@
 // Substitutes styled-components' build-time constants so Metro can
 // compile its TS source verbatim (see `metro.config.js`). Mirrors
 // `packages/styled-components/rollup.config.mjs`:
-//   __SERVER__       → false
-//   __NATIVE__       → true
-//   __NATIVE_WEB__   → isWeb (per `api.caller(platform)`)
-//   __DEV__          → process.env.NODE_ENV !== 'production'
+//
+//   native target:
+//     __SERVER__       → false
+//     __NATIVE__       → true
+//     __NATIVE_WEB__   → false
+//
+//   web target (rn-web bridge):
+//     __SERVER__       → false
+//     __NATIVE__       → false  (bridge routes through the web pipeline)
+//     __NATIVE_WEB__   → true
+//
+//   __DEV__            → process.env.NODE_ENV !== 'production'
+//   __VERSION__        → string literal from package.json
+const sgPkg = require('styled-components/package.json');
+const sgVersion = sgPkg.version;
+
 function makeReplaceBuildConstants(isWebTarget) {
   const isDev = process.env.NODE_ENV !== 'production';
   return ({ types: t }) => ({
@@ -14,11 +26,13 @@ function makeReplaceBuildConstants(isWebTarget) {
         if (path.node.name === '__SERVER__') {
           path.replaceWith(t.booleanLiteral(false));
         } else if (path.node.name === '__NATIVE__') {
-          path.replaceWith(t.booleanLiteral(true));
+          path.replaceWith(t.booleanLiteral(!isWebTarget));
         } else if (path.node.name === '__NATIVE_WEB__') {
           path.replaceWith(t.booleanLiteral(isWebTarget));
         } else if (path.node.name === '__DEV__') {
           path.replaceWith(t.booleanLiteral(isDev));
+        } else if (path.node.name === '__VERSION__') {
+          path.replaceWith(t.stringLiteral(sgVersion));
         }
       },
     },

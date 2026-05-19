@@ -1,9 +1,5 @@
 import { Dict } from '../../types';
-import {
-  getSystemColorPlatformColor,
-  isCssSystemColorKeyword,
-  wrapSystemColorForRnWeb,
-} from './polyfills/systemColors';
+import { getSystemColorPlatformColor, isCssSystemColorKeyword } from './polyfills/systemColors';
 import { Token, TokenKind } from './tokens';
 import { tokenize } from './tokenize';
 import { TokenStream } from './tokenStream';
@@ -105,16 +101,13 @@ export function isSingleTokenColorArg(arg: string): boolean {
   return stream.eof();
 }
 
-/** Map a color token's authored substring to an RN color value; rn-web keeps CSS keywords. */
+/** Map a color token's authored substring to an RN color value. */
 export function colorTokenToRnStyleValue(t: Token): unknown {
   return cssColorRawToRnStyleValue(t.raw);
 }
 
 /** Same as {@link colorTokenToRnStyleValue} for raw declaration substrings. */
 export function cssColorRawToRnStyleValue(raw: string): unknown {
-  if (__NATIVE_WEB__) {
-    return isCssSystemColorKeyword(raw) ? wrapSystemColorForRnWeb(raw) : raw;
-  }
   const folded = getSystemColorPlatformColor(raw);
   return folded !== null ? folded : raw;
 }

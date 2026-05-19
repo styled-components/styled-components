@@ -1865,11 +1865,9 @@ function parseRelativeFrom(
     rgb = parseHex(baseTok.name!);
   } else if (baseTok.kind === TokenKind.Ident) {
     const name = baseTok.name!;
-    // `currentColor` origin needs cascade visibility; the static fold has none
-    // on native, so warn and drop. rn-web passes the function through so the
-    // browser resolves it.
+    // `currentColor` origin needs cascade visibility; the static fold has
+    // none, so warn and drop.
     if (name === 'currentcolor') {
-      if (__NATIVE_WEB__) return null;
       if (__DEV__) {
         warnOnce(
           'native-relative-color-currentcolor',

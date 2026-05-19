@@ -73,11 +73,10 @@ function parseBoxShadowLayer(
 /**
  * When a CSS system color keyword appears in `box-shadow`, RN's string parser
  * cannot detect the color token (`processColor` rejects the keyword). Expand
- * to the object-array form so `color` can be a `PlatformColor`. rn-web keeps
- * the CSS string; dynamic theme sentinels skip rewriting.
+ * to the object-array form so `color` can be a `PlatformColor`. Dynamic
+ * theme sentinels skip rewriting.
  */
 export function maybeExpandBoxShadowSystemColors(rawValue: string): string | Dict<any>[] {
-  if (__NATIVE_WEB__) return rawValue;
   if (rawValue.indexOf('\0') !== -1) return rawValue;
 
   const normalized = rawValue.replace(/\n/g, ' ');

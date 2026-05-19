@@ -10,6 +10,12 @@ export const checkDynamicCreation = (displayName: string, componentId?: string |
   // RSC: components are module-level by construction and hook-detection is
   // unreliable across the server-component eval boundary.
   if (IS_RSC) return;
+  // rn-web bridge: route files are imported lazily by Expo Router during
+  // a parent render, so module-top-level `styled` calls run with React's
+  // dispatcher set up and the `useState(null)` probe can't distinguish
+  // them from real in-render creation. The warning is a permanent false
+  // alarm in this environment; suppress it.
+  if (__NATIVE_WEB__) return;
 
   const key = componentId ? displayName + '|' + componentId : displayName;
 

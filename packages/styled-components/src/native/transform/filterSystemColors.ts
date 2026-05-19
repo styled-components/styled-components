@@ -8,20 +8,27 @@ const WHITESPACE_SPLIT_REGEX = /\s+(?![^(]*\))/;
 /** Same function-scan regex as RN `processFilter` for string input. */
 const FILTER_FN_REGEX = /([\w-]+)\(([^()]*|\([^()]*\)|[^()]*\([^()]*\)[^()]*)\)/g;
 
-function camelizeFilterName(filterName: string): string {
-  if (filterName === 'hue-rotate') return 'hueRotate';
-  return filterName.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+// Local camelize: the shared `camelize` in `./index` would create an import
+// cycle (index → filterSystemColors → index). Filter names are a fixed set
+// of ~7 short strings, so the per-call work is negligible without a cache.
+function camelizeFilterName(name: string): string {
+  return name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
 }
+
+// Required digit in group 1 prevents a zero-length match. The previous
+// all-optional shape worked for the single `exec()` here (the caller
+// rejects NaN) but would zero-advance forever if a future caller
+// switched to `.matchAll`.
+const ARGS_WITH_UNITS_RE = /([+-]?\d+(?:\.\d+)?|[+-]?\.\d+)([a-zA-Z%]+)?/;
 
 /** Port of RN `processFilter` `_getFilterAmount` for supported scalar filters. */
 function parseFilterScalarAmount(filterName: string, filterArgs: string): number | null {
   const trimmed = filterArgs.trim();
-  const argsWithUnitsRegex = /([+-]?\d*(\.\d+)?)([a-zA-Z%]+)?/g;
-  const match = argsWithUnitsRegex.exec(trimmed);
+  const match = ARGS_WITH_UNITS_RE.exec(trimmed);
   if (!match || Number.isNaN(Number(match[1]))) return null;
 
   let filterArgAsNumber = Number(match[1]);
-  const unit = match[3];
+  const unit = match[2];
 
   switch (filterName) {
     case 'hueRotate':
@@ -99,10 +106,9 @@ function parseDropShadowInner(inner: string): { layer: Dict<any>; hadSystemColor
  * RN `parseDropShadowString` rejects CSS system color keywords (same
  * `processColor` probe as `box-shadow`). When any `drop-shadow()` layer needs
  * folding, rewrite the whole `filter` string to RN's array form so sibling
- * functions stay composited. rn-web keeps the CSS string.
+ * functions stay composited.
  */
 export function maybeExpandFilterDropShadowSystemColors(rawValue: string): string | Dict<any>[] {
-  if (__NATIVE_WEB__) return rawValue;
   if (rawValue.indexOf('\0') !== -1) return rawValue;
 
   const normalized = rawValue.replace(/\n/g, ' ');

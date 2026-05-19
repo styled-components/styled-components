@@ -15,7 +15,6 @@ import { TokenStream } from '../tokenStream';
  *   - iOS has no equivalent style or prop in 0.85. Soft-hyphens (U+00AD)
  *     in source text still hyphenate naturally on both platforms;
  *     `manual` therefore matches iOS native behavior with no extra work.
- *   - rn-web honors the `hyphens` style key natively (browser CSS).
  *
  * Mapping to Android prop:
  *   none   → 'none'     (no automatic hyphenation; conditional hyphens
@@ -26,9 +25,6 @@ import { TokenStream } from '../tokenStream';
  *   auto   → 'normal'   (Android's balanced strategy; 'full' is reserved
  *                        for justified text which we can't detect at
  *                        transform time)
- *
- * `hyphens` is preserved on the style object so rn-web's browser engine
- * still applies it directly; on RN the unknown style key is silently dropped.
  */
 
 const VALUES = new Set(['none', 'manual', 'auto']);
@@ -45,10 +41,6 @@ function hyphensShorthand(tokens: Token[]): Dict<any> | null {
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name!;
   if (!VALUES.has(name)) return null;
-  // rn-web: emit the style key only; the browser handles `hyphens`
-  // natively. The Android prop lift and the iOS limitation warn are
-  // native-only concerns.
-  if (__NATIVE_WEB__) return { hyphens: name };
   const out: Dict<any> = {
     hyphens: name,
     android_hyphenationFrequency: SPEC_TO_ANDROID[name],
@@ -56,7 +48,7 @@ function hyphensShorthand(tokens: Token[]): Dict<any> | null {
   if (__DEV__ && name === 'auto' && getReactNativePlatformOS() === 'ios') {
     warnOnce(
       'native-hyphens-ios',
-      '`hyphens: auto` cannot enable automatic hyphenation on iOS in React Native. Android and rn-web keep the authored behavior; on iOS, add soft hyphens (U+00AD) where words may break.'
+      '`hyphens: auto` cannot enable automatic hyphenation on iOS in React Native. On iOS, add soft hyphens (U+00AD) where words may break.'
     );
   }
   return out;

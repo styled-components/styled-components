@@ -21,7 +21,7 @@ function warnIosTextWrapBalancePretty(style: string): void {
     'native-text-wrap-ios',
     '`text-wrap: ' +
       style +
-      '` uses Android-only line-breaking controls. iOS keeps its default line breaking; rn-web keeps the authored value.',
+      '` uses Android-only line-breaking controls. iOS keeps its default line breaking.',
     style
   );
 }
@@ -49,12 +49,6 @@ function textWrapShorthand(tokens: Token[]): Dict<any> | null {
   if (mode === null && style === null) return null;
 
   const value = mode !== null && style !== null ? mode + ' ' + style : mode !== null ? mode : style;
-  // rn-web: the browser implements `text-wrap` (mode + style) natively
-  // via Chromium / WebKit / Gecko. Emit only the shorthand and skip the
-  // RN-prop lifts (numberOfLines, ellipsizeMode, textBreakStrategy) so
-  // we don't fight the browser's own line-breaking implementation.
-  if (__NATIVE_WEB__) return { textWrap: value };
-
   const out: Dict<any> = { textWrap: value };
   if (mode === 'nowrap') {
     // `numberOfLines: 1` + `ellipsizeMode: 'clip'` is the closest
@@ -74,7 +68,7 @@ function textWrapShorthand(tokens: Token[]): Dict<any> | null {
     if (__DEV__) {
       warnOnce(
         'native-text-wrap-stable',
-        '`text-wrap: stable` is ignored on React Native because iOS and Android do not expose reflow stability controls. rn-web keeps the authored value.'
+        '`text-wrap: stable` is ignored on React Native because iOS and Android do not expose reflow stability controls.'
       );
     }
   }
@@ -91,7 +85,6 @@ function textWrapModeLonghand(tokens: Token[]): Dict<any> | null {
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
   if (name === undefined || !MODES.has(name)) return null;
-  if (__NATIVE_WEB__) return { textWrapMode: name };
   const out: Dict<any> = { textWrapMode: name };
   if (name === 'nowrap') {
     // Same nowrap approximation as the shorthand path, applied silently.
@@ -113,7 +106,6 @@ function textWrapStyleLonghand(tokens: Token[]): Dict<any> | null {
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
   if (name === undefined || !STYLES.has(name)) return null;
-  if (__NATIVE_WEB__) return { textWrapStyle: name };
   const out: Dict<any> = { textWrapStyle: name };
   if (name === 'balance') {
     out.textBreakStrategy = 'balanced';
@@ -125,7 +117,7 @@ function textWrapStyleLonghand(tokens: Token[]): Dict<any> | null {
     if (__DEV__) {
       warnOnce(
         'native-text-wrap-stable',
-        '`text-wrap: stable` is ignored on React Native because iOS and Android do not expose reflow stability controls. rn-web keeps the authored value.'
+        '`text-wrap: stable` is ignored on React Native because iOS and Android do not expose reflow stability controls.'
       );
     }
   }

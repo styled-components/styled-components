@@ -132,9 +132,12 @@ const CQ_UNIT_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(cqw|cqh|cqmin|cqmax|cqi|cqb)$/i
 // browser unchanged.
 //
 // `rem` / `rlh` must come BEFORE `em` / `lh` in the alternation so
-// `12rem` matches as rem rather than `12r` + `em`. The regex anchors
-// guarantee whole-token consumption regardless.
-const REM_UNIT_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(rem|rlh|em|lh)$/i;
+// Font-relative units: cascade-anchored (em / lh, parent) or root-anchored
+// (rem / rlh, root). Font-metric forms (ex / cap / ch / ic and their
+// r-variants) have no measurable glyph metrics on RN and fall through to
+// fixed approximations in fontRelativeResolver. Alternation listed
+// longest-first so `12rem` matches rem not `12r` + `em`.
+const REM_UNIT_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(rcap|rch|rex|ric|rem|rlh|cap|ch|em|ex|ic|lh)$/i;
 const FALLBACK_UNIT_RE = /^-?(?:\d+(?:\.\d+)?|\.\d+)([a-z%]+)$/i;
 const LENGTH_LITERAL_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(px)?$/;
 const NUMERIC_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))([a-z%]*)$/i;
@@ -178,17 +181,12 @@ export function buildResolver(value: unknown): Resolver | null {
   if ((c0 >= $.DIGIT_0 && c0 <= $.DIGIT_9) || c0 === $.HYPHEN || c0 === $.DOT || c0 === $.PLUS) {
     const vp = VP_UNIT_RE.exec(value);
     if (vp !== null) {
-      // rn-web: passthrough so the browser distinguishes dvh/svh/lvh.
-      if (__NATIVE_WEB__) return null;
       return viewportResolver(parseFloat(vp[1]), vp[2].toLowerCase());
     }
     const cq = CQ_UNIT_RE.exec(value);
     if (cq !== null) return containerResolver(parseFloat(cq[1]), cq[2].toLowerCase());
     const rem = REM_UNIT_RE.exec(value);
     if (rem !== null) {
-      // rn-web: browser resolves font-relative units against the
-      // document's root / cascade font-size; no resolver needed.
-      if (__NATIVE_WEB__) return null;
       return fontRelativeResolver(parseFloat(rem[1]), rem[2].toLowerCase());
     }
     // Numeric-prefixed values fall through to templateResolver if they
@@ -238,9 +236,8 @@ export function buildResolver(value: unknown): Resolver | null {
   }
   if (c0 === 0x65 /* e */ && value.startsWith('env(')) return envResolver(value);
 
-  // round(line-width, A): CSS Values 4 §10.3 + "snap a length as a line
-  // width" (§6). The static fold can't run because the device pixel ratio
-  // isn't known at compile time; defer to a runtime resolver here.
+  // round(line-width, A) defers to a runtime resolver because the device
+  // pixel ratio isn't known at compile time.
   if (c0 === 0x72 /* r */ && value.startsWith('round(line-width,')) {
     return lineWidthRoundResolver(value);
   }
@@ -264,41 +261,6 @@ export function buildResolver(value: unknown): Resolver | null {
   }
 
   return null;
-}
-
-/**
- * True when a token stream (the args of `calc()` / `clamp()` / `min/max()`,
- * or any nested math-fn args) contains at least one arm that needs runtime
- * evaluation: a createTheme sentinel, an `env()` / `light-dark()` call, or
- * a viewport / container unit. Used on web to decide between full
- * evaluation and raw passthrough; on native every math fn evaluates
- * regardless (Yoga can't parse calc strings), so this predicate isn't
- * consulted.
- */
-function tokensNeedRuntimeResolution(tokens: Token[]): boolean {
-  for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i];
-    if (t.kind === TokenKind.Sentinel) return true;
-    if (t.kind === TokenKind.Length && t.unit) {
-      const u = t.unit;
-      if (u !== 'px' && u !== '') {
-        // Lengths matching VP/CQ unit regexes have dedicated runtime
-        // resolvers; em/rem/in/pt etc. are bailed on by `buildOperand`
-        // already, so flagging dynamic here means "there's something we
-        // can resolve at render time". Static-mixed-unit calc with only
-        // px and % returns false from this walk and passes through.
-        if (VP_UNIT_RE.test(t.raw) || CQ_UNIT_RE.test(t.raw)) return true;
-      }
-    }
-    if (t.kind === TokenKind.Function) {
-      const name = t.name;
-      if (name === 'env' || name === 'light-dark') return true;
-      if (name === 'calc' || name === 'min' || name === 'max' || name === 'clamp') {
-        if (tokensNeedRuntimeResolution(tokenizeFunctionArgs(t))) return true;
-      }
-    }
-  }
-  return false;
 }
 
 /**
@@ -328,16 +290,7 @@ function resolveMathFn(value: string): Resolver | null {
   // Bare grouping parens are equivalent to nested `calc()`. Our tokenizer
   // doesn't emit Paren tokens; the cheapest path to grouping support is
   // to rewrite bare `(...)` as `calc(...)` before tokenization so the
-  // existing nested-calc support handles them. The web passthrough must
-  // keep the original string (the browser parses grouping natively), so
-  // this rewrite only runs for the native path.
-  if (__NATIVE_WEB__) {
-    if (tokensNeedRuntimeResolution(tokenize(value))) return mathFnResolver(value);
-    // Static-mixed: passthrough raw. `mathFnResolver(value, undefined)`
-    // doubles as a parseability gate;null means malformed, in which
-    // case we drop the decl rather than ship a broken passthrough.
-    return mathFnResolver(value) === null ? null : () => value;
-  }
+  // existing nested-calc support handles them.
   return mathFnResolver(expandBareParens(value), NATIVE_MATH_OPTS);
 }
 
@@ -418,7 +371,7 @@ function findMatchingClose(s: string, openIdx: number): number {
 /** Advance past a `'…'` / `"…"` string literal that begins at `i`,
  *  returning the index of the closing quote (`i` if unterminated, in
  *  which case the caller naturally walks to end-of-string). Honors
- *  `\<x>` escapes per CSS Syntax 3 §4.3.5. */
+ *  `\<x>` CSS string escapes. */
 function skipString(s: string, i: number, quote: number): number {
   const len = s.length;
   let j = i + 1;
@@ -501,6 +454,12 @@ function viewportResolver(n: number, unit: string): Resolver {
  * `project_known_open_issues.md` if the divergence matters for a real
  * use case.
  */
+// Font-metric approximations, used because RN exposes no glyph metrics.
+const EX_FRACTION = 0.5;
+const CAP_FRACTION = 0.7;
+const CH_FRACTION = 0.5;
+const IC_FRACTION = 1.0;
+
 function fontRelativeResolver(n: number, unit: string): Resolver {
   switch (unit) {
     case 'rem':
@@ -514,6 +473,22 @@ function fontRelativeResolver(n: number, unit: string): Resolver {
       return env => n * env.fontSize;
     case 'lh':
       return env => n * env.lineHeight;
+    case 'ex':
+      return env => n * env.fontSize * EX_FRACTION;
+    case 'cap':
+      return env => n * env.fontSize * CAP_FRACTION;
+    case 'ch':
+      return env => n * env.fontSize * CH_FRACTION;
+    case 'ic':
+      return env => n * env.fontSize * IC_FRACTION;
+    case 'rex':
+      return env => n * env.rootFontSize * EX_FRACTION;
+    case 'rcap':
+      return env => n * env.rootFontSize * CAP_FRACTION;
+    case 'rch':
+      return env => n * env.rootFontSize * CH_FRACTION;
+    case 'ric':
+      return env => n * env.rootFontSize * IC_FRACTION;
     default:
       return env => n;
   }
@@ -533,9 +508,9 @@ function lineWidthRoundResolver(value: string): Resolver | null {
   return env => snapAsLineWidth(n, env.media.pixelRatio);
 }
 
-// CSS Values 4 §6 snap-as-line-width: integer device pixels pass through;
-// sub-device-pixel snaps to ±1 device pixel preserving sign; otherwise
-// truncates toward zero to the nearest integer device pixel.
+// snap-as-line-width: integer device pixels pass through; sub-device-pixel
+// snaps to ±1 device pixel preserving sign; otherwise truncates toward
+// zero to the nearest integer device pixel.
 function snapAsLineWidth(cssPx: number, pixelRatio: number): number {
   const devicePx = cssPx * pixelRatio;
   if (Number.isInteger(devicePx)) return cssPx;
@@ -615,14 +590,6 @@ function lightDarkResolver(value: string): Resolver | null {
   if (isImageBranch(light) !== isImageBranch(dark)) return null;
   const lightR = buildResolver(light);
   const darkR = buildResolver(dark);
-  if (__NATIVE_WEB__ && lightR === null && darkR === null) {
-    // Pure-static on rn-web: return null so the literal `light-dark(...)`
-    // value reaches the DOM verbatim. `transformDecl` wraps these in a CSS
-    // custom-property indirection (rn-web's `normalizeColor` strips the
-    // function form, but it accepts `var()`), letting the browser handle
-    // `prefers-color-scheme` reactivity natively.
-    return null;
-  }
   // Dynamic branches (theme sentinels, env(), nested resolvers) evaluate
   // at render time; the OS color-scheme change re-renders via the
   // Appearance listener.
@@ -1394,13 +1361,6 @@ function numericToCss(r: NumericResult): number | string {
 function colorFnResolver(value: string): Resolver | null {
   const tr = templateResolver(value);
   if (tr === null) return null;
-  if (__NATIVE_WEB__) {
-    // rn-web: passthrough preserves wide gamut; the browser handles oklch / oklab / lch / lab / color-mix natively.
-    return env => {
-      const assembled = tr(env);
-      return typeof assembled === 'string' ? assembled : null;
-    };
-  }
   return env => {
     const assembled = tr(env);
     if (typeof assembled !== 'string') return null;

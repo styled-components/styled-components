@@ -29,7 +29,7 @@ import {
   SiblingInfo,
   SiblingsList,
 } from '../native/ParentContext';
-import { applyStylePolyfills, normalizeStyleForWeb } from '../native/polyfills';
+import { applyStylePolyfills } from '../native/polyfills';
 import { applyResolvers, ResolveEnv } from '../native/transform/polyfills/resolvers';
 import { concatSourceInputs } from '../parser/source';
 import type {
@@ -963,11 +963,6 @@ type RenderCache = [
  * `Pressable`/`TextInput` accept a function for `style` (state callback);
  * pass-through that shape by wrapping the function call.
  *
- * `normalizeStyleForWeb` is invoked on the user-supplied side; it patches
- * around rn-web's translation gaps (e.g. 16-element matrix transforms).
- * It's a no-op on native and returns the same reference when no rewrite
- * is needed, so identity-based caches downstream stay intact.
- *
  * INTENTIONALLY DUPLICATED with `appendStyle` below: a generic
  * `composeStyles(existing, layer, normalizeLayer)` regressed the static
  * path by 50-65% (extra polymorphic branch + a shared concat helper that
@@ -978,12 +973,11 @@ export function composeBase(base: object, userStyle: any): any {
   if (userStyle === undefined || userStyle === null) return base;
   if (isFunction(userStyle)) {
     return (state: any) => {
-      const u = normalizeStyleForWeb(userStyle(state));
+      const u = userStyle(state);
       return Array.isArray(u) ? [base].concat(u) : [base, u];
     };
   }
-  const normalized = normalizeStyleForWeb(userStyle);
-  return Array.isArray(normalized) ? [base as object].concat(normalized) : [base, normalized];
+  return Array.isArray(userStyle) ? [base as object].concat(userStyle) : [base, userStyle];
 }
 
 /**
@@ -1291,7 +1285,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     }
     resolveEnv = buildResolveEnv(env, containerCtx, theme as Record<string, any>, renderCascade);
     let varImportant: Dict<any> | undefined;
-    if (!__NATIVE_WEB__ && compiled.varDeferred !== undefined) {
+    if (compiled.varDeferred !== undefined) {
       const varOut = applyVarDeferred(compiled.varDeferred, renderCascade.customProperties ?? null);
       if (varOut.normal !== null) {
         if (effectiveBase === compiled.base) {
@@ -1381,14 +1375,8 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // multiline TextInput grows the view to its text size on its own. If
   // the user passed `multiline={false}`, the lift is voided and the
   // input renders single-line; warn so the missing autosize is
-  // visible. Skipped on rn-web (browser handles `field-sizing`
-  // natively against the textarea the polyfill also lifts).
-  if (
-    __DEV__ &&
-    !__NATIVE_WEB__ &&
-    compiled.fieldSizing === 'content' &&
-    elementProps.multiline === false
-  ) {
+  // visible.
+  if (__DEV__ && compiled.fieldSizing === 'content' && elementProps.multiline === false) {
     warnOnce(
       'native-field-sizing-needs-multiline',
       '`field-sizing: content` requires `multiline={true}` so React Native renders the input as a multiline TextInput that can grow with its content. The component received `multiline={false}` and will render at a fixed single-line height instead. Drop the explicit `multiline` prop or remove the `field-sizing: content` declaration.'
@@ -1913,10 +1901,6 @@ export function assembleFinalStyle(
   parentCtx: ParentContextValue = DEFAULT_PARENT_CONTEXT,
   varImportant?: Dict<any>
 ): any {
-  // Patch around rn-web translation gaps before merging (no-op on native).
-  // Function-form userStyle is normalized at call time inside the closures
-  // below, since the result depends on the runtime state argument.
-  if (!isFunction(userStyle)) userStyle = normalizeStyleForWeb(userStyle);
   const nonPseudoEntries = compiled.nonPseudoEntries;
   const pseudoEntries = compiled.pseudoEntries;
   const hasConditional = nonPseudoEntries.length > 0;
@@ -1963,7 +1947,7 @@ export function assembleFinalStyle(
       );
       for (let i = 0; i < matched.normal.length; i++) styles.push(matched.normal[i]);
       if (isFunction(userStyle)) {
-        const userResolved = normalizeStyleForWeb(userStyle(state));
+        const userResolved = userStyle(state);
         Array.isArray(userResolved)
           ? styles.push.apply(styles, userResolved)
           : styles.push(userResolved);
@@ -1990,7 +1974,7 @@ export function assembleFinalStyle(
     const preStateStyles: object[] =
       activeConditional.length > 0 ? [base as object].concat(activeConditional) : [base as object];
     return (state: any) => {
-      const out: any[] = preStateStyles.concat(normalizeStyleForWeb(userStyle(state)));
+      const out: any[] = preStateStyles.concat(userStyle(state));
       if (baseImportantLayer !== null) out.push(baseImportantLayer);
       if (activeMatched.important !== null) {
         for (let i = 0; i < activeMatched.important.length; i++) {
