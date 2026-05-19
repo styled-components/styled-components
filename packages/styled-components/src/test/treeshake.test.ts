@@ -162,14 +162,20 @@ describe('rn-web bridge build', () => {
     // colorMath OKLab path's distinctive constant is one proof point.
     expect(bridgeCJS).not.toContain('4122214708');
     expect(bridgeESM).not.toContain('4122214708');
-    // matrix3d rewrite was a rn-web-specific workaround in the native
-    // engine path; on the bridge the browser handles transform parsing.
-    expect(bridgeCJS).not.toContain('matrix3d');
-    expect(bridgeESM).not.toContain('matrix3d');
     // Animated bridge has no role on the bridge either; CSS animations
     // come through the web pipeline.
     expect(bridgeCJS).not.toContain('createAnimatedComponent');
     expect(bridgeESM).not.toContain('createAnimatedComponent');
+  });
+
+  it('keeps the 16-element matrix → matrix3d rewrite for rn-web preprocess', () => {
+    // rn-web's preprocess.js emits `matrix(a,b,c,...,p)` for any
+    // `transform:[{matrix:[...]}]` regardless of element count, which
+    // the browser rejects. The bridge's `rewrite3dMatrices` shim
+    // converts 16-element entries to `{ matrix3d: [...] }` before
+    // rn-web sees them — the property name must survive minification.
+    expect(bridgeCJS).toContain('matrix3d');
+    expect(bridgeESM).toContain('matrix3d');
   });
 
   it('uses the styleq $$css escape hatch to compose classNames with rn-web atomic CSS', () => {

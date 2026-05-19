@@ -775,14 +775,25 @@ function applyBridgeRewritesToRules(rules: string[]): void {
 function withBridgeRewrites<
   F extends (this: typeof mainCompiler, ...args: never[]) => string[] | null,
 >(original: F): F {
-  return function patched(this: typeof mainCompiler, ...args: Parameters<F>) {
+  const patched = function patched(this: typeof mainCompiler, ...args: Parameters<F>) {
     const rules = original.apply(this, args);
     if (rules !== null) applyBridgeRewritesToRules(rules);
     return rules;
-  } as F;
+  } as F & { __scBridgePatched?: true };
+  patched.__scBridgePatched = true;
+  return patched;
 }
-mainCompiler.emit = withBridgeRewrites(mainCompiler.emit);
-mainCompiler.compile = withBridgeRewrites(mainCompiler.compile);
+// Guard against the bridge module being evaluated more than once (duplicate
+// copies in a monorepo, mixed ESM/CJS resolution, test isolation). Without
+// the marker, re-wrapping an already-patched function runs every rewrite
+// pass twice, duplicating `vertical-align` companion rules.
+type Patchable = ((...args: never[]) => string[] | null) & { __scBridgePatched?: true };
+if (!(mainCompiler.emit as Patchable).__scBridgePatched) {
+  mainCompiler.emit = withBridgeRewrites(mainCompiler.emit);
+}
+if (!(mainCompiler.compile as Patchable).__scBridgePatched) {
+  mainCompiler.compile = withBridgeRewrites(mainCompiler.compile);
+}
 
 /**
  * Walk the static string segments of a tagged template and extract
