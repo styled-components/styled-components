@@ -381,6 +381,12 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
         /background-color:\s*ButtonFace/i,
       ],
       ['Mark (background)', 'background-color: Mark;', /background-color:\s*Mark/i],
+      [
+        'AccentColor (background)',
+        'background-color: AccentColor;',
+        /background-color:\s*AccentColor/i,
+      ],
+      ['AccentColorText (color)', 'color: AccentColorText;', /color:\s*AccentColorText/i],
     ];
     for (const [name, decl, expected] of cases) {
       it(`passes ${name} through`, () => {
@@ -1069,6 +1075,25 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
       const css = readAllCss();
       expect(css).toMatch(/width:\s*hypot\(60px,\s*80px\)/);
       expect(css).not.toMatch(/calc\(hypot\(60px/);
+    });
+
+    // Regression guard: the previous VERT_ALIGN_RULE_RE had adjacent
+    // greedy `[^{}]*` + lazy `[^{}]*?` flanking the `\{`, which on
+    // adversarial input like `.cls<40k chars> vertical-align: top`
+    // produced 1.6s of polynomial backtracking. The indexOf-bounded
+    // rewrite keeps each step O(n).
+    it('vertical-align rewriter handles long class-prefix input within a wall-clock budget', () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const bridge = require('../native/web-bridge') as {
+        __testOnly_verticalAlignCompanions: (s: string) => string[];
+      };
+      const adversarial = '.cls' + 'a'.repeat(40000) + ' vertical-align: top';
+      const t0 = Date.now();
+      const result = bridge.__testOnly_verticalAlignCompanions(adversarial);
+      const elapsed = Date.now() - t0;
+      // Adversarial input lacks `{` after the class so no companions emit.
+      expect(result).toEqual([]);
+      expect(elapsed).toBeLessThan(50);
     });
   });
 

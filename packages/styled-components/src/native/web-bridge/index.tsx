@@ -153,21 +153,26 @@ function rewrite3dMatrices(style: unknown): unknown {
  */
 function collectDataProps(rest: Record<string, unknown>): {
   dataSet: Record<string, unknown> | undefined;
-  other: Record<string, unknown>;
+  other: Record<string, unknown> | null;
 } {
-  let dataSet: Record<string, unknown> | undefined;
+  let hasData = false;
+  for (const key in rest) {
+    if (key.charCodeAt(0) === 100 /* 'd' */ && key.startsWith('data-')) {
+      hasData = true;
+      break;
+    }
+  }
+  if (!hasData) return { dataSet: undefined, other: null };
+  const dataSet: Record<string, unknown> = {};
   const other: Record<string, unknown> = {};
   for (const key in rest) {
-    if (key.startsWith('data-')) {
-      if (dataSet === undefined) dataSet = {};
-      // `data-place-self` → `placeSelf` via the shared camelize cache.
+    if (key.charCodeAt(0) === 100 && key.startsWith('data-')) {
       dataSet[camelize(key.slice(5))] = rest[key];
     } else {
       other[key] = rest[key];
     }
   }
-  if (dataSet !== undefined && rest.dataSet && typeof rest.dataSet === 'object') {
-    // Fold any explicit dataSet provided by the caller; explicit wins.
+  if (rest.dataSet && typeof rest.dataSet === 'object') {
     Object.assign(dataSet, rest.dataSet);
   }
   return { dataSet, other };
@@ -204,7 +209,8 @@ function bridgePrimitive<P extends BridgedProps>(
       finalStyle = layers;
     }
     const { dataSet, other } = collectDataProps(rest as Record<string, unknown>);
-    const finalProps: Record<string, unknown> = { ...other, ref, style: finalStyle };
+    const base = other !== null ? other : (rest as Record<string, unknown>);
+    const finalProps: Record<string, unknown> = { ...base, ref, style: finalStyle };
     if (dataSet !== undefined) finalProps.dataSet = dataSet;
     return React.createElement(Component, finalProps as unknown as P);
   });
@@ -350,39 +356,31 @@ const baselineCss: Partial<Record<KnownAlias, string>> = {
  *   color support on a lifted prop need to author with hex / rgb /
  *   hsl until rn-web's color subset catches up to CSS Color 4.
  */
-type CssLiftMap = Record<string, { prop: string; transform?: (v: string) => unknown }>;
+type CssLiftEntry = { prop: string; re: RegExp; transform?: (v: string) => unknown };
+type CssLiftMap = Record<string, CssLiftEntry>;
 
-// One RegExp per CSS property name, materialized on first lookup. Each
-// regex matches `<prop>:<value>` at the start of a decl or after `;`/`{`/
-// whitespace so longer identifiers (`-webkit-object-fit`) don't false-match.
-const liftRegexCache = new Map<string, RegExp>();
-function liftRegex(cssProp: string): RegExp {
-  let re = liftRegexCache.get(cssProp);
-  if (re === undefined) {
-    const escaped = cssProp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    re = new RegExp('(?:^|[;{\\s])' + escaped + '\\s*:\\s*([^;}\\n]+)', 'i');
-    liftRegexCache.set(cssProp, re);
-  }
-  return re;
+// `(?:^|[;{\s])` boundary so longer identifiers like `-webkit-object-fit`
+// don't false-match a lift for `object-fit`.
+function liftEntry(
+  cssProp: string,
+  prop: string,
+  transform?: (v: string) => unknown
+): CssLiftEntry {
+  const escaped = cssProp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp('(?:^|[;{\\s])' + escaped + '\\s*:\\s*([^;}\\n]+)', 'i');
+  return transform ? { prop, re, transform } : { prop, re };
 }
 
 const imageLifts: CssLiftMap = {
-  'object-fit': {
-    prop: 'resizeMode',
-    transform: v => {
-      // CSS Images 3 §5.5 → rn-web Image.resizeMode enum.
-      // `fill` stretches without preserving aspect (`stretch` on rn-web).
-      // `none` displays the intrinsic size (`center` on rn-web is the
-      // nearest analog: no scaling, anchored at center).
-      // `scale-down` collapses to `contain` since rn-web has no
-      // direct analog — both keep aspect and never upscale past the
-      // intrinsic size when the image fits the box.
-      if (v === 'fill') return 'stretch';
-      if (v === 'none') return 'center';
-      if (v === 'scale-down') return 'contain';
-      return v;
-    },
-  },
+  // CSS Images 3 → rn-web Image.resizeMode enum. `fill` → `stretch`
+  // (no aspect preservation); `none` → `center` (no scaling, centered);
+  // `scale-down` collapses to `contain` (nearest analog).
+  'object-fit': liftEntry('object-fit', 'resizeMode', v => {
+    if (v === 'fill') return 'stretch';
+    if (v === 'none') return 'center';
+    if (v === 'scale-down') return 'contain';
+    return v;
+  }),
 };
 
 /**
@@ -448,64 +446,34 @@ function canonicalizeColor(input: string): string {
 }
 
 const textLifts: CssLiftMap = {
-  // CSS Text 4 `text-wrap: nowrap`. rn-web's Text only applies its
-  // `textOneLine` baseline (`white-space: nowrap; text-overflow:
-  // ellipsis`) when `numberOfLines={1}`; without it, authored
-  // `text-wrap: nowrap` reaches the DOM but the Text element's
-  // default `pre-wrap` whitespace handling wins anyway. The lift
-  // matches the native engine's `SPECIAL_CASE_PROPS` mapping.
-  // Authored `text-overflow: clip` still works through source-order
-  // specificity, overriding rn-web's baseline ellipsis.
-  'text-wrap': {
-    prop: 'numberOfLines',
-    transform: v => (v === 'nowrap' ? 1 : undefined),
-  },
-  // CSS Overflow 4 `line-clamp: <integer>`. rn-web's Text already
-  // emits the webkit-line-clamp triple (display: -webkit-box;
-  // -webkit-box-orient: vertical; -webkit-line-clamp: N; overflow:
-  // hidden) when `numberOfLines` is set, so the lift just routes the
-  // integer there. Authored CSS `line-clamp: 2` survives in the
-  // rule too, which the browser now ignores in favor of rn-web's
-  // -webkit-* triple. Map iteration order is preserved: `line-clamp`
-  // wins over `text-wrap: nowrap` if both are declared since it's
-  // the more specific intent.
-  'line-clamp': {
-    prop: 'numberOfLines',
-    transform: v => {
-      const n = parseInt(v, 10);
-      return Number.isFinite(n) && n > 0 ? n : 1;
-    },
-  },
+  // rn-web's Text only enables `text-wrap: nowrap` behavior when
+  // `numberOfLines={1}` is set; lift forces the prop on. Map order
+  // matters: `line-clamp` below overwrites `numberOfLines` when both
+  // are authored.
+  'text-wrap': liftEntry('text-wrap', 'numberOfLines', v => (v === 'nowrap' ? 1 : undefined)),
+  'line-clamp': liftEntry('line-clamp', 'numberOfLines', v => {
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) && n > 0 ? n : 1;
+  }),
 };
 
 const textInputLifts: CssLiftMap = {
-  // CSS Form Control Styling 1 §7.1 `field-sizing: content`. The
-  // browser only honors it on `<textarea>` (and a few input types)
-  // for height auto-grow; rn-web's TextInput only renders to
-  // `<textarea>` when `multiline={true}`. The lift flips multiline
-  // on so the authored CSS actually has a target. Other field-sizing
-  // values (`fixed`, `auto`) are no-ops — leave them alone.
-  'field-sizing': {
-    prop: 'multiline',
-    transform: v => (v === 'content' ? true : undefined),
-  },
+  // rn-web TextInput only renders as `<textarea>` (the only element
+  // the browser honors `field-sizing: content` on) when
+  // `multiline={true}`. The lift flips it so the authored CSS has a
+  // target. `fixed` / `auto` are no-ops.
+  'field-sizing': liftEntry('field-sizing', 'multiline', v => (v === 'content' ? true : undefined)),
 };
 
 const switchLifts: CssLiftMap = {
-  'accent-color': {
-    prop: 'trackColor',
-    // rn-web Switch only consumes color via its `trackColor.true` /
-    // `trackColor.false` prop; CSS `accent-color` doesn't reach the
-    // custom-rendered control. Also, rn-web's `normalizeColor` only
-    // recognizes hex / rgb / hsl / hwb / named colors; oklch / lab /
-    // color-mix / system colors / `auto` all silently fold to
-    // undefined. Canonicalize via the browser's canvas2d parser so
-    // we hand rn-web a value it understands.
-    transform: v => {
-      const canonical = canonicalizeColor(v);
-      return { true: canonical, false: canonical };
-    },
-  },
+  // rn-web Switch consumes color via `trackColor.true|false` only;
+  // authored `accent-color` never reaches the custom-rendered control.
+  // Canonicalize through canvas2d so oklch / lab / color-mix / system
+  // colors fold to the rgba subset rn-web's normalizeColor accepts.
+  'accent-color': liftEntry('accent-color', 'trackColor', v => {
+    const canonical = canonicalizeColor(v);
+    return { true: canonical, false: canonical };
+  }),
 };
 
 const liftsByAlias: Partial<Record<KnownAlias, CssLiftMap>> = {
@@ -627,8 +595,8 @@ const VAR_WITH_UNIT_RE = /var\(\s*(--[a-zA-Z0-9_-]+)\s*,\s*([-+\d.]+)\s*\)([a-zA
 // failed-tail inputs like `abs(<spaces>1<spaces>) X` (the trailing
 // `X` defeats the anchored `$`, then the engine retries every split
 // between the body and the closing `)`).
-const BARE_MATH_FN_RE =
-  /^\s*(abs|hypot|pow|mod|rem|sin|cos|tan|asin|acos|atan|atan2|exp|log|sqrt|sign)\(\s*([-+\d.,/*()](?:[-+\d.,\s/*()]*[-+\d.,/*()])?)\s*\)\s*$/i;
+const BARE_MATH_BODY_SRC =
+  '(abs|hypot|pow|mod|rem|sin|cos|tan|asin|acos|atan|atan2|exp|log|sqrt|sign)\\(\\s*([-+\\d.,/*()](?:[-+\\d.,\\s/*()]*[-+\\d.,/*()])?)\\s*\\)';
 const KNOWN_UNITS = new Set([
   'px',
   'em',
@@ -636,9 +604,13 @@ const KNOWN_UNITS = new Set([
   'lh',
   'rlh',
   'ch',
-  'ex',
   'cap',
+  'ex',
   'ic',
+  'rch',
+  'rcap',
+  'rex',
+  'ric',
   '%',
   'vh',
   'vw',
@@ -656,6 +628,12 @@ const KNOWN_UNITS = new Set([
   'cqmax',
   'cqi',
   'cqb',
+  'in',
+  'cm',
+  'mm',
+  'q',
+  'pt',
+  'pc',
   'fr',
   'deg',
   'rad',
@@ -683,11 +661,8 @@ function rewriteVarUnitSuffix(input: string): string {
  */
 const LENGTH_CONTEXT_PROP_RE =
   '(?:width|height|min-width|max-width|min-height|max-height|top|left|right|bottom|inset(?:-[a-z]+)?|margin(?:-[a-z]+)?|padding(?:-[a-z]+)?|gap|row-gap|column-gap|border(?:-[a-z]+)?-width|outline-width|outline-offset|font-size|letter-spacing|word-spacing|text-indent|line-height|flex-basis|background-size)';
-// Bare-math source without its anchors so we can splice it into a
-// non-anchored composite regex. Group 1 = fn name; group 2 = args.
-const BARE_MATH_BODY_RE = BARE_MATH_FN_RE.source.slice(1, -1);
 const BARE_MATH_IN_LENGTH_PROP_RE = new RegExp(
-  '(\\b' + LENGTH_CONTEXT_PROP_RE + '\\s*:\\s*)' + BARE_MATH_BODY_RE + '(?=\\s*[;}])',
+  '(\\b' + LENGTH_CONTEXT_PROP_RE + '\\s*:\\s*)' + BARE_MATH_BODY_SRC + '(?=\\s*[;}])',
   'gi'
 );
 function rewriteBareMathFn(input: string): string {
@@ -715,13 +690,13 @@ function rewriteBareMathFn(input: string): string {
  * - `<textarea>` / `<input>` get `align-content: <flex>` so the input
  *   text itself lands at the requested edge inside the control. Block
  *   `align-content` is the standards-compliant way to vertically
- *   position text inside a textarea (CSS Box Alignment Module L3 §5).
+ *   position text inside a textarea.
  *
  * The original `vertical-align` declaration is kept so consumers
  * authoring CSS that runs in a non-rn-web context still see it.
  */
-const VERT_ALIGN_RULE_RE =
-  /(\.[a-zA-Z0-9_-]+)[^{}]*\{[^{}]*?vertical-align\s*:\s*(top|middle|bottom)[^{}]*\}/i;
+const CLASS_HEAD_RE = /^\.[a-zA-Z0-9_-]+/;
+const VERT_ALIGN_DECL_RE = /vertical-align\s*:\s*(top|middle|bottom)\b/i;
 const VERT_ALIGN_TO_FLEX: Record<string, string> = {
   top: 'flex-start',
   middle: 'center',
@@ -731,53 +706,57 @@ const VERT_ALIGN_TO_FLEX: Record<string, string> = {
  * Returns companion rules for a class that uses `vertical-align: top
  * | middle | bottom`. Empty array if no match. CSSOM `insertRule`
  * accepts a single rule per call so companions are inserted as
- * separate entries by the caller.
+ * separate entries by the caller. indexOf bounds the body slice so
+ * neither regex can backtrack across the full input.
  */
 function verticalAlignCompanions(input: string): string[] {
-  const m = VERT_ALIGN_RULE_RE.exec(input);
-  if (!m) return [];
-  const cls = m[1];
-  const flexValue = VERT_ALIGN_TO_FLEX[m[2].toLowerCase()];
+  const classMatch = CLASS_HEAD_RE.exec(input);
+  if (!classMatch) return [];
+  const braceOpen = input.indexOf('{', classMatch[0].length);
+  if (braceOpen < 0) return [];
+  const braceClose = input.indexOf('}', braceOpen + 1);
+  if (braceClose < 0) return [];
+  const declMatch = VERT_ALIGN_DECL_RE.exec(input.slice(braceOpen + 1, braceClose));
+  if (!declMatch) return [];
+  const flexValue = VERT_ALIGN_TO_FLEX[declMatch[1].toLowerCase()];
   if (!flexValue) return [];
+  const cls = classMatch[0];
   return [
     cls + ':not(textarea):not(input) { display: flex; align-items: ' + flexValue + '; }',
     cls + ':is(textarea, input) { align-content: ' + flexValue + '; }',
   ];
 }
 
-// Patch the shared `mainCompiler` so EVERY emitted CSS rule runs through
-// the var()+unit rewrite. This catches both static-text declarations
-// and the showcase-idiomatic `${t.space.x}<unit>` interpolation
-// pattern (where the var() and the unit live in different segments of
-// the tagged template). The mutation is contained to the bridge entry
-// import; consumers who reach for the bridge subpath get the rewrite,
-// pure web `styled-components` consumers that don't import the bridge
-// see the unmodified compiler.
-const __bridgeEmitOriginal = mainCompiler.emit;
-const __bridgeCompileOriginal = mainCompiler.compile;
-function applyBridgeRewrites(input: string): string {
-  let out = input;
-  out = rewriteVarUnitSuffix(out);
-  out = rewriteBareMathFn(out);
-  return out;
-}
+// Patches `mainCompiler.emit` and `.compile` so every emitted CSS rule
+// runs through the var()+unit and bare-math rewrites. Bridge import is
+// the trigger; pure-web consumers that never import the bridge see the
+// unmodified compiler. Documented in
+// feedback_bridge_maincompiler_global_mutation.
+//
 // `:not(...)` chains carry CSS-spec specificity each (`(0,n,0)` for n
 // simple selectors), which beats a sibling `.cls[attr]` rule's (0,1,0)
 // regardless of source order. Wrapping the chain in `:where(...)`
 // zeroes the specificity and restores the native engine's source-order
-// cascade. Anchored to the class selector at the start of the rule;
-// nested chains elsewhere in the selector are left alone.
+// cascade.
 const NOT_CHAIN_AFTER_CLASS_RE = /(^\.[a-zA-Z0-9_-]+)((?::not\([^()]*\))+)/;
 
 function applyBridgeRewritesToRules(rules: string[]): void {
   let extras: Array<{ index: number; rule: string }> | null = null;
   for (let i = 0; i < rules.length; i++) {
-    let after = applyBridgeRewrites(rules[i]);
-    if (after.indexOf(':not(') >= 0) {
-      after = after.replace(NOT_CHAIN_AFTER_CLASS_RE, '$1:where($2)');
-    }
-    if (after !== rules[i]) rules[i] = after;
-    if (after.indexOf('vertical-align') < 0) continue;
+    const before = rules[i];
+    const hasVar = before.indexOf('var(') >= 0;
+    const hasParen = before.indexOf('(') >= 0;
+    const hasNot = before.indexOf(':not(') >= 0;
+    const hasVertAlign = before.indexOf('vertical-align') >= 0;
+    if (!hasVar && !hasParen && !hasNot && !hasVertAlign) continue;
+
+    let after = before;
+    if (hasVar) after = rewriteVarUnitSuffix(after);
+    if (hasParen) after = rewriteBareMathFn(after);
+    if (hasNot) after = after.replace(NOT_CHAIN_AFTER_CLASS_RE, '$1:where($2)');
+    if (after !== before) rules[i] = after;
+    if (!hasVertAlign) continue;
+
     const companions = verticalAlignCompanions(after);
     if (companions.length === 0) continue;
     if (extras === null) extras = [];
@@ -793,34 +772,17 @@ function applyBridgeRewritesToRules(rules: string[]): void {
     rules.splice(index, 0, rule);
   }
 }
-mainCompiler.emit = function patchedEmit(
-  source: Parameters<typeof __bridgeEmitOriginal>[0],
-  filled: Parameters<typeof __bridgeEmitOriginal>[1],
-  parentSelector: Parameters<typeof __bridgeEmitOriginal>[2],
-  componentId: Parameters<typeof __bridgeEmitOriginal>[3],
-  fragments: Parameters<typeof __bridgeEmitOriginal>[4]
-): string[] {
-  const rules = __bridgeEmitOriginal.call(
-    mainCompiler,
-    source,
-    filled,
-    parentSelector,
-    componentId,
-    fragments
-  );
-  applyBridgeRewritesToRules(rules);
-  return rules;
-};
-mainCompiler.compile = function patchedCompile(
-  css: string,
-  selector?: string,
-  prefix?: string,
-  componentId?: string
-): string[] {
-  const rules = __bridgeCompileOriginal.call(mainCompiler, css, selector, prefix, componentId);
-  applyBridgeRewritesToRules(rules);
-  return rules;
-};
+function withBridgeRewrites<
+  F extends (this: typeof mainCompiler, ...args: never[]) => string[] | null,
+>(original: F): F {
+  return function patched(this: typeof mainCompiler, ...args: Parameters<F>) {
+    const rules = original.apply(this, args);
+    if (rules !== null) applyBridgeRewritesToRules(rules);
+    return rules;
+  } as F;
+}
+mainCompiler.emit = withBridgeRewrites(mainCompiler.emit);
+mainCompiler.compile = withBridgeRewrites(mainCompiler.compile);
 
 /**
  * Walk the static string segments of a tagged template and extract
@@ -834,19 +796,16 @@ function extractCssLifts(
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const cssProp in lifts) {
-    const { prop, transform } = lifts[cssProp];
-    const re = liftRegex(cssProp);
+    const entry = lifts[cssProp];
     for (const segment of strings) {
-      const m = segment.match(re);
+      const m = segment.match(entry.re);
       if (m === null) continue;
       const value = m[1]
         .trim()
         .replace(/!important$/i, '')
         .trim();
-      const lifted = transform ? transform(value) : value;
-      // A transform returning `undefined` means "no lift for this value"
-      // (e.g. `text-wrap: balance` doesn't map to `numberOfLines`).
-      if (lifted !== undefined) out[prop] = lifted;
+      const lifted = entry.transform ? entry.transform(value) : value;
+      if (lifted !== undefined) out[entry.prop] = lifted;
       break;
     }
   }
@@ -1032,3 +991,5 @@ export type {
   StyledObject,
   StyledOptions,
 } from '../../types';
+
+export const __testOnly_verticalAlignCompanions = verticalAlignCompanions;
