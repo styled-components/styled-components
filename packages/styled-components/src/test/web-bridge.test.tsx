@@ -1044,6 +1044,22 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
       expect(css).not.toMatch(/opacity:\s*calc\(pow/);
     });
 
+    // Regression guard: BARE_MATH_FN_RE previously had nested-whitespace
+    // backtracking that turned an ~4 KB malformed input into a 6-second
+    // CPU spin. The fix anchors the inner body on non-whitespace; the
+    // budget below catches any reintroduction.
+    it('rejects whitespace-padded malformed math fns within a wall-clock budget', () => {
+      const attack = 'width: abs(' + ' '.repeat(2000) + '1' + ' '.repeat(2000) + ') X';
+      const t0 = Date.now();
+      const Box = styled.View`
+        ${attack}
+      `;
+      render(<Box testID="bare-math-attack" />);
+      readAllCss();
+      const elapsed = Date.now() - t0;
+      expect(elapsed).toBeLessThan(100);
+    });
+
     it('leaves already-typed math functions alone', () => {
       // `hypot(60px, 80px)` already returns length; don't double-wrap.
       const Box = styled.View`

@@ -134,13 +134,15 @@ const SwatchBase = styled.View`
    still wins so the label stays tomato under press. The :active
    bucket also flips background-color (no !important on either side)
    so iOS users can see the bucket fired even though the color demo's
-   intended outcome is "no change". */
+   intended outcome is "no change". `border` is a distinct shade
+   from `surfaceMuted` in both light and dark themes; `signalSoft`
+   aliases `surfaceMuted` so it would have been invisible. */
 const PressedNormal = styled.Pressable`
   color: tomato !important;
   padding: ${t.space.xs}px ${t.space.sm}px;
   background-color: ${t.colors.surfaceMuted};
   &:active {
-    background-color: ${t.colors.signalSoft};
+    background-color: ${t.colors.border};
     color: royalblue;
   }
 `;

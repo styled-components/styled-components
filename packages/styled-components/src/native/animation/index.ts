@@ -413,11 +413,16 @@ interface TransformComponent {
   value: number | string;
 }
 
+// Eager `[^)]*` with no flanking `\s*`; the caller trims the captured
+// args anyway. Avoids polynomial backtracking on user-authored
+// `transform:` values like `translate(<spaces>X` (no close paren).
+const TRANSFORM_FN_RE = /([A-Za-z]+)\(([^)]*)\)/g;
+
 function parseTransformString(s: string): TransformComponent[] {
   const out: TransformComponent[] = [];
-  const re = /([A-Za-z]+)\s*\(\s*([^)]+?)\s*\)/g;
   let match: RegExpExecArray | null;
-  while ((match = re.exec(s)) !== null) {
+  TRANSFORM_FN_RE.lastIndex = 0;
+  while ((match = TRANSFORM_FN_RE.exec(s)) !== null) {
     const kind = match[1];
     const raw = match[2].trim();
     out.push({ kind, value: parseTransformValue(kind, raw) });

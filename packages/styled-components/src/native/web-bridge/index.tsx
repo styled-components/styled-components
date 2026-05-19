@@ -621,8 +621,14 @@ const VAR_WITH_UNIT_RE = /var\(\s*(--[a-zA-Z0-9_-]+)\s*,\s*([-+\d.]+)\s*\)([a-zA
  * unit anywhere in the arg list signals the author already typed
  * the expression and we leave it alone.
  */
+// Inner arg class anchored so the last char is non-whitespace, denying
+// the trailing `\)\s*$` any backtracking room. Without this, a long
+// run of inner whitespace can drag the engine into polynomial work on
+// failed-tail inputs like `abs(<spaces>1<spaces>) X` (the trailing
+// `X` defeats the anchored `$`, then the engine retries every split
+// between the body and the closing `)`).
 const BARE_MATH_FN_RE =
-  /^\s*(abs|hypot|pow|mod|rem|sin|cos|tan|asin|acos|atan|atan2|exp|log|sqrt|sign)\(\s*([-+\d.,\s/*()]+)\s*\)\s*$/i;
+  /^\s*(abs|hypot|pow|mod|rem|sin|cos|tan|asin|acos|atan|atan2|exp|log|sqrt|sign)\(\s*([-+\d.,/*()](?:[-+\d.,\s/*()]*[-+\d.,/*()])?)\s*\)\s*$/i;
 const KNOWN_UNITS = new Set([
   'px',
   'em',

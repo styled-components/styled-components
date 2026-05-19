@@ -13,15 +13,20 @@ function camelizeFilterName(filterName: string): string {
   return filterName.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
 }
 
+// Required digit in group 1 prevents a zero-length match. The previous
+// all-optional shape worked for the single `exec()` here (the caller
+// rejects NaN) but would zero-advance forever if a future caller
+// switched to `.matchAll`.
+const ARGS_WITH_UNITS_RE = /([+-]?\d+(?:\.\d+)?|[+-]?\.\d+)([a-zA-Z%]+)?/;
+
 /** Port of RN `processFilter` `_getFilterAmount` for supported scalar filters. */
 function parseFilterScalarAmount(filterName: string, filterArgs: string): number | null {
   const trimmed = filterArgs.trim();
-  const argsWithUnitsRegex = /([+-]?\d*(\.\d+)?)([a-zA-Z%]+)?/g;
-  const match = argsWithUnitsRegex.exec(trimmed);
+  const match = ARGS_WITH_UNITS_RE.exec(trimmed);
   if (!match || Number.isNaN(Number(match[1]))) return null;
 
   let filterArgAsNumber = Number(match[1]);
-  const unit = match[3];
+  const unit = match[2];
 
   switch (filterName) {
     case 'hueRotate':
