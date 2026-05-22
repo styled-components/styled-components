@@ -22,6 +22,13 @@ const cjs = {
   sourcemap: true,
 };
 
+// Node maps native ESM default imports from CJS to module.exports.
+const styledCJSInteropFooter = `
+Object.assign(styled, exports);
+Object.defineProperty(styled, '__esModule', { value: true });
+module.exports = styled;
+`;
+
 const esm = {
   format: 'esm',
   interop: 'auto',
@@ -179,7 +186,7 @@ const serverConfig = {
   ...configBase,
   output: [
     getESM({ file: 'dist/styled-components.esm.js' }),
-    getCJS({ file: 'dist/styled-components.cjs.js' }),
+    getCJS({ file: 'dist/styled-components.cjs.js', footer: styledCJSInteropFooter }),
   ],
   plugins: configBase.plugins.concat(
     replace({
@@ -196,7 +203,7 @@ const browserConfig = {
   ...configBase,
   output: [
     getESM({ file: 'dist/styled-components.browser.esm.js' }),
-    getCJS({ file: 'dist/styled-components.browser.cjs.js' }),
+    getCJS({ file: 'dist/styled-components.browser.cjs.js', footer: styledCJSInteropFooter }),
   ],
   plugins: configBase.plugins.concat(
     replace({

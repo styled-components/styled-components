@@ -448,4 +448,38 @@ describe('ESM tree-shakeability', () => {
       './dist/styled-components.browser.esm.js'
     );
   });
+
+  it('supports a default import from native Node ESM', () => {
+    const os = require('os');
+    const { spawnSync } = require('child_process');
+    const pkgDir = path.resolve(__dirname, '../..');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sc-node-esm-'));
+
+    try {
+      fs.mkdirSync(path.join(tmpDir, 'node_modules'), { recursive: true });
+      fs.symlinkSync(pkgDir, path.join(tmpDir, 'node_modules', 'styled-components'), 'dir');
+
+      const script = [
+        "import styled, { css } from 'styled-components';",
+        "if (typeof styled !== 'function') throw new Error(`default export was ${typeof styled}`);",
+        "if (typeof styled.h1 !== 'function') throw new Error('styled.h1 is unavailable');",
+        "if (styled.default !== styled) throw new Error('styled.default does not point at styled');",
+        "if (typeof css !== 'function') throw new Error('named css export is unavailable');",
+        "console.log('ok');",
+      ].join('\n');
+
+      const result = spawnSync(process.execPath, ['--input-type=module', '--eval', script], {
+        cwd: tmpDir,
+        encoding: 'utf8',
+      });
+
+      expect({ status: result.status, stdout: result.stdout, stderr: result.stderr }).toEqual({
+        status: 0,
+        stdout: 'ok\n',
+        stderr: '',
+      });
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
