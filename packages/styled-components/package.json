@@ -8,7 +8,7 @@
   "types": "dist/index.d.ts",
   "main": "dist/styled-components.cjs.js",
   "module": "./dist/styled-components.esm.js",
-  "react-native": "native/dist/styled-components.native.cjs.js",
+  "react-native": "native/dist/styled-components.native.js",
   "browser": {
     "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js",
     "./dist/styled-components.esm.js": "./dist/styled-components.browser.esm.js"

@@ -93,7 +93,7 @@ describe('native build isolation', () => {
   let nativeESM: string;
 
   beforeAll(() => {
-    nativeCJS = readNative('styled-components.native.cjs.js');
+    nativeCJS = readNative('styled-components.native.js');
     nativeESM = readNative('styled-components.native.esm.js');
   });
 
@@ -145,12 +145,12 @@ describe('rn-web bridge build', () => {
   let bridgeESM: string;
 
   beforeAll(() => {
-    bridgeCJS = readNative('styled-components.native.web-bridge.cjs.js');
-    bridgeESM = readNative('styled-components.native.web-bridge.esm.js');
+    bridgeCJS = readNative('styled-components.web.js');
+    bridgeESM = readNative('styled-components.web.esm.js');
   });
 
   it('exists and is meaningfully smaller than the Hermes native bundle', () => {
-    const hermesCJS = readNative('styled-components.native.cjs.js');
+    const hermesCJS = readNative('styled-components.native.js');
     expect(bridgeCJS.length).toBeGreaterThan(0);
     expect(bridgeCJS.length).toBeLessThan(hermesCJS.length);
   });
@@ -192,7 +192,7 @@ describe('Hermes native build keeps the Animated-bridge adapter', () => {
   let nativeESM: string;
 
   beforeAll(() => {
-    nativeCJS = readNative('styled-components.native.cjs.js');
+    nativeCJS = readNative('styled-components.native.js');
     nativeESM = readNative('styled-components.native.esm.js');
   });
 
@@ -201,6 +201,53 @@ describe('Hermes native build keeps the Animated-bridge adapter', () => {
     expect(nativeESM).toContain('createAnimatedComponent');
     expect(nativeCJS).not.toContain('data-sc-anim');
     expect(nativeESM).not.toContain('data-sc-anim');
+  });
+});
+
+describe('native subpath platform-extension entries', () => {
+  // Metro applies a package.json `browser` object-map on every platform, so the
+  // old map silently routed the rn-web bridge onto iOS/Android. The fix ships
+  // the engines as platform-extension files (`.native.js` Hermes, `.web.js` +
+  // `.js` fallback bridge) with an extensionless `main` and no `browser` map, so
+  // Metro resolves the engine per platform at the file layer. These lock that
+  // file layout and the package.json shape that drives it.
+  const nativePkg = JSON.parse(
+    fs.readFileSync(path.resolve(nativeDistDir, '../package.json'), 'utf8')
+  );
+
+  it('main is extensionless so Metro applies platform extensions', () => {
+    // `.native.js` / `.web.js` / `.js` only resolve per-platform when the field
+    // value carries no extension of its own.
+    expect(nativePkg.main).toBe('./dist/styled-components');
+  });
+
+  it('ships no browser object-map (the bug source)', () => {
+    expect(nativePkg.browser).toBeUndefined();
+  });
+
+  it('module points at the rn-web bridge ESM for tree-shaking web bundlers', () => {
+    expect(nativePkg.module).toBe('./dist/styled-components.web.esm.js');
+  });
+
+  it('the .native.js entry is the Hermes engine, not the bridge', () => {
+    const nativeJS = readNative('styled-components.native.js');
+    expect(nativeJS).toContain('createAnimatedComponent');
+    expect(nativeJS).not.toContain('$$css');
+  });
+
+  it('the .web.js and .js entries are the rn-web bridge', () => {
+    // A web-side fallback must never land on the Hermes engine; both carry the
+    // styleq `$$css` escape hatch and drop the native Animated bridge.
+    const webJS = readNative('styled-components.web.js');
+    const fallbackJS = readNative('styled-components.js');
+    expect(webJS).toContain('$$css');
+    expect(fallbackJS).toContain('$$css');
+    expect(webJS).not.toContain('createAnimatedComponent');
+    expect(fallbackJS).not.toContain('createAnimatedComponent');
+    // `.js` is the extensionless-main fallback: the same bridge bundle, differing
+    // only in its trailing sourceMappingURL comment.
+    const stripSourceMap = (s: string) => s.replace(/\/\/# sourceMappingURL=\S+/g, '');
+    expect(stripSourceMap(fallbackJS)).toBe(stripSourceMap(webJS));
   });
 });
 

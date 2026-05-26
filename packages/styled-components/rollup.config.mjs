@@ -230,12 +230,19 @@ const nativeBasePlugins = [
   }),
 ];
 
+// The native subpath ships its engine builds as Metro platform-extension
+// entries (`.native.js` for Hermes, `.web.js` + a plain `.js` fallback for the
+// rn-web bridge) instead of a package.json `browser` object-map. Metro applies
+// `browser` on every platform, not just web, so the old map silently routed the
+// rn-web bridge onto iOS/Android. Platform extensions resolve at the file layer
+// per platform, so Metro picks the Hermes engine natively and the bridge on web
+// with no map. `native/package.json` `main` points at the extensionless base.
 const nativeConfig = {
   ...configBase,
   input: './src/native/index.ts',
   output: [
     getCJS({
-      file: 'native/dist/styled-components.native.cjs.js',
+      file: 'native/dist/styled-components.native.js',
     }),
     getESM({
       file: 'native/dist/styled-components.native.esm.js',
@@ -311,12 +318,20 @@ const reanimatedConfig = {
 const webBridgeConfig = {
   ...configBase,
   input: './src/native/web-bridge/index.tsx',
+  // `.web.js` is the explicit web platform entry; `styled-components.js` is the
+  // extensionless-`main` fallback for resolvers that don't apply platform
+  // extensions (and Metro web when it falls through `.web.js`). Both are the
+  // bridge so a web-side fallback never lands on the Hermes engine. `.web.esm.js`
+  // backs the `module` field for tree-shaking web bundlers.
   output: [
     getCJS({
-      file: 'native/dist/styled-components.native.web-bridge.cjs.js',
+      file: 'native/dist/styled-components.web.js',
+    }),
+    getCJS({
+      file: 'native/dist/styled-components.js',
     }),
     getESM({
-      file: 'native/dist/styled-components.native.web-bridge.esm.js',
+      file: 'native/dist/styled-components.web.esm.js',
     }),
   ],
   plugins: [

@@ -193,9 +193,16 @@ function bridgePrimitive<P extends BridgedProps>(
     // deprecates the prop in favor of `style.pointerEvents`. Values
     // `auto | none | box-none | box-only` pass through identically to
     // rn-web's own `pointerEventsStyles` map.
-    const { className, style, pointerEvents, ...rest } = props as P & {
-      pointerEvents?: unknown;
-    };
+    const augmented = props as P & { pointerEvents?: unknown };
+    const { className, style, pointerEvents } = augmented;
+    // Build `rest` without object-rest destructuring so the bridge bundle does
+    // not import tslib's `__rest` helper; the package declares no tslib dep.
+    const rest: Record<string, unknown> = {};
+    for (const key in augmented) {
+      if (key !== 'className' && key !== 'style' && key !== 'pointerEvents') {
+        rest[key] = (augmented as Record<string, unknown>)[key];
+      }
+    }
     const fixedStyle = rewrite3dMatrices(style);
     const classLayer = className ? { $$css: true, sc: className } : null;
     const pointerLayer = pointerEvents != null ? { pointerEvents } : null;
@@ -208,8 +215,8 @@ function bridgePrimitive<P extends BridgedProps>(
       if (pointerLayer) layers.push(pointerLayer);
       finalStyle = layers;
     }
-    const { dataSet, other } = collectDataProps(rest as Record<string, unknown>);
-    const base = other !== null ? other : (rest as Record<string, unknown>);
+    const { dataSet, other } = collectDataProps(rest);
+    const base = other !== null ? other : rest;
     const finalProps: Record<string, unknown> = { ...base, ref, style: finalStyle };
     if (dataSet !== undefined) finalProps.dataSet = dataSet;
     return React.createElement(Component, finalProps as unknown as P);
