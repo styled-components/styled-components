@@ -197,7 +197,11 @@ function bridgePrimitive<P extends BridgedProps>(
     const { className, style, pointerEvents } = augmented;
     // Build `rest` without object-rest destructuring so the bridge bundle does
     // not import tslib's `__rest` helper; the package declares no tslib dep.
-    const rest: Record<string, unknown> = {};
+    // The container is prototypeless so a prop literally named `__proto__` is
+    // copied as an own data property (matching object-rest) rather than hitting
+    // the `__proto__` setter and reassigning the prototype; `hasOwnProperty`
+    // keeps the copy to own enumerable keys.
+    const rest: Record<string, unknown> = Object.create(null);
     for (const key in augmented) {
       if (
         key !== 'className' &&
