@@ -199,7 +199,12 @@ function bridgePrimitive<P extends BridgedProps>(
     // not import tslib's `__rest` helper; the package declares no tslib dep.
     const rest: Record<string, unknown> = {};
     for (const key in augmented) {
-      if (key !== 'className' && key !== 'style' && key !== 'pointerEvents') {
+      if (
+        key !== 'className' &&
+        key !== 'style' &&
+        key !== 'pointerEvents' &&
+        Object.prototype.hasOwnProperty.call(augmented, key)
+      ) {
         rest[key] = (augmented as Record<string, unknown>)[key];
       }
     }

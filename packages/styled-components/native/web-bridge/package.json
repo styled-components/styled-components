@@ -2,8 +2,8 @@
   "name": "styled-components-native-web-bridge",
   "private": true,
   "types": "../dist/native/web-bridge/index.d.ts",
-  "main": "../dist/styled-components.native.web-bridge.cjs.js",
-  "module": "../dist/styled-components.native.web-bridge.esm.js",
+  "main": "../dist/styled-components.web.js",
+  "module": "../dist/styled-components.web.esm.js",
   "devDependencies": {
     "react": "^19",
     "react-native-web": "~0.21.2"

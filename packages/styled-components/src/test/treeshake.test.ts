@@ -249,6 +249,30 @@ describe('native subpath platform-extension entries', () => {
     const stripSourceMap = (s: string) => s.replace(/\/\/# sourceMappingURL=\S+/g, '');
     expect(stripSourceMap(fallbackJS)).toBe(stripSourceMap(webJS));
   });
+
+  it('every native subpath package.json resolves main/module/types to real files', () => {
+    // A subpath redirector pointing at a renamed dist file silently breaks the
+    // import. Renaming the bridge outputs without updating this is exactly how
+    // `styled-components/native/web-bridge` broke. Lock the native engine, the
+    // rn-web bridge, and reanimated subpaths together.
+    const nativeRoot = path.resolve(nativeDistDir, '..');
+    // The native subpath `main` is the extensionless platform-extension base, so
+    // accept `<base>.js` for a target with no extension of its own.
+    const resolvesToFile = (p: string) =>
+      fs.existsSync(p) || (path.extname(p) === '' && fs.existsSync(`${p}.js`));
+    for (const rel of ['package.json', 'web-bridge/package.json', 'reanimated/package.json']) {
+      const pkgPath = path.join(nativeRoot, rel);
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      const pkgDir = path.dirname(pkgPath);
+      for (const field of ['main', 'module', 'types'] as const) {
+        if (!pkg[field]) continue;
+        const target = path.resolve(pkgDir, pkg[field]);
+        expect(`${rel} ${field}=${pkg[field]} resolves=${resolvesToFile(target)}`).toBe(
+          `${rel} ${field}=${pkg[field]} resolves=true`
+        );
+      }
+    }
+  });
 });
 
 describe('rscPlugin tree-shaking', () => {
