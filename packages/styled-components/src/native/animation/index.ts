@@ -416,18 +416,45 @@ interface TransformComponent {
 // Eager `[^)]*` with no flanking `\s*`; the caller trims the captured
 // args anyway. Avoids polynomial backtracking on user-authored
 // `transform:` values like `translate(<spaces>X` (no close paren).
-const TRANSFORM_FN_RE = /([A-Za-z]+)\(([^)]*)\)/g;
+const TRANSFORM_FN_RE = /([A-Za-z][A-Za-z0-9]*)\(([^)]*)\)/g;
 
 function parseTransformString(s: string): TransformComponent[] {
   const out: TransformComponent[] = [];
   let match: RegExpExecArray | null;
   TRANSFORM_FN_RE.lastIndex = 0;
   while ((match = TRANSFORM_FN_RE.exec(s)) !== null) {
-    const kind = match[1];
-    const raw = match[2].trim();
-    out.push({ kind, value: parseTransformValue(kind, raw) });
+    pushTransformComponents(out, match[1], match[2].trim());
   }
   return out;
+}
+
+/**
+ * RN's object-array transform form (`[{ translateX: n }, …]`) has no
+ * `translate`/`translate3d` key and no 2-arg `scale`; those reject with
+ * "Transform with key of <k> must have an array as the value". CSS
+ * authors write the shorthand freely (and RN parses it fine as a static
+ * string), so the animation path decomposes them into the per-axis keys
+ * RN accepts. parseFloat drops the unit; percentage translate stays
+ * unsupported either way since RN's transforms take dp, not percentages.
+ */
+function pushTransformComponents(out: TransformComponent[], kind: string, raw: string): void {
+  if (kind === 'translate' || kind === 'translate3d') {
+    const args = raw.split(',');
+    out.push({ kind: 'translateX', value: parseFloat(args[0]) || 0 });
+    out.push({ kind: 'translateY', value: args.length > 1 ? parseFloat(args[1]) || 0 : 0 });
+    if (kind === 'translate3d' && args.length > 2) {
+      out.push({ kind: 'translateZ', value: parseFloat(args[2]) || 0 });
+    }
+    return;
+  }
+  if (kind === 'scale' && raw.indexOf(',') !== -1) {
+    const args = raw.split(',');
+    const x = parseFloat(args[0]);
+    out.push({ kind: 'scaleX', value: x });
+    out.push({ kind: 'scaleY', value: args.length > 1 ? parseFloat(args[1]) : x });
+    return;
+  }
+  out.push({ kind, value: parseTransformValue(kind, raw) });
 }
 
 function parseTransformValue(kind: string, raw: string): number | string {
