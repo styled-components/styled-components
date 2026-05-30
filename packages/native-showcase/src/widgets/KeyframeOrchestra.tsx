@@ -20,6 +20,7 @@ import { theme as t } from '@/theme/tokens';
  * - animation-fill-mode: both with animation-delay (stagger)
  * - animation-play-state toggling (pause/resume)
  * - Multi-property keyframes (transform+opacity, rotateY+scaleX+color)
+ * - Multi-argument transform shorthand: translate(x, y) + scale(x, y)
  * - Theme tokens resolving inside @keyframes frames
  * - prefers-reduced-motion gating
  */
@@ -185,6 +186,36 @@ const JellyBall = styled.View<{ $play: boolean }>`
   border-radius: ${t.radius.pill}px;
   background-color: ${t.colors.fail};
   animation: jelly 1.6s infinite;
+  animation-play-state: ${p => (p.$play ? 'running' : 'paused')};
+`;
+
+// ── 3b. Drift (multi-arg translate(x, y) + scale(x, y) shorthand) ──
+//
+// The shorthand `translate(26px, -12px)` / `scale(1.4, 0.7)` forms must
+// decompose into per-axis transforms; if they leak through as a single
+// `translate` key this cell throws RN's "must have an array as the value"
+// and the failure is the demo on any platform that regresses.
+
+const DriftBox = styled.View<{ $play: boolean }>`
+  @keyframes drift {
+    0% {
+      transform: translate(0px, 0px) scale(1, 1);
+    }
+    30% {
+      transform: translate(16px, -12px) scale(1.4, 0.7);
+    }
+    60% {
+      transform: translate(-16px, 12px) scale(0.7, 1.4);
+    }
+    100% {
+      transform: translate(0px, 0px) scale(1, 1);
+    }
+  }
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  background-color: ${t.colors.accent};
+  animation: drift 2.4s ease-in-out infinite;
   animation-play-state: ${p => (p.$play ? 'running' : 'paused')};
 `;
 
@@ -396,6 +427,12 @@ export function KeyframeOrchestra() {
         <JellyStage>
           <JellyBall $play={active} />
         </JellyStage>
+      </Row>
+
+      <Row label="drift" feature="translate(x, y) + scale(x, y) shorthand · 4-stop">
+        <CellFrame>
+          <DriftBox $play={active} />
+        </CellFrame>
       </Row>
 
       <Row label="card flip" feature="rotateY + scaleX + opacity · 5-stop · alternate">

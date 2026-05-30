@@ -83,6 +83,106 @@ describe('parseTransformString', () => {
     `);
   });
 
+  // RN's object-array transform form has no `translate`/`translate3d`
+  // key and no 2-arg `scale`; passing them through unsplit makes
+  // `processTransform` throw "must have an array as the value". The
+  // shorthands decompose into the per-axis keys RN accepts.
+  it('decomposes translate(x, y) into translateX + translateY', () => {
+    expect(parseTransformString('translate(26px, -12px)')).toMatchInlineSnapshot(`
+      [
+        {
+          "kind": "translateX",
+          "value": 26,
+        },
+        {
+          "kind": "translateY",
+          "value": -12,
+        },
+      ]
+    `);
+  });
+
+  it('defaults the y axis to 0 for single-arg translate(x)', () => {
+    expect(parseTransformString('translate(26px)')).toMatchInlineSnapshot(`
+      [
+        {
+          "kind": "translateX",
+          "value": 26,
+        },
+        {
+          "kind": "translateY",
+          "value": 0,
+        },
+      ]
+    `);
+  });
+
+  it('decomposes translate3d(x, y, z) into all three axes', () => {
+    expect(parseTransformString('translate3d(4px, 8px, 12px)')).toMatchInlineSnapshot(`
+      [
+        {
+          "kind": "translateX",
+          "value": 4,
+        },
+        {
+          "kind": "translateY",
+          "value": 8,
+        },
+        {
+          "kind": "translateZ",
+          "value": 12,
+        },
+      ]
+    `);
+  });
+
+  it('decomposes 2-arg scale(x, y) into scaleX + scaleY', () => {
+    expect(parseTransformString('scale(2, 3)')).toMatchInlineSnapshot(`
+      [
+        {
+          "kind": "scaleX",
+          "value": 2,
+        },
+        {
+          "kind": "scaleY",
+          "value": 3,
+        },
+      ]
+    `);
+  });
+
+  // A malformed/omitted axis must fall back to the other axis (uniform),
+  // never NaN, since NaN in an Animated outputRange crashes RN at runtime.
+  it('falls back to uniform for a trailing-comma scale(x,)', () => {
+    expect(parseTransformString('scale(1,)')).toMatchInlineSnapshot(`
+      [
+        {
+          "kind": "scaleX",
+          "value": 1,
+        },
+        {
+          "kind": "scaleY",
+          "value": 1,
+        },
+      ]
+    `);
+  });
+
+  it('falls back to identity for a missing x in scale(,y)', () => {
+    expect(parseTransformString('scale(,2)')).toMatchInlineSnapshot(`
+      [
+        {
+          "kind": "scaleX",
+          "value": 1,
+        },
+        {
+          "kind": "scaleY",
+          "value": 2,
+        },
+      ]
+    `);
+  });
+
   // Regression guard: the previous /([A-Za-z]+)\s*\(\s*([^)]+?)\s*\)/g
   // shape exhibited polynomial backtracking. A user-authored value with
   // a long whitespace run and no closing paren — reachable from any
@@ -143,6 +243,26 @@ describe('interpolateTransform', () => {
     expect((out![1].translateY as FakeInterp).outputRange).toEqual([-12, 0]);
     expect((out![2].rotate as FakeInterp).outputRange).toEqual(['0deg', '18deg']);
     expect((out![3].scale as FakeInterp).outputRange).toEqual([1, 0.85]);
+  });
+
+  // End-to-end guard for the reported RN crash: a keyframe authored with
+  // the `translate(x, y)` shorthand must assemble into a per-axis array
+  // (`translateX`/`translateY`), never the bare `translate` key RN rejects
+  // with "must have an array as the value".
+  it('assembles translate(x, y) shorthand into per-axis interpolations', () => {
+    const out = interpolateTransform(
+      fakeProgress as any,
+      'translate(26px, -12px)',
+      'translate(-30px, 16px)',
+      ['translateX', 'translateY'],
+      LINEAR,
+      300
+    );
+    expect(out).not.toBeNull();
+    expect(out!.map(readKind)).toEqual(['translateX', 'translateY']);
+    expect(out!.some(e => 'translate' in e)).toBe(false);
+    expect((out![0].translateX as FakeInterp).outputRange).toEqual([26, -30]);
+    expect((out![1].translateY as FakeInterp).outputRange).toEqual([-12, 16]);
   });
 
   it('morphs matched-kind transforms (translateX only)', () => {
