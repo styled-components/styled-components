@@ -437,21 +437,28 @@ function parseTransformString(s: string): TransformComponent[] {
  * RN accepts. parseFloat drops the unit; percentage translate stays
  * unsupported either way since RN's transforms take dp, not percentages.
  */
+function finiteOr(n: number, fallback: number): number {
+  return Number.isFinite(n) ? n : fallback;
+}
+
 function pushTransformComponents(out: TransformComponent[], kind: string, raw: string): void {
   if (kind === 'translate' || kind === 'translate3d') {
     const args = raw.split(',');
-    out.push({ kind: 'translateX', value: parseFloat(args[0]) || 0 });
-    out.push({ kind: 'translateY', value: args.length > 1 ? parseFloat(args[1]) || 0 : 0 });
+    out.push({ kind: 'translateX', value: finiteOr(parseFloat(args[0]), 0) });
+    out.push({ kind: 'translateY', value: finiteOr(parseFloat(args[1]), 0) });
     if (kind === 'translate3d' && args.length > 2) {
-      out.push({ kind: 'translateZ', value: parseFloat(args[2]) || 0 });
+      out.push({ kind: 'translateZ', value: finiteOr(parseFloat(args[2]), 0) });
     }
     return;
   }
   if (kind === 'scale' && raw.indexOf(',') !== -1) {
     const args = raw.split(',');
-    const x = parseFloat(args[0]);
+    // A missing/malformed axis falls back to the other (uniform), matching
+    // CSS `scale(n)`; an empty `scale(1,)` would otherwise yield NaN and
+    // crash RN's Animated outputRange.
+    const x = finiteOr(parseFloat(args[0]), 1);
     out.push({ kind: 'scaleX', value: x });
-    out.push({ kind: 'scaleY', value: args.length > 1 ? parseFloat(args[1]) : x });
+    out.push({ kind: 'scaleY', value: finiteOr(parseFloat(args[1]), x) });
     return;
   }
   out.push({ kind, value: parseTransformValue(kind, raw) });

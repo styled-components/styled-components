@@ -151,6 +151,38 @@ describe('parseTransformString', () => {
     `);
   });
 
+  // A malformed/omitted axis must fall back to the other axis (uniform),
+  // never NaN, since NaN in an Animated outputRange crashes RN at runtime.
+  it('falls back to uniform for a trailing-comma scale(x,)', () => {
+    expect(parseTransformString('scale(1,)')).toMatchInlineSnapshot(`
+      [
+        {
+          "kind": "scaleX",
+          "value": 1,
+        },
+        {
+          "kind": "scaleY",
+          "value": 1,
+        },
+      ]
+    `);
+  });
+
+  it('falls back to identity for a missing x in scale(,y)', () => {
+    expect(parseTransformString('scale(,2)')).toMatchInlineSnapshot(`
+      [
+        {
+          "kind": "scaleX",
+          "value": 1,
+        },
+        {
+          "kind": "scaleY",
+          "value": 2,
+        },
+      ]
+    `);
+  });
+
   // Regression guard: the previous /([A-Za-z]+)\s*\(\s*([^)]+?)\s*\)/g
   // shape exhibited polynomial backtracking. A user-authored value with
   // a long whitespace run and no closing paren — reachable from any
