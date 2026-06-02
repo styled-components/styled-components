@@ -1,5 +1,12 @@
 # styled-components
 
+## 6.4.3
+
+### Patch Changes
+
+- f692ec2: Fix a TypeScript error when wrapping a component whose props can't be statically read, such as Mantine v7's polymorphic-factory components (`Button`, `Card`, `Menu.Item`, and similar). These styled components no longer reject every prop, including `children`; arbitrary props are accepted again at the JSX call site and via `.attrs()`, while components with readable prop types stay fully type-checked.
+- f692ec2: Keep TypeScript attribute autocomplete working while you type props on a polymorphic styled component. When a component renders a different element through `as` (for example `as="video"`), beginning to type a new prop name could make the whole suggestion list vanish; the rendered element's props now keep autocompleting as you go.
+
 ## 6.4.2
 
 ### Patch Changes
