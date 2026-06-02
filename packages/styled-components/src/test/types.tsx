@@ -815,3 +815,103 @@ const ToggleWithAttrs = styled(ToggleBase).attrs({ isOpen: false })``;
 <ToggleWithAttrs />;
 // @ts-expect-error isOpen is boolean, not string
 <ToggleWithAttrs isOpen="yes" onToggle={() => {}} />;
+
+/**
+ * Wrapping a component whose props can't be statically introspected -- e.g.
+ * Mantine v7's polymorphic-factory components, whose generic callable signature
+ * makes `React.ComponentPropsWithRef` resolve to `{}` -- must stay permissive at
+ * the JSX call site rather than reject every prop including `children` (#5756).
+ *
+ * The synthetic factory below mirrors Mantine's exact shape: a generic callable
+ * intersected with `FunctionComponent` statics. Verified against real
+ * `@mantine/core@7` that this collapses `ComponentPropsWithRef` to `{}`.
+ */
+type FactoryExtendedProps<Props = {}, OverrideProps = {}> = OverrideProps &
+  Omit<Props, keyof OverrideProps>;
+type FactoryElementType = keyof React.JSX.IntrinsicElements | React.JSXElementConstructor<any>;
+type FactoryPropsOf<C extends FactoryElementType> = React.JSX.LibraryManagedAttributes<
+  C,
+  React.ComponentProps<C>
+>;
+type FactoryComponentProp<C> = { component?: C };
+type FactoryInheritedProps<C extends FactoryElementType, Props = {}> = FactoryExtendedProps<
+  FactoryPropsOf<C>,
+  Props
+>;
+type PolymorphicFactoryProps<C, Props = {}> = C extends React.ElementType
+  ? FactoryInheritedProps<C, Props & FactoryComponentProp<C>> & {
+      ref?: any;
+      renderRoot?: (props: any) => any;
+    }
+  : Props & { component: React.ElementType; renderRoot?: (props: Record<string, any>) => any };
+
+interface PolyButtonProps {
+  variant?: string;
+  color?: string;
+  children?: React.ReactNode;
+}
+type PolymorphicFactoryButton = (<C = 'button'>(
+  props: PolymorphicFactoryProps<C, PolyButtonProps>
+) => React.ReactElement) &
+  Omit<React.FunctionComponent<PolymorphicFactoryProps<any, PolyButtonProps>>, never> & {
+    extend: (p: any) => any;
+  };
+declare const PolyButton: PolymorphicFactoryButton;
+
+// The premise: this resolves to `{}` (no statically-known keys).
+type PolyButtonResolvedProps = React.ComponentPropsWithRef<typeof PolyButton>;
+const _polyPremise: keyof PolyButtonResolvedProps extends never ? true : false = true;
+
+const StyledPolyButton = styled(PolyButton)`
+  color: red;
+`;
+// Arbitrary props + children accepted (permissive fallback).
+<StyledPolyButton variant="filled" color="blue">
+  hi
+</StyledPolyButton>;
+<StyledPolyButton>just children</StyledPolyButton>;
+// `as` is still accepted. The fallback can't resolve the `as`-target's own props
+// though: a permissive prop bag is required to accept the unknown base props, and
+// that same bag types every key (including the target's) as the catch-all, so e.g.
+// `href` below is not anchor-checked. This is the unavoidable cost of having no
+// base type to substitute against -- an introspectable base keeps full `as` typing.
+<StyledPolyButton as="a" href="/x">
+  link
+</StyledPolyButton>;
+
+// `.attrs()` is permissive too for un-introspectable targets, so arbitrary keys
+// can be backfilled (matching the JSX call site).
+const PolyButtonWithAttrs = styled(PolyButton).attrs({ variant: 'filled', type: 'button' })``;
+<PolyButtonWithAttrs color="blue">hi</PolyButtonWithAttrs>;
+// Function-form attrs can read arbitrary props (typed `unknown`).
+styled(PolyButton).attrs(props => ({ 'data-variant': String(props.variant ?? '') }))``;
+// Introspectable targets keep strict `.attrs()` typing.
+declare const TypedAttrsComp: (props: { a: string }) => React.ReactElement;
+// @ts-expect-error -- `nope` is not a prop of the wrapped component
+styled(TypedAttrsComp).attrs({ nope: 1 })``;
+
+// A bare union of disjoint shapes is introspectable, even though `keyof` of the
+// union is `never`. It must stay strict, not fall into the permissive branch.
+type DisjointUnionProps = { a: string } | { b: string };
+declare const DisjointUnionComp: (props: DisjointUnionProps) => React.ReactElement;
+const StyledDisjointUnion = styled(DisjointUnionComp)`
+  color: red;
+`;
+<StyledDisjointUnion a="x" />;
+<StyledDisjointUnion b="y" />;
+// @ts-expect-error -- `nonsense` is on neither union member; widening must not fire
+<StyledDisjointUnion a="x" nonsense="y" />;
+
+// All-optional props have a non-`never` `keyof`, so they stay strict (the widen
+// fallback fires only when there are genuinely no known keys).
+declare const AllOptionalComp: (props: { a?: string }) => React.ReactElement;
+const StyledAllOptional = styled(AllOptionalComp)``;
+// @ts-expect-error -- unknown prop still rejected
+<StyledAllOptional nonsense="y" />;
+
+// A union with one empty member (`{} | { a }`) is still introspectable: not every
+// constituent is empty, so the distributed check must not widen it.
+declare const OneEmptyMemberComp: (props: {} | { a: string }) => React.ReactElement;
+const StyledOneEmpty = styled(OneEmptyMemberComp)``;
+// @ts-expect-error -- nonsense is on neither member
+<StyledOneEmpty nonsense="y" />;

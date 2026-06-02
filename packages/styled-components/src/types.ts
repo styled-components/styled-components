@@ -268,11 +268,38 @@ export interface PolymorphicComponent<
   ): React.JSX.Element;
 }
 
+/**
+ * Some wrapped targets can't be statically introspected and their props
+ * collapse to `{}` -- most notably polymorphic-factory components (e.g. Mantine
+ * v7's `Button`, `Card`, `Menu.Item`), whose generic callable signature defeats
+ * `React.ComponentPropsWithRef`. A closed `{}` would reject every prop at the JSX
+ * call site, including `children`. Falling back to a permissive prop bag keeps
+ * these components usable; targets with introspectable props are unchanged.
+ *
+ * Applied only to the JSX call surface (`PolymorphicComponent`), never to the
+ * statics (`IStyledStatics`, `defaultProps`), so internal code keeps the real
+ * `Props` and the widening can't leak past the call site.
+ *
+ * The "no known keys" test is distributed over `Props` first. `keyof` on a union
+ * intersects each member's keys, so a bare union of disjoint shapes (e.g.
+ * `{ a: string } | { b: string }`) has `keyof` of `never` despite being fully
+ * introspectable. Checking each constituent independently widens only when every
+ * member is truly empty.
+ */
+export type WidenUntypedProps<Props extends BaseObject> = (
+  Props extends unknown ? (keyof Props extends never ? true : false) : never
+) extends true
+  ? Props & { [key: string]: unknown }
+  : Props;
+
 export interface IStyledComponentBase<
   out R extends Runtime,
   in out Props extends BaseObject = BaseObject,
 >
-  extends PolymorphicComponent<R, Props>, IStyledStatics<R, Props>, StyledComponentBrand {
+  extends
+    PolymorphicComponent<R, WidenUntypedProps<Props>>,
+    IStyledStatics<R, Props>,
+    StyledComponentBrand {
   defaultProps?: (ExecutionProps & Partial<Props>) | undefined;
   toString: () => string;
 }
