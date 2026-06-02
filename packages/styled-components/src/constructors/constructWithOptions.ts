@@ -12,6 +12,7 @@ import {
   StyledTarget,
   Styles,
   Substitute,
+  WidenUntypedProps,
 } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
 import styledError from '../utils/error';
@@ -63,7 +64,12 @@ export interface Styled<
   attrs: <
     Props extends object = BaseObject,
     PrivateMergedProps extends object = Substitute<OuterProps, Props>,
-    PrivateAttrsArg extends Attrs<PrivateMergedProps> = Attrs<PrivateMergedProps>,
+    // Widen when the merged props are un-introspectable ({}) so attrs can backfill
+    // arbitrary keys on e.g. Mantine polymorphic-factory targets, matching the
+    // permissive JSX call site. Targets with known props are unaffected.
+    PrivateAttrsArg extends Attrs<WidenUntypedProps<PrivateMergedProps>> = Attrs<
+      WidenUntypedProps<PrivateMergedProps>
+    >,
     PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>,
   >(
     attrs: PrivateAttrsArg
@@ -129,7 +135,9 @@ export default function constructWithOptions<
   templateFunction.attrs = <
     Props extends object = BaseObject,
     PrivateMergedProps extends object = Substitute<OuterProps, Props>,
-    PrivateAttrsArg extends Attrs<PrivateMergedProps> = Attrs<PrivateMergedProps>,
+    PrivateAttrsArg extends Attrs<WidenUntypedProps<PrivateMergedProps>> = Attrs<
+      WidenUntypedProps<PrivateMergedProps>
+    >,
     PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>,
   >(
     attrs: PrivateAttrsArg
