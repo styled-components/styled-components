@@ -185,7 +185,7 @@ export interface IStyledStatics<
 export type PolymorphicComponentProps<
   R extends Runtime,
   BaseProps extends BaseObject,
-  AsTarget extends StyledTarget<R> | void,
+  AsTarget extends StyledTarget<R> | (BaseProps extends { as?: infer A } ? A : never) | void,
   ForwardedAsTarget extends StyledTarget<R> | void,
   // props extracted from "as"
   AsTargetProps extends BaseObject = AsTarget extends KnownTarget
@@ -213,6 +213,47 @@ export type PolymorphicComponentProps<
 >;
 
 /**
+ * Resolves the call-site props for one usage of a polymorphic component,
+ * branching on the supplied `as` / `forwardedAs` targets into the three prior
+ * overload shapes:
+ *  - `as` is a real render target (e.g. `as="video"`, `as={Component}`):
+ *    substitute that target's props and require `as`.
+ *  - no `as`, or `as` is the wrapped component's own non-target type (e.g.
+ *    Next.js Link's `as?: Url`): Substitute-free base props so ref callbacks
+ *    infer with spread props (#5687), the wrapped `as` type stays assignable and
+ *    optional (#5734), and BaseProps keys keep completing for plain usage (#5741).
+ *  - `forwardedAs` only: substitute the forwarded target's props.
+ *
+ * Extracted to a named alias so identical (R, BaseProps, AsTarget,
+ * ForwardedAsTarget) tuples dedupe across the many JSX call sites in an app.
+ *
+ * The target test is `string | AnyComponent`, not the broader `WebTarget`
+ * (`KnownTarget | (string & {})`): both describe the same set (any string or
+ * component), but comparing against the ~156 literal members of `KnownTarget`
+ * here costs ~6% more type instantiations across all call sites. Don't narrow it
+ * to bare `KnownTarget` -- that drops custom element strings (`as="my-element"`)
+ * out of the target branch and makes them error.
+ */
+type PolymorphicCallProps<
+  R extends Runtime,
+  BaseProps extends BaseObject,
+  AsTarget extends StyledTarget<R> | (BaseProps extends { as?: infer A } ? A : never) | void,
+  ForwardedAsTarget extends StyledTarget<R> | void,
+> = [AsTarget] extends [string | AnyComponent]
+  ? PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget> & { as: AsTarget }
+  : [ForwardedAsTarget] extends [void]
+    ? OverrideStyle<
+        NoInfer<FastOmit<BaseProps, keyof ExecutionProps>> &
+          FastOmit<ExecutionProps, 'as' | 'forwardedAs'> & {
+            as?: BaseProps extends { as?: infer A } ? A : void;
+            forwardedAs?: BaseProps extends { forwardedAs?: infer A } ? A : void;
+          }
+      >
+    : PolymorphicComponentProps<R, BaseProps, void, ForwardedAsTarget> & {
+        forwardedAs: ForwardedAsTarget;
+      };
+
+/**
  * This type forms the signature for a forwardRef-enabled component
  * that accepts the "as" prop to dynamically change the underlying
  * rendered JSX. The interface will automatically attempt to extract
@@ -233,38 +274,18 @@ export interface PolymorphicComponent<
     forwardedAs?: StyledTarget<R> | undefined;
   }
 > {
-  // Default overload (no `as`/`forwardedAs`) is listed first so TypeScript's JSX
-  // completion resolves to it for plain `<StyledComponent ... />` usage. The
-  // generic overloads below introduce unsolved type parameters that, when
-  // visited first, suppress JSX attribute name completions for keys carried by
-  // `BaseProps` (#5741). Avoids `Substitute` so ref callbacks get contextual
-  // typing even with spread props (#5687).
-  //
-  // `as` / `forwardedAs` here widen to also accept the wrapped component's own
-  // `as` / `forwardedAs` type when present (e.g. Next.js Link's `as?: Url`), so
-  // spreading the wrapped component's props onto the styled component remains
-  // assignable (#5734).
-  (
-    props: OverrideStyle<
-      NoInfer<FastOmit<BaseProps, keyof ExecutionProps>> &
-        FastOmit<ExecutionProps, 'as' | 'forwardedAs'> & {
-          as?: BaseProps extends { as?: infer A } ? A : void;
-          forwardedAs?: BaseProps extends { forwardedAs?: infer A } ? A : void;
-        }
-    >
-  ): React.JSX.Element;
-
-  // Overload for `as` polymorphism. `as` is required here to prevent TS from
-  // falling back to the constraint type (`StyledTarget<R>`) which is too wide.
-  <AsTarget extends StyledTarget<R>, ForwardedAsTarget extends StyledTarget<R> | void = void>(
-    props: PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget> & { as: AsTarget }
-  ): React.JSX.Element;
-
-  // Overload for `forwardedAs` polymorphism (without `as`).
-  <ForwardedAsTarget extends StyledTarget<R>>(
-    props: PolymorphicComponentProps<R, BaseProps, void, ForwardedAsTarget> & {
-      forwardedAs: ForwardedAsTarget;
-    }
+  // A single call signature (not several overloads) so JSX attribute completion
+  // never collapses while an attribute is mid-typed. With multiple overloads, a
+  // partially-typed or unknown attribute matches none of them, overload
+  // resolution fails, and completion drops to nothing; one signature always
+  // resolves, so the rendered target's props keep autocompleting. The branching
+  // that preserves the prior overload shapes lives in `PolymorphicCallProps`.
+  <
+    AsTarget extends StyledTarget<R> | (BaseProps extends { as?: infer A } ? A : never) | void =
+      void,
+    ForwardedAsTarget extends StyledTarget<R> | void = void,
+  >(
+    props: PolymorphicCallProps<R, BaseProps, AsTarget, ForwardedAsTarget>
   ): React.JSX.Element;
 }
 
