@@ -113,13 +113,7 @@ function useInjectedStyle<T extends ExecutionContext>(
   styleSheet: StyleSheet,
   compiler: Compiler
 ): string {
-  const className = webStyle.flush(resolvedAttrs, styleSheet, compiler);
-
-  if (__DEV__ && React.useDebugValue) {
-    React.useDebugValue(className);
-  }
-
-  return className;
+  return webStyle.flush(resolvedAttrs, styleSheet, compiler);
 }
 
 /**
@@ -572,12 +566,13 @@ function useImpl<Props extends BaseObject>(
     if (IS_RSC) {
       generatedStyle = rscFlush(webStyle, context, ssc.styleSheet, ssc.compiler);
       generatedClassName = generatedStyle.className;
-      if (__DEV__ && React.useDebugValue) {
-        React.useDebugValue(generatedClassName);
-      }
     } else {
       generatedClassName = useInjectedStyle(webStyle, context, ssc.styleSheet, ssc.compiler);
     }
+  }
+
+  if (__DEV__ && React.useDebugValue) {
+    React.useDebugValue(generatedClassName);
   }
 
   if (__DEV__ && forwardedComponent.warnTooManyClasses) {
