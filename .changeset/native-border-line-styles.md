@@ -2,4 +2,4 @@
 'styled-components': patch
 ---
 
-Fixes border line styles on React Native: `hidden` acts like no border, repeated sides collapse without noise, mixed sides keep the first drawable style with a development warning, and unsupported keywords such as `double` are ignored instead of rendering as the wrong border. Web builds keep CSS border styles as authored.
+Border line styles are supported on React Native: `hidden` acts like no border, repeated sides collapse quietly, and mixed sides keep the first drawable style with a development warning. Keywords React Native can't draw, such as `double`, are not supported on native and are ignored. Web builds keep CSS border styles as authored.

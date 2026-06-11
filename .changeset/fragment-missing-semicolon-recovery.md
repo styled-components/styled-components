@@ -2,9 +2,7 @@
 'styled-components': patch
 ---
 
-A `css\`\`\``fragment placed after a declaration that was missing its trailing`;` is now treated as a sibling block instead of being silently swallowed into the prior value.
-
-Before, this composition would render with broken styles because the `${...}` fragment was absorbed into the `margin` value:
+A `css\`\`\``fragment placed after a declaration that is missing its trailing`;` is treated as a sibling block:
 
 ```jsx
 const Box = styled.View`
@@ -13,4 +11,4 @@ const Box = styled.View`
 `;
 ```
 
-The fragment now reliably promotes to a sibling, so the declaration above behaves the same as if you had written `margin: 0 10px; color: red;`. Value-position fragments (`border: ${frag};`) are unaffected.
+The fragment promotes to a sibling, so the declaration above behaves the same as if you had written `margin: 0 10px; color: red;`. Value-position fragments (`border: ${frag};`) interpolate into the value as usual.

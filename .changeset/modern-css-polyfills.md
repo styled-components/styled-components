@@ -2,7 +2,7 @@
 'styled-components': minor
 ---
 
-Modern CSS functions now work in React Native styles. Values that can be calculated immediately are converted before they reach React Native, while values that depend on the device, like viewport size, safe area, container size, or color scheme, update when those inputs change.
+React Native: modern CSS functions are supported in styles. Values that can be calculated immediately are converted before they reach React Native, while values that depend on the device, like viewport size, safe area, container size, or color scheme, update when those inputs change.
 
 ```tsx
 import styled from 'styled-components/native';
@@ -27,10 +27,10 @@ const Card = styled.View`
 - Container query units `cqw` / `cqh` / `cqmin` / `cqmax` scale to the nearest ancestor container.
 - `light-dark(light, dark)` swaps based on OS appearance.
 - `env(safe-area-inset-top | right | bottom | left)` reads from the device safe area.
-- Logical shorthands `margin-inline`, `margin-block`, `padding-inline`, `padding-block`, `inset-inline`, `inset-block` work as authored.
+- Logical shorthands `margin-inline`, `margin-block`, `padding-inline`, `padding-block`, `inset-inline`, `inset-block` apply as authored.
 - `line-clamp: N` truncates to N lines.
 - `&:is(:hover, :focus)` and `&:where(:pressed, :disabled)` apply the styles to each listed state.
 - `@media (min-aspect-ratio: 16/9)`, `(max-aspect-ratio: 1/1)`, and exact `(aspect-ratio: 4/3)` match the device's current width-to-height ratio. Bare numbers are treated like `<n>/1`, matching browser behavior.
 - `@starting-style { ... }` declarations apply on first mount: the starting values are the initial state and any transitions on the same component animate from there toward the resolved values.
 
-Features React Native does not yet support (`position: fixed`, `position: sticky`, `backdrop-filter`, 3D transforms, `text-shadow`, scroll-snap, view-transitions, form-state selectors, and more) are listed in the "React Native CSS Features" compatibility tracker maintained alongside the library.
+The full, current support matrix for CSS on React Native lives at https://styled-components.com/docs/compatibility.

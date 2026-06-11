@@ -2,7 +2,7 @@
 'styled-components': major
 ---
 
-React Native: `createTheme()` now works exactly the way it does on web. Pass the returned object to `ThemeProvider`, reference leaves in your styled components, and the current theme resolves automatically.
+React Native: `createTheme()` works the same way it does on the web. Pass the returned object to `ThemeProvider`, reference leaves in your styled components, and the current theme resolves automatically.
 
 ```tsx
 import styled, { createTheme, ThemeProvider } from 'styled-components/native';
@@ -21,4 +21,4 @@ const Card = styled.View`
 </ThemeProvider>;
 ```
 
-Nested `ThemeProvider`s on React Native deep-merge their theme objects so an inner override that only touches one leaf keeps the siblings it inherited; a child provider that sets `colors.text` keeps `colors.bg` from the ancestor. Web behavior is unchanged.
+Nested `ThemeProvider`s on React Native deep-merge their theme objects so an inner override that only touches one leaf keeps the siblings it inherited; a child provider that sets `colors.text` keeps `colors.bg` from the ancestor. Behavior on the web is unchanged.

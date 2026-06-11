@@ -2,7 +2,7 @@
 'styled-components': major
 ---
 
-Styled components no longer honor `defaultProps`. React 19 removed `defaultProps` support from function components, so styled components can no longer inherit a parent's `defaultProps` either.
+A styled component does not honor `defaultProps`, and it does not inherit a wrapped component's `defaultProps`. React 19 removed `defaultProps` support from function components.
 
 Migration: use `.attrs()` for prop defaults. The object form always wins over user-provided props (this is intentional, see the attrs FAQ). The function form lets user-provided props override the default:
 

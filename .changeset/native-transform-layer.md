@@ -2,15 +2,15 @@
 'styled-components': major
 ---
 
-React Native: CSS-to-style-object translation is now built in. Several long-standing limitations go away on the native path.
+React Native: CSS-to-style-object translation is built in. The native path supports a broad set of modern CSS:
 
-- `transform: matrix(...)` / `matrix3d(...)` work.
-- `transform: translateX(10)` (bare number, no unit) works.
-- `background-image: linear-gradient(...)` / `radial-gradient(...)` work.
-- `filter: blur(4px) saturate(1.5)` and the full filter-function chain work.
-- Modern color notations pass through to React Native's color parser unchanged: `rgb(r g b / a)` slash-alpha, `hwb()`, `hsl()` all work.
-- `box-shadow` with spread and inset pass through as CSS strings.
-- `mix-blend-mode`, `isolation`, `cursor` flow through.
+- `transform: matrix(...)` / `matrix3d(...)`.
+- `transform: translateX(10)` (bare number, no unit).
+- `background-image: linear-gradient(...)` / `radial-gradient(...)`.
+- `filter: blur(4px) saturate(1.5)` and the full filter-function chain.
+- Modern color notations: `rgb(r g b / a)` slash-alpha, `hwb()`, `hsl()`.
+- `box-shadow` with spread and inset.
+- `mix-blend-mode`, `isolation`, `cursor`.
 
 ```tsx
 import styled from 'styled-components/native';
@@ -23,6 +23,8 @@ const Tile = styled.View`
 `;
 ```
 
-`border: none` no longer emits `border-style: solid` on native; it now emits `border-style: none` to match the rest of the ecosystem.
+`border: none` emits `border-style: none` on native, matching the rest of the ecosystem.
 
-iOS setup note for filters: in React Native 0.85, the `filter` primitives `blur`, `saturate`, `hue-rotate`, `grayscale`, `contrast`, and `drop-shadow` only render when your iOS app opts into the SwiftUI-based filter backend. Set `ReactNativeReleaseLevel` to `experimental` in your iOS `Info.plist` (or `ios.infoPlist` in `app.json` for Expo) to enable it. `brightness` and `opacity` work without this flag.
+`text-decoration: underline` without a color follows the text color, matching CSS's `currentcolor` initial value; an authored color still applies (on iOS and the web; Android always paints decorations in the text color and warns in development when a color is authored).
+
+iOS setup note for filters: in React Native 0.85, the `filter` primitives `blur`, `saturate`, `hue-rotate`, `grayscale`, `contrast`, and `drop-shadow` only render when your iOS app opts into the SwiftUI-based filter backend. Set `ReactNativeReleaseLevel` to `experimental` in your iOS `Info.plist` (or `ios.infoPlist` in `app.json` for Expo) to enable it. `brightness` and `opacity` are supported without this flag.

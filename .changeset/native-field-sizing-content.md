@@ -15,6 +15,6 @@ const Note = styled.TextInput`
 <Note placeholder="Start typing…" />;
 ```
 
-The field grows in height as the user types, no controlled height state, no `onContentSizeChange` wiring. Pass `multiline={false}` explicitly to keep a fixed single-line field (a dev-time message points out that autosize is off in that case).
+The field grows in height as the user types, no controlled height state, no `onContentSizeChange` wiring. Pass `multiline={false}` explicitly to keep a fixed single-line field (a development warning points out that autosize is off in that case).
 
-On `react-native-web` the declaration is handed straight to the browser, which has supported `field-sizing` natively since Chrome 123.
+On react-native-web the declaration is handed straight to the browser, which has supported `field-sizing` natively since Chrome 123.

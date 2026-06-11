@@ -2,7 +2,7 @@
 'styled-components': minor
 ---
 
-React Native: CSS `transition`, `@keyframes`, and `@starting-style` now animate.
+React Native: CSS `transition`, `@keyframes`, and `@starting-style` animate.
 
 ```jsx
 const fade = keyframes`

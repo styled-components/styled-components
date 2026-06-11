@@ -2,7 +2,7 @@
 'styled-components': patch
 ---
 
-Fixed plain objects with a custom `toString()` being expanded as CSS-property blocks instead of stringified. Useful for design-token shapes where the token resolves to a default value but also carries alternate sub-values:
+A plain object with a custom `toString()` interpolated into a template stringifies via that method rather than expanding its keys as a CSS-property block. Useful for design-token shapes where the token resolves to a default value but also carries alternate sub-values:
 
 ```ts
 const ink = {

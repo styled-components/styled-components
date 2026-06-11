@@ -2,7 +2,7 @@
 'styled-components': minor
 ---
 
-React Native: descendant and child combinator selectors now work across styled components.
+React Native: descendant and child combinator selectors are supported across styled components.
 
 ```jsx
 const Card = styled.View`
@@ -23,4 +23,4 @@ const Title = styled.Text`
 
 The descendant form `${Card} &` matches whenever the component is rendered anywhere inside `Card`. The child form `${Card} > &` only matches when `Card` is the nearest styled parent. Regular React Native components can sit between styled components without breaking selector matching.
 
-The same selectors also work on web. This also fixes a web bug where `${Component} { ... }` rules placed after another declaration could lose the component selector and target too broadly.
+The same selectors are supported on the web. This also fixes a web bug where `${Component} { ... }` rules placed after another declaration could lose the component selector and target too broadly.

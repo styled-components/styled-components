@@ -2,4 +2,4 @@
 'styled-components': patch
 ---
 
-Fixes React Native spec-compliance edge cases in the `place-content` shorthand. `start`, `end`, and `space-evenly` now match CSS Box Alignment behavior.
+React Native: the `place-content` shorthand is supported. `start`, `end`, and `space-evenly` match CSS Box Alignment behavior on iOS, Android, and react-native-web.

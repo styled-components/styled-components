@@ -15,4 +15,4 @@ const Icon = styled(Path).attrs((_props, ast) => ({
 `;
 ```
 
-Both methods take an optional fallback as the second argument, returned when the value is missing. Works on web and native, with no per-render overhead when the callback resolves entirely from static declarations.
+Both methods take an optional fallback as the second argument, returned when the value is missing. Supported on the web and React Native, with no per-render overhead when the callback resolves entirely from static declarations.

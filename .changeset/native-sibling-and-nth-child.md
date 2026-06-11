@@ -2,7 +2,7 @@
 'styled-components': minor
 ---
 
-React Native: sibling combinator selectors and the `:nth-child` family now work.
+React Native: sibling combinator selectors and the `:nth-child` family are supported.
 
 ```jsx
 const Card = styled.View`
