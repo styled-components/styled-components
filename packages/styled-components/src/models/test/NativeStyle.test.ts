@@ -1562,6 +1562,38 @@ describe('NativeStyle class;compile() fast-paths', () => {
     });
   });
 
+  describe('anchor-subscription gate (usesAnchorFunctions)', () => {
+    it('flags anchor() in static string parts', () => {
+      const inline = new NativeStyle(['top: anchor(--hero bottom);'] as any);
+      expect(inline.usesAnchorFunctions).toBe(true);
+    });
+
+    it('flags anchor-size() in static string parts', () => {
+      const inline = new NativeStyle(['width: anchor-size(--hero width);'] as any);
+      expect(inline.usesAnchorFunctions).toBe(true);
+    });
+
+    it('does not flag static rules without an anchor function', () => {
+      const inline = new NativeStyle(['top: 10px; left: 20px;'] as any);
+      expect(inline.usesAnchorFunctions).toBe(false);
+    });
+
+    // A function interpolation is opaque at construction time, so it may
+    // return an anchor() value. The gate conservatively subscribes so the
+    // component re-resolves when an anchor rect moves.
+    it('conservatively flags a function interpolation', () => {
+      const fn = () => 'anchor(--hero bottom)';
+      const inline = new NativeStyle(['top: ', fn, ';'] as any);
+      expect(inline.usesAnchorFunctions).toBe(true);
+    });
+
+    it('conservatively flags a function nested in an array', () => {
+      const fn = () => '10px';
+      const inline = new NativeStyle([['top: ', fn, ';']] as any);
+      expect(inline.usesAnchorFunctions).toBe(true);
+    });
+  });
+
   describe('dynamic same-CSS dedup', () => {
     it('returns the same compiled result across calls when function output is stable', () => {
       // Function returns the same value regardless of context;common with

@@ -90,7 +90,7 @@ function gridColumnHandler(tokens: Token[], rawValue: string): Dict<any> | null 
     warnOnce(
       'native-grid-placement-unsupported',
       `the \`grid-column\` value "${rawValue}" is not supported on React Native. Only \`grid-column: span N\` (integer N >= 1) is implemented; line numbers, named lines, \`grid-row\`, and \`grid-area\` are not. The declaration was ignored.`,
-      rawValue
+      `grid-column:${rawValue}`
     );
   }
   return {};
@@ -106,7 +106,7 @@ function gridPlacementUnsupportedHandler(
     warnOnce(
       'native-grid-placement-unsupported',
       `the \`${cssName}\` property is not supported on React Native. Place grid items with \`grid-column: span N\` (integer N >= 1) instead. The declaration was ignored.`,
-      rawValue
+      `${cssName}:${rawValue}`
     );
   }
   return {};

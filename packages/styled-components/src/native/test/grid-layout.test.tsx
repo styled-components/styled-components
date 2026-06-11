@@ -154,6 +154,24 @@ describe('display: grid subset spec compliance (CSS Grid 2)', () => {
       }
     });
 
+    // Different placement properties that share the same raw value must
+    // each warn. A dedupe suffix of the bare value would collapse
+    // `grid-column: 1`, `grid-row: 1`, and `grid-area: 1` into one warning.
+    it('warns per placement property even when values collide', () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        expect(transformDecl('grid-column', '1')).toEqual({});
+        expect(transformDecl('grid-row', '1')).toEqual({});
+        expect(transformDecl('grid-area', '1')).toEqual({});
+        const messages = warnSpy.mock.calls.map(c => String(c[0]));
+        expect(messages.some(m => m.includes('`grid-column` value "1"'))).toBe(true);
+        expect(messages.some(m => m.includes('`grid-row` property is not supported'))).toBe(true);
+        expect(messages.some(m => m.includes('`grid-area` property is not supported'))).toBe(true);
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
+
     // §8.5 grid-auto-flow controls the auto-placement direction; `row`
     // is the initial value and the only flow the subset implements.
     it('accepts `grid-auto-flow: row` as a no-op', () => {

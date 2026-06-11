@@ -52,8 +52,15 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
       synthesizeSourceForRuleSet(rules);
       this.staticCSS = isAllStaticStrings(rules) ? joinStringRules(rules) : null;
       // Gates the anchor-registry subscription in the dynamic render
-      // path; lifetime-constant so the hook branch is stable.
-      if (!__NATIVE_WEB__ && ANCHOR_FN_RE.test(joinStringRules(rules, '\n'))) {
+      // path; lifetime-constant so the hook branch is stable. Function
+      // interpolations are opaque at construction time and may return an
+      // anchor() value, so they conservatively enable the subscription;
+      // otherwise such a component would never re-resolve when an anchor
+      // rect moves.
+      if (
+        !__NATIVE_WEB__ &&
+        (ANCHOR_FN_RE.test(joinStringRules(rules, '\n')) || hasFunctionInterpolation(rules))
+      ) {
         this.usesAnchorFunctions = true;
       }
       if (this.staticCSS !== null) {
@@ -178,6 +185,15 @@ function isAllStaticStrings(rules: ReadonlyArray<unknown>): boolean {
     return false;
   }
   return true;
+}
+
+function hasFunctionInterpolation(rules: ReadonlyArray<unknown>): boolean {
+  for (let i = 0; i < rules.length; i++) {
+    const r = rules[i];
+    if (typeof r === 'function') return true;
+    if (Array.isArray(r) && hasFunctionInterpolation(r)) return true;
+  }
+  return false;
 }
 
 function joinStringRules(rules: ReadonlyArray<unknown>, separator = ''): string {
