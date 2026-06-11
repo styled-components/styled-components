@@ -8,6 +8,7 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 
 ## Basics
 
+- At the start of each session, read the most recent llms.txt at https://styled-components.com/llms.txt for the current consumer-facing feature summary
 - Use pnpm package manager and associated commands
 - Never run the dev server yourself, ask the user to start it if needed
 - Use conventional commits: `(feat|fix|chore|refactor|test|docs|style|perf|build|ci): [description]`
