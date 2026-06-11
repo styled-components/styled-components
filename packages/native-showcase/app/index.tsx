@@ -56,22 +56,35 @@ function buildCatalog(): {
   return { rows, anchorIndex, categories, jumpList };
 }
 
-const renderRow: ListRenderItem<CatalogRow> = ({ item }) => {
-  if (item.kind === 'category') {
-    return (
-      <CategoryBlock>
-        <CategoryHeading>{item.category}</CategoryHeading>
-        <CategoryRule />
-      </CategoryBlock>
-    );
-  }
-  const f = item.entry;
+// Each cell is memoized on its stable row identity (the rows array is
+// built once). FlatList re-renders cells for its own bookkeeping
+// (viewability, scroll position, removeClippedSubviews remounts); without
+// a memo boundary every such pass would re-render the live widget subtree
+// underneath, which is what trips VirtualizedList's slow-update warning
+// since the widgets run real timers and Animated loops.
+const CategoryCell = React.memo(function CategoryCell({ category }: { category: FidgetCategory }) {
   return (
-    <WidgetCase slug={f.slug} title={f.title} brief={f.summary} feature={f.feature}>
-      <f.Widget />
+    <CategoryBlock>
+      <CategoryHeading>{category}</CategoryHeading>
+      <CategoryRule />
+    </CategoryBlock>
+  );
+});
+
+const FidgetCell = React.memo(function FidgetCell({ entry }: { entry: FidgetEntry }) {
+  return (
+    <WidgetCase slug={entry.slug} title={entry.title} brief={entry.summary} feature={entry.feature}>
+      <entry.Widget />
     </WidgetCase>
   );
-};
+});
+
+const renderRow: ListRenderItem<CatalogRow> = ({ item }) =>
+  item.kind === 'category' ? (
+    <CategoryCell category={item.category} />
+  ) : (
+    <FidgetCell entry={item.entry} />
+  );
 
 const keyExtractor = (item: CatalogRow): string =>
   item.kind === 'category' ? `cat:${item.category}` : `fid:${item.entry.slug}`;

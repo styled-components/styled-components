@@ -560,11 +560,29 @@ export function ScreenScaffold<Item>({
     listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0 });
   }, []);
 
+  const jumpRevealTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  React.useEffect(
+    () => () => {
+      if (jumpRevealTimerRef.current) clearTimeout(jumpRevealTimerRef.current);
+    },
+    []
+  );
+
   const handleSlugJump = React.useCallback(
     (slug: string) => {
       const idx = anchorIndex?.get(slug);
       if (idx === undefined) return;
       restoreTargetRef.current = idx;
+      // Far targets aren't measured under virtualization, so the jump
+      // resolves as estimate-hop + measured retry over a few frames,
+      // which reads as a rapid scrub. Hide the list for the hop
+      // sequence; the viewability callback reveals the moment the
+      // target row is on-screen, so the jump reads as a teleport. The
+      // timer is the safety reveal for the already-on-target no-op
+      // case, where no viewability change ever fires.
+      setHidden(true);
+      if (jumpRevealTimerRef.current) clearTimeout(jumpRevealTimerRef.current);
+      jumpRevealTimerRef.current = setTimeout(() => setHidden(false), 450);
       listRef.current?.scrollToIndex({ index: idx, animated: false, viewPosition: 0 });
     },
     [anchorIndex]

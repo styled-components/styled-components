@@ -14,15 +14,16 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ThemeProvider } from 'styled-components/native';
+import { setAnimationDebug, ThemeProvider } from 'styled-components/native';
 import { FpsMeter } from '@/components/FpsMeter';
 import { darkTheme, lightTheme } from '@/theme/tokens';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
-// To enable animation adapter logging, import `setAnimationDebug` from
-// `styled-components/native` and call `setAnimationDebug(true)` once.
-// Logs are tagged `[sc/anim]` for greppable filtering in Metro.
+// Scroll timeline attach + position: sticky outcome logging, tagged
+// `[sc/anim]`, one line per scroller. Dev builds only. Pass `true`
+// instead for the full (very chatty) animation adapter trace.
+if (__DEV__) setAnimationDebug('timeline');
 
 function ThemedStack() {
   const scheme = useColorScheme() ?? 'light';

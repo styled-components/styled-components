@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import styled from 'styled-components/native';
 import { theme as t } from '@/theme/tokens';
 import { InlineMarkdown } from '../components/Markdown';
@@ -129,25 +129,26 @@ const SwatchBase = styled.View`
   height: 48px;
 `;
 
-/* :active also flips background-color so iOS users can see the bucket
-   fired (the color demo's intended outcome is "no change"). */
+/* The !important contest plays out on the Pressable's own background
+   so it stays visible in both color schemes: the :active bucket's
+   normal background-color loses to the base !important, while the
+   bucket's opacity drop proves the press actually fired. */
 const PressedNormal = styled.Pressable`
-  color: tomato !important;
+  align-self: flex-start;
+  background-color: tomato !important;
   padding: ${t.space.xs}px ${t.space.sm}px;
-  background-color: ${t.colors.surfaceMuted};
   &:active {
-    background-color: ${t.colors.border};
-    color: royalblue;
+    background-color: royalblue;
+    opacity: 0.5;
   }
 `;
 const PressedLabel = styled.Text`
   font-family: ${t.fontFamily.monoStrong};
   font-size: ${t.fontSize.body}px;
-  color: inherit;
+  color: white;
 `;
 
 export function ImportantBoard() {
-  const [, setNow] = useState(0);
   return (
     <Stack>
       <Row>
@@ -211,12 +212,12 @@ export function ImportantBoard() {
       <Row>
         <Tag>pseudo bucket</Tag>
         <Frame>
-          <PressedNormal onPress={() => setNow(n => n + 1)}>
-            <PressedLabel>press me</PressedLabel>
+          <PressedNormal>
+            <PressedLabel>press and hold</PressedLabel>
           </PressedNormal>
         </Frame>
         <InlineMarkdown variant="brief">
-          {`Press the box. The \`:active\` bucket declares \`color: royalblue\` as a normal value; the base \`color: tomato !important\` overrides. The label stays tomato even while pressed.`}
+          {`Press and hold the box. The \`:active\` bucket declares \`background-color: royalblue\` as a normal value plus \`opacity: 0.5\`; the box dims (the bucket fired) but the base \`background-color: tomato !important\` keeps the fill tomato.`}
         </InlineMarkdown>
       </Row>
     </Stack>

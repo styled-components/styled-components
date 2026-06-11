@@ -321,8 +321,16 @@ const Stage = styled.View`
   justify-content: center;
   overflow: visible;
   perspective: 1200px;
-  /* saturate rebuilds intensity that the per-face soft-light blend dims. */
-  filter: saturate(1.4);
+  /* The faces must blend against EACH OTHER, not the page background
+     (soft-light over the pale page washes the solid to pastel), so the
+     blend group is scoped here. It cannot sit on SceneOrigin: isolation
+     is a grouping value (CSS Transforms 2) and would force that node's
+     preserve-3d to compute to flat, collapsing the 3D face placement on
+     web. No filter here either: a mounted gated filter function (e.g.
+     saturate) disables descendant mix-blend-mode compositing entirely on
+     iOS at RN 0.85's default release level, flattening every face
+     opaque. */
+  isolation: isolate;
   /* Cursor + selection guards stay scoped to mouse / trackpad inputs so
      iOS / Android touch surfaces don't try to compile a :active bucket
      on a non-Pressable View (which can drop the static rule and collapse
@@ -342,7 +350,8 @@ const SceneOrigin = styled.View`
   width: 0;
   height: 0;
   /* z-index: auto escapes rn-web's default View stacking context so
-     descendant mix-blend-mode reaches the page backdrop. */
+     descendant mix-blend-mode reaches the scene backdrop. No isolation
+     here: it would force preserve-3d to flat (grouping value). */
   z-index: auto;
   transform-style: preserve-3d;
 `;
@@ -711,6 +720,12 @@ export function PlatonicLogo() {
   // When set, a collapse → expand animation is in flight: the "from" solid
   // shrinks to origin, the "to" solid expands back out. Cleared on completion.
   const transitionRef = useRef<TransitionState | null>(null);
+  // Painter's z-sort cache. zIndex is assigned by depth RANK (0..n-1) and the
+  // ranks array is rebuilt only when the depth order actually changes. Fabric
+  // sorts real subview order by zIndex, so a fresh zIndex value on every rAF
+  // tick (the old `round(z * 100)` scheme) forced reorder mounting ops on
+  // every face every frame; rank values hold steady between order flips.
+  const zRanksRef = useRef<{ key: string; ranks: number[] }>({ key: '', ranks: [] });
 
   // User-controllable settings, persisted to AsyncStorage on change.
   // `restored` gates writes so the first paint doesn't echo defaults back
@@ -953,6 +968,27 @@ export function PlatonicLogo() {
   // Constant during transition; the matrix scale handles shrinking.
   const facePixelSize = SOLID_SIDE[renderSolidIdx] * SOLID_RADIUS_PX;
 
+  // Compose all face matrices first so the depth sort can run over the full
+  // set before any JSX is produced.
+  const composedMats = faces.map((face, i) => {
+    // Use the cached static matrix only when no transition is running.
+    // During transitions, scale varies frame-to-frame so we rebuild.
+    const localMat = trans ? buildScaledLocalMat(face, scale) : ALL_LOCAL_MATS[renderSolidIdx][i];
+    return mat4Mul(parentMat, localMat);
+  });
+  const depthOrder = composedMats
+    .map((_, i) => i)
+    .sort((a, b) => composedMats[a][14] - composedMats[b][14]);
+  const orderKey = depthOrder.join(',');
+  if (zRanksRef.current.key !== orderKey) {
+    const ranks = new Array<number>(depthOrder.length);
+    for (let rank = 0; rank < depthOrder.length; rank++) {
+      ranks[depthOrder[rank]] = rank;
+    }
+    zRanksRef.current = { key: orderKey, ranks };
+  }
+  const zRanks = zRanksRef.current.ranks;
+
   return (
     <HeroColumn>
       <Controls $visible={controlsVisible}>
@@ -986,14 +1022,13 @@ export function PlatonicLogo() {
         </CtrlBtn>
       </Controls>
       <Stage {...responder.panHandlers}>
+        {/* No collapsable={false} on SceneOrigin: forcing it to
+            materialize shatters face positioning on iOS after Fast
+            Refresh (recycled host views keep stale transform state).
+            Stage's isolation: isolate already scopes the blend group on
+            every platform via the library's Android layer lift. */}
         <SceneOrigin>
           {faces.map((face, i) => {
-            // Use the cached static matrix only when no transition is running.
-            // During transitions, scale varies frame-to-frame so we rebuild.
-            const localMat = trans
-              ? buildScaledLocalMat(face, scale)
-              : ALL_LOCAL_MATS[renderSolidIdx][i];
-            const composed = mat4Mul(parentMat, localMat);
             // Painter's z-sort: faces farther from the camera (more negative
             // resolved z) get lower zIndex so closer faces draw on top. On
             // native this also approximates depth ordering since transforms
@@ -1001,13 +1036,12 @@ export function PlatonicLogo() {
             // perspective on Stage/SceneOrigin/FaceWrapper let the browser
             // composite in real 3D and the soft-light blend reads through to
             // the rear faces - no JS backface cull needed.
-            const z = composed[14];
             return (
               <FaceWrapper
                 key={i}
                 style={{
-                  transform: [{ matrix: composed }],
-                  zIndex: Math.round(z * 100) + 1000,
+                  transform: [{ matrix: composedMats[i] }],
+                  zIndex: zRanks[i],
                 }}
                 pointerEvents="none"
               >

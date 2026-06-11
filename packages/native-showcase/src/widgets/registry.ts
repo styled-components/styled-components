@@ -1,6 +1,8 @@
 import { ComponentType } from 'react';
 import { AccentColorBoard } from './AccentColorBoard';
+import { AnchoredTooltip } from './AnchoredTooltip';
 import { AspectRatioGallery } from './AspectRatioGallery';
+import { AttrDrivenSizing } from './AttrDrivenSizing';
 import { AttributeVariants } from './AttributeVariants';
 import { BackgroundBlendStudio } from './BackgroundBlendStudio';
 import { BackgroundShorthandBoard } from './BackgroundShorthandBoard';
@@ -9,6 +11,7 @@ import { BoxSizingHyphensBoard } from './BoxSizingHyphensBoard';
 import { CaretColorBoard } from './CaretColorBoard';
 import { ColorFunctionsLab } from './ColorFunctionsLab';
 import { CompositeRules } from './CompositeRules';
+import { CornerShapeBoard } from './CornerShapeBoard';
 import { ContainerQueryCard } from './ContainerQueryCard';
 import { ContainerUnitsKnob } from './ContainerUnitsKnob';
 import { CssVariablesBoard } from './CssVariablesBoard';
@@ -18,6 +21,7 @@ import { FieldSizingBoard } from './FieldSizingBoard';
 import { FilterStack } from './FilterStack';
 import { GradientPalette } from './GradientPalette';
 import { GridLayoutBoard } from './GridLayoutBoard';
+import { GridTiles } from './GridTiles';
 import { InteractivityBoard } from './InteractivityBoard';
 import { KeyframeOrchestra } from './KeyframeOrchestra';
 import { LightDarkSwatch } from './LightDarkSwatch';
@@ -27,10 +31,13 @@ import { MediaRangeBars } from './MediaRangeBars';
 import { ObjectFitBoard } from './ObjectFitBoard';
 import { PlaceShelf } from './PlaceShelf';
 import { PressInteractive } from './PressInteractive';
+import { PropertyRegistration } from './PropertyRegistration';
 import { RelativeUnitsScale } from './RelativeUnitsScale';
+import { ScrollStory } from './ScrollStory';
 import { ScrollSurfacesBoard } from './ScrollSurfacesBoard';
 import { SelectorComboBoard } from './SelectorComboBoard';
 import { SiblingNthBoard } from './SiblingNthBoard';
+import { SnapCarousel } from './SnapCarousel';
 import { HasSelectorBoard } from './HasSelectorBoard';
 import { ImportantBoard } from './ImportantBoard';
 import { ReducedMotionBeacon } from './ReducedMotionBeacon';
@@ -45,6 +52,7 @@ import { TextWrapShelf } from './TextWrapShelf';
 import { ThemeOverrides } from './ThemeOverrides';
 import { TransformPlayground } from './TransformPlayground';
 import { TransitionGallery } from './TransitionGallery';
+import { TreeCountingStaircase } from './TreeCountingStaircase';
 import { TypeFeaturesShelf } from './TypeFeaturesShelf';
 import { ViewportUnitsRibbon } from './ViewportUnitsRibbon';
 
@@ -158,6 +166,15 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     Widget: StandaloneTransforms,
   },
   {
+    slug: 'corner-shape-board',
+    title: 'Corner shapes',
+    summary:
+      '`corner-shape: squircle` maps to the Apple smooth corner (iOS `borderCurve: continuous`); overlapping round vs squircle squares expose the smoothing delta as corner crescents. `superellipse(2)` joins it; `scoop` has no native contour, warns, and renders default corners (Chrome 139+ scoops it).',
+    feature: 'corner-shape',
+    category: 'Visual effects',
+    Widget: CornerShapeBoard,
+  },
+  {
     slug: 'transition-gallery',
     title: 'Transitions · property matrix',
     summary:
@@ -174,6 +191,42 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     feature: '@keyframes · animation',
     category: 'Animation',
     Widget: KeyframeOrchestra,
+  },
+  {
+    slug: 'property-registration',
+    title: '@property registration',
+    summary:
+      'Registered custom properties: the first bar paints and sizes purely from `@property` initial values (no declarations exist anywhere), and an `inherits: false` registration ignores a loud parent override while its inheriting neighbor stretches to it.',
+    feature: '@property',
+    category: 'Theming',
+    Widget: PropertyRegistration,
+  },
+  {
+    slug: 'anchored-tooltip',
+    title: 'Anchor positioning',
+    summary:
+      'A tooltip with zero measurement code: the button declares `anchor-name: --save` and the tooltip binds its edges with `anchor(--save bottom)` / `anchor(--save left)` and matches widths with `anchor-size()`. Tap the button to move it; the tooltip tracks through CSS alone.',
+    feature: 'anchor() / anchor-name',
+    category: 'Layout',
+    Widget: AnchoredTooltip,
+  },
+  {
+    slug: 'snap-carousel',
+    title: 'Scroll snap',
+    summary:
+      '`scroll-snap-type: x mandatory` on a `styled.ScrollView` with `scroll-snap-align: start` on the cards, the same CSS the web needs. The scroller measures its aligned children and snaps to real card positions; the bottom carousel omits the declarations and drifts to rest anywhere. The browser handles it natively on web.',
+    feature: 'scroll-snap-type',
+    category: 'Layout',
+    Widget: SnapCarousel,
+  },
+  {
+    slug: 'scroll-story',
+    title: 'Scroll-driven animations',
+    summary:
+      'Animations whose timeline is the scroll position: a progress bar, a hue sweep, a balloon inflating through the middle of the range, staged reveals bound to `animation-range` slices, and `view()` cards that slide in as they cross the scrollport. Release mid-scroll and the scene freezes with your finger.',
+    feature: 'animation-timeline: scroll() / view()',
+    category: 'Animation',
+    Widget: ScrollStory,
   },
   {
     slug: 'blend-mode-board',
@@ -209,6 +262,15 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     feature: 'flex-wrap + width %',
     category: 'Layout',
     Widget: GridLayoutBoard,
+  },
+  {
+    slug: 'grid-tiles',
+    title: 'Grid tiles',
+    summary:
+      'Real `display: grid` + `grid-template-columns: repeat(3, 1fr)` + `gap`. One tile uses `grid-column: span 2` to span two columns.',
+    feature: 'display: grid',
+    category: 'Layout',
+    Widget: GridTiles,
   },
   {
     slug: 'logical-spacing-dial',
@@ -313,6 +375,24 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     feature: 'calc / min / max / clamp',
     category: 'Math & units',
     Widget: MathFunctionsLab,
+  },
+  {
+    slug: 'tree-counting-staircase',
+    title: 'Tree counting',
+    summary:
+      'One ruleset, position-driven output: `sibling-index()` builds a width staircase and an `oklch()` hue ramp, `sibling-count()` divides a bar evenly and redistributes live as segments mount.',
+    feature: 'sibling-index() / sibling-count()',
+    category: 'Math & units',
+    Widget: TreeCountingStaircase,
+  },
+  {
+    slug: 'attr-driven-sizing',
+    title: 'attr() typed props',
+    summary:
+      'CSS reads component props directly: `attr(data-size px, 48px)` sizes bars from a prop with a declared fallback, `type(<color>)` validates tints, and `attr()` composes inside `calc()`.',
+    feature: 'attr()',
+    category: 'Math & units',
+    Widget: AttrDrivenSizing,
   },
   {
     slug: 'type-features-shelf',

@@ -55,10 +55,14 @@ const VARIANT_FONT: Record<
 };
 
 // Inline span styled components - they route through the v7 engine, so
-// dark-mode token swaps land automatically when these are used.
+// dark-mode token swaps land automatically when these are used. These
+// only render for literal HTML tags in the markdown source; backtick
+// spans and `**bold**` dispatch directly to `Text` with the matching
+// `styles` entry (see `variantStyles`). No font-size here: nested RN
+// Text inherits the surrounding paragraph's size, keeping HTML `<code>`
+// flush with its sentence the same way `codeInline` is.
 const InlineCode = styled.Text`
   font-family: ${t.fontFamily.mono};
-  font-size: ${t.fontSize.mono}px;
   color: ${t.colors.ink};
   background-color: ${t.colors.signalSoft};
 `;
@@ -128,12 +132,18 @@ function variantStyles(
   return {
     text,
     paragraph: text,
-    // Inline code routes through `InlineCode` (override above), so this
-    // is redundant - but kept as a safety net for callers that disable
-    // the `code` override.
+    // Backtick spans dispatch straight to `Text` with this style; the
+    // `code` override above only fires for literal HTML `<code>` tags.
+    // Size tracks the surrounding variant minus one step: the mono face
+    // reads optically large at equal pixel size, so one down sits flush
+    // with the sentence (a fixed `mono` size previously read 2-3px small
+    // in 14-15px captions). Line-height stays the variant's so baselines
+    // align. Code blocks reuse this style, so they scale with the
+    // variant too.
     codeInline: {
       fontFamily: theme.fontFamily.mono,
-      fontSize: theme.fontSize.mono,
+      fontSize: v.fontSize - 1,
+      lineHeight: v.lineHeight,
       color: theme.colors.ink,
       backgroundColor: theme.colors.signalSoft,
     },

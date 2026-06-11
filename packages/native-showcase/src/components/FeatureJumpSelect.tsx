@@ -93,7 +93,10 @@ const Sheet = styled.View`
   background-color: ${C.bg};
   border-top-width: ${t.borderWidth.hairline}px;
   border-top-color: ${C.rule};
-  max-height: 70%;
+  /* Fixed height (not max-height): the sheet must hold its size while
+     typing filters the list, otherwise the bottom-anchored top edge
+     jumps with every keystroke. */
+  height: 70%;
 `;
 
 const SheetHeader = styled.View`
@@ -171,6 +174,11 @@ const EmptyLabel = styled.Text`
 `;
 
 type Row = { kind: 'group'; label: string } | { kind: 'item'; item: JumpItem };
+
+// The sheet is fixed-height; the list fills the remainder under the
+// header so short filtered sets leave calm empty space instead of
+// resizing the takeover.
+const listFillStyle = { flex: 1 } as const;
 
 const keyExtractor = (r: Row): string => (r.kind === 'group' ? `g:${r.label}` : `i:${r.item.slug}`);
 
@@ -369,6 +377,7 @@ export function FeatureJumpSelect({ groups, onJump }: Props) {
             ) : (
               <FlatList<Row>
                 ref={listRef}
+                style={listFillStyle}
                 data={rows}
                 renderItem={renderRow}
                 keyExtractor={keyExtractor}
