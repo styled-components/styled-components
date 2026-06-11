@@ -165,6 +165,7 @@ export type NativeAtClass =
     }
   | { kind: 'starting-style' }
   | { kind: 'keyframes' }
+  | { kind: 'property' }
   | { kind: 'unsupported'; warn: 'web-only' | 'unknown' };
 
 /**

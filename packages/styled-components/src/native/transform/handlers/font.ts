@@ -476,14 +476,17 @@ export function fontVariantShorthand(tokens: Token[]): Dict<any> | null {
 }
 
 /**
- * `aspect-ratio: auto || <ratio>`. `auto` alone yields `'auto'` (replaced
- * elements like `<Image>` use intrinsic ratio; styled views have none).
- * `<ratio>` alone emits the number. Combined forms emit the ratio plus a dev
- * warn since RN has no intrinsic-ratio surface on non-replaced views.
+ * `aspect-ratio: auto || <ratio>`. `auto` alone yields `'auto'`. A ratio
+ * (combined with `auto` or not) emits the number: non-replaced boxes use
+ * the specified ratio per spec, and RN exposes no natural-ratio surface
+ * so the same value applies to image-like components too (that replaced
+ * case is the one documented deviation). A degenerate ratio (a zero
+ * component) behaves as `auto` rather than failing the declaration.
  */
 export function aspectRatioShorthand(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(tokens);
   let auto = false;
+  let sawRatio = false;
   let ratio: number | null = null;
 
   while (!stream.eof()) {
@@ -493,35 +496,28 @@ export function aspectRatioShorthand(tokens: Token[]): Dict<any> | null {
       stream.consume();
       continue;
     }
-    if (ratio === null && t.kind === TokenKind.Number) {
+    if (!sawRatio && t.kind === TokenKind.Number) {
       const numerator = t.value!;
       stream.consume();
+      sawRatio = true;
+      let divisor = 1;
       if (!stream.eof() && stream.peek()!.kind === TokenKind.Slash) {
         stream.consume();
-        const divisor = stream.consume();
-        if (!divisor || divisor.kind !== TokenKind.Number) return null;
-        if (numerator <= 0 || divisor.value! <= 0) return null;
-        ratio = numerator / divisor.value!;
-      } else {
-        if (numerator <= 0) return null;
-        ratio = numerator;
+        const d = stream.consume();
+        if (!d || d.kind !== TokenKind.Number) return null;
+        divisor = d.value!;
       }
+      if (numerator < 0 || divisor < 0) return null;
+      // Degenerate (zero component): leave `ratio` null so the
+      // declaration behaves as `auto`.
+      if (numerator > 0 && divisor > 0) ratio = numerator / divisor;
       continue;
     }
     return null;
   }
 
-  if (auto && ratio === null) return { aspectRatio: 'auto' };
-  if (ratio !== null) {
-    if (__DEV__ && auto) {
-      warnOnce(
-        'native-aspect-ratio-auto-intrinsic',
-        '`aspect-ratio: auto <ratio>` only uses `auto` for image-like components with natural dimensions. Other styled views use the ratio and ignore `auto`; remove `auto` to silence this warning.',
-        String(ratio)
-      );
-    }
-    return { aspectRatio: ratio };
-  }
+  if (ratio !== null) return { aspectRatio: ratio };
+  if (auto || sawRatio) return { aspectRatio: 'auto' };
   return null;
 }
 

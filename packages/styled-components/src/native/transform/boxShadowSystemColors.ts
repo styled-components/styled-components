@@ -77,6 +77,9 @@ function parseBoxShadowLayer(
  * theme sentinels skip rewriting.
  */
 export function maybeExpandBoxShadowSystemColors(rawValue: string): string | Dict<any>[] {
+  // The browser parses system keywords inside box-shadow natively; the
+  // object-array rewrite is a native-only workaround.
+  if (__NATIVE_WEB__) return rawValue;
   if (rawValue.indexOf('\0') !== -1) return rawValue;
 
   const normalized = rawValue.replace(/\n/g, ' ');

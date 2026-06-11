@@ -71,9 +71,24 @@ export function textDecorationShorthand(tokens: Token[]): Dict<any> | null {
   let line: string | null = null;
   let style: string | null = null;
   let color: Token | null = null;
+  let thickness: string | null = null;
 
   while (!stream.eof()) {
     const t = stream.peek()!;
+    // `text-decoration-thickness` component: a <length-percentage> or the
+    // `auto` / `from-font` keywords. RN can't honor it, but the rest of
+    // the shorthand should still apply; consume the token, remember it,
+    // and warn after the loop instead of failing the whole declaration.
+    if (
+      t.kind === TokenKind.Length ||
+      t.kind === TokenKind.Percent ||
+      (t.kind === TokenKind.Ident && (t.name === 'auto' || t.name === 'from-font'))
+    ) {
+      if (thickness !== null) return null;
+      thickness = t.raw;
+      stream.consume();
+      continue;
+    }
     if (t.kind === TokenKind.Ident && DECORATION_LINES.has(t.name!)) {
       if (line !== null) return null;
       const collected: string[] = [t.name!];
@@ -122,12 +137,83 @@ export function textDecorationShorthand(tokens: Token[]): Dict<any> | null {
       color.raw
     );
   }
-  return {
+  const out: Dict<any> = {
     textDecorationLine: line !== null ? line : 'none',
     textDecorationStyle: style !== null ? style : 'solid',
-    textDecorationColor: color !== null ? colorTokenToRnStyleValue(color) : 'black',
+    // An omitted color resets to the initial currentcolor. RN paints the
+    // line in the text color when the key is absent, so emit an explicit
+    // undefined: it clobbers any earlier text-decoration-color in the same
+    // block while leaving the platform to its currentcolor behavior.
+    textDecorationColor: color !== null ? colorTokenToRnStyleValue(color) : undefined,
+  };
+  if (thickness !== null) {
+    if (__NATIVE_WEB__) {
+      out.textDecorationThickness = thickness;
+    } else if (__DEV__) {
+      warnOnce(
+        'native-text-decoration-thickness-unsupported',
+        '`text-decoration-thickness: ' +
+          thickness +
+          '` has no effect on React Native; iOS and Android draw a fixed-position underline with no thickness, offset, or position control. For a heavier or offset underline, put a `border-bottom` on a wrapping View.',
+        thickness
+      );
+    }
+  }
+  return out;
+}
+
+/**
+ * `text-decoration-thickness`, `text-underline-offset`, and
+ * `text-underline-position` have no React Native surface: RN draws a
+ * fixed-position, fixed-weight underline with no control over thickness,
+ * vertical offset, or which side of the text it sits on. Each native
+ * handler drops the declaration and points at the border-bottom workaround.
+ * rn-web passes the authored value straight through to the browser.
+ */
+function makeUnsupportedTextDecorationLonghand(
+  styleKey: 'textDecorationThickness' | 'textUnderlineOffset' | 'textUnderlinePosition',
+  cssName: string,
+  code: string
+): (tokens: Token[]) => Dict<any> | null {
+  return (tokens: Token[]): Dict<any> | null => {
+    const raw = tokens
+      .map(t => t.raw)
+      .join(' ')
+      .trim();
+    if (raw.length === 0) return null;
+    if (__NATIVE_WEB__) {
+      return { [styleKey]: raw };
+    }
+    if (__DEV__) {
+      warnOnce(
+        code,
+        '`' +
+          cssName +
+          ': ' +
+          raw +
+          '` has no effect on React Native; iOS and Android draw a fixed-position underline with no thickness, offset, or position control. For a heavier or offset underline, put a `border-bottom` on a wrapping View.',
+        raw
+      );
+    }
+    return {};
   };
 }
+
+export const textDecorationThicknessHandler = makeUnsupportedTextDecorationLonghand(
+  'textDecorationThickness',
+  'text-decoration-thickness',
+  'native-text-decoration-thickness-unsupported'
+);
+export const textUnderlineOffsetHandler = makeUnsupportedTextDecorationLonghand(
+  'textUnderlineOffset',
+  'text-underline-offset',
+  'native-text-underline-offset-unsupported'
+);
+export const textUnderlinePositionHandler = makeUnsupportedTextDecorationLonghand(
+  'textUnderlinePosition',
+  'text-underline-position',
+  'native-text-underline-position-unsupported'
+);
 
 /**
  * `text-decoration-line: <line>{1,4}`. The `none` keyword is exclusive; it
@@ -148,17 +234,64 @@ export function textDecorationLineShorthand(tokens: Token[]): Dict<any> | null {
 }
 
 /**
- * `text-shadow: <offset-x> <offset-y> [<blur>] [<color>]` (any order
- * relative to the color) → RN's three split longhands.
+ * `text-shadow: none | <shadow>#`, each layer `<offset-x> <offset-y>
+ * [<blur>] [<color>]` (any order relative to the color) → RN's three
+ * split longhands. RN renders one shadow, so a comma-separated list keeps
+ * the first (topmost) layer and warns. rn-web passes the authored value
+ * through raw: the browser ships the full grammar, and react-native-web
+ * deprecates the textShadow* longhands in favor of a `textShadow` string.
  */
-export function textShadowShorthand(tokens: Token[]): Dict<any> | null {
-  const s = parseShadow(tokens);
-  if (s === null) return null;
+export function textShadowShorthand(tokens: Token[], rawValue: string): Dict<any> | null {
+  if (__NATIVE_WEB__) {
+    return { textShadow: rawValue };
+  }
+  const layers = splitShadowLayers(tokens);
+  const parsed: ParsedShadow[] = [];
+  for (let i = 0; i < layers.length; i++) {
+    // `none` alternates with the <shadow># list; it is not a <shadow>, so
+    // it is invalid as a list item. parseShadow accepts it standalone.
+    if (layers.length > 1 && isNoneLayer(layers[i])) return null;
+    const s = parseShadow(layers[i]);
+    if (s === null) return null;
+    parsed.push(s);
+  }
+  if (parsed.length === 0) return null;
+  if (parsed.length > 1 && __DEV__) {
+    warnOnce(
+      'native-text-shadow-multiple',
+      '`text-shadow: ' +
+        rawValue +
+        '` declares ' +
+        parsed.length +
+        ' shadow layers, but React Native renders a single shadow per Text. Only the first (topmost) layer was applied. To layer more shadows, stack duplicate Text elements with one shadow each.',
+      rawValue
+    );
+  }
+  const s = parsed[0];
   return {
     textShadowOffset: s.offset,
     textShadowRadius: s.radius,
     textShadowColor: s.color,
   };
+}
+
+function splitShadowLayers(tokens: Token[]): Token[][] {
+  const layers: Token[][] = [];
+  let current: Token[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i].kind === TokenKind.Comma) {
+      layers.push(current);
+      current = [];
+    } else {
+      current.push(tokens[i]);
+    }
+  }
+  layers.push(current);
+  return layers;
+}
+
+function isNoneLayer(layer: Token[]): boolean {
+  return layer.length === 1 && layer[0].kind === TokenKind.Ident && layer[0].name === 'none';
 }
 
 /** `shadow-offset` / `text-shadow-offset`: `<x> [<y>]` → `{width, height}`. */

@@ -1,6 +1,6 @@
 import { Dict } from '../../types';
 import * as $ from '../../utils/charCodes';
-import { warnIfAndroidSkew, warnIfIosVerticalAlign, warnOnce } from './dev';
+import { warnIfAndroidSkew, warnIfIosGatedFilter, warnIfIosVerticalAlign, warnOnce } from './dev';
 import {
   collapseIdenticalCommas,
   getPassthroughKeys,
@@ -10,12 +10,14 @@ import {
   normalizeBackgroundPositionValue,
   substituteBackgroundSizeKeywordsForNative,
 } from './passthrough';
-import { staticColorFunctionToHex } from './polyfills/colorMath';
+import { hasRelativeFromPrefix, staticColorFunctionToHex } from './polyfills/colorMath';
 import { numericResultToRn, resolveStaticMathFunction } from './polyfills/mathFns';
+import { buildResolver } from './polyfills/resolvers';
 import { getSystemColorPlatformColor } from './polyfills/systemColors';
 import { getShorthand } from './shorthands';
 import { tokenize } from './tokenize';
 import { Token, TokenKind } from './tokens';
+import { warnIfConicGradientNative } from './handlers/background';
 import { maybeExpandBackgroundImageSystemColors } from './backgroundGradientNative';
 import { maybeExpandBoxShadowSystemColors } from './boxShadowSystemColors';
 import { maybeExpandFilterDropShadowSystemColors } from './filterSystemColors';
@@ -76,11 +78,41 @@ import './shorthands.register';
 // listed fall through to `{ [passthroughKeys[0]]: value }`.
 type SinglePassthroughHandler = (value: string, rawValue: string) => Dict<any>;
 const SINGLE_PASSTHROUGH_HANDLERS: Record<string, SinglePassthroughHandler> = {
-  verticalAlign: value => ({ verticalAlign: value }),
+  verticalAlign: value => {
+    // rn-web Text defaults to `display: inline`, where height is a no-op
+    // and vertical-align is inert inside flex parents; the align-content
+    // companion realizes the alignment there (flex-prefixed keywords only;
+    // rn-web's Flow types reject the bare `start` / `end` forms).
+    if (__NATIVE_WEB__) {
+      const alignContent =
+        value === 'top'
+          ? 'flex-start'
+          : value === 'middle'
+            ? 'center'
+            : value === 'bottom'
+              ? 'flex-end'
+              : null;
+      if (alignContent !== null) return { alignContent, verticalAlign: value };
+    }
+    return { verticalAlign: value };
+  },
   boxShadow: value => ({ boxShadow: maybeExpandBoxShadowSystemColors(value) }),
   filter: value => ({ filter: maybeExpandFilterDropShadowSystemColors(value) }),
-  // Dual-emit so RN Text honors the cascade.
-  direction: value => ({ direction: value, writingDirection: value }),
+  // Android has no isolation style key; the platform primitive that forces
+  // an isolated compositing surface (so blended descendants composite
+  // against the group, not the page) is the hardware-texture layer. iOS
+  // drops the Android-suffixed prop and consumes the style key instead.
+  isolation: value =>
+    !__NATIVE_WEB__ && value === 'isolate'
+      ? { isolation: value, renderToHardwareTextureAndroid: true }
+      : { isolation: value },
+  // Dual-emit so RN Text honors the cascade. rn-web rejects `direction` as
+  // a style key; the `dir` prop lift feeds its LocaleContext instead so
+  // descendants and BiDi-aware text-align resolve against the new value.
+  direction: value =>
+    __NATIVE_WEB__
+      ? { dir: value, writingDirection: value }
+      : { direction: value, writingDirection: value },
   objectFit: value => ({ objectFit: value }),
 };
 
@@ -117,6 +149,95 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     if (platformColor !== null) return { [camel]: platformColor };
   }
 
+  // `z-index: auto`: RN's zIndex prop is a plain number (Android Fabric
+  // throws casting a string), and an absent zIndex is exactly the `auto`
+  // behavior, so the declaration drops on native. The browser implements
+  // `auto` natively.
+  if (camel === 'zIndex' && rawValue.trim() === 'auto') {
+    if (__NATIVE_WEB__) return { zIndex: 'auto' };
+    return {};
+  }
+
+  // `order`: browsers reorder flex/grid items visually without touching
+  // source order. React Native's Yoga has no equivalent; children render
+  // in JSX order regardless. On rn-web the browser handles it; on native
+  // we drop it and tell the developer how to reorder for real.
+  if (camel === 'order') {
+    if (__NATIVE_WEB__) {
+      return { order: coerceRawValue('order', rawValue) };
+    }
+    if (__DEV__) {
+      warnOnce(
+        'native-order-unsupported',
+        '`order: ' +
+          rawValue +
+          '` has no effect on React Native; iOS and Android render children in JSX order. Reorder the JSX children directly, or use `flex-direction: row-reverse` / `column-reverse` to flip a whole axis.',
+        rawValue
+      );
+    }
+    return {};
+  }
+
+  // `display: grid`: React Native has no grid formatting context. The
+  // closest primitive is a wrapping flex row, which the grid item math
+  // (read from the published cascade at render) then sizes exactly. The
+  // `__scGridContainer` sentinel signals `compileNative` to lift the
+  // grid metadata. On rn-web the browser lays out a real grid, so the
+  // declaration passes through. Other `display` values fall through to
+  // the generic passthrough below.
+  if (camel === 'display' && rawValue.trim() === 'grid') {
+    if (__NATIVE_WEB__) return { display: 'grid' };
+    return { display: 'flex', flexDirection: 'row', flexWrap: 'wrap', __scGridContainer: true };
+  }
+
+  // CSS-wide keywords (initial / inherit / unset / revert / revert-layer):
+  // React Native has no cascade to resolve them against, and its style
+  // defaults differ from CSS initial values, so a silent drop or a literal
+  // string reaching RN would both misrender. Drop loudly on native; the
+  // browser implements explicit defaulting, so rn-web passes through.
+  const wideKeyword = asCssWideKeyword(rawValue);
+  if (
+    wideKeyword !== null &&
+    // Exempt pairs the platform (or a spec'd shorthand expansion)
+    // implements natively: RN's `direction` enum includes `inherit` (the
+    // Yoga default), and Flexbox defines `flex: initial` as the static
+    // `0 1 auto`.
+    !(camel === 'direction' && wideKeyword === 'inherit') &&
+    !(camel === 'flex' && wideKeyword === 'initial')
+  ) {
+    if (__NATIVE_WEB__) return { [camel]: wideKeyword };
+    if (__DEV__) {
+      warnOnce(
+        'native-css-wide-keyword',
+        '`' +
+          prop +
+          ': ' +
+          wideKeyword +
+          '` is a CSS-wide keyword; React Native has no cascade to resolve it against, and its style defaults can differ from the CSS initial values, so the declaration was ignored. Set an explicit value instead.',
+        camel + ':' + wideKeyword
+      );
+    }
+    return {};
+  }
+
+  // Whole-value `light-dark()` on rn-web: the color normalizer strips the
+  // function (its allowlist is @react-native/normalize-colors), but
+  // custom-property keys and `var()` references reach the DOM untouched, so
+  // the browser resolves both branches natively. The custom key is
+  // pre-hyphenated because rn-web runs hyphenateStyleName over every style
+  // key and would mangle a camelCase custom property. `color-scheme: light
+  // dark` is the opt-in the UA needs to honor the dark branch. Values
+  // carrying theme sentinels stay on the render-time resolver path instead;
+  // an inline custom property never passes through sentinel substitution.
+  if (__NATIVE_WEB__ && rawValue.indexOf('\0') === -1 && isWholeLightDark(rawValue)) {
+    const kebab = hyphenate(camel);
+    return {
+      ['--sc-ld-' + kebab]: rawValue,
+      [camel]: 'var(--sc-ld-' + kebab + ')',
+      colorScheme: 'light dark',
+    };
+  }
+
   const passthroughKeys = getPassthroughKeys(camel);
   if (passthroughKeys !== undefined) {
     if (__DEV__) {
@@ -124,6 +245,8 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
         warnIfAndroidSkew(rawValue);
       } else if (camel === 'verticalAlign') {
         warnIfIosVerticalAlign(rawValue);
+      } else if (camel === 'filter') {
+        warnIfIosGatedFilter(rawValue);
       }
     }
     if (!isValidLayeredBackgroundValue(camel, rawValue)) {
@@ -151,6 +274,14 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     // `substituteBackgroundSizeKeywordsForNative` for the spec basis.
     // Pre-fold gradient stops carrying system colors so RN's array form
     // ships a PlatformColor object.
+    if (
+      __DEV__ &&
+      !__NATIVE_WEB__ &&
+      camel === 'backgroundImage' &&
+      value.indexOf('conic-gradient(') !== -1
+    ) {
+      warnIfConicGradientNative(value);
+    }
     const nativeImage =
       camel === 'backgroundImage' ? maybeExpandBackgroundImageSystemColors(value) : value;
     // rn-web's validator rejects `backgroundPosition` with more than one
@@ -191,7 +322,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
   const shorthand = getShorthand(camel);
   if (shorthand !== undefined) {
     tokens = tokenize(rawValue);
-    const out = shorthand(tokens);
+    const out = shorthand(tokens, rawValue);
     if (out !== null) return out;
     if (__DEV__) {
       warnOnce(
@@ -203,12 +334,17 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     return {};
   }
 
-  // Static math fns: always fold.
+  // Static math fns: fold on native. On rn-web, expressions whose result
+  // carries a unit pass through raw (the browser computes them against the
+  // real containing block); unitless results still fold because a bare
+  // function like `width: pow(8, 2)` is not renderable CSS, while the
+  // folded number follows the RN dp convention on every host.
   if (mightBeMathFn(rawValue)) {
     tokens = tokens ?? tokenize(rawValue);
     if (tokens.length === 1 && tokens[0].kind === TokenKind.Function) {
       const numeric = resolveStaticMathFunction(tokens[0]);
       if (numeric !== null) {
+        if (__NATIVE_WEB__ && numeric.unit !== '') return { [camel]: rawValue };
         return { [camel]: numericResultToRn(numeric) };
       }
     }
@@ -228,15 +364,15 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
       const hex = staticColorFunctionToHex(tokens[0]);
       if (hex !== null) return { [camel]: hex };
     }
-    // Static fold bailed. The runtime resolver path handles
-    // sentinel-bearing dynamics (theme tokens). Anything else here is
-    // either relative-color syntax (`oklch(from red l c h)`), a
-    // `calc()` with dynamic units in a channel (`sign(1em - 10px)`),
-    // or an unrecognized colorspace; none of which RN's normalizeColor
-    // can interpret. Flag the value before it silently renders as
-    // transparent. The dedupeSuffix is the value itself so repeat
-    // declarations don't spam.
-    if (__DEV__ && rawValue.indexOf('\0') === -1) {
+    // Static fold bailed, but the value may still resolve at render
+    // time: theme-token sentinels, tree-counting functions
+    // (`sibling-index()`), and env-dependent channel math all get a
+    // resolver from `buildResolver` and fold to hex per render. Warn
+    // only when nothing downstream can render the value (unknown
+    // colorspace, an interpolation space RN can't reach), so it doesn't
+    // silently paint transparent. The dedupeSuffix is the value itself
+    // so repeat declarations don't spam.
+    if (__DEV__ && rawValue.indexOf('\0') === -1 && buildResolver(rawValue, camel) === null) {
       warnOnce(
         'native-modern-color-cant-fold',
         `the value "${rawValue}" for "${camel}" uses a modern color form React Native cannot render directly. ` +
@@ -284,6 +420,25 @@ function hasUpperInPrefix(v: string, endExclusive: number): boolean {
   return false;
 }
 
+/** Kebab-case a camelCase property name (`backgroundColor` → `background-color`). */
+function hyphenate(camel: string): string {
+  let out = '';
+  for (let i = 0; i < camel.length; i++) {
+    const c = camel.charCodeAt(i);
+    out += c >= 0x41 && c <= 0x5a ? '-' + camel[i].toLowerCase() : camel[i];
+  }
+  return out;
+}
+
+/** True when the value is exactly one `light-dark(...)` function. */
+function isWholeLightDark(v: string): boolean {
+  if (v.length < 12) return false;
+  const haystack = hasUpperInPrefix(v, 11) ? v.toLowerCase() : v;
+  if (!haystack.startsWith('light-dark(')) return false;
+  const tokens = tokenize(v);
+  return tokens.length === 1 && tokens[0].kind === TokenKind.Function;
+}
+
 function mightBeMathFn(v: string): boolean {
   // Cheap prefix check before tokenizing; avoids work on `10px` etc. Function
   // names are ASCII case-insensitive, so scan a 6-char prefix for any uppercase
@@ -320,11 +475,30 @@ function mightBeMathFn(v: string): boolean {
   return false;
 }
 
+/**
+ * Whole-value, ASCII case-insensitive match against the CSS-wide keywords
+ * (initial / inherit / unset / revert / revert-layer). Returns the
+ * normalized keyword, or null for any other value. First-char gate keeps
+ * the hot path to one charCode read for the overwhelming majority of
+ * values.
+ */
+function asCssWideKeyword(v: string): string | null {
+  const c0 = v.charCodeAt(0) | 0x20;
+  if (c0 !== 0x69 /* i */ && c0 !== 0x75 /* u */ && c0 !== 0x72 /* r */) return null;
+  const t = v.trim().toLowerCase();
+  if (t === 'initial' || t === 'inherit' || t === 'unset' || t === 'revert' || t === 'revert-layer')
+    return t;
+  return null;
+}
+
 function mightBeModernColor(v: string): boolean {
   // Cheap prefix check; modern function forms RN doesn't understand:
   // `oklch(`, `oklab(`, `lch(`, `lab(`, `color-mix(`, `color(`.
-  // RN already handles hex / rgb / hsl / hwb at runtime; no polyfill
-  // needed for those. Longest prefix is `color-mix(` (10).
+  // RN already handles the ABSOLUTE hex / rgb / hsl / hwb forms at
+  // runtime, so those bypass the fold. The relative-color from-forms of
+  // rgb / hsl / hwb (`rgb(from red r g b)`) are NOT understood by RN's
+  // normalizeColor, so they must fold; gate them on a `from` prefix.
+  // Longest prefix is `color-mix(` (10).
   if (v.length < 5) return false;
   const haystack = hasUpperInPrefix(v, 10) ? v.toLowerCase() : v;
   const c0 = haystack.charCodeAt(0);
@@ -332,5 +506,16 @@ function mightBeModernColor(v: string): boolean {
   if (c0 === 0x6c /* l */) return haystack.startsWith('lch(') || haystack.startsWith('lab(');
   if (c0 === 0x63 /* c */)
     return haystack.startsWith('color-mix(') || haystack.startsWith('color(');
+  if (c0 === 0x72 /* r */) {
+    if (haystack.startsWith('rgb(')) return hasRelativeFromPrefix(v, 3);
+    if (haystack.startsWith('rgba(')) return hasRelativeFromPrefix(v, 4);
+    return false;
+  }
+  if (c0 === 0x68 /* h */) {
+    if (haystack.startsWith('hsl(') || haystack.startsWith('hwb('))
+      return hasRelativeFromPrefix(v, 3);
+    if (haystack.startsWith('hsla(')) return hasRelativeFromPrefix(v, 4);
+    return false;
+  }
   return false;
 }

@@ -21,10 +21,14 @@ import { getPrimaryPassthroughKey } from '../native/transform/passthrough';
 import {
   buildResolver,
   indexOfUnquotedSubstring,
+  ResolveEnv,
   Resolver,
   substituteVars,
 } from '../native/transform/polyfills/resolvers';
 import { PERSPECTIVE_SENTINEL_KEY } from '../native/transform/polyfills/standaloneTransform';
+import { registerCssProperty } from '../native/propertyRegistry';
+import { tokenize } from '../native/transform/tokenize';
+import { TokenKind } from '../native/transform/tokens';
 import {
   ANIMATION_LONGHAND_KEYS,
   TRANSITION_LONGHAND_KEYS,
@@ -32,8 +36,10 @@ import {
 import type {
   AnimationDescriptor,
   EasingDescriptor,
+  TimelineAxis,
   TransitionDescriptor,
 } from '../native/animation/types';
+import { AUTO_TIMELINE } from '../native/animation/types';
 import { parse } from '../parser/parser';
 import { Dict, StyleSheet } from '../types';
 import { normalize } from '../utils/normalize';
@@ -257,6 +263,45 @@ export interface NativeStyles {
    */
   containerInfo?: { type: string; explicitName?: string };
   /**
+   * Named scroll progress timeline declared on this component
+   * (`scroll-timeline-name` / `-axis`). The render path publishes the
+   * scroller's offset/extent under this name for descendants'
+   * `animation-timeline: --name` references.
+   */
+  scrollTimeline?: { name: string; axis: TimelineAxis };
+  /**
+   * Set when the source declared `position: sticky`. The parent styled
+   * ScrollView lifts the child's index onto `stickyHeaderIndices`.
+   */
+  sticky?: true;
+  /**
+   * Set when the source declared `scroll-snap-align` (and optionally
+   * `scroll-snap-stop: always`). The render path registers the child's
+   * measured layout with the nearest styled scroll container, which
+   * derives `snapToOffsets` from its aligned children. `align` is the
+   * raw 1-2 keyword value ([block, inline] axes per css-scroll-snap-1);
+   * the scroller picks the keyword for its scroll axis.
+   */
+  snapTarget?: { align: string; stop: boolean };
+  /** `anchor-name` declared by this component; published at render. */
+  anchorName?: string;
+  /** `position-anchor`: implicit target for anchor() / anchor-size(). */
+  positionAnchor?: string;
+  /**
+   * Set when the source declared `display: grid` with a supported equal
+   * `1fr` track list. `columns` is the column count. The render path
+   * publishes a grid entry (column count + gutters + measured content
+   * width) to descendants so direct children can size themselves. The
+   * container itself renders as a wrapping flex row.
+   */
+  gridInfo?: { columns: number };
+  /**
+   * Set when the source declared `grid-column: span N` on a grid item.
+   * The render path reads the parent's published grid entry and applies
+   * the computed pixel width (or a percentage fallback before layout).
+   */
+  gridSpan?: number;
+  /**
    * `field-sizing`. Set when the source CSS declared
    * `field-sizing: content` on a styled component targeting
    * `TextInput`. The polyfill itself lifts `multiline: true`
@@ -269,6 +314,17 @@ export interface NativeStyles {
    * runs on non-rn-web bundles via `__NATIVE_WEB__` tree-shaking.
    */
   fieldSizing?: 'content';
+  /**
+   * Set when the source declared an explicit `width` / `height` (or a
+   * logical equivalent, post-transform) without declaring any flex
+   * factor. When the component renders on a scrollable target, the
+   * render path appends `flexGrow: 0` so the declared size holds: RN's
+   * ScrollView base style ships `flexGrow: 1`, which stretches declared
+   * dimensions with the flex parent, while CSS elements default
+   * `flex-grow: 0`. Computed from base + render-time resolver keys
+   * (declarations inside @media buckets do not set it).
+   */
+  scrollerFlexPin?: true;
   /**
    * `true` when this compile output COULD publish a cascade value
    * (font-size / line-height / direction) to descendants. Set when any
@@ -372,6 +428,25 @@ export const SPECIAL_CASE_PROPS: Record<string, SpecialCaseMeta> = {
     validOn: ['ScrollView', 'FlatList', 'SectionList', 'VirtualizedList'],
     source: 'scrollbar-width',
   },
+  // scroll-snap-type lifts. RN derives snap behavior from the scroller's
+  // own props, so the polyfill approximates CSS scroll snap: `mandatory`
+  // lifts pagingEnabled + decelerationRate (plus the JS settle corrector,
+  // see native/snapSettle.ts); `proximity` lifts snapToAlignment +
+  // decelerationRate. User-supplied snapToInterval / snapToOffsets win
+  // over the paging approximation (RN treats them as overriding
+  // pagingEnabled).
+  snapToAlignment: {
+    validOn: ['ScrollView', 'FlatList', 'SectionList', 'VirtualizedList'],
+    source: 'scroll-snap-type',
+  },
+  decelerationRate: {
+    validOn: ['ScrollView', 'FlatList', 'SectionList', 'VirtualizedList'],
+    source: 'scroll-snap-type',
+  },
+  pagingEnabled: {
+    validOn: ['ScrollView', 'FlatList', 'SectionList', 'VirtualizedList'],
+    source: 'scroll-snap-type',
+  },
   trackColor: { validOn: ['Switch'], source: 'accent-color' },
   // Android-only Text prop (API 23+); silently dropped on iOS by RN's own
   // view-prop filter. Maps text-wrap balance / pretty into Android's line-
@@ -381,6 +456,11 @@ export const SPECIAL_CASE_PROPS: Record<string, SpecialCaseMeta> = {
   // auto` reaches Android's system hyphenator instead of being dropped as
   // an unknown style key.
   android_hyphenationFrequency: { validOn: ['Text', 'VirtualText'], source: 'hyphens' },
+  // Android-only View prop. `isolation: isolate` lifts it so the element
+  // renders into its own compositing surface and blended descendants
+  // composite against the group instead of the page; iOS drops the prop
+  // via RN's own view-prop filter and honors the `isolation` style key.
+  renderToHardwareTextureAndroid: { validOn: [...VIEW_LIKE_TARGETS], source: 'isolation' },
   // <Image> only. On rn-web `objectFit` is ignored as a style key; the
   // polyfill lifts a `resizeMode` prop carrying the spec-mapped value.
   resizeMode: { validOn: ['Image'], source: 'object-fit' },
@@ -549,6 +629,11 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   const animations = extractAnimations(resolvedBase);
   const transitions = extractTransitions(resolvedBase);
   const containerInfo = extractContainerInfo(resolvedBase);
+  const scrollTimeline = extractScrollTimeline(resolvedBase);
+  const grid = extractGrid(resolvedBase);
+  const sticky = extractSticky(resolvedBase);
+  const snapTarget = extractSnapTarget(resolvedBase);
+  const anchorDecls = extractAnchorDecls(resolvedBase);
   // Only lift `fieldSizing` out of `base` on native bundles; on rn-web
   // the polyfill leaves it in place so the browser sees `field-sizing`
   // and handles autosize without engaging the render-time hook.
@@ -629,9 +714,42 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   if (customProperties !== null) out.customProperties = customProperties;
   if (varDeferred !== null && varDeferred.length > 0) out.varDeferred = varDeferred;
   if (containerInfo !== null) out.containerInfo = containerInfo;
+  if (scrollTimeline !== null) out.scrollTimeline = scrollTimeline;
+  if (grid.gridInfo !== null) out.gridInfo = grid.gridInfo;
+  if (grid.gridSpan !== null) out.gridSpan = grid.gridSpan;
+  if (sticky !== null) out.sticky = sticky;
+  if (snapTarget !== null) out.snapTarget = snapTarget;
+  if (anchorDecls.anchorName !== null) out.anchorName = anchorDecls.anchorName;
+  if (anchorDecls.positionAnchor !== null) out.positionAnchor = anchorDecls.positionAnchor;
   if (fieldSizing !== null) out.fieldSizing = fieldSizing;
   out.publishesCascade = computePublishesCascade(out);
+  if (computeScrollerFlexPin(out)) out.scrollerFlexPin = true;
   return out;
+}
+
+/**
+ * Authored width/height (post-transform, so logical properties already
+ * map) with no authored flex factor. See `scrollerFlexPin` on the
+ * compiled shape for why the render path pins `flexGrow: 0` on
+ * scrollable targets when this is set.
+ */
+function computeScrollerFlexPin(out: NativeStyles): boolean {
+  // `base` may be a registered StyleSheet id (number) rather than the
+  // raw style object; the keys aren't inspectable then, so only the
+  // resolver / varDeferred scans below contribute.
+  const base = out.base as Dict<any>;
+  const baseInspectable = typeof base === 'object' && base !== null;
+  let dim = baseInspectable && ('width' in base || 'height' in base);
+  let flex = baseInspectable && ('flex' in base || 'flexGrow' in base);
+  for (const list of [out.resolvers, out.varDeferred]) {
+    if (list === undefined) continue;
+    for (let i = 0; i < list.length; i++) {
+      const key = list[i][0];
+      if (key === 'width' || key === 'height') dim = true;
+      else if (key === 'flex' || key === 'flexGrow') flex = true;
+    }
+  }
+  return dim && !flex;
 }
 
 /**
@@ -738,6 +856,137 @@ function extractContainerInfo(base: Dict<any>): { type: string; explicitName?: s
 }
 
 /**
+ * Lift `anchor-name` / `position-anchor` declarations off the style
+ * object (RN's validator doesn't know them). `anchor-name` drives the
+ * render-time anchor rect publisher; `position-anchor` becomes the
+ * implicit target for anchor functions. rn-web leaves both in place
+ * for the browser. Mutates `base`.
+ */
+function extractAnchorDecls(base: Dict<any>): {
+  anchorName: string | null;
+  positionAnchor: string | null;
+} {
+  if (__NATIVE_WEB__) return { anchorName: null, positionAnchor: null };
+  let anchorName: string | null = null;
+  let positionAnchor: string | null = null;
+  const an = base.anchorName;
+  if (an !== undefined) {
+    delete base.anchorName;
+    if (typeof an === 'string' && an.startsWith('--')) anchorName = an;
+  }
+  const pa = base.positionAnchor;
+  if (pa !== undefined) {
+    delete base.positionAnchor;
+    if (typeof pa === 'string' && pa.startsWith('--')) positionAnchor = pa;
+  }
+  return { anchorName, positionAnchor };
+}
+
+/**
+ * Lift `position: sticky` into `NativeStyles.sticky`. React Native's
+ * layout engine has no sticky position; the behavior is implemented by
+ * the parent styled ScrollView via `stickyHeaderIndices`, so the
+ * declaration must not reach RN's style validator. The element behaves
+ * as relative when not stuck (RN's default), matching the spec's
+ * "identical to relative, except..." framing. rn-web leaves the
+ * declaration in place for the browser. Mutates `base`.
+ */
+function extractSticky(base: Dict<any>): true | null {
+  if (base.position !== 'sticky') return null;
+  if (__NATIVE_WEB__) return null;
+  delete base.position;
+  return true;
+}
+
+/**
+ * Lift the `scroll-snap-align` / `scroll-snap-stop` sentinels emitted by
+ * the scroll polyfills into `NativeStyles.snapTarget`. At render the
+ * child registers its measured layout with the nearest styled scroll
+ * container, which derives `snapToOffsets` from its aligned children.
+ * Mutates `base` to remove the sentinel keys.
+ */
+function extractSnapTarget(base: Dict<any>): { align: string; stop: boolean } | null {
+  const align = base.__scSnapAlign;
+  const stop = base.__scSnapStop;
+  if (align === undefined && stop === undefined) return null;
+  delete base.__scSnapAlign;
+  delete base.__scSnapStop;
+  // `scroll-snap-stop: always` without an alignment defines no snap
+  // position of its own (align initial is `none`), so there is nothing
+  // to register; the stop only matters on actual snap targets.
+  if (typeof align !== 'string') return null;
+  return { align, stop: stop === true };
+}
+
+/**
+ * Lift `scroll-timeline-name` / `-axis` declarations into
+ * `NativeStyles.scrollTimeline`. One named timeline per scroller is
+ * supported; declarations of multiple names keep the first (dev warn).
+ * Mutates `base` to remove the keys.
+ */
+function extractScrollTimeline(base: Dict<any>): { name: string; axis: TimelineAxis } | null {
+  const name = base.scrollTimelineName;
+  const axis = base.scrollTimelineAxis;
+  if (name === undefined && axis === undefined) return null;
+  delete base.scrollTimelineName;
+  delete base.scrollTimelineAxis;
+  const firstName = Array.isArray(name) ? name[0] : name;
+  const firstAxis = Array.isArray(axis) ? axis[0] : axis;
+  if (__DEV__ && Array.isArray(name) && name.length > 1) {
+    warnOnce(
+      'native-scroll-timeline-multiple',
+      'Multiple `scroll-timeline-name` values were declared on one component. React Native scrollers publish a single timeline; only the first name is used. Split the scrollable areas into separate components to declare more timelines.',
+      String(firstName)
+    );
+  }
+  if (typeof firstName !== 'string' || firstName === 'none') return null;
+  return {
+    name: firstName,
+    axis: typeof firstAxis === 'string' ? (firstAxis as TimelineAxis) : 'block',
+  };
+}
+
+/**
+ * Lift the native-only grid sentinels (`__scGridContainer` /
+ * `__scGridColumns` / `__scGridSpan`) out of the resolved base.
+ *
+ * A grid container needs both `__scGridContainer` (from `display: grid`)
+ * and `__scGridColumns` (from a supported `grid-template-columns` track
+ * list) to size its children. A container with no template still renders
+ * (it lays out as a wrapping flex row), but it can't compute per-child
+ * widths, so it warns and produces no `gridInfo`. The sentinels are
+ * always removed so RN's style validator never sees them.
+ *
+ * Skipped on rn-web (the grid CSS stays in `base` for the browser; the
+ * sentinels never form there).
+ */
+function extractGrid(base: Dict<any>): {
+  gridInfo: { columns: number } | null;
+  gridSpan: number | null;
+} {
+  if (__NATIVE_WEB__) return { gridInfo: null, gridSpan: null };
+  const isContainer = base.__scGridContainer === true;
+  const columns = base.__scGridColumns;
+  const span = base.__scGridSpan;
+  delete base.__scGridContainer;
+  delete base.__scGridColumns;
+  delete base.__scGridSpan;
+  let gridInfo: { columns: number } | null = null;
+  if (isContainer) {
+    if (typeof columns === 'number' && columns >= 1) {
+      gridInfo = { columns };
+    } else if (__DEV__) {
+      warnOnce(
+        'native-grid-missing-template',
+        'a `display: grid` container has no supported `grid-template-columns` track list, so React Native cannot size its children. The container renders as a wrapping flex row. Add `grid-template-columns: repeat(N, 1fr)` (or an equal `1fr` track list) to lay out columns.'
+      );
+    }
+  }
+  const gridSpan = typeof span === 'number' && span >= 1 ? span : null;
+  return { gridInfo, gridSpan };
+}
+
+/**
  * Pull `fieldSizing` out of the resolved base into a top-level
  * `NativeStyles.fieldSizing` flag. Only the `content` value triggers
  * runtime work;`fixed` is the platform default and is a no-op even
@@ -776,6 +1025,9 @@ const ANIMATION_RECIPE: ExtractRecipe<AnimationDescriptor> = [
   ['animationFillMode', 'fillMode', 'none'],
   ['animationPlayState', 'playState', 'running'],
   ['animationComposition', 'composition', 'replace'],
+  ['animationRangeStart', 'rangeStart', 'normal'],
+  ['animationRangeEnd', 'rangeEnd', 'normal'],
+  ['animationTimeline', 'timeline', AUTO_TIMELINE],
 ];
 
 const TRANSITION_RECIPE: ExtractRecipe<TransitionDescriptor> = [
@@ -1107,7 +1359,7 @@ function processDecls(decls: StaticDeclNode[]): {
     for (const k in partial) {
       const v = partial[k];
       raw[k] = v;
-      const r = buildResolver(v);
+      const r = buildResolver(v, k);
       if (isImportant) {
         if (important === null) important = {};
         if (r !== null) {
@@ -1148,7 +1400,9 @@ function processDecls(decls: StaticDeclNode[]): {
  */
 export function applyVarDeferred(
   varDeferred: ReadonlyArray<readonly [string, string, boolean?]>,
-  customProperties: ReadonlyMap<string, string> | null
+  customProperties: ReadonlyMap<string, string> | null,
+  own?: ReadonlyMap<string, string> | null,
+  env?: ResolveEnv
 ): { normal: Dict<any> | null; important: Dict<any> | null } {
   let normal: Dict<any> | null = null;
   let important: Dict<any> | null = null;
@@ -1157,7 +1411,7 @@ export function applyVarDeferred(
     const prop = entry[0];
     const rawValue = entry[1];
     const isImportant = entry[2] === true;
-    const substituted = substituteVars(rawValue, customProperties);
+    const substituted = substituteVars(rawValue, customProperties, undefined, own);
     if (substituted === null) {
       if (__DEV__) warnIfNativeCssVar(prop, rawValue);
       continue;
@@ -1166,12 +1420,20 @@ export function applyVarDeferred(
     // drop rather than landing a bare `''` on the host element.
     if (substituted === '' || substituted.trim() === '') continue;
     const partial = transformDecl(prop, substituted);
-    if (isImportant) {
-      if (important === null) important = {};
-      for (const k in partial) important[k] = partial[k];
-    } else {
-      if (normal === null) normal = {};
-      for (const k in partial) normal[k] = partial[k];
+    const out = isImportant ? (important ??= {}) : (normal ??= {});
+    for (const k in partial) {
+      const v = partial[k];
+      // var() substitutes as if the tokens had been authored literally,
+      // so dynamic values in the substituted text (light-dark(),
+      // viewport units, env()) get the same resolver pass the compiled
+      // path applies; here it runs against the live env immediately.
+      const r = env !== undefined ? buildResolver(v, k) : null;
+      if (r !== null) {
+        const resolved = r(env!);
+        if (resolved !== null) out[k] = resolved;
+      } else {
+        out[k] = v;
+      }
     }
   }
   return { normal, important };
@@ -1606,6 +1868,121 @@ function readRuleClass(node: StaticRuleNode): NativeRuleClass {
   return classifyRuleNow(node.selectors);
 }
 
+/**
+ * `@property <custom-property-name> { ... }`: register a typed custom
+ * property. Required descriptors and initial-value rules follow the
+ * Properties and Values API; invalid rules warn and are ignored. The
+ * registration is app-global (the rule is document-global in CSS). On
+ * the web bundle the registration forwards to the browser's
+ * CSS.registerProperty() since var() stays browser-resolved there.
+ */
+function handlePropertyAtRule(node: StaticAtRuleNode): void {
+  const name = node.prelude.trim();
+  const invalid = (reason: string): void => {
+    if (__DEV__) {
+      warnOnce(
+        'native-property-invalid',
+        `The \`@property ${name}\` rule was ignored: ${reason}`,
+        name + ':' + reason
+      );
+    }
+  };
+  if (!name.startsWith('--') || name.length < 3) {
+    invalid('the rule name must be a custom property name like `--brand`.');
+    return;
+  }
+  let syntax: string | null = null;
+  let inherits: boolean | null = null;
+  let initialValue: string | null = null;
+  if (node.children) {
+    for (let i = 0; i < node.children.length; i++) {
+      const child = node.children[i];
+      if (child.kind !== NodeKind.Decl) continue;
+      const prop = child.prop;
+      const value = String(child.value).trim();
+      if (prop === 'syntax') {
+        // The descriptor value is a <string>; strip the quotes.
+        const m = /^['"](.*)['"]$/.exec(value);
+        syntax = m !== null ? m[1].trim() : null;
+      } else if (prop === 'inherits') {
+        if (value === 'true') inherits = true;
+        else if (value === 'false') inherits = false;
+      } else if (prop === 'initial-value' || prop === 'initialValue') {
+        initialValue = value;
+      }
+      // Unknown descriptors are ignored without invalidating the rule.
+    }
+  }
+  if (syntax === null) {
+    invalid("a `syntax` descriptor (a quoted string such as '<length>') is required.");
+    return;
+  }
+  if (inherits === null) {
+    invalid('an `inherits: true | false` descriptor is required.');
+    return;
+  }
+  if (syntax !== '*') {
+    if (initialValue === null) {
+      invalid("an `initial-value` is required unless the syntax is '*'.");
+      return;
+    }
+    if (!validatePropertyInitialValue(syntax, initialValue)) {
+      invalid(
+        `the initial-value \`${initialValue}\` does not match the syntax \`${syntax}\` (or the syntax is not supported on React Native; supported: *, <length>, <number>, <percentage>, <integer>, <angle>, <time>, <color>).`
+      );
+      return;
+    }
+  }
+  if (__NATIVE_WEB__) {
+    const css = (globalThis as any).CSS;
+    if (css && typeof css.registerProperty === 'function') {
+      try {
+        css.registerProperty({
+          name,
+          syntax,
+          inherits,
+          ...(initialValue !== null ? { initialValue } : null),
+        });
+      } catch {
+        // Double registration in the browser throws; the first wins.
+      }
+    }
+    return;
+  }
+  registerCssProperty(name, { syntax, inherits, initialValue });
+}
+
+/**
+ * Validate an initial-value against the supported syntax components.
+ * Colors are validated structurally (hash / color function / ident).
+ */
+function validatePropertyInitialValue(syntax: string, value: string): boolean {
+  const toks = tokenize(value);
+  if (syntax === '<color>') {
+    if (toks.length !== 1) return false;
+    const t = toks[0];
+    return t.kind === TokenKind.Hash || t.kind === TokenKind.Ident || t.kind === TokenKind.Function;
+  }
+  if (toks.length !== 1) return false;
+  const t = toks[0];
+  switch (syntax) {
+    case '<length>':
+      return t.kind === TokenKind.Length || (t.kind === TokenKind.Number && t.value === 0);
+    case '<number>':
+      return t.kind === TokenKind.Number;
+    case '<integer>':
+      return t.kind === TokenKind.Number && Number.isInteger(t.value!);
+    case '<percentage>':
+      return t.kind === TokenKind.Percent;
+    case '<angle>':
+      return t.kind === TokenKind.Angle;
+    case '<time>':
+      return t.kind === TokenKind.Time;
+    default:
+      return false;
+  }
+}
+
 function handleAtRule(
   node: StaticAtRuleNode,
   baseDecls: StaticDeclNode[],
@@ -1625,6 +2002,11 @@ function handleAtRule(
         if (child.kind === NodeKind.Decl) pushDecl(startingDecls, child);
       }
     }
+    return;
+  }
+
+  if (cls.kind === 'property') {
+    handlePropertyAtRule(node);
     return;
   }
 

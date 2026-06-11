@@ -16,12 +16,20 @@ function accentColorHandler(tokens: Token[]): Dict<any> | null {
   if (first.kind === TokenKind.Ident && first.name === 'auto') {
     stream.consume();
     if (!stream.eof()) return null;
+    // Browser ships accent-color; the Switch trackColor lift is native-only.
+    if (__NATIVE_WEB__) return { accentColor: 'auto' };
     const resolved = getSystemColorPlatformColor('AccentColor');
     return { accentColor: resolved, trackColor: { true: resolved } };
   }
 
   const colorTok = consumeColor(stream);
   if (colorTok === null || !stream.eof()) return null;
+  // rn-web's Switch overlays its track with plain Views (CSS accent-color
+  // never reaches a real checkbox there), so the trackColor lift applies on
+  // rn-web too; the color stays authored CSS text for the browser.
+  if (__NATIVE_WEB__) {
+    return { accentColor: colorTok.raw, trackColor: { true: colorTok.raw } };
+  }
   const resolved = colorTokenToRnStyleValue(colorTok);
   return { accentColor: resolved, trackColor: { true: resolved } };
 }

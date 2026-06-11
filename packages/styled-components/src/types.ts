@@ -430,8 +430,24 @@ interface CompileOutput {
   specialCases?: Dict<any>;
   /** Container-query metadata extracted from the source CSS at compile time. */
   containerInfo?: { type: string; explicitName?: string };
+  /** Named scroll progress timeline declared on this component. */
+  scrollTimeline?: { name: string; axis: 'block' | 'inline' | 'x' | 'y' };
+  /** Set when the source declared `position: sticky` (native lift). */
+  sticky?: true;
+  /** Set when the source declared `scroll-snap-align` (+ optional `scroll-snap-stop: always`); the child registers with its scroll container, which derives `snapToOffsets`. */
+  snapTarget?: { align: string; stop: boolean };
+  /** `anchor-name` declared by this component (published at render). */
+  anchorName?: string;
+  /** `position-anchor`: implicit target for anchor functions. */
+  positionAnchor?: string;
+  /** Set for a `display: grid` container with a supported equal `1fr` track list; `columns` is the column count. */
+  gridInfo?: { columns: number };
+  /** Set for a grid item declaring `grid-column: span N`. */
+  gridSpan?: number;
   /** `true` when this compile output could publish a cascade value (font-size / line-height / direction) to descendants. */
   publishesCascade: boolean;
+  /** Authored width/height with no authored flex factor; scrollable targets pin `flexGrow: 0` at render so the declared size holds. */
+  scrollerFlexPin?: true;
 }
 
 export interface INativeStyle<Props extends BaseObject> {
@@ -440,6 +456,13 @@ export interface INativeStyle<Props extends BaseObject> {
   staticEligible: boolean;
   /** Set at construction; null when rules contain function interpolations. */
   staticCompiled: CompileOutput | null;
+  /**
+   * Set at construction; true when the CSS uses anchor() /
+   * anchor-size(). Gates the anchor-registry subscription in the
+   * dynamic render path (lifetime-constant, so the hook branch is
+   * stable).
+   */
+  usesAnchorFunctions: boolean;
   compile(executionContext: ExecutionContext & Props): CompileOutput;
 }
 

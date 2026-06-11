@@ -1,9 +1,17 @@
 import React from 'react';
-import { Appearance, Dimensions, View } from 'react-native';
+import { Appearance, Dimensions, Text, View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { NativeStyleContext } from '../';
 import { DEFAULT_CASCADE } from '../NativeStyleContext';
 import { resetResponsiveCache } from '../responsive';
+import { resetWarningsForTest } from '../transform/dev';
+
+// Forward style verbatim to a host; models a Pressable-wrapping custom
+// component so the pseudo-state tests below keep the state-callback
+// style form. Plain styled.View / styled.Text now resolve pseudo styles
+// statically (see the "non-pressable targets" block).
+const StateView = (props: any) => <View {...props} />;
+const StateText = (props: any) => <Text {...props} />;
 
 describe('modern CSS on React Native', () => {
   beforeEach(() => {
@@ -645,8 +653,112 @@ describe('modern CSS on React Native', () => {
   });
 
   describe('pseudo-state conditionals', () => {
+    describe('non-pressable targets get static styles, not a state function', () => {
+      // React Native invokes a function `style` only on Pressable; every
+      // other host treats a function style as invalid and drops the WHOLE
+      // style object. A pseudo-state bucket on styled.View therefore must
+      // not switch the style prop to the function form: the base styles
+      // ship as a plain static style and the (unreachable) pseudo bucket
+      // stays inert. Regression: the showcase logo's Stage (a View with a
+      // media-fenced &:active) collapsed to zero size on iOS because its
+      // entire rule rode in an ignored function.
+      let warnSpy: jest.SpyInstance;
+      beforeEach(() => {
+        resetWarningsForTest();
+        warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      });
+      afterEach(() => {
+        warnSpy.mockRestore();
+      });
+
+      it('styled.View with &:active keeps its base styles as a static style', () => {
+        const Comp = styled.View`
+          width: 146px;
+          height: 146px;
+          align-items: center;
+          &:active {
+            opacity: 0.5;
+          }
+        `;
+        const tree = TestRenderer.create(<Comp />);
+        const style = tree.root.findByType(View).props.style;
+        expect(typeof style).not.toBe('function');
+        const flat = Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
+        expect(flat.width).toBe(146);
+        expect(flat.height).toBe(146);
+        expect(flat.alignItems).toBe('center');
+        expect(flat.opacity).toBeUndefined();
+      });
+
+      it('warns that the pseudo state can never fire on a View', () => {
+        const Comp = styled.View`
+          width: 10px;
+          &:active {
+            opacity: 0.5;
+          }
+        `;
+        TestRenderer.create(<Comp />);
+        const warn = warnSpy.mock.calls.find(c => /:active/.test(c[0]));
+        expect(warn).toBeDefined();
+        expect(warn![0]).toMatch(/View/);
+        expect(warn![0]).toMatch(/Pressable/);
+      });
+
+      it('does not warn when the pseudo bucket is fenced behind a non-matching media query', () => {
+        const Comp = styled.View`
+          width: 146px;
+          @media (hover: hover) and (pointer: fine) {
+            cursor: grab;
+            &:active {
+              cursor: grabbing;
+            }
+          }
+        `;
+        const tree = TestRenderer.create(<Comp />);
+        const style = tree.root.findByType(View).props.style;
+        expect(typeof style).not.toBe('function');
+        const flat = Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
+        expect(flat.width).toBe(146);
+        expect(warnSpy).not.toHaveBeenCalled();
+      });
+
+      it('styled.Pressable keeps the state-function style', () => {
+        const Comp = styled.Pressable`
+          width: 10px;
+          &:active {
+            opacity: 0.5;
+          }
+        `;
+        const tree = TestRenderer.create(<Comp />);
+        // The styled element receives the function; Pressable resolves it
+        // with live state. Find the outermost element carrying it.
+        const el = tree.root.findAllByProps({ testID: undefined })[0] ?? tree.root;
+        const styledEl = tree.root.find(
+          n => typeof n.props.style === 'function' && n.type !== Comp
+        );
+        expect(typeof styledEl.props.style).toBe('function');
+        expect(warnSpy).not.toHaveBeenCalled();
+        void el;
+      });
+
+      it('custom component targets keep the state-function style (may wrap a Pressable)', () => {
+        const Forwarder = (props: any) => <View {...props} />;
+        const Comp = styled(Forwarder)`
+          width: 10px;
+          &:active {
+            opacity: 0.5;
+          }
+        `;
+        const tree = TestRenderer.create(<Comp />);
+        const style = tree.root.findByType(View).props.style;
+        expect(typeof style).toBe('function');
+        expect(style({ pressed: true })).toEqual([{ width: 10 }, { opacity: 0.5 }]);
+        expect(warnSpy).not.toHaveBeenCalled();
+      });
+    });
+
     it('produces a function style that resolves pressed state from &:active', () => {
-      const Comp = styled.View`
+      const Comp = styled(StateView)`
         background-color: white;
         &:active {
           opacity: 0.5;
@@ -676,7 +788,7 @@ describe('modern CSS on React Native', () => {
     });
 
     it('resolves hover state (&:hover)', () => {
-      const Comp = styled.View`
+      const Comp = styled(StateView)`
         color: black;
         &:hover {
           color: purple;
@@ -704,7 +816,7 @@ describe('modern CSS on React Native', () => {
     });
 
     it('aliases :focus-visible to :focus on native (web parity for portable code)', () => {
-      const Comp = styled.View`
+      const Comp = styled(StateView)`
         color: black;
         &:focus-visible {
           color: orange;
@@ -738,7 +850,7 @@ describe('modern CSS on React Native', () => {
       // a selector list as its argument."
       // On RN we only expand lists of supported pseudo-classes (see nativePlan).
       it('&:is(:hover, :focus) applies when either pseudo state matches', () => {
-        const Comp = styled.View`
+        const Comp = styled(StateView)`
           opacity: 1;
           &:is(:hover, :focus) {
             opacity: 0.5;
@@ -776,7 +888,7 @@ describe('modern CSS on React Native', () => {
       });
 
       it('&:where(:active, :disabled) fans out like separate pseudo rules', () => {
-        const Comp = styled.View`
+        const Comp = styled(StateView)`
           opacity: 1;
           &:where(:active, :disabled) {
             opacity: 0.4;
@@ -808,7 +920,7 @@ describe('modern CSS on React Native', () => {
     });
 
     it('merges user style function under pseudo state', () => {
-      const Comp = styled.View<{ style?: any }>`
+      const Comp = styled(StateView)<{ style?: any }>`
         background-color: white;
         &:active {
           opacity: 0.5;
@@ -1003,7 +1115,7 @@ describe('modern CSS on React Native', () => {
     });
 
     it('attr + pseudo `&[attr]:active` fires only when both gates pass', () => {
-      const Btn = styled.View<{
+      const Btn = styled(StateView)<{
         'data-tone'?: 'fail';
       }>`
         background-color: white;
@@ -1494,7 +1606,7 @@ describe('modern CSS on React Native', () => {
       // Default RN-jest viewport is 750×1334, so `(min-width: 500px)`
       // matches. We test the engine path that gates on all three:
       // media condition + attr chain + pseudo state.
-      const Card = styled.View<{ 'data-variant'?: 'hot' }>`
+      const Card = styled(StateView)<{ 'data-variant'?: 'hot' }>`
         background-color: white;
         @media (min-width: 500px) {
           &[data-variant='hot']:active {
@@ -1545,7 +1657,7 @@ describe('modern CSS on React Native', () => {
     });
 
     it('base + media + pseudo in one component', () => {
-      const Comp = styled.View`
+      const Comp = styled(StateView)`
         color: black;
         @media (min-width: 500px) {
           padding-top: 20px;
@@ -1584,7 +1696,7 @@ describe('modern CSS on React Native', () => {
     });
 
     it('resolves multiple pseudo-states active simultaneously', () => {
-      const Comp = styled.View`
+      const Comp = styled(StateView)`
         color: black;
         &:hover {
           color: blue;
@@ -1641,7 +1753,7 @@ describe('modern CSS on React Native', () => {
     it('pseudo inside @media gates on BOTH conditions', () => {
       // Width 750 → min-width 500 matches. Nested pseudo bucket activates only
       // when both the media query AND the hover state hold.
-      const Comp = styled.View`
+      const Comp = styled(StateView)`
         color: black;
         @media (min-width: 500px) {
           padding-top: 8px;
@@ -1683,7 +1795,7 @@ describe('modern CSS on React Native', () => {
 
     it('pseudo inside @media does NOT activate when media condition fails', () => {
       // min-width 2000 → doesn't match, so nested pseudo can't activate either.
-      const Comp = styled.View`
+      const Comp = styled(StateView)`
         color: black;
         @media (min-width: 2000px) {
           &:hover {
@@ -1711,7 +1823,7 @@ describe('modern CSS on React Native', () => {
     });
 
     it('pseudo inside @container gates on container + state', () => {
-      const Comp = styled.View`
+      const Comp = styled(StateView)`
         color: black;
         @container card (min-width: 100px) {
           padding-top: 4px;
@@ -1762,7 +1874,7 @@ describe('modern CSS on React Native', () => {
 
     it('pseudo inside @container without a matching container stays inactive', () => {
       // No ContainerContext;container bucket can't match, composite pseudo can't fire.
-      const Comp = styled.View`
+      const Comp = styled(StateView)`
         color: black;
         @container card (min-width: 100px) {
           &:active {
@@ -2023,6 +2135,148 @@ describe('modern CSS on React Native', () => {
   });
 
   // https://drafts.csswg.org/selectors-4/#nth-child-pseudo
+  // https://drafts.csswg.org/css-values-5/#tree-counting
+  // "The sibling-index() functional notation represents, as an <integer>,
+  // the index of the element on which the notation is used among its
+  // inclusive siblings. Like :nth-child(), sibling-index() is 1-indexed."
+  // Render-level coverage; the value-resolution rules are locked in
+  // resolvers.test.ts.
+  describe('tree-counting functions end-to-end (CSS Values 5, sibling-index / sibling-count)', () => {
+    it('calc(sibling-index() * 10px) sizes children by position (spec example)', () => {
+      const Parent = styled.View.withConfig({ displayName: 'TreeParent' })`
+        flex: 1;
+      `;
+      const Item = styled.View.withConfig({ displayName: 'TreeItem' })`
+        width: calc(sibling-index() * 10px);
+      `;
+      const tree = TestRenderer.create(
+        <Parent>
+          <Item />
+          <Item />
+          <Item />
+        </Parent>
+      );
+      const items = tree.root.findAllByType(View);
+      expect(items[1].props.style).toEqual({ width: 10 });
+      expect(items[2].props.style).toEqual({ width: 20 });
+      expect(items[3].props.style).toEqual({ width: 30 });
+    });
+
+    it('sibling-count() divides space evenly and reacts to sibling insertion', () => {
+      const Parent = styled.View.withConfig({ displayName: 'CountParent' })`
+        flex: 1;
+      `;
+      const Item = styled.View.withConfig({ displayName: 'CountItem' })`
+        width: calc(120px / sibling-count());
+      `;
+      const tree = TestRenderer.create(
+        <Parent>
+          <Item key="a" />
+          <Item key="b" />
+        </Parent>
+      );
+      let items = tree.root.findAllByType(View);
+      expect(items[1].props.style).toEqual({ width: 60 });
+
+      tree.update(
+        <Parent>
+          <Item key="a" />
+          <Item key="b" />
+          <Item key="c" />
+        </Parent>
+      );
+      items = tree.root.findAllByType(View);
+      expect(items[1].props.style).toEqual({ width: 40 });
+      expect(items[3].props.style).toEqual({ width: 40 });
+    });
+
+    // Regression: the showcase staircase widget shape. Pure-percent
+    // sibling math stays a percentage (parent-relative), and a color
+    // function with an env-dependent calc channel folds per position
+    // instead of shipping the raw string to RN (which paints it
+    // transparent).
+    it('percent ramp + dynamic oklch hue resolve per position (staircase widget shape)', () => {
+      const Ladder = styled.View.withConfig({ displayName: 'StairLadder' })`
+        gap: 4px;
+      `;
+      const Step = styled.View.withConfig({ displayName: 'StairStep' })`
+        height: 18px;
+        width: calc(sibling-index() * 13%);
+        background-color: oklch(0.72 0.14 calc(sibling-index() * 55));
+      `;
+      const tree = TestRenderer.create(
+        <Ladder>
+          <Step />
+          <Step />
+          <Step />
+        </Ladder>
+      );
+      const views = tree.root.findAllByType(View);
+      const styles = views.slice(1).map(v => Object.assign({}, ...[v.props.style].flat(Infinity)));
+      expect(styles.map(s => s.width)).toEqual(['13%', '26%', '39%']);
+      for (const s of styles) {
+        expect(s.backgroundColor).toMatch(/^#[0-9a-f]{6,8}$/i);
+      }
+      expect(new Set(styles.map(s => s.backgroundColor)).size).toBe(3);
+    });
+
+    it('untracked elements (parent is not styled) resolve as an only child', () => {
+      const Item = styled.View.withConfig({ displayName: 'LoneItem' })`
+        width: calc(sibling-index() * 10px);
+        height: calc(sibling-count() * 5px);
+      `;
+      const tree = TestRenderer.create(
+        <View>
+          <Item />
+        </View>
+      );
+      const items = tree.root.findAllByType(View);
+      expect(items[1].props.style).toEqual({ width: 10, height: 5 });
+    });
+  });
+
+  // https://drafts.csswg.org/css-values-5/#attr-notation
+  // Render-level coverage; grammar and type rules are locked in
+  // resolvers.test.ts. On native, attr() reads the component's props.
+  describe('attr() end-to-end (CSS Values 5 §8.7)', () => {
+    it('reads a typed prop with px unit and applies the fallback when missing', () => {
+      const Box = styled.View.withConfig({ displayName: 'AttrBox' })`
+        width: attr(data-size px, 40px);
+      `;
+      const tree = TestRenderer.create(
+        <View>
+          {/* @ts-expect-error data-* props are not part of ViewProps */}
+          <Box data-size={12} />
+          <Box />
+        </View>
+      );
+      const items = tree.root.findAllByType(View);
+      expect(items[1].props.style).toEqual({ width: 12 });
+      expect(items[2].props.style).toEqual({ width: 40 });
+    });
+
+    it('re-resolves when the prop changes', () => {
+      const Box = styled.View.withConfig({ displayName: 'AttrLiveBox' })`
+        width: attr(data-size px, 40px);
+      `;
+      // @ts-expect-error data-* props are not part of ViewProps
+      const tree = TestRenderer.create(<Box data-size={12} />);
+      expect(tree.root.findByType(View).props.style).toEqual({ width: 12 });
+      // @ts-expect-error data-* props are not part of ViewProps
+      tree.update(<Box data-size={20} />);
+      expect(tree.root.findByType(View).props.style).toEqual({ width: 20 });
+    });
+
+    it('composes inside calc()', () => {
+      const Box = styled.View.withConfig({ displayName: 'AttrCalcBox' })`
+        width: calc(attr(data-size px, 40px) * 2);
+      `;
+      // @ts-expect-error data-* props are not part of ViewProps
+      const tree = TestRenderer.create(<Box data-size={15} />);
+      expect(tree.root.findByType(View).props.style).toEqual({ width: 30 });
+    });
+  });
+
   describe(':nth-child family spec compliance (CSS Selectors 4: :nth-child / :nth-of-type)', () => {
     it(':first-child matches index 0', () => {
       const Parent = styled.View.withConfig({ displayName: 'FirstParent' })`
@@ -2098,6 +2352,45 @@ describe('modern CSS on React Native', () => {
       const pairItems = pair.root.findAllByType(View);
       expect(pairItems[1].props.style).toEqual({ color: 'black' });
       expect(pairItems[2].props.style).toEqual({ color: 'black' });
+    });
+
+    it('re-resolves :nth-child when a sibling insertion shifts position (stable element identity)', () => {
+      // Selectors 4: :nth-child matches the CURRENT tree position. When a
+      // sibling is inserted before an element whose props are unchanged
+      // (same element reference), the position-dependent match must
+      // re-evaluate; a render cache keyed only on props/env must not
+      // serve the stale match.
+      const Parent = styled.View.withConfig({ displayName: 'ShiftParent' })`
+        flex: 1;
+      `;
+      const Item = styled.View.withConfig({ displayName: 'ShiftItem' })`
+        color: black;
+        &:nth-child(2) {
+          color: red;
+        }
+      `;
+      const stable = <Item key="stable" />;
+      const tree = TestRenderer.create(
+        <Parent>
+          <Item key="a" />
+          {stable}
+        </Parent>
+      );
+      let items = tree.root.findAllByType(View);
+      expect(items[2].props.style).toEqual([{ color: 'black' }, { color: 'red' }]);
+
+      // Insert a sibling ahead of `stable`: it is now position 3 and the
+      // nth-child(2) styling must move to the inserted element.
+      tree.update(
+        <Parent>
+          <Item key="a" />
+          <Item key="b" />
+          {stable}
+        </Parent>
+      );
+      items = tree.root.findAllByType(View);
+      expect(items[2].props.style).toEqual([{ color: 'black' }, { color: 'red' }]);
+      expect(items[3].props.style).toEqual({ color: 'black' });
     });
 
     it(':nth-child(2) matches the second child', () => {
@@ -2286,8 +2579,8 @@ describe('modern CSS on React Native', () => {
     // of the state callback. Before pseudoStylesForState learned the
     // nthChild bucket, the compound silently dropped.
     it(':nth-child(N) compounds with a pseudo state', () => {
-      const Parent = styled.View.withConfig({ displayName: 'NthHoverParent' })``;
-      const Child = styled.View.withConfig({ displayName: 'NthHoverChild' })`
+      const Parent = styled(StateView).withConfig({ displayName: 'NthHoverParent' })``;
+      const Child = styled(StateView).withConfig({ displayName: 'NthHoverChild' })`
         color: black;
         &:nth-child(2):hover {
           color: green;
@@ -2575,7 +2868,7 @@ describe('modern CSS on React Native', () => {
     // taking a selector list as an argument. It represents an element
     // that is not represented by its argument."
     it('&:not(:hover) inverts the pseudo-state', () => {
-      const Btn = styled.View`
+      const Btn = styled(StateView)`
         color: black;
         &:not(:hover) {
           color: red;
@@ -2592,7 +2885,7 @@ describe('modern CSS on React Native', () => {
 
     // Same §4.3 rule: inverting :focus.
     it('&:not(:focus) inverts the focus pseudo-state', () => {
-      const Btn = styled.View`
+      const Btn = styled(StateView)`
         color: black;
         &:not(:focus) {
           color: red;
@@ -2645,7 +2938,7 @@ describe('modern CSS on React Native', () => {
     // fire only when the element is NOT represented by the inner
     // selector AND the trailing pseudo-state holds.
     it('&:not([data-active]):hover fires only when NOT active AND hovered', () => {
-      const Btn = styled.View<{ 'data-active'?: boolean }>`
+      const Btn = styled(StateView)<{ 'data-active'?: boolean }>`
         color: black;
         &:not([data-active]):hover {
           color: red;
@@ -2902,13 +3195,13 @@ describe('modern CSS on React Native', () => {
       });
 
       it('combines with a trailing pseudo-state on the host (:nth-child(... of ...):hover)', () => {
-        const Parent = styled.View.withConfig({ displayName: 'NthOfHoverParent' })`
+        const Parent = styled(StateView).withConfig({ displayName: 'NthOfHoverParent' })`
           flex: 1;
         `;
         // The of-form keeps the matching contract; the :hover suffix gates
         // the matched rule on the pseudo-state at runtime, so each item's
         // style is a state callback once any pseudo-state rule exists.
-        const Item = styled.View.withConfig({ displayName: 'NthOfHoverItem' })`
+        const Item = styled(StateView).withConfig({ displayName: 'NthOfHoverItem' })`
           color: black;
           &:nth-child(1 of [data-active]):hover {
             color: red;

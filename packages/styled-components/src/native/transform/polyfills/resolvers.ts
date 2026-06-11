@@ -4,7 +4,9 @@ import { warnOnce } from '../dev';
 import { isSafeThemePath } from '../sanitize';
 import { tokenize, tokenizeFunctionArgs } from '../tokenize';
 import { Token, TokenKind } from '../tokens';
-import { staticColorFunctionToHex } from './colorMath';
+import { getCssPropertyRegistration } from '../../propertyRegistry';
+import { buildAnchorResolver } from './anchorFns';
+import { hasRelativeFromPrefix, staticColorFunctionToHex } from './colorMath';
 import { identToNumeric, NumericResult, resolveStaticMathFunction, unifyUnits } from './mathFns';
 
 /**
@@ -42,6 +44,24 @@ export interface ResolveEnv {
    * no ancestor has declared any.
    */
   customProperties: ReadonlyMap<string, string> | null;
+  /**
+   * 1-based position among the parent's children, for `sibling-index()`.
+   * Sourced from ParentContext. `undefined` (untracked) resolves as 1
+   * (only child).
+   */
+  siblingIndex?: number;
+  /** Total children of the parent, for `sibling-count()`. Defaults to 1. */
+  siblingCount?: number;
+  /**
+   * The styled component's props: the attribute source for `attr()`.
+   * Same bag the attribute-selector matcher ([data-x="y"]) reads.
+   */
+  props?: Record<string, unknown> | null;
+  /**
+   * The component's declared `position-anchor` name; the implicit
+   * target for `anchor()` / `anchor-size()` without an explicit name.
+   */
+  positionAnchor?: string;
 }
 
 /**
@@ -151,7 +171,7 @@ const NUMERIC_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))([a-z%]*)$/i;
  * compiled bucket; the StyledNativeComponent render path then runs
  * them against the current env via {@link applyResolvers}.
  */
-export function buildResolver(value: unknown): Resolver | null {
+export function buildResolver(value: unknown, prop?: string): Resolver | null {
   if (typeof value !== 'string') return null;
   if (value.length === 0) return null;
 
@@ -181,6 +201,10 @@ export function buildResolver(value: unknown): Resolver | null {
   if ((c0 >= $.DIGIT_0 && c0 <= $.DIGIT_9) || c0 === $.HYPHEN || c0 === $.DOT || c0 === $.PLUS) {
     const vp = VP_UNIT_RE.exec(value);
     if (vp !== null) {
+      // The browser distinguishes dvh / svh / lvh against the real URL-bar
+      // state; a JS resolver would collapse them to one number. Leave the
+      // authored unit on the value so rn-web forwards it to CSS unchanged.
+      if (__NATIVE_WEB__) return null;
       return viewportResolver(parseFloat(vp[1]), vp[2].toLowerCase());
     }
     const cq = CQ_UNIT_RE.exec(value);
@@ -212,13 +236,14 @@ export function buildResolver(value: unknown): Resolver | null {
   //   layouts, slightly off for nested cards).
   if (c0 === 0x63 /* c */) {
     if (value.startsWith('calc(') || value.startsWith('clamp(')) {
-      return resolveMathFn(value);
+      return resolveMathFn(value, prop);
     }
     if (value.startsWith('color-mix(')) return colorFnResolver(value);
+    if (value.startsWith('color(')) return colorFnResolver(value);
   }
   if (c0 === 0x6d /* m */) {
     if (value.startsWith('min(') || value.startsWith('max(')) {
-      return resolveMathFn(value);
+      return resolveMathFn(value, prop);
     }
   }
 
@@ -231,15 +256,58 @@ export function buildResolver(value: unknown): Resolver | null {
 
   // Non-numeric prefix; `light-dark(` and `lch`/`lab` color fns share `l`.
   if (c0 === 0x6c /* l */) {
-    if (value.startsWith('light-dark(')) return lightDarkResolver(value);
+    if (value.startsWith('light-dark(')) {
+      // Pure-static light-dark survives as authored text on rn-web so the
+      // CSS indirection path (`--sc-ld-*` + `var()`) reaches the browser;
+      // sentinel-bearing branches still need render-time substitution.
+      if (__NATIVE_WEB__ && value.indexOf('\0') === -1) return null;
+      return lightDarkResolver(value);
+    }
     if (value.startsWith('lch(') || value.startsWith('lab(')) return colorFnResolver(value);
   }
   if (c0 === 0x65 /* e */ && value.startsWith('env(')) return envResolver(value);
 
   // round(line-width, A) defers to a runtime resolver because the device
-  // pixel ratio isn't known at compile time.
-  if (c0 === 0x72 /* r */ && value.startsWith('round(line-width,')) {
-    return lineWidthRoundResolver(value);
+  // pixel ratio isn't known at compile time. The relative from-forms of
+  // rgb()/rgba() also start with `r`; route them to colorFnResolver so a
+  // sentinel (theme-token) origin folds at render time. Absolute rgb()
+  // stays un-resolved (RN normalizeColor handles it).
+  if (c0 === 0x72 /* r */) {
+    if (value.startsWith('round(line-width,')) return lineWidthRoundResolver(value);
+    if (value.startsWith('rgb(') && hasRelativeFromPrefix(value, 3)) return colorFnResolver(value);
+    if (value.startsWith('rgba(') && hasRelativeFromPrefix(value, 4)) return colorFnResolver(value);
+  }
+
+  // Relative from-forms of hsl()/hsla()/hwb() route to colorFnResolver
+  // for the same reason; absolute forms stay un-resolved for RN.
+  if (c0 === 0x68 /* h */) {
+    if ((value.startsWith('hsl(') || value.startsWith('hwb(')) && hasRelativeFromPrefix(value, 3)) {
+      return colorFnResolver(value);
+    }
+    if (value.startsWith('hsla(') && hasRelativeFromPrefix(value, 4)) return colorFnResolver(value);
+  }
+
+  // Tree-counting functions take no arguments; exact match only so a
+  // malformed `sibling-index(2)` stays invalid.
+  if (c0 === 0x73 /* s */) {
+    if (value === 'sibling-index()') return siblingIndexResolver;
+    if (value === 'sibling-count()') return siblingCountResolver;
+  }
+
+  if (c0 === 0x61 /* a */) {
+    if (value.startsWith('attr(')) {
+      const r = attrResolver(value);
+      if (r !== null) return r;
+    }
+    // anchor() / anchor-size() need the destination property for the
+    // spec's axis rules, so they only resolve when the caller knows it.
+    if (prop !== undefined && value.startsWith('anchor-size(')) {
+      const r = buildAnchorResolver(value, prop, true);
+      if (r !== null) return r;
+    } else if (prop !== undefined && value.startsWith('anchor(')) {
+      const r = buildAnchorResolver(value, prop, false);
+      if (r !== null) return r;
+    }
   }
 
   // Multi-token values containing one or more clean sentinels: assemble
@@ -285,14 +353,47 @@ function bailOnUnsupportedKeyword(value: string): boolean {
   return true;
 }
 
-function resolveMathFn(value: string): Resolver | null {
+function resolveMathFn(value: string, prop?: string): Resolver | null {
   if (bailOnUnsupportedKeyword(value)) return null;
   // Bare grouping parens are equivalent to nested `calc()`. Our tokenizer
   // doesn't emit Paren tokens; the cheapest path to grouping support is
   // to rewrite bare `(...)` as `calc(...)` before tokenization so the
   // existing nested-calc support handles them.
-  return mathFnResolver(expandBareParens(value), NATIVE_MATH_OPTS);
+  const opts =
+    prop !== undefined && value.indexOf('anchor') !== -1
+      ? { ...NATIVE_MATH_OPTS, prop }
+      : NATIVE_MATH_OPTS;
+  const r = mathFnResolver(expandBareParens(value), opts);
+  if (r === null) return null;
+  // Static-mixed-unit math passes through to the browser's CSS engine,
+  // which resolves `%` and friends against the real containing block at
+  // paint time; strictly more accurate than anything computed here. The
+  // resolver above still gates validity (malformed math must not reach
+  // CSS); only operands the browser cannot know (theme sentinels and our
+  // polyfilled attr() / anchor() / tree-counting / container units) force
+  // JS evaluation on rn-web.
+  if (__NATIVE_WEB__ && !rnWebMathNeedsJsResolution(value)) {
+    return () => value;
+  }
+  return r;
 }
+
+/** True when a math expression contains an operand only our JS runtime can
+ *  substitute (rn-web passthrough must not strand these in CSS text). */
+function rnWebMathNeedsJsResolution(value: string): boolean {
+  return (
+    value.indexOf('\0') !== -1 ||
+    value.indexOf('attr(') !== -1 ||
+    value.indexOf('anchor') !== -1 ||
+    value.indexOf('sibling-') !== -1 ||
+    CQ_UNIT_ANYWHERE_RE.test(value)
+  );
+}
+
+// Container-query units anywhere in the expression (CQ_UNIT_RE is anchored
+// to a whole value). Containers are polyfilled on rn-web, so cq* lengths
+// always need the JS resolver.
+const CQ_UNIT_ANYWHERE_RE = /\d(?:cqw|cqh|cqi|cqb|cqmin|cqmax)\b/i;
 
 /**
  * Convert bare grouping parentheses inside a math expression to a nested
@@ -928,6 +1029,249 @@ function templateResolver(value: string): Resolver | null {
   };
 }
 
+const siblingIndexResolver: Resolver = env => env.siblingIndex ?? 1;
+const siblingCountResolver: Resolver = env => env.siblingCount ?? 1;
+
+/**
+ * Unit names accepted by attr()'s `<attr-unit>` type. The spec defines
+ * <attr-unit> as a <custom-ident> that must match a known CSS dimension
+ * unit (or `%`); unknown names trigger fallback rather than invalidity.
+ */
+const ATTR_KNOWN_UNITS = new Set([
+  '%',
+  'px',
+  'em',
+  'rem',
+  'ex',
+  'rex',
+  'cap',
+  'rcap',
+  'ch',
+  'rch',
+  'ic',
+  'ric',
+  'lh',
+  'rlh',
+  'vw',
+  'vh',
+  'vi',
+  'vb',
+  'vmin',
+  'vmax',
+  'svw',
+  'svh',
+  'lvw',
+  'lvh',
+  'dvw',
+  'dvh',
+  'cqw',
+  'cqh',
+  'cqi',
+  'cqb',
+  'cqmin',
+  'cqmax',
+  'cm',
+  'mm',
+  'q',
+  'in',
+  'pt',
+  'pc',
+  'deg',
+  'grad',
+  'rad',
+  'turn',
+  's',
+  'ms',
+  'hz',
+  'khz',
+  'fr',
+  'dpi',
+  'dpcm',
+  'dppx',
+  'x',
+]);
+
+const ATTR_COLOR_FN_NAMES = new Set([
+  'rgb',
+  'rgba',
+  'hsl',
+  'hsla',
+  'hwb',
+  'oklch',
+  'oklab',
+  'lch',
+  'lab',
+  'color',
+  'color-mix',
+  'light-dark',
+]);
+
+/** Full-string CSS <number-token> form (no unit, optional exponent). */
+const ATTR_NUMBER_TOKEN_RE = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+
+type AttrTypeSpec =
+  | { kind: 'string' } // raw-string keyword or omitted type
+  | { kind: 'number' }
+  | { kind: 'unit'; unit: string | null } // null = unknown unit (always-fallback)
+  | { kind: 'syntax'; syntax: 'length' | 'number' | 'percentage' | 'color' | 'any' | null };
+
+/**
+ * Parse a prop value as a CSS <number-token>. JS number props are
+ * accepted directly (deviation noted in the spec block tests).
+ */
+function attrToNumber(raw: unknown): number | null {
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null;
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  return ATTR_NUMBER_TOKEN_RE.test(trimmed) ? parseFloat(trimmed) : null;
+}
+
+/**
+ * Normalize a fallback `<declaration-value>` for emission into an RN
+ * style slot: `Npx` and bare numbers become numbers, everything else
+ * passes through as the raw string (`50%`, `gray`, `auto`, ...).
+ */
+function normalizeAttrValue(s: string): number | string {
+  const m = NUMERIC_RE.exec(s);
+  if (m !== null && (m[2] === '' || m[2] === 'px')) return parseFloat(m[1]);
+  return s;
+}
+
+/**
+ * Build a render-time resolver for `attr(<attr-name> <attr-type>?,
+ * <declaration-value>?)`. On React Native the attribute source is the
+ * styled component's props ({@link ResolveEnv.props}), mirroring the
+ * attribute-selector matcher. Returns `null` for malformed heads
+ * (namespaced names, empty args); type/value mismatches resolve to the
+ * fallback per spec, and a missing fallback on a typed attr() drops the
+ * declaration (guaranteed-invalid).
+ */
+function attrResolver(value: string): Resolver | null {
+  const toks = tokenize(value);
+  if (toks.length !== 1 || toks[0].kind !== TokenKind.Function || toks[0].name !== 'attr') {
+    return null;
+  }
+  const argsRaw = toks[0].args || '';
+  const commaIdx = topLevelCommaIdx(argsRaw);
+  const headRaw = (commaIdx === -1 ? argsRaw : argsRaw.slice(0, commaIdx)).trim();
+  const fallbackRaw = commaIdx === -1 ? null : argsRaw.slice(commaIdx + 1).trim();
+  // Namespaced attr names (`ns|name`) have no React-props analogue.
+  if (headRaw.length === 0 || headRaw.indexOf('|') !== -1) return null;
+
+  const wsIdx = headRaw.search(/\s/);
+  const name = wsIdx === -1 ? headRaw : headRaw.slice(0, wsIdx);
+  const typeRaw = wsIdx === -1 ? '' : headRaw.slice(wsIdx).trim();
+
+  let type: AttrTypeSpec;
+  if (typeRaw === '' || typeRaw === 'raw-string') {
+    type = { kind: 'string' };
+  } else if (typeRaw === 'number') {
+    type = { kind: 'number' };
+  } else if (typeRaw.startsWith('type(') && typeRaw.endsWith(')')) {
+    const syntax = typeRaw.slice(5, -1).trim();
+    if (syntax === '*') type = { kind: 'syntax', syntax: 'any' };
+    else if (syntax === '<length>') type = { kind: 'syntax', syntax: 'length' };
+    else if (syntax === '<number>') type = { kind: 'syntax', syntax: 'number' };
+    else if (syntax === '<percentage>') type = { kind: 'syntax', syntax: 'percentage' };
+    else if (syntax === '<color>') type = { kind: 'syntax', syntax: 'color' };
+    else {
+      if (__DEV__) {
+        warnOnce(
+          'native-attr-type-unsupported',
+          `\`attr()\` with the syntax \`${syntax}\` is not supported on React Native. Supported forms: type(*), type(<length>), type(<number>), type(<percentage>), type(<color>), a unit name like px, the number keyword, or raw-string. The fallback value is used instead.`,
+          syntax
+        );
+      }
+      type = { kind: 'syntax', syntax: null };
+    }
+  } else {
+    const unit = typeRaw.toLowerCase();
+    type = { kind: 'unit', unit: ATTR_KNOWN_UNITS.has(unit) ? unit : null };
+  }
+
+  // "If the <attr-type> argument is omitted, the fallback defaults to the
+  // empty string if omitted; otherwise, it defaults to the
+  // guaranteed-invalid value if omitted."
+  //
+  // The fallback is a <declaration-value> that substitutes for the
+  // attribute's value, so it re-enters value resolution: a dynamic
+  // fallback (light-dark(), viewport units, math fns) gets its own
+  // nested resolver, built once here.
+  const fallbackResolver =
+    fallbackRaw !== null && fallbackRaw !== '' ? buildResolver(fallbackRaw) : null;
+  const staticFallback: number | string | null =
+    fallbackRaw !== null
+      ? fallbackRaw === ''
+        ? ''
+        : normalizeAttrValue(fallbackRaw)
+      : type.kind === 'string'
+        ? ''
+        : null;
+
+  return env => {
+    const fallback = fallbackResolver !== null ? fallbackResolver(env) : staticFallback;
+    const props = env.props;
+    const raw = props == null ? undefined : props[name];
+    if (raw === undefined || raw === null) return fallback;
+
+    switch (type.kind) {
+      case 'string':
+        return typeof raw === 'string' ? raw : String(raw);
+      case 'number': {
+        const n = attrToNumber(raw);
+        return n === null ? fallback : n;
+      }
+      case 'unit': {
+        if (type.unit === null) return fallback;
+        const n = attrToNumber(raw);
+        if (n === null) return fallback;
+        if (type.unit === 'px') return n;
+        return n + type.unit;
+      }
+      case 'syntax':
+        return resolveAttrSyntax(type.syntax, raw, fallback);
+    }
+  };
+}
+
+function resolveAttrSyntax(
+  syntax: 'length' | 'number' | 'percentage' | 'color' | 'any' | null,
+  raw: unknown,
+  fallback: number | string | null
+): number | string | null {
+  if (syntax === null) return fallback;
+  if (syntax === 'any') return typeof raw === 'string' ? raw : String(raw);
+  if (syntax === 'number') {
+    const n = attrToNumber(raw);
+    return n === null ? fallback : n;
+  }
+  // RN number props conventionally mean device px; accept for <length>.
+  if (syntax === 'length' && typeof raw === 'number') {
+    return Number.isFinite(raw) ? raw : fallback;
+  }
+  if (typeof raw !== 'string') return fallback;
+  const toks = tokenize(raw.trim());
+  if (toks.length !== 1) return fallback;
+  const t = toks[0];
+  if (syntax === 'length') {
+    if (t.kind === TokenKind.Number && t.value === 0) return 0;
+    if (t.kind !== TokenKind.Length) return fallback;
+    if (t.unit === 'px' || t.unit === '') return t.value!;
+    // Dynamic length units re-enter the resolver pipeline as strings;
+    // RN itself can't consume them, so anything non-px falls back.
+    return fallback;
+  }
+  if (syntax === 'percentage') {
+    return t.kind === TokenKind.Percent ? t.value! + '%' : fallback;
+  }
+  // <color>: structural validation only (hash, color function, or ident);
+  // ident names are not checked against the named-color table.
+  if (t.kind === TokenKind.Hash) return raw.trim();
+  if (t.kind === TokenKind.Function && ATTR_COLOR_FN_NAMES.has(t.name || '')) return raw.trim();
+  if (t.kind === TokenKind.Ident) return raw.trim();
+  return fallback;
+}
+
 function topLevelCommaIdx(s: string): number {
   let depth = 0;
   for (let i = 0; i < s.length; i++) {
@@ -974,6 +1318,11 @@ function parseLengthLiteral(s: string): number | string | null {
  */
 interface BuildOpts {
   resolvePercent?: (env: ResolveEnv) => number | null;
+  /**
+   * Destination style property, when known. Enables operands whose
+   * resolution is property-dependent (anchor() axis rules).
+   */
+  prop?: string;
 }
 
 /**
@@ -988,11 +1337,67 @@ function mathFnResolver(value: string, opts?: BuildOpts): Resolver | null {
   if (tokens.length !== 1 || tokens[0].kind !== TokenKind.Function) return null;
   const fn = tokens[0];
   const name = fn.name || '';
-  if (name === 'calc') return calcResolverFromFn(fn, opts);
+  // "the computed value of a percentage is the specified percentage":
+  // when every dimensional operand is a percent (numbers and
+  // number-valued functions like sibling-index() are unitless), the
+  // result stays a percent string and the host resolves it against the
+  // property's own reference box (the parent for width / height). The
+  // eager % -> px conversion in `resolvePercent` only applies to MIXED
+  // expressions, which React Native cannot represent symbolically.
+  let effOpts = opts;
+  if (opts !== undefined && opts.resolvePercent !== undefined && isPurePercentMathFn(fn)) {
+    effOpts = opts.prop !== undefined ? { prop: opts.prop } : undefined;
+  }
+  if (name === 'calc') return calcResolverFromFn(fn, effOpts);
   if (name === 'min' || name === 'max' || name === 'clamp') {
-    return minMaxClampResolverFromFn(name, fn, opts);
+    return minMaxClampResolverFromFn(name, fn, effOpts);
   }
   return null;
+}
+
+/**
+ * True when a math function's operand tree contains at least one percent
+ * and no other dimensional operand: numbers, arithmetic, and
+ * number-valued functions (nested math, sibling-index() /
+ * sibling-count()) are fine; any length, sentinel, or env-dependent
+ * length function makes the expression mixed.
+ */
+function isPurePercentMathFn(fn: Token): boolean {
+  return scanPurePercent(fn) === 1;
+}
+
+/** 0 = no percent seen (yet), 1 = percent seen, -1 = mixed/unknown. */
+function scanPurePercent(fn: Token): 0 | 1 | -1 {
+  const args = tokenizeFunctionArgs(fn);
+  let saw: 0 | 1 = 0;
+  for (let i = 0; i < args.length; i++) {
+    const t = args[i];
+    switch (t.kind) {
+      case TokenKind.Percent:
+        saw = 1;
+        continue;
+      case TokenKind.Number:
+      case TokenKind.Op:
+      case TokenKind.Slash:
+      case TokenKind.Comma:
+      case TokenKind.Ident:
+        continue;
+      case TokenKind.Function: {
+        const inner = t.name || '';
+        if (inner === 'calc' || inner === 'min' || inner === 'max' || inner === 'clamp') {
+          const nested = scanPurePercent(t);
+          if (nested === -1) return -1;
+          if (nested === 1) saw = 1;
+          continue;
+        }
+        if (inner === 'sibling-index' || inner === 'sibling-count') continue;
+        return -1;
+      }
+      default:
+        return -1;
+    }
+  }
+  return saw;
 }
 
 function calcResolverFromFn(fn: Token, opts?: BuildOpts): Resolver | null {
@@ -1263,6 +1668,24 @@ function buildOperand(
       if (r === null) return null;
       return env => valueToNumeric(r(env), '');
     }
+    if (inner === 'sibling-index' || inner === 'sibling-count') {
+      if ((t.args || '').trim() !== '') return null;
+      const isIndex = inner === 'sibling-index';
+      return env => ({
+        value: isIndex ? (env.siblingIndex ?? 1) : (env.siblingCount ?? 1),
+        unit: '',
+      });
+    }
+    if (inner === 'attr') {
+      const r = attrResolver(t.raw);
+      if (r === null) return null;
+      return env => valueToNumeric(r(env), '');
+    }
+    if ((inner === 'anchor' || inner === 'anchor-size') && opts?.prop !== undefined) {
+      const r = buildAnchorResolver(t.raw, opts.prop, inner === 'anchor-size');
+      if (r === null) return null;
+      return env => valueToNumeric(r(env), 'px');
+    }
   }
   return null;
 }
@@ -1344,28 +1767,184 @@ function numericToCss(r: NumericResult): number | string {
 }
 
 /**
- * Runtime resolver for `oklch()` / `oklab()` / `lch()` / `lab()` /
- * `color-mix()` when one or more channel arms are dynamic. The static
- * fold in `staticColorFunctionToHex` (colorMath.ts) bails the moment a
- * channel isn't a Number / Percent literal; we land here, substitute
- * sentinel arms via `templateResolver` at render time, then run the
- * assembled string back through the static converter to produce a hex.
- *
- * Limitation by design: this re-uses the static converter, so individual
- * channel arms must end up as Number / Percent / color literal after
- * substitution. Dynamic env() / calc() / nested fns inside a channel
- * aren't supported here;the static converter doesn't know about them
- * either. Sentinels resolved to numbers / percents / hex colors cover
- * the practical theme-palette case.
+ * Runtime resolver for color functions (`oklch()` / `oklab()` / `lch()` /
+ * `lab()` / `color-mix()` / `color()` / relative forms) when one or more
+ * channel arms are dynamic. The static fold in `staticColorFunctionToHex`
+ * (colorMath.ts) bails the moment a channel isn't a literal; we land
+ * here, substitute the dynamic arms at render time (theme sentinels plus
+ * env-dependent math: calc()/min()/max()/clamp() and bare
+ * sibling-index()/sibling-count()), then run the assembled string back
+ * through the static converter to produce a hex. Without the math
+ * substitution the raw function string reached React Native, whose color
+ * parser rejects it and paints transparent.
  */
 function colorFnResolver(value: string): Resolver | null {
-  const tr = templateResolver(value);
-  if (tr === null) return null;
+  return colorDynamicTemplateResolver(value);
+}
+
+/** Math-function heads whose results are spliced into a color string. */
+function matchColorMathHead(value: string, i: number): 'math' | 'sibling' | null {
+  const c = value.charCodeAt(i);
+  if (c === 0x63 /* c */) {
+    if (value.startsWith('calc(', i) || value.startsWith('clamp(', i)) return 'math';
+    return null;
+  }
+  if (c === 0x6d /* m */) {
+    if (value.startsWith('min(', i) || value.startsWith('max(', i)) return 'math';
+    return null;
+  }
+  if (c === 0x73 /* s */) {
+    if (value.startsWith('sibling-index()', i) || value.startsWith('sibling-count()', i)) {
+      return 'sibling';
+    }
+  }
+  return null;
+}
+
+function isIdentChar(c: number): boolean {
+  return (
+    (c >= 0x61 && c <= 0x7a) ||
+    (c >= 0x41 && c <= 0x5a) ||
+    (c >= 0x30 && c <= 0x39) ||
+    c === 0x2d ||
+    c === 0x5f
+  );
+}
+
+/**
+ * Like {@link templateResolver}, but for color-function strings: splices
+ * BOTH theme sentinels and env-dependent math segments. Math segments may
+ * themselves carry sentinels (the math operand machinery resolves them).
+ * Returns null when the string has no dynamic segment this recognizes.
+ */
+function colorDynamicTemplateResolver(value: string): Resolver | null {
+  interface Seg {
+    start: number;
+    end: number;
+    resolver: Resolver;
+    unit: string;
+  }
+  const segments: Seg[] = [];
+  let i = 0;
+  let depth = 0;
+  const len = value.length;
+  while (i < len) {
+    const c = value.charCodeAt(i);
+    if (c === 0x28 /* ( */) {
+      depth++;
+      i++;
+      continue;
+    }
+    if (c === 0x29 /* ) */) {
+      depth--;
+      i++;
+      continue;
+    }
+    if (c === 0) {
+      // Sentinel atom; same boundary + terminator rules as templateResolver.
+      if (i > 0) {
+        const prev = value.charCodeAt(i - 1);
+        const isBoundary =
+          prev === 0x20 ||
+          prev === 0x09 ||
+          prev === 0x0a ||
+          prev === 0x0d ||
+          prev === 0x2c ||
+          prev === 0x28 ||
+          prev === 0x29 ||
+          prev === 0x2f;
+        if (!isBoundary) return null;
+      }
+      const startDepth = depth;
+      let end = i + 1;
+      let scanDepth = depth;
+      while (end < len) {
+        const ec = value.charCodeAt(end);
+        if (
+          ec === 0x20 ||
+          ec === 0x09 ||
+          ec === 0x0a ||
+          ec === 0x0d ||
+          ec === 0x2c ||
+          ec === 0x2f
+        ) {
+          break;
+        }
+        if (ec === 0x28) {
+          scanDepth++;
+        } else if (ec === 0x29) {
+          if (scanDepth === startDepth) break;
+          scanDepth--;
+        }
+        end++;
+      }
+      const segment = value.substring(i, end);
+      const r = themeResolver(segment);
+      if (r === null) return null;
+      const lastColon = segment.lastIndexOf(':');
+      const fb = lastColon === -1 ? '' : segment.slice(lastColon + 1);
+      segments.push({ start: i, end, resolver: r, unit: fallbackUnit(fb) });
+      depth = scanDepth;
+      i = end;
+      continue;
+    }
+    if (isIdentChar(c)) {
+      const prev = i > 0 ? value.charCodeAt(i - 1) : -1;
+      const isBoundary =
+        prev === -1 ||
+        prev === 0x20 ||
+        prev === 0x09 ||
+        prev === 0x0a ||
+        prev === 0x0d ||
+        prev === 0x2c ||
+        prev === 0x28 ||
+        prev === 0x29 ||
+        prev === 0x2f;
+      const head = isBoundary ? matchColorMathHead(value, i) : null;
+      if (head !== null) {
+        const open = value.indexOf('(', i);
+        const close = findMatchingClose(value, open);
+        if (close !== -1) {
+          const seg = value.substring(i, close + 1);
+          const r = head === 'sibling' ? buildResolver(seg) : resolveMathFn(seg);
+          if (r !== null) {
+            segments.push({ start: i, end: close + 1, resolver: r, unit: '' });
+            i = close + 1;
+            continue;
+          }
+        }
+      }
+      // Skip the whole ident run so heads aren't re-matched mid-word.
+      let j = i + 1;
+      while (j < len && isIdentChar(value.charCodeAt(j))) j++;
+      i = j;
+      continue;
+    }
+    i++;
+  }
+  if (segments.length === 0) return null;
   return env => {
-    const assembled = tr(env);
-    if (typeof assembled !== 'string') return null;
-    const tokens = tokenize(assembled);
+    let out = '';
+    let pos = 0;
+    for (let k = 0; k < segments.length; k++) {
+      const s = segments[k];
+      if (pos < s.start) out += value.substring(pos, s.start);
+      const v = s.resolver(env);
+      if (v === null) return null;
+      if (typeof v === 'number') {
+        out += s.unit === '' ? String(v) : String(v) + s.unit;
+      } else {
+        out += String(v);
+      }
+      pos = s.end;
+    }
+    if (pos < value.length) out += value.substring(pos);
+    const tokens = tokenize(out);
     if (tokens.length !== 1 || tokens[0].kind !== TokenKind.Function) return null;
+    // Wide-gamut color functions stay authored CSS text on rn-web; the
+    // sentinels only splice resolved numbers into the string and the
+    // browser parses the function (and its color space) natively.
+    if (__NATIVE_WEB__) return out;
     return staticColorFunctionToHex(tokens[0]);
   };
 }
@@ -1426,7 +2005,10 @@ function applyResolversWithCache(
 export function substituteVars(
   value: string,
   customProperties: ReadonlyMap<string, string> | null,
-  visited?: Set<string>
+  visited?: Set<string>,
+  /** The component's OWN declarations; the only source a registered
+   *  `inherits: false` property may read from (besides its initial). */
+  own?: ReadonlyMap<string, string> | null
 ): string | null {
   if (indexOfUnquotedSubstring(value, 'var(', 0) === -1) return value;
   let out = '';
@@ -1450,7 +2032,7 @@ export function substituteVars(
     // substitution). Resolve it before looking up the resulting name.
     let name = rawName;
     if (indexOfUnquotedSubstring(name, 'var(', 0) !== -1) {
-      const resolvedName = substituteVars(name, customProperties, visited);
+      const resolvedName = substituteVars(name, customProperties, visited, own);
       if (resolvedName === null) {
         name = '';
       } else {
@@ -1467,9 +2049,22 @@ export function substituteVars(
       resolved = null;
     } else {
       localVisited.add(name);
-      const direct = customProperties !== null ? customProperties.get(name) : undefined;
+      // Registered properties (CSS Properties and Values API): an
+      // `inherits: false` registration only reads the component's own
+      // declarations, and an unset registered property resolves to its
+      // typed initial value before the var() fallback is considered.
+      const reg = getCssPropertyRegistration(name);
+      let direct: string | undefined;
+      if (reg !== undefined && !reg.inherits) {
+        direct = own != null ? own.get(name) : undefined;
+      } else {
+        direct = customProperties !== null ? customProperties.get(name) : undefined;
+      }
+      if (direct === undefined && reg !== undefined && reg.initialValue !== null) {
+        direct = reg.initialValue;
+      }
       resolved =
-        direct !== undefined ? substituteVars(direct, customProperties, localVisited) : null;
+        direct !== undefined ? substituteVars(direct, customProperties, localVisited, own) : null;
       localVisited.delete(name);
     }
     if (resolved === null) {
@@ -1477,7 +2072,7 @@ export function substituteVars(
       // is empty (or itself fails to substitute) the consuming
       // declaration is invalid and the caller drops it.
       if (!hasFallback || fallback === '') return null;
-      const substitutedFallback = substituteVars(fallback, customProperties, localVisited);
+      const substitutedFallback = substituteVars(fallback, customProperties, localVisited, own);
       if (substitutedFallback === null) return null;
       out += substitutedFallback;
     } else {

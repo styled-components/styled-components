@@ -101,7 +101,8 @@ export function classifyAtRuleNow(name: string, prelude: string): NativeAtClass 
     return { kind: name, containerName: undefined, condition: prelude };
   }
   if (name === 'keyframes' || /^-[a-z]+-keyframes$/.test(name)) return { kind: 'keyframes' };
-  if (name === 'font-face' || name === 'property' || name === 'page') {
+  if (name === 'property') return { kind: 'property' };
+  if (name === 'font-face' || name === 'page') {
     return { kind: 'unsupported', warn: 'web-only' };
   }
   return { kind: 'unsupported', warn: 'unknown' };

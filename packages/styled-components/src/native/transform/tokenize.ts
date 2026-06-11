@@ -222,8 +222,13 @@ export function tokenize(value: string): Token[] {
       }
     }
 
-    // Bare minus; op in calc / separator
-    if (c === $.HYPHEN) {
+    // Bare minus; op in calc / separator. `--` followed by an ident char
+    // starts a dashed ident (custom-property names, timeline names) per
+    // CSS Syntax §4.3.9; let the ident scanner below consume it.
+    if (
+      c === $.HYPHEN &&
+      !(i + 2 < len && value.charCodeAt(i + 1) === $.HYPHEN && isIdentPart(value.charCodeAt(i + 2)))
+    ) {
       tokens.push(opToken('-'));
       i++;
       continue;

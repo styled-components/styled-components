@@ -5,6 +5,10 @@
  * in isolation from the render pipeline. Integration behavior lives in
  * `src/native/test/modern-css.test.tsx`.
  */
+import {
+  getCssPropertyRegistration,
+  resetCssPropertiesForTest,
+} from '../../native/propertyRegistry';
 import { resetWarningsForTest } from '../../native/transform/dev';
 import { toNativeStyles, NativeStyles, resetNativeStyleCache } from '../compileNative';
 
@@ -281,9 +285,18 @@ describe('toNativeStyles', () => {
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('@font-face'));
     });
 
-    it('warns and drops @property', () => {
+    it('registers @property instead of warning (CSS Properties and Values API)', () => {
+      // Previously warned as web-only; @property now registers the
+      // custom property. Full spec coverage lives in
+      // src/native/test/property-registration.test.tsx.
       compile('@property --foo { syntax: "<color>"; inherits: false; initial-value: red; }');
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('@property'));
+      expect(warnSpy).not.toHaveBeenCalled();
+      expect(getCssPropertyRegistration('--foo')).toEqual({
+        syntax: '<color>',
+        inherits: false,
+        initialValue: 'red',
+      });
+      resetCssPropertiesForTest();
     });
 
     it('warns and drops @page', () => {

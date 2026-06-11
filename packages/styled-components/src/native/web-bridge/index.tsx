@@ -956,6 +956,15 @@ function toStyleSheet(): Record<string, unknown> {
   return {};
 }
 
+/**
+ * `setAnimationDebug` mirrors the native entry's debug toggle so
+ * omniplatform code can call it at module scope without crashing on web.
+ * The browser runs animations, scroll timelines, and `position: sticky`
+ * natively on the bridge, so there is no adapter activity to trace; the
+ * call is accepted and ignored.
+ */
+function setAnimationDebug(_on: boolean | 'timeline'): void {}
+
 export default styled;
 export {
   styled,
@@ -968,6 +977,7 @@ export {
   BridgeThemeProvider as ThemeProvider,
   ThemeConsumer,
   ThemeContext,
+  setAnimationDebug,
   toStyleSheet,
   useTheme,
   StyleSheetManager,

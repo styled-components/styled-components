@@ -141,6 +141,28 @@ describe('native !important spec compliance (CSS Cascade L4 §3 + §6.2)', () =>
     expect(styleOf(Box).color).toBe('red');
   });
 
+  it('a base bucket !important beats a matched pseudo-state bucket normal (:active)', () => {
+    const Press = styled.Pressable`
+      background-color: tomato !important;
+      &:active {
+        background-color: royalblue;
+        opacity: 0.5;
+      }
+    `;
+    const tree = TestRenderer.create(<Press />);
+    // Pressable hosts get a function-form style that resolves with live
+    // press state; find the element carrying it.
+    const styledEl = tree.root.find(n => typeof n.props.style === 'function' && n.type !== Press);
+    const styleProp = styledEl.props.style;
+    const resolve = (state: { pressed: boolean }) => StyleSheet.flatten(styleProp(state));
+    const pressed = resolve({ pressed: true });
+    // The bucket itself fired (its other declaration landed)...
+    expect(pressed.opacity).toBe(0.5);
+    // ...but its normal background-color loses to the base !important.
+    expect(pressed.backgroundColor).toBe('tomato');
+    expect(resolve({ pressed: false }).backgroundColor).toBe('tomato');
+  });
+
   // Case insensitivity: `!IMPORTANT` and `! important` are equivalent
   // per CSS Syntax 3 tokenization.
   // Inputs are interpolated so the linter doesn't normalize the

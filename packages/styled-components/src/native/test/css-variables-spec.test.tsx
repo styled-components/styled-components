@@ -9,9 +9,10 @@
 
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
-import { View } from 'react-native';
+import { Appearance, View } from 'react-native';
 
 import styled from '..';
+import { resetResponsiveCache } from '../responsive';
 import { resetWarningsForTest } from '../transform/dev';
 
 function styleOf(El: React.ComponentType<any>, props: object = {}): any {
@@ -23,6 +24,7 @@ describe('CSS Custom Properties Module Level 1 spec compliance', () => {
   let warnSpy: jest.SpyInstance;
 
   beforeEach(() => {
+    resetResponsiveCache();
     resetWarningsForTest();
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
   });
@@ -257,6 +259,142 @@ describe('CSS Custom Properties Module Level 1 spec compliance', () => {
       expect(style.marginRight).toBe(8);
       expect(style.marginBottom).toBe(4);
       expect(style.marginLeft).toBe(8);
+    });
+  });
+
+  describe('§3 substituted values compute like literal CSS', () => {
+    // "The value of a custom property can be substituted into the value
+    // of another property with the var() function." The var() function
+    // is an "arbitrary substitution function" (CSS Values 5): after
+    // replacement the containing property computes as if the substituted
+    // tokens had been authored literally, so dynamic functions inside
+    // the custom property's value (light-dark(), viewport units) must
+    // still resolve against the render environment.
+    it('resolves light-dark() stored in an ancestor custom property (dark scheme)', () => {
+      const spy = jest.spyOn(Appearance, 'getColorScheme').mockReturnValue('dark');
+      try {
+        const Theme = styled(View)`
+          --themed: light-dark(darkslateblue, gold);
+        `;
+        const Leaf = styled(View)`
+          color: var(--themed);
+        `;
+        const tree = TestRenderer.create(
+          <Theme>
+            <Leaf />
+          </Theme>
+        );
+        const views = tree.root.findAllByType(View);
+        expect(views[views.length - 1].props.style.color).toBe('gold');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('resolves light-dark() stored in an ancestor custom property (light scheme)', () => {
+      const spy = jest.spyOn(Appearance, 'getColorScheme').mockReturnValue('light');
+      try {
+        const Theme = styled(View)`
+          --themed: light-dark(darkslateblue, gold);
+        `;
+        const Leaf = styled(View)`
+          color: var(--themed);
+        `;
+        const tree = TestRenderer.create(
+          <Theme>
+            <Leaf />
+          </Theme>
+        );
+        const views = tree.root.findAllByType(View);
+        expect(views[views.length - 1].props.style.color).toBe('darkslateblue');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('resolves light-dark() in a self-declared custom property', () => {
+      const spy = jest.spyOn(Appearance, 'getColorScheme').mockReturnValue('dark');
+      try {
+        const Box = styled(View)`
+          --c: light-dark(#111, #eee);
+          background-color: var(--c);
+        `;
+        expect(styleOf(Box).backgroundColor).toBe('#eee');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    // Viewport units resolve against the device dimensions (jest mock
+    // is 750x1334), exactly as a literal `width: 50vw` would.
+    it('resolves a viewport-unit length stored in a custom property', () => {
+      const Box = styled(View)`
+        --w: 50vw;
+        width: var(--w);
+      `;
+      expect(styleOf(Box).width).toBe(375);
+    });
+
+    it('resolves light-dark() supplied through a var() fallback', () => {
+      const spy = jest.spyOn(Appearance, 'getColorScheme').mockReturnValue('dark');
+      try {
+        const Box = styled(View)`
+          color: var(--absent, light-dark(black, white));
+        `;
+        expect(styleOf(Box).color).toBe('white');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('repaints a var()-substituted light-dark() when the OS scheme flips (no remount)', () => {
+      const getSpy = jest.spyOn(Appearance, 'getColorScheme').mockReturnValue('light');
+      const addSpy = jest.spyOn(Appearance, 'addChangeListener');
+      try {
+        const Theme = styled(View)`
+          --themed: light-dark(darkslateblue, gold);
+        `;
+        const Leaf = styled(View)`
+          color: var(--themed);
+        `;
+        const tree = TestRenderer.create(
+          <Theme>
+            <Leaf />
+          </Theme>
+        );
+        const leafColor = () => {
+          const views = tree.root.findAllByType(View);
+          return views[views.length - 1].props.style.color;
+        };
+        expect(leafColor()).toBe('darkslateblue');
+
+        const listener = addSpy.mock.calls[addSpy.mock.calls.length - 1]?.[0];
+        expect(listener).toBeDefined();
+        TestRenderer.act(() => {
+          listener!({ colorScheme: 'dark' });
+        });
+        expect(leafColor()).toBe('gold');
+      } finally {
+        getSpy.mockRestore();
+        addSpy.mockRestore();
+      }
+    });
+
+    it('resolves light-dark() through var() inside a conditional bucket', () => {
+      const spy = jest.spyOn(Appearance, 'getColorScheme').mockReturnValue('dark');
+      try {
+        const Box = styled(View)`
+          --c: light-dark(#222, #ddd);
+          @media (min-width: 0px) {
+            color: var(--c);
+          }
+        `;
+        const style = styleOf(Box);
+        const flat = (Array.isArray(style) ? style.flat(Infinity) : [style]).filter(Boolean);
+        expect(flat.some((l: any) => l.color === '#ddd')).toBe(true);
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 

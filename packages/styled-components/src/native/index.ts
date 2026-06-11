@@ -72,16 +72,22 @@ const styled = baseStyled as typeof baseStyled & {
   [E in KnownComponents]: Styled<'native', RNComponents[E], React.ComponentProps<RNComponents[E]>>;
 };
 
-// ScrollView baseline. Native ships `flex-shrink: 1` (vs View's `0`);
-// pin to `0` so explicit `width:` / `height:` declarations aren't
-// silently overridden in flex parents.
-let cachedScrollViewBase: NativeTarget | undefined;
-function getScrollViewBase(): NativeTarget {
-  if (cachedScrollViewBase) return cachedScrollViewBase;
-  cachedScrollViewBase = styled(reactNative.ScrollView as NativeTarget)`
-    flex-shrink: 0;
-  ` as unknown as NativeTarget;
-  return cachedScrollViewBase;
+// Scroller baseline. RN's ScrollView-family base style ships
+// `flex-shrink: 1` (vs View's `0`); pin to `0` so explicit `width:` /
+// `height:` declarations aren't silently overridden in flex parents.
+// The companion `flexGrow: 0` pin is conditional on an authored
+// dimension and applied at render (see `scrollerFlexPin`).
+const SCROLLER_ALIASES = new Set(['FlatList', 'ScrollView', 'SectionList', 'VirtualizedList']);
+const cachedScrollerBases = new Map<string, NativeTarget>();
+function getScrollerBase(alias: string): NativeTarget {
+  let base = cachedScrollerBases.get(alias);
+  if (base === undefined) {
+    base = styled(reactNative[alias as keyof typeof reactNative] as NativeTarget)`
+      flex-shrink: 0;
+    ` as unknown as NativeTarget;
+    cachedScrollerBases.set(alias, base);
+  }
+  return base;
 }
 
 aliases.forEach(alias =>
@@ -90,7 +96,7 @@ aliases.forEach(alias =>
     configurable: false,
     get() {
       if (alias in reactNative && reactNative[alias]) {
-        if (alias === 'ScrollView') return styled(getScrollViewBase());
+        if (SCROLLER_ALIASES.has(alias)) return styled(getScrollerBase(alias));
         return styled(reactNative[alias] as NativeTarget);
       }
 

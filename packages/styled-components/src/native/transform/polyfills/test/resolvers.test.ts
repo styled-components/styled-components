@@ -1,4 +1,7 @@
+import { describeOnRnWeb } from '../../describeOnRnWeb';
 import { applyResolvers, buildResolver, escapeSentinelFallback, ResolveEnv } from '../resolvers';
+import { staticColorFunctionToHex } from '../colorMath';
+import { tokenize } from '../../tokenize';
 
 const baseEnv: ResolveEnv = {
   media: {
@@ -1046,7 +1049,7 @@ describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
     expect(buildResolver('1px solid mylight-dark(red, blue)')).toBeNull();
   });
 
-  describe.skip('on rn-web', () => {
+  describeOnRnWeb(() => {
     // Mirrors rn-web bundle (`__NATIVE_WEB__`); browsers resolve several values statically,
     // so omit resolvers. See `describeOnRnWeb` and `resolvers.ts`. rn-web `@react-native/normalize-colors`
     // rejects literal `light-dark(...)` strings; `buildResolver(null)` pairs with custom-property wrapping
@@ -1263,7 +1266,7 @@ describe('cross-feature integrations', () => {
       expect(r({ ...baseEnv, theme: { colors: { fg: '#0000ff' } } })).toMatch(/^#[0-9a-f]{6,8}$/);
     });
 
-    describe.skip('on rn-web', () => {
+    describeOnRnWeb(() => {
       // Wide-gamut `<color>` functions stay as authored CSS strings on rn-web (`__NATIVE_WEB__`).
       // Sentinels only splice resolved numbers into those strings.
       it('pure-static sentinel oklch substitutes to assembled function text (passthrough)', () => {
@@ -1683,7 +1686,7 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
     });
   });
 
-  describe.skip('on rn-web', () => {
+  describeOnRnWeb(() => {
     // CSS Values §10 (calc/min/max/clamp): browsers resolve percentages against real layouts.
     // Return null resolver so stylesheet text stays intact unless a sentinel needs substitution.
     it('passes through static-mixed-unit calc/clamp/min/max expressions raw', () => {
@@ -1827,7 +1830,7 @@ describe('env() spec compliance (CSS Environment Variables Level 1 §3)', () => 
     });
   });
 
-  describe.skip('on rn-web', () => {
+  describeOnRnWeb(() => {
     // `buildResolver('env(...)')` is not gated behind `__NATIVE_WEB__`;
     // safe-area substitutions still read ResolveEnv.insets on rn-web.
     it('parity: safe-area-inset-top resolves from env.insets', () => {
@@ -1967,7 +1970,7 @@ describe('container units spec compliance (CSS Conditional 5 §7)', () => {
     });
   });
 
-  describe.skip('on rn-web', () => {
+  describeOnRnWeb(() => {
     // Viewport-relative units bypass resolvers on rn-web (`buildResolver → null`).
     // Container cq* still resolve numerically against the RN layout probe.
     it('parity: cqw resolves against registered container width', () => {
@@ -2129,7 +2132,7 @@ describe('viewport units spec compliance (CSS Values Level 4 §6.1.2)', () => {
     });
   });
 
-  describe.skip('on rn-web', () => {
+  describeOnRnWeb(() => {
     it('passes through static viewport values without a resolver', () => {
       // Returning null from buildResolver leaves the raw `<n><unit>` in
       // base so react-native-web forwards it to CSS unchanged. The browser
@@ -2141,6 +2144,354 @@ describe('viewport units spec compliance (CSS Values Level 4 §6.1.2)', () => {
       expect(buildResolver('100lvh')).toBeNull();
       expect(buildResolver('50vmin')).toBeNull();
       expect(buildResolver('50vmax')).toBeNull();
+    });
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────
+// CSS Values 5: Tree Counting Functions.
+// Drafts source: https://drafts.csswg.org/css-values-5/#tree-counting
+// (fetched 2026-06-09 into /tmp/css-values-5.html).
+//
+// Verbatim spec text that drove these tests:
+// - "The sibling-count() functional notation represents, as an <integer>,
+//   the total number of child elements in the parent of the element on
+//   which the notation is used."
+// - "The sibling-index() functional notation represents, as an <integer>,
+//   the index of the element on which the notation is used among its
+//   inclusive siblings. Like :nth-child(), sibling-index() is 1-indexed."
+// - Spec example: `width: calc(sibling-index() * 10px);`
+//
+// Deviation note: the spec's failure value (0) applies to shadow-tree
+// boundary crossings, which do not exist on React Native. The analogous
+// native situation is an element whose parent is not a styled component
+// (no sibling tracking); we resolve as an only child (index 1, count 1)
+// instead of 0 so multiplicative patterns degrade to the base size
+// rather than collapsing the layout. Locked below.
+// ──────────────────────────────────────────────────────────────────────
+describe('tree-counting functions spec compliance (CSS Values 5, sibling-index / sibling-count)', () => {
+  const at = (idx: number, count: number): ResolveEnv => ({
+    ...baseEnv,
+    siblingIndex: idx,
+    siblingCount: count,
+  });
+
+  it('sibling-index() resolves to the 1-indexed position', () => {
+    const r = buildResolver('sibling-index()')!;
+    expect(r(at(1, 5))).toBe(1);
+    expect(r(at(4, 5))).toBe(4);
+  });
+
+  it('sibling-count() resolves to the total child count of the parent', () => {
+    const r = buildResolver('sibling-count()')!;
+    expect(r(at(2, 7))).toBe(7);
+  });
+
+  it('composes inside calc() per the spec example (width: calc(sibling-index() * 10px))', () => {
+    const r = buildResolver('calc(sibling-index() * 10px)')!;
+    expect(r(at(3, 5))).toBe(30);
+  });
+
+  // CSS Values 4 §5.5.1: "Unless otherwise specified ... the computed
+  // value of a percentage is the specified percentage." A purely
+  // percent-scaled expression therefore stays a percentage; React
+  // Native resolves it against the parent box natively, which is the
+  // per-property reference (the containing block for width). Converting
+  // to absolute px against the container/viewport mis-sized children
+  // whose parent is not the measuring box.
+  it('composes with sibling-count() arithmetic, staying a percentage', () => {
+    const r = buildResolver('calc(100% / sibling-count())')!;
+    expect(r(at(1, 4))).toBe('25%');
+  });
+
+  it('sibling-index() percent ramp stays percent (width: calc(sibling-index() * 13%))', () => {
+    const r = buildResolver('calc(sibling-index() * 13%)')!;
+    expect(r(at(1, 5))).toBe('13%');
+    expect(r(at(2, 5))).toBe('26%');
+    expect(r(at(5, 5))).toBe('65%');
+  });
+
+  it('fractional even division stays percent (calc(94% / sibling-count()))', () => {
+    const r = buildResolver('calc(94% / sibling-count())')!;
+    expect(r(at(1, 3))).toBe(`${94 / 3}%`);
+  });
+
+  // Mixed percent + length cannot stay symbolic on RN (no native calc);
+  // it converts against the measured base (container 200px in this env).
+  it('mixed percent + length math still converts to absolute px', () => {
+    const r = buildResolver('calc(100% / sibling-count() - 20px)')!;
+    expect(r(at(1, 2))).toBe(80);
+  });
+
+  it('composes inside min()/max()/clamp() arms', () => {
+    const r = buildResolver('min(100px, calc(sibling-index() * 30px))')!;
+    expect(r(at(2, 3))).toBe(60);
+    expect(r(at(4, 4))).toBe(100);
+  });
+
+  it('untracked position resolves as an only child (deviation: 1/1, not 0)', () => {
+    const ri = buildResolver('sibling-index()')!;
+    const rc = buildResolver('sibling-count()')!;
+    expect(ri(baseEnv)).toBe(1);
+    expect(rc(baseEnv)).toBe(1);
+  });
+
+  it('arguments are not part of the grammar; any argument invalidates', () => {
+    expect(buildResolver('sibling-index(2)')).toBeNull();
+    expect(buildResolver('sibling-count(of)')).toBeNull();
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────
+// Dynamic math inside color functions. The static fold bails on any
+// channel that is not a literal; channels carrying env-dependent math
+// (calc()/min()/max()/clamp(), bare sibling-index()/sibling-count())
+// must resolve per render and re-fold, instead of shipping the raw
+// function string to React Native (whose color parser rejects it,
+// rendering transparent).
+// ──────────────────────────────────────────────────────────────────────
+describe('dynamic math inside color functions', () => {
+  const at = (idx: number, count: number): ResolveEnv => ({
+    ...baseEnv,
+    siblingIndex: idx,
+    siblingCount: count,
+  });
+
+  function staticHex(literal: string): string {
+    const tok = tokenize(literal)[0];
+    return staticColorFunctionToHex(tok) as string;
+  }
+
+  it('oklch() with a calc(sibling-index()) hue folds per position', () => {
+    const r = buildResolver('oklch(0.72 0.14 calc(sibling-index() * 55))');
+    expect(r).not.toBeNull();
+    expect(r!(at(1, 5))).toBe(staticHex('oklch(0.72 0.14 55)'));
+    expect(r!(at(2, 5))).toBe(staticHex('oklch(0.72 0.14 110)'));
+    expect(r!(at(3, 5))).toBe(staticHex('oklch(0.72 0.14 165)'));
+  });
+
+  it('a bare sibling-index() channel resolves', () => {
+    const r = buildResolver('oklch(0.72 0.14 sibling-index())');
+    expect(r).not.toBeNull();
+    expect(r!(at(3, 5))).toBe(staticHex('oklch(0.72 0.14 3)'));
+  });
+
+  it('min()/clamp() channels resolve', () => {
+    const r = buildResolver('oklch(0.72 0.14 min(calc(sibling-index() * 90), 200))');
+    expect(r).not.toBeNull();
+    expect(r!(at(1, 3))).toBe(staticHex('oklch(0.72 0.14 90)'));
+    expect(r!(at(3, 3))).toBe(staticHex('oklch(0.72 0.14 200)'));
+  });
+
+  it('color-mix() with a dynamic percent weight resolves', () => {
+    const r = buildResolver('color-mix(in oklab, red calc(sibling-index() * 20%), blue)');
+    expect(r).not.toBeNull();
+    expect(r!(at(1, 4))).toBe(staticHex('color-mix(in oklab, red 20%, blue)'));
+    expect(r!(at(3, 4))).toBe(staticHex('color-mix(in oklab, red 60%, blue)'));
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────
+// CSS Values 5 §8.7: Attribute References, the attr() notation.
+// Drafts source: https://drafts.csswg.org/css-values-5/#attr-notation
+// (fetched 2026-06-09 into /tmp/css-values-5.html).
+//
+// Verbatim grammar:
+//   attr() = attr( <attr-name> <attr-type>? , <declaration-value>?)
+//   <attr-type> = type( <syntax> ) | raw-string | number | <attr-unit>
+//
+// Verbatim spec text that drove these tests:
+// - number: "it causes the attribute's literal value, after stripping
+//   leading and trailing whitespace, to be parsed as a <number-token>.
+//   Values that fail to parse trigger fallback."
+// - <attr-unit>: "the value is first parsed as if number keyword was
+//   specified; if this fails to parse, it triggers fallback. Then, if the
+//   <attr-unit> value matches a known CSS unit name or is %, the number is
+//   turned into a dimension or percentage with that value and the given
+//   unit. If the <attr-unit> does not match a known CSS unit, it triggers
+//   fallback."
+// - raw-string / omitted: "it causes the attribute's literal value to be
+//   treated as the value of a CSS string, with no CSS parsing performed at
+//   all ... No value triggers fallback; only the lack of the attribute
+//   entirely does."
+// - fallback: "Specifies a fallback value for the attr(), which will be
+//   substituted instead of the attribute's value if the attribute is
+//   missing or fails to parse as the specified type."
+// - "If the <attr-type> argument is omitted, the fallback defaults to the
+//   empty string if omitted; otherwise, it defaults to the
+//   guaranteed-invalid value if omitted."
+//
+// Deviation note: React Native has no DOM attributes; attr() reads the
+// styled component's React props, the same source the attribute-selector
+// implementation matches against ([data-x="y"]). Prop names are
+// case-sensitive JS keys. Props that are already JS numbers are accepted
+// directly by the number / <attr-unit> types (a strict reading would
+// stringify first; the result is identical for finite numbers).
+// Namespaced <attr-name> forms (`ns|name`) are not supported (React
+// props have no namespaces); they invalidate the function.
+// ──────────────────────────────────────────────────────────────────────
+describe('attr() spec compliance (CSS Values 5 §8.7)', () => {
+  const withProps = (props: Record<string, unknown>): ResolveEnv => ({ ...baseEnv, props });
+
+  describe('<attr-unit> form', () => {
+    it('px unit produces a device-pixel number', () => {
+      const r = buildResolver('attr(data-size px, 40px)')!;
+      expect(r(withProps({ 'data-size': '12' }))).toBe(12);
+    });
+
+    it('accepts JS number props directly (deviation)', () => {
+      const r = buildResolver('attr(data-size px, 40px)')!;
+      expect(r(withProps({ 'data-size': 12 }))).toBe(12);
+    });
+
+    it('% produces a percentage', () => {
+      const r = buildResolver('attr(data-w %, 100%)')!;
+      expect(r(withProps({ 'data-w': '50' }))).toBe('50%');
+    });
+
+    it('missing attribute triggers fallback', () => {
+      const r = buildResolver('attr(data-size px, 40px)')!;
+      expect(r(withProps({}))).toBe(40);
+      expect(r(baseEnv)).toBe(40);
+    });
+
+    it('a value that fails to parse as a number triggers fallback', () => {
+      const r = buildResolver('attr(data-size px, 40px)')!;
+      expect(r(withProps({ 'data-size': 'large' }))).toBe(40);
+    });
+
+    it('whitespace around the literal value is stripped before number parsing', () => {
+      const r = buildResolver('attr(data-size px, 40px)')!;
+      expect(r(withProps({ 'data-size': '  12  ' }))).toBe(12);
+    });
+
+    it('an unknown unit name triggers fallback rather than invalidating', () => {
+      const r = buildResolver('attr(data-size florps, 40px)')!;
+      expect(r(withProps({ 'data-size': '12' }))).toBe(40);
+    });
+
+    it('non-px dimension units carry their unit as a string (deg)', () => {
+      const r = buildResolver('attr(data-turn deg, 0deg)')!;
+      expect(r(withProps({ 'data-turn': '45' }))).toBe('45deg');
+    });
+
+    it('guaranteed-invalid: typed attr with no fallback drops the declaration', () => {
+      const r = buildResolver('attr(data-size px)')!;
+      expect(r(withProps({}))).toBeNull();
+      expect(r(withProps({ 'data-size': 'nope' }))).toBeNull();
+    });
+  });
+
+  describe('number keyword', () => {
+    it('parses the literal as a number', () => {
+      const r = buildResolver('attr(data-n number, 1)')!;
+      expect(r(withProps({ 'data-n': '0.5' }))).toBe(0.5);
+    });
+
+    it('fallback fires on parse failure', () => {
+      const r = buildResolver('attr(data-n number, 1)')!;
+      expect(r(withProps({ 'data-n': 'abc' }))).toBe(1);
+    });
+  });
+
+  describe('raw-string / omitted type', () => {
+    it('omitted type yields the literal value as a string with no parsing', () => {
+      const r = buildResolver('attr(data-label)')!;
+      expect(r(withProps({ 'data-label': ' 12px ' }))).toBe(' 12px ');
+    });
+
+    it('raw-string keyword behaves identically', () => {
+      const r = buildResolver('attr(data-label raw-string)')!;
+      expect(r(withProps({ 'data-label': 'hello' }))).toBe('hello');
+    });
+
+    it('only the missing attribute triggers fallback; empty string does not', () => {
+      const r = buildResolver('attr(data-label, fallback)')!;
+      expect(r(withProps({ 'data-label': '' }))).toBe('');
+      expect(r(withProps({}))).toBe('fallback');
+    });
+
+    it('omitted type with omitted fallback defaults the fallback to the empty string', () => {
+      const r = buildResolver('attr(data-label)')!;
+      expect(r(withProps({}))).toBe('');
+    });
+
+    it('bare trailing comma passes an explicitly empty fallback', () => {
+      const r = buildResolver('attr(data-size px,)')!;
+      expect(r(withProps({}))).toBe('');
+    });
+  });
+
+  describe('type() form', () => {
+    it('type(<length>) parses px lengths to numbers', () => {
+      const r = buildResolver('attr(data-size type(<length>), 40px)')!;
+      expect(r(withProps({ 'data-size': '12px' }))).toBe(12);
+    });
+
+    it('type(<length>) falls back when the value is not a length', () => {
+      const r = buildResolver('attr(data-size type(<length>), 40px)')!;
+      expect(r(withProps({ 'data-size': 'red' }))).toBe(40);
+    });
+
+    it('type(<number>) parses numbers', () => {
+      const r = buildResolver('attr(data-n type(<number>), 0)')!;
+      expect(r(withProps({ 'data-n': '3' }))).toBe(3);
+    });
+
+    it('type(<percentage>) parses percentages', () => {
+      const r = buildResolver('attr(data-w type(<percentage>), 100%)')!;
+      expect(r(withProps({ 'data-w': '25%' }))).toBe('25%');
+    });
+
+    it('type(<color>) passes through parseable colors and falls back otherwise', () => {
+      const r = buildResolver('attr(data-tint type(<color>), gray)')!;
+      expect(r(withProps({ 'data-tint': '#ff0000' }))).toBe('#ff0000');
+      expect(r(withProps({ 'data-tint': '12px' }))).toBe('gray');
+    });
+
+    it('type(*) substitutes the parsed value with no type requirement', () => {
+      const r = buildResolver('attr(data-x type(*), none)')!;
+      expect(r(withProps({ 'data-x': 'whatever 3' }))).toBe('whatever 3');
+    });
+  });
+
+  describe('fallback substitution', () => {
+    // "Specifies a fallback value for the attr(), which will be
+    // substituted instead of the attribute's value". Substitution means
+    // the fallback re-enters value resolution: dynamic fallbacks
+    // (light-dark(), viewport units, math) resolve like any declaration.
+    it('a light-dark() fallback resolves against the active color scheme', () => {
+      const r = buildResolver('attr(data-tint type(<color>), light-dark(#111111, #eeeeee))')!;
+      expect(r({ ...baseEnv, props: {} })).toBe('#111111');
+      expect(
+        r({
+          ...baseEnv,
+          props: {},
+          media: { ...baseEnv.media, colorScheme: 'dark' },
+        })
+      ).toBe('#eeeeee');
+    });
+
+    it('a math-function fallback resolves', () => {
+      const r = buildResolver('attr(data-size px, calc(10px + 30px))')!;
+      expect(r({ ...baseEnv, props: {} })).toBe(40);
+    });
+
+    it('a viewport-unit fallback resolves', () => {
+      const r = buildResolver('attr(data-size px, 50vw)')!;
+      expect(r({ ...baseEnv, props: {} })).toBe(200);
+    });
+  });
+
+  describe('grammar edges', () => {
+    it('namespaced attr names are not supported (deviation: invalidates)', () => {
+      expect(buildResolver('attr(svg|width px, 0px)')).toBeNull();
+    });
+
+    it('composes inside calc()', () => {
+      const r = buildResolver('calc(attr(data-size px, 40px) * 2)')!;
+      expect(r(withProps({ 'data-size': '12' }))).toBe(24);
+      expect(r(withProps({}))).toBe(80);
     });
   });
 });

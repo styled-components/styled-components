@@ -1,8 +1,18 @@
 import type { Dict } from '../../types';
+import { tokenizeFunctionArgs } from '../transform/tokenize';
 import type { Token } from '../transform/tokens';
 import { TokenKind } from '../transform/tokens';
-import type { EasingDescriptor, AnimationDescriptor, TransitionDescriptor } from './types';
+import type {
+  EasingDescriptor,
+  AnimationDescriptor,
+  AnimationTimeline,
+  RangeBoundary,
+  TimelineAxis,
+  TransitionDescriptor,
+} from './types';
+import { AUTO_TIMELINE } from './types';
 import { parseEasing } from './css-keywords';
+import { parseRangeBoundary } from './range';
 
 const DIRECTION_KEYWORDS = new Set(['normal', 'reverse', 'alternate', 'alternate-reverse']);
 const FILL_MODE_KEYWORDS = new Set(['none', 'forwards', 'backwards', 'both']);
@@ -106,6 +116,15 @@ function parseSingleAnimation(tokens: Token[]): Partial<AnimationDescriptor> | n
       out.iterationCount = t.value!;
       continue;
     }
+    if (t.kind === TokenKind.Function && (t.name === 'scroll' || t.name === 'view')) {
+      // <single-animation-timeline> function forms are unambiguous in the
+      // shorthand grammar; bare dashed-idents stay keyframes names (see
+      // the deviation note in the scroll-timeline spec block).
+      const timeline = parseTimelineFunction(t);
+      if (timeline === null) return null;
+      out.timeline = timeline;
+      continue;
+    }
     if (t.kind === TokenKind.Function && t.name === 'calc') {
       // calc() in the animation shorthand only resolves to iteration-count
       // (`infinity`). Time slots carry units that can't reduce without context.
@@ -154,6 +173,9 @@ const DEFAULT_ANIMATION: AnimationDescriptor = {
   fillMode: 'none',
   playState: 'running',
   composition: 'replace',
+  rangeStart: 'normal',
+  rangeEnd: 'normal',
+  timeline: AUTO_TIMELINE,
 };
 
 /**
@@ -189,6 +211,14 @@ const ANIMATION_LONGHAND_MAPPING: ReadonlyArray<[string, keyof AnimationDescript
   ['animationDirection', 'direction'],
   ['animationFillMode', 'fillMode'],
   ['animationPlayState', 'playState'],
+  // Reset-only sub-properties: `parseSingleAnimation` never sets these,
+  // so the materializer always emits the spec initial (`normal`),
+  // giving the `animation` shorthand its reset semantics for free.
+  ['animationRangeStart', 'rangeStart'],
+  ['animationRangeEnd', 'rangeEnd'],
+  // Settable via the scroll()/view() function forms; otherwise resets
+  // to auto like the range properties.
+  ['animationTimeline', 'timeline'],
 ];
 
 /**
@@ -384,6 +414,185 @@ export function animationCompositionLonghand(tokens: Token[]): Dict<any> | null 
   return listLonghand(tokens, 'animationComposition', enumValidator(COMPOSITION_KEYWORDS));
 }
 
+const TIMELINE_AXES = new Set(['block', 'inline', 'x', 'y']);
+const TIMELINE_SCROLLERS = new Set(['nearest', 'root', 'self']);
+
+/** Custom-property-shaped ident check; dashed idents are case-sensitive. */
+function isDashedIdent(t: Token): boolean {
+  return t.kind === TokenKind.Ident && t.raw.length > 2 && t.raw.startsWith('--');
+}
+
+/**
+ * Parse `scroll( [ <scroller> || <axis> ]? )` / `view( [ <axis> ||
+ * <view-timeline-inset> ]? )` into an AnimationTimeline. `||` grammar:
+ * each component at most once, any order.
+ */
+function parseTimelineFunction(t: Token): AnimationTimeline | null {
+  const args = tokenizeFunctionArgs(t);
+  if (t.name === 'scroll') {
+    let scroller: 'nearest' | 'root' | 'self' | null = null;
+    let axis: TimelineAxis | null = null;
+    for (let i = 0; i < args.length; i++) {
+      const a = args[i];
+      if (a.kind !== TokenKind.Ident) return null;
+      const name = a.name!;
+      if (TIMELINE_SCROLLERS.has(name)) {
+        if (scroller !== null) return null;
+        scroller = name as 'nearest' | 'root' | 'self';
+      } else if (TIMELINE_AXES.has(name)) {
+        if (axis !== null) return null;
+        axis = name as TimelineAxis;
+      } else {
+        return null;
+      }
+    }
+    return { kind: 'scroll', scroller: scroller ?? 'nearest', axis: axis ?? 'block' };
+  }
+  // view(): parse the axis; remaining tokens form the inset (carried raw
+  // for the view-timeline engine).
+  let axis: TimelineAxis | null = null;
+  const insetParts: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a.kind === TokenKind.Ident && TIMELINE_AXES.has(a.name!)) {
+      if (axis !== null) return null;
+      axis = a.name as TimelineAxis;
+    } else {
+      insetParts.push(a.raw);
+    }
+  }
+  return {
+    kind: 'view',
+    axis: axis ?? 'block',
+    inset: insetParts.length > 0 ? insetParts.join(' ') : null,
+  };
+}
+
+function parseSingleTimelineValue(t: Token): AnimationTimeline | null {
+  if (t.kind === TokenKind.Ident) {
+    if (t.name === 'auto') return AUTO_TIMELINE;
+    if (t.name === 'none') return { kind: 'none' };
+    if (isDashedIdent(t)) return { kind: 'named', name: t.raw };
+    return null;
+  }
+  if (t.kind === TokenKind.Function && (t.name === 'scroll' || t.name === 'view')) {
+    return parseTimelineFunction(t);
+  }
+  return null;
+}
+
+export function animationTimelineLonghand(tokens: Token[]): Dict<any> | null {
+  return listLonghand(tokens, 'animationTimeline', parseSingleTimelineValue);
+}
+
+/**
+ * `scroll-timeline-name: [ none | <dashed-ident> ]#`. Emits the raw
+ * (case-sensitive) ident, or the string `'none'`.
+ */
+export function scrollTimelineNameLonghand(tokens: Token[]): Dict<any> | null {
+  return listLonghand(tokens, 'scrollTimelineName', t => {
+    if (t.kind !== TokenKind.Ident) return null;
+    if (t.name === 'none') return 'none';
+    return isDashedIdent(t) ? t.raw : null;
+  });
+}
+
+export function scrollTimelineAxisLonghand(tokens: Token[]): Dict<any> | null {
+  return listLonghand(tokens, 'scrollTimelineAxis', t =>
+    t.kind === TokenKind.Ident && TIMELINE_AXES.has(t.name!) ? t.name! : null
+  );
+}
+
+/** `scroll-timeline: [ <'scroll-timeline-name'> <'scroll-timeline-axis'>? ]#` */
+export function scrollTimelineShorthand(tokens: Token[]): Dict<any> | null {
+  const groups = splitTopLevelCommas(tokens);
+  if (groups.length === 0) return null;
+  const names: string[] = [];
+  const axes: string[] = [];
+  for (let i = 0; i < groups.length; i++) {
+    const g = groups[i];
+    if (g.length < 1 || g.length > 2) return null;
+    const nameTok = g[0];
+    if (nameTok.kind !== TokenKind.Ident) return null;
+    if (nameTok.name === 'none') names.push('none');
+    else if (isDashedIdent(nameTok)) names.push(nameTok.raw);
+    else return null;
+    if (g.length === 2) {
+      const axisTok = g[1];
+      if (axisTok.kind !== TokenKind.Ident || !TIMELINE_AXES.has(axisTok.name!)) return null;
+      axes.push(axisTok.name!);
+    } else {
+      axes.push('block');
+    }
+  }
+  const single = names.length === 1;
+  return {
+    scrollTimelineName: single ? names[0] : names,
+    scrollTimelineAxis: single ? axes[0] : axes,
+  };
+}
+
+/**
+ * Parse a comma list of range boundaries for the `animation-range-start`
+ * / `-end` longhands. Each comma group must be exactly one boundary
+ * (1-2 tokens); any unparseable group invalidates the declaration.
+ */
+function rangeBoundaryLonghand(tokens: Token[], key: string, isStart: boolean): Dict<any> | null {
+  const groups = splitTopLevelCommas(tokens);
+  if (groups.length === 0) return null;
+  const out: RangeBoundary[] = [];
+  for (let i = 0; i < groups.length; i++) {
+    const g = groups[i];
+    const parsed = parseRangeBoundary(g, 0, isStart);
+    if (parsed === null || parsed[1] !== g.length) return null;
+    out.push(parsed[0]);
+  }
+  return { [key]: out.length === 1 ? out[0] : out };
+}
+
+export function animationRangeStartLonghand(tokens: Token[]): Dict<any> | null {
+  return rangeBoundaryLonghand(tokens, 'animationRangeStart', true);
+}
+
+export function animationRangeEndLonghand(tokens: Token[]): Dict<any> | null {
+  return rangeBoundaryLonghand(tokens, 'animationRangeEnd', false);
+}
+
+/**
+ * `animation-range` shorthand: `[ <'animation-range-start'>
+ * <'animation-range-end'>? ]#`. When the end boundary is omitted, a
+ * named start copies its range name with 100%; an unnamed start leaves
+ * the end at its initial `normal`.
+ */
+export function animationRangeShorthand(tokens: Token[]): Dict<any> | null {
+  const groups = splitTopLevelCommas(tokens);
+  if (groups.length === 0) return null;
+  const starts: RangeBoundary[] = [];
+  const ends: RangeBoundary[] = [];
+  for (let i = 0; i < groups.length; i++) {
+    const g = groups[i];
+    const start = parseRangeBoundary(g, 0, true);
+    if (start === null) return null;
+    let end: RangeBoundary;
+    if (start[1] < g.length) {
+      const parsedEnd = parseRangeBoundary(g, start[1], false);
+      if (parsedEnd === null || parsedEnd[1] !== g.length) return null;
+      end = parsedEnd[0];
+    } else if (typeof start[0] === 'object' && start[0].rangeName !== null) {
+      end = { rangeName: start[0].rangeName, value: 100, unit: '%', calcRaw: null };
+    } else {
+      end = 'normal';
+    }
+    starts.push(start[0]);
+    ends.push(end);
+  }
+  const single = starts.length === 1;
+  return {
+    animationRangeStart: single ? starts[0] : starts,
+    animationRangeEnd: single ? ends[0] : ends,
+  };
+}
+
 export function transitionPropertyLonghand(tokens: Token[]): Dict<any> | null {
   return listLonghand(tokens, 'transitionProperty', t =>
     t.kind === TokenKind.Ident ? t.raw : null
@@ -453,7 +662,16 @@ export const ANIMATION_LONGHAND_KEYS = new Set([
   'animationFillMode',
   'animationPlayState',
   'animationComposition',
+  'animationRangeStart',
+  'animationRangeEnd',
+  'animationTimeline',
 ]);
+
+/**
+ * Scroller-side timeline declaration keys; lifted off the base style
+ * into `NativeStyles.scrollTimeline` by compileNative.
+ */
+export const SCROLL_TIMELINE_KEYS = new Set(['scrollTimelineName', 'scrollTimelineAxis']);
 
 export const TRANSITION_LONGHAND_KEYS = new Set([
   'transitionProperty',

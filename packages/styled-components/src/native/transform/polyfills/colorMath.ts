@@ -539,9 +539,33 @@ function readHsParts(tok: Token): [number, number, number, number] | null {
   const sb: number[] = [];
   let alpha = 1;
   let sawSlash = false;
-  for (let i = 0; i < args.length; i++) {
+  let startIdx = 0;
+  let relative = false;
+
+  // Relative HSL / HWB syntax (`hsl(from <color> h s l)` /
+  // `hwb(from <color> h w b)`). The keyword space keys off the outer fn
+  // name. Detection is unconditional: `from` is unreachable in valid
+  // absolute hsl()/hwb().
+  const fnName = tok.name === 'hwb' ? 'hwb' : 'hsl';
+  const from = parseRelativeFrom(args, 0, tok.name || fnName);
+  if (from !== null) {
+    if ('sentinelBail' in from) return null;
+    const bindings = rgbToTargetBindings(from.rgb, fnName);
+    substituteRelativeBindings(args, from.consumed, RELATIVE_CHANNEL_KEYWORDS[fnName], bindings);
+    // Omitted alpha defaults to the origin's alpha (not 100%).
+    alpha = bindings[3];
+    startIdx = from.consumed;
+    relative = true;
+  }
+
+  for (let i = startIdx; i < args.length; i++) {
     const t = args[i];
-    if (t.kind === TokenKind.Comma) continue;
+    if (t.kind === TokenKind.Comma) {
+      // Relative HSL / HWB syntax is only valid in the non-legacy
+      // (space-separated) form; commas bail.
+      if (relative) return null;
+      continue;
+    }
     if (t.kind === TokenKind.Slash) {
       sawSlash = true;
       continue;
@@ -568,6 +592,30 @@ function readHsParts(tok: Token): [number, number, number, number] | null {
       if (inAlpha) alpha = NaN;
       else if (h === null) h = NaN;
       else sb.push(NaN);
+    } else if (t.kind === TokenKind.Function) {
+      // Static math fn in a channel slot. Enables `calc()` in absolute
+      // hsl()/hwb() as well as the relative form (after the keyword
+      // pre-pass replaced bound keywords with numbers).
+      const numeric = resolveStaticMathFunction(t, true);
+      if (numeric === null) return null;
+      if (numeric.unit === '') {
+        // Bare number: hue (degrees) for the h slot, 0..100 for s/l/w/b,
+        // 0..1 for alpha.
+        if (inAlpha) alpha = numeric.value;
+        else if (h === null) h = numeric.value;
+        else sb.push(numeric.value);
+      } else if (numeric.unit === '%') {
+        if (inAlpha) alpha = numeric.value / 100;
+        // Percent is invalid for the hue slot.
+        else if (h === null) return null;
+        else sb.push(numeric.value);
+      } else if (numeric.unit === 'deg') {
+        // An angle only makes sense for the hue slot.
+        if (inAlpha || h !== null) return null;
+        h = numeric.value;
+      } else {
+        return null;
+      }
     } else {
       return null;
     }
@@ -983,7 +1031,25 @@ function readColorFn(
   const vals: number[] = [];
   let alpha = 1;
   let sawSlash = false;
-  for (let i = 0; i < args.length; i++) {
+  let startIdx = 0;
+  let relative = false;
+  let relativeRgb: RGB | null = null;
+
+  // Relative color() syntax: `color(from <origin> <space> ...)`. The
+  // `from` prefix precedes the colorspace ident. Detect + resolve the
+  // origin here; the per-space binding substitution happens once the
+  // space ident is read in the loop (the keyword set depends on it).
+  const from = parseRelativeFrom(args, 0, tok.name || 'color');
+  if (from !== null) {
+    if ('sentinelBail' in from) return null;
+    relativeRgb = from.rgb;
+    startIdx = from.consumed;
+    relative = true;
+    // Omitted alpha defaults to the origin's alpha (not 100%).
+    alpha = from.rgb.a;
+  }
+
+  for (let i = startIdx; i < args.length; i++) {
     const t = args[i];
     if (t.kind === TokenKind.Comma) return null;
     if (t.kind === TokenKind.Slash) {
@@ -993,6 +1059,26 @@ function readColorFn(
     if (space === null) {
       if (t.kind !== TokenKind.Ident) return null;
       space = t.name || null;
+      if (relative) {
+        if (space === null) return null;
+        const keywords = colorFnChannelKeywords(space);
+        if (keywords === null) return null;
+        // Origin RGB → the chosen space's native channel encoding.
+        const lin = {
+          r: srgbToLinear(relativeRgb!.r),
+          g: srgbToLinear(relativeRgb!.g),
+          b: srgbToLinear(relativeRgb!.b),
+        };
+        const native = linearSrgbToSpaceNative(lin.r, lin.g, lin.b, relativeRgb!.a, space);
+        if (native === null) return null;
+        const bindings: [number, number, number, number] = [
+          native.c1,
+          native.c2,
+          native.c3,
+          native.alpha,
+        ];
+        substituteRelativeBindings(args, i + 1, keywords, bindings);
+      }
       continue;
     }
     if (t.kind === TokenKind.Number) {
@@ -1033,9 +1119,30 @@ function readRgbFn(tok: Token): [number, number, number, number] | null {
   const channels: number[] = [];
   let alpha = 1;
   let sawSlash = false;
-  for (let i = 0; i < args.length; i++) {
+  let startIdx = 0;
+  let relative = false;
+
+  // Relative sRGB syntax (`rgb(from <color> r g b)`). Detection is
+  // unconditional: `from` is unreachable in valid absolute rgb().
+  const from = parseRelativeFrom(args, 0, tok.name || 'rgb');
+  if (from !== null) {
+    if ('sentinelBail' in from) return null;
+    const bindings = rgbToTargetBindings(from.rgb, 'rgb');
+    substituteRelativeBindings(args, from.consumed, RELATIVE_CHANNEL_KEYWORDS.rgb, bindings);
+    // Omitted alpha defaults to the origin's alpha (not 100%).
+    alpha = bindings[3];
+    startIdx = from.consumed;
+    relative = true;
+  }
+
+  for (let i = startIdx; i < args.length; i++) {
     const t = args[i];
-    if (t.kind === TokenKind.Comma) continue;
+    if (t.kind === TokenKind.Comma) {
+      // "Relative sRGB color syntax is only applicable to the non-legacy
+      // RGB syntactic forms"; commas are invalid inside the relative form.
+      if (relative) return null;
+      continue;
+    }
     if (t.kind === TokenKind.Slash) {
       sawSlash = true;
       continue;
@@ -1815,6 +1922,9 @@ const RELATIVE_CHANNEL_KEYWORDS: Record<string, Record<string, number>> = {
   oklab: { l: 0, a: 1, b: 2, alpha: 3 },
   lch: { l: 0, c: 1, h: 2, alpha: 3 },
   lab: { l: 0, a: 1, b: 2, alpha: 3 },
+  rgb: { r: 0, g: 1, b: 2, alpha: 3 },
+  hsl: { h: 0, s: 1, l: 2, alpha: 3 },
+  hwb: { h: 0, w: 1, b: 2, alpha: 3 },
 };
 
 /**
@@ -1866,9 +1976,10 @@ function parseRelativeFrom(
   } else if (baseTok.kind === TokenKind.Ident) {
     const name = baseTok.name!;
     // `currentColor` origin needs cascade visibility; the static fold has
-    // none, so warn and drop.
+    // none, so warn and drop. The browser resolves currentColor itself, so
+    // rn-web stays silent and lets the authored text through.
     if (name === 'currentcolor') {
-      if (__DEV__) {
+      if (__DEV__ && !__NATIVE_WEB__) {
         warnOnce(
           'native-relative-color-currentcolor',
           `\`${outerFn}(from currentColor ...)\` cannot be converted for React Native because \`currentColor\` depends on inherited styles. Use a theme value as the base color, or write the resolved color directly.`
@@ -1896,8 +2007,21 @@ function parseRelativeFrom(
  */
 function rgbToTargetBindings(
   rgb: RGB,
-  targetSpace: 'oklch' | 'oklab' | 'lab' | 'lch'
+  targetSpace: 'oklch' | 'oklab' | 'lab' | 'lch' | 'rgb' | 'hsl' | 'hwb'
 ): [number, number, number, number] {
+  if (targetSpace === 'rgb') {
+    // sRGB keywords are <number>s where 255 == 100%. readRgbFn's Number
+    // branch divides by 255, so the bound value is the 0..255 form.
+    return [rgb.r * 255, rgb.g * 255, rgb.b * 255, rgb.a];
+  }
+  if (targetSpace === 'hsl') {
+    const [h, s, l] = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    return [h, s, l, rgb.a];
+  }
+  if (targetSpace === 'hwb') {
+    const [h, w, b] = rgbToHwb(rgb.r, rgb.g, rgb.b);
+    return [h, w, b, rgb.a];
+  }
   if (targetSpace === 'oklab') {
     const ok = srgbToOklab(rgb.r, rgb.g, rgb.b, rgb.a);
     return [ok.L, ok.a, ok.b, ok.alpha];
@@ -1950,6 +2074,91 @@ function substituteCalcBindings(
       substituteCalcBindings(t, keywords, bindings);
     }
   }
+}
+
+/**
+ * Channel-keyword map for a `color(<space> ...)` relative form. Predefined
+ * RGB spaces bind `r`/`g`/`b`; XYZ spaces bind `x`/`y`/`z`. Both add
+ * `alpha`. Returns null for an unknown space so the caller bails the fold.
+ */
+function colorFnChannelKeywords(space: string): Record<string, number> | null {
+  switch (space) {
+    case 'srgb':
+    case 'srgb-linear':
+    case 'display-p3':
+    case 'display-p3-linear':
+    case 'a98-rgb':
+    case 'prophoto-rgb':
+    case 'rec2020':
+      return { r: 0, g: 1, b: 2, alpha: 3 };
+    case 'xyz':
+    case 'xyz-d65':
+    case 'xyz-d50':
+      return { x: 0, y: 1, z: 2, alpha: 3 };
+    default:
+      return null;
+  }
+}
+
+/**
+ * Pre-pass for a relative-color reader: walk the top-level arg tokens from
+ * `startIdx` and substitute every bound channel keyword with the bound
+ * number, including keywords nested inside `calc()` trees. After this runs,
+ * the reader's existing loop sees plain Number tokens and applies its
+ * per-spec scaling (e.g. `/255` for rgb, `/100` for percent channels). Bare
+ * `none` idents and non-keyword idents are left for the reader to handle or
+ * reject.
+ */
+function substituteRelativeBindings(
+  args: Token[],
+  startIdx: number,
+  keywords: Record<string, number>,
+  bindings: readonly number[]
+): void {
+  for (let i = startIdx; i < args.length; i++) {
+    const t = args[i];
+    if (t.kind === TokenKind.Ident && t.name !== undefined && t.name !== 'none') {
+      const bIdx = keywords[t.name];
+      if (bIdx !== undefined) {
+        const v = bindings[bIdx];
+        // Missing origin components (NaN, e.g. hue at chroma 0) collapse to 0.
+        args[i] = numberToken(String(v !== v ? 0 : v), v !== v ? 0 : v);
+      }
+    } else if (t.kind === TokenKind.Function) {
+      substituteCalcBindings(t, keywords, bindings);
+    }
+  }
+}
+
+/**
+ * True when `value` opens with a `from` relative-color prefix immediately
+ * inside the function's parentheses, e.g. `rgb(from red ...)`. `parenIdx`
+ * is the index of the `(`. Matches `from` case-insensitively and requires a
+ * whitespace boundary after it so identifiers like `fromage` don't match.
+ * Used by the native dispatch to route relative rgb / hsl / hwb into the
+ * fold while leaving the absolute (RN-native) forms untouched.
+ */
+export function hasRelativeFromPrefix(value: string, parenIdx: number): boolean {
+  let i = parenIdx + 1;
+  const len = value.length;
+  // Skip whitespace after `(`.
+  while (i < len) {
+    const c = value.charCodeAt(i);
+    if (c === 0x20 || c === 0x09 || c === 0x0a || c === 0x0d) i++;
+    else break;
+  }
+  // Match `from` ASCII case-insensitively (lowercase via | 0x20).
+  if (
+    (value.charCodeAt(i) | 0x20) !== 0x66 /* f */ ||
+    (value.charCodeAt(i + 1) | 0x20) !== 0x72 /* r */ ||
+    (value.charCodeAt(i + 2) | 0x20) !== 0x6f /* o */ ||
+    (value.charCodeAt(i + 3) | 0x20) !== 0x6d /* m */
+  ) {
+    return false;
+  }
+  // Require a whitespace boundary after `from` so `fromage` doesn't match.
+  const after = value.charCodeAt(i + 4);
+  return after === 0x20 || after === 0x09 || after === 0x0a || after === 0x0d;
 }
 
 /**

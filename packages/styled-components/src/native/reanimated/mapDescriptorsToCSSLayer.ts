@@ -4,6 +4,7 @@ import type {
   EasingDescriptor,
   TransitionDescriptor,
 } from '../animation/types';
+import { warnOnce } from '../transform/dev';
 import { applyResolvers, type ResolveEnv } from '../transform/polyfills/resolvers';
 
 /**
@@ -205,6 +206,30 @@ export function mapDescriptorsToCSSLayer(
   ctx?: ReanimatedMapContext
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
+
+  // Reanimated 4's CSS layer is time-based only; scroll-driven and
+  // timeline-dissociated animations have no representation there and
+  // are skipped with a dev warning.
+  if (animations !== undefined) {
+    let filtered: AnimationDescriptor[] | undefined;
+    for (let i = 0; i < animations.length; i++) {
+      // Defensive read: descriptors built outside the parser (tests,
+      // userland) may predate the timeline field.
+      if (animations[i].timeline !== undefined && animations[i].timeline.kind !== 'auto') {
+        if (filtered === undefined) filtered = animations.slice(0, i);
+        if (__DEV__) {
+          warnOnce(
+            'native-scroll-timeline-reanimated',
+            `The animation "${animations[i].name}" uses \`animation-timeline\`, which the Reanimated adapter cannot drive (Reanimated's CSS layer is time-based). The animation is skipped; the default Animated adapter supports scroll-driven animations.`,
+            animations[i].name
+          );
+        }
+      } else if (filtered !== undefined) {
+        filtered.push(animations[i]);
+      }
+    }
+    if (filtered !== undefined) animations = filtered;
+  }
 
   if (animations && animations.length > 0) {
     const layers = resolveAnimationLayers(host, animations, ctx);

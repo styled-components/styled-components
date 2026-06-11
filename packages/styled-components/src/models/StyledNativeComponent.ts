@@ -29,7 +29,24 @@ import {
   SiblingInfo,
   SiblingsList,
 } from '../native/ParentContext';
+import {
+  getAnchorVersion,
+  subscribeAnchors,
+  useAnchorNamePublisher,
+} from '../native/anchorRegistry';
 import { applyStylePolyfills } from '../native/polyfills';
+import { useSnapSettle } from '../native/snapSettle';
+import { matchSupports } from '../native/supports';
+import {
+  getAnimatedComponentCached,
+  isScrollableTargetName,
+  type ScrollTimelineEntry,
+  useScrollTimelinePublisher,
+  useSnapOffsets,
+  useSnapTargetRegistration,
+  useStickyPosition,
+  useViewTimelineSubject,
+} from '../native/scrollTimeline';
 import { applyResolvers, ResolveEnv } from '../native/transform/polyfills/resolvers';
 import { concatSourceInputs } from '../parser/source';
 import type {
@@ -272,13 +289,23 @@ function resolveLeafTarget(target: unknown): LeafTarget {
   return cur as LeafTarget;
 }
 
+/** `Animated.createAnimatedComponent` (and reanimated's equivalent) name
+ *  their wrappers `Animated(Text)` / `AnimatedComponent(Text)`; the inner
+ *  name is what validOn checks and scroller detection care about. */
+const ANIMATED_WRAPPER_NAME_RE = /^(?:Animated|AnimatedComponent|Reanimated)\((.+)\)$/;
+
 function leafName(leaf: LeafTarget): string | undefined {
   if (typeof leaf === 'string') return leaf;
   if (leaf == null) return undefined;
   // RN core components are functions (typeof === 'function'), user wrappers
   // can be classes (typeof === 'object' or 'function'). Both expose
   // `displayName` / `name` as enumerable on the constructor.
-  return leaf.displayName || leaf.name;
+  const name = leaf.displayName || leaf.name;
+  if (name !== undefined && name.charCodeAt(name.length - 1) === 41 /* ) */) {
+    const m = ANIMATED_WRAPPER_NAME_RE.exec(name);
+    if (m !== null) return m[1];
+  }
+  return name;
 }
 
 function targetMatchesValidOn(target: unknown, validOn: ReadonlyArray<string>): boolean {
@@ -358,9 +385,16 @@ function buildResolveEnv(
   env: MediaQueryEnv,
   containerCtx: ContainerContextValue,
   theme: Record<string, any>,
-  cascade: NativeCascadeValues
+  cascade: NativeCascadeValues,
+  parentCtx: ParentContextValue,
+  props: Record<string, unknown>,
+  positionAnchor?: string
 ): ResolveEnv {
-  return {
+  // Untracked position (parent isn't an indexing styled component)
+  // resolves as an only child; see the tree-counting spec block for the
+  // documented deviation from the spec's shadow-boundary failure value.
+  const tracked = parentCtx.siblingIndex >= 0;
+  const out: ResolveEnv = {
     media: env,
     container: containerCtx.nearest,
     theme: theme ?? EMPTY_OBJECT,
@@ -370,7 +404,12 @@ function buildResolveEnv(
     lineHeight: cascade.lineHeight,
     direction: cascade.direction,
     customProperties: cascade.customProperties ?? null,
+    siblingIndex: tracked ? parentCtx.siblingIndex + 1 : 1,
+    siblingCount: tracked ? parentCtx.totalSiblings : 1,
+    props,
   };
+  if (positionAnchor !== undefined) out.positionAnchor = positionAnchor;
+  return out;
 }
 
 /**
@@ -420,6 +459,10 @@ function computePublishedCascade(
     direction,
   };
   if (inherited.customProperties !== undefined) next.customProperties = inherited.customProperties;
+  // Grid items size against the nearest grid container's published entry;
+  // carry it through any cascade rebuild so a child that also changes
+  // font-size / direction still sees its grid owner.
+  if (inherited.grid !== undefined) next.grid = inherited.grid;
   return next;
 }
 
@@ -446,13 +489,15 @@ function mergeCustomPropertiesIntoCascade(
     inheritedMap.forEach((v, k) => merged.set(k, v));
   }
   own.forEach((v, k) => merged.set(k, v));
-  return {
+  const next: NativeCascadeValues = {
     fontSize: inherited.fontSize,
     lineHeight: inherited.lineHeight,
     rootFontSize: inherited.rootFontSize,
     direction: inherited.direction,
     customProperties: merged,
   };
+  if (inherited.grid !== undefined) next.grid = inherited.grid;
+  return next;
 }
 
 function collectCascadeSlots(style: any, slots: [unknown, unknown, unknown]): boolean {
@@ -489,8 +534,14 @@ function conditionMatches(
   env: MediaQueryEnv,
   containerCtx: Pick<ContainerContextValue, 'named' | 'nearest'>
 ): boolean {
-  if (entry.type === 'media' || entry.type === 'supports') {
+  if (entry.type === 'media') {
     return matchMedia(entry.condition, env);
+  }
+  if (entry.type === 'supports') {
+    // Feature queries have their own grammar (declarations, not media
+    // features); routing them through the media matcher silently
+    // mismatches every condition.
+    return matchSupports(entry.condition);
   }
   if (entry.type === 'container') {
     // CSS spec: anonymous `@container (…)` matches the nearest
@@ -530,7 +581,7 @@ function pushMatched(out: MatchedLayers, entry: ConditionalStyle, env: ResolveEn
   // each entry's importance flag.
   let varOut: { normal: Dict<any> | null; important: Dict<any> | null } | null = null;
   if (entry.varDeferred !== undefined) {
-    varOut = applyVarDeferred(entry.varDeferred, env.customProperties);
+    varOut = applyVarDeferred(entry.varDeferred, env.customProperties, null, env);
   }
   out.normal.push(resolveBucket(entry, env, varOut !== null ? varOut.normal : null));
   if (
@@ -872,6 +923,92 @@ function evaluateAttrOperator(
   }
 }
 
+/**
+ * RN host components whose `style` prop rejects the function (state
+ * callback) form. Pressable is the one host that invokes a function
+ * style with interaction state; everything else silently drops a
+ * function style, taking the component's ENTIRE rule with it. Mirrors
+ * the alias list in native/index.ts (kept local to avoid an import
+ * cycle); custom component targets are intentionally absent so wrappers
+ * that forward style to a Pressable keep the function form.
+ */
+const STATELESS_STYLE_TARGETS = new Set([
+  'ActivityIndicator',
+  'Button',
+  'FlatList',
+  'Image',
+  'ImageBackground',
+  'InputAccessoryView',
+  'KeyboardAvoidingView',
+  'Modal',
+  'RefreshControl',
+  'SafeAreaView',
+  'ScrollView',
+  'SectionList',
+  'StatusBar',
+  'Switch',
+  'Text',
+  'TextInput',
+  'TouchableHighlight',
+  'TouchableNativeFeedback',
+  'TouchableOpacity',
+  'TouchableWithoutFeedback',
+  'View',
+  'VirtualizedList',
+]);
+
+/** Leaf target name when it cannot receive a function style; null otherwise. */
+function inertStateStyleTargetName(target: unknown): string | null {
+  const name = leafName(resolveLeafTarget(target));
+  return name !== undefined && STATELESS_STYLE_TARGETS.has(name) ? name : null;
+}
+
+const PSEUDO_TO_SELECTOR: Record<PseudoState, string> = {
+  pressed: ':active',
+  hover: ':hover',
+  focus: ':focus',
+  disabled: ':disabled',
+};
+
+/**
+ * Dev warning for pseudo-state buckets that can never fire because the
+ * target cannot receive interaction state. Skips buckets whose
+ * environmental gate (media / container / supports) does not currently
+ * match, so a web-only rule fenced behind `@media (hover: hover)` stays
+ * silent on touch platforms.
+ */
+function warnInertPseudoStates(
+  entries: ConditionalStyle[],
+  env: MediaQueryEnv,
+  containerCtx: Pick<ContainerContextValue, 'named' | 'nearest'>,
+  targetName: string
+): void {
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    const pseudo = entry.type === 'pseudo' ? (entry.condition as PseudoState) : entry.pseudo!;
+    if (
+      entry.type !== 'pseudo' &&
+      entry.type !== 'attr' &&
+      entry.type !== 'combinator' &&
+      entry.type !== 'nthChild' &&
+      entry.type !== 'has' &&
+      !conditionMatches(entry, env, containerCtx)
+    ) {
+      continue;
+    }
+    warnOnce(
+      'native-pseudo-state-inert',
+      '`' +
+        PSEUDO_TO_SELECTOR[pseudo] +
+        '` styles on a styled ' +
+        targetName +
+        ' never apply on React Native: only `Pressable` provides interaction state to its style. Use `styled.Pressable` for press / hover / focus styling, or fence a web-only rule behind `@media (hover: hover)`.',
+      targetName + ':' + PSEUDO_TO_SELECTOR[pseudo]
+    );
+    return;
+  }
+}
+
 // Maps our pseudo-state names to the field RN's `style` callback exposes.
 const PSEUDO_TO_STATE_KEY: Record<PseudoState, 'pressed' | 'hovered' | 'focused' | 'disabled'> = {
   pressed: 'pressed',
@@ -956,6 +1093,8 @@ type RenderCache = [
   Dict<any>,
   ResolveEnv,
   Dict<any>,
+  ParentContextValue,
+  number,
 ];
 
 /**
@@ -1094,23 +1233,46 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   const compiled = nativeStyle.staticCompiled!;
   const elementToBeCreated: NativeTarget = (props.as as NativeTarget) || target;
   const containerName = resolveContainerName(compiled.containerInfo, styledComponentId);
-  const elementProps = finalizeElementProps(
-    props,
-    elementToBeCreated,
-    undefined,
-    composeStaticStyle(compiled, props.style, styledComponentId),
-    compiled.specialCases,
-    forwardedRef,
-    forwardedComponent
-  );
   if (IS_RSC) {
+    const elementProps = finalizeElementProps(
+      props,
+      elementToBeCreated,
+      undefined,
+      composeStaticStyle(compiled, props.style, styledComponentId),
+      compiled.specialCases,
+      forwardedRef,
+      forwardedComponent
+    );
     return createFastElement(
       elementToBeCreated,
       applyStylePolyfills(elementProps as Record<string, unknown>) as Dict<any>,
       containerName
     );
   }
+  // A static-eligible component can still be a grid item: an empty or
+  // purely-static child placed inside a `display: grid` container. The
+  // parent decides this at runtime, so the static path reads the cascade
+  // and applies the computed width when this component is a direct child
+  // of the grid that published the entry.
+  const nativeStyleCtx = React.useContext(NativeStyleContext);
   const parentCtx = React.useContext(ParentContext);
+  let composedStyle = composeStaticStyle(compiled, props.style, styledComponentId);
+  const grid = nativeStyleCtx.cascade.grid;
+  if (grid !== undefined && parentCtx.parentId === grid.ownerId) {
+    // A `grid-column: span N` item is never static-eligible (the
+    // eligibility gate excludes `gridSpan`), so a static grid item always
+    // spans one column.
+    composedStyle = appendStyle(composedStyle, { width: computeGridItemWidth(grid, 1) });
+  }
+  const elementProps = finalizeElementProps(
+    props,
+    elementToBeCreated,
+    undefined,
+    composedStyle,
+    compiled.specialCases,
+    forwardedRef,
+    forwardedComponent
+  );
   const publishCacheRef = React.useRef<ParentPublishCache | null>(null);
   if (publishCacheRef.current === null) publishCacheRef.current = createParentPublishCache();
   // Index sibling positions BEFORE running polyfills + createFastElement
@@ -1124,17 +1286,35 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
     styledComponentId,
     elementToBeCreated
   );
-  const effectiveProps =
+  let effectiveProps =
     publishedValue !== null
       ? withIndexedChildren(
           elementProps,
           indexStyledChildren(publishCacheRef.current, elementProps.children, publishedValue)
         )
       : elementProps;
-  const inner = createFastElement(
-    elementToBeCreated,
-    applyStylePolyfills(effectiveProps as Record<string, unknown>) as Dict<any>,
-    containerName
+  // Static-eligible scroll containers still publish their timeline so
+  // descendants' `animation-timeline: scroll()` resolves, and lift
+  // sticky children onto stickyHeaderIndices.
+  const isScroller = isScrollableTargetName(leafName(resolveLeafTarget(elementToBeCreated)));
+  const [scrollProps, wrapScrollTimeline, timelineEntry] = useScrollTimelinePublisher(
+    isScroller || compiled.scrollTimeline !== undefined,
+    compiled.scrollTimeline,
+    effectiveProps
+  );
+  effectiveProps = useScrollerSnapProps(
+    isScroller,
+    compiled,
+    compiled.snapTarget,
+    timelineEntry,
+    scrollProps
+  );
+  const inner = wrapScrollTimeline(
+    createFastElement(
+      elementToBeCreated,
+      applyStylePolyfills(effectiveProps as Record<string, unknown>) as Dict<any>,
+      containerName
+    )
   );
   return publishedValue !== null
     ? createElement(ParentContext.Provider, { value: publishedValue }, inner)
@@ -1188,6 +1368,14 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   const nativeStyleCtx = !IS_RSC ? React.useContext(NativeStyleContext) : DEFAULT_NATIVE_STYLE;
   const containerCtx = nativeStyleCtx.container;
   const parentCtx = !IS_RSC ? React.useContext(ParentContext) : DEFAULT_PARENT_CONTEXT;
+  // Anchor-rect reactivity: components whose CSS uses anchor() /
+  // anchor-size() re-render (and re-key their cache) when any anchor's
+  // rect changes. The gate is lifetime-constant per component, so the
+  // hook branch is stable.
+  const anchorVersion =
+    !IS_RSC && nativeStyle.usesAnchorFunctions
+      ? React.useSyncExternalStore(subscribeAnchors, getAnchorVersion)
+      : 0;
 
   const renderCacheRef = (!IS_RSC ? React.useRef<RenderCache | null>(null) : { current: null }) as {
     current: RenderCache | null;
@@ -1219,7 +1407,17 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   let propsKeyCount = prev !== null ? prev[2] : 0;
 
   const propsMatch = prev !== null && prev[1] === theme && shallowEqual(prev[0], props, prev[2]);
-  const fullHit = propsMatch && prev![5] === env && prev![6] === nativeStyleCtx;
+  // parentCtx participates because position-dependent output (nth-child /
+  // combinator matches, sibling-index() resolvers) is baked into the
+  // cached composedStyle. perChildValue identity is stable unless the
+  // parent's sibling shape actually changed, so this only invalidates
+  // when a re-resolve is genuinely required.
+  const fullHit =
+    propsMatch &&
+    prev![5] === env &&
+    prev![6] === nativeStyleCtx &&
+    prev![12] === parentCtx &&
+    prev![13] === anchorVersion;
 
   if (fullHit) {
     context = prev![3] as typeof context;
@@ -1283,10 +1481,23 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
         merged: renderCascade,
       };
     }
-    resolveEnv = buildResolveEnv(env, containerCtx, theme as Record<string, any>, renderCascade);
+    resolveEnv = buildResolveEnv(
+      env,
+      containerCtx,
+      theme as Record<string, any>,
+      renderCascade,
+      parentCtx,
+      props as Record<string, unknown>,
+      compiled.positionAnchor
+    );
     let varImportant: Dict<any> | undefined;
     if (compiled.varDeferred !== undefined) {
-      const varOut = applyVarDeferred(compiled.varDeferred, renderCascade.customProperties ?? null);
+      const varOut = applyVarDeferred(
+        compiled.varDeferred,
+        renderCascade.customProperties ?? null,
+        compiled.customProperties ?? null,
+        resolveEnv
+      );
       if (varOut.normal !== null) {
         if (effectiveBase === compiled.base) {
           effectiveBase = { ...compiled.base, ...varOut.normal };
@@ -1310,7 +1521,8 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
           baseOverride,
           renderCascade,
           parentCtx,
-          varImportant
+          varImportant,
+          compiled.hasPseudo ? inertStateStyleTargetName(elementToBeCreated) : null
         )
       : composeBase(effectiveBase, props.style);
     composedStyle = injectAutoContainerName(
@@ -1318,6 +1530,18 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
       compiled.containerInfo,
       forwardedComponent.styledComponentId
     );
+    // Grid item sizing: a direct child of a `display: grid` container
+    // reads the published grid entry and applies a computed width. The
+    // owner check (`parentId === grid.ownerId`) enforces the spec's
+    // direct-children rule; grandchildren do not become grid items.
+    // contentWidth changes flow through `nativeStyleCtx` identity (part
+    // of the fullHit cache key), so the width recomputes on re-layout.
+    const grid = renderCascade.grid;
+    if (grid !== undefined && parentCtx.parentId === grid.ownerId) {
+      composedStyle = appendStyle(composedStyle, {
+        width: computeGridItemWidth(grid, compiled.gridSpan ?? 1),
+      });
+    }
   }
 
   const animationAdapter = getAnimationAdapter() ?? NOOP_ADAPTER;
@@ -1325,30 +1549,49 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     onAnimationEnd?: AnimatedStyleInput['onAnimationEnd'];
     onTransitionEnd?: AnimatedStyleInput['onTransitionEnd'];
   };
+  // View progress subjects capture their layout before the adapter runs
+  // so the timeline can place them within the scroller; the composed
+  // onLayout lands on the element props below. Hook order is
+  // unconditional inside.
+  const isViewSubject = !IS_RSC && animationsUseViewTimeline(compiled.animations);
+  const [viewSubjectLayout, withViewSubjectLayout] = useViewTimelineSubject(isViewSubject);
+  const sticky = useStickyPosition(!IS_RSC && compiled.sticky === true);
   const animInput: AnimatedStyleInput = {
     compiled,
     resolved: composedStyle,
     target: elementToBeCreated,
     env: resolveEnv,
   };
+  if (isViewSubject) animInput.viewSubject = viewSubjectLayout;
   if (userProps.onAnimationEnd !== undefined) animInput.onAnimationEnd = userProps.onAnimationEnd;
   if (userProps.onTransitionEnd !== undefined)
     animInput.onTransitionEnd = userProps.onTransitionEnd;
   const animOut = animationAdapter.useAnimatedStyle(animInput);
 
+  // Sticky elements append the crossover fade-out and need an
+  // Animated-capable host to consume the UI-thread opacity node. The
+  // pre-fade style is what the overlay twin replicates.
+  let renderStyle = animOut.style;
+  let renderType = animOut.elementType;
+  const stickyTwinStyle = animOut.style;
+  if (sticky.layer !== null) {
+    renderStyle = appendStyle(renderStyle, sticky.layer);
+    renderType = getAnimatedComponentCached(renderType) ?? renderType;
+  }
+
   let elementProps: Dict<any>;
   // Adapters with off-React state machinery (allow-discrete 50% flip,
   // for example) signal `invalidateCache` to force an elementProps
   // rebuild when their internal state changed despite stable inputs.
-  if (fullHit && !animOut.invalidateCache) {
+  if (fullHit && !animOut.invalidateCache && !sticky.changed) {
     elementProps = prev![9];
   } else {
     elementProps = applyStylePolyfills(
       finalizeElementProps(
         context,
-        animOut.elementType,
+        renderType,
         shouldForwardProp,
-        animOut.style,
+        renderStyle,
         compiled.specialCases,
         forwardedRef,
         forwardedComponent
@@ -1367,6 +1610,8 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
       elementProps,
       resolveEnv,
       effectiveBase,
+      parentCtx,
+      anchorVersion,
     ];
   }
 
@@ -1410,7 +1655,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     forwardedComponent.styledComponentId,
     animOut.elementType
   );
-  const effectiveProps =
+  let effectiveProps =
     publishedValue !== null
       ? withIndexedChildren(
           elementProps,
@@ -1418,17 +1663,61 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
         )
       : elementProps;
 
+  // Scroll progress timelines: styled scroll containers publish their
+  // offset/extent so descendants' `animation-timeline: scroll()` /
+  // named references resolve. Hook order is unconditional inside.
+  const isScroller =
+    !IS_RSC && isScrollableTargetName(leafName(resolveLeafTarget(elementToBeCreated)));
+  const [scrollProps, wrapScrollTimeline, timelineEntry] = useScrollTimelinePublisher(
+    isScroller || (!IS_RSC && compiled.scrollTimeline !== undefined),
+    compiled.scrollTimeline,
+    effectiveProps
+  );
+  effectiveProps = useScrollerSnapProps(
+    isScroller,
+    compiled,
+    !IS_RSC ? compiled.snapTarget : undefined,
+    timelineEntry,
+    scrollProps
+  );
+  // anchor-name publishers report their parent-relative rect for
+  // anchor() / anchor-size() consumers.
+  effectiveProps = useAnchorNamePublisher(
+    !IS_RSC ? compiled.anchorName : undefined,
+    effectiveProps
+  );
+  effectiveProps = withViewSubjectLayout(effectiveProps);
+  effectiveProps = sticky.compose(effectiveProps);
+  sticky.register(renderType, effectiveProps, stickyTwinStyle);
+
   let inner: React.ReactElement;
-  if (containerName !== undefined) {
+  if (compiled.gridInfo !== undefined) {
+    // `display: grid` container: measure the content-box width and
+    // publish a grid entry so direct children size themselves. The
+    // gutters come from the resolved base (`gap` shorthand or split
+    // `rowGap` / `columnGap`).
+    const gutters = readGridGutters(composedStyle);
+    inner = createElement(GridPublisher, {
+      ownerId: forwardedComponent.styledComponentId,
+      columns: compiled.gridInfo.columns,
+      columnGap: gutters.columnGap,
+      rowGap: gutters.rowGap,
+      containerName,
+      parent: nativeStyleCtx,
+      cascadeOverride: cascadeChanged ? publishedCascade : null,
+      elementType: renderType,
+      elementProps: effectiveProps,
+    } as GridPublisherProps);
+  } else if (containerName !== undefined) {
     inner = createElement(ContainerPublisher, {
       name: containerName,
       parent: nativeStyleCtx,
       cascadeOverride: cascadeChanged ? publishedCascade : null,
-      elementType: animOut.elementType,
+      elementType: renderType,
       elementProps: effectiveProps,
     } as ContainerPublisherProps);
   } else {
-    inner = createElement(animOut.elementType, effectiveProps);
+    inner = createElement(renderType, effectiveProps);
     if (animOut.isolate3d) {
       inner = createElement(get3dIsolationView(), { collapsable: false }, inner);
     }
@@ -1440,6 +1729,8 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
       );
     }
   }
+
+  inner = wrapScrollTimeline(inner);
 
   return publishedValue !== null
     ? createElement(ParentContext.Provider, { value: publishedValue }, inner)
@@ -1726,6 +2017,69 @@ function withIndexedChildren(elementProps: Dict<any>, indexedChildren: React.Rea
   return { ...elementProps, children: indexedChildren };
 }
 
+/** Prepended below the composed style: anything in props.style beats
+ *  ScrollView's base `flexGrow: 1` regardless of position, and sitting
+ *  first keeps a runtime `style={{ flexGrow: 1 }}` (and any authored
+ *  declaration) above this library default. Authored flex factors also
+ *  suppress the pin at compile time (see `scrollerFlexPin`). */
+const SCROLLER_FLEX_PIN = Object.freeze({ flexGrow: 0 });
+
+/**
+ * Web-parity defaults for styled scrollers. User-supplied props and
+ * authored flex declarations always win.
+ *
+ * - `nestedScrollEnabled: true`: browsers nest scrolling natively, while
+ *   Android's ScrollView requires the opt-in before an inner scroller may
+ *   claim a gesture from a scrollable ancestor. Inert on iOS and rn-web.
+ * - `pinGrow` (compiled `scrollerFlexPin`): an authored width/height
+ *   holds instead of stretching with RN ScrollView's `flexGrow: 1` base.
+ *   The companion `flexShrink: 0` lives in the styled scroller baseline
+ *   in `native/index.ts` instead: as authored CSS it participates in the
+ *   cascade, so `flex-shrink` declarations override it anywhere
+ *   (including inside @media buckets the compile-time pin scan can't
+ *   see).
+ */
+function withScrollerDefaults(
+  isScroller: boolean,
+  pinGrow: boolean,
+  elementProps: Dict<any>
+): Dict<any> {
+  if (!isScroller) return elementProps;
+  const needsNested = elementProps.nestedScrollEnabled === undefined;
+  if (!needsNested && !pinGrow) return elementProps;
+  const out = { ...elementProps };
+  if (needsNested) out.nestedScrollEnabled = true;
+  if (pinGrow) out.style = [SCROLLER_FLEX_PIN, elementProps.style];
+  return out;
+}
+
+/**
+ * Scroller ergonomics + CSS scroll snap wiring, shared by both render
+ * paths. Hook order is unconditional; the gates only shape the props.
+ * The settle corrector activates only for the `scroll-snap-type: *
+ * mandatory` lift (`pagingEnabled` enters `specialCases` from that lift
+ * alone): proximity and bare user-supplied snap props carry no CSS
+ * must-rest contract, so correcting them would be an overreach.
+ */
+function useScrollerSnapProps(
+  isScroller: boolean,
+  compiled: NativeStyles,
+  snapTarget: { align: string; stop: boolean } | undefined,
+  timelineEntry: ScrollTimelineEntry | null,
+  elementProps: Dict<any>
+): Dict<any> {
+  let out = withScrollerDefaults(isScroller, compiled.scrollerFlexPin === true, elementProps);
+  out = useSnapTargetRegistration(snapTarget, out);
+  out = useSnapOffsets(isScroller, timelineEntry, out);
+  return useSnapSettle(
+    isScroller &&
+      compiled.specialCases !== undefined &&
+      compiled.specialCases.pagingEnabled === true,
+    timelineEntry,
+    out
+  );
+}
+
 interface ContainerPublisherProps {
   name: string;
   /** Inherited NativeStyle from the nearest ancestor publisher; the
@@ -1781,6 +2135,49 @@ function mergeStyle(style: any, out: Record<string, any>): void {
   }
   if (typeof style !== 'object') return;
   for (const k in style) out[k] = style[k];
+}
+
+/**
+ * Compute the width of a grid item from the published grid entry.
+ *
+ * Each `1fr` column's share of the container's content-box is the
+ * leftover space (content width minus the gutters between columns)
+ * divided by the column count (CSS Grid 2 §7.2.4: each track's share is
+ * `<flex> * leftover / sum-of-flex-factors`, here `1 * leftover / N`). A
+ * span of S items is S column widths plus the (S-1) interior gutters it
+ * bridges.
+ *
+ * Before the container's first layout (`contentWidth === 0`), fall back
+ * to a percentage so the item still occupies its share of the row; the
+ * pixel form takes over once the measured width arrives.
+ */
+function computeGridItemWidth(
+  grid: NonNullable<NativeCascadeValues['grid']>,
+  span: number
+): number | string {
+  const columns = grid.columns;
+  // A span can't exceed the column count; clamp so it never overflows.
+  const s = span > columns ? columns : span;
+  if (grid.contentWidth > 0) {
+    const single = (grid.contentWidth - (columns - 1) * grid.columnGap) / columns;
+    const width = single * s + (s - 1) * grid.columnGap;
+    return Math.round(width * 100) / 100;
+  }
+  return `${(100 * s) / columns}%`;
+}
+
+/**
+ * True when any compiled animation descriptor binds to a view progress
+ * timeline. Gates the subject-layout hook's work; the descriptor list is
+ * compile-time data, so the answer is stable per compiled style.
+ */
+function animationsUseViewTimeline(animations: NativeStyles['animations'] | undefined): boolean {
+  if (animations === undefined) return false;
+  for (let i = 0; i < animations.length; i++) {
+    const tl = animations[i].timeline;
+    if (tl !== undefined && tl.kind === 'view') return true;
+  }
+  return false;
 }
 
 function numOrZero(v: unknown): number {
@@ -1884,6 +2281,130 @@ function ContainerPublisher({
   );
 }
 
+interface GridPublisherProps {
+  ownerId: string;
+  columns: number;
+  columnGap: number;
+  rowGap: number;
+  /** Set when the grid container also declares `container-type`: the
+   *  element is a query container regardless of display type, so the
+   *  grid role must publish the container box too instead of eating it. */
+  containerName: string | undefined;
+  /** Inherited NativeStyle; container + cascade pass through, with this
+   *  publisher's grid entry added to the cascade. */
+  parent: NativeStyleContextValue;
+  /** Cascade override when the grid container also changes a cascade
+   *  key (font-size / line-height / direction); `null` otherwise. */
+  cascadeOverride: NativeCascadeValues | null;
+  elementType: NativeTarget;
+  elementProps: Dict<any>;
+}
+
+/**
+ * Read the column / row gutters off a resolved grid-container style. The
+ * `gap` shorthand stays as a single `gap` key for equal gutters; the
+ * two-value form is split into `rowGap` / `columnGap` by the gap handler.
+ * Longhand `column-gap` / `row-gap` win over the shorthand.
+ */
+function readGridGutters(style: any): { columnGap: number; rowGap: number } {
+  const m: Record<string, any> = {};
+  mergeStyle(style, m);
+  const gap = numOrZero(m.gap);
+  return {
+    columnGap: numOrZero(m.columnGap ?? gap),
+    rowGap: numOrZero(m.rowGap ?? gap),
+  };
+}
+
+const EMPTY_BOX = { width: 0, height: 0 };
+
+/**
+ * Mounted only for `display: grid` containers. Mirrors
+ * `ContainerPublisher`: measures the content-box width via a composed
+ * onLayout and publishes the grid entry through `NativeStyleContext` so
+ * direct children compute their widths. The container query state and
+ * the rest of the cascade pass through unchanged.
+ */
+function GridPublisher({
+  ownerId,
+  columns,
+  columnGap,
+  rowGap,
+  containerName,
+  parent,
+  cascadeOverride,
+  elementType,
+  elementProps,
+}: GridPublisherProps): React.ReactElement {
+  const [contentBox, setContentBox] = React.useState<{ width: number; height: number }>(EMPTY_BOX);
+  const lastRef = React.useRef(EMPTY_BOX);
+
+  const styleRef = React.useRef<any>(elementProps.style);
+  styleRef.current = elementProps.style;
+
+  const onLayout = React.useMemo(
+    () => (e: any) => {
+      const { width, height } = e.nativeEvent.layout;
+      const insets = getContentBoxInsets(styleRef.current);
+      // Floor to the device pixel grid Yoga snaps to internally so child
+      // widths summed back up never exceed the snapped container slot
+      // (which would trip an extra flex-wrap line).
+      const ratio = getRN().PixelRatio?.get?.() ?? 1;
+      const snap = (v: number) => (ratio > 1 ? Math.floor(v * ratio) / ratio : v);
+      const w = width > insets.horizontal ? snap(width - insets.horizontal) : 0;
+      const h = height > insets.vertical ? snap(height - insets.vertical) : 0;
+      const last = lastRef.current;
+      if (last.width === w && last.height === h) return;
+      const next = { width: w, height: h };
+      lastRef.current = next;
+      setContentBox(next);
+    },
+    []
+  );
+
+  const value = React.useMemo<NativeStyleContextValue>(() => {
+    const baseCascade = cascadeOverride ?? parent.cascade;
+    const cascade: NativeCascadeValues = {
+      ...baseCascade,
+      grid: { ownerId, columns, columnGap, rowGap, contentWidth: contentBox.width },
+    };
+    // A `container-type` declaration on the grid container makes it a
+    // query container too; publish its box the same way ContainerPublisher
+    // does (width-0 "pending" entry pre-measurement, see that component
+    // for the rationale).
+    let container = parent.container;
+    if (containerName !== undefined) {
+      const entry: ContainerEntry = {
+        name: containerName,
+        width: contentBox.width,
+        height: contentBox.height,
+      };
+      const named = Object.freeze({ ...parent.container.named, [containerName]: entry });
+      container = { nearest: entry, named };
+    }
+    return { container, cascade };
+  }, [parent, cascadeOverride, ownerId, columns, columnGap, rowGap, contentBox, containerName]);
+
+  const existingOnLayout = elementProps.onLayout;
+  const composedOnLayout = React.useMemo(
+    () =>
+      existingOnLayout
+        ? (e: any) => {
+            onLayout(e);
+            existingOnLayout(e);
+          }
+        : onLayout,
+    [onLayout, existingOnLayout]
+  );
+  const finalProps = { ...elementProps, onLayout: composedOnLayout };
+
+  return createElement(
+    NativeStyleContext.Provider,
+    { value },
+    createElement(elementType, finalProps)
+  );
+}
+
 /**
  * Assemble the final `style` value passed to the underlying RN element.
  * Pulled out of the render hook so the cache-hit path can short-circuit
@@ -1899,13 +2420,22 @@ export function assembleFinalStyle(
   baseOverride?: Dict<any>,
   cascade: NativeCascadeValues = DEFAULT_CASCADE,
   parentCtx: ParentContextValue = DEFAULT_PARENT_CONTEXT,
-  varImportant?: Dict<any>
+  varImportant?: Dict<any>,
+  inertStateTarget?: string | null
 ): any {
   const nonPseudoEntries = compiled.nonPseudoEntries;
   const pseudoEntries = compiled.pseudoEntries;
   const hasConditional = nonPseudoEntries.length > 0;
   const hasPseudoState = compiled.hasPseudo;
-  const resolveEnv = buildResolveEnv(env, containerCtx, theme, cascade);
+  const resolveEnv = buildResolveEnv(
+    env,
+    containerCtx,
+    theme,
+    cascade,
+    parentCtx,
+    props,
+    compiled.positionAnchor
+  );
 
   const activeMatched: MatchedLayers = hasConditional
     ? matchConditionals(nonPseudoEntries, env, containerCtx, props, resolveEnv, parentCtx)
@@ -1934,7 +2464,7 @@ export function assembleFinalStyle(
   if (hasPseudoState) {
     const preStateStyles: object[] =
       activeConditional.length > 0 ? [base as object].concat(activeConditional) : [base as object];
-    return (state: any) => {
+    const stateStyle = (state: any) => {
       const styles: any[] = preStateStyles.slice();
       const matched = pseudoStylesForState(
         pseudoEntries,
@@ -1968,6 +2498,18 @@ export function assembleFinalStyle(
       }
       return styles;
     };
+    // Only Pressable invokes a function `style` with interaction state;
+    // every other RN host treats a function style as invalid and drops
+    // the WHOLE style. For those targets, evaluate once with empty state
+    // so the base + matched conditional layers still apply and the
+    // pseudo buckets are simply inert.
+    if (inertStateTarget !== undefined && inertStateTarget !== null) {
+      if (__DEV__) {
+        warnInertPseudoStates(pseudoEntries, env, containerCtx, inertStateTarget);
+      }
+      return stateStyle(EMPTY_OBJECT);
+    }
+    return stateStyle;
   }
 
   if (isFunction(userStyle)) {

@@ -32,6 +32,66 @@ export type EasingDescriptor =
     };
 
 /**
+ * Named segments of an animation timeline (Scroll-driven Animations L1).
+ * Only view progress timelines define named ranges; scroll timelines
+ * accept plain `<length-percentage>` boundaries only.
+ */
+export type TimelineRangeName =
+  | 'cover'
+  | 'contain'
+  | 'entry'
+  | 'exit'
+  | 'entry-crossing'
+  | 'exit-crossing'
+  | 'scroll';
+
+/**
+ * One boundary of an animation attachment range. Single hidden class:
+ * `calcRaw` is non-null only for mixed-unit calc() boundaries that need
+ * the timeline extent to resolve (value/unit are placeholders then).
+ */
+export interface RangeOffset {
+  /** `null` measures from the whole timeline rather than a named range. */
+  rangeName: TimelineRangeName | null;
+  value: number;
+  unit: '%' | 'px';
+  /** Raw `calc(...)` source for offsets that defer to resolve time. */
+  calcRaw: string | null;
+}
+
+export type RangeBoundary = 'normal' | RangeOffset;
+
+/** Scroll axis selector; block/inline map to y/x in horizontal-tb (Yoga's only writing mode). */
+export type TimelineAxis = 'block' | 'inline' | 'x' | 'y';
+
+/**
+ * Parsed `<single-animation-timeline>` (CSS Animations 2 §4.9).
+ * `named` carries the case-sensitive dashed-ident. `view` is parsed at
+ * this layer; its engine support ships with view progress timelines.
+ */
+export type AnimationTimeline =
+  | { kind: 'auto' }
+  | { kind: 'none' }
+  | { kind: 'named'; name: string }
+  | { kind: 'scroll'; scroller: 'nearest' | 'root' | 'self'; axis: TimelineAxis }
+  | { kind: 'view'; axis: TimelineAxis; inset: string | null };
+
+export const AUTO_TIMELINE: AnimationTimeline = { kind: 'auto' };
+
+/**
+ * The view progress subject's layout within its scroll container,
+ * captured from the subject's own onLayout. Coordinates are
+ * parent-relative, which equals content-relative for direct children of
+ * the scroller (the supported subset).
+ */
+export interface ViewSubjectLayout {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+}
+
+/**
  * Resolved CSS animation declaration;the L1+L2 longhand set, but
  * shaped for the adapter, not for serialization.
  */
@@ -55,6 +115,15 @@ export interface AnimationDescriptor {
    * `replace`.
    */
   composition: 'replace' | 'add' | 'accumulate';
+  /**
+   * Attachment range boundaries. Application is only defined for
+   * scroll/view timelines; the time-driven engine carries but ignores
+   * them (the spec leaves time-driven application undefined).
+   */
+  rangeStart: RangeBoundary;
+  rangeEnd: RangeBoundary;
+  /** Timeline driving the animation's progress. */
+  timeline: AnimationTimeline;
 }
 
 /**
@@ -100,6 +169,12 @@ export interface AnimatedStyleInput {
   target: NativeTarget;
   /** Render env (used for resolver re-runs and reduced-motion gating). */
   env: ResolveEnv;
+  /**
+   * View progress subject layout for `animation-timeline: view()`,
+   * captured by the render path's composed onLayout. `null` until the
+   * subject measures; absent when no animation uses a view timeline.
+   */
+  viewSubject?: ViewSubjectLayout | null;
   /**
    * User-supplied `onAnimationEnd` callback, lifted off the styled
    * component's React props. The Hermes adapter fires from

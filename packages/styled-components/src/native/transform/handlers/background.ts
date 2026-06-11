@@ -31,6 +31,27 @@ const ATTACHMENT_KEYWORDS = new Set(['scroll', 'fixed', 'local']);
 const BOX_KEYWORDS = new Set(['content-box', 'padding-box', 'border-box']);
 const NONE_IDENT = 'none';
 
+/**
+ * Warn once when a conic (or repeating-conic) gradient layer is present on
+ * native. RN's gradient support covers linear and radial only; conic layers
+ * silently render nothing on iOS and Android. The layer still renders on
+ * the web (rn-web) and on the server, so emission is left untouched; the
+ * warning makes the native gap visible in dev. dedupeSuffix is the raw
+ * value so distinct gradients each warn once.
+ */
+export function warnIfConicGradientNative(value: string): void {
+  if (!__DEV__) return;
+  if (__NATIVE_WEB__) return;
+  if (value.indexOf('conic-gradient(') === -1) return;
+  warnOnce(
+    'native-conic-gradient-unsupported',
+    '`' +
+      value +
+      '` does not render on iOS or Android; React Native gradients cover `linear-gradient()` and `radial-gradient()` only. Use a radial or linear gradient, or a prebaked image, for native. The conic gradient still renders on the web.',
+    value
+  );
+}
+
 interface ParsedLayer {
   image: string | null;
   position: string | null;
@@ -114,6 +135,7 @@ function parseLayer(layerSrc: string, isFinal: boolean): ParsedLayer | null {
         t.name === 'conic-gradient' ||
         t.name === 'repeating-linear-gradient' ||
         t.name === 'repeating-radial-gradient' ||
+        t.name === 'repeating-conic-gradient' ||
         t.name === 'url')
     ) {
       if (layer.image !== null) return null;
@@ -244,6 +266,14 @@ export function backgroundShorthand(tokens: Token[]): Dict<any> | null {
   const finalLayer = layers[layers.length - 1];
   for (let i = 0; i < layers.length; i++) {
     const layer = layers[i];
+    if (
+      __DEV__ &&
+      !__NATIVE_WEB__ &&
+      layer.image !== null &&
+      layer.image.indexOf('conic-gradient(') !== -1
+    ) {
+      warnIfConicGradientNative(layer.image);
+    }
     if (__DEV__ && !__NATIVE_WEB__ && layer.attachment !== null && layer.attachment !== 'scroll') {
       if (layer.attachment === 'fixed') {
         warnOnce(

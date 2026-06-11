@@ -1,3 +1,4 @@
+import { describeOnRnWeb } from '../describeOnRnWeb';
 import { resetWarningsForTest } from '../dev';
 import { transformDecl } from '../index';
 import { getPassthroughKeys, getPrimaryPassthroughKey } from '../passthrough';
@@ -11,7 +12,9 @@ describe('passthrough mapping', () => {
       ['filter', 'blur(4px) saturate(1.2)', 'filter'],
       ['mix-blend-mode', 'multiply', 'mixBlendMode'],
       ['background-blend-mode', 'multiply', 'backgroundBlendMode'],
-      ['isolation', 'isolate', 'isolation'],
+      // `isolation: isolate` lifts an Android layer prop alongside the
+      // style key; its single-key form is the initial value.
+      ['isolation', 'auto', 'isolation'],
       ['cursor', 'pointer', 'cursor'],
       ['pointer-events', 'none', 'pointerEvents'],
       ['user-select', 'none', 'userSelect'],
@@ -61,7 +64,7 @@ describe('passthrough mapping', () => {
       });
     });
 
-    describe.skip('on rn-web', () => {
+    describeOnRnWeb(() => {
       // rn-web emits `writingDirection` (translates to CSS `direction`
       // so the browser flips bidi rendering) AND lifts a `dir` prop
       // through SPECIAL_CASE_PROPS - rn-web's LocaleContext / BiDi
@@ -254,6 +257,82 @@ describe('passthrough mapping', () => {
         // each layer). Only the layered background props cycle.
         expect(transformDecl('box-shadow', '0 0 1px #000, 0 0 1px #000')).toEqual({
           boxShadow: '0 0 1px #000, 0 0 1px #000',
+        });
+      });
+    });
+
+    describe('isolation: isolate Android layer lift (CSS Compositing 1 §3)', () => {
+      // "isolation: isolate ... the element must act as a group", i.e.
+      // descendants' mix-blend-mode composites against the group's own
+      // backdrop, not the page. Android has no isolation style key; the
+      // platform primitive that forces an isolated compositing surface is
+      // the hardware-texture layer, so the polyfill lifts that prop
+      // alongside the style key (iOS drops the Android-suffixed prop via
+      // RN's own view-prop filter; its compositor consumes the style key).
+      // Device-verified: without the lift, blended children composite
+      // against the page background on Android and wash out.
+      it('isolate lifts the Android hardware-texture layer', () => {
+        expect(transformDecl('isolation', 'isolate')).toEqual({
+          isolation: 'isolate',
+          renderToHardwareTextureAndroid: true,
+        });
+      });
+
+      it('auto stays a plain passthrough', () => {
+        expect(transformDecl('isolation', 'auto')).toEqual({ isolation: 'auto' });
+      });
+
+      describeOnRnWeb(() => {
+        it('passes through untouched (browser implements isolation)', () => {
+          expect(transformDecl('isolation', 'isolate')).toEqual({ isolation: 'isolate' });
+        });
+      });
+    });
+
+    describe('filter iOS release-level gate characterization', () => {
+      // Device-verified on the iOS simulator (RN 0.85, default release
+      // level): only brightness() and opacity() render; the other filter
+      // functions are silently inert AND, while a gated function is
+      // mounted, descendants' mix-blend-mode stops compositing against
+      // the backdrop. The declaration still passes through (it renders
+      // fully when the app opts into the experimental release level);
+      // the warning is the value.
+      let warnSpy: jest.SpyInstance;
+      beforeEach(() => {
+        resetWarningsForTest();
+        warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      });
+      afterEach(() => {
+        warnSpy.mockRestore();
+      });
+
+      it('warns once for gated filter functions on iOS and still passes through', () => {
+        expect(transformDecl('filter', 'saturate(1.4)')).toEqual({ filter: 'saturate(1.4)' });
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+        expect(warnSpy.mock.calls[0][0]).toMatch(/saturate\(1\.4\)/);
+        expect(warnSpy.mock.calls[0][0]).toMatch(/mix-blend-mode/);
+      });
+
+      it('warns when a gated function is mixed with renderable ones', () => {
+        expect(transformDecl('filter', 'brightness(1.2) saturate(2)')).toEqual({
+          filter: 'brightness(1.2) saturate(2)',
+        });
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+      });
+
+      it('stays silent for brightness() / opacity(), which render by default', () => {
+        expect(transformDecl('filter', 'brightness(1.2) opacity(0.9)')).toEqual({
+          filter: 'brightness(1.2) opacity(0.9)',
+        });
+        expect(warnSpy).not.toHaveBeenCalled();
+      });
+
+      describeOnRnWeb(() => {
+        it('never warns on rn-web (browser renders the full filter list)', () => {
+          expect(transformDecl('filter', 'saturate(1.4) blur(2px)')).toEqual({
+            filter: 'saturate(1.4) blur(2px)',
+          });
+          expect(warnSpy).not.toHaveBeenCalled();
         });
       });
     });
@@ -472,7 +551,7 @@ describe('passthrough mapping', () => {
     });
   });
 
-  describe.skip('box-shadow on rn-web', () => {
+  describeOnRnWeb('box-shadow on rn-web', () => {
     it('passes system color keywords through as a CSS string', () => {
       expect(transformDecl('box-shadow', '1px 2px Highlight')).toEqual({
         boxShadow: '1px 2px Highlight',
@@ -480,7 +559,7 @@ describe('passthrough mapping', () => {
     });
   });
 
-  describe.skip('filter on rn-web', () => {
+  describeOnRnWeb('filter on rn-web', () => {
     it('passes drop-shadow() with system colors through as a CSS string', () => {
       expect(transformDecl('filter', 'drop-shadow(1px 2px Highlight)')).toEqual({
         filter: 'drop-shadow(1px 2px Highlight)',
@@ -492,7 +571,7 @@ describe('passthrough mapping', () => {
   // subtree locks parity so a future rn-web-only shortcut cannot diverge
   // from the Hermes path for structured stacks (see `index.ts` passthrough
   // block + `substituteBackgroundSizeKeywordsForNative`).
-  describe.skip('dual-emit background longhands on rn-web', () => {
+  describeOnRnWeb('dual-emit background longhands on rn-web', () => {
     it('background-size cover keeps keyword on standard key and folds native key', () => {
       expect(transformDecl('background-size', 'cover')).toEqual({
         experimental_backgroundSize: 'auto',
@@ -507,7 +586,7 @@ describe('passthrough mapping', () => {
     });
   });
 
-  describe.skip('vertical-align align-content polyfill on rn-web', () => {
+  describeOnRnWeb('vertical-align align-content polyfill on rn-web', () => {
     // CSS Box Alignment L3 §5.3.
 
     it.each([

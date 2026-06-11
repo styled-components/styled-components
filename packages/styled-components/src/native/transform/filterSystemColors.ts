@@ -109,6 +109,9 @@ function parseDropShadowInner(inner: string): { layer: Dict<any>; hadSystemColor
  * functions stay composited.
  */
 export function maybeExpandFilterDropShadowSystemColors(rawValue: string): string | Dict<any>[] {
+  // The browser parses system keywords inside drop-shadow() natively; the
+  // array rewrite is a native-only workaround.
+  if (__NATIVE_WEB__) return rawValue;
   if (rawValue.indexOf('\0') !== -1) return rawValue;
 
   const normalized = rawValue.replace(/\n/g, ' ');

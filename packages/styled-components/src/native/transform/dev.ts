@@ -50,8 +50,25 @@ export function getUserCallSite(stack?: string | null): string | null {
  * utility owns the dedupe Set and the `[sc]` prefix. The `code` is the
  * internal dedupe key only; it does NOT appear in the printed message.
  */
+// @supports declaration probes run authored declarations through the
+// transform pipeline purely to ask "would this render"; the handlers'
+// platform-limitation warnings would misfire there (probing for a gap is
+// the author's intent, not a mistake), so the prober suppresses them for
+// the duration of the call.
+let warnSuppressed = false;
+export function runWithWarningsSuppressed<T>(fn: () => T): T {
+  const prev = warnSuppressed;
+  warnSuppressed = true;
+  try {
+    return fn();
+  } finally {
+    warnSuppressed = prev;
+  }
+}
+
 export function warnOnce(code: string, message: string, dedupeSuffix?: string): void {
   if (!__DEV__) return;
+  if (warnSuppressed) return;
   // Skip the `new Error().stack` walk when the warning is already deduped.
   // The user-call-site suffix is only useful the first time the warning fires;
   // dedupe short-circuit lets repeated decls (same css value across many
@@ -160,6 +177,33 @@ export function warnIfAndroidSkew(value: unknown): void {
   warnOnce(
     'native-android-skew',
     `\`skewX\` / \`skewY\` are ignored on Android (seen in transform: "${value}"). Android views support translation, rotation, and scale, but not skew. Tracked at https://github.com/facebook/react-native/issues/27649.`
+  );
+}
+
+// Filter functions iOS renders only when the app opts into the
+// experimental release level; brightness() and opacity() render by
+// default. Device-verified: while a gated function is mounted, iOS also
+// stops compositing descendants' mix-blend-mode against the backdrop.
+const IOS_GATED_FILTER_RE =
+  /(?:^|[\s(])(blur|grayscale|saturate|contrast|hue-rotate|drop-shadow|invert|sepia)\s*\(/i;
+
+/**
+ * Warn once when a `filter` value contains functions iOS cannot render at
+ * the default release level. The declaration still passes through (it
+ * renders fully when the app opts in); the warning carries the two
+ * consequences the author cannot otherwise see: the effect silently does
+ * nothing, and descendant `mix-blend-mode` stops blending while the
+ * filter is mounted.
+ */
+export function warnIfIosGatedFilter(value: string): void {
+  if (!__DEV__) return;
+  if (__NATIVE_WEB__) return;
+  if (!IOS_GATED_FILTER_RE.test(value)) return;
+  if (getReactNativePlatformOS() !== 'ios') return;
+  warnOnce(
+    'native-filter-ios-gated',
+    `\`filter: ${value}\` includes effects iOS does not render in React Native 0.85 unless the app opts into the experimental release level; only \`brightness()\` and \`opacity()\` render by default. While the filter is present, iOS also stops blending descendants' \`mix-blend-mode\` against the backdrop. Bake the effect into the source colors, or keep blended descendants outside the filtered element.`,
+    value
   );
 }
 

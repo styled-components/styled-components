@@ -45,11 +45,17 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
     private fragmentsBuffer: (FastPathFragment | null)[] | undefined;
     staticEligible = false;
     staticCompiled: NativeStyles | null = null;
+    usesAnchorFunctions = false;
 
     constructor(rules: RuleSet<Props>) {
       this.rules = rules;
       synthesizeSourceForRuleSet(rules);
       this.staticCSS = isAllStaticStrings(rules) ? joinStringRules(rules) : null;
+      // Gates the anchor-registry subscription in the dynamic render
+      // path; lifetime-constant so the hook branch is stable.
+      if (!__NATIVE_WEB__ && ANCHOR_FN_RE.test(joinStringRules(rules, '\n'))) {
+        this.usesAnchorFunctions = true;
+      }
       if (this.staticCSS !== null) {
         const compiled = toNativeStyles(this.staticCSS, styleSheet);
         this.staticCompiled = compiled;
@@ -66,6 +72,14 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
           compiled.varDeferred === undefined &&
           compiled.important === undefined &&
           compiled.importantResolvers === undefined &&
+          // The anchor rect publisher needs the dynamic path's hooks.
+          compiled.anchorName === undefined &&
+          // Sticky elements translate via a hook-built Animated node.
+          compiled.sticky === undefined &&
+          // Grid containers publish a measured cascade entry and grid
+          // items read it; both require the dynamic path's hooks.
+          compiled.gridInfo === undefined &&
+          compiled.gridSpan === undefined &&
           !hasCascadeKey(compiled.base);
       }
     }
@@ -166,12 +180,17 @@ function isAllStaticStrings(rules: ReadonlyArray<unknown>): boolean {
   return true;
 }
 
-function joinStringRules(rules: ReadonlyArray<unknown>): string {
+function joinStringRules(rules: ReadonlyArray<unknown>, separator = ''): string {
   let css = '';
   for (let i = 0; i < rules.length; i++) {
     const r = rules[i];
-    if (typeof r === 'string') css += r;
-    else if (Array.isArray(r)) css += joinStringRules(r);
+    if (typeof r === 'string') css += separator === '' ? r : r + separator;
+    else if (Array.isArray(r)) css += joinStringRules(r, separator);
   }
   return css;
 }
+
+// Syntactic gate for anchor() / anchor-size() usage (CSS Anchor
+// Positioning). Mirrors ANCHOR_FN_RE in transform/polyfills/anchorFns;
+// duplicated here to keep NativeStyle free of a polyfill import.
+const ANCHOR_FN_RE = /\banchor(?:-size)?\(/;

@@ -46,6 +46,7 @@ import {
   NativeAnimationEvent,
   NativeTransitionEvent,
   TransitionDescriptor,
+  ViewSubjectLayout,
   passthroughOutput,
   setAnimationAdapter,
 } from './types';
@@ -60,7 +61,15 @@ import { tokenize } from '../transform/tokenize';
 import { TokenKind } from '../transform/tokens';
 import { getRN } from '../responsive';
 import { isWebPlatform } from '../polyfills';
+import {
+  buildScrollProgressNode,
+  resolveTimelineEntry,
+  ScrollTimelineContext,
+  scrollTimelineKey,
+  type ScrollTimelineContextValue,
+} from '../scrollTimeline';
 import { evaluateCubicBezier, evaluateEasing, evaluateSteps } from './css-keywords';
+import { setDebugEnabled } from './debug';
 
 type AnimatedNS = any;
 
@@ -189,6 +198,13 @@ interface AdapterScratch {
   running: Set<AnimationHandle>;
   mounted?: boolean;
   anims?: AnimScratch[];
+  /**
+   * Set when a scroll-driven animation (re)built its interpolations
+   * this render. The styled component's render cache must rebuild
+   * elementProps even on otherwise-stable inputs, because the scroll
+   * timeline context isn't part of its cache key. Cleared after read.
+   */
+  scrollRebuilt?: boolean;
 }
 
 interface NormalizedFrame {
@@ -207,6 +223,12 @@ interface AnimScratch {
   fillMode: AnimationDescriptor['fillMode'];
   finished: boolean;
   prevPlayState?: string;
+  /**
+   * Identity of the scroll-timeline binding the current overrides were
+   * built against (extent + axis + range + iteration shape). A change
+   * rebuilds the interpolations; `undefined` for time-driven animations.
+   */
+  timelineKey?: string;
   /**
    * `animation-play-state: paused` captures the linear timing progress
    * (0..1) at pause so `running` can resume with the remaining duration
@@ -2204,6 +2226,8 @@ function applyAnimations(
   baseValues: Record<string, any> | undefined,
   env: ResolveEnv,
   shouldReduce: boolean,
+  scrollTimelines: ScrollTimelineContextValue,
+  viewSubject: ViewSubjectLayout | null,
   onAnimationEnd?: (event: NativeAnimationEvent) => void
 ): any {
   const Animated = getAnimated();
@@ -2215,6 +2239,98 @@ function applyAnimations(
 
   for (let idx = 0; idx < animations.length; idx++) {
     const desc = animations[idx];
+
+    // Scroll-driven (and timeline-less) animations bypass the timing
+    // engine entirely: progress comes from the scroller's offset, so
+    // duration, delay, fill-mode wall-clock gates, and completion events
+    // don't apply. The interpolations are rebuilt whenever the timeline
+    // binding (extent / axis / range / iterations) changes. Defensive
+    // read: descriptors built outside the parser may omit the field.
+    const tlKind = desc.timeline !== undefined ? desc.timeline.kind : 'auto';
+    if (tlKind !== 'auto') {
+      let animS: AnimScratch;
+      if (idx < scratch.anims.length) {
+        animS = scratch.anims[idx];
+      } else {
+        animS = {
+          name: '',
+          progress: new Animated.Value(0),
+          handle: null,
+          overrides: {},
+          drivenProps: new Set(),
+          fillMode: desc.fillMode,
+          finished: false,
+        };
+        scratch.anims.push(animS);
+      }
+      if (animS.handle) {
+        animS.handle.stop();
+        scratch.running.delete(animS.handle);
+        animS.handle = null;
+      }
+      const frames =
+        tlKind !== 'none' && desc.name !== 'none' && !shouldReduce
+          ? resolveKeyframes(keyframesDefs, desc.name, env)
+          : null;
+      const target = frames !== null ? resolveTimelineEntry(desc, scrollTimelines) : null;
+      // Native-driver eligibility decides which offset pair drives the
+      // progress node, so compute it before building (see the
+      // ScrollTimelineEntry dual-pair note).
+      let canNative = true;
+      if (frames !== null) {
+        for (const p of frames) {
+          for (const k in p.decls) {
+            if (!canUseNativeDriver(k)) {
+              canNative = false;
+              break;
+            }
+          }
+          if (!canNative) break;
+        }
+      }
+      const node =
+        target !== null
+          ? buildScrollProgressNode(desc, target.entry, target.axis, viewSubject, canNative)
+          : null;
+      if (node === null || frames === null) {
+        // Inactive timeline: the animation applies no effect.
+        animS.overrides = {};
+        animS.drivenProps.clear();
+        animS.name = '';
+        delete animS.timelineKey;
+        animS.finished = false;
+        continue;
+      }
+      const key = scrollTimelineKey(desc, target!.entry, target!.axis, viewSubject, canNative);
+      if (animS.name !== desc.name || animS.timelineKey !== key) {
+        scratch.scrollRebuilt = true;
+        animS.name = desc.name;
+        animS.timelineKey = key;
+        animS.progress = node;
+        animS.finished = false;
+        delete animS.startedAt;
+        delete animS.delayMs;
+        const result = buildKeyframeInterpolations(
+          node,
+          frames,
+          desc.timingFunction,
+          baseValues,
+          canNative,
+          desc.durationMs > 0 ? desc.durationMs : 1000,
+          desc.composition
+        );
+        animS.overrides = result.overrides;
+        animS.drivenProps = result.drivenProps;
+        if (result.transformKinds) animS.transformKinds = result.transformKinds;
+      }
+      if (Object.keys(animS.overrides).length > 0) {
+        if (mergedOverrides === null) mergedOverrides = {};
+        for (const k in animS.overrides) {
+          mergedOverrides[k] = animS.overrides[k];
+        }
+      }
+      continue;
+    }
 
     if (desc.name === 'none' || desc.durationMs <= 0 || shouldReduce) {
       // Clean up scratch if it existed
@@ -2403,6 +2519,10 @@ const animatedAdapter: AnimationAdapter = {
     if (scratchRef.current === null) scratchRef.current = createScratch();
     const scratch = scratchRef.current;
 
+    // Scroll progress timelines in scope (published by styled scroll
+    // containers). Read unconditionally for stable hook order.
+    const scrollTimelines = React.useContext(ScrollTimelineContext);
+
     // Tick counter: bumped from setTimeout callbacks (e.g. allow-discrete
     // 50%-flip) so the hook re-runs and the override picks up the new
     // shown value. The render isn't otherwise driven by React, since
@@ -2474,6 +2594,8 @@ const animatedAdapter: AnimationAdapter = {
         resolvedBaseValues,
         env,
         env.media.reduceMotion,
+        scrollTimelines,
+        input.viewSubject ?? null,
         input.onAnimationEnd
       );
     }
@@ -2518,6 +2640,10 @@ const animatedAdapter: AnimationAdapter = {
         }
       }
     }
+    if (scratch.scrollRebuilt) {
+      invalidateCache = true;
+      scratch.scrollRebuilt = false;
+    }
 
     const out: AnimatedStyleOutput = {
       style: outStyle,
@@ -2532,17 +2658,21 @@ const animatedAdapter: AnimationAdapter = {
 setAnimationAdapter(animatedAdapter);
 
 /**
- * Toggle animation adapter debug logging. When on, each render and
- * timing operation logs to the console with a `[sc/anim]` prefix ;
- * grep-friendly in Metro / Hermes inspector.
+ * Toggle animation debug logging, tagged `[sc/anim]` for greppable
+ * filtering in Metro / Hermes inspector. `true` logs everything,
+ * including each adapter render and timing operation (verbose).
+ * `'timeline'` logs only scroll timeline attachment and `position:
+ * sticky` outcomes: one line per scroller or sticky element, quiet
+ * enough to leave on.
  *
  * ```ts
  * import { setAnimationDebug } from 'styled-components/native';
- * setAnimationDebug(true);
+ * setAnimationDebug('timeline');
  * ```
  */
-export function setAnimationDebug(on: boolean): void {
-  debugEnabled = on;
+export function setAnimationDebug(on: boolean | 'timeline'): void {
+  debugEnabled = on === true;
+  setDebugEnabled(on === true || on === 'timeline');
 }
 
 export {

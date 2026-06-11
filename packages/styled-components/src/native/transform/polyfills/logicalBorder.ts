@@ -94,7 +94,10 @@ function singleStyle(tokens: Token[], edge: string): Dict<any> | null {
   if (__NATIVE_WEB__) {
     return { ['border' + camelEdge(edge) + 'Style']: name };
   }
-  warnNoPerEdgeStyle(edge, name);
+  // `solid` matches RN's default border style on every edge, so the
+  // declaration renders identically with or without per-edge support;
+  // accept it silently and only warn for styles RN would visibly miss.
+  if (name !== 'solid') warnNoPerEdgeStyle(edge, name);
   return {};
 }
 
@@ -163,7 +166,10 @@ function axisStyle(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | null 
       ['border' + camelEdge(endEdge) + 'Style']: secondName,
     };
   }
-  warnNoPerEdgeStyle(axis, firstName + (firstName !== secondName ? ' ' + secondName : ''));
+  // Uniform `solid` matches RN's default border style; see singleStyle.
+  if (firstName !== 'solid' || secondName !== 'solid') {
+    warnNoPerEdgeStyle(axis, firstName + (firstName !== secondName ? ' ' + secondName : ''));
+  }
   return {};
 }
 

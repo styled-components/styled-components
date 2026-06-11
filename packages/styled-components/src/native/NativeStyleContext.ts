@@ -75,6 +75,21 @@ export interface NativeCascadeValues {
    * the browser's cascade.
    */
   customProperties?: ReadonlyMap<string, string>;
+  /**
+   * Published by a `display: grid` container so its direct children can
+   * size themselves. `ownerId` is the container's `styledComponentId`;
+   * only children whose `parentId` equals it are grid items (the spec's
+   * direct-children rule). `contentWidth` is the measured content-box
+   * width in dp, `0` before the first layout. Native bundles only;
+   * rn-web defers to the browser's grid layout.
+   */
+  grid?: {
+    ownerId: string;
+    columns: number;
+    columnGap: number;
+    rowGap: number;
+    contentWidth: number;
+  };
 }
 
 export interface NativeStyleContextValue {

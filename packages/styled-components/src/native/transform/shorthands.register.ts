@@ -7,8 +7,15 @@ import {
   animationIterationCountLonghand,
   animationNameLonghand,
   animationPlayStateLonghand,
+  animationRangeEndLonghand,
+  animationRangeShorthand,
+  animationRangeStartLonghand,
   animationShorthand,
+  animationTimelineLonghand,
   animationTimingFunctionLonghand,
+  scrollTimelineAxisLonghand,
+  scrollTimelineNameLonghand,
+  scrollTimelineShorthand,
   transitionBehaviorLonghand,
   transitionDelayLonghand,
   transitionDurationLonghand,
@@ -57,8 +64,11 @@ import {
   textAlignHandler,
   textDecorationLineShorthand,
   textDecorationShorthand,
+  textDecorationThicknessHandler,
   textShadowOffsetShorthand,
   textShadowShorthand,
+  textUnderlineOffsetHandler,
+  textUnderlinePositionHandler,
 } from './handlers/text';
 import { register } from './shorthands';
 
@@ -87,6 +97,9 @@ register('aspectRatio', aspectRatioShorthand);
 register('textAlign', textAlignHandler);
 register('textDecoration', textDecorationShorthand);
 register('textDecorationLine', textDecorationLineShorthand);
+register('textDecorationThickness', textDecorationThicknessHandler);
+register('textUnderlineOffset', textUnderlineOffsetHandler);
+register('textUnderlinePosition', textUnderlinePositionHandler);
 register('textShadow', textShadowShorthand);
 register('textShadowOffset', textShadowOffsetShorthand);
 register('shadowOffset', shadowOffsetShorthand);
@@ -106,6 +119,13 @@ register('animationDirection', animationDirectionLonghand);
 register('animationFillMode', animationFillModeLonghand);
 register('animationPlayState', animationPlayStateLonghand);
 register('animationComposition', animationCompositionLonghand);
+register('animationRange', animationRangeShorthand);
+register('animationRangeStart', animationRangeStartLonghand);
+register('animationRangeEnd', animationRangeEndLonghand);
+register('animationTimeline', animationTimelineLonghand);
+register('scrollTimeline', scrollTimelineShorthand);
+register('scrollTimelineName', scrollTimelineNameLonghand);
+register('scrollTimelineAxis', scrollTimelineAxisLonghand);
 register('transition', transitionShorthand);
 register('transitionProperty', transitionPropertyLonghand);
 register('transitionDuration', transitionDurationLonghand);
@@ -126,3 +146,5 @@ import './polyfills/hyphens';
 import './polyfills/caretColor';
 import './polyfills/standaloneTransform';
 import './polyfills/fieldSizing';
+import './polyfills/cornerShape';
+import './polyfills/grid';

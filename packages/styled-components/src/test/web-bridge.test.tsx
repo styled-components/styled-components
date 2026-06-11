@@ -344,6 +344,51 @@ describe('rn-web bridge: CSS surfaces that needed polyfills on native pass throu
   }
 });
 
+describe('rn-web bridge: omniplatform export parity', () => {
+  // Every value export of the Hermes entry (src/native/index.ts) that an
+  // omniplatform app can call at module scope must also exist on the
+  // bridge, or `import { x } from 'styled-components/native'` crashes on
+  // web ("x is not a function"). Keep this list in sync when adding value
+  // exports to the native entry.
+  const OMNIPLATFORM_VALUE_EXPORTS = [
+    'NativeStyleContext',
+    'ParentContext',
+    'ThemeConsumer',
+    'ThemeContext',
+    'ThemeProvider',
+    'createTheme',
+    'css',
+    'isStyledComponent',
+    'matchMedia',
+    'setAnimationDebug',
+    'styled',
+    'toStyleSheet',
+    'useBreakpoint',
+    'useContainer',
+    'useContainerQuery',
+    'useMediaEnv',
+    'useMediaQuery',
+    'useNativeStyleContext',
+    'useParentContext',
+    'useTheme',
+    'withTheme',
+  ] as const;
+
+  it.each(OMNIPLATFORM_VALUE_EXPORTS)('exports %s', name => {
+    const bridge = require('../native/web-bridge');
+    expect(bridge[name]).toBeDefined();
+  });
+
+  it('setAnimationDebug is callable and inert (browser owns animations on web)', () => {
+    const bridge = require('../native/web-bridge');
+    expect(() => {
+      bridge.setAnimationDebug('timeline');
+      bridge.setAnimationDebug(true);
+      bridge.setAnimationDebug(false);
+    }).not.toThrow();
+  });
+});
+
 describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
   // accent-color: oklch / color-mix / system color / auto must reach the CSSOM
   // intact. The browser handles each natively; the web pipeline just

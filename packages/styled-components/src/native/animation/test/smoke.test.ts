@@ -58,6 +58,11 @@ describe('animation/transition shorthand parsing', () => {
           "iterationCount": Infinity,
           "name": "pulse",
           "playState": "running",
+          "rangeEnd": "normal",
+          "rangeStart": "normal",
+          "timeline": {
+            "kind": "auto",
+          },
           "timingFunction": {
             "kind": "cubic-bezier",
             "p": [
@@ -130,6 +135,11 @@ describe('animation/transition shorthand parsing', () => {
         "iterationCount": 1,
         "name": "foo",
         "playState": "running",
+        "rangeEnd": "normal",
+        "rangeStart": "normal",
+        "timeline": {
+          "kind": "auto",
+        },
         "timingFunction": {
           "kind": "cubic-bezier",
           "p": [
@@ -197,6 +207,11 @@ describe('animation/transition shorthand parsing', () => {
           "iterationCount": 1,
           "name": "a",
           "playState": "running",
+          "rangeEnd": "normal",
+          "rangeStart": "normal",
+          "timeline": {
+            "kind": "auto",
+          },
           "timingFunction": {
             "kind": "cubic-bezier",
             "p": [
@@ -216,6 +231,11 @@ describe('animation/transition shorthand parsing', () => {
           "iterationCount": 1,
           "name": "b",
           "playState": "running",
+          "rangeEnd": "normal",
+          "rangeStart": "normal",
+          "timeline": {
+            "kind": "auto",
+          },
           "timingFunction": {
             "kind": "cubic-bezier",
             "p": [

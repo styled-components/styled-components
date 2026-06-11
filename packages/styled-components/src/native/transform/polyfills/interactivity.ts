@@ -33,6 +33,12 @@ function interactivityHandler(tokens: Token[]): Dict<any> | null {
   const value = t.name;
   if (value !== 'auto' && value !== 'inert') return null;
 
+  if (__NATIVE_WEB__) {
+    // A single HTML `inert` attribute covers every surface the native
+    // lift approximates; rn-web forwards the prop to the DOM verbatim.
+    return { inert: value === 'inert' };
+  }
+
   if (value === 'auto') return {};
 
   // inert: lift six top-level props via SPECIAL_CASE_PROPS.

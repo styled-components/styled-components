@@ -49,6 +49,9 @@ function textWrapShorthand(tokens: Token[]): Dict<any> | null {
   if (mode === null && style === null) return null;
 
   const value = mode !== null && style !== null ? mode + ' ' + style : mode !== null ? mode : style;
+  // Browser ships text-wrap end-to-end; the Text prop lifts and the
+  // platform-limitation warns are native-only.
+  if (__NATIVE_WEB__) return { textWrap: value };
   const out: Dict<any> = { textWrap: value };
   if (mode === 'nowrap') {
     // `numberOfLines: 1` + `ellipsizeMode: 'clip'` is the closest
@@ -85,6 +88,7 @@ function textWrapModeLonghand(tokens: Token[]): Dict<any> | null {
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
   if (name === undefined || !MODES.has(name)) return null;
+  if (__NATIVE_WEB__) return { textWrapMode: name };
   const out: Dict<any> = { textWrapMode: name };
   if (name === 'nowrap') {
     // Same nowrap approximation as the shorthand path, applied silently.
@@ -106,6 +110,7 @@ function textWrapStyleLonghand(tokens: Token[]): Dict<any> | null {
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
   if (name === undefined || !STYLES.has(name)) return null;
+  if (__NATIVE_WEB__) return { textWrapStyle: name };
   const out: Dict<any> = { textWrapStyle: name };
   if (name === 'balance') {
     out.textBreakStrategy = 'balanced';

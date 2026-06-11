@@ -31,8 +31,8 @@ function fieldSizingHandler(tokens: Token[]): Dict<any> | null {
   if (value !== 'content' && value !== 'fixed') return null;
 
   if (value === 'fixed') {
-    // Native has no surface to honor on `fixed`.
-    return {};
+    // Browser ships field-sizing; native has no surface to honor on `fixed`.
+    return __NATIVE_WEB__ ? { fieldSizing: 'fixed' } : {};
   }
 
   // Lift `multiline` so Yoga + RN's shadow-view measure callback do the

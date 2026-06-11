@@ -1,5 +1,6 @@
+import { describeOnRnWeb } from '../transform/describeOnRnWeb';
 import React, { PropsWithChildren } from 'react';
-import { Image, Switch, Text, TextInput, View, ViewProps } from 'react-native';
+import { Animated, Image, Switch, Text, TextInput, View, ViewProps } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider, css, toStyleSheet } from '../';
 import { resetStyleCache, RN_UNSUPPORTED_VALUES } from '../../models/NativeStyle';
@@ -1416,6 +1417,23 @@ describe('native', () => {
       }
     });
 
+    it('detects the leaf through Animated wrappers (lift applies, no warn)', () => {
+      // Animated.createAnimatedComponent names the wrapper `Animated(Text)`;
+      // the validOn check must see the inner Text, not the wrapper name.
+      const Clamped = styled(Animated.Text as any)`
+        line-clamp: 2;
+      `;
+      const warnSpy2 = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        const tree = TestRenderer.create(<Clamped>long text</Clamped>);
+        const el = tree.root.findByType(Animated.Text as any);
+        expect(el.props.numberOfLines).toBe(2);
+        expect(warnSpy2).not.toHaveBeenCalled();
+      } finally {
+        warnSpy2.mockRestore();
+      }
+    });
+
     it('lifts line-clamp to numberOfLines on a styled TextInput', () => {
       const Clamped = styled.TextInput`
         line-clamp: 1;
@@ -1719,7 +1737,7 @@ describe('native', () => {
       expect(root.props.focusable).toBeUndefined();
     });
 
-    describe.skip('on rn-web', () => {
+    describeOnRnWeb(() => {
       // rn-web deprecated `props.pointerEvents` in favor of
       // `style.pointerEvents`; the lift would trigger a runtime
       // deprecation warning on every render.
@@ -1793,7 +1811,7 @@ describe('native', () => {
   // unit transformDecl tests can't reach: validates the prop reaches the
   // underlying component and is gated to the validOn target.
   describe('rn-web prop lifts', () => {
-    describe.skip('on rn-web', () => {
+    describeOnRnWeb(() => {
       it('direction: rtl lifts a dir prop onto a styled View', () => {
         const Page = styled.View`
           direction: rtl;
