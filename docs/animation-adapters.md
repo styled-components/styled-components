@@ -41,9 +41,17 @@ CSS Animations L1+L2, Transitions L1+L2, Easing L1+L2.
 - **Per-keyframe easing**: same-unit numeric values ride per-frame easing; the segmented interpolation samples easing curves so `cubic-bezier(...)` keyframes don't degrade to linear under the native driver.
 - **Easing functions**: `linear`, `cubic-bezier(...)`, `steps(n, jump-type)`, multi-stop `linear(...)` with explicit positions.
 
+### Scroll-driven timelines
+
+- **`animation-timeline: scroll()` + named scroll timelines + `animation-range`**: progress comes from the scroller's offset instead of the timing engine; iteration count, direction, and attachment ranges remap onto a segmented interpolation over the finite range. Styled scroll containers publish offset/extent through `ScrollTimelineContext`. Each entry carries TWO offset value pairs: a UI-thread pair mapped via `Animated.attachNativeEvent` that drives native-driver-eligible keyframes (opacity, transforms) in lockstep with the finger, and a JS pair fed from the JS scroll handler for everything else (width, colors); a single shared pair would either tag layout-prop interpolations native (hard error) or leave UI-thread consumers lagging. The JS handler echoes offsets into both pairs so the native pair stays readable before attachment.
+- **`animation-timeline: view()`**: the subject's onLayout places its visibility range within the scroller; the named view ranges (`cover`, `contain`, `entry`, `exit`, `entry-crossing`, `exit-crossing`, `scroll`) resolve through the same boundary resolver as `animation-range`. Subjects must be direct children of the scroll container (onLayout coordinates are parent-relative).
+
 ### Gaps
 
-- **`animation-range` / `animation-timeline`**: no scroll-timeline primitive on the UI thread; the host can't surface scroll position to JS at a rate the Animated bridge can consume without dropping frames.
+- **`scroll(root)` / `scroll(self)`**: no document viewport scroller on RN; self-referencing scrollers aren't wired. Inactive with a dev warning.
+- **Named view timelines (`view-timeline-*`) and `view-timeline-inset`**: not implemented; a declared inset warns and the visibility range stays the scrollport.
+- **Scroll-driven fill-mode**: progress clamps at the attachment-range edges, so edge frames hold (the `both` behavior) regardless of the declared fill-mode.
+- **Reanimated adapter**: its CSS layer is time-based; any `animation-timeline` animation warns and is skipped there.
 
 ## Spec coverage (rn-web CSS-emit adapter)
 
