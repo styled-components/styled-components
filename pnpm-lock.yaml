@@ -16,6 +16,10 @@ overrides:
 importers:
 
   .:
+    dependencies:
+      fast-xml-builder:
+        specifier: 1.1.7
+        version: 1.1.7
     devDependencies:
       '@changesets/cli':
         specifier: ^2.27.7
@@ -3841,6 +3845,9 @@ packages:
 
   fast-xml-builder@1.1.5:
     resolution: {integrity: sha512-4TJn/8FKLeslLAH3dnohXqE3QSoxkhvaMzepOIZytwJXZO69Bfz0HBdDHzOTOon6G59Zrk6VQ2bEiv1t61rfkA==}
+
+  fast-xml-builder@1.1.7:
+    resolution: {integrity: sha512-Yh7/7rQuMXICNr0oMYDR2yHP6oUvmQsTToFeOWj/kIDhAwQ+c4Ol/lbcwOmEM5OHYQmh6S6EQSQ1sljCKP36bQ==}
 
   fast-xml-parser@5.7.2:
     resolution: {integrity: sha512-P7oW7tLbYnhOLQk/Gv7cZgzgMPP/XN03K02/Jy6Y/NHzyIAIpxuZIM/YqAkfiXFPxA2CTm7NtCijK9EDu09u2w==}
@@ -8954,7 +8961,7 @@ snapshots:
       tinyglobby: 0.2.16
       yargs: 17.7.2
 
-  '@react-native/community-cli-plugin@0.85.2(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/metro-config@0.85.2(@babel/core@7.29.0))':
+  '@react-native/community-cli-plugin@0.85.2(@react-native-community/cli@20.1.0)(@react-native/metro-config@0.85.2(@babel/core@7.29.0))':
     dependencies:
       '@react-native/dev-middleware': 0.85.2
       debug: 4.4.3
@@ -10697,6 +10704,10 @@ snapshots:
   fast-uri@3.1.0: {}
 
   fast-xml-builder@1.1.5:
+    dependencies:
+      path-expression-matcher: 1.5.0
+
+  fast-xml-builder@1.1.7:
     dependencies:
       path-expression-matcher: 1.5.0
 
@@ -12775,7 +12786,7 @@ snapshots:
     dependencies:
       '@react-native/assets-registry': 0.85.2
       '@react-native/codegen': 0.85.2(@babel/core@7.29.0)
-      '@react-native/community-cli-plugin': 0.85.2(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/metro-config@0.85.2(@babel/core@7.29.0))
+      '@react-native/community-cli-plugin': 0.85.2(@react-native-community/cli@20.1.0)(@react-native/metro-config@0.85.2(@babel/core@7.29.0))
       '@react-native/gradle-plugin': 0.85.2
       '@react-native/js-polyfills': 0.85.2
       '@react-native/normalize-colors': 0.85.2
@@ -12821,7 +12832,7 @@ snapshots:
     dependencies:
       '@react-native/assets-registry': 0.85.2
       '@react-native/codegen': 0.85.2(@babel/core@7.29.0)
-      '@react-native/community-cli-plugin': 0.85.2(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/metro-config@0.85.2(@babel/core@7.29.0))
+      '@react-native/community-cli-plugin': 0.85.2(@react-native-community/cli@20.1.0)(@react-native/metro-config@0.85.2(@babel/core@7.29.0))
       '@react-native/gradle-plugin': 0.85.2
       '@react-native/js-polyfills': 0.85.2
       '@react-native/normalize-colors': 0.85.2

@@ -45,5 +45,8 @@
       "postcss": ">=8.5.10",
       "serialize-javascript": ">=7.0.5"
     }
+  },
+  "dependencies": {
+    "fast-xml-builder": "1.1.7"
   }
 }
