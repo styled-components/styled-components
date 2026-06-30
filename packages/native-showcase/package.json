@@ -37,7 +37,7 @@
     "styled-components": "workspace:*"
   },
   "devDependencies": {
-    "@babel/core": "^7.25.2",
+    "@babel/core": "^7.29.6",
     "@types/react": "^19",
     "babel-plugin-styled-components": "2.1.4",
     "pretty-format": "29.7.0",
