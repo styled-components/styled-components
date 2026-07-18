@@ -179,6 +179,11 @@ export interface IStyledStatics<
     | undefined;
 }
 
+/** ExecutionProps sans as/forwardedAs, pre-resolved so call sites relate against a concrete interface. */
+interface ThemedExecutionProps {
+  theme?: DefaultTheme | undefined;
+}
+
 /**
  * Used by PolymorphicComponent to define prop override cascading order.
  */
@@ -206,52 +211,48 @@ export type PolymorphicComponentProps<
       keyof ExecutionProps
     >
   > &
-    FastOmit<ExecutionProps, 'as' | 'forwardedAs'> & {
+    ThemedExecutionProps & {
       as?: AsTarget;
       forwardedAs?: ForwardedAsTarget;
     }
 >;
 
 /**
- * Resolves the call-site props for one usage of a polymorphic component,
- * branching on the supplied `as` / `forwardedAs` targets into the three prior
- * overload shapes:
- *  - `as` is a real render target (e.g. `as="video"`, `as={Component}`):
- *    substitute that target's props and require `as`.
- *  - no `as`, or `as` is the wrapped component's own non-target type (e.g.
- *    Next.js Link's `as?: Url`): Substitute-free base props so ref callbacks
- *    infer with spread props (#5687), the wrapped `as` type stays assignable and
- *    optional (#5734), and BaseProps keys keep completing for plain usage (#5741).
- *  - `forwardedAs` only: substitute the forwarded target's props.
+ * Resolves the call-site props for one usage of a polymorphic component from its
+ * `as` / `forwardedAs` targets. An `as` render target substitutes that target's
+ * props and requires `as`; plain usage (or `as` being the wrapped component's own
+ * non-target type, e.g. Next.js Link's `as?: Url`) keeps Substitute-free base
+ * props so ref callbacks infer with spread props (#5687), the wrapped `as` stays
+ * assignable (#5734), and BaseProps keys keep completing (#5741); `forwardedAs`
+ * substitutes the forwarded target's props.
  *
- * Extracted to a named alias so identical (R, BaseProps, AsTarget,
- * ForwardedAsTarget) tuples dedupe across the many JSX call sites in an app.
+ * The target test is `string | AnyComponent`, not `KnownTarget`: narrowing it
+ * drops custom element strings (`as="my-element"`) out of the target branch.
  *
- * The target test is `string | AnyComponent`, not the broader `WebTarget`
- * (`KnownTarget | (string & {})`): both describe the same set (any string or
- * component), but comparing against the ~156 literal members of `KnownTarget`
- * here costs ~6% more type instantiations across all call sites. Don't narrow it
- * to bare `KnownTarget` -- that drops custom element strings (`as="my-element"`)
- * out of the target branch and makes them error.
+ * Load-bearing shape, do not simplify: two conditionals with `unknown` sibling
+ * branches (not one three-way conditional), a leading flat `{ as?; forwardedAs? }`
+ * member, and positive `extends [string | AnyComponent]` discriminants. Collapsing
+ * the conditionals, dropping the flat member, or using a `[void]` discriminant
+ * each regress plain-call-site cost, `as`-target completion, or ref-callback
+ * inference (#5687) respectively.
  */
 type PolymorphicCallProps<
   R extends Runtime,
   BaseProps extends BaseObject,
   AsTarget extends StyledTarget<R> | (BaseProps extends { as?: infer A } ? A : never) | void,
   ForwardedAsTarget extends StyledTarget<R> | void,
-> = [AsTarget] extends [string | AnyComponent]
+> = { as?: AsTarget | undefined; forwardedAs?: ForwardedAsTarget | undefined } & ([
+  AsTarget,
+] extends [string | AnyComponent]
   ? PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget> & { as: AsTarget }
-  : [ForwardedAsTarget] extends [void]
-    ? OverrideStyle<
-        NoInfer<FastOmit<BaseProps, keyof ExecutionProps>> &
-          FastOmit<ExecutionProps, 'as' | 'forwardedAs'> & {
-            as?: BaseProps extends { as?: infer A } ? A : void;
-            forwardedAs?: BaseProps extends { forwardedAs?: infer A } ? A : void;
-          }
-      >
-    : PolymorphicComponentProps<R, BaseProps, void, ForwardedAsTarget> & {
-        forwardedAs: ForwardedAsTarget;
-      };
+  : unknown) &
+  ([AsTarget] extends [string | AnyComponent]
+    ? unknown
+    : [ForwardedAsTarget] extends [string | AnyComponent]
+      ? PolymorphicComponentProps<R, BaseProps, void, ForwardedAsTarget> & {
+          forwardedAs: ForwardedAsTarget;
+        }
+      : OverrideStyle<NoInfer<FastOmit<BaseProps, keyof ExecutionProps>> & ThemedExecutionProps>);
 
 /**
  * This type forms the signature for a forwardRef-enabled component
@@ -274,12 +275,9 @@ export interface PolymorphicComponent<
     forwardedAs?: StyledTarget<R> | undefined;
   }
 > {
-  // A single call signature (not several overloads) so JSX attribute completion
-  // never collapses while an attribute is mid-typed. With multiple overloads, a
-  // partially-typed or unknown attribute matches none of them, overload
-  // resolution fails, and completion drops to nothing; one signature always
-  // resolves, so the rendered target's props keep autocompleting. The branching
-  // that preserves the prior overload shapes lives in `PolymorphicCallProps`.
+  // A single call signature, not overloads: with overloads a mid-typed JSX
+  // attribute matches none, resolution fails, and attribute completion drops. The
+  // prop-shape branching lives in `PolymorphicCallProps`.
   <
     AsTarget extends StyledTarget<R> | (BaseProps extends { as?: infer A } ? A : never) | void =
       void,
