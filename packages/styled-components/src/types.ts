@@ -179,6 +179,11 @@ export interface IStyledStatics<
     | undefined;
 }
 
+/** ExecutionProps sans as/forwardedAs, pre-resolved so call sites relate against a concrete interface. */
+interface ThemedExecutionProps {
+  theme?: DefaultTheme | undefined;
+}
+
 /**
  * Used by PolymorphicComponent to define prop override cascading order.
  */
@@ -206,7 +211,7 @@ export type PolymorphicComponentProps<
       keyof ExecutionProps
     >
   > &
-    FastOmit<ExecutionProps, 'as' | 'forwardedAs'> & {
+    ThemedExecutionProps & {
       as?: AsTarget;
       forwardedAs?: ForwardedAsTarget;
     }
@@ -233,25 +238,46 @@ export type PolymorphicComponentProps<
  * here costs ~6% more type instantiations across all call sites. Don't narrow it
  * to bare `KnownTarget` -- that drops custom element strings (`as="my-element"`)
  * out of the target branch and makes them error.
+ *
+ * Structure notes (perf + inference; measured, do not "simplify"):
+ *  - The branching is split into TWO intersected conditionals whose other side
+ *    is `unknown` instead of one three-way conditional. While `AsTarget` /
+ *    `ForwardedAsTarget` are still uninferred, the checker probes a deferred
+ *    conditional through its default constraint, the union of both branches.
+ *    `union(Branch, unknown)` absorbs to `unknown`, so every probe against the
+ *    untaken side is free; a single three-way conditional instead walks the
+ *    heavy `as` branch at every plain call site (~45K extra instantiations per
+ *    1K call sites). Resolution after inference is identical to the three-way
+ *    form because `X & unknown` reduces to `X`.
+ *  - The leading `{ as?; forwardedAs? }` member exists because the absorbed
+ *    `unknown` constraint would otherwise leave `as="video"` with no contextual
+ *    type mid-inference, widening the literal to `string` and losing the target
+ *    branch. A flat object member restores per-attribute contextual typing and
+ *    literal preservation.
+ *  - Both discriminants are POSITIVE (`extends [string | AnyComponent]`), never
+ *    `[ForwardedAsTarget] extends [void]`. Spreading a styled component's own
+ *    props feeds `as?/forwardedAs?: WebTarget | undefined` back in as inference
+ *    candidates via the flat member; a positive test routes that wide shape to
+ *    the plain branch, keeping `ref` concrete for callback inference (#5687).
+ *    A negative void-test would route it to a target branch and defer `ref`.
  */
 type PolymorphicCallProps<
   R extends Runtime,
   BaseProps extends BaseObject,
   AsTarget extends StyledTarget<R> | (BaseProps extends { as?: infer A } ? A : never) | void,
   ForwardedAsTarget extends StyledTarget<R> | void,
-> = [AsTarget] extends [string | AnyComponent]
+> = { as?: AsTarget | undefined; forwardedAs?: ForwardedAsTarget | undefined } & ([
+  AsTarget,
+] extends [string | AnyComponent]
   ? PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget> & { as: AsTarget }
-  : [ForwardedAsTarget] extends [void]
-    ? OverrideStyle<
-        NoInfer<FastOmit<BaseProps, keyof ExecutionProps>> &
-          FastOmit<ExecutionProps, 'as' | 'forwardedAs'> & {
-            as?: BaseProps extends { as?: infer A } ? A : void;
-            forwardedAs?: BaseProps extends { forwardedAs?: infer A } ? A : void;
-          }
-      >
-    : PolymorphicComponentProps<R, BaseProps, void, ForwardedAsTarget> & {
-        forwardedAs: ForwardedAsTarget;
-      };
+  : unknown) &
+  ([AsTarget] extends [string | AnyComponent]
+    ? unknown
+    : [ForwardedAsTarget] extends [string | AnyComponent]
+      ? PolymorphicComponentProps<R, BaseProps, void, ForwardedAsTarget> & {
+          forwardedAs: ForwardedAsTarget;
+        }
+      : OverrideStyle<NoInfer<FastOmit<BaseProps, keyof ExecutionProps>> & ThemedExecutionProps>);
 
 /**
  * This type forms the signature for a forwardRef-enabled component
