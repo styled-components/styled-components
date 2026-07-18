@@ -313,16 +313,20 @@ export type PolymorphicComponentProps<
  * each regress plain-call-site cost, `as`-target completion, or ref-callback
  * inference (#5687) respectively.
  */
+type PolymorphicAsProps<AsTarget, ForwardedAsTarget> = {
+  as?: AsTarget | undefined;
+  forwardedAs?: ForwardedAsTarget | undefined;
+};
+
 type PolymorphicCallProps<
   R extends Runtime,
   BaseProps extends BaseObject,
   AsTarget extends StyledTarget<R> | (BaseProps extends { as?: infer A } ? A : never) | void,
   ForwardedAsTarget extends StyledTarget<R> | void,
-> = { as?: AsTarget | undefined; forwardedAs?: ForwardedAsTarget | undefined } & ([
-  AsTarget,
-] extends [string | AnyComponent]
-  ? PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget> & { as: AsTarget }
-  : unknown) &
+> = PolymorphicAsProps<AsTarget, ForwardedAsTarget> &
+  ([AsTarget] extends [string | AnyComponent]
+    ? PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget> & { as: AsTarget }
+    : unknown) &
   ([AsTarget] extends [string | AnyComponent]
     ? unknown
     : [ForwardedAsTarget] extends [string | AnyComponent]
