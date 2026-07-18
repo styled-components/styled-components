@@ -87,3 +87,11 @@ Localizing the literal union to an attrs-only helper type keeps the literal
 narrowing but doesn't recover the win, since `Attrs<Props>` is referenced from
 `IStyledStatics.attrs[]` - the literal-bearing type still propagates wherever a
 styled component appears.
+
+## Testing the type surface
+
+Type contracts are gated in `src/test/types.tsx`, compiled by `pnpm test:types` (`tsc --noEmit -p tsconfig.test-types.json`, which includes all of `src`). No runtime, no extra deps.
+
+- Negative assertions use `@ts-expect-error` on the line directly above the offending expression, each with a one-line comment stating what must fail. This is a deliberate test, not a suppression: if the type gets looser and the error stops occurring, the directive itself errors as unused, which flags the regression.
+- `declare module` augmentation is project-wide: it leaks into every file in the same `tsc` program. The suite augments the declaration's own source location (`'../models/ThemeProvider'` for `DefaultTheme`, `'react'` for `CSSProp`) because the test imports from `src`, not the published package; consumers instead augment the public specifier, `declare module 'styled-components'`. If a future augmentation test needs a variant that would collide with the suite's, give it its own tsconfig project (including only that file) run as a separate `tsc` pass, rather than letting two augmentations collide in one program.
+- `test:types` checks `src`, not the built `.d.ts`. A regression that only appears after the dts rollup (a dropped or mangled export) is not caught here; measure the consumer surface by compiling a fixture that imports from the published `dist`, per the consumer-cost note above.
