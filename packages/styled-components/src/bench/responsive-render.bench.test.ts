@@ -53,11 +53,11 @@ const flatCompiled: NativeStyles = {
   keyframes: [],
 };
 
-const mediaBucket = {
+const mediaBucket: NativeStyles['nonPseudoEntries'][number] = {
   type: 'media',
   condition: '(min-width: 400px)',
   styles: { padding: 32 },
-} as any;
+};
 
 const responsiveCompiled: NativeStyles = {
   base: { color: 'red', padding: 16 },
