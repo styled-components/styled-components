@@ -241,7 +241,7 @@ export function functionToken(raw: string, name: string, args: string): Token {
     raw,
     undefined,
     undefined,
-    name.toLowerCase(),
+    toLowerIfMixed(name),
     args,
     null,
     undefined,

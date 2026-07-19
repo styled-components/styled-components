@@ -336,25 +336,8 @@ function resolveMinMaxClamp(
   fn: Token,
   permitNonFinite: boolean
 ): NumericResult | null {
-  const args = tokenizeFunctionArgs(fn);
-  const operands: NumericResult[] = [];
-  let current: Token[] = [];
-  for (let i = 0; i < args.length; i++) {
-    const t = args[i];
-    if (t.kind === TokenKind.Comma) {
-      const r = evalSequence(current, permitNonFinite);
-      if (r === null) return null;
-      operands.push(r);
-      current = [];
-    } else {
-      current.push(t);
-    }
-  }
-  if (current.length > 0) {
-    const r = evalSequence(current, permitNonFinite);
-    if (r === null) return null;
-    operands.push(r);
-  }
+  const operands = readCommaOperands(fn, permitNonFinite);
+  if (operands === null) return null;
   if (operands.length === 0) return null;
 
   // All operands must share a compatible unit (all 'px' or all 'px'/'' mix)

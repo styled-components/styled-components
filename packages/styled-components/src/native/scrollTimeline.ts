@@ -388,12 +388,15 @@ export function isScrollableTargetName(name: string | undefined): boolean {
   return name !== undefined && SCROLLABLE_TARGETS.has(name);
 }
 
+/** Parent-relative rectangle of a scroller, used to position the overlay host. */
+type PublisherFrame = { h: number; w: number; x: number; y: number };
+
 interface PublisherState {
   entry: ScrollTimelineEntry | null;
   contentW: number;
   contentH: number;
   /** Parent-relative frame of the scroller; positions the overlay host. */
-  frame: { h: number; w: number; x: number; y: number } | null;
+  frame: PublisherFrame | null;
   viewportW: number;
   viewportH: number;
 }
@@ -673,7 +676,7 @@ function getViewComponent(): any {
  * host transparent to touches outside the twins themselves.
  */
 function StickyOverlayHost(props: {
-  frame: { h: number; w: number; x: number; y: number } | null;
+  frame: PublisherFrame | null;
   registry: StickyCloneRegistry;
 }): React.ReactElement | null {
   const { frame, registry } = props;

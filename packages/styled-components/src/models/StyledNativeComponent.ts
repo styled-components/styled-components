@@ -1138,15 +1138,7 @@ function resolveContainerName(
   return info.explicitName ?? styledComponentId;
 }
 
-/**
- * Inject `container-name: <styledComponentId>` into the rendered
- * style when a component declares `container-type` without an
- * explicit `container-name`. Lets rn-web emit the matching CSS so
- * `@container <id> (...)` queries written via `${Component}`
- * interpolation match against the source on the browser side; on
- * native this prop is ignored by the view manager (the runtime
- * publisher carries the same name through `ContainerContext`).
- */
+/** Append an `extra` style object onto a composed style, preserving its function-or-array shape. */
 function appendStyle(composed: any, extra: object): any {
   if (composed === undefined || composed === null) return extra;
   if (isFunction(composed)) {
@@ -1158,6 +1150,15 @@ function appendStyle(composed: any, extra: object): any {
   return Array.isArray(composed) ? [...composed, extra] : [composed, extra];
 }
 
+/**
+ * Inject `container-name: <styledComponentId>` into the rendered
+ * style when a component declares `container-type` without an
+ * explicit `container-name`. Lets rn-web emit the matching CSS so
+ * `@container <id> (...)` queries written via `${Component}`
+ * interpolation match against the source on the browser side; on
+ * native this prop is ignored by the view manager (the runtime
+ * publisher carries the same name through `ContainerContext`).
+ */
 function injectAutoContainerName(
   composed: any,
   info: NativeStyles['containerInfo'] | undefined,

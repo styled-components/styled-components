@@ -1,5 +1,7 @@
 // CSS Color 4 system keywords → RN PlatformColor; rn-web preserves the authored keyword string.
 
+import { getReactNativePlatformOS } from '../dev';
+
 type PlatformColorFn = (...names: string[]) => unknown;
 type PlatformOS = 'ios' | 'android' | 'unknown';
 
@@ -17,14 +19,8 @@ function getPlatformColor(): PlatformColorFn | null {
 }
 
 function getPlatformOS(): PlatformOS {
-  try {
-    const rn = require('react-native') as { Platform?: { OS?: string } };
-    const os = rn.Platform?.OS;
-    if (os === 'ios' || os === 'android') return os;
-  } catch {
-    // Non-RN test environments fall back to the cross-platform table.
-  }
-  return 'unknown';
+  const os = getReactNativePlatformOS();
+  return os === 'ios' || os === 'android' ? os : 'unknown';
 }
 
 const SYSTEM_COLOR_LITERAL: Record<string, string> = {

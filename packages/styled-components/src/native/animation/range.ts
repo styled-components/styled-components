@@ -2,6 +2,7 @@ import { resolveStaticMathFunction } from '../transform/polyfills/mathFns';
 import { tokenize } from '../transform/tokenize';
 import type { Token } from '../transform/tokens';
 import { TokenKind } from '../transform/tokens';
+import { ABSOLUTE_LENGTH_PX_PER_UNIT } from '../transform/units';
 import type { RangeBoundary, RangeOffset, TimelineRangeName } from './types';
 
 const TIMELINE_RANGE_NAMES: ReadonlySet<string> = new Set([
@@ -14,23 +15,12 @@ const TIMELINE_RANGE_NAMES: ReadonlySet<string> = new Set([
   'scroll',
 ]);
 
-/** CSS Values 4 absolute-length ratios; RN dp == CSS px so no DPR multiply. */
-const ABS_UNIT_TO_PX: Record<string, number> = {
-  px: 1,
-  in: 96,
-  cm: 96 / 2.54,
-  mm: 96 / 25.4,
-  q: 96 / 101.6,
-  pt: 96 / 72,
-  pc: 16,
-};
-
 function offsetFromToken(rangeName: TimelineRangeName | null, t: Token): RangeOffset | null {
   if (t.kind === TokenKind.Percent) {
     return { rangeName, value: t.value!, unit: '%', calcRaw: null };
   }
   if (t.kind === TokenKind.Length) {
-    const ratio = ABS_UNIT_TO_PX[t.unit!];
+    const ratio = ABSOLUTE_LENGTH_PX_PER_UNIT[t.unit!];
     if (ratio === undefined) return null;
     return { rangeName, value: t.value! * ratio, unit: 'px', calcRaw: null };
   }
@@ -41,7 +31,7 @@ function offsetFromToken(rangeName: TimelineRangeName | null, t: Token): RangeOf
     const folded = resolveStaticMathFunction(t);
     if (folded !== null) {
       if (folded.unit === '%') return { rangeName, value: folded.value, unit: '%', calcRaw: null };
-      const ratio = ABS_UNIT_TO_PX[folded.unit];
+      const ratio = ABSOLUTE_LENGTH_PX_PER_UNIT[folded.unit];
       if (ratio !== undefined) {
         return { rangeName, value: folded.value * ratio, unit: 'px', calcRaw: null };
       }

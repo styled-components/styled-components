@@ -1,4 +1,4 @@
-import { evaluateForFastPath, FastPathFragment } from '../parser/compile';
+import { evaluateForFastPath, FastPathFragment, hasAnyFragment } from '../parser/compile';
 import { getSource, synthesizeSourceForRuleSet } from '../parser/source';
 import StyleSheet from '../sheet';
 import { Compiler, ExecutionContext, RuleSet } from '../types';
@@ -107,19 +107,12 @@ export default class WebGlobalStyle<Props extends object> {
         // Write referenced keyframes before the global rules so they sort
         // ahead in the sheet (group IDs were claimed at construction time).
         flushKeyframes(styleSheet, keyframes);
-        let hasFragments = false;
-        for (let i = 0; i < fragments.length; i++) {
-          if (fragments[i] !== null) {
-            hasFragments = true;
-            break;
-          }
-        }
         const out = compiler.emit(
           source,
           filled,
           '',
           this.componentId,
-          hasFragments ? fragments : null
+          hasAnyFragment(fragments) ? fragments : null
         );
         if (out !== null) rules = out;
       }

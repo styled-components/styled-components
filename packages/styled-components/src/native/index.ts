@@ -121,7 +121,7 @@ const toStyleSheet = (rules: RuleSet<object>) => {
   let flatCSS = '';
   if (source !== undefined) {
     const fragments: (FastPathFragment | null)[] = [];
-    const filled = evaluateForFastPath(source, {} as never, undefined, undefined, fragments);
+    const filled = evaluateForFastPath(source, {}, undefined, undefined, fragments);
     if (filled !== null) {
       let hasFragments = false;
       for (let i = 0; i < fragments.length; i++) {

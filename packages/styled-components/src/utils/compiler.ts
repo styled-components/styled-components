@@ -46,21 +46,24 @@ export default function createCompiler({
     if (!plugin) continue;
     const rw = plugin.rw;
     if (rw) {
-      postProcessSelector = postProcessSelector
-        ? (
-            prev => (s: string) =>
-              rw(prev!(s))
-          )(postProcessSelector)
-        : rw;
+      if (postProcessSelector) {
+        const prev = postProcessSelector;
+        postProcessSelector = (s: string) => rw(prev(s));
+      } else {
+        postProcessSelector = rw;
+      }
     }
     const decl = plugin.decl;
     if (decl) {
-      postProcessDecl = postProcessDecl
-        ? (prev => (p: string, v: string) => {
-            const first = prev!(p, v);
-            return decl(first ? first.prop : p, first ? first.value : v) || first;
-          })(postProcessDecl)
-        : decl;
+      if (postProcessDecl) {
+        const prev = postProcessDecl;
+        postProcessDecl = (p: string, v: string) => {
+          const first = prev(p, v);
+          return decl(first ? first.prop : p, first ? first.value : v) || first;
+        };
+      } else {
+        postProcessDecl = decl;
+      }
     }
   }
 

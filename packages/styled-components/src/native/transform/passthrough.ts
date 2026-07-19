@@ -61,8 +61,9 @@ export const PASSTHROUGH_PROPS: ReadonlyMap<string, readonly string[]> = new Map
   // and dual-emit (native: `direction` + `writingDirection`; rn-web:
   // `writingDirection` + `dir` prop lift).
   ['direction', ['direction']],
-  // CSS Images 4. <Image> only. Native identity passthrough; rn-web is
-  // remapped to `resizeMode` inline in `transformDecl`.
+  // CSS Images 4. <Image> only. Native identity passthrough; rn-web
+  // remaps the rendered CSS string to `resizeMode` via the `imageLifts`
+  // CSS-string lift in `native/web-bridge/index.tsx`.
   ['objectFit', ['objectFit']],
   // CSS Inline 3. <Text> only. RN 0.85 accepts the keyword grammar
   // (`auto | top | bottom | middle`); length/percent forms are rn-web only.

@@ -12,6 +12,7 @@ import {
   PseudoState,
   RuleNode,
 } from './ast';
+import { isKeyframesName } from './atRuleNames';
 
 export type {
   AttrSelector,
@@ -100,7 +101,7 @@ export function classifyAtRuleNow(name: string, prelude: string): NativeAtClass 
     }
     return { kind: name, containerName: undefined, condition: prelude };
   }
-  if (name === 'keyframes' || /^-[a-z]+-keyframes$/.test(name)) return { kind: 'keyframes' };
+  if (isKeyframesName(name)) return { kind: 'keyframes' };
   if (name === 'property') return { kind: 'property' };
   if (name === 'font-face' || name === 'page') {
     return { kind: 'unsupported', warn: 'web-only' };
@@ -173,14 +174,7 @@ function parseSimpleInner(inner: string): NthOfBranch | null {
   if (inner.charCodeAt(0) === $.DOT) {
     let i = 1;
     while (i < inner.length) {
-      const c = inner.charCodeAt(i);
-      const isIdent =
-        (c >= 0x30 && c <= 0x39) /* 0-9 */ ||
-        (c >= 0x41 && c <= 0x5a) /* A-Z */ ||
-        (c >= 0x61 && c <= 0x7a) /* a-z */ ||
-        c === 0x2d /* - */ ||
-        c === 0x5f; /* _ */
-      if (!isIdent) break;
+      if (!$.isIdentChar(inner.charCodeAt(i))) break;
       i++;
     }
     if (i !== inner.length) return null;
@@ -490,14 +484,7 @@ function detectCombinator(selectors: string[]): NativeRuleClass | null {
   // Walk the styled-component id (`sc-` + ident chars + digits).
   let i = 1;
   while (i < sel.length) {
-    const c = sel.charCodeAt(i);
-    const isIdent =
-      (c >= 0x30 && c <= 0x39) /* 0-9 */ ||
-      (c >= 0x41 && c <= 0x5a) /* A-Z */ ||
-      (c >= 0x61 && c <= 0x7a) /* a-z */ ||
-      c === 0x2d /* - */ ||
-      c === 0x5f; /* _ */
-    if (!isIdent) break;
+    if (!$.isIdentChar(sel.charCodeAt(i))) break;
     i++;
   }
   if (i === 1) return null;

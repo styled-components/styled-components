@@ -772,22 +772,7 @@ function embeddedLightDarkResolver(value: string): Resolver | null {
     }
     // Find the matching close paren, respecting nested parens inside
     // the call's body (e.g. `light-dark(rgba(...), rgba(...))`).
-    let depth = 0;
-    let j = idx + NEEDLE.length;
-    let endIdx = -1;
-    while (j < value.length) {
-      const c = value.charCodeAt(j);
-      if (c === 0x28 /* ( */) {
-        depth++;
-      } else if (c === 0x29 /* ) */) {
-        if (depth === 0) {
-          endIdx = j;
-          break;
-        }
-        depth--;
-      }
-      j++;
-    }
+    const endIdx = findMatchingClose(value, idx + NEEDLE.length - 1);
     if (endIdx === -1) return null;
     const callStr = value.substring(idx, endIdx + 1);
     const r = lightDarkResolver(callStr);
@@ -1209,27 +1194,30 @@ function attrResolver(value: string): Resolver | null {
         : null;
 
   return env => {
-    const fallback = fallbackResolver !== null ? fallbackResolver(env) : staticFallback;
+    // Fallback construction is a pure env read (no subscription side
+    // effects), so it's deferred to only the paths that actually need
+    // it; the common present-and-valid-prop cases never touch it.
+    const getFallback = () => (fallbackResolver !== null ? fallbackResolver(env) : staticFallback);
     const props = env.props;
     const raw = props == null ? undefined : props[name];
-    if (raw === undefined || raw === null) return fallback;
+    if (raw === undefined || raw === null) return getFallback();
 
     switch (type.kind) {
       case 'string':
         return typeof raw === 'string' ? raw : String(raw);
       case 'number': {
         const n = attrToNumber(raw);
-        return n === null ? fallback : n;
+        return n === null ? getFallback() : n;
       }
       case 'unit': {
-        if (type.unit === null) return fallback;
+        if (type.unit === null) return getFallback();
         const n = attrToNumber(raw);
-        if (n === null) return fallback;
+        if (n === null) return getFallback();
         if (type.unit === 'px') return n;
         return n + type.unit;
       }
       case 'syntax':
-        return resolveAttrSyntax(type.syntax, raw, fallback);
+        return resolveAttrSyntax(type.syntax, raw, getFallback);
     }
   };
 }
@@ -1237,39 +1225,39 @@ function attrResolver(value: string): Resolver | null {
 function resolveAttrSyntax(
   syntax: 'length' | 'number' | 'percentage' | 'color' | 'any' | null,
   raw: unknown,
-  fallback: number | string | null
+  getFallback: () => number | string | null
 ): number | string | null {
-  if (syntax === null) return fallback;
+  if (syntax === null) return getFallback();
   if (syntax === 'any') return typeof raw === 'string' ? raw : String(raw);
   if (syntax === 'number') {
     const n = attrToNumber(raw);
-    return n === null ? fallback : n;
+    return n === null ? getFallback() : n;
   }
   // RN number props conventionally mean device px; accept for <length>.
   if (syntax === 'length' && typeof raw === 'number') {
-    return Number.isFinite(raw) ? raw : fallback;
+    return Number.isFinite(raw) ? raw : getFallback();
   }
-  if (typeof raw !== 'string') return fallback;
+  if (typeof raw !== 'string') return getFallback();
   const toks = tokenize(raw.trim());
-  if (toks.length !== 1) return fallback;
+  if (toks.length !== 1) return getFallback();
   const t = toks[0];
   if (syntax === 'length') {
     if (t.kind === TokenKind.Number && t.value === 0) return 0;
-    if (t.kind !== TokenKind.Length) return fallback;
+    if (t.kind !== TokenKind.Length) return getFallback();
     if (t.unit === 'px' || t.unit === '') return t.value!;
     // Dynamic length units re-enter the resolver pipeline as strings;
     // RN itself can't consume them, so anything non-px falls back.
-    return fallback;
+    return getFallback();
   }
   if (syntax === 'percentage') {
-    return t.kind === TokenKind.Percent ? t.value! + '%' : fallback;
+    return t.kind === TokenKind.Percent ? t.value! + '%' : getFallback();
   }
   // <color>: structural validation only (hash, color function, or ident);
   // ident names are not checked against the named-color table.
   if (t.kind === TokenKind.Hash) return raw.trim();
   if (t.kind === TokenKind.Function && ATTR_COLOR_FN_NAMES.has(t.name || '')) return raw.trim();
   if (t.kind === TokenKind.Ident) return raw.trim();
-  return fallback;
+  return getFallback();
 }
 
 function topLevelCommaIdx(s: string): number {
@@ -1497,8 +1485,9 @@ function minMaxClampResolverFromFn(name: string, fn: Token, opts?: BuildOpts): R
       // clamp(MIN, VAL, MAX) === max(MIN, min(VAL, MAX)). MIN wins
       // when MIN > MAX. `none` arms drop out of the comparison.
       const lo = operands[0];
-      const val = operands[1]!;
+      const val = operands[1];
       const hi = operands[2];
+      if (val === null) return null;
       let v = val.value;
       if (hi !== null && v > hi.value) v = hi.value;
       if (lo !== null && v < lo.value) v = lo.value;
@@ -1766,22 +1755,6 @@ function numericToCss(r: NumericResult): number | string {
   return `${r.value}${r.unit}`;
 }
 
-/**
- * Runtime resolver for color functions (`oklch()` / `oklab()` / `lch()` /
- * `lab()` / `color-mix()` / `color()` / relative forms) when one or more
- * channel arms are dynamic. The static fold in `staticColorFunctionToHex`
- * (colorMath.ts) bails the moment a channel isn't a literal; we land
- * here, substitute the dynamic arms at render time (theme sentinels plus
- * env-dependent math: calc()/min()/max()/clamp() and bare
- * sibling-index()/sibling-count()), then run the assembled string back
- * through the static converter to produce a hex. Without the math
- * substitution the raw function string reached React Native, whose color
- * parser rejects it and paints transparent.
- */
-function colorFnResolver(value: string): Resolver | null {
-  return colorDynamicTemplateResolver(value);
-}
-
 /** Math-function heads whose results are spliced into a color string. */
 function matchColorMathHead(value: string, i: number): 'math' | 'sibling' | null {
   const c = value.charCodeAt(i);
@@ -1812,12 +1785,23 @@ function isIdentChar(c: number): boolean {
 }
 
 /**
+ * Runtime resolver for color functions (`oklch()` / `oklab()` / `lch()` /
+ * `lab()` / `color-mix()` / `color()` / relative forms) when one or more
+ * channel arms are dynamic. The static fold in `staticColorFunctionToHex`
+ * (colorMath.ts) bails the moment a channel isn't a literal; we land
+ * here, substitute the dynamic arms at render time (theme sentinels plus
+ * env-dependent math: calc()/min()/max()/clamp() and bare
+ * sibling-index()/sibling-count()), then run the assembled string back
+ * through the static converter to produce a hex. Without the math
+ * substitution the raw function string reached React Native, whose color
+ * parser rejects it and paints transparent.
+ *
  * Like {@link templateResolver}, but for color-function strings: splices
  * BOTH theme sentinels and env-dependent math segments. Math segments may
  * themselves carry sentinels (the math operand machinery resolves them).
  * Returns null when the string has no dynamic segment this recognizes.
  */
-function colorDynamicTemplateResolver(value: string): Resolver | null {
+function colorFnResolver(value: string): Resolver | null {
   interface Seg {
     start: number;
     end: number;

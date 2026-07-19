@@ -1,3 +1,5 @@
+import { getReactNativePlatformOS } from '../dev';
+
 /**
  * Generic font-family keywords. RN exposes no concept of "system serif"
  * / "system mono" / etc.; each platform registers concrete font names
@@ -77,14 +79,8 @@ let osCache: 'ios' | 'android' | 'unknown' | null = null;
 
 function getPlatformOS(): 'ios' | 'android' | 'unknown' {
   if (osCache !== null) return osCache;
-  try {
-    const os = (require('react-native') as { Platform?: { OS?: string } }).Platform?.OS;
-    if (os === 'ios') osCache = 'ios';
-    else if (os === 'android') osCache = 'android';
-    else osCache = 'unknown';
-  } catch {
-    osCache = 'unknown';
-  }
+  const os = getReactNativePlatformOS();
+  osCache = os === 'ios' ? 'ios' : os === 'android' ? 'android' : 'unknown';
   return osCache;
 }
 

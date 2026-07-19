@@ -4,7 +4,6 @@ import {
   evaluateEasing,
   evaluateSteps,
   parseEasing,
-  parseTimeToMs,
 } from '../css-keywords';
 
 describe('CSS easing keyword table', () => {
@@ -216,19 +215,5 @@ describe('evaluateEasing dispatch', () => {
         0.5
       )
     ).toBe(0.5);
-  });
-});
-
-describe('parseTimeToMs', () => {
-  it('parses milliseconds', () => {
-    expect(parseTimeToMs('500ms')).toBe(500);
-  });
-  it('parses seconds and converts to milliseconds', () => {
-    expect(parseTimeToMs('0.5s')).toBe(500);
-    expect(parseTimeToMs('2s')).toBe(2000);
-  });
-  it('passes through bare numbers (legacy RN convention)', () => {
-    expect(parseTimeToMs('500')).toBe(500);
-    expect(parseTimeToMs(500)).toBe(500);
   });
 });

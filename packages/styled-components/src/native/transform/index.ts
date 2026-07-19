@@ -113,7 +113,6 @@ const SINGLE_PASSTHROUGH_HANDLERS: Record<string, SinglePassthroughHandler> = {
     __NATIVE_WEB__
       ? { dir: value, writingDirection: value }
       : { direction: value, writingDirection: value },
-  objectFit: value => ({ objectFit: value }),
 };
 
 /**

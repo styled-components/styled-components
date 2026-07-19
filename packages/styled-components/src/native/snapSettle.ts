@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dict } from '../types';
 import type { ScrollTimelineEntry } from './scrollTimeline';
+import type { GestureResponderEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 
 /**
  * Quiet window after the last scroll-ish event before the rest position
@@ -105,7 +106,7 @@ export function useSnapSettle(
     if (s.timer !== null) clearTimeout(s.timer);
     s.timer = setTimeout(check, SETTLE_QUIET_MS);
   };
-  const scrollish = (user: unknown) => (e: any) => {
+  const scrollish = (user: unknown) => (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const co = e !== null && typeof e === 'object' ? e.nativeEvent?.contentOffset : undefined;
     if (co !== undefined) {
       s.offX = co.x;
@@ -114,7 +115,7 @@ export function useSnapSettle(
     schedule();
     if (typeof user === 'function') user(e);
   };
-  const touch = (user: unknown) => (e: any) => {
+  const touch = (user: unknown) => (e: GestureResponderEvent) => {
     schedule();
     if (typeof user === 'function') user(e);
   };

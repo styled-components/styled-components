@@ -1541,12 +1541,20 @@ function walkRoot(
   }
 }
 
+/** Enclosing at-rule gate (`@media` / `@container` / `@supports`) threaded
+ *  through the bucket-construction helpers below. */
+type OuterGate = {
+  type: 'media' | 'container' | 'supports';
+  condition: string;
+  containerName: string | undefined;
+};
+
 function handleRootRule(node: StaticRuleNode, conditional: ConditionalStyle[]): void {
   // Read parse-time classification when present; fall back to render-time
   // re-classification on the filled selectors when sentinels were
   // present at parse time (rare).
   const cls = readRuleClass(node);
-  applyRuleClass(node, cls, conditional, undefined, undefined);
+  applyRuleClass(node, cls, conditional, undefined);
 }
 
 /**
@@ -1561,16 +1569,7 @@ function applyRuleClass(
   node: StaticRuleNode,
   cls: NativeRuleClass,
   conditional: ConditionalStyle[],
-  outer:
-    | {
-        type: 'media' | 'container' | 'supports';
-        condition: string;
-        containerName: string | undefined;
-      }
-    | undefined,
-  // Unused parameter retained for symmetry with applyAtRule's signature
-  // shape; the linter will catch real un-uses elsewhere.
-  _reserved?: undefined
+  outer: OuterGate | undefined
 ): void {
   if (cls.kind === 'unsupported') {
     if (__DEV__ && outer === undefined) {
@@ -1680,13 +1679,7 @@ function pushNthChildBucket(
   important: Dict<any> | null,
   importantResolvers: Array<[string, Resolver]> | null,
   varDeferred: Array<[string, string, boolean]> | null,
-  outer:
-    | {
-        type: 'media' | 'container' | 'supports';
-        condition: string;
-        containerName: string | undefined;
-      }
-    | undefined,
+  outer: OuterGate | undefined,
   cls: { spec: NthSpec; pseudo?: PseudoState; negate?: boolean }
 ): void {
   if (outer !== undefined) return;
@@ -1732,13 +1725,7 @@ function pushHasBucket(
   important: Dict<any> | null,
   importantResolvers: Array<[string, Resolver]> | null,
   varDeferred: Array<[string, string, boolean]> | null,
-  outer:
-    | {
-        type: 'media' | 'container' | 'supports';
-        condition: string;
-        containerName: string | undefined;
-      }
-    | undefined,
+  outer: OuterGate | undefined,
   cls: {
     inner: { kind: 'component'; id: string } | { kind: 'attr'; attr: ConditionalAttr };
     pseudo?: PseudoState;
@@ -1781,13 +1768,7 @@ function pushCombinatorBucket(
   important: Dict<any> | null,
   importantResolvers: Array<[string, Resolver]> | null,
   varDeferred: Array<[string, string, boolean]> | null,
-  outer:
-    | {
-        type: 'media' | 'container' | 'supports';
-        condition: string;
-        containerName: string | undefined;
-      }
-    | undefined,
+  outer: OuterGate | undefined,
   cls: {
     combinator: 'descendant' | 'child' | 'adjacent-sibling' | 'general-sibling';
     ancestorId: string;
@@ -1819,13 +1800,7 @@ function pushBucket(
   important: Dict<any> | null,
   importantResolvers: Array<[string, Resolver]> | null,
   varDeferred: Array<[string, string, boolean]> | null,
-  outer:
-    | {
-        type: 'media' | 'container' | 'supports';
-        condition: string;
-        containerName: string | undefined;
-      }
-    | undefined,
+  outer: OuterGate | undefined,
   pseudo: PseudoState | undefined,
   attrSel: AttrSelector | undefined,
   negate: boolean | undefined
@@ -1934,7 +1909,7 @@ function handlePropertyAtRule(node: StaticAtRuleNode): void {
     }
   }
   if (__NATIVE_WEB__) {
-    const css = (globalThis as any).CSS;
+    const css = (globalThis as { CSS?: { registerProperty?: (definition: unknown) => void } }).CSS;
     if (css && typeof css.registerProperty === 'function') {
       try {
         css.registerProperty({
@@ -2040,15 +2015,18 @@ function handleAtRule(
     const decls = collectDecls(node.children);
     if (decls.length > 0) {
       const { base, resolvers, important, importantResolvers, varDeferred } = processDecls(decls);
-      const entry: ConditionalStyle = {
-        type: outer.type,
-        condition: outer.condition,
-        styles: base,
-      };
-      if (outer.containerName) entry.containerName = outer.containerName;
-      entry.styles = stripSpecialCasesFromConditional(base, entry);
-      attachBucketExtras(entry, resolvers, important, importantResolvers, varDeferred);
-      conditional.push(entry);
+      pushBucket(
+        conditional,
+        base,
+        resolvers,
+        important,
+        importantResolvers,
+        varDeferred,
+        outer,
+        undefined,
+        undefined,
+        undefined
+      );
     }
 
     // Nested rules inside the at-rule body. Emit one bucket per

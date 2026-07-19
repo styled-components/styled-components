@@ -4,6 +4,7 @@ import {
   buildInterpKey,
   evaluateForFastPath,
   FastPathFragment,
+  hasAnyFragment,
 } from '../parser/compile';
 import { getSource, Source, synthesizeSourceForRuleSet } from '../parser/source';
 import StyleSheet from '../sheet';
@@ -112,10 +113,20 @@ export default class WebStyle {
     let fastFragments: (FastPathFragment | null)[] | null = null;
     if (source !== null) {
       if (this.filledBuffer === undefined) {
-        this.filledBuffer = new Array(source.interpolations.length);
+        // Pre-fill via push so V8 keeps these PACKED_ELEMENTS. `new Array(n)`
+        // stays HOLEY_ELEMENTS even after every slot is overwritten, which
+        // infects the IC for the per-slot reads in `evaluateForFastPath` and
+        // the fragments scan below. See NativeStyle.ts for the same pattern.
+        const n = source.interpolations.length;
+        const buf: string[] = [];
+        for (let i = 0; i < n; i++) buf.push('');
+        this.filledBuffer = buf;
       }
       if (this.fragmentsBuffer === undefined) {
-        this.fragmentsBuffer = new Array(source.interpolations.length);
+        const n = source.interpolations.length;
+        const buf: (FastPathFragment | null)[] = [];
+        for (let i = 0; i < n; i++) buf.push(null);
+        this.fragmentsBuffer = buf;
       }
       if (this.keyframesBuffer === undefined) {
         this.keyframesBuffer = [];
@@ -132,14 +143,7 @@ export default class WebStyle {
       );
       if (filled !== null) {
         fastFilled = filled;
-        let hasFragments = false;
-        for (let i = 0; i < this.fragmentsBuffer.length; i++) {
-          if (this.fragmentsBuffer[i] !== null) {
-            hasFragments = true;
-            break;
-          }
-        }
-        fastFragments = hasFragments ? this.fragmentsBuffer : null;
+        fastFragments = hasAnyFragment(this.fragmentsBuffer) ? this.fragmentsBuffer : null;
         interpKey = buildInterpKey(filled, fastFragments, compiler.hash);
         name = this.interpKeyCache && this.interpKeyCache.get(interpKey);
         if (name === undefined) {

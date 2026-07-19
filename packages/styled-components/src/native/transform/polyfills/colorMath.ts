@@ -1032,7 +1032,6 @@ function readColorFn(
   let alpha = 1;
   let sawSlash = false;
   let startIdx = 0;
-  let relative = false;
   let relativeRgb: RGB | null = null;
 
   // Relative color() syntax: `color(from <origin> <space> ...)`. The
@@ -1044,7 +1043,6 @@ function readColorFn(
     if ('sentinelBail' in from) return null;
     relativeRgb = from.rgb;
     startIdx = from.consumed;
-    relative = true;
     // Omitted alpha defaults to the origin's alpha (not 100%).
     alpha = from.rgb.a;
   }
@@ -1059,17 +1057,17 @@ function readColorFn(
     if (space === null) {
       if (t.kind !== TokenKind.Ident) return null;
       space = t.name || null;
-      if (relative) {
+      if (relativeRgb !== null) {
         if (space === null) return null;
         const keywords = colorFnChannelKeywords(space);
         if (keywords === null) return null;
         // Origin RGB → the chosen space's native channel encoding.
         const lin = {
-          r: srgbToLinear(relativeRgb!.r),
-          g: srgbToLinear(relativeRgb!.g),
-          b: srgbToLinear(relativeRgb!.b),
+          r: srgbToLinear(relativeRgb.r),
+          g: srgbToLinear(relativeRgb.g),
+          b: srgbToLinear(relativeRgb.b),
         };
-        const native = linearSrgbToSpaceNative(lin.r, lin.g, lin.b, relativeRgb!.a, space);
+        const native = linearSrgbToSpaceNative(lin.r, lin.g, lin.b, relativeRgb.a, space);
         if (native === null) return null;
         const bindings: [number, number, number, number] = [
           native.c1,
@@ -1490,7 +1488,8 @@ function parseColorMix(tok: Token): RGB | null {
   }
 
   // color-mix uses non-forced normalization: sums > 100 still scale, sums < 100
-  // leave a leftover that drives alpha.
+  // leave a leftover that drives alpha. Resolve every item's pct to a concrete
+  // number in one pass so downstream mix code never re-derives non-nullness.
   let specifiedSum = 0;
   let omittedCount = 0;
   for (const it of items) {
@@ -1498,15 +1497,16 @@ function parseColorMix(tok: Token): RGB | null {
     else specifiedSum += it.pct;
   }
   if (specifiedSum > 100) specifiedSum = 100;
-  if (omittedCount > 0) {
-    const share = (100 - specifiedSum) / omittedCount;
-    for (const it of items) if (it.pct === null) it.pct = share;
-  }
+  const share = omittedCount > 0 ? (100 - specifiedSum) / omittedCount : 0;
   let total = 0;
-  for (const it of items) total += it.pct!;
+  const resolved: { color: RGB; pct: number }[] = items.map(it => {
+    const pct = it.pct === null ? share : it.pct;
+    total += pct;
+    return { color: it.color, pct };
+  });
   if (total > 100) {
     const f = 100 / total;
-    for (const it of items) it.pct = it.pct! * f;
+    for (const it of resolved) it.pct *= f;
     total = 100;
   }
   const leftover = total < 100 ? 100 - total : 0;
@@ -1520,9 +1520,9 @@ function parseColorMix(tok: Token): RGB | null {
   // out-of-gamut operands don't lose chroma through an sRGB round-trip.
   if (space === 'lab' || space === 'oklab') {
     const useOklab = space === 'oklab';
-    const triples: { triple: LabTriple; pct: number | null }[] = [];
-    for (let i = 0; i < items.length; i++) {
-      const it = items[i];
+    const triples: { triple: LabTriple; pct: number }[] = [];
+    for (let i = 0; i < resolved.length; i++) {
+      const it = resolved[i];
       const native = labFromRGBForMix(colorParts[i], it.color, useOklab);
       triples.push({ triple: native, pct: it.pct });
     }
@@ -1535,9 +1535,9 @@ function parseColorMix(tok: Token): RGB | null {
     while (stack.length >= 2) {
       const a = stack.pop()!;
       const b = stack.pop()!;
-      const sum = a.pct! + b.pct!;
-      const wA = sum === 0 ? 0.5 : a.pct! / sum;
-      const wB = sum === 0 ? 0.5 : b.pct! / sum;
+      const sum = a.pct + b.pct;
+      const wA = sum === 0 ? 0.5 : a.pct / sum;
+      const wB = sum === 0 ? 0.5 : b.pct / sum;
       const mixed = mixLab(a.triple, b.triple, wA, wB);
       stack.push({ triple: mixed, pct: sum });
     }
@@ -1551,9 +1551,9 @@ function parseColorMix(tok: Token): RGB | null {
   // against the source channels rather than the derived (a, b) form.
   if (space === 'lch' || space === 'oklch') {
     const useOklch = space === 'oklch';
-    const triples: { triple: LchTriple; pct: number | null }[] = [];
-    for (let i = 0; i < items.length; i++) {
-      const it = items[i];
+    const triples: { triple: LchTriple; pct: number }[] = [];
+    for (let i = 0; i < resolved.length; i++) {
+      const it = resolved[i];
       const native = lchFromRGBForMix(colorParts[i], it.color, useOklch);
       triples.push({ triple: native, pct: it.pct });
     }
@@ -1566,9 +1566,9 @@ function parseColorMix(tok: Token): RGB | null {
     while (stack.length >= 2) {
       const a = stack.pop()!;
       const b = stack.pop()!;
-      const sum = a.pct! + b.pct!;
-      const wA = sum === 0 ? 0.5 : a.pct! / sum;
-      const wB = sum === 0 ? 0.5 : b.pct! / sum;
+      const sum = a.pct + b.pct;
+      const wA = sum === 0 ? 0.5 : a.pct / sum;
+      const wB = sum === 0 ? 0.5 : b.pct / sum;
       const mixed = mixLch(a.triple, b.triple, wA, wB, hueMethod);
       stack.push({ triple: mixed, pct: sum });
     }
@@ -1581,9 +1581,9 @@ function parseColorMix(tok: Token): RGB | null {
   // Lab-family but the cartesian channels are saturation/lightness or
   // whiteness/blackness rather than Lab a/b.
   if (space === 'hsl' || space === 'hwb') {
-    const triples: { triple: HsTriple; pct: number | null }[] = [];
-    for (let i = 0; i < items.length; i++) {
-      const it = items[i];
+    const triples: { triple: HsTriple; pct: number }[] = [];
+    for (let i = 0; i < resolved.length; i++) {
+      const it = resolved[i];
       const native = hsFromRGBForMix(colorParts[i], it.color, space === 'hsl');
       triples.push({ triple: native, pct: it.pct });
     }
@@ -1596,9 +1596,9 @@ function parseColorMix(tok: Token): RGB | null {
     while (stack.length >= 2) {
       const a = stack.pop()!;
       const b = stack.pop()!;
-      const sum = a.pct! + b.pct!;
-      const wA = sum === 0 ? 0.5 : a.pct! / sum;
-      const wB = sum === 0 ? 0.5 : b.pct! / sum;
+      const sum = a.pct + b.pct;
+      const wA = sum === 0 ? 0.5 : a.pct / sum;
+      const wB = sum === 0 ? 0.5 : b.pct / sum;
       const mixed = mixHs(a.triple, b.triple, wA, wB, hueMethod, space === 'hsl');
       stack.push({ triple: mixed, pct: sum });
     }
@@ -1612,9 +1612,9 @@ function parseColorMix(tok: Token): RGB | null {
   // the target space's native channels with NaN carry-forward, then
   // project back to display sRGB via `colorSpaceToRgb`.
   if (RGB_LIKE_MIX_SPACES.has(space)) {
-    const triples: { triple: RgbSpaceTriple; pct: number | null }[] = [];
-    for (let i = 0; i < items.length; i++) {
-      const it = items[i];
+    const triples: { triple: RgbSpaceTriple; pct: number }[] = [];
+    for (let i = 0; i < resolved.length; i++) {
+      const it = resolved[i];
       const native = rgbSpaceTripleFromOperand(colorParts[i], it.color, space);
       triples.push({ triple: native, pct: it.pct });
     }
@@ -1634,9 +1634,9 @@ function parseColorMix(tok: Token): RGB | null {
     while (stack.length >= 2) {
       const a = stack.pop()!;
       const b = stack.pop()!;
-      const sum = a.pct! + b.pct!;
-      const wA = sum === 0 ? 0.5 : a.pct! / sum;
-      const wB = sum === 0 ? 0.5 : b.pct! / sum;
+      const sum = a.pct + b.pct;
+      const wA = sum === 0 ? 0.5 : a.pct / sum;
+      const wB = sum === 0 ? 0.5 : b.pct / sum;
       const mixed = mixRgbSpace(a.triple, b.triple, wA, wB);
       stack.push({ triple: mixed, pct: sum });
     }
@@ -2275,12 +2275,17 @@ function readChannels(
       // the NaN flag to drive carry-forward.
       if (sawSlash) alpha = NaN;
       else vals.push(NaN);
-    } else if (t.kind === TokenKind.Ident && t.name !== undefined && keywords !== null) {
+    } else if (
+      t.kind === TokenKind.Ident &&
+      t.name !== undefined &&
+      keywords !== null &&
+      bindings !== null
+    ) {
       // Channel keyword bound from the origin color. Keywords are accepted in
       // any slot order so `oklch(from #f00 c l h)` works too.
       const bIdx = keywords[t.name];
       if (bIdx === undefined) return null;
-      const v = bindings![bIdx];
+      const v = bindings[bIdx];
       if (sawSlash) alpha = v;
       else vals.push(v);
     } else {

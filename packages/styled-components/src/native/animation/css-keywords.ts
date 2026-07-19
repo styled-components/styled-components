@@ -17,6 +17,12 @@ export const CSS_EASING_KEYWORDS: Record<string, [number, number, number, number
   'ease-in-out': [0.42, 0, 0.58, 1],
 };
 
+/** The `animation`/`transition` shorthand's spec initial timing function (`ease`). */
+export const DEFAULT_EASING: EasingDescriptor = {
+  kind: 'cubic-bezier',
+  p: CSS_EASING_KEYWORDS.ease,
+};
+
 /**
  * Build an EasingDescriptor from a raw CSS easing string. Returns a
  * `linear` descriptor for the literal `linear` keyword (no work to do).
@@ -275,19 +281,4 @@ export function evaluateEasing(easing: EasingDescriptor, progress: number): numb
       return last[1];
     }
   }
-}
-
-/**
- * Parse a CSS time value (`<time>`) to milliseconds.
- *
- * Per CSS Values L4: `s` (seconds) and `ms` (milliseconds). Bare numbers
- * are NOT valid times in CSS but RN frequently passes raw millisecond
- * numbers, so we accept them too.
- */
-export function parseTimeToMs(raw: string | number): number {
-  if (typeof raw === 'number') return raw;
-  const s = raw.trim().toLowerCase();
-  if (s.endsWith('ms')) return parseFloat(s.slice(0, -2));
-  if (s.endsWith('s')) return parseFloat(s.slice(0, -1)) * 1000;
-  return parseFloat(s); // raw number string fallback
 }

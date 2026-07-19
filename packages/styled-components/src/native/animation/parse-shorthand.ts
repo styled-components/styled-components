@@ -11,7 +11,7 @@ import type {
   TransitionDescriptor,
 } from './types';
 import { AUTO_TIMELINE } from './types';
-import { parseEasing } from './css-keywords';
+import { DEFAULT_EASING, parseEasing } from './css-keywords';
 import { parseRangeBoundary } from './range';
 
 const DIRECTION_KEYWORDS = new Set(['normal', 'reverse', 'alternate', 'alternate-reverse']);
@@ -166,7 +166,7 @@ function parseSingleAnimation(tokens: Token[]): Partial<AnimationDescriptor> | n
 const DEFAULT_ANIMATION: AnimationDescriptor = {
   name: 'none',
   durationMs: 0,
-  timingFunction: { kind: 'cubic-bezier', p: [0.25, 0.1, 0.25, 1] }, // CSS `ease`
+  timingFunction: DEFAULT_EASING,
   delayMs: 0,
   iterationCount: 1,
   direction: 'normal',
@@ -225,13 +225,15 @@ const ANIMATION_LONGHAND_MAPPING: ReadonlyArray<[string, keyof AnimationDescript
  * Generic shorthand materializer: parses each comma group into a
  * partial descriptor, then fans the parsed values out into the longhand
  * keys. Single-group input emits scalar values; multi-group emits
- * arrays. Returns `null` on any unparseable group.
+ * arrays. Returns `null` on any unparseable group, or when `validate`
+ * (run once over every parsed group) returns `false`.
  */
 function shorthand<T>(
   tokens: Token[],
   parseOne: (g: Token[]) => Partial<T> | null,
   mapping: ReadonlyArray<[string, keyof T]>,
-  defaults: T
+  defaults: T,
+  validate?: (parsed: Partial<T>[]) => boolean
 ): Dict<any> | null {
   const groups = splitTopLevelCommas(tokens);
   if (groups.length === 0) return null;
@@ -241,6 +243,7 @@ function shorthand<T>(
     if (single === null) return null;
     parsed.push(single);
   }
+  if (validate && !validate(parsed)) return null;
   const out: Dict<any> = {};
   const single = parsed.length === 1;
   for (let i = 0; i < mapping.length; i++) {
@@ -259,7 +262,7 @@ function shorthand<T>(
 const DEFAULT_TRANSITION: TransitionDescriptor = {
   property: 'all',
   durationMs: 0,
-  timingFunction: { kind: 'cubic-bezier', p: [0.25, 0.1, 0.25, 1] }, // CSS `ease`
+  timingFunction: DEFAULT_EASING,
   delayMs: 0,
   behavior: 'normal',
 };
@@ -314,36 +317,18 @@ function parseSingleTransition(tokens: Token[]): Partial<TransitionDescriptor> |
  * transitionTimingFunction | transitionDelay | transitionBehavior`.
  */
 export function transitionShorthand(tokens: Token[]): Dict<any> | null {
-  const groups = splitTopLevelCommas(tokens);
-  if (groups.length === 0) return null;
-  const parsed: Partial<TransitionDescriptor>[] = [];
-  for (let i = 0; i < groups.length; i++) {
-    const single = parseSingleTransition(groups[i]);
-    if (single === null) return null;
-    parsed.push(single);
-  }
-  // `none` as transition-property in a comma list invalidates the whole shorthand.
-  if (
-    parsed.length > 1 &&
-    parsed.some(p => typeof p.property === 'string' && p.property.toLowerCase() === 'none')
-  ) {
-    return null;
-  }
-  const out: Dict<any> = {};
-  const single = parsed.length === 1;
-  for (let i = 0; i < TRANSITION_LONGHAND_MAPPING.length; i++) {
-    const [key, field] = TRANSITION_LONGHAND_MAPPING[i];
-    if (single) {
-      out[key] = parsed[0][field] ?? DEFAULT_TRANSITION[field];
-    } else {
-      const arr = new Array(parsed.length);
-      for (let j = 0; j < parsed.length; j++) {
-        arr[j] = parsed[j][field] ?? DEFAULT_TRANSITION[field];
-      }
-      out[key] = arr;
-    }
-  }
-  return out;
+  return shorthand(
+    tokens,
+    parseSingleTransition,
+    TRANSITION_LONGHAND_MAPPING,
+    DEFAULT_TRANSITION,
+    // `none` as transition-property in a comma list invalidates the whole shorthand.
+    parsed =>
+      !(
+        parsed.length > 1 &&
+        parsed.some(p => typeof p.property === 'string' && p.property.toLowerCase() === 'none')
+      )
+  );
 }
 
 const TRANSITION_LONGHAND_MAPPING: ReadonlyArray<[string, keyof TransitionDescriptor]> = [
@@ -399,19 +384,19 @@ export function animationIterationCountLonghand(tokens: Token[]): Dict<any> | nu
 }
 
 export function animationDirectionLonghand(tokens: Token[]): Dict<any> | null {
-  return listLonghand(tokens, 'animationDirection', enumValidator(DIRECTION_KEYWORDS));
+  return listLonghand(tokens, 'animationDirection', validateDirection);
 }
 
 export function animationFillModeLonghand(tokens: Token[]): Dict<any> | null {
-  return listLonghand(tokens, 'animationFillMode', enumValidator(FILL_MODE_KEYWORDS));
+  return listLonghand(tokens, 'animationFillMode', validateFillMode);
 }
 
 export function animationPlayStateLonghand(tokens: Token[]): Dict<any> | null {
-  return listLonghand(tokens, 'animationPlayState', enumValidator(PLAY_STATE_KEYWORDS));
+  return listLonghand(tokens, 'animationPlayState', validatePlayState);
 }
 
 export function animationCompositionLonghand(tokens: Token[]): Dict<any> | null {
-  return listLonghand(tokens, 'animationComposition', enumValidator(COMPOSITION_KEYWORDS));
+  return listLonghand(tokens, 'animationComposition', validateComposition);
 }
 
 const TIMELINE_AXES = new Set(['block', 'inline', 'x', 'y']);
@@ -612,7 +597,7 @@ export function transitionTimingFunctionLonghand(tokens: Token[]): Dict<any> | n
 }
 
 export function transitionBehaviorLonghand(tokens: Token[]): Dict<any> | null {
-  return listLonghand(tokens, 'transitionBehavior', enumValidator(TRANSITION_BEHAVIOR_KEYWORDS));
+  return listLonghand(tokens, 'transitionBehavior', validateTransitionBehavior);
 }
 
 /**
@@ -646,6 +631,14 @@ function enumValidator(valid: Set<string>): (t: Token) => string | null {
     return valid.has(t.name!) ? t.name! : null;
   };
 }
+
+// Hoisted so each longhand handler reuses one validator closure instead of
+// allocating a fresh one per call.
+const validateDirection = enumValidator(DIRECTION_KEYWORDS);
+const validateFillMode = enumValidator(FILL_MODE_KEYWORDS);
+const validatePlayState = enumValidator(PLAY_STATE_KEYWORDS);
+const validateComposition = enumValidator(COMPOSITION_KEYWORDS);
+const validateTransitionBehavior = enumValidator(TRANSITION_BEHAVIOR_KEYWORDS);
 
 /**
  * Set of camelCase animation+transition longhand keys. Used by the

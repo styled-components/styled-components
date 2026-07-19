@@ -26,6 +26,35 @@ function warnIosTextWrapBalancePretty(style: string): void {
   );
 }
 
+/**
+ * `numberOfLines: 1` + `ellipsizeMode: 'clip'` is the closest
+ * approximation RN exposes (the line cannot truly overflow
+ * horizontally; we clip instead of ellipsise). Applied silently
+ * because the user-observed behavior matches the intent.
+ */
+function applyTextWrapNowrap(out: Dict<any>): void {
+  out.numberOfLines = 1;
+  out.ellipsizeMode = 'clip';
+}
+
+/** `balance`/`pretty` map to Android's `textBreakStrategy`; `stable` has no native equivalent. */
+function applyTextWrapStyle(out: Dict<any>, style: string | null): void {
+  if (style === 'balance') {
+    out.textBreakStrategy = 'balanced';
+    if (__DEV__) warnIosTextWrapBalancePretty(style);
+  } else if (style === 'pretty') {
+    out.textBreakStrategy = 'highQuality';
+    if (__DEV__) warnIosTextWrapBalancePretty(style);
+  } else if (style === 'stable') {
+    if (__DEV__) {
+      warnOnce(
+        'native-text-wrap-stable',
+        '`text-wrap: stable` is ignored on React Native because iOS and Android do not expose reflow stability controls.'
+      );
+    }
+  }
+}
+
 function textWrapShorthand(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(tokens);
   let mode: string | null = null;
@@ -53,28 +82,8 @@ function textWrapShorthand(tokens: Token[]): Dict<any> | null {
   // platform-limitation warns are native-only.
   if (__NATIVE_WEB__) return { textWrap: value };
   const out: Dict<any> = { textWrap: value };
-  if (mode === 'nowrap') {
-    // `numberOfLines: 1` + `ellipsizeMode: 'clip'` is the closest
-    // approximation RN exposes (the line cannot truly overflow
-    // horizontally; we clip instead of ellipsise). Applied silently
-    // because the user-observed behavior matches the intent.
-    out.numberOfLines = 1;
-    out.ellipsizeMode = 'clip';
-  }
-  if (style === 'balance') {
-    out.textBreakStrategy = 'balanced';
-    if (__DEV__) warnIosTextWrapBalancePretty(style);
-  } else if (style === 'pretty') {
-    out.textBreakStrategy = 'highQuality';
-    if (__DEV__) warnIosTextWrapBalancePretty(style);
-  } else if (style === 'stable') {
-    if (__DEV__) {
-      warnOnce(
-        'native-text-wrap-stable',
-        '`text-wrap: stable` is ignored on React Native because iOS and Android do not expose reflow stability controls.'
-      );
-    }
-  }
+  if (mode === 'nowrap') applyTextWrapNowrap(out);
+  applyTextWrapStyle(out, style);
   return out;
 }
 
@@ -90,11 +99,8 @@ function textWrapModeLonghand(tokens: Token[]): Dict<any> | null {
   if (name === undefined || !MODES.has(name)) return null;
   if (__NATIVE_WEB__) return { textWrapMode: name };
   const out: Dict<any> = { textWrapMode: name };
-  if (name === 'nowrap') {
-    // Same nowrap approximation as the shorthand path, applied silently.
-    out.numberOfLines = 1;
-    out.ellipsizeMode = 'clip';
-  }
+  // Same nowrap approximation as the shorthand path, applied silently.
+  if (name === 'nowrap') applyTextWrapNowrap(out);
   return out;
 }
 
@@ -112,20 +118,7 @@ function textWrapStyleLonghand(tokens: Token[]): Dict<any> | null {
   if (name === undefined || !STYLES.has(name)) return null;
   if (__NATIVE_WEB__) return { textWrapStyle: name };
   const out: Dict<any> = { textWrapStyle: name };
-  if (name === 'balance') {
-    out.textBreakStrategy = 'balanced';
-    if (__DEV__) warnIosTextWrapBalancePretty(name);
-  } else if (name === 'pretty') {
-    out.textBreakStrategy = 'highQuality';
-    if (__DEV__) warnIosTextWrapBalancePretty(name);
-  } else if (name === 'stable') {
-    if (__DEV__) {
-      warnOnce(
-        'native-text-wrap-stable',
-        '`text-wrap: stable` is ignored on React Native because iOS and Android do not expose reflow stability controls.'
-      );
-    }
-  }
+  applyTextWrapStyle(out, name);
   return out;
 }
 
