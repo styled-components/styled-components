@@ -27,7 +27,7 @@ export const getRehydrationContainer = (
   }
 
   if ('getRootNode' in target) {
-    const root = (target as HTMLElement).getRootNode();
+    const root = target.getRootNode();
     if (isShadowRoot(root)) {
       return root;
     }

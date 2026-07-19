@@ -402,15 +402,7 @@ function applySelfReferenceRewrite(
     }
     const after = idx + selLen;
     const afterCh = after < len ? compiledSelector.charCodeAt(after) : 0;
-    const isBoundary =
-      after >= len ||
-      !(
-        (afterCh >= $.DIGIT_0 && afterCh <= $.DIGIT_9) ||
-        (afterCh >= $.UPPER_A && afterCh <= $.UPPER_Z) ||
-        (afterCh >= $.LOWER_A && afterCh <= $.LOWER_Z) ||
-        afterCh === $.UNDERSCORE ||
-        afterCh === $.HYPHEN
-      );
+    const isBoundary = after >= len || !$.isIdentChar(afterCh);
     out += compiledSelector.substring(i, idx);
     if (isBoundary) {
       out += replacement;

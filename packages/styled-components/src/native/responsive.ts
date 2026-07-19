@@ -1,9 +1,9 @@
 import React, { useContext, useMemo } from 'react';
 import { fifoSet } from '../utils/fifoMap';
 
-// Pull RN APIs eagerly at module load so the `useEffect` closures don't chase
-// lazy module getters after Jest's environment teardown. The references are
-// captured once and reused across all subscriptions.
+// Resolved lazily on first call and cached, so the `useEffect` closures
+// don't chase live module getters after Jest's environment teardown. The
+// references are captured once and reused across all subscriptions.
 type RNApis = {
   Dimensions: any;
   Appearance: any;
@@ -444,10 +444,8 @@ function readSnapshot(
         ? prev.colorScheme
         : safeReadColorScheme(RN);
   const reduceMotion =
-    override && 'reduceMotion' in override
-      ? // `Partial<MediaQueryEnv>['reduceMotion']` is `boolean | undefined`; the
-        // key check above narrows the JS branch but TS can't track it.
-        override.reduceMotion!
+    typeof override?.reduceMotion === 'boolean'
+      ? override.reduceMotion
       : prev !== null
         ? prev.reduceMotion
         : false;

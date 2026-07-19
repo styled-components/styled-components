@@ -30,6 +30,7 @@ import {
   RuleNode,
   TemplateValue,
 } from './ast';
+import { isKeyframesName } from './atRuleNames';
 import { stampAtClass, stampRuleClass } from './nativePlan';
 
 /**
@@ -456,12 +457,6 @@ function isNameStop(code: number): boolean {
   return isWS(code) || code === OPEN_BRACE || code === SEMICOLON;
 }
 
-function isKeyframesName(name: string): boolean {
-  if (name === 'keyframes') return true;
-  // vendor prefixes: -webkit-keyframes, -moz-keyframes, -o-keyframes
-  return /^-[a-z]+-keyframes$/.test(name);
-}
-
 function parseAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode {
   const css = ctx.css;
   const len = ctx.len;
@@ -603,7 +598,7 @@ function parseFrameDecls(ctx: ParseContext): DeclNode[] {
     while (true) {
       const stop = scanQP(css, i, len, COLON, SEMICOLON, CLOSE_BRACE, -1);
       if (stop >= len) {
-        if (colon !== -1) pushFrameDecl(ctx, decls, start, colon, stop);
+        if (colon !== -1) pushDecl(ctx, decls, start, colon, stop);
         ctx.i = stop;
         return decls;
       }
@@ -614,7 +609,7 @@ function parseFrameDecls(ctx: ParseContext): DeclNode[] {
         continue;
       }
       // c is SEMICOLON or CLOSE_BRACE
-      if (colon !== -1) pushFrameDecl(ctx, decls, start, colon, stop);
+      if (colon !== -1) pushDecl(ctx, decls, start, colon, stop);
       if (c === CLOSE_BRACE) {
         ctx.i = stop + 1;
         return decls;
@@ -625,24 +620,6 @@ function parseFrameDecls(ctx: ParseContext): DeclNode[] {
   }
 
   return decls;
-}
-
-function pushFrameDecl(
-  ctx: ParseContext,
-  decls: DeclNode[],
-  start: number,
-  colon: number,
-  end: number
-): void {
-  const prop = trimRange(ctx.css, start, colon);
-  if (!prop) return;
-  const value = normalizeValue(ctx, colon + 1, end);
-  if (!value && !isCustomProperty(prop)) return;
-  decls.push({
-    kind: NodeKind.Decl,
-    prop: templateOrString(ctx, prop),
-    value: templateOrString(ctx, value),
-  });
 }
 
 /**

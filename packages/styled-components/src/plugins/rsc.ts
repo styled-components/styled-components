@@ -1,3 +1,4 @@
+import type { SCPlugin } from '../utils/compiler';
 import { rewriteSelectorForRSC } from './rscSelectorRewrite';
 
 /**
@@ -12,7 +13,7 @@ import { rewriteSelectorForRSC } from './rscSelectorRewrite';
  * <StyleSheetManager plugins={[rscPlugin]}>...</StyleSheetManager>
  * ```
  */
-const rscPlugin: { name: string; rw: (selector: string) => string } = {
+const rscPlugin: SCPlugin = {
   name: 'rsc',
   rw: rewriteSelectorForRSC,
 };

@@ -175,10 +175,14 @@ function axisStyle(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | null 
 
 /* ─────────── 4 composite single-edge shorthands ─────────── */
 
-function compositeEdge(
-  tokens: Token[],
-  edge: 'inline-start' | 'inline-end' | 'block-start' | 'block-end'
-): Dict<any> | null {
+/**
+ * Shared width/style/color scan for the composite and mode-spanning border
+ * shorthands: any order, at most one of each, returns null on an
+ * unrecognized token or when nothing was consumed.
+ */
+function parseEdgeAttrs(
+  tokens: Token[]
+): { width: Token | null; style: string | null; color: Token | null } | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   let width: Token | null = null;
   let style: string | null = null;
@@ -211,6 +215,17 @@ function compositeEdge(
   }
 
   if (width === null && style === null && color === null) return null;
+
+  return { width, style, color };
+}
+
+function compositeEdge(
+  tokens: Token[],
+  edge: 'inline-start' | 'inline-end' | 'block-start' | 'block-end'
+): Dict<any> | null {
+  const attrs = parseEdgeAttrs(tokens);
+  if (attrs === null) return null;
+  const { width, style, color } = attrs;
 
   const out: Dict<any> = {};
   const map = EDGE_MAP[edge];
@@ -231,38 +246,9 @@ function compositeEdge(
 function modeSpanning(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | null {
   const startEdge = axis === 'inline' ? 'inline-start' : 'block-start';
   const endEdge = axis === 'inline' ? 'inline-end' : 'block-end';
-  const stream = new TokenStream(withoutSlashes(tokens));
-  let width: Token | null = null;
-  let style: string | null = null;
-  let color: Token | null = null;
-
-  while (!stream.eof()) {
-    const t = stream.peek();
-    if (!t) break;
-    if (t.kind === TokenKind.Ident && t.name !== undefined && CSS_LINE_STYLES.has(t.name)) {
-      if (style !== null) return null;
-      style = t.name;
-      stream.consume();
-      continue;
-    }
-    if (width === null) {
-      const w = consumeDimensionLike(stream);
-      if (w !== null) {
-        width = w;
-        continue;
-      }
-    }
-    if (color === null) {
-      const c = consumeColor(stream);
-      if (c !== null) {
-        color = c;
-        continue;
-      }
-    }
-    return null;
-  }
-
-  if (width === null && style === null && color === null) return null;
+  const attrs = parseEdgeAttrs(tokens);
+  if (attrs === null) return null;
+  const { width, style, color } = attrs;
 
   const out: Dict<any> = {};
   const startMap = EDGE_MAP[startEdge];

@@ -35,7 +35,7 @@ export default class StyleSheet implements Sheet {
   }
 
   constructor(
-    options: SheetConstructorArgs = EMPTY_OBJECT as object,
+    options: SheetConstructorArgs = EMPTY_OBJECT,
     names?: NamesAllocationMap | undefined
   ) {
     this.options = {
@@ -43,7 +43,7 @@ export default class StyleSheet implements Sheet {
       ...options,
     };
 
-    this.names = new Map(names as NamesAllocationMap);
+    this.names = new Map(names);
     this.server = !!options.isServer;
 
     // We rehydrate only once and use the sheet that is created first

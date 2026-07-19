@@ -29,7 +29,7 @@ import type {
 } from '../types';
 import { NodeKind, type Root, type TemplateValue } from '../parser/ast';
 import { evaluateForFastPath, type FastPathFragment } from '../parser/compile';
-import { getSource } from '../parser/source';
+import { getSource, Source } from '../parser/source';
 import { themeValue } from '../utils/themePath';
 import { tracePostAttr, type PostAttrsPlan } from '../utils/tracePostAttrs';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
@@ -175,20 +175,7 @@ function resolveContext<Props extends BaseObject>(
         )
       : attrDef;
 
-    const resolvedDict = resolvedAttrDef as Dict<unknown>;
-    for (const key in resolvedDict) {
-      if (key === 'className') {
-        context.className = joinStrings(context.className, resolvedDict[key] as string);
-      } else if (key === 'style') {
-        context.style = { ...context.style, ...(resolvedDict[key] as React.CSSProperties) };
-      } else if (!(key in props && (props as Dict<unknown>)[key] === undefined)) {
-        // Apply attr value unless the user explicitly passed undefined for this
-        // prop, which signals intent to reset the value. Cast at the
-        // assignment site since attrs intentionally add arbitrary keys to
-        // the resolved context.
-        (context as unknown as Dict<unknown>)[key] = resolvedDict[key];
-      }
-    }
+    mergeAttrDict(context, props, resolvedAttrDef as Dict<unknown>);
   }
 
   if ('className' in props && typeof props.className === 'string') {
@@ -278,7 +265,14 @@ function findBaseDecl(
  * Native fully removes the decl from the compiled style object; web
  * relies on the inline-style override. Documented asymmetry.
  */
-function mergePostAttrsResult<Props extends BaseObject>(
+/**
+ * Merge an attrs-resolved dict into the execution context: `className` joins,
+ * `style` shallow-merges, and every other key overwrites unless the user
+ * explicitly passed `undefined` for it (which signals intent to reset the
+ * value). The final `else` casts at the assignment site since attrs
+ * intentionally add arbitrary keys to the resolved context.
+ */
+function mergeAttrDict<Props extends BaseObject>(
   context: React.HTMLAttributes<Element> & ExecutionContext & Props,
   props: ExecutionProps & Props,
   resolved: Dict<unknown>
@@ -310,7 +304,7 @@ function applyPostAttrsWeb<Props extends BaseObject>(
   // its callback at runtime (the fallback path).
   let lazyState:
     | {
-        source: ReturnType<typeof getSource>;
+        source: Source;
         ast: Root;
         filled: ReadonlyArray<string> | null | undefined;
       }
@@ -326,7 +320,7 @@ function applyPostAttrsWeb<Props extends BaseObject>(
     planIdx++;
 
     if (plan !== null && plan !== undefined) {
-      mergePostAttrsResult(context, props, plan.output);
+      mergeAttrDict(context, props, plan.output);
       if (plan.popped !== null) {
         if (popOverrides === null) popOverrides = {};
         plan.popped.forEach(key => {
@@ -349,9 +343,14 @@ function applyPostAttrsWeb<Props extends BaseObject>(
     if (astAccessor === null) {
       const ensureFilled = (): ReadonlyArray<string> | null => {
         if (state.filled !== undefined) return state.filled as ReadonlyArray<string> | null;
-        const src = state.source!;
-        const buf: string[] = new Array(src.interpolations.length);
-        const fragBuf: (FastPathFragment | null)[] = new Array(src.interpolations.length);
+        const src = state.source;
+        // Push-fill to keep these PACKED_ELEMENTS; `new Array(n)` stays
+        // HOLEY_ELEMENTS and infects the IC for `evaluateForFastPath`.
+        const n = src.interpolations.length;
+        const buf: string[] = [];
+        for (let i = 0; i < n; i++) buf.push('');
+        const fragBuf: (FastPathFragment | null)[] = [];
+        for (let i = 0; i < n; i++) fragBuf.push(null);
         state.filled = evaluateForFastPath(
           src,
           context as ExecutionContext,
@@ -397,7 +396,7 @@ function applyPostAttrsWeb<Props extends BaseObject>(
     const resolved = (
       attr as (p: ExecutionContext & Props, a: CompiledAst) => ExecutionProps & Partial<Props>
     )({ ...context }, astAccessor);
-    mergePostAttrsResult(context, props, resolved as Dict<unknown>);
+    mergeAttrDict(context, props, resolved as Dict<unknown>);
   }
 
   return popOverrides;

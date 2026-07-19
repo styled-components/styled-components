@@ -4,6 +4,7 @@ import {
   evaluateForFastPath,
   FastPathFragment,
   fillAst,
+  hasAnyFragment,
 } from '../parser/compile';
 import type { Source } from '../parser/source';
 import { getSource, synthesizeSourceForRuleSet } from '../parser/source';
@@ -107,7 +108,7 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
         // Pre-fill via push so V8 keeps these PACKED_ELEMENTS. `new
         // Array(n)` creates HOLEY_ELEMENTS even after every slot is
         // overwritten, which infects the IC for the per-slot reads in
-        // `evaluateForFastPath` and the `fragmentsBuffer` scan below.
+        // `evaluateForFastPath` and the `hasAnyFragment` scan.
         // See feedback_v8_class_vs_struct_empirical / GroupedTag note
         // in AGENTS.md.
         if (this.filledBuffer === undefined) {
@@ -130,14 +131,7 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
           this.fragmentsBuffer
         );
         if (filled !== null) {
-          let hasFragments = false;
-          for (let i = 0; i < this.fragmentsBuffer.length; i++) {
-            if (this.fragmentsBuffer[i] !== null) {
-              hasFragments = true;
-              break;
-            }
-          }
-          fragments = hasFragments ? this.fragmentsBuffer : null;
+          fragments = hasAnyFragment(this.fragmentsBuffer) ? this.fragmentsBuffer : null;
           interpKey = buildInterpKey(filled, fragments);
           const cached = this.interpKeyCache && this.interpKeyCache.get(interpKey);
           if (cached !== undefined) return cached;

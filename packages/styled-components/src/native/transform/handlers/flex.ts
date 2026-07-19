@@ -195,7 +195,7 @@ const ITEMS_SELF_KEYWORDS = new Set([
 const OVERFLOW_POSITION = new Set(['safe', 'unsafe']);
 const BASELINE_QUALIFIER = new Set(['first', 'last']);
 
-function readItemsKeyword(stream: TokenStream): string | null {
+function readAlignKeyword(stream: TokenStream, allowed: ReadonlySet<string>): string | null {
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident) return null;
   const name = t.name!;
@@ -204,6 +204,8 @@ function readItemsKeyword(stream: TokenStream): string | null {
     const next = stream.consume();
     if (!next || next.kind !== TokenKind.Ident) return null;
     const nextName = next.name!;
+    // `auto` must stay disallowed after `safe`/`unsafe`, so this checks
+    // against ITEMS_SELF_KEYWORDS regardless of `allowed`.
     if (!ITEMS_SELF_KEYWORDS.has(nextName)) return null;
     if (__DEV__) {
       warnOnce(
@@ -228,8 +230,12 @@ function readItemsKeyword(stream: TokenStream): string | null {
     return 'baseline';
   }
 
-  if (!ITEMS_SELF_KEYWORDS.has(name)) return null;
+  if (!allowed.has(name)) return null;
   return SELF_POSITION_NORMALIZE[name] ?? name;
+}
+
+function readItemsKeyword(stream: TokenStream): string | null {
+  return readAlignKeyword(stream, ITEMS_SELF_KEYWORDS);
 }
 
 /**
@@ -262,40 +268,7 @@ export function placeItemsShorthand(tokens: Token[]): Dict<any> | null {
 const SELF_KEYWORDS_WITH_AUTO = new Set([...ITEMS_SELF_KEYWORDS, 'auto']);
 
 function readSelfKeyword(stream: TokenStream): string | null {
-  const t = stream.consume();
-  if (!t || t.kind !== TokenKind.Ident) return null;
-  const name = t.name!;
-
-  if (OVERFLOW_POSITION.has(name)) {
-    const next = stream.consume();
-    if (!next || next.kind !== TokenKind.Ident) return null;
-    const nextName = next.name!;
-    if (!ITEMS_SELF_KEYWORDS.has(nextName)) return null;
-    if (__DEV__) {
-      warnOnce(
-        'native-align-overflow-position-dropped',
-        '`safe` and `unsafe` alignment prefixes are ignored on React Native because Yoga has no overflow-alignment control. The alignment value still applies.',
-        name
-      );
-    }
-    return SELF_POSITION_NORMALIZE[nextName] ?? nextName;
-  }
-
-  if (BASELINE_QUALIFIER.has(name)) {
-    const next = stream.consume();
-    if (!next || next.kind !== TokenKind.Ident || next.name !== 'baseline') return null;
-    if (__DEV__) {
-      warnOnce(
-        'native-align-baseline-qualifier-dropped',
-        '`first baseline` and `last baseline` both map to `baseline` on React Native because iOS and Android do not expose first/last baseline alignment.',
-        name
-      );
-    }
-    return 'baseline';
-  }
-
-  if (!SELF_KEYWORDS_WITH_AUTO.has(name)) return null;
-  return SELF_POSITION_NORMALIZE[name] ?? name;
+  return readAlignKeyword(stream, SELF_KEYWORDS_WITH_AUTO);
 }
 
 export function placeSelfShorthand(tokens: Token[]): Dict<any> | null {

@@ -11,6 +11,21 @@
 
 import * as $ from '../../utils/charCodes';
 
+/**
+ * CSS Values 4 absolute-length ratios, anchored at 1in === 96px; RN dp
+ * === CSS px so no device-pixel-ratio multiply. Shared by every native
+ * Length-token fold (font metrics, scroll-timeline range offsets).
+ */
+export const ABSOLUTE_LENGTH_PX_PER_UNIT: Record<string, number> = {
+  px: 1,
+  in: 96,
+  cm: 96 / 2.54,
+  mm: 96 / 25.4,
+  q: 96 / (25.4 * 4),
+  pt: 96 / 72,
+  pc: 16,
+};
+
 const UNITLESS_NUMERIC_PROPS = new Set([
   'opacity',
   'flex',

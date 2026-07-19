@@ -325,6 +325,16 @@ function canUseNativeDriver(prop: string): boolean {
   return NATIVE_DRIVER_PROPS.has(prop);
 }
 
+/** Native-driver eligibility for a full keyframe set: every declared prop across every frame must qualify. */
+function framesAllowNativeDriver(frames: NormalizedFrame[]): boolean {
+  for (const p of frames) {
+    for (const k in p.decls) {
+      if (!canUseNativeDriver(k)) return false;
+    }
+  }
+  return true;
+}
+
 // Baked-curve timings must drive progress linearly; RN defaults to easeInOut.
 const LINEAR_EASING = (t: number): number => t;
 
@@ -1604,6 +1614,45 @@ function additiveCombineTransform(base: any, frame: any): any {
   return out;
 }
 
+/**
+ * Collect a single property's explicit keyframe values across `frames`,
+ * additively combining with the underlying value where composition
+ * requires it, then synthesize base-only offset-0/1 endpoints (if
+ * missing and a base value exists) and sort by offset. Shared by both
+ * the `transform` and scalar branches of `buildKeyframeInterpolations`,
+ * which differ only in their `combine` function.
+ */
+function collectFrameEntries(
+  frames: NormalizedFrame[],
+  prop: string,
+  baseVal: any,
+  isAdditive: boolean,
+  combine: (base: any, frame: any) => any
+): Array<{ offset: number; value: any; easing?: EasingDescriptor }> {
+  const out: Array<{ offset: number; value: any; easing?: EasingDescriptor }> = [];
+  for (let i = 0; i < frames.length; i++) {
+    if (frames[i].decls[prop] !== undefined) {
+      const raw = frames[i].decls[prop];
+      const value = isAdditive && baseVal !== undefined ? combine(baseVal, raw) : raw;
+      const entry: { offset: number; value: any; easing?: EasingDescriptor } = {
+        offset: frames[i].offset,
+        value,
+      };
+      const frameEasing = frames[i].easing;
+      if (frameEasing) entry.easing = frameEasing;
+      out.push(entry);
+    }
+  }
+  if (baseVal !== undefined) {
+    const has0 = out.some(f => f.offset === 0);
+    const has1 = out.some(f => f.offset === 1);
+    if (!has0) out.push({ offset: 0, value: baseVal });
+    if (!has1) out.push({ offset: 1, value: baseVal });
+  }
+  out.sort((a, b) => a.offset - b.offset);
+  return out;
+}
+
 function buildKeyframeInterpolations(
   progress: any,
   frames: NormalizedFrame[],
@@ -1631,33 +1680,18 @@ function buildKeyframeInterpolations(
 
   for (const prop of allProps) {
     if (prop === 'transform') {
-      const framesByOffset: Array<{ offset: number; value: any; easing?: EasingDescriptor }> = [];
       const base0 = baseValues ? baseValues[prop] : undefined;
-      for (let i = 0; i < frames.length; i++) {
-        if (frames[i].decls[prop] !== undefined) {
-          const raw = frames[i].decls[prop];
-          // Additive composition: combine base transform with frame
-          // transform component-by-component. Synthetic offset 0/1
-          // entries below stay base-only so the underlying value is
-          // visible at endpoints with no explicit keyframe.
-          const value =
-            isAdditive && base0 !== undefined ? additiveCombineTransform(base0, raw) : raw;
-          const entry: { offset: number; value: any; easing?: EasingDescriptor } = {
-            offset: frames[i].offset,
-            value,
-          };
-          const frameEasing = frames[i].easing;
-          if (frameEasing) entry.easing = frameEasing;
-          framesByOffset.push(entry);
-        }
-      }
-      if (base0 !== undefined) {
-        const has0 = framesByOffset.some(f => f.offset === 0);
-        const has1 = framesByOffset.some(f => f.offset === 1);
-        if (!has0) framesByOffset.push({ offset: 0, value: base0 });
-        if (!has1) framesByOffset.push({ offset: 1, value: base0 });
-      }
-      framesByOffset.sort((a, b) => a.offset - b.offset);
+      // Additive composition combines base transform with frame
+      // transform component-by-component; synthesized offset-0/1
+      // entries stay base-only so the underlying value is visible at
+      // endpoints with no explicit keyframe.
+      const framesByOffset = collectFrameEntries(
+        frames,
+        prop,
+        base0,
+        isAdditive,
+        additiveCombineTransform
+      );
 
       if (framesByOffset.length < 2) continue;
 
@@ -1712,33 +1746,12 @@ function buildKeyframeInterpolations(
       const values: Array<{ offset: number; value: any }> = [];
       const easings: Array<EasingDescriptor | undefined> = [];
 
-      const collected: Array<{ offset: number; value: any; easing?: EasingDescriptor }> = [];
+      // Additive composition adds explicit keyframe values on top of
+      // the underlying value. Synthesized offset-0/1 endpoints remain
+      // base-only (base + 0 = base), preserving the documented
+      // "underlying value seen at endpoints" semantics.
       const baseVal = baseValues ? baseValues[prop] : undefined;
-      for (let i = 0; i < frames.length; i++) {
-        if (frames[i].decls[prop] !== undefined) {
-          // Additive composition: explicit keyframe values are added
-          // on top of the underlying value. Synthetic offset 0/1
-          // endpoints below remain base-only (base + 0 = base), which
-          // preserves the documented "underlying value seen at
-          // endpoints" semantics.
-          const raw = frames[i].decls[prop];
-          const value = isAdditive && baseVal !== undefined ? additiveCombine(baseVal, raw) : raw;
-          const entry: { offset: number; value: any; easing?: EasingDescriptor } = {
-            offset: frames[i].offset,
-            value,
-          };
-          const frameEasing = frames[i].easing;
-          if (frameEasing) entry.easing = frameEasing;
-          collected.push(entry);
-        }
-      }
-      if (baseVal !== undefined) {
-        const has0 = collected.some(f => f.offset === 0);
-        const has1 = collected.some(f => f.offset === 1);
-        if (!has0) collected.push({ offset: 0, value: baseVal });
-        if (!has1) collected.push({ offset: 1, value: baseVal });
-      }
-      collected.sort((a, b) => a.offset - b.offset);
+      const collected = collectFrameEntries(frames, prop, baseVal, isAdditive, additiveCombine);
 
       if (collected.length < 2) continue;
 
@@ -1878,6 +1891,16 @@ function startKeyframeAnimation(
       useNativeDriver: useNativeDriverOnHost,
     });
 
+  /** Zero-duration timing that snaps `animS.progress` straight to `toValue`, optionally after `delay`. */
+  const snap = (toValue: number, delay = 0) =>
+    Animated.timing(animS.progress, {
+      toValue,
+      duration: 0,
+      delay,
+      easing: LINEAR_EASING,
+      useNativeDriver: useNativeDriverOnHost,
+    });
+
   /**
    * Build one iteration body suitable for `Animated.loop`. Forward
    * iterations pass through; reverse iterations are wrapped in a
@@ -1890,16 +1913,7 @@ function startKeyframeAnimation(
   const loopableIter = (dur: number): any => {
     const timing = isReverse ? makeReverse(dur, 0) : makeForward(dur, 0);
     if (!isReverse) return timing;
-    return Animated.sequence([
-      Animated.timing(animS.progress, {
-        toValue: 1,
-        duration: 0,
-        delay: 0,
-        easing: LINEAR_EASING,
-        useNativeDriver: useNativeDriverOnHost,
-      }),
-      timing,
-    ]);
+    return Animated.sequence([snap(1), timing]);
   };
 
   /**
@@ -1916,17 +1930,7 @@ function startKeyframeAnimation(
     if (!firstIsReverseSense) {
       return Animated.sequence([makeForward(dur, 0), makeReverse(dur, 0)]);
     }
-    return Animated.sequence([
-      Animated.timing(animS.progress, {
-        toValue: 1,
-        duration: 0,
-        delay: 0,
-        easing: LINEAR_EASING,
-        useNativeDriver: useNativeDriverOnHost,
-      }),
-      makeReverse(dur, 0),
-      makeForward(dur, 0),
-    ]);
+    return Animated.sequence([snap(1), makeReverse(dur, 0), makeForward(dur, 0)]);
   };
 
   let body: any;
@@ -1965,13 +1969,7 @@ function startKeyframeAnimation(
       // iterations; insert a 0-duration snap back to the cycle start
       // only for the native forward case.
       const needsNativeLoopRestartSnap = useNativeDriverOnHost && !isReverse;
-      const snapToLoopStart = Animated.timing(animS.progress, {
-        toValue: 0,
-        duration: 0,
-        delay: 0,
-        easing: LINEAR_EASING,
-        useNativeDriver: useNativeDriverOnHost,
-      });
+      const snapToLoopStart = snap(0);
       body = needsNativeLoopRestartSnap
         ? Animated.sequence([partial, snapToLoopStart, loopBody])
         : Animated.sequence([partial, loopBody]);
@@ -2022,19 +2020,7 @@ function startKeyframeAnimation(
 
     if (iterCount === Infinity) {
       const looped = Animated.loop(pair);
-      body =
-        delay > 0
-          ? Animated.sequence([
-              Animated.timing(animS.progress, {
-                toValue: initialProgress,
-                duration: 0,
-                delay,
-                easing: LINEAR_EASING,
-                useNativeDriver: useNativeDriverOnHost,
-              }),
-              looped,
-            ])
-          : looped;
+      body = delay > 0 ? Animated.sequence([snap(initialProgress, delay), looped]) : looped;
     } else {
       const fullPairs = Math.floor(iterCount / 2);
       const remainder = iterCount - fullPairs * 2;
@@ -2043,15 +2029,7 @@ function startKeyframeAnimation(
 
       if (fullPairs > 0) {
         if (delay > 0) {
-          parts.push(
-            Animated.timing(animS.progress, {
-              toValue: initialProgress,
-              duration: 0,
-              delay,
-              easing: LINEAR_EASING,
-              useNativeDriver: useNativeDriverOnHost,
-            })
-          );
+          parts.push(snap(initialProgress, delay));
           delayConsumed = true;
         }
         parts.push(fullPairs === 1 ? pair : Animated.loop(pair, { iterations: fullPairs }));
@@ -2104,13 +2082,7 @@ function startKeyframeAnimation(
               // 0-duration delay-only timing so `Animated.loop` runs
               // after the requested delay. `Animated.loop` doesn't
               // expose its own delay parameter.
-              Animated.timing(animS.progress, {
-                toValue: initialProgress,
-                duration: 0,
-                delay,
-                easing: LINEAR_EASING,
-                useNativeDriver: useNativeDriverOnHost,
-              }),
+              snap(initialProgress, delay),
               Animated.loop(inner, {
                 iterations: iters === Infinity ? -1 : iters,
               }),
@@ -2129,15 +2101,7 @@ function startKeyframeAnimation(
           parts.push(isReverse ? makeReverse(duration, delay) : makeForward(duration, delay));
         } else {
           if (delay > 0) {
-            parts.push(
-              Animated.timing(animS.progress, {
-                toValue: initialProgress,
-                duration: 0,
-                delay,
-                easing: LINEAR_EASING,
-                useNativeDriver: useNativeDriverOnHost,
-              })
-            );
+            parts.push(snap(initialProgress, delay));
           }
           parts.push(
             Animated.loop(loopableIter(duration), {
@@ -2276,18 +2240,7 @@ function applyAnimations(
       // Native-driver eligibility decides which offset pair drives the
       // progress node, so compute it before building (see the
       // ScrollTimelineEntry dual-pair note).
-      let canNative = true;
-      if (frames !== null) {
-        for (const p of frames) {
-          for (const k in p.decls) {
-            if (!canUseNativeDriver(k)) {
-              canNative = false;
-              break;
-            }
-          }
-          if (!canNative) break;
-        }
-      }
+      const canNative = frames !== null ? framesAllowNativeDriver(frames) : true;
       const node =
         target !== null
           ? buildScrollProgressNode(desc, target.entry, target.axis, viewSubject, canNative)
@@ -2382,16 +2335,7 @@ function applyAnimations(
       animS.prevPlayState = desc.playState;
 
       // Determine native driver eligibility
-      let canNative = true;
-      for (const p of frames) {
-        for (const k in p.decls) {
-          if (!canUseNativeDriver(k)) {
-            canNative = false;
-            break;
-          }
-        }
-        if (!canNative) break;
-      }
+      const canNative = framesAllowNativeDriver(frames);
 
       const result = buildKeyframeInterpolations(
         animS.progress,
@@ -2452,16 +2396,7 @@ function applyAnimations(
           }
         } else if (desc.playState === 'running' && !animS.handle && !animS.finished) {
           // Resume from current progress
-          let canNative = true;
-          for (const p of frames) {
-            for (const k in p.decls) {
-              if (!canUseNativeDriver(k)) {
-                canNative = false;
-                break;
-              }
-            }
-            if (!canNative) break;
-          }
+          const canNative = framesAllowNativeDriver(frames);
           startKeyframeAnimation(scratch, animS, desc, canNative, onAnimationEnd);
         }
         animS.prevPlayState = desc.playState;
@@ -2553,8 +2488,8 @@ const animatedAdapter: AnimationAdapter = {
     if (debugEnabled) {
       dbg(
         'render',
-        hasTransition ? `transitions=${compiled.transitions!.length}` : '',
-        hasAnimation ? `animations=${compiled.animations!.length}` : '',
+        compiled.transitions ? `transitions=${compiled.transitions.length}` : '',
+        compiled.animations ? `animations=${compiled.animations.length}` : '',
         hasStarting ? 'starting' : '',
         `baseKeys=${resolvedBaseValues ? Object.keys(resolvedBaseValues).join(',') : '∅'}`,
         `reduceMotion=${env.media.reduceMotion}`
@@ -2564,17 +2499,17 @@ const animatedAdapter: AnimationAdapter = {
     const firstMount = !scratch.mounted;
     if (firstMount) scratch.mounted = true;
     let resolvedStartingStyle: Dict<any> | undefined;
-    if (firstMount && hasStarting) {
+    if (firstMount && hasStarting && compiled.startingStyle) {
       resolvedStartingStyle = compiled.startingStyleResolvers
-        ? applyResolvers(compiled.startingStyle!, compiled.startingStyleResolvers, env)
+        ? applyResolvers(compiled.startingStyle, compiled.startingStyleResolvers, env)
         : compiled.startingStyle;
     }
 
     let outStyle = resolved;
-    if (hasTransition) {
+    if (hasTransition && compiled.transitions) {
       outStyle = applyTransitions(
         scratch,
-        compiled.transitions!,
+        compiled.transitions,
         resolved,
         resolvedBaseValues,
         env.media.reduceMotion,

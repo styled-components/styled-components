@@ -1,6 +1,6 @@
 import { getAnchorRect } from '../../anchorRegistry';
 import { warnOnce } from '../dev';
-import { tokenize, tokenizeFunctionArgs } from '../tokenize';
+import { tokenize } from '../tokenize';
 import { Token, TokenKind } from '../tokens';
 import type { ResolveEnv, Resolver } from './resolvers';
 

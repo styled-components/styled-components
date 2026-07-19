@@ -38,6 +38,18 @@ export interface FastPathFragment {
 }
 
 /**
+ * True when any slot in a fast-path fragments buffer resolved to a fragment.
+ * A plain for-loop, not `.some()`: this runs on the per-render fast path and
+ * must stay monomorphic so V8 inlines it at each call site.
+ */
+export function hasAnyFragment(fragments: (FastPathFragment | null)[]): boolean {
+  for (let i = 0; i < fragments.length; i++) {
+    if (fragments[i] !== null) return true;
+  }
+  return false;
+}
+
+/**
  * Resolve `Source` slots into a `string[]`. Dispatches on pre-classified
  * `kinds` so the hot path skips per-slot typeof checks.
  *

@@ -398,53 +398,33 @@ export interface INativeStyleConstructor<Props extends BaseObject> {
   new (rules: RuleSet<Props>): INativeStyle<Props>;
 }
 
+type ConditionalKind =
+  | 'media'
+  | 'container'
+  | 'supports'
+  | 'pseudo'
+  | 'attr'
+  | 'combinator'
+  | 'nthChild'
+  | 'has';
+
+interface ConditionalEntry<T extends ConditionalKind = ConditionalKind> {
+  type: T;
+  condition: string;
+  containerName?: string;
+  attribute?: string;
+  attrValue?: string;
+  combinator?: 'descendant' | 'child' | 'adjacent-sibling' | 'general-sibling';
+  styles: object;
+}
+
 interface CompileOutput {
   base: object;
-  conditional: Array<{
-    type:
-      | 'media'
-      | 'container'
-      | 'supports'
-      | 'pseudo'
-      | 'attr'
-      | 'combinator'
-      | 'nthChild'
-      | 'has';
-    condition: string;
-    containerName?: string;
-    attribute?: string;
-    attrValue?: string;
-    combinator?: 'descendant' | 'child' | 'adjacent-sibling' | 'general-sibling';
-    styles: object;
-  }>;
+  conditional: Array<ConditionalEntry>;
   /** Subset of `conditional` minus pseudo-bearing entries. */
-  nonPseudoEntries: Array<{
-    type: 'media' | 'container' | 'supports' | 'attr' | 'combinator' | 'nthChild' | 'has';
-    condition: string;
-    containerName?: string;
-    attribute?: string;
-    attrValue?: string;
-    combinator?: 'descendant' | 'child' | 'adjacent-sibling' | 'general-sibling';
-    styles: object;
-  }>;
+  nonPseudoEntries: Array<ConditionalEntry<Exclude<ConditionalKind, 'pseudo'>>>;
   /** Subset of `conditional` containing only pseudo-bearing entries. */
-  pseudoEntries: Array<{
-    type:
-      | 'media'
-      | 'container'
-      | 'supports'
-      | 'pseudo'
-      | 'attr'
-      | 'combinator'
-      | 'nthChild'
-      | 'has';
-    condition: string;
-    containerName?: string;
-    attribute?: string;
-    attrValue?: string;
-    combinator?: 'descendant' | 'child' | 'adjacent-sibling' | 'general-sibling';
-    styles: object;
-  }>;
+  pseudoEntries: Array<ConditionalEntry>;
   /** `true` when any conditional bucket carries a pseudo-state gate. */
   hasPseudo: boolean;
   keyframes: Array<{

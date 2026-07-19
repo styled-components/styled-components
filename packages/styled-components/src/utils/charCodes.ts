@@ -62,3 +62,18 @@ export const UPPER_TO_LOWER = 32;
 export function isWS(c: number): boolean {
   return c === SPACE || c === TAB || c === LF || c === CR;
 }
+
+/**
+ * Inline-friendly identifier-continuation predicate: matches ASCII
+ * letters, digits, `-`, and `_`. Shared by the selector/component-id
+ * char-scanning loops in the parser and native selector classifiers.
+ */
+export function isIdentChar(c: number): boolean {
+  return (
+    (c >= DIGIT_0 && c <= DIGIT_9) ||
+    (c >= UPPER_A && c <= UPPER_Z) ||
+    (c >= LOWER_A && c <= LOWER_Z) ||
+    c === HYPHEN ||
+    c === UNDERSCORE
+  );
+}

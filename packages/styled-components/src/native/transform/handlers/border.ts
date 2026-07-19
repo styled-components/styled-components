@@ -63,30 +63,64 @@ function normalizeNativeBorderStyle(name: string): Dict<any> | null {
 }
 
 /**
- * `border: <width> || <style> || <color>`; order-agnostic composite.
- * v7 fix vs. CSSTN: `border: none` now emits `borderStyle: 'none'`
- * (not `'solid'`), matching web.
+ * Consumes an already-matched style token from `stream` and returns its
+ * name, or returns `null` (without consuming) when `t` isn't a style
+ * token for this shorthand. Shared by `border` and `outline`, which
+ * differ only in which style keywords they accept and whether a match
+ * warns.
  */
-export function borderShorthand(tokens: Token[]): Dict<any> | null {
-  if (
-    tokens.length === 1 &&
-    tokens[0].kind === TokenKind.Ident &&
-    (tokens[0].name === 'none' || tokens[0].name === 'hidden')
-  ) {
-    return { borderWidth: 0, borderStyle: 'none', borderColor: 'transparent' };
+type StyleMatcher = (t: Token, stream: TokenStream) => string | null;
+
+function matchBorderStyle(t: Token, stream: TokenStream): string | null {
+  if (t.kind === TokenKind.Ident && CSS_LINE_STYLES.has(t.name!)) {
+    stream.consume();
+    return t.name!;
   }
-  const stream = new TokenStream(withoutSlashes(tokens));
+  return null;
+}
+
+function matchOutlineStyle(t: Token, stream: TokenStream): string | null {
+  if (t.kind === TokenKind.Ident) {
+    const name = t.name!;
+    const webOnly = WEB_ONLY_OUTLINE_STYLES.has(name);
+    if (webOnly || RN_OUTLINE_STYLES.has(name)) {
+      stream.consume();
+      if (__DEV__ && webOnly && !__NATIVE_WEB__) {
+        warnOnce(
+          'native-outline-style',
+          '`outline-style: ' +
+            name +
+            "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', or 'dashed'.",
+          name
+        );
+      }
+      return name;
+    }
+  }
+  return null;
+}
+
+/**
+ * Order-agnostic `width || style || color` scan shared by `border` and
+ * `outline`. `matchStyle` encapsulates the per-shorthand style keyword
+ * set (and any warn side effect on match).
+ */
+function consumeWidthStyleColor(
+  stream: TokenStream,
+  matchStyle: StyleMatcher
+): { width: Token | null; style: string | null; color: Token | null } | null {
   let width: Token | null = null;
   let style: string | null = null;
   let color: Token | null = null;
 
   while (!stream.eof()) {
     const t = stream.peek()!;
-    if (t.kind === TokenKind.Ident && CSS_LINE_STYLES.has(t.name!)) {
-      if (style !== null) return null;
-      style = t.name!;
-      stream.consume();
-      continue;
+    if (style === null) {
+      const matched = matchStyle(t, stream);
+      if (matched !== null) {
+        style = matched;
+        continue;
+      }
     }
     if (width === null) {
       const w = consumeDimensionLike(stream);
@@ -102,8 +136,29 @@ export function borderShorthand(tokens: Token[]): Dict<any> | null {
         continue;
       }
     }
-    return null; // unrecognized token
+    return null;
   }
+
+  return { width, style, color };
+}
+
+/**
+ * `border: <width> || <style> || <color>`; order-agnostic composite.
+ * v7 fix vs. CSSTN: `border: none` now emits `borderStyle: 'none'`
+ * (not `'solid'`), matching web.
+ */
+export function borderShorthand(tokens: Token[]): Dict<any> | null {
+  if (
+    tokens.length === 1 &&
+    tokens[0].kind === TokenKind.Ident &&
+    (tokens[0].name === 'none' || tokens[0].name === 'hidden')
+  ) {
+    return { borderWidth: 0, borderStyle: 'none', borderColor: 'transparent' };
+  }
+  const stream = new TokenStream(withoutSlashes(tokens));
+  const parsed = consumeWidthStyleColor(stream, matchBorderStyle);
+  if (parsed === null) return null;
+  const { width, style, color } = parsed;
 
   if (!__NATIVE_WEB__ && style !== null) {
     const nativeStyle = normalizeNativeBorderStyle(style);
@@ -147,47 +202,9 @@ export function outlineShorthand(tokens: Token[]): Dict<any> | null {
     }
   }
   const stream = new TokenStream(withoutSlashes(tokens));
-  let width: Token | null = null;
-  let style: string | null = null;
-  let color: Token | null = null;
-
-  while (!stream.eof()) {
-    const t = stream.peek()!;
-    if (t.kind === TokenKind.Ident) {
-      const name = t.name!;
-      const webOnly = WEB_ONLY_OUTLINE_STYLES.has(name);
-      if (webOnly || RN_OUTLINE_STYLES.has(name)) {
-        if (style !== null) return null;
-        style = name;
-        stream.consume();
-        if (__DEV__ && webOnly && !__NATIVE_WEB__) {
-          warnOnce(
-            'native-outline-style',
-            '`outline-style: ' +
-              name +
-              "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', or 'dashed'.",
-            name
-          );
-        }
-        continue;
-      }
-    }
-    if (width === null) {
-      const w = consumeDimensionLike(stream);
-      if (w !== null) {
-        width = w;
-        continue;
-      }
-    }
-    if (color === null) {
-      const c = consumeColor(stream);
-      if (c !== null) {
-        color = c;
-        continue;
-      }
-    }
-    return null;
-  }
+  const parsed = consumeWidthStyleColor(stream, matchOutlineStyle);
+  if (parsed === null) return null;
+  const { width, style, color } = parsed;
 
   if (width === null && style === null && color === null) return null;
   const out: Dict<any> = {};

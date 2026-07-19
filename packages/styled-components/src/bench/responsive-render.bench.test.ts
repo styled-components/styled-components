@@ -47,18 +47,27 @@ const resolveEnv = {
 const flatCompiled: NativeStyles = {
   base: { color: 'red', padding: 16 },
   conditional: [],
+  nonPseudoEntries: [],
+  pseudoEntries: [],
+  hasPseudo: false,
   keyframes: [],
 };
 
+const mediaBucket = {
+  type: 'media',
+  condition: '(min-width: 400px)',
+  styles: { padding: 32 },
+} as any;
+
 const responsiveCompiled: NativeStyles = {
   base: { color: 'red', padding: 16 },
-  conditional: [
-    {
-      type: 'media',
-      condition: '(min-width: 400px)',
-      styles: { padding: 32 },
-    } as any,
-  ],
+  conditional: [mediaBucket],
+  // Current compiled output partitions `conditional` into pseudo / non-pseudo
+  // buckets; a `@media` rule is non-pseudo, so the honor-the-bucket path reads
+  // it here. Keep this in sync with the shape `compileNative` emits.
+  nonPseudoEntries: [mediaBucket],
+  pseudoEntries: [],
+  hasPseudo: false,
   keyframes: [],
 };
 

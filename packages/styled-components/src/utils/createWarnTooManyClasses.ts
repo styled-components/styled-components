@@ -1,16 +1,15 @@
-import type { Dict } from '../types';
 import { warnOnce } from './warnOnce';
 
 export const LIMIT = 200;
 
 export default (displayName: string, componentId: string) => {
-  let generatedClasses: Dict<any> = {};
+  let generatedClasses = new Set<string>();
   let warningSeen = false;
 
   return (className: string) => {
     if (!warningSeen) {
-      generatedClasses[className] = true;
-      if (Object.keys(generatedClasses).length >= LIMIT) {
+      generatedClasses.add(className);
+      if (generatedClasses.size >= LIMIT) {
         const parsedIdString = componentId ? ` with the id of "${componentId}"` : '';
         warnOnce(
           'too-many-classes',
@@ -27,7 +26,7 @@ Example:
           componentId
         );
         warningSeen = true;
-        generatedClasses = {};
+        generatedClasses = new Set();
       }
     }
   };

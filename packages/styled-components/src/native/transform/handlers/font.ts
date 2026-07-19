@@ -5,6 +5,7 @@ import { buildResolver } from '../polyfills/resolvers';
 import { tokenToValue, withoutSlashes } from '../shorthandHelpers';
 import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
+import { ABSOLUTE_LENGTH_PX_PER_UNIT } from '../units';
 
 const FONT_STYLES = new Set(['italic', 'oblique']);
 const FONT_WEIGHTS = new Set([
@@ -23,17 +24,6 @@ const FONT_WEIGHTS = new Set([
   'normal',
 ]);
 const FONT_VARIANTS = new Set(['small-caps']);
-
-// Absolute length conversion table. 1in === 96px is the anchor; the
-// rest derive from it via the standard relations.
-const ABSOLUTE_LENGTH_PX_PER_UNIT: Record<string, number> = {
-  in: 96,
-  cm: 96 / 2.54,
-  mm: 96 / 25.4,
-  q: 96 / (25.4 * 4),
-  pt: 96 / 72,
-  pc: 16,
-};
 
 const FONT_WIDTH_KEYWORDS = new Set([
   'ultra-condensed',
@@ -340,6 +330,27 @@ function degreesOf(t: Token): number | null {
 }
 
 /**
+ * Length-token fold shared by `line-height` / `letter-spacing` /
+ * `font-size`: px / unitless pass through as-is, other absolute units
+ * fold via the shared §5.2 ratio table, and everything else (em / rem /
+ * lh / rlh / viewport / container) defers to `buildResolver` so parser
+ * acceptance tracks resolver coverage automatically.
+ */
+type LengthFold =
+  | { kind: 'value'; value: number }
+  | { kind: 'resolver'; raw: string }
+  | { kind: 'unsupported' };
+
+function foldLengthToken(t: Token): LengthFold {
+  if (t.value === undefined) return { kind: 'unsupported' };
+  if (t.unit === 'px' || t.unit === '') return { kind: 'value', value: t.value };
+  const absRatio = t.unit !== undefined ? ABSOLUTE_LENGTH_PX_PER_UNIT[t.unit] : undefined;
+  if (absRatio !== undefined) return { kind: 'value', value: t.value * absRatio };
+  if (buildResolver(t.raw) !== null) return { kind: 'resolver', raw: t.raw };
+  return { kind: 'unsupported' };
+}
+
+/**
  * `line-height` handler. Numeric multipliers and px resolve at compile
  * time; absolute lengths fold via §5.2 ratios; everything else delegates
  * to buildResolver so coverage tracks the resolver automatically. rn-web
@@ -356,10 +367,9 @@ export function lineHeightHandler(tokens: Token[]): Dict<any> | null {
 
   if (t.kind === TokenKind.Number) return { lineHeight: t.value };
   if (t.kind === TokenKind.Length) {
-    if (t.unit === 'px' || t.unit === '') return { lineHeight: t.value };
-    const absRatio = t.unit !== undefined ? ABSOLUTE_LENGTH_PX_PER_UNIT[t.unit] : undefined;
-    if (absRatio !== undefined) return { lineHeight: t.value! * absRatio };
-    if (buildResolver(t.raw) !== null) return { lineHeight: t.raw };
+    const folded = foldLengthToken(t);
+    if (folded.kind === 'value') return { lineHeight: folded.value };
+    if (folded.kind === 'resolver') return { lineHeight: folded.raw };
     if (__DEV__) {
       warnOnce(
         'native-line-height-unit-unsupported',
@@ -396,10 +406,9 @@ export function letterSpacingHandler(tokens: Token[]): Dict<any> | null {
 
   if (t.kind === TokenKind.Number) return { letterSpacing: t.value };
   if (t.kind === TokenKind.Length) {
-    if (t.unit === 'px' || t.unit === '') return { letterSpacing: t.value };
-    const absRatio = t.unit !== undefined ? ABSOLUTE_LENGTH_PX_PER_UNIT[t.unit] : undefined;
-    if (absRatio !== undefined) return { letterSpacing: t.value! * absRatio };
-    if (buildResolver(t.raw) !== null) return { letterSpacing: t.raw };
+    const folded = foldLengthToken(t);
+    if (folded.kind === 'value') return { letterSpacing: folded.value };
+    if (folded.kind === 'resolver') return { letterSpacing: folded.raw };
     if (__DEV__) {
       warnOnce(
         'native-letter-spacing-unit-unsupported',
@@ -444,13 +453,9 @@ export function fontSizeHandler(tokens: Token[]): Dict<any> | null {
 
   if (t.kind === TokenKind.Length) {
     if (t.value === undefined || t.value < 0) return null;
-    if (t.unit === 'px' || t.unit === '') return { fontSize: t.value };
-    const absRatio = t.unit !== undefined ? ABSOLUTE_LENGTH_PX_PER_UNIT[t.unit] : undefined;
-    if (absRatio !== undefined) return { fontSize: t.value * absRatio };
-    // Everything else (em / rem / lh / rlh / viewport / container)
-    // delegates to buildResolver so parser acceptance tracks resolver
-    // coverage automatically.
-    if (buildResolver(t.raw) !== null) return { fontSize: t.raw };
+    const folded = foldLengthToken(t);
+    if (folded.kind === 'value') return { fontSize: folded.value };
+    if (folded.kind === 'resolver') return { fontSize: folded.raw };
     return null;
   }
 
