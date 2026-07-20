@@ -43,7 +43,8 @@
       "react-dom": "19.2.3",
       "fast-xml-parser": ">=5.7.0",
       "postcss": ">=8.5.10",
-      "serialize-javascript": ">=7.0.5"
+      "serialize-javascript": ">=7.0.5",
+      "shell-quote": ">=1.8.4"
     }
   }
 }
