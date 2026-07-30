@@ -52,4 +52,6 @@ const remToPxPlugin: SCPlugin = {
 };
 ```
 
+Custom plugins compose with the first-party ones left to right: pass `plugins={[prefixPlugin, myPlugin]}` and `myPlugin` runs on every declaration and selector `prefixPlugin` emitted.
+
 The `name` field is required and identifies the plugin so different plugin sets across nested `<StyleSheetManager>` trees stay isolated.
