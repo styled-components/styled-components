@@ -359,6 +359,156 @@ describe('prefixPlugin', () => {
     `);
   });
 
+  describe('plugin gate', () => {
+    let warnSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      warnSpy.mockRestore();
+    });
+
+    it('does not warn for a well-formed custom plugin composed with prefixPlugin', () => {
+      const projectPrefixes = {
+        name: 'project-prefixes',
+        decl: (prop: string, value: string) =>
+          prop === 'transform-style'
+            ? [
+                { prop: '-webkit-transform-style', value },
+                { prop, value },
+              ]
+            : undefined,
+      };
+      const Comp = styled.div`
+        transform-style: preserve-3d;
+        appearance: none;
+      `;
+      render(
+        <StyleSheetManager plugins={[prefixPlugin, projectPrefixes]}>
+          <Comp />
+        </StyleSheetManager>
+      );
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('warns when a stylis middleware function is passed', () => {
+      // A named function reads as `{ name: string }`, which is how a legacy
+      // stylis middleware structurally satisfies the SCPlugin type.
+      function stylisPrefixer() {}
+      const Comp = styled.div`
+        appearance: none;
+      `;
+      render(
+        <StyleSheetManager plugins={[stylisPrefixer]}>
+          <Comp />
+        </StyleSheetManager>
+      );
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('stylis'));
+    });
+
+    it('warns when a plugin has neither rw nor decl', () => {
+      const noop = { name: 'noop-plugin' };
+      const Comp = styled.div`
+        appearance: none;
+      `;
+      render(
+        <StyleSheetManager plugins={[noop]}>
+          <Comp />
+        </StyleSheetManager>
+      );
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('noop-plugin'));
+    });
+  });
+
+  describe('composition', () => {
+    const projectPrefixes = {
+      name: 'project-prefixes',
+      decl: (prop: string, value: string) =>
+        prop === 'transform-style'
+          ? [
+              { prop: '-webkit-transform-style', value },
+              { prop, value },
+            ]
+          : undefined,
+    };
+
+    it('composes a custom prefix plugin after prefixPlugin', () => {
+      const Comp = styled.div`
+        transform-style: preserve-3d;
+        appearance: none;
+      `;
+      render(
+        <StyleSheetManager plugins={[prefixPlugin, projectPrefixes]}>
+          <Comp />
+        </StyleSheetManager>
+      );
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".b {
+          -webkit-transform-style: preserve-3d;
+          transform-style: preserve-3d;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          -ms-appearance: none;
+          appearance: none;
+        }"
+      `);
+    });
+
+    it('does not double-prefix the custom output in reverse order', () => {
+      const Comp = styled.div`
+        transform-style: preserve-3d;
+      `;
+      render(
+        <StyleSheetManager plugins={[projectPrefixes, prefixPlugin]}>
+          <Comp />
+        </StyleSheetManager>
+      );
+      // projectPrefixes emits `-webkit-transform-style` first; prefixPlugin's
+      // leading-dash passthrough must not re-prefix it.
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".b {
+          -webkit-transform-style: preserve-3d;
+          transform-style: preserve-3d;
+        }"
+      `);
+    });
+
+    it('maps later plugins over every result an earlier plugin emitted', () => {
+      // Reacts only to a form prefixPlugin produces, so the rewrite lands only
+      // when it runs after prefixPlugin.
+      const doubleWebkitBlur = {
+        name: 'double-webkit-blur',
+        decl: (prop: string, value: string) =>
+          prop === '-webkit-backdrop-filter' ? { prop, value: 'blur(8px)' } : undefined,
+      };
+      const Comp = styled.div`
+        backdrop-filter: blur(4px);
+      `;
+      render(
+        <>
+          <StyleSheetManager plugins={[prefixPlugin, doubleWebkitBlur]}>
+            <Comp />
+          </StyleSheetManager>
+          <StyleSheetManager plugins={[doubleWebkitBlur, prefixPlugin]}>
+            <Comp />
+          </StyleSheetManager>
+        </>
+      );
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".b {
+          -webkit-backdrop-filter: blur(8px);
+          backdrop-filter: blur(4px);
+        }
+        .c {
+          -webkit-backdrop-filter: blur(4px);
+          backdrop-filter: blur(4px);
+        }"
+      `);
+    });
+  });
+
   describe('scoping', () => {
     it('is opt-in per StyleSheetManager subtree', () => {
       const A = styled.div`
