@@ -67,6 +67,20 @@ Here is a quick guide to doing code contributions to the library.
 
 12. Perform a celebratory dance! :dancer:
 
+### Security updates
+
+For transitive dependency CVEs, pin the patched version in root `package.json` under `pnpm.overrides`. Do not add a root-level `dependencies` entry for packages the repo does not import directly.
+
+```json
+"pnpm": {
+  "overrides": {
+    "shell-quote": ">=1.8.4"
+  }
+}
+```
+
+Run `pnpm install`, commit the lockfile, and confirm the vulnerable version is gone. Use `>=` to match existing override entries. No changeset needed. If the package is a direct dependency of a workspace package, bump it there instead.
+
 ### How do I run the benchmarks?
 
 We have three different benchmarks: mounting a deep tree, mounting a wide tree and updating dynamic styles. Shoutout to [@necolas](https://github.com/necolas), who wrote these for `react-native-web` and whom we stole these benchmarks from.
