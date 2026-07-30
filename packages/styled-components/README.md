@@ -127,7 +127,7 @@ import { prefixPlugin } from 'styled-components/plugins';
 </StyleSheetManager>;
 ```
 
-The included prefix set targets Chrome 45, Firefox 36, Safari and iOS 9, and Edge 12, matching the browser floor for the JavaScript APIs required by React. Use a build-time transform such as PostCSS when you need to support older browsers or a different target.
+The included prefix set targets Chrome 45, Firefox 36, Safari and iOS 9, and Edge 12, matching the browser floor for the JavaScript APIs required by React. For a different set, declare both the prefixed and standard forms yourself, or write a plugin that emits the prefixes you need.
 
 The `enableVendorPrefixes` prop from v6 has been removed in favor of this plugin.
 
