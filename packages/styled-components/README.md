@@ -114,6 +114,21 @@ const Input = styled.input`
 `;
 ```
 
+### Vendor prefixes
+
+CSS is emitted unprefixed by default. To support browsers that require prefixes for CSS such as `appearance`, `user-select`, or `::placeholder`, add the opt-in `prefixPlugin` at the relevant subtree:
+
+```tsx
+import { StyleSheetManager } from 'styled-components';
+import { prefixPlugin } from 'styled-components/plugins';
+
+<StyleSheetManager plugins={[prefixPlugin]}>
+  <App />
+</StyleSheetManager>;
+```
+
+The `enableVendorPrefixes` prop from v6 has been removed in favor of this plugin.
+
 ### Animations
 
 Define `@keyframes` once, reference them across components. Names are scoped automatically.
