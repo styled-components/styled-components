@@ -150,7 +150,7 @@ const projectPrefixes: SCPlugin = {
 </StyleSheetManager>;
 ```
 
-Plugins apply left to right: a later `decl` runs on every declaration an earlier plugin emitted, so returning `undefined` on the miss path is what keeps a custom plugin cheap. Skip properties that already start with `-`, as `prefixPlugin` does, and plugins can compose in either order without double-prefixing. The full hook contract is documented under [authoring custom plugins](https://styled-components.com/docs/v7#authoring-custom-plugins).
+`SCPlugin`, `DeclResult`, `DeclTransform`, and `SelectorTransform` are exported only from `styled-components/plugins`, not the package root. Plugins apply left to right: a later `decl` runs on every declaration an earlier plugin emitted, so returning `undefined` on the miss path is what keeps a custom plugin cheap. Skip properties that already start with `-`, as `prefixPlugin` does, and plugins can compose in either order without double-prefixing. The full hook contract is documented under [authoring custom plugins](https://styled-components.com/docs/v7#authoring-custom-plugins).
 
 The `enableVendorPrefixes` prop from v6 has been removed in favor of this plugin.
 

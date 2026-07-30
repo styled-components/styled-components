@@ -147,9 +147,11 @@ export type IStyleSheetManager = React.PropsWithChildren<{
    */
   shouldForwardProp?: undefined | IStyleSheetContext['shouldForwardProp'];
   /**
-   * Plugins to apply during CSS emission. First-party plugins ship via
-   * `styled-components/plugins` (`prefixPlugin`, `rscPlugin`, `rtlPlugin`); other plugins must
-   * implement the `SCPlugin` shape (`{ name, rw?, decl? }`).
+   * Plugins to apply during CSS emission. First-party plugins and the
+   * `SCPlugin` / `DeclResult` / `DeclTransform` / `SelectorTransform` types
+   * ship only via `styled-components/plugins` (`prefixPlugin`, `rscPlugin`,
+   * `rtlPlugin`); they are not re-exported from the package root. Other
+   * plugins must implement `{ name, rw?, decl? }`.
    *
    * When nested inside another `StyleSheetManager`, omitting this prop inherits
    * the parent's plugins. Pass an empty array (`[]`) to explicitly disable

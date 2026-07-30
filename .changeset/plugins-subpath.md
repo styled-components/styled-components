@@ -34,19 +34,25 @@ Flexbox, transforms, transitions, animations, and gradients are left unprefixed,
 Custom plugins authored against the v6 stylis contract need to port to the narrower plugin interface, which exposes `rw` (selector rewrite) and `decl` (declaration rewrite) hooks; implement either or both. A hook may return one result or an array (one authored declaration or selector expands into several).
 
 ```ts
-import type { SCPlugin } from 'styled-components/plugins';
+import type {
+  DeclResult,
+  DeclTransform,
+  SCPlugin,
+  SelectorTransform,
+} from 'styled-components/plugins';
 
-// `rw` runs on every fully-resolved selector after `&` substitution and
-// namespace prepending. Return a new selector string, or an array of
-// selectors to emit one rule per entry.
+// `rw` is a `SelectorTransform`: runs on every fully-resolved selector after
+// `&` substitution and namespace prepending. Return a new selector string, or
+// an array of selectors to emit one rule per entry.
 const scopePlugin: SCPlugin = {
   name: 'scope',
   rw: selector => `.app ${selector}`,
 };
 
-// `decl` runs on every emitted `prop: value` pair (top-level decls, decl-body
-// at-rules, keyframe frames). Return `{ prop, value }` to rewrite, an array
-// to expand one declaration into several, or `void` to leave the pair unchanged.
+// `decl` is a `DeclTransform`: runs on every emitted `prop: value` pair
+// (top-level decls, decl-body at-rules, keyframe frames). Return a `DeclResult`
+// to rewrite, an array to expand one declaration into several, or `void` to
+// leave the pair unchanged.
 const remToPxPlugin: SCPlugin = {
   name: 'rem-to-px',
   decl: (prop, value) => {
