@@ -38,6 +38,14 @@ const esm = {
 const getCJS = override => ({ ...cjs, ...override });
 const getESM = override => ({ ...esm, ...override });
 
+/**
+ * `__DEV__` for the bundles that leave the decision to the consumer's bundler.
+ * The parentheses are load-bearing: substitution is textual, so a bare
+ * comparison rebinds under any tighter operator and silently inverts
+ * `!__DEV__`.
+ */
+const DEFERRED_DEV = "(process.env.NODE_ENV !== 'production')";
+
 const defaultTypescriptPlugin = typescript({
   // The build breaks if the tests are included by the typescript plugin.
   // Since un-excluding them in tsconfig.json, we must explicitly exclude them
@@ -193,7 +201,7 @@ const serverConfig = {
       __SERVER__: JSON.stringify(true),
       __NATIVE__: JSON.stringify(false),
       __NATIVE_WEB__: JSON.stringify(false),
-      __DEV__: "process.env.NODE_ENV !== 'production'",
+      __DEV__: DEFERRED_DEV,
     }),
     minifierPlugin
   ),
@@ -210,7 +218,7 @@ const browserConfig = {
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(false),
       __NATIVE_WEB__: JSON.stringify(false),
-      __DEV__: "process.env.NODE_ENV !== 'production'",
+      __DEV__: DEFERRED_DEV,
     }),
     replace({
       delimiters: ['', ''],
@@ -259,7 +267,7 @@ const nativeConfig = {
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(true),
       __NATIVE_WEB__: JSON.stringify(false),
-      __DEV__: "process.env.NODE_ENV !== 'production'",
+      __DEV__: DEFERRED_DEV,
     }),
     minifierPlugin,
   ],
@@ -274,7 +282,7 @@ const pluginsConfig = {
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(false),
       __NATIVE_WEB__: JSON.stringify(false),
-      __DEV__: "process.env.NODE_ENV !== 'production'",
+      __DEV__: DEFERRED_DEV,
     }),
     replace({
       delimiters: ['', ''],
@@ -303,7 +311,7 @@ const reanimatedConfig = {
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(true),
       __NATIVE_WEB__: JSON.stringify(false),
-      __DEV__: "process.env.NODE_ENV !== 'production'",
+      __DEV__: DEFERRED_DEV,
     }),
     minifierPlugin,
   ],
@@ -340,7 +348,7 @@ const webBridgeConfig = {
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(false),
       __NATIVE_WEB__: JSON.stringify(true),
-      __DEV__: "process.env.NODE_ENV !== 'production'",
+      __DEV__: DEFERRED_DEV,
     }),
     minifierPlugin,
   ],
