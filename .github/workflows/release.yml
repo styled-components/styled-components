@@ -6,7 +6,12 @@ on:
       - main
   workflow_dispatch:
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+# Superseding a queued or running release is safe: snapshot versions are
+# timestamped, and the surviving run announces every changeset touched since the
+# previous tag, so nothing is lost by cancelling an earlier one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   release:
