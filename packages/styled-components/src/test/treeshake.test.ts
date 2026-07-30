@@ -88,6 +88,55 @@ describe('dead-code elimination: standalone production build', () => {
   });
 });
 
+/**
+ * `__DEV__` is substituted textually, so the replacement has to be
+ * parenthesized. A bare `process.env.NODE_ENV !== 'production'` rebinds under
+ * any tighter operator: `!__DEV__` becomes `(!process.env.NODE_ENV) !==
+ * 'production'`, which is always true, so every `if (!__DEV__) return;` guard
+ * in the library inverts. That silences every warning and serves production
+ * error text in development, and neither the build nor the source-level tests
+ * can see it, because Jest defines `__DEV__` as a real boolean.
+ */
+describe('__DEV__ substitution in built output', () => {
+  const jsFiles = (dir: string) =>
+    fs
+      .readdirSync(dir)
+      .filter(file => file.endsWith('.js'))
+      .sort();
+
+  it.each(jsFiles(distDir))('leaves no rebound negation in %s', file => {
+    expect(read(file)).not.toContain('!process.env.NODE_ENV');
+  });
+
+  it.each(jsFiles(nativeDistDir))('leaves no rebound negation in native/%s', file => {
+    expect(readNative(file)).not.toContain('!process.env.NODE_ENV');
+  });
+
+  it('throws readable errors outside production', () => {
+    const { ServerStyleSheet } = require(path.join(distDir, 'styled-components.cjs.js'));
+    const sheet = new ServerStyleSheet();
+    sheet.seal();
+
+    // The catalog text, not the terse production form that only links to it.
+    expect(() => sheet.getStyleTags()).toThrow(/one off instance for each server-side render/);
+    expect(() => sheet.getStyleTags()).not.toThrow(/An error occurred\. See https/);
+  });
+
+  it('emits warnings outside production', () => {
+    const { createTheme } = require(path.join(distDir, 'styled-components.cjs.js'));
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      createTheme({ shadow: 'drop-shadow(0 0 2px' });
+
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('unbalanced parentheses');
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});
+
 describe('native build isolation', () => {
   let nativeCJS: string;
   let nativeESM: string;

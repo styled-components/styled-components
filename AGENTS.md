@@ -1,4 +1,4 @@
-NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
+NOTE: This file is the only home for these instructions. CLAUDE.md is a one-line pointer to it, intentionally a regular file rather than a symlink; leave it that way and never move content into it.
 
 ## CSS surface
 
@@ -83,10 +83,10 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - `pnpm --filter sandbox dev`: Start Next.js dev server
 - `pnpm --filter styled-components test:web`: Test web build
 - `pnpm --filter styled-components test:native`: Test React Native
-- `pnpm --filter styled-components bench`: Run all benchmarks (web + native + RSC)
-- `pnpm --filter styled-components bench:web`: Run web benchmarks (`parser-pipeline`, `parser-strategies`, `responsive`, `v6-vs-v7`). The `parser-pipeline` suite measures in-house parse+emit throughput only.
+- `pnpm --filter styled-components bench`: `bench:web` then `bench:rsc`
+- `pnpm --filter styled-components bench:web`: Every suite under `src/bench/` matched by `jest.config.bench.js` (`*.bench.test.*`, `web*.test.*`, `preprocess*.test.*`). Each file's header docblock states what it measures, so a new suite joins the run by matching one of those patterns. Do not enumerate the suites here; that list has already drifted twice.
 - `pnpm --filter styled-components bench:web:stress`: Stress benchmarks only (`src/bench/web.test.js`); uses `SC_BENCH_ITER_SCALE=0.2` and `SC_BENCH_RUNS=3` for quicker runs
-- `pnpm --filter styled-components bench:rsc`: RSC benchmarks (renderToString + dedup + React baseline)
+- `pnpm --filter styled-components bench:rsc`: `src/bench/rsc.test.tsx`, matched by `jest.config.bench-rsc.js` (node environment, `IS_RSC` server path)
 - Native render perf: use `packages/ios-benchmark` (real Hermes V1 on iOS sim). The previous in-tree native React-rendering bench was retired; `react-test-renderer` 19.2 + RN preset doesn't synchronously invoke function components, and the V8 numbers wouldn't predict Hermes anyway. Algorithm-shape benches (parser, responsive, RSC) still run via `bench:web` / `bench:rsc`.
 
 ## Profiling (Bun)

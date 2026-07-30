@@ -19,7 +19,10 @@ The `__DEV__` and `__*` build-constant scheme is load-bearing for both correctne
 
 Two entries are not plain literals:
 
-- `__DEV__` "deferred" means the bundle substitutes the string `process.env.NODE_ENV !== 'production'` rather than a literal. The consumer's bundler then folds `NODE_ENV` and DCEs the dead branch on the consumer side. Only the two standalone bundles ship a hard `true` / `false`, since they are prebuilt and minified here with no downstream bundler to defer to.
+- `__DEV__` "deferred" means the bundle substitutes the string `(process.env.NODE_ENV !== 'production')` rather than a literal. The consumer's bundler then folds `NODE_ENV` and DCEs the dead branch on the consumer side. Only the two standalone bundles ship a hard `true` / `false`, since they are prebuilt and minified here with no downstream bundler to defer to.
+
+  The parentheses are load-bearing, because substitution is textual and the replacement is an expression, not a value. Without them `if (!__DEV__) return;` emits `if (!process.env.NODE_ENV !== 'production') return;`, which parses as `(!process.env.NODE_ENV) !== 'production'` and is therefore always true. Every such guard in the library inverts: warnings never fire and errors serve their terse production text in development. Nothing catches it upstream, since Jest defines `__DEV__` as a real boolean and source-level tests never see the substituted form. `treeshake.test.ts` locks it from the other end, asserting no emitted bundle contains `!process.env.NODE_ENV` and that a built bundle really does warn and throw readable errors.
+
 - `IS_RSC` is defined in `utils/isRsc.ts` as `typeof React.createContext === 'undefined'`. Every bundle except `server` replaces that exact expression with `false` (via a zero-delimiter `replace`), which DCEs both the branch and the `import React` in that file. The `server` bundle leaves the expression as a genuine runtime check, because a server build must detect an RSC environment at request time rather than at build time.
 
 ### Build-time `__*` versus runtime `IS_BROWSER`

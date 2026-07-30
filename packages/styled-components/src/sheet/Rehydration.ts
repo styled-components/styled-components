@@ -1,5 +1,6 @@
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION, SPLITTER } from '../constants';
 import { InsertionTarget } from '../types';
+import { warnOnce } from '../utils/warnOnce';
 import { idForGroup, setGroupForId } from './GroupIDAllocator';
 import { Sheet } from './types';
 
@@ -108,6 +109,27 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
   }
 };
 
+/**
+ * A `<style>` that opts into React's `precedence` hoisting reaches the DOM
+ * under React's own attributes, without the ones {@link SELECTOR} keys on, so
+ * the rules it carries can never be adopted and get injected a second time on
+ * the client. The group markers survive inside the CSS text, which is what
+ * distinguishes our stripped styles from another library's hoisted ones.
+ */
+const warnOnUnadoptableStyles = (container: Document | ShadowRoot) => {
+  const nodes = container.querySelectorAll<HTMLStyleElement>('style[data-precedence]');
+
+  for (let i = 0, l = nodes.length; i < l; i++) {
+    if ((nodes[i].textContent ?? '').indexOf(SC_ATTR + '.g') > -1) {
+      warnOnce(
+        'rehydration-precedence-style',
+        'server-rendered styles arrived in a <style> tag React manages through `precedence`, which strips the attributes needed to adopt them, so every rule is injected again on the client. Render the tag from `ServerStyleSheet#getStyleElement()` with no `precedence` or `href` prop.'
+      );
+      return;
+    }
+  }
+};
+
 export const rehydrateSheet = (sheet: Sheet) => {
   const container = getRehydrationContainer(sheet.options.target);
   const nodes = container.querySelectorAll<HTMLStyleElement>(SELECTOR);
@@ -121,5 +143,9 @@ export const rehydrateSheet = (sheet: Sheet) => {
         node.parentNode.removeChild(node);
       }
     }
+  }
+
+  if (__DEV__) {
+    warnOnUnadoptableStyles(container);
   }
 };
