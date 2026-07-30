@@ -1,19 +1,20 @@
 /**
- * Emits per-package prerelease GitHub release notes (Markdown). Shallow clones need
- * full history (`fetch-depth: 0` in CI, or `git fetch --unshallow`) for tag and
- * ancestry queries to match real runs.
+ * Emits per-package prerelease GitHub release notes (Markdown). A pending changeset
+ * is announced when its last-change commit is not contained in the package's
+ * previous release tag, so editing a pending changeset re-announces it. Shallow
+ * clones need full history (`fetch-depth: 0` in CI, or `git fetch --unshallow`)
+ * for tag and ancestry queries to match real runs.
  */
 
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import * as changesetsGit from '@changesets/git';
 import readChangesets from '@changesets/read';
 
 import type { ChangelogOptions } from './changelog.ts';
 import changelog from './changelog.ts';
-import { createDefaultGitAdapter } from './default-git-adapter.ts';
+import { createDefaultGitAdapter, getLastChangesetCommits } from './default-git-adapter.ts';
 import { groupChangesetsByPackageAndType } from './prerelease-grouping.ts';
 
 type PkgJson = { name: string; private?: boolean; version: string };
@@ -119,13 +120,9 @@ export async function buildPrereleaseReleaseNotes(options: {
 
   const changesets = await readChangesets(cwd);
   if (changesets.length) {
-    const paths = changesets.map(c => `.changeset/${c.id}.md`);
-    const shaList = await changesetsGit.getCommitsThatAddFiles(paths, {
-      cwd,
-      short: true,
-    });
-    for (let i = 0; i < changesets.length; i++) {
-      changesets[i].commit = shaList[i] || undefined;
+    const lastCommits = getLastChangesetCommits(cwd);
+    for (const cs of changesets) {
+      cs.commit = lastCommits.get(`.changeset/${cs.id}.md`) || undefined;
     }
   }
 
@@ -192,8 +189,10 @@ async function main(): Promise<void> {
   console.error(`Wrote prerelease notes to ${out} (RELEASE_NOTES_OUTPUT_DIR overrides path).`);
 }
 
-const invoked = typeof process.argv[1] === 'string' ? resolve(process.argv[1]) : '';
-const script = resolve(fileURLToPath(import.meta.url));
+// realpath both sides: invoking through a symlinked path (macOS /tmp -> /private/tmp)
+// otherwise compares unequal and main() never runs.
+const invoked = typeof process.argv[1] === 'string' ? realpathSync(resolve(process.argv[1])) : '';
+const script = realpathSync(resolve(fileURLToPath(import.meta.url)));
 if (invoked === script) {
   main().catch(err => {
     console.error(err);

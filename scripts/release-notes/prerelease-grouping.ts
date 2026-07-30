@@ -9,6 +9,7 @@ export interface ReleaseEntry {
 
 export interface ChangesetWithCommit {
   id: string;
+  /** Last commit that touched the changeset file; undefined when uncommitted. */
   commit?: string;
   summary: string;
   releases: ReleaseEntry[];

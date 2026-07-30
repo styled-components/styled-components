@@ -13,7 +13,7 @@
     "prettier": "prettier . --check",
     "size": "pnpm --filter styled-components size",
     "test": "pnpm --filter styled-components test",
-    "test:changeset-changelog": "node --test scripts/release-notes/changelog.test.ts scripts/release-notes/prerelease-aggregation.test.ts",
+    "test:changeset-changelog": "node --test \"scripts/release-notes/*.test.ts\"",
     "dry-run:prerelease-notes": "node scripts/release-notes/build-prerelease-release-notes.ts"
   },
   "author": "Glen Maddern",
