@@ -284,12 +284,16 @@ describe('rscPlugin tree-shaking', () => {
   });
 
   it('is available in the plugins subpath bundles for downstream tree-shaking', () => {
-    // rscPlugin lives in the dedicated `styled-components/plugins` subpath
-    // (1d3a3d06), so it should be present in those bundles and only those.
+    // First-party plugins live in the dedicated `styled-components/plugins`
+    // subpath, so they should be present in those bundles and only those.
     const pluginsESM = read('plugins.esm.js');
     const pluginsCJS = read('plugins.cjs.js');
     expect(pluginsESM).toContain('rscPlugin');
     expect(pluginsCJS).toContain('rscPlugin');
+    expect(pluginsESM).toContain('prefixPlugin');
+    expect(pluginsCJS).toContain('prefixPlugin');
+    expect(pluginsESM).toContain('rtlPlugin');
+    expect(pluginsCJS).toContain('rtlPlugin');
   });
 
   it('is eliminated by webpack when unused', async () => {
@@ -326,12 +330,93 @@ describe('rscPlugin tree-shaking', () => {
       expect(bundle).not.toContain('rewriteSelector');
       expect(bundle).not.toContain('rscPlugin');
       expect(bundle).not.toContain(':not(style[data-styled])');
+      expect(bundle).not.toContain('prefixPlugin');
+      expect(bundle).not.toContain('::-webkit-input-placeholder');
+      expect(bundle).not.toContain('backdrop-filter');
 
       // Sanity: core styled-components code IS present
       expect(bundle.length).toBeGreaterThan(1000);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
+  }, 30000);
+});
+
+describe('per-plugin DCE from plugins subpath', () => {
+  // Unique needles that survive minification. Exercise the hooks so terser
+  // cannot constant-fold `.name` and drop the plugin body.
+  const PREFIX_NEEDLE = '::-webkit-input-placeholder';
+  const PREFIX_NEEDLE_B = 'backdrop-filter';
+  const RTL_NEEDLE = 'border-top-left-radius';
+  // Minifiers keep the template as `:not(style[${attr}])`, so assert on the
+  // rewrite shape rather than the fully interpolated selector string.
+  const RSC_NEEDLE = 'nth-child(1 of';
+
+  async function webpackBundle(entrySource: string): Promise<string> {
+    const webpack = require('webpack');
+    const os = require('os');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sc-plugin-dce-'));
+    const entryFile = path.join(tmpDir, 'entry.js');
+    const outputFile = path.join(tmpDir, 'bundle.js');
+    try {
+      fs.writeFileSync(entryFile, entrySource);
+      const stats: any = await new Promise((resolve, reject) => {
+        webpack(
+          {
+            mode: 'production',
+            entry: entryFile,
+            output: { path: tmpDir, filename: 'bundle.js' },
+            externals: { react: 'React', 'react-dom': 'ReactDOM' },
+          },
+          (err: any, stats: any) => (err ? reject(err) : resolve(stats))
+        );
+      });
+      if (stats.hasErrors()) {
+        throw new Error(stats.compilation.errors.map((e: any) => e.message).join('\n'));
+      }
+      return fs.readFileSync(outputFile, 'utf8');
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  }
+
+  it('keeps rtlPlugin and drops prefix/rsc when only rtl is imported', async () => {
+    const bundle = await webpackBundle(
+      [
+        `import { rtlPlugin } from '${distDir}/plugins.esm.js';`,
+        `console.log(rtlPlugin.name, rtlPlugin.decl && rtlPlugin.decl('padding-left','1px'));`,
+      ].join('\n')
+    );
+    expect(bundle).toContain(RTL_NEEDLE);
+    expect(bundle).not.toContain(PREFIX_NEEDLE);
+    expect(bundle).not.toContain(PREFIX_NEEDLE_B);
+    expect(bundle).not.toContain(RSC_NEEDLE);
+  }, 30000);
+
+  it('keeps prefixPlugin and drops rtl/rsc when only prefix is imported', async () => {
+    const bundle = await webpackBundle(
+      [
+        `import { prefixPlugin } from '${distDir}/plugins.esm.js';`,
+        `console.log(prefixPlugin.name, prefixPlugin.decl && prefixPlugin.decl('backdrop-filter','blur(1px)'), prefixPlugin.rw && prefixPlugin.rw('a::placeholder'));`,
+      ].join('\n')
+    );
+    expect(bundle).toContain(PREFIX_NEEDLE);
+    expect(bundle).toContain(PREFIX_NEEDLE_B);
+    expect(bundle).not.toContain(RTL_NEEDLE);
+    expect(bundle).not.toContain(RSC_NEEDLE);
+  }, 30000);
+
+  it('keeps rscPlugin and drops rtl/prefix when only rsc is imported', async () => {
+    const bundle = await webpackBundle(
+      [
+        `import { rscPlugin } from '${distDir}/plugins.esm.js';`,
+        `console.log(rscPlugin.name, rscPlugin.rw && rscPlugin.rw(':first-child'));`,
+      ].join('\n')
+    );
+    expect(bundle).toContain(RSC_NEEDLE);
+    expect(bundle).not.toContain(RTL_NEEDLE);
+    expect(bundle).not.toContain(PREFIX_NEEDLE);
+    expect(bundle).not.toContain(PREFIX_NEEDLE_B);
   }, 30000);
 });
 
@@ -352,7 +437,8 @@ describe('bundle size', () => {
     // scaffolding. Worth it for the third-party-component bridge ergonomics.
     // Bumped again for the fragment-slot missing-`;` recovery in the parser
     // (~0.1kB of charCode imports + the cssProduct structure check).
-    expect(sizeKB).toBeLessThan(15.4);
+    // Bumped for multi-result plugin composition in createCompiler (~0.1kB).
+    expect(sizeKB).toBeLessThan(15.6);
   });
 
   it('production bundle size with real bundler tree-shaking', async () => {
@@ -425,7 +511,8 @@ describe('bundle size', () => {
       // pop/peek) trace + runtime-fallback scaffolding: ~0.6kB. Net
       // ~2.5kB above v6.4.1 baseline after scanQP/isWS scan-primitive
       // unification. Plus fragment-slot missing-`;` recovery: ~0.1kB.
-      expect(sizeKB).toBeLessThan(14.2);
+      // Plus multi-result plugin composition: ~0.1kB.
+      expect(sizeKB).toBeLessThan(14.4);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
@@ -486,7 +573,8 @@ describe('bundle size', () => {
       // shared `warnOnce` + `[sc]` taxonomy) plus the arity-2 attrs
       // bridge (CompiledAst trace + runtime fallback) for net ~2.5kB.
       // Plus fragment-slot missing-`;` recovery: ~0.1kB.
-      expect(sizeKB).toBeLessThan(14.2);
+      // Plus multi-result plugin composition: ~0.1kB.
+      expect(sizeKB).toBeLessThan(14.4);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }

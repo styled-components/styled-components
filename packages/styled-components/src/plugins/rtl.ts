@@ -32,17 +32,25 @@ const PROP_SWAP: Record<string, string> = {
   'scroll-padding-right': 'scroll-padding-left',
 };
 
-/** Properties whose VALUES may contain `left` / `right` keywords that should flip. */
-const DIRECTIONAL_VALUE_PROPS = new Set(['float', 'clear', 'text-align', 'caption-side']);
+/**
+ * Properties whose VALUES may contain `left` / `right` keywords that should flip.
+ * Plain object (not Set) so unused-plugin DCE treats the table as pure.
+ */
+const DIRECTIONAL_VALUE_PROPS: Record<string, 1> = {
+  'caption-side': 1,
+  clear: 1,
+  float: 1,
+  'text-align': 1,
+};
 
 /** Shorthand properties using the `top right bottom left` 4-value order. */
-const FOUR_VALUE_PROPS = new Set([
-  'padding',
-  'margin',
-  'border-color',
-  'border-style',
-  'border-width',
-]);
+const FOUR_VALUE_PROPS: Record<string, 1> = {
+  'border-color': 1,
+  'border-style': 1,
+  'border-width': 1,
+  margin: 1,
+  padding: 1,
+};
 
 const LR_RE = /\b(left|right)\b/g;
 
@@ -101,11 +109,11 @@ const rtl: SCPlugin = {
   decl(prop, value) {
     const swappedProp = PROP_SWAP[prop];
     if (swappedProp) return { prop: swappedProp, value };
-    if (DIRECTIONAL_VALUE_PROPS.has(prop)) {
+    if (DIRECTIONAL_VALUE_PROPS[prop]) {
       const swapped = swapDirectionKeyword(value);
       if (swapped !== value) return { prop, value: swapped };
     }
-    if (FOUR_VALUE_PROPS.has(prop)) {
+    if (FOUR_VALUE_PROPS[prop]) {
       const swapped = swapFourValue(value);
       if (swapped !== value) return { prop, value: swapped };
     }
