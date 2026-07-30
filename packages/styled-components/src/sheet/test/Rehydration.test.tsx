@@ -4,6 +4,7 @@ import { render } from '@testing-library/react';
 import { ServerStyleSheet, StyleSheetManager } from '../../base';
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../../constants';
 import { resetStyled } from '../../test/utils';
+import { resetWarnOnce } from '../../utils/warnOnce';
 import * as GroupIDAllocator from '../GroupIDAllocator';
 import { outputSheet, rehydrateSheet } from '../Rehydration';
 import StyleSheet from '../Sheet';
@@ -143,6 +144,118 @@ describe('rehydrateSheet', () => {
 
     const sheet = new StyleSheet({ isServer: true });
     rehydrateSheet(sheet);
+  });
+
+  /**
+   * A `<style>` given both `precedence` and `href` becomes a React hoistable
+   * resource. React re-emits it from a fixed `data-precedence` + `data-href`
+   * template and reads only `children` / `dangerouslySetInnerHTML` off the
+   * props, so `data-styled` and `data-styled-version` cannot survive however
+   * they were spelled. Shape confirmed against react-dom 19.2.3.
+   */
+  describe('server styles React hoisted via precedence', () => {
+    let warn: jest.SpyInstance;
+
+    const emitHoistedTag = () => {
+      document.head.innerHTML = `
+        <style data-precedence="styled-components" data-href="sc-registry-0">
+          .a {}/*!sc*/
+          ${SC_ATTR}.g11[id="idA"]{content:"nameA,"}/*!sc*/
+        </style>
+      `;
+      return document.head.querySelector('style')!;
+    };
+
+    beforeEach(() => {
+      resetWarnOnce();
+      warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      warn.mockRestore();
+    });
+
+    it('leaves the rules unadopted and the tag in place', () => {
+      const node = emitHoistedTag();
+      const sheet = new StyleSheet({ isServer: true });
+
+      rehydrateSheet(sheet);
+
+      expect(GroupIDAllocator.idForGroup(11)).toBe(undefined);
+      expect(sheet.hasNameForId('idA', 'nameA')).toBe(false);
+      expect(sheet.getTag().tag.length).toBe(0);
+      // React owns the tag as a permanent resource, so the rules it holds
+      // stay in the document alongside whatever the client injects.
+      expect(node.parentElement).toBe(document.head);
+    });
+
+    it('warns and names the alternative', () => {
+      emitHoistedTag();
+
+      rehydrateSheet(new StyleSheet({ isServer: true }));
+
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toMatchInlineSnapshot(
+        `"[sc] server-rendered styles arrived in a <style> tag React manages through \`precedence\`, which strips the attributes needed to adopt them, so every rule is injected again on the client. Render the tag from \`ServerStyleSheet#getStyleElement()\` with no \`precedence\` or \`href\` prop."`
+      );
+    });
+
+    it('warns once however many sheets rehydrate', () => {
+      emitHoistedTag();
+
+      rehydrateSheet(new StyleSheet({ isServer: true }));
+      rehydrateSheet(new StyleSheet({ isServer: true }));
+
+      expect(warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('stays silent when the marker attributes survived', () => {
+      document.head.innerHTML = `
+        <style ${SC_ATTR} ${SC_ATTR_VERSION}="${SC_VERSION}">
+          .a {}/*!sc*/
+          ${SC_ATTR}.g11[id="idA"]{content:"nameA,"}/*!sc*/
+        </style>
+      `;
+      const sheet = new StyleSheet({ isServer: true });
+
+      rehydrateSheet(sheet);
+
+      expect(sheet.hasNameForId('idA', 'nameA')).toBe(true);
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('stays silent for another library\u2019s precedence styles', () => {
+      document.head.innerHTML = `
+        <style data-precedence="high" data-href="some-other-library">
+          .not-ours { color: red; }
+        </style>
+      `;
+
+      rehydrateSheet(new StyleSheet({ isServer: true }));
+
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('stays silent when there are no server styles at all', () => {
+      document.head.innerHTML = '';
+
+      rehydrateSheet(new StyleSheet({ isServer: true }));
+
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('does not warn in a production build', () => {
+      emitHoistedTag();
+      (global as { __DEV__: boolean }).__DEV__ = false;
+
+      try {
+        rehydrateSheet(new StyleSheet({ isServer: true }));
+      } finally {
+        (global as { __DEV__: boolean }).__DEV__ = true;
+      }
+
+      expect(warn).not.toHaveBeenCalled();
+    });
   });
 
   describe('Shadow DOM support', () => {

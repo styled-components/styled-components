@@ -215,6 +215,50 @@ describe('rehydration', () => {
     });
   });
 
+  describe('with server styles React hoisted via precedence', () => {
+    let warn: jest.SpyInstance;
+
+    beforeEach(() => {
+      /* Same CSS as the adoptable case, but a `<style>` carrying `precedence`
+       * and `href` reaches the browser under React's own
+       * `data-precedence` / `data-href` attributes, so the markers we key on
+       * are gone. */
+      document.head.innerHTML = `
+        <style data-precedence="styled-components" data-href="sc-registry-0">
+          .b { color: red; }/*!sc*/
+          ${SC_ATTR}.g2[id="TWO"]{content: "b,"}/*!sc*/
+        </style>
+      `;
+
+      warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      rehydrateTestStyles();
+    });
+
+    afterEach(() => {
+      warn.mockRestore();
+    });
+
+    it('injects a second copy of a rule the server already sent', () => {
+      seedNextClassnames(['b']);
+      const Comp = styled.div.withConfig({ componentId: 'TWO' })`
+        color: red;
+        ${() => ''}
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".b {
+          color: red;
+        }
+        data-styled.g2[id="TWO"] {
+          content: "b,";
+        }
+        .b {
+          color: red;
+        }"
+      `);
+    });
+  });
+
   describe('with global styles', () => {
     beforeEach(() => {
       /* Adding a non-local stylesheet with a hash 557410406 which is
