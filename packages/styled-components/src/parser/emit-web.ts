@@ -86,12 +86,22 @@ function formatDecl(
   prop: string,
   value: string,
   transform:
-    | ((p: string, v: string) => { prop: string; value: string } | undefined | void)
+    | ((
+        p: string,
+        v: string
+      ) => { prop: string; value: string } | { prop: string; value: string }[] | undefined | void)
     | undefined
 ): string {
   if (transform) {
     const t = transform(prop, value);
-    if (t) return t.prop + ':' + t.value;
+    if (t) {
+      if (Array.isArray(t)) {
+        let out = t[0].prop + ':' + t[0].value;
+        for (let i = 1; i < t.length; i++) out += ';' + t[i].prop + ':' + t[i].value;
+        return out;
+      }
+      return t.prop + ':' + t.value;
+    }
   }
   return prop + ':' + value;
 }
@@ -114,18 +124,23 @@ export interface EmitOptions {
   /**
    * Final-stage selector transform. Used by RSC's child-selector rewrite so
    * `:first-child` / `:nth-child()` exclude `<style data-styled>` tags. Runs
-   * after namespace + self-reference resolution. Short name keeps bundle size
-   * down; object keys aren't mangled by minifiers.
+   * after namespace + self-reference resolution. Return a string to replace
+   * the selector, or an array to emit one rule per selector. Short name
+   * keeps bundle size down; object keys aren't mangled by minifiers.
    */
-  rw?: ((selector: string) => string) | undefined;
+  rw?: ((selector: string) => string | string[]) | undefined;
   /**
    * Declaration transform. Invoked on every emitted `prop: value` pair,
    * including declarations inside @keyframes and decl-body at-rules
-   * (@font-face, @property, etc). Used by first-party plugins like RTL to
-   * swap logical property sides.
+   * (@font-face, @property, etc). Return `{prop, value}` to rewrite, an
+   * array to expand one authored declaration into several, or undefined
+   * to pass through. Used by first-party plugins like RTL and prefix.
    */
   decl?:
-    | ((prop: string, value: string) => { prop: string; value: string } | undefined | void)
+    | ((
+        prop: string,
+        value: string
+      ) => { prop: string; value: string } | { prop: string; value: string }[] | undefined | void)
     | undefined;
 }
 
@@ -236,10 +251,17 @@ function emitNodes(
       options && options.namespace
         ? prependNamespace(currentSelector, options.namespace)
         : currentSelector;
+    const body = '{' + baseDecls.join(';') + ';}';
     if (options && options.rw) {
-      wrappingSelector = options.rw(wrappingSelector);
+      const rewritten = options.rw(wrappingSelector);
+      if (Array.isArray(rewritten)) {
+        for (let i = 0; i < rewritten.length; i++) result.push(rewritten[i] + body);
+      } else {
+        result.push(rewritten + body);
+      }
+    } else {
+      result.push(wrappingSelector + body);
     }
-    result.push(wrappingSelector + '{' + baseDecls.join(';') + ';}');
   }
   for (let i = 0; i < other.length; i++) result.push(other[i]);
   return result;

@@ -1499,5 +1499,81 @@ background-color: green;`)
         ]
       `);
     });
+
+    it('expands a multi-result decl transform into several declarations', () => {
+      const dual = {
+        name: 'dual',
+        decl: (prop: string, value: string) =>
+          prop === 'appearance'
+            ? [
+                { prop: '-webkit-appearance', value },
+                { prop: 'appearance', value },
+              ]
+            : undefined,
+      };
+      const compiler = createCompiler({ plugins: [dual] });
+      expect(compiler.compile(`appearance: none; color: red;`, '.a', undefined, 'a')).toEqual([
+        '.a{-webkit-appearance:none;appearance:none;color:red;}',
+      ]);
+    });
+
+    it('expands a multi-result rw transform into several rules', () => {
+      const placeholders = {
+        name: 'placeholders',
+        rw: (selector: string) =>
+          selector.includes('::placeholder')
+            ? [
+                selector.replace('::placeholder', '::-webkit-input-placeholder'),
+                selector.replace('::placeholder', '::-moz-placeholder'),
+                selector,
+              ]
+            : selector,
+      };
+      const compiler = createCompiler({ plugins: [placeholders] });
+      expect(compiler.compile(`color: gray;`, '.a::placeholder', undefined, 'a')).toEqual([
+        '.a::-webkit-input-placeholder{color:gray;}',
+        '.a::-moz-placeholder{color:gray;}',
+        '.a::placeholder{color:gray;}',
+      ]);
+    });
+
+    it('maps a later decl plugin over each result of an earlier multi-emit', () => {
+      const dual = {
+        name: 'dual',
+        decl: (prop: string, value: string) =>
+          prop === 'appearance'
+            ? [
+                { prop: '-webkit-appearance', value },
+                { prop: 'appearance', value },
+              ]
+            : undefined,
+      };
+      const upperValue = {
+        name: 'upper-value',
+        decl: (prop: string, value: string) =>
+          prop.endsWith('appearance') ? { prop, value: value.toUpperCase() } : undefined,
+      };
+      const compiler = createCompiler({ plugins: [dual, upperValue] });
+      expect(compiler.compile(`appearance: none;`, '.a', undefined, 'a')).toEqual([
+        '.a{-webkit-appearance:NONE;appearance:NONE;}',
+      ]);
+    });
+
+    it('leaves single-result plugins unchanged when neighbors return undefined', () => {
+      const dual = {
+        name: 'dual',
+        decl: (prop: string, value: string) =>
+          prop === 'appearance'
+            ? [
+                { prop: '-webkit-appearance', value },
+                { prop: 'appearance', value },
+              ]
+            : undefined,
+      };
+      const compiler = createCompiler({ plugins: [rtl, dual] });
+      expect(compiler.compile(`margin-left: 8px; appearance: none;`, '.a', undefined, 'a')).toEqual(
+        ['.a{margin-right:8px;-webkit-appearance:none;appearance:none;}']
+      );
+    });
   });
 });
