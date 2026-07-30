@@ -21,7 +21,8 @@ const Card = styled.View`
 
 - `clamp(10px, 50%, 400px)`, `min(100px, 50vw)`, `max(200px, 100vh)`, and `calc(100vw - 40px)`.
 - Math functions like `round()`, `mod()`, `rem()`, `sin()`, `cos()`, `tan()`, `pow()`, `sqrt()`, `hypot()`, `log()`, `exp()`, `abs()`, and `sign()` when their inputs are known before render.
-- `oklch(...)`, `oklab(...)`, `lch(...)`, `lab(...)` resolve to a color React Native can render. Wide-gamut inputs that fall outside sRGB are mapped to the closest in-gamut color while preserving hue, so the rendered result stays as close as possible to what was written.
+- `oklch(...)`, `oklab(...)`, `lch(...)`, `lab(...)` resolve to a color React Native can render. Wide-gamut inputs that fall outside sRGB are mapped to the closest in-gamut color while preserving hue, so the rendered result stays as close as possible to what was written. `lab()` and `lch()` accept percentage channels and resolve to the correct color (`lab(50% 0 0)` is mid-gray); per CSS Color L4 each space has its own range: `lab` L maps 0%-100% to 0-100 with a/b at ±125, `lch` C maps 100% to 0-150, `oklab` L maps to 0-1 with a/b at ±0.4, and `oklch` C maps 100% to 0-0.4.
+- `round(line-width, A)` snaps `A` to the device pixel grid at render time using the platform's pixel ratio, matching the CSS Values 4 "snap a length as a line width" algorithm. Useful for hairline borders that should align to physical pixels regardless of screen scale.
 - `color-mix(in <space>, …)` mixes through the requested space (`srgb`, `oklab`, `oklch`, `lab`, `lch`) and converts back to sRGB for display.
 - Viewport units `vw` / `vh` / `vmin` / `vmax` / `dvh` / `svh` / `lvh` scale to the current window dimensions.
 - Container query units `cqw` / `cqh` / `cqmin` / `cqmax` scale to the nearest ancestor container.
