@@ -4,7 +4,7 @@
  * Run this file only (with reduced iterations for faster / CI-friendly runs):
  *   pnpm --filter styled-components bench:web:stress
  *
- * Full web bench suite (parser, preprocess, v6 vs v7, responsive, etc.):
+ * Full web bench suite:
  *   pnpm --filter styled-components bench:web
  *
  * Optional env (see bench-utils.ts): SC_BENCH_ITER_SCALE, SC_BENCH_RUNS
