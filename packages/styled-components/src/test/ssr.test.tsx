@@ -774,7 +774,7 @@ describe('ssr', () => {
       </style>
     `);
     expect(warnSpy.mock.calls[0][0]).toMatchInlineSnapshot(
-      `"[sc] plugin "stylisRTLPlugin" is not supported in v7. Only the first-party plugins from \`styled-components/plugins\` are recognized; legacy stylis plugins (prefixer, RTL, etc.) must migrate to a build-time transform or use the v7 plugin shape."`
+      `"[sc] plugin "stylisRTLPlugin" is a stylis middleware function; v7 plugins are objects with an \`rw\` and/or \`decl\` hook."`
     );
     warnSpy.mockRestore();
   });

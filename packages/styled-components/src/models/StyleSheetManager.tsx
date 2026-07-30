@@ -29,19 +29,37 @@ const getRscSlot: (() => RscRenderSlot) | null = IS_RSC
     )
   : null;
 
-// Allow-list lives inside `warnUnsupportedPlugins` so terser eliminates it in
-// production builds; hoisting leaks names into the bundle and trips the
-// tree-shake test. Unnamed plugins throw error #15.
+// Minimum viable gate: warn only when a plugin can never be invoked. Legacy
+// stylis middleware is a function, and a plugin with neither hook has nothing
+// to call. Anything else that is incompatible fails on its own. Unnamed
+// plugins throw error #15 from createCompiler.
 function warnUnsupportedPlugins(plugins: SCPlugin[] | undefined): void {
   if (!__DEV__ || !plugins) return;
   for (let i = 0; i < plugins.length; i++) {
-    const name = plugins[i]?.name;
-    if (!name || name === 'rsc' || name === 'rtl') continue;
-    warnOnce(
-      'unsupported-plugin',
-      `plugin "${name}" is not supported in v7. Only the first-party plugins from \`styled-components/plugins\` are recognized; legacy stylis plugins (prefixer, RTL, etc.) must migrate to a build-time transform or use the v7 plugin shape.`,
-      name
-    );
+    // Legacy stylis middleware is a function, which SCPlugin[] does not admit
+    // but JS callers pass anyway, so inspect the value as unknown.
+    const plugin: unknown = plugins[i];
+    if (typeof plugin === 'function') {
+      const name = plugin.name || '(anonymous)';
+      warnOnce(
+        'legacy-stylis-plugin',
+        `plugin "${name}" is a stylis middleware function; v7 plugins are objects with an \`rw\` and/or \`decl\` hook.`,
+        name
+      );
+      continue;
+    }
+    if (typeof plugin !== 'object' || plugin === null) continue;
+    const name = 'name' in plugin && typeof plugin.name === 'string' ? plugin.name : '';
+    if (!name) continue;
+    const rw = 'rw' in plugin ? plugin.rw : undefined;
+    const decl = 'decl' in plugin ? plugin.decl : undefined;
+    if (rw === undefined && decl === undefined) {
+      warnOnce(
+        'plugin-no-hooks',
+        `plugin "${name}" defines neither \`rw\` nor \`decl\`; it is never invoked.`,
+        name
+      );
+    }
   }
 }
 
@@ -130,7 +148,7 @@ export type IStyleSheetManager = React.PropsWithChildren<{
   shouldForwardProp?: undefined | IStyleSheetContext['shouldForwardProp'];
   /**
    * Plugins to apply during CSS emission. First-party plugins ship via
-   * `styled-components/plugins` (`rscPlugin`, `rtlPlugin`); other plugins must
+   * `styled-components/plugins` (`prefixPlugin`, `rscPlugin`, `rtlPlugin`); other plugins must
    * implement the `SCPlugin` shape (`{ name, rw?, decl? }`).
    *
    * When nested inside another `StyleSheetManager`, omitting this prop inherits

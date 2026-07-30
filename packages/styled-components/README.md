@@ -114,6 +114,46 @@ const Input = styled.input`
 `;
 ```
 
+### Vendor prefixes
+
+CSS is emitted unprefixed by default. To support browsers that require prefixes for CSS such as `appearance`, `user-select`, or `::placeholder`, add the opt-in `prefixPlugin` at the relevant subtree:
+
+```tsx
+import { StyleSheetManager } from 'styled-components';
+import { prefixPlugin } from 'styled-components/plugins';
+
+<StyleSheetManager plugins={[prefixPlugin]}>
+  <App />
+</StyleSheetManager>;
+```
+
+The included prefix set targets Chrome 45, Firefox 36, Safari and iOS 9, and Edge 12, matching the browser floor for the JavaScript APIs required by React. For a different set, declare both the prefixed and standard forms yourself, or extend the plugin with one of your own:
+
+```tsx
+import { StyleSheetManager } from 'styled-components';
+import { prefixPlugin } from 'styled-components/plugins';
+import type { SCPlugin } from 'styled-components/plugins';
+
+const projectPrefixes: SCPlugin = {
+  name: 'project-prefixes',
+  decl: (prop, value) =>
+    prop === 'transform-style'
+      ? [
+          { prop: '-webkit-transform-style', value },
+          { prop, value },
+        ]
+      : undefined, // undefined passes the declaration through untouched
+};
+
+<StyleSheetManager plugins={[prefixPlugin, projectPrefixes]}>
+  <App />
+</StyleSheetManager>;
+```
+
+Plugins apply left to right: a later `decl` runs on every declaration an earlier plugin emitted, so returning `undefined` on the miss path is what keeps a custom plugin cheap. Skip properties that already start with `-`, as `prefixPlugin` does, and plugins can compose in either order without double-prefixing. The full hook contract is documented under [authoring custom plugins](https://styled-components.com/docs/v7#authoring-custom-plugins).
+
+The `enableVendorPrefixes` prop from v6 has been removed in favor of this plugin.
+
 ### Animations
 
 Define `@keyframes` once, reference them across components. Names are scoped automatically.

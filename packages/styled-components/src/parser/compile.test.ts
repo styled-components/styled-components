@@ -644,5 +644,27 @@ describe('compileWeb', () => {
         compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a', decl: swap })
       ).toEqual(legacy('background: red;'));
     });
+
+    it('expands a multi-result decl transform', () => {
+      const src = parseSource(['appearance: none;'], []);
+      const dual = (prop: string, value: string) =>
+        prop === 'appearance'
+          ? [
+              { prop: '-webkit-appearance', value },
+              { prop: 'appearance', value },
+            ]
+          : undefined;
+      expect(
+        compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a', decl: dual })
+      ).toEqual(legacy('-webkit-appearance: none; appearance: none;'));
+    });
+
+    it('expands a multi-result rw transform into one rule per selector', () => {
+      const src = parseSource(['color: gray;'], []);
+      const multi = (sel: string) => [sel + '::-webkit-input-placeholder', sel + '::placeholder'];
+      expect(
+        compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a', rw: multi })
+      ).toEqual(['.a::-webkit-input-placeholder{color:gray;}', '.a::placeholder{color:gray;}']);
+    });
   });
 });
