@@ -18,6 +18,7 @@ const baseConfig = require('./jest.config.base');
 module.exports = Object.assign({}, baseConfig, {
   preset: '@react-native/jest-preset',
   setupFiles: ['<rootDir>/src/test/globals.ts', '<rootDir>/src/test/native-setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/test-utils/setupTestFramework.ts'],
   testEnvironment: 'node',
   testRegex: 'src/native/(test|.*/test)/.*.tsx?$',
 });
