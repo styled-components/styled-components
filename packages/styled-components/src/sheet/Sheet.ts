@@ -10,6 +10,9 @@ import { GroupedTag, Sheet, SheetOptions } from './types';
 
 let SHOULD_REHYDRATE = IS_BROWSER;
 
+/** Placeholder until the claim winner stashes compiled rules. */
+const EMPTY_PROVISIONAL: string[] = [];
+
 type SheetConstructorArgs = {
   isServer?: boolean;
   nonce?: string | undefined;
@@ -26,6 +29,14 @@ const defaultOptions: SheetOptions = {
 export default class StyleSheet implements Sheet {
   names: NamesAllocationMap;
   options: SheetOptions;
+  /**
+   * Turn-scoped compiled rules keyed by `id\\0name`. The first generate for a
+   * name compiles and stores here; same-turn siblings reuse the bytes so a
+   * discarded claimer cannot leave a committed follower with an empty payload.
+   * Dropped on a microtask so a discarded concurrent render cannot pin a name
+   * past the turn that claimed it.
+   */
+  provisionalRules: Map<string, string[]> | null = null;
   server: boolean;
   tag?: GroupedTag | undefined;
 
@@ -87,9 +98,49 @@ export default class StyleSheet implements Sheet {
     return this.tag || (this.tag = makeGroupedTag(makeTag(this.options)));
   }
 
-  /** Check whether a name is known for caching */
+  /** Check whether a name is permanently registered, meaning its rules have already been emitted for this sheet. */
   hasNameForId(id: string, name: string): boolean {
     return this.names.get(id)?.has(name) ?? false;
+  }
+
+  /**
+   * Claim a name for this JS turn so later generates skip recompilation.
+   * Returns true if this call is the first claim (caller should compile and
+   * then {@link stashProvisionalRules}). Does not permanently register;
+   * inject / registerName still required.
+   *
+   * Server sheets skip the provisional store: sync flush registers on inject
+   * in the same call stack, so turn-scoped bookkeeping would only allocate.
+   */
+  claimNameForId(id: string, name: string): boolean {
+    if (this.hasNameForId(id, name)) return false;
+    if (this.server) return true;
+    const key = id + '\0' + name;
+    let map = this.provisionalRules;
+    if (map === null) {
+      map = new Map();
+      this.provisionalRules = map;
+      queueMicrotask(() => {
+        this.provisionalRules = null;
+      });
+    } else if (map.has(key)) {
+      return false;
+    }
+    map.set(key, EMPTY_PROVISIONAL);
+    return true;
+  }
+
+  /** Store compiled rules for same-turn followers after a successful claim. */
+  stashProvisionalRules(id: string, name: string, rules: string[]): void {
+    const map = this.provisionalRules;
+    if (map === null) return;
+    map.set(id + '\0' + name, rules);
+  }
+
+  /** Rules stashed by the turn's claim winner, if any. */
+  getProvisionalRules(id: string, name: string): string[] | undefined {
+    const rules = this.provisionalRules?.get(id + '\0' + name);
+    return rules === undefined || rules === EMPTY_PROVISIONAL ? undefined : rules;
   }
 
   /** Mark a group's name as known for caching; returns the group id. */

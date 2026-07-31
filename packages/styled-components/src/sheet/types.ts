@@ -25,15 +25,18 @@ export type SheetOptions = {
 };
 
 export interface Sheet {
+  claimNameForId(id: string, name: string): boolean;
   clearNames(id: string): void;
   clearRules(id: string): void;
   clearTag(): void;
+  getProvisionalRules(id: string, name: string): string[] | undefined;
   getTag(): GroupedTag;
   hasNameForId(id: string, name: string): boolean;
   insertRules(id: string, name: string, rules: string[]): void;
-  options: SheetOptions;
   names: Map<string, Set<string>>;
+  options: SheetOptions;
   registerName(id: string, name: string): number;
   rehydrate(): void;
+  stashProvisionalRules(id: string, name: string, rules: string[]): void;
   toString(): string;
 }

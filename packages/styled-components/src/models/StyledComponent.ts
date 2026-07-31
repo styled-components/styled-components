@@ -61,6 +61,60 @@ const hasOwn = Object.prototype.hasOwnProperty;
 
 const identifiers: { [key: string]: number } = {};
 
+const subscribeNoop = (): (() => void) => () => {};
+const getFalse = (): boolean => false;
+const getTrue = (): boolean => true;
+
+/**
+ * Writes one render's generated CSS into the sheet from an insertion effect,
+ * so a committed render's rules land before paint and a discarded render
+ * writes nothing. Mounted only when a render still has unwritten rules.
+ */
+function StyleInjector({
+  generated,
+  sheet,
+  webStyle,
+}: {
+  generated: GeneratedStyle;
+  sheet: StyleSheet;
+  webStyle: WebStyle;
+}): null {
+  // getServerSnapshot runs under renderToString; getSnapshot under createRoot.
+  // Distinguishes the jsdom-without-ServerStyleSheet footgun (buffered path,
+  // insertion effects never fire) from a normal client mount, without the
+  // false positives a post-render microtask probe would raise on discarded
+  // concurrent renders.
+  const isServerRender = React.useSyncExternalStore(subscribeNoop, getFalse, getTrue);
+  if (__DEV__ && isServerRender) {
+    warnOnce(
+      'buffered-ssr-without-sheet',
+      'client styles inject through useInsertionEffect, which does not run during renderToString / renderToStaticMarkup. Wrap the tree in ServerStyleSheet#collectStyles so styles flush during render.'
+    );
+  }
+  React.useInsertionEffect(() => {
+    webStyle.inject(sheet, generated);
+  });
+  return null;
+}
+
+/** True when `generated` carries rules or keyframes the sheet has not emitted. */
+function generatedNeedsSheetWrite(generated: GeneratedStyle, sheet: StyleSheet): boolean {
+  if (generated.keyframes.length > 0) {
+    for (let i = 0; i < generated.keyframes.length; i++) {
+      const kf = generated.keyframes[i];
+      if (!sheet.hasNameForId(kf.id, kf.name)) return true;
+    }
+  }
+  const levels = generated.levels;
+  for (let i = 0; i < levels.length; i++) {
+    const level = levels[i];
+    if (level.rules.length > 0 && !sheet.hasNameForId(level.componentId, level.name)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Shared `toString` for styled components: returns `.styledComponentId` so
  * `${StyledFoo}` interpolation resolves to the class selector.
@@ -138,7 +192,8 @@ function rscFlush<T extends ExecutionContext>(
 }
 
 // Cached render inputs + style result: [prevProps, prevTheme, prevStyleSheet, prevCompiler,
-// prevPropsKeyCount, cachedContext, cachedClassName, prevWebStyle, popOverrides]
+// prevPropsKeyCount, cachedContext, cachedClassName, prevWebStyle, popOverrides,
+// cachedGenerated]
 type RenderCache = [
   object, // prevProps
   DefaultTheme | undefined, // prevTheme
@@ -149,6 +204,7 @@ type RenderCache = [
   string, // cachedClassName
   WebStyle, // prevWebStyle (for HMR invalidation)
   Dict<string> | null, // popOverrides (post-compile attrs inline-style override)
+  GeneratedStyle | null, // cachedGenerated (reinject if a discarded attempt left the sheet empty)
 ];
 
 function resolveContext<Props extends BaseObject>(
@@ -506,6 +562,8 @@ function useImpl<Props extends BaseObject>(
   let generatedStyle: GeneratedStyle | null = null;
   let popOverrides: Dict<string> | null = null;
   const wantsPostAttrs = forwardedComponent.hasPostAttrs === true;
+  /** The CSSOM write to schedule in the insertion effect (buffered path only). */
+  let pendingInject: GeneratedStyle | null = null;
 
   if (!__SERVER__ && !IS_RSC) {
     const renderCacheRef = React.useRef<RenderCache | null>(null);
@@ -522,6 +580,16 @@ function useImpl<Props extends BaseObject>(
       context = prev[5] as typeof context;
       generatedClassName = prev[6];
       popOverrides = prev[8];
+      // A discarded concurrent attempt may have cached a GeneratedStyle whose
+      // rules never reached the sheet; reinstate the injector when needed.
+      const cachedGenerated = prev[9];
+      if (
+        cachedGenerated != null &&
+        !ssc.styleSheet.server &&
+        generatedNeedsSheetWrite(cachedGenerated, ssc.styleSheet)
+      ) {
+        pendingInject = cachedGenerated;
+      }
     } else {
       context = resolveContext<Props>(componentAttrs, props, theme);
       if (wantsPostAttrs) {
@@ -533,7 +601,18 @@ function useImpl<Props extends BaseObject>(
           webStyle
         );
       }
-      generatedClassName = useInjectedStyle(webStyle, context, ssc.styleSheet, ssc.compiler);
+      // ServerStyleSheet SSR never runs insertion effects, so the CSSOM write
+      // must stay synchronous whenever styleSheet.server is set. The browser
+      // path generates during render and injects via StyleInjector.
+      let cachedGenerated: GeneratedStyle | null = null;
+      if (!ssc.styleSheet.server) {
+        const generated = webStyle.generate(context, ssc.styleSheet, ssc.compiler);
+        generatedClassName = generated.className;
+        cachedGenerated = generated;
+        pendingInject = generatedNeedsSheetWrite(generated, ssc.styleSheet) ? generated : null;
+      } else {
+        generatedClassName = useInjectedStyle(webStyle, context, ssc.styleSheet, ssc.compiler);
+      }
 
       let propsKeyCount = 0;
       for (const key in props) {
@@ -549,6 +628,7 @@ function useImpl<Props extends BaseObject>(
         generatedClassName,
         webStyle,
         popOverrides,
+        cachedGenerated,
       ];
     }
   } else {
@@ -603,7 +683,32 @@ function useImpl<Props extends BaseObject>(
     elementProps.ref = forwardedRef;
   }
 
+  // Client path: stable Fragment shape so the host element keeps identity
+  // when the injector mounts or unmounts across commits. Only instances that
+  // still need a CSSOM write mount StyleInjector.
+  const injectsAfterCommit = !__SERVER__ && !IS_RSC && !ssc.styleSheet.server;
+
+  if (injectsAfterCommit) {
+    elementProps.key = 'sc-el';
+  }
+
   const element = createElement(elementToBeCreated, elementProps);
+
+  if (injectsAfterCommit) {
+    return createElement(
+      React.Fragment,
+      null,
+      pendingInject
+        ? createElement(StyleInjector, {
+            key: 'sc-inject',
+            generated: pendingInject,
+            sheet: ssc.styleSheet,
+            webStyle,
+          })
+        : null,
+      element
+    );
+  }
 
   // RSC mode: emit this component's CSS (and its inheritance chain + keyframes)
   // as an inline <style> tag. No `precedence`; server component output isn't

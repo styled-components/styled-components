@@ -35,6 +35,11 @@ type GeneratedLevel = {
   componentId: string;
   name: string;
   rules: string[];
+  /**
+   * True when this generate call won the name claim and produced `rules`.
+   * A later claimant sees false but still receives the winner's `rules` so
+   * inject can write them if the winner's render was discarded.
+   */
   isNew: boolean;
 };
 
@@ -83,8 +88,10 @@ export default class WebStyle {
   }
 
   /**
-   * Produce per-level compiled CSS without writing to the sheet. Walks the
-   * inheritance chain so callers get the full chain's output in one pass.
+   * Produce per-level compiled CSS without writing any rules to the tag.
+   * Claims each level's name on the sheet for the current turn so a sibling
+   * generating the same class skips recompilation; the CSSOM write happens
+   * in {@link inject}.
    */
   generate(
     executionContext: ExecutionContext,
@@ -202,10 +209,13 @@ export default class WebStyle {
       }
     }
 
-    const isNew = !styleSheet.hasNameForId(this.componentId, name);
+    // Permanent registration or a same-turn claim by a sibling both mean the
+    // rules already exist, so skip compilation. Followers still receive the
+    // winner's bytes so a discarded claimer cannot leave them empty-handed.
+    const claimed = styleSheet.claimNameForId(this.componentId, name);
     let rules: string[];
-    if (!isNew) {
-      rules = EMPTY_RULES;
+    if (!claimed) {
+      rules = styleSheet.getProvisionalRules(this.componentId, name) ?? EMPTY_RULES;
     } else if (source !== null && fastFilled !== null) {
       const fast = compiler.emit(source, fastFilled, '.' + name, this.componentId, fastFragments);
       if (fast !== null) {
@@ -216,12 +226,14 @@ export default class WebStyle {
         if (!css) css = buildHashCSS(source.strings, fastFilled, fastFragments);
         rules = compiler.compile(css, '.' + name, undefined, this.componentId);
       }
+      styleSheet.stashProvisionalRules(this.componentId, name, rules);
     } else {
       rules = compiler.compile(css, '.' + name, undefined, this.componentId);
+      styleSheet.stashProvisionalRules(this.componentId, name, rules);
     }
 
     const levels = baseGenerated ? baseGenerated.levels.slice() : [];
-    levels.push({ componentId: this.componentId, name, rules, isNew });
+    levels.push({ componentId: this.componentId, name, rules, isNew: claimed });
 
     return {
       className: joinStrings(baseGenerated ? baseGenerated.className : '', name),
@@ -237,7 +249,9 @@ export default class WebStyle {
     const levels = generated.levels;
     for (let i = 0; i < levels.length; i++) {
       const level = levels[i];
-      if (level.isNew) {
+      // Write whenever this payload carries rules the sheet lacks. Followers
+      // may hold the winner's bytes with `isNew` false after a discarded claim.
+      if (level.rules.length > 0 && !styleSheet.hasNameForId(level.componentId, level.name)) {
         styleSheet.insertRules(level.componentId, level.name, level.rules);
       }
     }

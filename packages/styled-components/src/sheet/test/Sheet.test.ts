@@ -18,6 +18,35 @@ it('inserts rules correctly', () => {
   expect(tag.length).toBe(1);
 });
 
+it('claimNameForId reserves a name for the current turn without registering', () => {
+  // Client sheet: server sheets skip the provisional store entirely.
+  const client = new StyleSheet({ isServer: false });
+  expect(client.claimNameForId('id', 'name')).toBe(true);
+  expect(client.claimNameForId('id', 'name')).toBe(false);
+  // Provisional only: not permanently registered until insertRules/registerName.
+  expect(client.hasNameForId('id', 'name')).toBe(false);
+  client.registerName('id', 'name');
+  expect(client.hasNameForId('id', 'name')).toBe(true);
+  expect(client.claimNameForId('id', 'name')).toBe(false);
+});
+
+it('shares stashed rules with same-turn followers and clears them after the turn', async () => {
+  const client = new StyleSheet({ isServer: false });
+  expect(client.claimNameForId('id', 'temp')).toBe(true);
+  client.stashProvisionalRules('id', 'temp', ['.temp{}']);
+  expect(client.claimNameForId('id', 'temp')).toBe(false);
+  expect(client.getProvisionalRules('id', 'temp')).toEqual(['.temp{}']);
+  await Promise.resolve();
+  expect(client.getProvisionalRules('id', 'temp')).toBeUndefined();
+  expect(client.claimNameForId('id', 'temp')).toBe(true);
+});
+
+it('skips provisional bookkeeping on server sheets', () => {
+  expect(sheet.claimNameForId('id', 'a')).toBe(true);
+  expect(sheet.claimNameForId('id', 'a')).toBe(true);
+  expect(sheet.getProvisionalRules('id', 'a')).toBeUndefined();
+});
+
 it('allows to register and clear names for ids manually', () => {
   sheet.registerName('id', 'name');
   expect(sheet.hasNameForId('id', 'name')).toBe(true);

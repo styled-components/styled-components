@@ -31,12 +31,13 @@ sequenceDiagram
     useImpl->>StyleSheetManager: useStyleSheetContext()
     StyleSheetManager-->>useImpl: styleSheet, compiler, shouldForwardProp
 
-    Note over useImpl,WebStyle: 3. STYLE PROCESSING
+    Note over useImpl,WebStyle: 3. STYLE PROCESSING (render)
     useImpl->>useImpl: render-cache check (fast skip on shallow-equal props/theme)
     useImpl->>useImpl: resolveContext(attrs, props, theme)
-    useImpl->>WebStyle: flush(context, styleSheet, compiler)
+    useImpl->>WebStyle: generate(context, styleSheet, compiler)
     WebStyle->>WebStyle: evaluateForFastPath (fill sentinels in pre-built AST)
     WebStyle->>WebStyle: buildInterpKey -> interpKeyCache lookup
+    WebStyle->>StyleSheet: claimNameForId (turn-scoped; stash rules for siblings)
     Note over WebStyle: Cache hit returns prior class name<br/>without re-emitting CSS
 
     alt cache miss
@@ -46,38 +47,28 @@ sequenceDiagram
         WebStyle->>WebStyle: compiler.emit (AST-direct)
     end
 
-    Note over WebStyle,DOM: 4. STYLE INJECTION
-    WebStyle->>StyleSheet: insertRules(componentId, className, rules)
-    StyleSheet->>StyleSheet: registerName(componentId, className)
-    StyleSheet->>GroupedTag: getTag().insertRules(groupId, rules)
-    GroupedTag->>GroupedTag: indexOfGroup(groupId)
-    Note over GroupedTag: Calculate insertion index<br/>based on group priority
+    WebStyle-->>useImpl: GeneratedStyle (className + rules)
 
-    GroupedTag->>Tag: insertRule(index, rule)
-
-    alt Browser
+    Note over useImpl,DOM: 4. STYLE INJECTION
+    alt Browser client (buffered)
+        useImpl->>useImpl: mount StyleInjector when rules are unwritten
+        Note over useImpl,React: commit: useInsertionEffect
+        useImpl->>WebStyle: inject(styleSheet, generated)
+        WebStyle->>StyleSheet: insertRules (hasNameForId dedupes)
+        StyleSheet->>GroupedTag: getTag().insertRules(groupId, rules)
+        GroupedTag->>Tag: insertRule(index, rule)
         Tag->>DOM: CSSStyleSheet.insertRule(rule, index)
-    else Server (Virtual)
-        Tag->>Tag: rules.push(rule)
-    end
-
-    Tag-->>GroupedTag: success
-    GroupedTag-->>StyleSheet: complete
-    StyleSheet-->>WebStyle: complete
-
-    WebStyle-->>useImpl: className
-
-    Note over useImpl,DOM: 5. ELEMENT CREATION
-    useImpl->>useImpl: buildClassName(foldedIds + styledId + generated + props)
-    useImpl->>useImpl: rawElement(type, props, ref)
-    Note over useImpl: Bypasses React.createElement<br/>overhead (~60-120x faster)
-
-    alt RSC Mode
-        useImpl->>GroupedTag: getGroup() for inheritance chain + keyframes
-        useImpl->>useImpl: wrap base CSS in :where() for zero specificity
-        useImpl->>useImpl: emit Fragment with inline style tag + element
+    else ServerStyleSheet / sync server path
+        useImpl->>WebStyle: flush (generate + inject in one call)
+        WebStyle->>StyleSheet: insertRules
+        StyleSheet->>Tag: rules.push(rule)
+    else RSC Mode
+        useImpl->>useImpl: rscFlush + emit Fragment with inline style tag
         Note over useImpl: No precedence attr,<br/>avoids React 19 Float hoisting
     end
 
+    Note over useImpl,DOM: 5. ELEMENT CREATION
+    useImpl->>useImpl: buildClassName(foldedIds + styledId + generated + props)
+    useImpl->>useImpl: createElement(type, props)
     React-->>User: DOM element with injected styles
 ```
