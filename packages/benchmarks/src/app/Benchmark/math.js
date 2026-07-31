@@ -15,10 +15,9 @@ export const getMean = values => {
 };
 
 export const getMedian = values => {
-  if (values.length === 1) {
-    return values[0];
-  }
+  if (values.length === 0) return 0;
+  if (values.length === 1) return values[0];
 
-  const numbers = values.sort((a, b) => a - b);
+  const numbers = values.slice().sort((a, b) => a - b);
   return (numbers[(numbers.length - 1) >> 1] + numbers[numbers.length >> 1]) / 2;
 };

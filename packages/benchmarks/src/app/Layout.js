@@ -4,18 +4,20 @@ import { StyleSheet, View } from 'react-native';
 export default class Layout extends Component {
   state = {
     widescreen: false,
+    rootHeight: 0,
   };
 
   render() {
     const { viewPanel, actionPanel, listPanel } = this.props;
-    const { widescreen } = this.state;
+    const { widescreen, rootHeight } = this.state;
+    // Stacked (narrow) mode: cap the results list at a quarter of the root so
+    // the case view keeps the rest.
+    const narrowList = !widescreen && rootHeight > 0 ? { height: rootHeight / 4 } : null;
     return (
       <View onLayout={this._handleLayout} style={[styles.root, widescreen && styles.row]}>
-        <View style={[widescreen ? styles.grow : styles.stackPanel, styles.layer]}>
-          {viewPanel}
-        </View>
-        <View style={[styles.grow, styles.controlSide]}>
-          <View style={[styles.grow, styles.layer]}>{listPanel}</View>
+        <View style={[styles.grow, styles.layer]}>{viewPanel}</View>
+        <View style={[widescreen && styles.grow, styles.controlSide]}>
+          <View style={[widescreen ? styles.grow : narrowList, styles.layer]}>{listPanel}</View>
           <View style={styles.divider} />
           <View style={styles.layer}>{actionPanel}</View>
         </View>
@@ -25,11 +27,10 @@ export default class Layout extends Component {
 
   _handleLayout = ({ nativeEvent }) => {
     const { layout } = nativeEvent;
-    const { width } = layout;
-    if (width >= 740) {
-      this.setState(() => ({ widescreen: true }));
-    } else {
-      this.setState(() => ({ widescreen: false }));
+    const { width, height } = layout;
+    const widescreen = width >= 740;
+    if (widescreen !== this.state.widescreen || height !== this.state.rootHeight) {
+      this.setState(() => ({ widescreen, rootHeight: height }));
     }
   };
 }
@@ -51,9 +52,6 @@ const styles = StyleSheet.create({
   },
   grow: {
     flex: 1,
-  },
-  stackPanel: {
-    height: '33.33%',
   },
   layer: {
     transform: [{ translateZ: '0' }],

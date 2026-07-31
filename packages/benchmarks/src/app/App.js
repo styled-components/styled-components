@@ -101,6 +101,13 @@ export default class App extends Component {
     const { Component, Provider, getComponentProps, sampleCount } = currentImplementation;
     const isRunning = status === 'running';
     const isAutoRunning = isRunning && autoQueue !== null;
+    // Self-timed cases own a live demo in the view panel; the cycle Overlay
+    // would hide the workload, and centered overflow:hidden clips the fill.
+    const isSelfTimed = !!currentImplementation.selfTimed;
+    // Union of every library that appears in any suite. Suites that omit a
+    // library (e.g. concurrent injection A/B is styled-components only) still
+    // list it in the picker as a disabled option so the gap is visible.
+    const allLibraryNames = this._allLibraryNames();
 
     return (
       <React.Fragment>
@@ -113,16 +120,27 @@ export default class App extends Component {
                   <div data-bench-picker="" style={actionStyles.pickerSelect}>
                     <div style={actionStyles.pickerValue}>{currentLibraryName}</div>
                     <Chevron />
-                    <Picker
-                      enabled={!isRunning}
-                      onValueChange={this._handleChangeLibrary}
-                      selectedValue={currentLibraryName}
+                    {/*
+                      Native <select>: RNW Picker.Item cannot disable individual
+                      options, and unsupported libraries for this suite must stay
+                      visible but unselectable.
+                    */}
+                    <select
+                      disabled={isRunning}
+                      onChange={e => this._handleChangeLibrary(e.target.value)}
+                      value={currentLibraryName}
                       style={pickerOverlayStyle}
+                      aria-label="Library"
                     >
-                      {Object.keys(tests[currentBenchmarkName]).map(libraryName => (
-                        <Picker.Item key={libraryName} label={libraryName} value={libraryName} />
-                      ))}
-                    </Picker>
+                      {allLibraryNames.map(libraryName => {
+                        const supported = !!tests[currentBenchmarkName][libraryName];
+                        return (
+                          <option key={libraryName} value={libraryName} disabled={!supported}>
+                            {supported ? libraryName : libraryName + ' (n/a)'}
+                          </option>
+                        );
+                      })}
+                    </select>
                   </div>
                 </div>
                 <div style={actionStyles.pickerGroup}>
@@ -233,11 +251,11 @@ export default class App extends Component {
                   ) : null}
                 </ScrollView>
               </View>
-              {isRunning ? <Overlay /> : null}
+              {isRunning && !isSelfTimed ? <Overlay /> : null}
             </View>
           }
           viewPanel={
-            <View style={styles.viewPanel}>
+            <View style={[styles.viewPanel, isSelfTimed && styles.viewPanelFill]}>
               <View style={styles.iconEyeContainer}>
                 <TouchableOpacity onPress={this._handleVisuallyHideBenchmark}>
                   <IconEye style={styles.iconEye} />
@@ -245,8 +263,11 @@ export default class App extends Component {
               </View>
 
               <Provider key={currentLibraryName + ':' + currentBenchmarkName}>
-                {isRunning ? (
-                  <View ref={this._setBenchWrapperRef}>
+                {isRunning || (isSelfTimed && status === 'complete') ? (
+                  <View
+                    ref={this._setBenchWrapperRef}
+                    style={isSelfTimed ? styles.benchFill : undefined}
+                  >
                     <Benchmark
                       component={Component}
                       forceLayout
@@ -258,6 +279,7 @@ export default class App extends Component {
                       })}
                       ref={this._setBenchRef}
                       sampleCount={sampleCount}
+                      selfTimed={currentImplementation.selfTimed}
                       timeout={20000}
                       type={Component.benchmarkType}
                     />
@@ -267,7 +289,7 @@ export default class App extends Component {
                 )}
               </Provider>
 
-              {isRunning ? <Overlay /> : null}
+              {isRunning && !isSelfTimed ? <Overlay /> : null}
             </View>
           }
         />
@@ -276,32 +298,84 @@ export default class App extends Component {
     );
   }
 
+  _allLibraryNames() {
+    if (this._libraryNamesTests === this.props.tests && this._libraryNamesCache) {
+      return this._libraryNamesCache;
+    }
+    const names = new Set();
+    for (const bench of Object.keys(this.props.tests)) {
+      for (const lib of Object.keys(this.props.tests[bench])) names.add(lib);
+    }
+    // Array.from: `[...set]` is compiled to `[].concat(set)` by this bundle
+    // toolchain, which keeps the Set as one element (`[object Set]` in the UI).
+    this._libraryNamesTests = this.props.tests;
+    this._libraryNamesCache = Array.from(names).sort();
+    return this._libraryNamesCache;
+  }
+
+  /** Libraries that can run the given benchmark (or any selected suite bench). */
+  _librariesSupportedFor(benchmarkNames) {
+    const supported = new Set();
+    for (const bench of benchmarkNames) {
+      for (const lib of Object.keys(this.props.tests[bench] || {})) supported.add(lib);
+    }
+    return supported;
+  }
+
+  _getValidAutoRuns(benchmarks, selectedLibraries) {
+    const { tests } = this.props;
+    const queue = [];
+    for (const benchmarkName of benchmarks) {
+      for (const libraryName of selectedLibraries) {
+        if (tests[benchmarkName][libraryName]) {
+          queue.push({ benchmarkName, libraryName });
+        }
+      }
+    }
+    return queue;
+  }
+
   _renderAutoDialog() {
     const { tests } = this.props;
     const { dialogMode, autoSelectedLibraries, autoSelectedBenchmarks, currentBenchmarkName } =
       this.state;
     const allBenchmarks = Object.keys(tests);
-    const allLibraries = Object.keys(tests[allBenchmarks[0]]);
-    const selectedLibCount = allLibraries.filter(l => autoSelectedLibraries[l]).length;
-    const selectedBenchCount = allBenchmarks.filter(b => autoSelectedBenchmarks[b]).length;
+    const allLibraries = this._allLibraryNames();
     const isSuite = dialogMode === 'suite';
-    const totalRuns = isSuite ? selectedBenchCount * selectedLibCount : selectedLibCount;
-    const canRun = isSuite ? selectedBenchCount > 0 && selectedLibCount > 0 : selectedLibCount > 0;
+    const selectedBenchmarks = isSuite
+      ? allBenchmarks.filter(b => autoSelectedBenchmarks[b])
+      : [currentBenchmarkName];
+    // In Auto Benchmark, grey out libraries this suite does not implement. In
+    // Auto Suite, a library stays enabled if any selected benchmark supports it.
+    const supportedLibraries = this._librariesSupportedFor(
+      selectedBenchmarks.length ? selectedBenchmarks : allBenchmarks
+    );
+    const selectedLibraries = allLibraries.filter(
+      l => autoSelectedLibraries[l] && supportedLibraries.has(l)
+    );
+    const totalRuns = this._getValidAutoRuns(selectedBenchmarks, selectedLibraries).length;
+    const canRun = totalRuns > 0;
 
-    const renderCheckRow = (key, label, checked, onToggle) => (
+    const renderCheckRow = (key, label, checked, onToggle, disabled) => (
       <div
         key={key}
         data-bench-check=""
-        style={dialogStyles.checkRow}
-        onClick={() => onToggle(key)}
+        data-disabled={disabled ? 'true' : undefined}
+        style={{
+          ...dialogStyles.checkRow,
+          ...(disabled ? dialogStyles.checkRowDisabled : null),
+        }}
+        onClick={disabled ? undefined : () => onToggle(key)}
+        aria-disabled={disabled || undefined}
       >
         <div
           style={{
             ...dialogStyles.checkbox,
-            ...(checked ? dialogStyles.checkboxChecked : {}),
+            ...(checked && !disabled ? dialogStyles.checkboxChecked : {}),
+            ...(disabled ? dialogStyles.checkboxDisabled : null),
           }}
         >
-          {checked ? (
+          {checked && !disabled ? (
             <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
               <path
                 d="M1 4l2.5 2.5L9 1"
@@ -313,11 +387,23 @@ export default class App extends Component {
             </svg>
           ) : null}
         </div>
-        <div style={dialogStyles.checkLabel}>{label}</div>
+        <div style={dialogStyles.checkLabel}>
+          {label}
+          {disabled ? <span style={dialogStyles.naHint}> n/a</span> : null}
+        </div>
       </div>
     );
 
-    const renderColumn = (title, items, selected, onToggle, onAll, onNone, withDivider) => (
+    const renderColumn = (
+      title,
+      items,
+      selected,
+      onToggle,
+      onAll,
+      onNone,
+      withDivider,
+      isItemDisabled
+    ) => (
       <div
         style={{
           ...dialogStyles.column,
@@ -337,7 +423,10 @@ export default class App extends Component {
           </div>
         </div>
         <div style={dialogStyles.columnList}>
-          {items.map(item => renderCheckRow(item, item, !!selected[item], onToggle))}
+          {items.map(item => {
+            const disabled = isItemDisabled ? isItemDisabled(item) : false;
+            return renderCheckRow(item, item, !!selected[item] && !disabled, onToggle, disabled);
+          })}
         </div>
       </div>
     );
@@ -369,7 +458,8 @@ export default class App extends Component {
                   this._handleToggleAutoBenchmark,
                   () => this._setAllAuto('benchmarks', true),
                   () => this._setAllAuto('benchmarks', false),
-                  true
+                  true,
+                  null
                 )
               : null}
             {renderColumn(
@@ -379,7 +469,8 @@ export default class App extends Component {
               this._handleToggleAutoLibrary,
               () => this._setAllAuto('libraries', true),
               () => this._setAllAuto('libraries', false),
-              false
+              false,
+              lib => !supportedLibraries.has(lib)
             )}
           </div>
 
@@ -404,14 +495,23 @@ export default class App extends Component {
 
   _handleChangeBenchmark = value => {
     this.setState(
-      () => ({ currentBenchmarkName: value }),
+      state => {
+        const libraries = Object.keys(this.props.tests[value] || {});
+        const currentLibraryName = libraries.includes(state.currentLibraryName)
+          ? state.currentLibraryName
+          : libraries[0];
+        return { currentBenchmarkName: value, currentLibraryName, status: 'idle' };
+      },
       () => saveSettings(this.state)
     );
   };
 
   _handleChangeLibrary = value => {
+    const { tests } = this.props;
+    const { currentBenchmarkName } = this.state;
+    if (!tests[currentBenchmarkName][value]) return;
     this.setState(
-      () => ({ currentLibraryName: value }),
+      () => ({ currentLibraryName: value, status: 'idle' }),
       () => saveSettings(this.state)
     );
   };
@@ -468,9 +568,16 @@ export default class App extends Component {
   _setAllAuto = (kind, value) => {
     const { tests } = this.props;
     if (kind === 'libraries') {
-      const allLibraries = Object.keys(tests[Object.keys(tests)[0]]);
-      const next = {};
-      for (const lib of allLibraries) next[lib] = value;
+      const { dialogMode, autoSelectedBenchmarks, currentBenchmarkName } = this.state;
+      const benches =
+        dialogMode === 'suite'
+          ? Object.keys(tests).filter(b => autoSelectedBenchmarks[b])
+          : [currentBenchmarkName];
+      const supported = this._librariesSupportedFor(benches.length ? benches : Object.keys(tests));
+      const next = { ...this.state.autoSelectedLibraries };
+      for (const lib of this._allLibraryNames()) {
+        if (supported.has(lib)) next[lib] = value;
+      }
       this.setState({ autoSelectedLibraries: next }, () => saveSettings(this.state));
     } else if (kind === 'benchmarks') {
       const allBenchmarks = Object.keys(tests);
@@ -486,10 +593,6 @@ export default class App extends Component {
       this.state;
 
     const allBenchmarks = Object.keys(tests);
-    const allLibraries = Object.keys(tests[allBenchmarks[0]]);
-    const selectedLibraries = allLibraries.filter(lib => autoSelectedLibraries[lib]);
-    if (selectedLibraries.length === 0) return;
-
     let benchmarks;
     if (dialogMode === 'suite') {
       benchmarks = allBenchmarks.filter(b => autoSelectedBenchmarks[b]);
@@ -498,12 +601,14 @@ export default class App extends Component {
       benchmarks = [currentBenchmarkName];
     }
 
-    const queue = [];
-    for (const benchmarkName of benchmarks) {
-      for (const libraryName of selectedLibraries) {
-        queue.push({ benchmarkName, libraryName });
-      }
-    }
+    const supported = this._librariesSupportedFor(benchmarks);
+    const selectedLibraries = this._allLibraryNames().filter(
+      lib => autoSelectedLibraries[lib] && supported.has(lib)
+    );
+    if (selectedLibraries.length === 0) return;
+
+    const queue = this._getValidAutoRuns(benchmarks, selectedLibraries);
+    if (queue.length === 0) return;
 
     const [first, ...rest] = queue;
     this.setState({ dialogMode: null });
@@ -714,6 +819,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
     backgroundColor: 'var(--bench-view-bg)',
+  },
+  viewPanelFill: {
+    justifyContent: 'flex-start',
+    alignItems: 'stretch',
+    overflow: 'auto',
+  },
+  benchFill: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    alignSelf: 'stretch',
   },
   iconEye: {
     color: 'rgba(255,255,255,0.7)',
@@ -1030,6 +1146,18 @@ const dialogStyles = {
   checkboxChecked: {
     backgroundColor: 'var(--bench-accent)',
     borderColor: 'var(--bench-accent)',
+  },
+  checkRowDisabled: {
+    opacity: 0.45,
+    cursor: 'not-allowed',
+  },
+  checkboxDisabled: {
+    backgroundColor: 'transparent',
+    borderColor: 'var(--bench-border)',
+  },
+  naHint: {
+    color: 'var(--bench-text-muted)',
+    fontWeight: 400,
   },
   checkLabel: {
     fontSize: 13,

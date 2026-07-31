@@ -41,3 +41,6 @@ packages/styled-components/src/parser/wpt-corpus/raw/
 # Local prerelease release-notes dry-run (see scripts/release-notes)
 .dry-run-release-notes/
 
+# Concurrent responsiveness headless matrix JSON dumps
+packages/benchmarks/headless/out/
+

@@ -43,6 +43,24 @@ whereas others choose to use inline styles. Libraries without built-in support
 for dynamic styles (i.e., they rely on user-authored inline styles) are not
 included.
 
+### Concurrent CSS responsiveness
+
+Self-timed styled-components case that pits urgent input against a large
+transition-rendered tree (client injection uses `useInsertionEffect`). Reports
+Event Timing, CSSOM writes, and discarded renders rather than cycle throughput.
+
+Headed: pick `Concurrent CSS responsiveness`, then Run. Axes default to the
+adversarial cell (`unique` / `forced` / `interrupted`, ≥2500 cells) so
+interruption shows up without CPU throttle. Override via URL (`card`, `sel`,
+`layout`, `sched`, `cells`). Event Timing still needs the headless runner
+(`driver=external`).
+
+Headless matrix (serve `packages/benchmarks` on `127.0.0.1:8899` first):
+
+```sh
+node --expose-gc headless/concurrent.mjs --runs 3 --warmup 1 --throttle 2
+```
+
 ## Example results
 
 ### MacBook Pro (2011)

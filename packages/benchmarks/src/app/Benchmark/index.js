@@ -92,6 +92,9 @@ export default class Benchmark extends React.Component {
     };
     this._startTime = 0;
     this._samples = [];
+    /** After a self-timed run finishes, keep rendering so the case can show
+     *  its own report until App replaces this Benchmark instance. */
+    this._selfTimedDone = false;
   }
 
   // Replaces the deprecated `componentWillReceiveProps` lifecycle. Recomputes
@@ -113,6 +116,10 @@ export default class Benchmark extends React.Component {
     if (this.state.running && !prevState.running) {
       this._startTime = Timing.now();
     }
+
+    // Self-timed components own their run loop and signal completion through
+    // onBenchmarkComplete; the cycle machinery cannot see their work.
+    if (this.props.selfTimed) return;
 
     const { forceLayout, sampleCount, timeout, type } = this.props;
     const { cycle, running } = this.state;
@@ -158,16 +165,28 @@ export default class Benchmark extends React.Component {
   }
 
   render() {
-    const { component: Component, type } = this.props;
+    const { component: Component, selfTimed, type } = this.props;
     const { componentProps, cycle, running } = this.state;
     if (running && shouldRecord(cycle, type)) {
       this._samples[cycle] = { scriptingStart: Timing.now() };
     }
-    return running && shouldRender(cycle, type) ? <Component {...componentProps} /> : null;
+    if (selfTimed) {
+      if (!running && !this._selfTimedDone) return null;
+      return (
+        <Component
+          {...componentProps}
+          benchmarkRunning={running}
+          onBenchmarkComplete={this._handleSelfComplete}
+        />
+      );
+    }
+    if (!(running && shouldRender(cycle, type))) return null;
+    return <Component {...componentProps} />;
   }
 
   start() {
     this._samples = [];
+    this._selfTimedDone = false;
     this.setState(() => ({ running: true, cycle: 0 }));
   }
 
@@ -211,13 +230,39 @@ export default class Benchmark extends React.Component {
     );
   }
 
-  _handleComplete(endTime) {
+  _handleSelfComplete = payload => {
+    this._selfTimedDone = true;
+    this._handleComplete(Timing.now(), payload);
+  };
+
+  _handleComplete(endTime, payload) {
     const { onComplete } = this.props;
     const samples = this.getSamples();
 
     this.setState(() => ({ running: false, cycle: 0 }));
 
     const runTime = endTime - this._startTime;
+
+    if (payload) {
+      // Self-timed: the component measured its own workload; surface its
+      // duration and sample count rather than per-cycle statistics.
+      onComplete({
+        startTime: this._startTime,
+        endTime,
+        runTime,
+        sampleCount: payload.inputCount,
+        samples: [],
+        max: runTime,
+        min: runTime,
+        median: runTime,
+        mean: runTime,
+        stdDev: 0,
+        meanLayout: 0,
+        meanScripting: payload.durationMs,
+      });
+      return;
+    }
+
     const sortedElapsedTimes = samples.map(({ start, end }) => end - start).sort(sortNumbers);
     const sortedScriptingElapsedTimes = samples
       .map(({ scriptingStart, scriptingEnd }) => scriptingEnd - scriptingStart)
