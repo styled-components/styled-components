@@ -481,6 +481,7 @@ describe('basic', () => {
     // this no longer is possible in React 16.6 because
     // of the deprecation of findDOMNode; need to find an alternative
     it('should work in StrictMode without warnings', () => {
+      // fail-on-console (setupTestFramework) fails the test if console.error leaks
       const Comp = styled.div``;
 
       render(
@@ -488,8 +489,6 @@ describe('basic', () => {
           <Comp />
         </StrictMode>
       );
-
-      expect(console.error).not.toHaveBeenCalled();
     });
   });
 

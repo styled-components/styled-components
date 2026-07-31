@@ -1,0 +1,84 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  // Library and showcase trees export many symbols that are only consumed
+  // outside this monorepo (or only by tests knip already treats as entry).
+  // Keep those as warnings so `pnpm knip` stays a dependency/file hygiene gate.
+  "rules": {
+    "duplicates": "warn",
+    "enumMembers": "off",
+    "exports": "warn",
+    "namespaceMembers": "off",
+    "optionalPeerDependencies": "off",
+    "types": "warn",
+  },
+  "workspaces": {
+    ".": {
+      // Release-notes tooling runs directly; the babel preset chain is
+      // referenced by path from workspace babel configs.
+      "entry": ["scripts/**/*.ts", "babel.config.cjs", "babel-preset.cjs"],
+      // Referenced by string from babel-preset.cjs but declared by
+      // packages/styled-components (hoisted node_modules resolution).
+      "ignoreDependencies": ["@babel/preset-env"],
+    },
+    "packages/benchmarks": {
+      // Headless runners are executed directly.
+      "entry": ["headless/**/*.mjs"],
+      // Referenced only as a webpack/babel alias target for `react-native`.
+      "ignoreDependencies": ["react-native-web"],
+    },
+    "packages/ios-benchmark": {
+      // Bench orchestration scripts are executed directly.
+      "entry": ["scripts/**/*.mjs"],
+      // Injected by the RN babel preset for helper calls; not imported in source.
+      "ignoreDependencies": ["@babel/runtime"],
+    },
+    "packages/native-showcase": {
+      // Expo config plugins are referenced from app.json.
+      "entry": ["plugins/**/*.js"],
+      "ignoreDependencies": [
+        // Babel engine, resolved by Metro/expo tooling rather than imported.
+        "@babel/core",
+        // Not referenced anywhere in the app; knip infers it from expo config.
+        "expo-updates",
+      ],
+    },
+    "packages/sandbox": {
+      // Doc/example modules are not wired into the Next app router.
+      "ignoreFiles": ["**/*.example.tsx"],
+    },
+    "packages/styled-components": {
+      "entry": [
+        // Published subpath (styled-components/test-utils).
+        "test-utils/index.ts",
+        // Entry of the type-surface project (tsconfig.test-types.json).
+        "src/test/types.tsx",
+        // Bun CPU-profiling harnesses, run directly (see AGENTS.md "Profiling").
+        "src/parser/profile-harness.ts",
+        "src/native/profile*.ts",
+        "src/native/bunProfileGlobals.ts",
+      ],
+      "ignoreDependencies": [
+        // String-referenced from the shared root babel-preset.cjs; knip
+        // attributes those refs to the root workspace instead.
+        "@babel/core",
+        "@babel/plugin-transform-flow-strip-types",
+        "@babel/preset-env",
+        "@babel/preset-react",
+        "@babel/preset-typescript",
+        "@react-native/babel-preset",
+        "babel-jest",
+        "babel-plugin-add-module-exports",
+        // Guarded optional require; ships transitively with react-native.
+        "@react-native/normalize-colors",
+        // Type-only import in the published test-utils; consumers of
+        // enzymeFind bring their own enzyme.
+        "enzyme",
+      ],
+    },
+    "packages/styled-components/native": {
+      // Metro resolution stub; these pin the engines the native jest project
+      // resolves against.
+      "ignoreDependencies": ["react", "react-native", "react-native-web"],
+    },
+  },
+}
