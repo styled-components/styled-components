@@ -534,18 +534,38 @@ function bridgeStyledCall<T>(target: T): unknown {
   const result = (styledWeb as unknown as (t: T) => Factoryish)(effectiveTarget);
   return wrapBridgeFactory(result, allLifts);
 }
-styled = bridgeStyledCall as unknown as typeof styledWeb & BridgedNamespace;
-for (const key of Object.keys(styledWeb)) {
-  const value = (styledWeb as unknown as Record<string, unknown>)[key];
-  if (typeof value === 'function') {
-    (styled as unknown as Record<string, unknown>)[key] = wrapBridgeFactory(
-      value as Factoryish,
-      allLifts
-    );
-  } else {
-    (styled as unknown as Record<string, unknown>)[key] = value;
-  }
-}
+const bridgedShorthands = new Map<string, Factoryish>();
+
+/**
+ * HTML and SVG shorthands (`styled.a`, `styled.div`) come from the web factory
+ * wrapped in the bridge's lifts. Whether a name is a tag shorthand at all is the
+ * web factory's decision, so this asks it rather than repeating the test; the
+ * alias getters installed below own every name they define.
+ */
+styled = new Proxy(bridgeStyledCall, {
+  get(target, prop) {
+    if (typeof prop === 'string') {
+      const cached = bridgedShorthands.get(prop);
+      if (cached !== undefined) return cached;
+
+      if (!(prop in target)) {
+        const webFactory: unknown = Reflect.get(styledWeb, prop);
+        if (typeof webFactory === 'function') {
+          const bridged = wrapBridgeFactory(webFactory as Factoryish, allLifts);
+          bridgedShorthands.set(prop, bridged);
+          return bridged;
+        }
+      }
+    }
+
+    return Reflect.get(target, prop);
+  },
+
+  /** Match the web factory so `'div' in styled` agrees with `styled.div`. */
+  has(target, prop) {
+    return prop in target || Reflect.has(styledWeb, prop);
+  },
+}) as unknown as typeof styledWeb & BridgedNamespace;
 
 type Factoryish = ((
   strings: TemplateStringsArray,

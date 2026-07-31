@@ -68,13 +68,16 @@ type-check.
 
 `out` / `in out` on `Styled`, `PolymorphicComponent`, `IStyledComponentBase`, etc. reduce variance computation (-72%) and memory (-16%).
 
-### `domElements.forEach`
+### Element shorthands
 
-Uses `(styled as any)` cast; types are already declared via mapped type on the styled const, avoiding 120 redundant `Styled<>` instantiations.
+`styled.div` and friends are synthesized at runtime by a `Proxy`, and their types
+come from a single mapped type over `SupportedHTMLElements` asserted onto the
+`styled` const. Declaring them any other way (a per-element assignment, or typing
+the proxy target as the mapped type) instantiates `Styled<>` once per element.
 
 ### `KnownTarget` shape (don't re-narrow)
 
-The 153-element `SupportedHTMLElements | AnyComponent` union looks like an obvious
+The `SupportedHTMLElements | AnyComponent` union looks like an obvious
 target for narrowing. Don't. `ExecutionProps['as']: KnownTarget | undefined` is
 load-bearing for the contextual typing of `.attrs({ as: 'label' })`: the literal
 `'label'` only narrows against a union that includes `SupportedHTMLElements`. If
