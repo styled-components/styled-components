@@ -19,7 +19,7 @@ const sections = [
   {
     title: 'Performance',
     items: [
-      { href: '/perf/data-grid', label: 'Data Grid' },
+      { href: '/perf/data-grid', label: 'Data Grid (concurrent)' },
       { href: '/perf/dashboard', label: 'Dashboard' },
       { href: '/perf/form', label: 'Form' },
       { href: '/perf/list', label: 'List' },

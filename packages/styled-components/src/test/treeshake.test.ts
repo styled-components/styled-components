@@ -470,10 +470,11 @@ describe('per-plugin DCE from plugins subpath', () => {
 });
 
 describe('bundle size', () => {
-  // NOTE (v7): ceilings are intentionally loose through the v7 development
-  // cycle. Ratchet down to the v7 targets (standalone 12.0 kB / webpack 6.8 kB
-  // / all-in 10.5 kB) toward release. See AGENTS.md → CSS Parser for arc.
-  it('standalone minified bundle is under 15.5kB gzip', () => {
+  // Ceilings sit just above the current figures so any regression trips here.
+  // `pnpm --filter styled-components test:build` prints each live number.
+  // v7 release targets to ratchet toward: standalone 12.0kB, webpack 6.8kB,
+  // all-in 10.5kB.
+  it('standalone minified bundle stays under its gzip ceiling', () => {
     const zlib = require('zlib');
     const minified = fs.readFileSync(path.join(distDir, 'styled-components.min.js'));
     const gzipped = zlib.gzipSync(minified);
@@ -481,15 +482,12 @@ describe('bundle size', () => {
 
     console.log(`  styled-components.min.js: ${sizeKB.toFixed(2)}kB gzip`);
 
-    // Bumped from 15kB after the arity-2 attrs feature shipped (CompiledAst
-    // pop/peek): adds ~0.7kB of always-shipped trace + runtime-fallback
-    // scaffolding. Worth it for the third-party-component bridge ergonomics.
-    // Bumped again for the fragment-slot missing-`;` recovery in the parser
-    // (~0.1kB of charCode imports + the cssProduct structure check).
-    // Bumped for multi-result plugin composition in createCompiler (~0.1kB).
-    expect(sizeKB).toBeLessThan(15.6);
+    // Carries every export, so this is the widest surface: the in-house parser,
+    // arity-2 attrs tracing with its runtime fallback, and the server entry
+    // points a consumer bundle would shake away. Ceiling includes buffered
+    // injection (StyleInjector + provisional rule stash) on top of main.
+    expect(sizeKB).toBeLessThan(15.4);
   });
-
   it('production bundle size with real bundler tree-shaking', async () => {
     const webpack = require('webpack');
     const zlib = require('zlib');
@@ -550,29 +548,31 @@ describe('bundle size', () => {
       expect(bundle).not.toContain('border-top-left-radius');
       expect(bundle).not.toContain('styled-components/plugins/rtl');
 
-      // Phase 1 + 2 + B + C + D + E architecture: Source + AST-direct emit
-      // + pre-classified slot kinds + fragment splicing + on-demand string
-      // fragments + Source synthesis for non-`css(...)` inputs + objectToCSS
-      // / objectToTemplate + Phase C TemplateValue + interpolation-sentinel
-      // gate (`ParseContext.templates`) hardening the static-input parse
-      // path against malicious user-supplied filled[] values that contain
-      // sentinel-shaped byte patterns. Plus arity-2 attrs (CompiledAst
-      // pop/peek) trace + runtime-fallback scaffolding: ~0.6kB. Net
-      // ~2.5kB above v6.4.1 baseline after scanQP/isWS scan-primitive
-      // unification. Plus fragment-slot missing-`;` recovery: ~0.1kB.
-      // Plus multi-result plugin composition: ~0.1kB.
-      expect(sizeKB).toBeLessThan(14.4);
+      // `styled.div` is synthesized on first access, so the element table does
+      // not ship. A few camelCase SVG names remain in the shorthand shape
+      // test; assert names that exist only in the dropped table.
+      expect(bundle).not.toContain('blockquote');
+      expect(bundle).not.toContain('feConvolveMatrix');
+      expect(bundle).not.toContain('optgroup');
+      // Control for the tag-name checks above: a string that IS present, proving
+      // the probe reads a bundle it can actually match against.
+      expect(bundle).toContain('sc-');
+
+      // The in-house parser (Source, AST-direct emit, fragment splicing,
+      // interpolation-sentinel gating) is reachable from any styled call, so it
+      // dominates what survives here and cannot shake away. Ceiling includes
+      // buffered injection on top of main's plugin composition.
+      expect(sizeKB).toBeLessThan(14.3);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   }, 30000);
 
-  it('all-in consumer bundle (only react/react-dom external) stays smaller than v6.4.1', async () => {
+  it('all-in consumer bundle (only react/react-dom external) stays under its gzip ceiling', async () => {
     // Real consumer cost: what an app actually ships when it imports
     // styled-components. v6 shipped a bundled CSS preprocessor; v7 replaced it with the
     // in-house parser AND inlined the prop-validator (formerly
-    // @emotion/is-prop-valid). This test guards against transitive-dep drift
-    // and locks in v7's all-in win over v6 so regressions are caught early.
+    // @emotion/is-prop-valid). This test guards against transitive-dep drift.
     const webpack = require('webpack');
     const zlib = require('zlib');
     const os = require('os');
@@ -617,13 +617,11 @@ describe('bundle size', () => {
 
       console.log(`  all-in consumer bundle: ${sizeKB.toFixed(2)}kB gzip`);
 
-      // v6.4.1 all-in for the same entry is 11.44kB gzip. v7 ships extra
-      // scaffolding (Source-everywhere, AST-direct emit, fragment splicing,
-      // shared `warnOnce` + `[sc]` taxonomy) plus the arity-2 attrs
-      // bridge (CompiledAst trace + runtime fallback) for net ~2.5kB.
-      // Plus fragment-slot missing-`;` recovery: ~0.1kB.
-      // Plus multi-result plugin composition: ~0.1kB.
-      expect(sizeKB).toBeLessThan(14.4);
+      // v6.4.1 all-in for this same entry is 11.44kB gzip. v7 sits above it
+      // because the in-house parser and the arity-2 attrs bridge ship in full
+      // while v6 leaned on a smaller bundled preprocessor. Ceiling includes
+      // buffered injection on top of main's plugin composition.
+      expect(sizeKB).toBeLessThan(14.3);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }

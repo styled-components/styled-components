@@ -18,7 +18,13 @@
 
     /* Basic Options */
     "incremental": true /* Enable incremental compilation */,
-    "target": "ES2015" /* Specify ECMAScript target version: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017', 'ES2018', 'ES2019', 'ES2020', or 'ESNEXT'. */,
+    /**
+     * ES2020 emits `?.`, `??` and object spread natively instead of TypeScript's
+     * downlevel helpers. Safe against every declared peer (React 19, RN 0.85
+     * Hermes, Node 16). ES2021+ buys no further bytes and native class fields
+     * change field-initialization semantics, so ES2020 is the ceiling.
+     */
+    "target": "ES2020",
     "module": "ESNext" /* Specify module code generation: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', 'es2020', or 'ESNext'. */,
     "lib": ["ES2021", "DOM"] /* Specify library files to be included in the compilation. */,
     // "allowJs": true,                       /* Allow javascript files to be compiled. */

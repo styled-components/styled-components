@@ -117,7 +117,7 @@ const minifierPlugin = terser({
     keep_infinity: true,
     pure_getters: true,
   },
-  ecma: 2015,
+  ecma: 2020,
   format: {
     wrap_func_args: false,
     comments: /^\s*([@#]__[A-Z]+__\s*$|@cc_on)/,

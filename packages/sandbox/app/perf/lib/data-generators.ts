@@ -60,6 +60,21 @@ export function generateCells(count: number, seed?: number): GridCellData[] {
   return cells;
 }
 
+/** Replace `count` random entries (new array); ids stay stable for memoized rows. */
+export function patchCells(
+  cells: readonly GridCellData[],
+  count: number,
+  rand: () => number = Math.random
+): GridCellData[] {
+  const next = cells.slice();
+  const n = Math.min(count, next.length);
+  for (let i = 0; i < n; i++) {
+    const idx = (rand() * next.length) | 0;
+    next[idx] = randomCell(next[idx].id, rand);
+  }
+  return next;
+}
+
 export interface DashboardStat {
   id: string;
   label: string;
