@@ -38,11 +38,34 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Create Release Pull Request
+        id: changesets
         uses: changesets/action@v1
         with:
           publish: pnpm release
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
+
+      # changesets/action omits package changelogs when the PR body would exceed
+      # GitHub's 65536-character limit. Rewrite with a fence-safe truncation instead.
+      - name: Enrich Version Packages PR body
+        if: steps.changesets.outputs.pullRequestNumber != ''
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
+          VERSION_PR_BASE_BRANCH: main
+          VERSION_PR_BODY_OUT: ${{ runner.temp }}/version-pr-body.md
+          VERSION_PR_HAS_PUBLISH_SCRIPT: 'true'
+          VERSION_PR_VERSION_BRANCH: changeset-release/main
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          node scripts/release-notes/build-version-pr-body.ts
+          PR_NUMBER="${{ steps.changesets.outputs.pullRequestNumber }}"
+          CURRENT_FILE="${{ runner.temp }}/version-pr-body-current.md"
+          gh pr view "$PR_NUMBER" --json body --jq .body > "$CURRENT_FILE"
+          if cmp -s "$CURRENT_FILE" "$VERSION_PR_BODY_OUT"; then
+            echo "Version Packages PR body already up to date."
+            exit 0
+          fi
+          gh pr edit "$PR_NUMBER" --body-file "$VERSION_PR_BODY_OUT"
 
   prerelease:
     name: Prerelease

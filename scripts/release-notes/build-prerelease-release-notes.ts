@@ -4,19 +4,18 @@
  * ancestry queries to match real runs.
  */
 
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import * as changesetsGit from '@changesets/git';
 import readChangesets from '@changesets/read';
 
+import { discoverPublicPackages } from './build-version-pr-body.ts';
 import type { ChangelogOptions } from './changelog.ts';
 import changelog from './changelog.ts';
 import { createDefaultGitAdapter } from './default-git-adapter.ts';
 import { groupChangesetsByPackageAndType } from './prerelease-grouping.ts';
-
-type PkgJson = { name: string; private?: boolean; version: string };
 
 function loadChangesetConfigJson(cwd: string): {
   changelog?: string | [string, { repo?: string; branch?: string } & Record<string, unknown>];
@@ -90,21 +89,6 @@ export function resolveChangelogOptionsForBuild(
       ? process.env.SC_RELEASE_NOTES_BRANCH
       : cfgOpts.branch;
   return { repo, branch };
-}
-
-function discoverPublicPackages(cwd: string): PkgJson[] {
-  const packagesDir = join(cwd, 'packages');
-  const out: PkgJson[] = [];
-  for (const d of readdirSync(packagesDir)) {
-    const jsonPath = join(packagesDir, d, 'package.json');
-    try {
-      const pkg = JSON.parse(readFileSync(jsonPath, 'utf8')) as PkgJson;
-      if (!pkg.private) out.push(pkg);
-    } catch {
-      /* skip */
-    }
-  }
-  return out;
 }
 
 export async function buildPrereleaseReleaseNotes(options: {
