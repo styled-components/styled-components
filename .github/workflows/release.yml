@@ -47,10 +47,15 @@ jobs:
 
       # changesets/action omits package changelogs when the PR body would exceed
       # GitHub's 65536-character limit. Rewrite with a fence-safe truncation instead.
+      #
+      # Use the job token + REST for the body write. `gh pr edit` goes through
+      # GraphQL that demands `read:org` for a `login` field even when only the
+      # body changes; RELEASE_GITHUB_TOKEN is a classic PAT without that scope
+      # (cli/cli#13575). Job `pull-requests: write` is enough for REST.
       - name: Enrich Version Packages PR body
         if: steps.changesets.outputs.pullRequestNumber != ''
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           VERSION_PR_BASE_BRANCH: main
           VERSION_PR_BODY_OUT: ${{ runner.temp }}/version-pr-body.md
           VERSION_PR_HAS_PUBLISH_SCRIPT: 'true'
@@ -60,12 +65,14 @@ jobs:
           node scripts/release-notes/build-version-pr-body.ts
           PR_NUMBER="${{ steps.changesets.outputs.pullRequestNumber }}"
           CURRENT_FILE="${{ runner.temp }}/version-pr-body-current.md"
-          gh pr view "$PR_NUMBER" --json body --jq .body > "$CURRENT_FILE"
+          gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq .body > "$CURRENT_FILE"
           if cmp -s "$CURRENT_FILE" "$VERSION_PR_BODY_OUT"; then
             echo "Version Packages PR body already up to date."
             exit 0
           fi
-          gh pr edit "$PR_NUMBER" --body-file "$VERSION_PR_BODY_OUT"
+          jq -n --rawfile body "$VERSION_PR_BODY_OUT" '{body: $body}' \
+            | gh api --method PATCH "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --input - \
+            --jq '"Updated Version Packages PR body (" + (.body | length | tostring) + " chars)."'
 
   prerelease:
     name: Prerelease
