@@ -16,3 +16,4 @@ Visit http://localhost:3000.
 - `/global-style-test` - `createGlobalStyle` mounting / unmounting cases
 - `/rsc` - server-component rendering
 - `/perf` - render-cost scratch pad
+- `/perf/data-grid` - 2000-cell monitoring grid that patches ~400 cells every 100ms inside `startTransition` + `useDeferredValue`, with a sync filter and pause/resume
