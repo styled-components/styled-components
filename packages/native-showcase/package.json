@@ -40,7 +40,7 @@
     "@babel/core": "^7.25.2",
     "@types/react": "^19",
     "babel-plugin-styled-components": "2.1.4",
-    "pretty-format": "29.7.0",
+    "babel-preset-expo": "~56.0.8",
     "typescript": "^5.8.3"
   },
   "engines": {

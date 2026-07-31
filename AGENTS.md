@@ -87,6 +87,8 @@ NOTE: This file is the only home for these instructions. CLAUDE.md is a one-line
 - `pnpm --filter styled-components bench:web`: Every suite under `src/bench/` matched by `jest.config.bench.js` (`*.bench.test.*`, `web*.test.*`, `preprocess*.test.*`). Each file's header docblock states what it measures, so a new suite joins the run by matching one of those patterns. Do not enumerate the suites here; that list has already drifted twice.
 - `pnpm --filter styled-components bench:web:stress`: Stress benchmarks only (`src/bench/web.test.js`); uses `SC_BENCH_ITER_SCALE=0.2` and `SC_BENCH_RUNS=3` for quicker runs
 - `pnpm --filter styled-components bench:rsc`: `src/bench/rsc.test.tsx`, matched by `jest.config.bench-rsc.js` (node environment, `IS_RSC` server path)
+- `pnpm knip`: Dead-code scan (unused files, dependencies, exports); config in `knip.jsonc`. Output is a candidate list, not a delete list
+- `pnpm verify`: Format with autofix (`prettier --write`), knip, changeset-changelog tests, then `pnpm test`
 - Native render perf: use `packages/ios-benchmark` (real Hermes V1 on iOS sim). The previous in-tree native React-rendering bench was retired; `react-test-renderer` 19.2 + RN preset doesn't synchronously invoke function components, and the V8 numbers wouldn't predict Hermes anyway. Algorithm-shape benches (parser, responsive, RSC) still run via `bench:web` / `bench:rsc`.
 
 ## Profiling (Bun)
