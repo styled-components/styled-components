@@ -50,7 +50,8 @@
       "fast-xml-parser": ">=5.7.0",
       "postcss": ">=8.5.10",
       "serialize-javascript": ">=7.0.5",
-      "shell-quote": ">=1.8.4"
+      "shell-quote": ">=1.8.4",
+      "brace-expansion": "1.1.16"
     }
   }
 }
