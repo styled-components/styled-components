@@ -54,6 +54,19 @@ declare module '../models/ThemeProvider' {
 }
 
 /* ------------------------------------------------------------------------- *
+ * Known gap, characterized rather than asserted: a native `style` accepts
+ * web-only CSS. `TargetProps` carries no runtime parameter, so the CSS-variable
+ * widening it applies cannot be gated on web vs native at its one application
+ * point. Verified identical on 6.4.2, 6.4.4 and today, so this is inherited, not
+ * introduced -- but this is the seam that would carry the runtime if it were
+ * fixed. If these stop compiling the gap closed and this block should go.
+ * ------------------------------------------------------------------------- */
+
+const WidenedStyleView = styled.View``;
+<WidenedStyleView style={{ float: 'left' }} />;
+<WidenedStyleView style={{ width: '3em' }} />;
+
+/* ------------------------------------------------------------------------- *
  * Baseline: the shorthand aliases resolve their target's real props.
  * ------------------------------------------------------------------------- */
 
