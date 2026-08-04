@@ -272,12 +272,13 @@ export type PolymorphicComponentProps<
 
 /**
  * Resolves the call-site props for one usage of a polymorphic component from its
- * `as` / `forwardedAs` targets. An `as` render target substitutes that target's
- * props and requires `as`; plain usage (or `as` being the wrapped component's own
- * non-target type, e.g. Next.js Link's `as?: Url`) keeps Substitute-free base
- * props so ref callbacks infer with spread props (#5687), the wrapped `as` stays
- * assignable (#5734), and BaseProps keys keep completing (#5741); `forwardedAs`
- * substitutes the forwarded target's props.
+ * `as` / `forwardedAs` targets. An `as` render target has its props merged over
+ * the base props and requires `as`; plain usage (or `as` being the wrapped
+ * component's own non-target type, e.g. Next.js Link's `as?: Url`) reaches
+ * {@link PolymorphicComponentProps} not at all, so the base props stay untouched
+ * and ref callbacks infer with spread props (#5687), the wrapped `as` stays
+ * assignable (#5734), and BaseProps keys keep completing (#5741). `forwardedAs`
+ * merges the same way, and loses to `as` where both name a target.
  *
  * The target test is `string | AnyComponent`, not `KnownTarget`: narrowing it
  * drops custom element strings (`as="my-element"`) out of the target branch.

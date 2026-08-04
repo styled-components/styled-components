@@ -10,7 +10,7 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 
 - NEVER use `precedence` or `href` on `<style>` elements -- React 19 Float merges same-precedence tags, strips custom `data-*` attributes, and hoists to `<head>` where source ordering is unpredictable. RSC style tags must be plain inline `<style>` (server component output is not hydrated, so no mismatch).
 - The native entry must NEVER transitively import DOM code via value imports. Use `import type` and branded `Symbol.for()` checks instead of `instanceof`. Verify: `grep -c 'document\.' native/dist/styled-components.native.cjs.js` must be 0. RN/Hermes 0.79+ fails at module evaluation time on `document` references.
-- Server detection requires three mechanisms combined: `__SERVER__` (build-time constant), `IS_RSC` (module-level constant), and `styleSheet.server` (runtime flag from `ServerStyleSheet`). Always use `__SERVER__ || IS_RSC || ssc.styleSheet.server`. `IS_RSC` is `true` at runtime in React 19 server components because React's `react-server` export condition serves a stripped build without `createContext`. Bundlers (Next.js/Turbopack) use this condition automatically.
+- Server detection requires three mechanisms combined: `__SERVER__` (build-time constant), `IS_RSC` (module-level constant), and `styleSheet.server` (runtime flag from `ServerStyleSheet`). Always use `__SERVER__ || IS_RSC || ssc.styleSheet.server`, with one deliberate exception: `createGlobalStyle`'s server-cache cleanup drops the `IS_RSC` term because the `IS_RSC` branch above it already handled and returned, so reaching that line under RSC means there was nothing to clean. `IS_RSC` is `true` at runtime in React 19 server components because React's `react-server` export condition serves a stripped build without `createContext`. Bundlers (Next.js/Turbopack) use this condition automatically.
 - Turbopack resolves the `browser` entry for SSR of client components, making `__SERVER__` false on the server. `styleSheet.server` is the runtime fallback.
 - `React.useRef` is `undefined` in RSC server components. Gate behind `__SERVER__` for dead-code elimination, never use `typeof React.useRef === 'function'` (runtime conditional hook).
 - `new Array(n)` creates HOLEY_ELEMENTS arrays that infect V8 type feedback -- 3.9x regression observed in GroupedTag.
@@ -29,8 +29,8 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - Always run the formatter (`pnpm --filter styled-components prettier`) before committing code changes
 - Public-facing docs (README, `packages/*/README.md`, `docs/*`, FAQ, sandbox README) describe user-observable behavior only. Implementation details -- React Float/`precedence`, stylis internals, `React.cache`, V8 optimizations -- belong in AGENTS.md unless the answer to a user question specifically requires them.
 - Links to the site use the bare domain (`https://styled-components.com`). There is no `www` subdomain.
-- After editing `packages/styled-components/src/utils/errors.md`, run `pnpm run generateErrors` before tests -- Jest snapshots compare against the compiled error map and will fail silently otherwise.
-- The repo-root `src/utils/errors.md` is marked "DO NOT EDIT" but is kept in sync for URL/content fixes that mirror the canonical `packages/styled-components/src/utils/errors.md`. Update links in place; never change its structure or error numbering.
+- After editing `packages/styled-components/src/utils/errors.md`, run `pnpm --filter styled-components generateErrors` before tests -- Jest snapshots compare against the compiled error map and will fail silently otherwise.
+- The repo-root `src/utils/errors.md` is a frozen pre-monorepo stub, not a mirror. Nothing reads it: `generateErrorMap.js` and the production error URL both point at the canonical `packages/styled-components/src/utils/errors.md`. It stops at error 13 and its entry 2 already describes a different error than the one shipped, so do not consult it and do not treat it as authoritative. Update links in place if a link fix lands; never change its structure or error numbering. Whether it should exist at all is an open question for the maintainer, not a cleanup to do in passing.
 - Don't name specific AI providers in contributor-facing docs. "An AI coding assistant" is the neutral phrasing.
 - Don't hard-wrap prose in PR bodies, issue bodies, or GitHub comments. Write paragraphs as single lines with blank lines between them -- markdown re-flows automatically and hard wraps look broken in mobile viewers and quoted replies. Commit message bodies may still use the 72-char convention.
 
@@ -109,7 +109,7 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 | Props iteration | `for..in` is 1.7x faster than `Object.keys()` + loop |
 | RegExp creation | Cache via Map is 5x faster; `indexOf` pre-check to skip entirely is 5x more |
 | Template literals | Manual `+` concat is 1.3x faster than `` `${a}${b}` `` in tight loops |
-| `React.createElement` | Raw element objects are 60-120x faster; `$$typeof` detected at module load |
+| `React.createElement` | Raw element objects measure 60-120x faster, but are NOT used on this branch: `StyledComponent` calls React's own `createElement`. Measurement only, not an inventory entry |
 
 ## Type Contracts
 
@@ -203,7 +203,7 @@ consumers. Raise the budget with `--update` only after understanding why the cos
 - Flattening nested `Substitute` into parallel `FastOmit`s increases instantiations — TS deduplicates nested structures better
 - Don't replace built-in `Omit` with `FastOmit` in `OverrideStyle` — built-in `Omit` (Pick + Exclude) is more optimized (+17% instantiations when replaced)
 - Variance annotations (`out`/`in out`) on `Styled`, `PolymorphicComponent`, `IStyledComponentBase`, etc. reduce variance computation (-72%) and memory (-16%)
-- `domElements.forEach` uses `(styled as any)` cast — types are already declared via mapped type on the styled const, avoiding 120 redundant `Styled<>` instantiations
+- `domElements.forEach` uses `(styled as any)` cast — types are already declared via mapped type on the styled const, avoiding one redundant `Styled<>` instantiation per element in `domElements`
 - Profile: `~/.claude/tools/tsc-perf.sh measure tsconfig.test-types.json` or `npx tsc --noEmit --extendedDiagnostics --project tsconfig.test-types.json`. Delete tsbuildinfo for clean measurement.
 - `npx @typescript/analyze-trace /tmp/tsc-perf-trace` detects hot spots and duplicate packages
 

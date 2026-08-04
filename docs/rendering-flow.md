@@ -67,9 +67,9 @@ sequenceDiagram
     ComponentStyle-->>StyledComponentImpl: className
 
     Note over StyledComponentImpl,DOM: 5. ELEMENT CREATION
-    StyledComponentImpl->>StyledComponentImpl: buildClassName(foldedIds + styledId + generated + props)
-    StyledComponentImpl->>StyledComponentImpl: rawElement(type, props, ref)
-    Note over StyledComponentImpl: Bypasses React.createElement<br/>overhead (~60-120x faster)
+    StyledComponentImpl->>StyledComponentImpl: buildPropsForElement(context, target, theme, shouldForwardProp)
+    Note over StyledComponentImpl: className = foldedIds + styledId<br/>+ generated + props.className<br/>(`class` for custom elements)
+    StyledComponentImpl->>React: createElement(target, propsForElement)
 
     alt RSC Mode
         StyledComponentImpl->>GroupedTag: getGroup() for inheritance chain + keyframes

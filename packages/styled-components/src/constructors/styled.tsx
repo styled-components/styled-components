@@ -24,8 +24,9 @@ const styled = baseStyled as typeof baseStyled & {
 };
 
 // Shorthands for all valid HTML Elements.
-// The type assertion avoids 120 Styled<> instantiations during type checking -
-// the correct types are declared on the `styled` const above via the mapped type.
+// The type assertion avoids one Styled<> instantiation per element in
+// domElements during type checking - the correct types are declared on the
+// `styled` const above via the mapped type.
 domElements.forEach(domElement => {
   (styled as any)[domElement] = baseStyled(domElement);
 });

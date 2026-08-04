@@ -40,7 +40,7 @@
     // "alwaysStrict": true,                  /* Parse in strict mode and emit "use strict" for each source file. */
 
     /* Additional Checks */
-    // "noUnusedLocals": true,                /* Report errors on unused locals. */
+    "noUnusedLocals": true /* Catches imports left behind by a refactor; a stale `Substitute` import survived the MergeProps migration because nothing checked. */,
     // "noUnusedParameters": true,            /* Report errors on unused parameters. */
     // "noImplicitReturns": true,             /* Report error when not all code paths in function return a value. */
     // "noFallthroughCasesInSwitch": true,    /* Report errors for fallthrough cases in switch statement. */
