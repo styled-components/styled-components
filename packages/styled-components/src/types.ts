@@ -110,8 +110,12 @@ export type Interpolation<Props extends BaseObject> =
   | null
   | Keyframes
   | StyledComponentBrand
-  | RuleSet<Props>
-  | Interpolation<Props>[];
+  // `RuleSet<Props>` IS `Interpolation<Props>[]`, so listing both spelled the
+  // same recursive branch twice and doubled the work of every expansion. That
+  // was enough to tip `css?: CSSProp` over the instantiation-depth limit when
+  // combined with a library that has deep recursive generics of its own
+  // (react-spring's `animated`, #3496).
+  | RuleSet<Props>;
 
 // `Props` already carries the widened `style` from TargetProps, so this does not
 // re-apply OverrideStyle. Re-applying it here also broke `Attrs<any>` relating to
