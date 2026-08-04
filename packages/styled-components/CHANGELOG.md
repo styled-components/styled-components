@@ -1,5 +1,54 @@
 # styled-components
 
+## 6.5.0
+
+### Minor Changes
+
+- dfe4baf: React Native components now check `style` against React Native's own style types. Web-only CSS such as `float`, and CSS custom properties such as `--brand`, were previously accepted even though React Native has never done anything with them at runtime. They now surface as a type error where you write them instead of silently doing nothing.
+
+  ```tsx
+  const Card = styled.View``;
+
+  <Card style={{ padding: 16 }} />; // unchanged
+  <Card style={{ float: 'left' }} />; // now a type error
+  ```
+
+  Web components are unaffected and still accept custom properties.
+
+- dfe4baf: Declaring your own `style` prop type now constrains the fields you name while leaving the rest of CSS alone. Previously a declaration like `styled.div<{ style?: { width: number } }>` was quietly ignored, because the built-in style type was applied after your props, so any CSS value was still accepted. Now `width` has to be a number, while `color`, custom properties, and everything else you did not mention keep working as before.
+
+  To remove a field rather than constrain it, declare it as `never`. To make your type the only thing accepted, wrap it in the new `CustomStyle` helper, which removes every field you did not list:
+
+  ```tsx
+  const Box = styled.div<{ style?: CustomStyle<{ width: number }> }>``;
+  ```
+
+  The constraint holds when the component is rendered through `as` or `forwardedAs`, so it cannot be sidestepped by rendering the same component as a different tag. Note that `CustomStyle` removes CSS custom properties too, since they are among the fields you did not list.
+
+  One thing to know if you use `exactOptionalPropertyTypes`: on a component that declares its own `style`, passing `style={undefined}` explicitly is now rejected. Leaving the prop off is unaffected. Write `style?: { width: number } | undefined` in your declaration if you need to pass it explicitly.
+
+  Relatedly, reading the style type back off a component (for example with `React.ComponentProps`) now reports that CSS custom properties are accepted, which matches what was already allowed when rendering.
+
+- 2949923: Large TypeScript projects type-check dramatically faster. On a 500-component app, `tsc` check time drops to under a quarter of what 6.4.4 takes and peak memory to under a third, which resolves the out-of-memory failures some projects hit after upgrading past 6.4.2. Both are now better than 6.4.2 was, so there is no longer a reason to pin to it. Editor responsiveness improves by the same margin, and autocomplete on `as` targets is unchanged.
+
+### Patch Changes
+
+- dfe4baf: Fixed `ref` being rejected on React Native components created with the shorthand syntax, such as `styled.TextInput`. Passing a ref, or a ref callback whose parameter you have not annotated, now works the same way it does with `styled(TextInput)`.
+
+  Also fixed a type error when a component's `attrs` callback is given an explicit parameter type, as in `styled.div.attrs<MyProps>(props => props)`.
+
+- dfe4baf: Fixed components built on targets whose props cannot be inspected, such as Mantine's polymorphic components, rejecting `children` and the target's own props once you added a prop of your own:
+
+  ```tsx
+  const Styled = styled(MantineButton)<{ $variant: 'a' | 'b' }>``;
+
+  <Styled $variant="a" variant="filled">
+    this now works
+  </Styled>;
+  ```
+
+  Wrapping such a target without adding props already worked; adding one turned the permissiveness off. Your own declared props stay strictly typed either way.
+
 ## 6.4.4
 
 ### Patch Changes
