@@ -213,10 +213,28 @@ interface ThemedExecutionProps {
  * remaining consumer type-check cost.
  */
 export type TargetProps<T> = T extends keyof React.JSX.IntrinsicElements
-  ? OverrideStyle<React.JSX.IntrinsicElements[T]>
+  ? IntrinsicProps<T>
   : T extends AnyComponent
-    ? OverrideStyle<React.ComponentPropsWithRef<T>>
+    ? ComponentTargetProps<T>
     : {};
+
+/**
+ * Props of an HTML or SVG tag.
+ *
+ * Both branches of {@link TargetProps} are named rather than inlined, so a
+ * component's type reads as `Substituted<IntrinsicProps<"button">, { … }>`
+ * instead of the full expansion of every tag attribute. See {@link WithCSSVars}
+ * for why a conditional's inline branch cannot keep a name.
+ *
+ * Applies the widening directly rather than through {@link OverrideStyle}: every
+ * intrinsic element declares `style`, so the guard has nothing to decide here.
+ */
+type IntrinsicProps<T extends keyof React.JSX.IntrinsicElements> = WithCSSVars<
+  React.JSX.IntrinsicElements[T]
+>;
+
+/** Props of a component render target. Named for the same reason as {@link IntrinsicProps}. */
+type ComponentTargetProps<T extends AnyComponent> = OverrideStyle<React.ComponentPropsWithRef<T>>;
 
 /**
  * Used by PolymorphicComponent to define prop override cascading order.
@@ -408,11 +426,22 @@ export type CSSPropertiesWithVars = CSSProperties & {
  * filters `undefined` out so the explicit `?:` stays the sole optional source.
  * The explicit `| undefined` then restores assigning `style={undefined}`.
  */
-type OverrideStyle<P extends BaseObject> = 'style' extends keyof P
-  ? Omit<P, 'style'> & {
-      style?: CSSPropertiesWithVars | (P['style'] & {}) | undefined;
-    }
-  : P;
+/**
+ * The taken branch of {@link OverrideStyle}, named rather than inlined.
+ *
+ * A conditional type alias loses its name the moment it resolves: the checker
+ * returns the branch type and drops the alias, so an inline branch prints its
+ * whole expansion in every hover and error. Naming the branch puts a readable
+ * name back in the output at no measurable cost. Keep it named.
+ */
+type WithCSSVars<P extends BaseObject> = Omit<P, 'style'> & {
+  // `keyof P & 'style'` rather than `'style'`: splitting the branch out of the
+  // conditional means P is no longer known to carry the key here, and this form
+  // stays valid for any P while resolving to P['style'] whenever the key exists.
+  style?: CSSPropertiesWithVars | (P[keyof P & 'style'] & {}) | undefined;
+};
+
+type OverrideStyle<P extends BaseObject> = 'style' extends keyof P ? WithCSSVars<P> : P;
 
 export type CSSPseudos = { [K in CSS.Pseudos]?: CSSObject };
 
@@ -465,9 +494,11 @@ export type { NoInfer } from './utils/noInfer';
 // one bound propagates an unreducible node through every prop bag downstream
 // (measured at roughly +160% types and +70% check time on a consumer fixture).
 // Nothing here needs the bound: `keyof B` and `& B` are valid for any B.
-export type Substitute<A extends BaseObject, B> = keyof B extends never
-  ? A
-  : FastOmit<A, keyof B> & B;
+/** The taken branch of {@link Substitute}. Named so it survives into hovers and
+ * error messages; see {@link WithCSSVars} for why an inline branch does not. */
+export type Substituted<A extends BaseObject, B> = FastOmit<A, keyof B> & B;
+
+export type Substitute<A extends BaseObject, B> = keyof B extends never ? A : Substituted<A, B>;
 
 /**
  * Makes keys in K optional while keeping all others required.
