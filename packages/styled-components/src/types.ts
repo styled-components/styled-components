@@ -366,7 +366,7 @@ export type WidenUntypedProps<Props extends BaseObject> = WidenForUntypedTarget<
  * were merged into. Pass the latter and the test degrades: adding one transient
  * prop makes `keyof` non-`never`, the widening switches off, and the target's
  * own props including `children` start being rejected. That is #5756, and every
- * call site here passes `TargetProps<Target>` for that reason.
+ * call site here passes `TargetProps<R, Target>` for that reason.
  *
  * Applying it to an already-widened `Target` is a no-op, since the index
  * signature makes `keyof` be `string`.
