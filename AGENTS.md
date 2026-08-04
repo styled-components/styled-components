@@ -41,6 +41,7 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - `pnpm --filter sandbox dev` -- Start Next.js dev server
 - `pnpm --filter styled-components test:web` -- Test web build
 - `pnpm --filter styled-components test:native` -- Test React Native
+- `pnpm --filter styled-components type-perf` -- Consumer type-check budget (needs `pnpm build` first)
 - `pnpm --filter styled-components bench` -- Run all benchmarks (web + native + RSC)
 - `pnpm --filter styled-components bench:web` -- Run web benchmarks
 - `pnpm --filter styled-components bench:native` -- Run native benchmarks (parser + render)
@@ -111,8 +112,19 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 
 ## TypeScript Type Performance
 
-- `OverrideStyle` accounts for ~22% of type instantiations (measured via ablation). Cannot be simplified without breaking `exactOptionalPropertyTypes` or JSX overload resolution. Do not touch without a major version plan.
-- Use built-in `NoInfer` (TS 5.4+) internally; the export in `types.ts` is for downstream consumers only
+Consumer cost is budgeted in CI: `pnpm --filter styled-components type-perf` type-checks a generated
+fixture against the built `dist/*.d.ts` and fails when types or instantiations exceed
+`type-perf.budget.json`. Measure there, not against `src`, since internal files don't reach consumers.
+Raise the budget with `--update` only after understanding why the cost grew.
+
+- `TargetProps<T>` (`types.ts`) must stay ONE distributive conditional. Wrapping it in an outer `T extends KnownTarget ? … : {}` check nests two distributions over the ~153-member target union and costs ~4x the check time; folding the KnownTarget test into the helper's own `AnyComponent` arm is what makes it cheap.
+- Resolve HTML tag props by indexed access (`React.JSX.IntrinsicElements[T]`), never `React.ComponentPropsWithRef<T>`. On @types/react 18 the latter rebuilds the whole ~265-key prop bag through `Omit` just to strip legacy string refs; the indexed access already carries `ref` via `DetailedHTMLProps`. This was the entire #5767 regression: `ComponentPropsWithRef` went from 496 to 59,944 types in a 100-component fixture.
+- Do NOT "fix" a distributive conditional by bracketing it as `[T] extends [X] ? F<T & X> : …`. The `T & X` intersection cross-products two ~153-member unions and OOMs tsc. Bracketing is only safe when the true branch doesn't need `T` narrowed.
+- `OverrideStyle` is the largest remaining consumer cost, because it runs on the whole merged prop bag at every JSX call site, so its `Omit` is a fresh mapped type per styled component. Two routes were measured and neither shipped; the old note here blamed JSX overload resolution, which is stale since the overloads became a single call signature in 6.4.3.
+  - Intersect instead of omit (`P & { style?: … }`): -33% types, -22% check time. Not behavior-preserving, since `Omit` *replaces* the style type where an intersection *narrows* it, so a component declaring `style?: { width: number }` accepts arbitrary CSS today and would stop.
+  - Widen at the source: apply it once per target inside `TargetProps` and at the `styled.tag` / native maps, and drop it from both call-site positions. This is the big one: 500-component fixture goes 4.61s to 2.75s and 630K to 127K types, beating even 6.4.2. It needs a minor, not a patch. Three behavior deltas, each defensible but real: an explicitly declared `style` type (`styled.div<{ style?: MyStyle }>`) starts overriding rather than unioning; `style={undefined}` needs an explicit `| undefined` restored; and `React.ComponentProps<X>['style']` starts reflecting the widening, which today it silently does not. It also needs `'style' extends keyof P` rather than `P extends { style?: infer S }`, since `{}` vacuously satisfies the latter and would hand every un-introspectable target a `style` key, defeating `WidenUntypedProps` and regressing #5756. Expect knock-on work in `StyledComponent`/`StyledNativeComponent` where `Attrs<any>` stops relating to `Attrs<OuterProps>`.
+- Use built-in `NoInfer` (TS 5.4+) internally. Never declare a local `NoInfer` alias in a file that also uses it: the local declaration shadows the intrinsic within that module and silently downgrades every reference to the slower deferred form.
+- `tsc --noEmit` cannot see editor behavior. A change to the polymorphic call signature must also be checked by driving a real tsserver at a half-typed JSX attribute (`<Comp as="video" l|>` must still offer `loop`). Always include a positive control in that probe: a caret that lands wrong returns zero completions, which reads identically to a genuine regression.
 - `FastOmit<A, K> & B` (intersection) is 2.4x fewer instantiations than a single mapped type with per-key conditionals
 - Homomorphic mapped types (`{ [K in keyof P]: ... }`) break React JSX overload resolution
 - Flattening nested `Substitute` into parallel `FastOmit`s increases instantiations — TS deduplicates nested structures better

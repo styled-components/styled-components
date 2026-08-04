@@ -17,6 +17,8 @@ mount-deep-tree-trace.json
 mount-wide-tree-trace.json
 update-dynamic-styles-trace.json
 .rollup.cache
+# Generated consumer fixture for the type-check budget (`pnpm --filter styled-components type-perf`)
+.type-perf
 .build
 .next
 .expo

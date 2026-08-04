@@ -42,6 +42,10 @@ jobs:
       - run: pnpm build
         env:
           BUNDLEWATCH_GITHUB_TOKEN: ${{ secrets.BUNDLEWATCH_GITHUB_TOKEN }}
+
+      # Guards consumer type-check cost against the built .d.ts. Regressions here
+      # are invisible to the unit and type-contract suites (see #5767).
+      - run: pnpm --filter styled-components type-perf
   test:
     runs-on: ubuntu-latest
     steps:
