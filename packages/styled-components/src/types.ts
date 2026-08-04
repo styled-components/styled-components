@@ -441,8 +441,15 @@ export type Substitute<A extends BaseObject, B extends BaseObject> = keyof B ext
 /**
  * Makes keys in K optional while keeping all others required.
  * Used to make attrs-provided props optional on the final component.
+ *
+ * The guard is `[K] extends [never]`, not `keyof K extends never`. `K` is the set
+ * of attrs-provided keys and is `never` for any component without `.attrs()`,
+ * which is most of them, but `keyof never` is `string | number | symbol`, so the
+ * old spelling never short-circuited. Every such component paid an omit plus a
+ * `Partial<Pick<...>>` that removed and re-added nothing, and carried both in its
+ * displayed type.
  */
-export type MakeAttrsOptional<P extends BaseObject, K extends keyof any> = keyof K extends never
+export type MakeAttrsOptional<P extends BaseObject, K extends keyof any> = [K] extends [never]
   ? P
   : FastOmit<P, K & keyof P> & Partial<Pick<P, K & keyof P>>;
 
