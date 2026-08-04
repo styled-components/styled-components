@@ -10,4 +10,8 @@ To remove a field rather than constrain it, declare it as `never`. To make your 
 const Box = styled.div<{ style?: CustomStyle<{ width: number }> }>``;
 ```
 
+The constraint holds when the component is rendered through `as` or `forwardedAs`, so it cannot be sidestepped by rendering the same component as a different tag. Note that `CustomStyle` removes CSS custom properties too, since they are among the fields you did not list.
+
+One thing to know if you use `exactOptionalPropertyTypes`: on a component that declares its own `style`, passing `style={undefined}` explicitly is now rejected. Leaving the prop off is unaffected. Write `style?: { width: number } | undefined` in your declaration if you need to pass it explicitly.
+
 Relatedly, reading the style type back off a component (for example with `React.ComponentProps`) now reports that CSS custom properties are accepted, which matches what was already allowed when rendering.

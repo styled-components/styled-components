@@ -194,29 +194,16 @@ interface ThemedExecutionProps {
 /**
  * Props of a render target, for `as` / `forwardedAs`.
  *
- * One distributive conditional, never two nested. Resolving an HTML tag by
- * indexed access rather than through `React.ComponentPropsWithRef` is what makes
- * this cheap: for a tag the indexed access is a single lookup, where
- * `ComponentPropsWithRef` walks four more conditionals and (on @types/react 18)
- * rebuilds the whole ~265-key prop bag through `Omit` just to strip legacy string
- * refs. `React.JSX.IntrinsicElements['div']` already carries `ref` via
- * `DetailedHTMLProps`, so the tag branch loses nothing.
- *
- * Load-bearing shape, do not nest: wrapping this in an outer
- * `T extends KnownTarget ? ... : {}` check re-introduces a second distribution
- * over the ~153-member target union and costs roughly 4x the check time of this
- * flat form (measured against the #5767 reporter fixture). The `AnyComponent`
- * arm doubles as the KnownTarget test, and every non-target -- `void`, a custom
- * element string, a wrapped component's own `as` type such as Next.js Link's
- * `as?: Url` -- falls through to `{}` exactly as the outer check used to make it.
+ * One distributive conditional, never two nested, and tags resolve by indexed
+ * access rather than `React.ComponentPropsWithRef`. Both are load-bearing: this
+ * shape is the #5767 fix, and nesting a `T extends KnownTarget` check around it
+ * costs ~4x the check time. The `AnyComponent` arm doubles as that test, and
+ * every non-target falls through to `{}`.
  *
  * The `style` widening happens here, once per target, rather than at every JSX
- * call site -- via {@link WithCSSVars} directly on the intrinsic arm, which needs
- * no guard, and via {@link OverrideStyle} on the component arm, which does. A
- * target's prop interface is shared by every component built on it, so the
- * widening resolves once per tag instead of once per component; applying it to
- * the merged prop bag at the call site made it the single largest remaining
- * consumer type-check cost.
+ * call site -- directly via {@link WithCSSVars} on the intrinsic arm, which
+ * needs no guard, and via {@link OverrideStyle} on the component arm, which
+ * does. See AGENTS.md before changing any of it.
  */
 export type TargetProps<T> = T extends keyof React.JSX.IntrinsicElements
   ? IntrinsicProps<T>
@@ -256,7 +243,7 @@ export type PolymorphicComponentProps<
   ForwardedAsTargetProps extends BaseObject = TargetProps<ForwardedAsTarget>,
 > = NoInfer<
   FastOmit<
-    Substitute<
+    MergeProps<
       BaseProps,
       // "as" wins over "forwardedAs" when it comes to prop interface
       Substitute<ForwardedAsTargetProps, AsTargetProps>
@@ -351,32 +338,24 @@ export interface PolymorphicComponent<
  * statics (`IStyledStatics`, `defaultProps`), so internal code keeps the real
  * `Props` and the widening can't leak past the call site.
  *
- * The "no known keys" test is distributed over `Props` first. `keyof` on a union
- * intersects each member's keys, so a bare union of disjoint shapes (e.g.
- * `{ a: string } | { b: string }`) has `keyof` of `never` despite being fully
- * introspectable. Checking each constituent independently widens only when every
- * member is truly empty.
+ * The test distributes over `Props` first: `keyof` on a union intersects each
+ * member's keys, so a union of disjoint shapes has `keyof` of `never` while
+ * being perfectly introspectable. Checking each member alone avoids widening it.
  */
-export type WidenUntypedProps<Props extends BaseObject> = (
-  Props extends unknown ? (keyof Props extends never ? true : false) : never
-) extends true
-  ? Props & { [key: string]: unknown }
-  : Props;
+export type WidenUntypedProps<Props extends BaseObject> = WidenForUntypedTarget<Props, Props>;
 
 /**
- * Widens because the *target* was un-introspectable, even when the component
+ * Widens because the *target* is un-introspectable, even when the component
  * declares props of its own.
  *
- * {@link WidenUntypedProps} asks whether the finished prop bag is empty, which
- * stops being true the moment a component adds a transient prop:
- * `styled(PolymorphicTarget)<{ $variant: string }>` has a `keyof` of
- * `'$variant'`, so the widening switches off and the target's own props --
- * `children` included -- start being rejected (#5756). Whether a target can be
- * introspected is a property of the target, not of what the component adds on
- * top, so the test belongs on `Target`.
+ * `Target` must be the target's props, never a bag the component's own props
+ * were merged into. Pass the latter and the test degrades: adding one transient
+ * prop makes `keyof` non-`never`, the widening switches off, and the target's
+ * own props including `children` start being rejected. That is #5756, and every
+ * call site here passes `TargetProps<Target>` for that reason.
  *
- * Applying this on top of an already-widened bag is a no-op: the index
- * signature gives `keyof` of `string`, so the check is false the second time.
+ * Applying it to an already-widened `Target` is a no-op, since the index
+ * signature makes `keyof` be `string`.
  */
 export type WidenForUntypedTarget<Target extends BaseObject, Props extends BaseObject> = (
   Target extends unknown ? (keyof Target extends never ? true : false) : never
@@ -461,17 +440,14 @@ export type CustomStyle<T extends object> = T & {
 };
 
 /**
- * Widens a target's `style` prop so CSS custom properties are accepted. This is
- * the taken branch of {@link OverrideStyle}, named rather than inlined.
+ * Widens a target's `style` prop so CSS custom properties are accepted, and the
+ * taken branch of {@link OverrideStyle}. Keep it named: a conditional alias
+ * loses its name once it resolves, so an inline branch prints its whole
+ * expansion in every hover and error.
  *
- * A conditional type alias loses its name the moment it resolves: the checker
- * returns the branch type and drops the alias, so an inline branch prints its
- * whole expansion in every hover and error. Naming the branch puts a readable
- * name back in the output at no measurable cost. Keep it named.
- *
- * `(P['style'] & {})` is load-bearing under `exactOptionalPropertyTypes`: it
- * filters `undefined` out so the explicit `?:` stays the sole optional source.
- * The explicit `| undefined` then restores assigning `style={undefined}`.
+ * `(P['style'] & {})` is load-bearing under `exactOptionalPropertyTypes` -- it
+ * filters `undefined` out so the `?:` stays the sole optional source -- and the
+ * explicit `| undefined` then restores `style={undefined}`.
  */
 type WithCSSVars<P extends BaseObject> = Omit<P, 'style'> & {
   // `keyof P & 'style'` rather than `'style'`: splitting the branch out of the
@@ -483,10 +459,9 @@ type WithCSSVars<P extends BaseObject> = Omit<P, 'style'> & {
 /**
  * Applies the `style` widening to a target that may or may not declare `style`.
  *
- * Applied once per target in {@link TargetProps}, never to a merged prop bag at a
- * JSX call site. Because it runs before user props are substituted in, a `style`
- * type declared explicitly (e.g. `styled.div<{ style?: MyStyle }>`) replaces this
- * rather than being unioned with it.
+ * Applied once per target in {@link TargetProps}, never to a merged prop bag at
+ * a JSX call site. It runs before a component's own props, which then merge over
+ * it via {@link MergeProps} rather than replacing it.
  *
  * The test is `'style' extends keyof P`, not `P extends { style?: infer S }`:
  * the latter is vacuously satisfied by `{}`, which would hand a `style` key to
@@ -560,33 +535,22 @@ export type Substitute<A extends BaseObject, B> = keyof B extends never ? A : Su
 
 /**
  * A component's own props over its target's props, with `style` merged rather
- * than replaced.
+ * than replaced, so `styled.div<{ style?: { width: number } }>` constrains
+ * `width` and leaves the rest of CSS accepted. A field declared `never` is
+ * removed; {@link CustomStyle} removes everything a declaration omits.
  *
- * Declaring `styled.div<{ style?: { width: number } }>` constrains `width` and
- * leaves the rest of CSS -- including custom properties -- still accepted.
- * Replacing the type outright would mean anyone constraining one field lost
- * every field they did not mention. Declaring a field as `never` removes it, and
- * {@link CustomStyle} removes everything a declaration does not name, so a full
- * override is still expressible.
+ * Under `exactOptionalPropertyTypes` the intersection leaves no `undefined` arm,
+ * so such a component rejects an explicit `style={undefined}`; declare
+ * `style?: X | undefined` to allow it. Omitting the prop is unaffected.
  *
- * The merge is the intersection that falls out of NOT omitting `style` from `A`:
- * `CSSPropertiesWithVars & { width: number }` narrows `width` to `number` and
- * keeps every other property, and `& { color?: never }` ablates. Spelling it
- * this way rather than as a `'style' extends keyof B` guard is load-bearing on
- * two counts, both measured rather than reasoned:
- *   - a guard testing `keyof A` distributes over the ~153-member target union
- *     and tips `tsc` into TS2590 outright;
- *   - a guard testing `keyof B` stays deferred while `B` is generic, so the
- *     checker materializes both branches and costs +54% types on a consumer
- *     fixture even though no component in it declares a `style`.
- *
- * The `keyof B extends never` guard is inherited from {@link Substitute} for the
- * same reason it exists there: without it the no-props case resolves to
- * `FastOmit<A, never> & {}`, and `& {}` never reduces.
+ * Both conditional spellings of this were measured and rejected, one of them
+ * fatal. Keep it an intersection; see AGENTS.md before changing the shape.
  */
-export type MergeProps<A extends BaseObject, B> = keyof B extends never
-  ? A
-  : FastOmit<A, Exclude<keyof B, 'style'>> & B;
+export type MergeProps<A extends BaseObject, B> = keyof B extends never ? A : Merged<A, B>;
+
+/** The taken branch of {@link MergeProps}, named so hovers print a name rather
+ * than the expansion. Keep it named; see {@link Substituted}. */
+export type Merged<A extends BaseObject, B> = FastOmit<A, Exclude<keyof B, 'style'>> & B;
 
 /**
  * Makes keys in K optional while keeping all others required.

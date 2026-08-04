@@ -268,7 +268,10 @@ function run(extraArgs) {
   try {
     return execFileSync(
       process.execPath,
-      [`--max-old-space-size=${HEAP_MB}`, tscPath, '-p', workDir, ...extraArgs],
+      // `--expose-gc` is what makes the memory figure meaningful: tsc collects
+      // before sampling only when `global.gc` exists, so without it the number
+      // includes garbage and drifts ~1.5% between runs. With it, bit-identical.
+      [`--max-old-space-size=${HEAP_MB}`, '--expose-gc', tscPath, '-p', workDir, ...extraArgs],
       {
         encoding: 'utf8',
         maxBuffer: 64 * 1024 * 1024,
@@ -317,15 +320,12 @@ console.log(`  types:          ${measured.types.toLocaleString()}`);
 console.log(`  instantiations: ${measured.instantiations.toLocaleString()}`);
 console.log(`  memory:         ${Math.round(measured.memoryKb / 1024).toLocaleString()} MB`);
 
-// Derived from measured run-to-run noise, not guessed: types and instantiations
-// are bit-identical across runs, so 10% is pure headroom for dependency drift.
-// Memory moves about 1% here and is the only figure that can vary with the host,
-// so it gets a wider band -- still far tighter than the signal it exists to
-// catch, which is 3x and up (6.4.4 measured 867MB against this fixture where
-// 6.4.2 measured 338MB and this branch measures 231MB). Memory earns its place
-// because 6.4.4 has FEWER instantiations than 6.4.3 while using more memory: a
+// All three figures are deterministic run to run, so these bands are headroom
+// for dependency drift, not for noise; memory keeps a slightly wider one only
+// because a different host can move it. Memory is budgeted at all because 6.4.4
+// has FEWER instantiations than 6.4.3 while using far more of it -- a
 // counters-only budget reads that regression as an improvement.
-const TOLERANCE_PCT = { instantiations: 10, memoryKb: 20, types: 10 };
+const TOLERANCE_PCT = { instantiations: 10, memoryKb: 12, types: 10 };
 
 if (update) {
   writeFileSync(
@@ -340,6 +340,17 @@ const budget = JSON.parse(readFileSync(budgetFile, 'utf8'));
 if (!budget.measured || !budget.tolerancePct) {
   console.error(`type-perf: ${budgetFile} is not in the expected shape -- run with --update.`);
   process.exit(1);
+}
+
+// Per metric, not just per container. A metric missing from the file yields NaN
+// bounds, every comparison against NaN is false, and the run reports "within
+// budget" while checking nothing -- silently disabling the metric it was added
+// to enforce. Any budget written before a metric existed has exactly this shape.
+for (const metric of Object.keys(TOLERANCE_PCT)) {
+  if (!Number.isFinite(budget.measured[metric]) || !Number.isFinite(budget.tolerancePct[metric])) {
+    console.error(`type-perf: budget is missing '${metric}' -- run with --update to re-measure.`);
+    process.exit(1);
+  }
 }
 if (budget.count !== count) {
   console.error(`type-perf: budget is for ${budget.count} components, measured ${count}.`);

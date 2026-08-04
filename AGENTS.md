@@ -41,6 +41,7 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - `pnpm --filter sandbox dev` -- Start Next.js dev server
 - `pnpm --filter styled-components test:web` -- Test web build
 - `pnpm --filter styled-components test:native` -- Test React Native
+- `pnpm --filter styled-components test:types` -- Type contract suites (compile-only, no runner)
 - `pnpm --filter styled-components type-perf` -- Consumer type-check budget (needs `pnpm build` first)
 - `pnpm --filter styled-components bench` -- Run all benchmarks (web + native + RSC)
 - `pnpm --filter styled-components bench:web` -- Run web benchmarks
@@ -110,6 +111,46 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 | Template literals | Manual `+` concat is 1.3x faster than `` `${a}${b}` `` in tight loops |
 | `React.createElement` | Raw element objects are 60-120x faster; `$$typeof` detected at module load |
 
+## Type Contracts
+
+`src/test/types.tsx` (web) and `src/test/types.native.tsx` (native) are compile-only files with no
+test runner: `test:types` type-checks everything under `src` except `*.test.ts(x)`, so a new
+non-`.test` file is picked up automatically. Most cases are drawn from reported issues and carry the
+issue number.
+
+- Every `@ts-expect-error` is a test, and the compiler already enforces that each one is live: a
+  directive with nothing to suppress is itself an error, `TS2578 Unused '@ts-expect-error'
+  directive`, so `test:types` fails on a dead one with no extra tooling. Do not build a harness to
+  re-check this; one was written here and deleted once TS2578 was measured doing the same job.
+  When TS2578 fires, rewrite the assertion rather than deleting it -- the behavior it described
+  changed, and that is worth a decision. Never delete or relax an existing directive to make a
+  change compile; that is the change being wrong, not the test.
+- TS2578 proves a directive suppresses *something*, not that it suppresses the *right* thing. A
+  directive can go on passing for a reason its comment does not describe: an assertion here about
+  arbitrary CSS being rejected kept passing only because a required field was missing. Name the
+  expected error in the comment, and when editing a case, re-read what it actually catches.
+- A case asserting a type did NOT widen to `any` needs a presence anchor, since `any` compiles
+  clean. Write a deliberate mismatch under `@ts-expect-error` so the widening surfaces as `TS2578`.
+- Never annotate a callback parameter whose inference is the thing under test. An annotation makes
+  the case pass whether or not inference works.
+- A `DefaultTheme` augmentation in a contract suite uses optional keys only. The library defaults the
+  theme to `EMPTY_OBJECT` internally, so a required key fails the library's own source rather than the
+  test file. Read through `NonNullable<...>` where a non-optional view is needed.
+- `tsc` emits semantic diagnostics only when there are zero syntactic ones, so a single syntax error
+  in a contract suite blanks the entire type check and the file reads as "clean except one typo".
+  Fix any syntax error first, then re-read the output before believing a pass.
+- Third-party shapes are hand-written stubs (Mantine's polymorphic factory, Next.js `Link`'s `Url`).
+  Annotate a stub with the package version it was verified against, and pin its premise with an
+  assertion where the stub's whole point is a property of the real type -- the Mantine stub asserts
+  its resolved props have no keys, so the case cannot pass against a stub that became
+  introspectable. Do not add the real package as a dependency to test a type.
+- Four reported issues cannot be pinned in-tree, because each is a union-explosion or
+  recursion-depth cliff that a simplified stub sits clear of and would pass vacuously: antd's
+  `Button` under `.attrs()` (#5725), react-bootstrap 2.8's `Button` (#4166), react-spring's
+  `animated` with the `css` prop (#3496), and preact/compat (#3773). They are verified out of tree
+  against the real packages at the versions reported. Re-verify them by hand when the polymorphic
+  call signature or `Interpolation` changes.
+
 ## TypeScript Type Performance
 
 Consumer cost is budgeted in CI: `pnpm --filter styled-components type-perf` type-checks a generated
@@ -140,6 +181,8 @@ consumers. Raise the budget with `--update` only after understanding why the cos
 - Resolve HTML tag props by indexed access (`React.JSX.IntrinsicElements[T]`), never `React.ComponentPropsWithRef<T>`. On @types/react 18 the latter rebuilds the whole ~265-key prop bag through `Omit` just to strip legacy string refs; the indexed access already carries `ref` via `DetailedHTMLProps`. This was the entire #5767 regression: `ComponentPropsWithRef` went from 496 to 59,944 types in a 100-component fixture.
 - Do NOT "fix" a distributive conditional by bracketing it as `[T] extends [X] ? F<T & X> : …`. The `T & X` intersection cross-products two ~153-member unions and OOMs tsc. Bracketing is only safe when the true branch doesn't need `T` narrowed.
 - The `.attrs()` re-resolution seam in `constructWithOptions` keeps `React.ComponentPropsWithRef<PrivateResolvedTarget>` and must NOT be switched to `TargetProps`, even though `TargetProps` is cheaper everywhere else. The function form `.attrs(({ as }) => ({ as: as || 'button' }))` makes the resolved target a union, and `TargetProps` is two conditionals, so it distributes inside the distribution that seam already performs. Measured on a three-line repro: 6.4.2 157K instantiations, `TargetProps` 6.9M, and TS2589 (excessively deep) with one more chained layer -- a hard failure against both 6.4.2 and 6.4.4, not a slowdown. `ComponentPropsWithRef` there costs ~2% instantiations on the consumer fixture and lands the same repro at 133K, below 6.4.2. Cheaper in count, deeper in nesting is a real trade and this one position is where nesting wins.
+- Known limitation, characterized in the contract suite: under `exactOptionalPropertyTypes`, a component declaring its own `style` rejects an explicit `style={undefined}`, because intersecting the declared type leaves no `undefined` arm. Omitting the prop is unaffected and `style?: X | undefined` restores it. Do not "fix" this by reintroducing a conditional in `MergeProps`; that shape measured +54% types. Accepted and documented in the changeset instead.
+- `PolymorphicComponentProps` merges rather than substitutes the `as`/`forwardedAs` target's props over `BaseProps`, so a declared `style` constraint is not escapable by rendering the same component through a different tag. Measured on the consumer fixture: +0.016% types, +0.48% instantiations, memory unchanged. This is the one place a per-JSX-site cost was accepted, and it was accepted only because it buys a contract `CustomStyle` otherwise states falsely.
 - A declared `style` merges rather than replaces, and the merge is an intersection, not a conditional: `MergeProps` simply does not omit `style` from the target, so `CSSPropertiesWithVars & { width: number }` narrows one field and keeps the rest. Both conditional spellings were measured and rejected -- testing `keyof A` tips tsc into TS2590 outright, and testing `keyof B` costs +54% types because it stays deferred while `B` is generic and the checker materializes both branches. `never` ablates a field and `CustomStyle` ablates everything unnamed, so full override stays expressible without making it the default.
 - `CSSProp`'s recursion through `RuleSet` is load-bearing and must not be flattened to "fix" #3496 (`css?: CSSProp` plus react-spring's recursive `animated` types tips TS2589). Ablated against the real packages: react-spring alone is fine and `css?: string` is fine, so the depth is ours, but every shallower `CSSProp` that fixes it also stops `css={cssHelperOutput}` being assignable, which is the primary use of the prop. It reproduces identically on 6.4.2 and 6.4.4, so it is a standing limitation rather than a regression.
 - Permissiveness for an un-introspectable target is decided from the TARGET's props, not from the finished prop bag. `WidenUntypedProps` asks whether the merged bag is empty, which stops being true as soon as a component adds a transient prop, so `styled(PolymorphicTarget)<{ $variant: string }>` silently lost the permissiveness and started rejecting `children` (#5756, on 6.4.2 and 6.4.4 alike). `WidenForUntypedTarget` tests `Target` instead. Applying it over an already-widened bag is a no-op, since the index signature makes `keyof` be `string`.

@@ -15,7 +15,6 @@ import {
   Substitute,
   TargetProps,
   WidenForUntypedTarget,
-  WidenUntypedProps,
 } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
 import styledError from '../utils/error';
@@ -57,7 +56,13 @@ export interface Styled<
     ...interpolations: Interpolation<MergeProps<OuterProps, NoInfer<Props>>>[]
   ): IStyledComponent<
     R,
-    WidenForUntypedTarget<OuterProps, MakeAttrsOptional<MergeProps<OuterProps, Props>, AttrsKeys>>
+    // Tested against the target, never `OuterProps`: after `.attrs()` those
+    // diverge and the widening would switch off, which is #5756 one layer down.
+    // `TargetProps<Target>` is `OuterProps`' own default, so it costs nothing.
+    WidenForUntypedTarget<
+      TargetProps<Target>,
+      MakeAttrsOptional<MergeProps<OuterProps, Props>, AttrsKeys>
+    >
   > &
     OuterStatics &
     Statics &
@@ -73,9 +78,8 @@ export interface Styled<
     // Widen when the merged props are un-introspectable ({}) so attrs can backfill
     // arbitrary keys on e.g. Mantine polymorphic-factory targets, matching the
     // permissive JSX call site. Targets with known props are unaffected.
-    PrivateAttrsArg extends Attrs<WidenUntypedProps<PrivateMergedProps>> = Attrs<
-      WidenUntypedProps<PrivateMergedProps>
-    >,
+    PrivateAttrsArg extends Attrs<WidenForUntypedTarget<TargetProps<Target>, PrivateMergedProps>> =
+      Attrs<WidenForUntypedTarget<TargetProps<Target>, PrivateMergedProps>>,
     PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>,
   >(
     attrs: PrivateAttrsArg
@@ -84,15 +88,12 @@ export interface Styled<
     PrivateResolvedTarget,
     PrivateResolvedTarget extends KnownTarget
       ? MergeProps<
-          // `MergeProps`, not `Substitute`: the resolved target's own `style` is
-          // unwidened, and substituting would drop the CSS-variable widening
-          // `OuterProps` already carries. Merging intersects the two, so the
-          // custom-property index signature survives.
-          //
-          // `ComponentPropsWithRef`, not `TargetProps`, is deliberate here and
-          // is the one place that stays -- see AGENTS.md. A function-form
-          // `.attrs` makes this target a union, and `TargetProps` distributes
-          // inside that distribution, which measured as TS2589.
+          // `MergeProps` keeps the CSS-variable widening `OuterProps` carries,
+          // which substituting the target's unwidened `style` would drop.
+          // `ComponentPropsWithRef` rather than `TargetProps` is the one place
+          // that stays: a function-form `.attrs` makes this target a union, and
+          // `TargetProps` distributing inside that measured as TS2589. Both in
+          // AGENTS.md.
           MergeProps<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
           Props
         >
@@ -148,9 +149,8 @@ export default function constructWithOptions<
   templateFunction.attrs = <
     Props extends object = BaseObject,
     PrivateMergedProps extends object = MergeProps<OuterProps, Props>,
-    PrivateAttrsArg extends Attrs<WidenUntypedProps<PrivateMergedProps>> = Attrs<
-      WidenUntypedProps<PrivateMergedProps>
-    >,
+    PrivateAttrsArg extends Attrs<WidenForUntypedTarget<TargetProps<Target>, PrivateMergedProps>> =
+      Attrs<WidenForUntypedTarget<TargetProps<Target>, PrivateMergedProps>>,
     PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>,
   >(
     attrs: PrivateAttrsArg
@@ -160,7 +160,7 @@ export default function constructWithOptions<
       PrivateResolvedTarget,
       PrivateResolvedTarget extends KnownTarget
         ? MergeProps<
-            Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+            MergeProps<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
             Props
           >
         : PrivateMergedProps,
