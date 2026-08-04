@@ -113,9 +113,12 @@ export type Interpolation<Props extends BaseObject> =
   | RuleSet<Props>
   | Interpolation<Props>[];
 
+// `Props` already carries the widened `style` from TargetProps, so this does not
+// re-apply OverrideStyle. Re-applying it here also broke `Attrs<any>` relating to
+// `Attrs<SomeProps>` in the component implementations.
 export type Attrs<Props extends BaseObject = BaseObject> =
-  | (ExecutionProps & Partial<OverrideStyle<Props>>)
-  | ((props: ExecutionContext & Props) => ExecutionProps & Partial<OverrideStyle<Props>>);
+  | (ExecutionProps & Partial<Props>)
+  | ((props: ExecutionContext & Props) => ExecutionProps & Partial<Props>);
 
 export type RuleSet<Props extends BaseObject = BaseObject> = Interpolation<Props>[];
 
@@ -202,11 +205,17 @@ interface ThemedExecutionProps {
  * arm doubles as the KnownTarget test, and every non-target -- `void`, a custom
  * element string, a wrapped component's own `as` type such as Next.js Link's
  * `as?: Url` -- falls through to `{}` exactly as the outer check used to make it.
+ *
+ * `OverrideStyle` is applied here, once per target, rather than at every JSX
+ * call site. A target's prop interface is shared by every component built on it,
+ * so the widening resolves once per tag instead of once per component; applying
+ * it to the merged prop bag at the call site made it the single largest
+ * remaining consumer type-check cost.
  */
-type TargetProps<T> = T extends keyof React.JSX.IntrinsicElements
-  ? React.JSX.IntrinsicElements[T]
+export type TargetProps<T> = T extends keyof React.JSX.IntrinsicElements
+  ? OverrideStyle<React.JSX.IntrinsicElements[T]>
   : T extends AnyComponent
-    ? React.ComponentPropsWithRef<T>
+    ? OverrideStyle<React.ComponentPropsWithRef<T>>
     : {};
 
 /**
@@ -221,22 +230,20 @@ export type PolymorphicComponentProps<
   AsTargetProps extends BaseObject = TargetProps<AsTarget>,
   // props extracted from "forwardedAs"; note that ref is excluded
   ForwardedAsTargetProps extends BaseObject = TargetProps<ForwardedAsTarget>,
-> = OverrideStyle<
-  NoInfer<
-    FastOmit<
-      Substitute<
-        BaseProps,
-        // "as" wins over "forwardedAs" when it comes to prop interface
-        Substitute<ForwardedAsTargetProps, AsTargetProps>
-      >,
-      keyof ExecutionProps
-    >
-  > &
-    ThemedExecutionProps & {
-      as?: AsTarget;
-      forwardedAs?: ForwardedAsTarget;
-    }
->;
+> = NoInfer<
+  FastOmit<
+    Substitute<
+      BaseProps,
+      // "as" wins over "forwardedAs" when it comes to prop interface
+      Substitute<ForwardedAsTargetProps, AsTargetProps>
+    >,
+    keyof ExecutionProps
+  >
+> &
+  ThemedExecutionProps & {
+    as?: AsTarget;
+    forwardedAs?: ForwardedAsTarget;
+  };
 
 /**
  * Resolves the call-site props for one usage of a polymorphic component from its
@@ -273,7 +280,7 @@ type PolymorphicCallProps<
       ? PolymorphicComponentProps<R, BaseProps, void, ForwardedAsTarget> & {
           forwardedAs: ForwardedAsTarget;
         }
-      : OverrideStyle<NoInfer<FastOmit<BaseProps, keyof ExecutionProps>> & ThemedExecutionProps>);
+      : NoInfer<FastOmit<BaseProps, keyof ExecutionProps>> & ThemedExecutionProps);
 
 /**
  * This type forms the signature for a forwardRef-enabled component
@@ -385,8 +392,26 @@ export type CSSPropertiesWithVars = CSSProperties & {
   [key: `--${string}`]: string | number | undefined;
 };
 
-type OverrideStyle<P> = P extends { style?: infer S }
-  ? Omit<P, 'style'> & { style?: CSSPropertiesWithVars | (S & {}) }
+/**
+ * Widens a target's `style` prop so CSS custom properties are accepted.
+ *
+ * Applied once per target in {@link TargetProps}, never to a merged prop bag at a
+ * JSX call site. Because it now runs before user props are substituted in, a
+ * `style` type declared explicitly (e.g. `styled.div<{ style?: MyStyle }>`)
+ * overrides this rather than being unioned with it.
+ *
+ * The test is `'style' extends keyof P`, not `P extends { style?: infer S }`:
+ * the latter is vacuously satisfied by `{}`, which would hand a `style` key to
+ * targets that expose no props at all and defeat `WidenUntypedProps` (#5756).
+ *
+ * `(P['style'] & {})` is load-bearing under `exactOptionalPropertyTypes`: it
+ * filters `undefined` out so the explicit `?:` stays the sole optional source.
+ * The explicit `| undefined` then restores assigning `style={undefined}`.
+ */
+type OverrideStyle<P extends BaseObject> = 'style' extends keyof P
+  ? Omit<P, 'style'> & {
+      style?: CSSPropertiesWithVars | (P['style'] & {}) | undefined;
+    }
   : P;
 
 export type CSSPseudos = { [K in CSS.Pseudos]?: CSSObject };
@@ -434,7 +459,13 @@ export type CSSProp = Interpolation<any>;
 // TypeScript intrinsic within this file and downgrade every reference to it.
 export type { NoInfer } from './utils/noInfer';
 
-export type Substitute<A extends BaseObject, B extends BaseObject> = keyof B extends never
+// `B` is deliberately unconstrained. Bounding it to BaseObject forces callers
+// passing a still-generic target's props to intersect `& BaseObject` to satisfy
+// it, and `{}` is retained rather than reduced inside an intersection, so that
+// one bound propagates an unreducible node through every prop bag downstream
+// (measured at roughly +160% types and +70% check time on a consumer fixture).
+// Nothing here needs the bound: `keyof B` and `& B` are valid for any B.
+export type Substitute<A extends BaseObject, B> = keyof B extends never
   ? A
   : FastOmit<A, keyof B> & B;
 

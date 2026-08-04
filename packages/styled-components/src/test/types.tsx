@@ -545,6 +545,33 @@ const TestCSSVariableUsage = () => {
 };
 
 /**
+ * An explicitly declared `style` type replaces the built-in CSS-variable
+ * widening instead of being unioned with it. The widening is applied to the
+ * render target's props, so props declared on the styled component are
+ * substituted over it and win.
+ */
+const OwnStyleType = styled.div<{ style?: { width: number } }>``;
+<OwnStyleType style={{ width: 3 }} />;
+// @ts-expect-error the declared style type wins, so arbitrary CSS is rejected
+<OwnStyleType style={{ color: 'blue' }} />;
+// @ts-expect-error ...and so are custom properties
+<OwnStyleType style={{ '--x': '1' }} />;
+
+/** A target that declares no `style` prop does not gain one. */
+const NoStyleTarget = (props: { label: string }) => <div>{props.label}</div>;
+const StyledNoStyleTarget = styled(NoStyleTarget)``;
+<StyledNoStyleTarget label="x" />;
+
+/** `style={undefined}` stays assignable under exactOptionalPropertyTypes. */
+<DivWithCSSVariable style={undefined} />;
+
+/** Widening is visible through prop extraction, not only at the call site. */
+const StyleExtractionTarget = styled.div``;
+const extractedStyle: React.ComponentProps<typeof StyleExtractionTarget>['style'] = {
+  '--from-extraction': 'ok',
+};
+
+/**
  * Styled object with nested selectors without CSSProperties
  */
 const StyledObjectWithNestedSelectors: StyledObject = {

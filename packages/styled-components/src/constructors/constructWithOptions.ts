@@ -12,6 +12,7 @@ import {
   StyledTarget,
   Styles,
   Substitute,
+  TargetProps,
   WidenUntypedProps,
 } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
@@ -77,10 +78,7 @@ export interface Styled<
     R,
     PrivateResolvedTarget,
     PrivateResolvedTarget extends KnownTarget
-      ? Substitute<
-          Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-          Props
-        >
+      ? Substitute<Substitute<OuterProps, TargetProps<PrivateResolvedTarget>>, Props>
       : PrivateMergedProps,
     OuterStatics,
     AttrsKeys | keyof AttrsResult<PrivateAttrsArg>
@@ -94,9 +92,7 @@ export interface Styled<
 export default function constructWithOptions<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  OuterProps extends object = Target extends KnownTarget
-    ? React.ComponentPropsWithRef<Target>
-    : BaseObject,
+  OuterProps extends object = TargetProps<Target>,
   OuterStatics extends object = BaseObject,
   AttrsKeys extends keyof any = never,
 >(
@@ -146,10 +142,7 @@ export default function constructWithOptions<
       R,
       PrivateResolvedTarget,
       PrivateResolvedTarget extends KnownTarget
-        ? Substitute<
-            Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-            Props
-          >
+        ? Substitute<Substitute<OuterProps, TargetProps<PrivateResolvedTarget>>, Props>
         : PrivateMergedProps,
       OuterStatics,
       AttrsKeys | keyof AttrsResult<PrivateAttrsArg>
