@@ -359,6 +359,27 @@ export type WidenUntypedProps<Props extends BaseObject> = (
   ? Props & { [key: string]: unknown }
   : Props;
 
+/**
+ * Widens because the *target* was un-introspectable, even when the component
+ * declares props of its own.
+ *
+ * {@link WidenUntypedProps} asks whether the finished prop bag is empty, which
+ * stops being true the moment a component adds a transient prop:
+ * `styled(PolymorphicTarget)<{ $variant: string }>` has a `keyof` of
+ * `'$variant'`, so the widening switches off and the target's own props --
+ * `children` included -- start being rejected (#5756). Whether a target can be
+ * introspected is a property of the target, not of what the component adds on
+ * top, so the test belongs on `Target`.
+ *
+ * Applying this on top of an already-widened bag is a no-op: the index
+ * signature gives `keyof` of `string`, so the check is false the second time.
+ */
+export type WidenForUntypedTarget<Target extends BaseObject, Props extends BaseObject> = (
+  Target extends unknown ? (keyof Target extends never ? true : false) : never
+) extends true
+  ? Props & { [key: string]: unknown }
+  : Props;
+
 export interface IStyledComponentBase<
   out R extends Runtime,
   in out Props extends BaseObject = BaseObject,

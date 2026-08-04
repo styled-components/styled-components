@@ -927,6 +927,20 @@ const StyledPolyButton = styled(PolyButton)`
   link
 </StyledPolyButton>;
 
+/**
+ * Adding the component's own props must not switch the permissiveness off.
+ * Whether a target can be introspected is a property of the target, so a
+ * transient prop of our own does not make the target's props knowable (#5756).
+ */
+const StyledPolyButtonWithOwnProps = styled(PolyButton)<{ $variant: 'a' | 'b' }>`
+  color: red;
+`;
+<StyledPolyButtonWithOwnProps $variant="a" variant="filled">
+  children still accepted
+</StyledPolyButtonWithOwnProps>;
+// @ts-expect-error -- our own declared prop stays strictly typed
+<StyledPolyButtonWithOwnProps $variant="nope" />;
+
 // `.attrs()` is permissive too for un-introspectable targets, so arbitrary keys
 // can be backfilled (matching the JSX call site).
 const PolyButtonWithAttrs = styled(PolyButton).attrs({ variant: 'filled', type: 'button' })``;

@@ -14,6 +14,7 @@ import {
   Styles,
   Substitute,
   TargetProps,
+  WidenForUntypedTarget,
   WidenUntypedProps,
 } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
@@ -54,7 +55,10 @@ export interface Styled<
   <Props extends object = BaseObject, Statics extends object = BaseObject>(
     initialStyles: Styles<MergeProps<OuterProps, NoInfer<Props>>>,
     ...interpolations: Interpolation<MergeProps<OuterProps, NoInfer<Props>>>[]
-  ): IStyledComponent<R, MakeAttrsOptional<MergeProps<OuterProps, Props>, AttrsKeys>> &
+  ): IStyledComponent<
+    R,
+    WidenForUntypedTarget<OuterProps, MakeAttrsOptional<MergeProps<OuterProps, Props>, AttrsKeys>>
+  > &
     OuterStatics &
     Statics &
     (R extends 'web'
