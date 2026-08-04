@@ -185,6 +185,31 @@ interface ThemedExecutionProps {
 }
 
 /**
+ * Props of a render target, for `as` / `forwardedAs`.
+ *
+ * One distributive conditional, never two nested. Resolving an HTML tag by
+ * indexed access rather than through `React.ComponentPropsWithRef` is what makes
+ * this cheap: for a tag the indexed access is a single lookup, where
+ * `ComponentPropsWithRef` walks four more conditionals and (on @types/react 18)
+ * rebuilds the whole ~265-key prop bag through `Omit` just to strip legacy string
+ * refs. `React.JSX.IntrinsicElements['div']` already carries `ref` via
+ * `DetailedHTMLProps`, so the tag branch loses nothing.
+ *
+ * Load-bearing shape, do not nest: wrapping this in an outer
+ * `T extends KnownTarget ? ... : {}` check re-introduces a second distribution
+ * over the ~153-member target union and costs roughly 4x the check time of this
+ * flat form (measured against the #5767 reporter fixture). The `AnyComponent`
+ * arm doubles as the KnownTarget test, and every non-target -- `void`, a custom
+ * element string, a wrapped component's own `as` type such as Next.js Link's
+ * `as?: Url` -- falls through to `{}` exactly as the outer check used to make it.
+ */
+type TargetProps<T> = T extends keyof React.JSX.IntrinsicElements
+  ? React.JSX.IntrinsicElements[T]
+  : T extends AnyComponent
+    ? React.ComponentPropsWithRef<T>
+    : {};
+
+/**
  * Used by PolymorphicComponent to define prop override cascading order.
  */
 export type PolymorphicComponentProps<
@@ -193,13 +218,9 @@ export type PolymorphicComponentProps<
   AsTarget extends StyledTarget<R> | (BaseProps extends { as?: infer A } ? A : never) | void,
   ForwardedAsTarget extends StyledTarget<R> | void,
   // props extracted from "as"
-  AsTargetProps extends BaseObject = AsTarget extends KnownTarget
-    ? React.ComponentPropsWithRef<AsTarget>
-    : {},
-  // props extracted from "forwardAs"; note that ref is excluded
-  ForwardedAsTargetProps extends BaseObject = ForwardedAsTarget extends KnownTarget
-    ? React.ComponentPropsWithRef<ForwardedAsTarget>
-    : {},
+  AsTargetProps extends BaseObject = TargetProps<AsTarget>,
+  // props extracted from "forwardedAs"; note that ref is excluded
+  ForwardedAsTargetProps extends BaseObject = TargetProps<ForwardedAsTarget>,
 > = OverrideStyle<
   NoInfer<
     FastOmit<
@@ -409,11 +430,9 @@ export interface StyledObject<Props extends BaseObject = BaseObject>
 
 export type CSSProp = Interpolation<any>;
 
-/**
- * @deprecated Use the built-in NoInfer from TypeScript 5.4+ directly.
- * Kept for backward compatibility.
- */
-export type NoInfer<T> = [T][T extends any ? 0 : never];
+// Re-export, not a declaration: declaring `NoInfer` here would shadow the
+// TypeScript intrinsic within this file and downgrade every reference to it.
+export type { NoInfer } from './utils/noInfer';
 
 export type Substitute<A extends BaseObject, B extends BaseObject> = keyof B extends never
   ? A
@@ -422,8 +441,15 @@ export type Substitute<A extends BaseObject, B extends BaseObject> = keyof B ext
 /**
  * Makes keys in K optional while keeping all others required.
  * Used to make attrs-provided props optional on the final component.
+ *
+ * The guard is `[K] extends [never]`, not `keyof K extends never`. `K` is the set
+ * of attrs-provided keys and is `never` for any component without `.attrs()`,
+ * which is most of them, but `keyof never` is `string | number | symbol`, so the
+ * old spelling never short-circuited. Every such component paid an omit plus a
+ * `Partial<Pick<...>>` that removed and re-added nothing, and carried both in its
+ * displayed type.
  */
-export type MakeAttrsOptional<P extends BaseObject, K extends keyof any> = keyof K extends never
+export type MakeAttrsOptional<P extends BaseObject, K extends keyof any> = [K] extends [never]
   ? P
   : FastOmit<P, K & keyof P> & Partial<Pick<P, K & keyof P>>;
 

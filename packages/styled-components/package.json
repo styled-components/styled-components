@@ -24,6 +24,7 @@
     "pretest": "pnpm run generateErrors",
     "test": "pnpm run test:web && pnpm run test:native && pnpm run test:types",
     "test:types": "tsc --noEmit --project tsconfig.test-types.json",
+    "type-perf": "node scripts/typePerf.mjs",
     "test:web": "jest -c jest.config.main.js",
     "test:native": "jest -c jest.config.native.js --forceExit",
     "bench": "pnpm run bench:web && pnpm run bench:native && pnpm run bench:rsc",
