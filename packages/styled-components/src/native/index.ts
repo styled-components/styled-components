@@ -101,6 +101,7 @@ export {
   CSSObject,
   CSSProperties,
   CSSPseudos,
+  CustomStyle,
   DefaultTheme,
   ExecutionContext,
   ExecutionProps,

@@ -7,6 +7,7 @@ import {
   IStyledComponentFactory,
   KnownTarget,
   MakeAttrsOptional,
+  MergeProps,
   Runtime,
   StyledOptions,
   StyledTarget,
@@ -51,9 +52,9 @@ export interface Styled<
   out AttrsKeys extends keyof any = never,
 > {
   <Props extends object = BaseObject, Statics extends object = BaseObject>(
-    initialStyles: Styles<Substitute<OuterProps, NoInfer<Props>>>,
-    ...interpolations: Interpolation<Substitute<OuterProps, NoInfer<Props>>>[]
-  ): IStyledComponent<R, MakeAttrsOptional<Substitute<OuterProps, Props>, AttrsKeys>> &
+    initialStyles: Styles<MergeProps<OuterProps, NoInfer<Props>>>,
+    ...interpolations: Interpolation<MergeProps<OuterProps, NoInfer<Props>>>[]
+  ): IStyledComponent<R, MakeAttrsOptional<MergeProps<OuterProps, Props>, AttrsKeys>> &
     OuterStatics &
     Statics &
     (R extends 'web'
@@ -64,7 +65,7 @@ export interface Styled<
 
   attrs: <
     Props extends object = BaseObject,
-    PrivateMergedProps extends object = Substitute<OuterProps, Props>,
+    PrivateMergedProps extends object = MergeProps<OuterProps, Props>,
     // Widen when the merged props are un-introspectable ({}) so attrs can backfill
     // arbitrary keys on e.g. Mantine polymorphic-factory targets, matching the
     // permissive JSX call site. Targets with known props are unaffected.
@@ -78,7 +79,19 @@ export interface Styled<
     R,
     PrivateResolvedTarget,
     PrivateResolvedTarget extends KnownTarget
-      ? Substitute<Substitute<OuterProps, TargetProps<PrivateResolvedTarget>>, Props>
+      ? MergeProps<
+          // `MergeProps`, not `Substitute`: the resolved target's own `style` is
+          // unwidened, and substituting would drop the CSS-variable widening
+          // `OuterProps` already carries. Merging intersects the two, so the
+          // custom-property index signature survives.
+          //
+          // `ComponentPropsWithRef`, not `TargetProps`, is deliberate here and
+          // is the one place that stays -- see AGENTS.md. A function-form
+          // `.attrs` makes this target a union, and `TargetProps` distributes
+          // inside that distribution, which measured as TS2589.
+          MergeProps<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+          Props
+        >
       : PrivateMergedProps,
     OuterStatics,
     AttrsKeys | keyof AttrsResult<PrivateAttrsArg>
@@ -113,13 +126,13 @@ export default function constructWithOptions<
 
   /* This is callable directly as a template function */
   const templateFunction = <Props extends object = BaseObject, Statics extends object = BaseObject>(
-    initialStyles: Styles<Substitute<OuterProps, Props>>,
-    ...interpolations: Interpolation<Substitute<OuterProps, Props>>[]
+    initialStyles: Styles<MergeProps<OuterProps, Props>>,
+    ...interpolations: Interpolation<MergeProps<OuterProps, Props>>[]
   ) =>
-    componentConstructor<Substitute<OuterProps, Props>, Statics>(
+    componentConstructor<MergeProps<OuterProps, Props>, Statics>(
       tag,
-      options as StyledOptions<R, Substitute<OuterProps, Props>>,
-      css<Substitute<OuterProps, Props>>(initialStyles, ...interpolations)
+      options as StyledOptions<R, MergeProps<OuterProps, Props>>,
+      css<MergeProps<OuterProps, Props>>(initialStyles, ...interpolations)
     );
 
   /**
@@ -130,7 +143,7 @@ export default function constructWithOptions<
    */
   templateFunction.attrs = <
     Props extends object = BaseObject,
-    PrivateMergedProps extends object = Substitute<OuterProps, Props>,
+    PrivateMergedProps extends object = MergeProps<OuterProps, Props>,
     PrivateAttrsArg extends Attrs<WidenUntypedProps<PrivateMergedProps>> = Attrs<
       WidenUntypedProps<PrivateMergedProps>
     >,
@@ -142,7 +155,10 @@ export default function constructWithOptions<
       R,
       PrivateResolvedTarget,
       PrivateResolvedTarget extends KnownTarget
-        ? Substitute<Substitute<OuterProps, TargetProps<PrivateResolvedTarget>>, Props>
+        ? MergeProps<
+            Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+            Props
+          >
         : PrivateMergedProps,
       OuterStatics,
       AttrsKeys | keyof AttrsResult<PrivateAttrsArg>

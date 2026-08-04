@@ -3,7 +3,7 @@
  * Run via: pnpm --filter styled-components test:types
  */
 import React from 'react';
-import { css, CSSProp, IStyledComponent, StyledObject } from '../index';
+import { css, CSSProp, CustomStyle, IStyledComponent, StyledObject } from '../index';
 import styled from '../index-standalone';
 import { DataAttributes } from '../types';
 import { VeryLargeUnionType } from './veryLargeUnionType';
@@ -550,12 +550,31 @@ const TestCSSVariableUsage = () => {
  * render target's props, so props declared on the styled component are
  * substituted over it and win.
  */
+/**
+ * A declared `style` narrows the fields it names and leaves the rest of CSS
+ * available. Every assertion below states the width, so none of them can pass
+ * merely because a required field is missing.
+ */
 const OwnStyleType = styled.div<{ style?: { width: number } }>``;
 <OwnStyleType style={{ width: 3 }} />;
-// @ts-expect-error the declared style type wins, so arbitrary CSS is rejected
-<OwnStyleType style={{ color: 'blue' }} />;
-// @ts-expect-error ...and so are custom properties
-<OwnStyleType style={{ '--x': '1' }} />;
+<OwnStyleType style={{ color: 'blue', width: 3 }} />;
+<OwnStyleType style={{ '--x': '1', width: 3 }} />;
+// @ts-expect-error the declared type narrows width, so a string is rejected
+<OwnStyleType style={{ width: '3px' }} />;
+
+/** Declaring a field as `never` ablates it, without touching the others. */
+const AblatedStyleField = styled.div<{ style?: { color?: never; width: number } }>``;
+<AblatedStyleField style={{ opacity: 0.5, width: 3 }} />;
+// @ts-expect-error color was ablated by the declaration
+<AblatedStyleField style={{ color: 'blue', width: 3 }} />;
+
+/** `CustomStyle` ablates everything the declaration does not name. */
+const ExactStyleType = styled.div<{ style?: CustomStyle<{ width: number }> }>``;
+<ExactStyleType style={{ width: 3 }} />;
+// @ts-expect-error CustomStyle accepts only the fields it was given
+<ExactStyleType style={{ color: 'blue', width: 3 }} />;
+// @ts-expect-error custom properties are ablated too
+<ExactStyleType style={{ '--x': '1', width: 3 }} />;
 
 /** A target that declares no `style` prop does not gain one. */
 const NoStyleTarget = (props: { label: string }) => <div>{props.label}</div>;

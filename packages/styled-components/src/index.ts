@@ -8,6 +8,7 @@ export {
   CSSProp,
   CSSProperties,
   CSSPseudos,
+  CustomStyle,
   DataAttributes,
   DefaultTheme,
   ExecutionContext,
