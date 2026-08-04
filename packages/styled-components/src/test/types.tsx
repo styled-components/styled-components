@@ -3,7 +3,18 @@
  * Run via: pnpm --filter styled-components test:types
  */
 import React from 'react';
-import { css, CSSProp, IStyledComponent, StyledObject } from '../index';
+import {
+  css,
+  CSSProp,
+  CustomStyle,
+  ExecutionContext,
+  Interpolation,
+  IStyledComponent,
+  RuleSet,
+  StyledObject,
+  WebTarget,
+  withTheme,
+} from '../index';
 import styled from '../index-standalone';
 import { DataAttributes } from '../types';
 import { VeryLargeUnionType } from './veryLargeUnionType';
@@ -545,6 +556,84 @@ const TestCSSVariableUsage = () => {
 };
 
 /**
+ * An explicitly declared `style` type replaces the built-in CSS-variable
+ * widening instead of being unioned with it. The widening is applied to the
+ * render target's props, so props declared on the styled component are
+ * substituted over it and win.
+ */
+/**
+ * A declared `style` narrows the fields it names and leaves the rest of CSS
+ * available. Every assertion below states the width, so none of them can pass
+ * merely because a required field is missing.
+ */
+const OwnStyleType = styled.div<{ style?: { width: number } }>``;
+<OwnStyleType style={{ width: 3 }} />;
+<OwnStyleType style={{ color: 'blue', width: 3 }} />;
+<OwnStyleType style={{ '--x': '1', width: 3 }} />;
+// @ts-expect-error the declared type narrows width, so a string is rejected
+<OwnStyleType style={{ width: '3px' }} />;
+
+/**
+ * Characterizes a known limitation rather than asserting desired behavior.
+ * Under `exactOptionalPropertyTypes` the merge leaves no `undefined` arm on a
+ * declared `style`, so passing it explicitly is rejected. Omitting the prop is
+ * unaffected and spelling `| undefined` restores it, which is what the
+ * changeset tells users to do. If this case ever stops erroring the limitation
+ * is gone, and the docs saying otherwise need removing.
+ */
+<OwnStyleType />;
+const ExplicitUndefinedStyle = styled.div<{ style?: { width: number } | undefined }>``;
+<ExplicitUndefinedStyle style={undefined} />;
+// @ts-expect-error a declared style without `| undefined` rejects an explicit undefined
+<OwnStyleType style={undefined} />;
+
+/** Declaring a field as `never` ablates it, without touching the others. */
+const AblatedStyleField = styled.div<{ style?: { color?: never; width: number } }>``;
+<AblatedStyleField style={{ opacity: 0.5, width: 3 }} />;
+// @ts-expect-error color was ablated by the declaration
+<AblatedStyleField style={{ color: 'blue', width: 3 }} />;
+
+/**
+ * The declared constraint survives `as` and `forwardedAs`. The polymorphic path
+ * merges rather than substituting, so the render target's `style` no longer
+ * replaces the component's own -- otherwise a constraint could be escaped by
+ * rendering the same component through a different tag.
+ */
+<OwnStyleType as="a" style={{ color: 'red', width: 3 }} />;
+<OwnStyleType as="a" href="/x" style={{ width: 3 }} />;
+// @ts-expect-error the declared width constraint holds through `as`
+<OwnStyleType as="a" style={{ width: '3px' }} />;
+// @ts-expect-error ...and through `forwardedAs`
+<OwnStyleType forwardedAs="a" style={{ width: '3px' }} />;
+
+/** `CustomStyle` ablates everything the declaration does not name. */
+const ExactStyleType = styled.div<{ style?: CustomStyle<{ width: number }> }>``;
+<ExactStyleType style={{ width: 3 }} />;
+<ExactStyleType as="a" style={{ width: 3 }} />;
+// @ts-expect-error the ablation holds through `as` too
+<ExactStyleType as="a" style={{ color: 'red', width: 3 }} />;
+// @ts-expect-error CustomStyle accepts only the fields it was given
+<ExactStyleType style={{ color: 'blue', width: 3 }} />;
+// @ts-expect-error custom properties are ablated too
+<ExactStyleType style={{ '--x': '1', width: 3 }} />;
+
+/** A target that declares no `style` prop does not gain one. */
+const NoStyleTarget = (props: { label: string }) => <div>{props.label}</div>;
+const StyledNoStyleTarget = styled(NoStyleTarget)``;
+<StyledNoStyleTarget label="x" />;
+// @ts-expect-error the target declares no style prop, so neither does this one
+<StyledNoStyleTarget label="x" style={{ color: 'red' }} />;
+
+/** `style={undefined}` stays assignable under exactOptionalPropertyTypes. */
+<DivWithCSSVariable style={undefined} />;
+
+/** Widening is visible through prop extraction, not only at the call site. */
+const StyleExtractionTarget = styled.div``;
+const extractedStyle: React.ComponentProps<typeof StyleExtractionTarget>['style'] = {
+  '--from-extraction': 'ok',
+};
+
+/**
  * Styled object with nested selectors without CSSProperties
  */
 const StyledObjectWithNestedSelectors: StyledObject = {
@@ -879,6 +968,30 @@ const StyledPolyButton = styled(PolyButton)`
   link
 </StyledPolyButton>;
 
+/**
+ * Adding the component's own props must not switch the permissiveness off.
+ * Whether a target can be introspected is a property of the target, so a
+ * transient prop of our own does not make the target's props knowable (#5756).
+ */
+const StyledPolyButtonWithOwnProps = styled(PolyButton)<{ $variant: 'a' | 'b' }>`
+  color: red;
+`;
+<StyledPolyButtonWithOwnProps $variant="a" variant="filled">
+  children still accepted
+</StyledPolyButtonWithOwnProps>;
+// @ts-expect-error -- our own declared prop stays strictly typed
+<StyledPolyButtonWithOwnProps $variant="nope" />;
+
+/**
+ * The same must hold through `.attrs()` with an explicit generic. The widening
+ * is decided from the target, so adding the component's own props to the attrs
+ * call does not make the target introspectable.
+ */
+const PolyButtonExplicitAttrs = styled(PolyButton).attrs<{ $v: string }>({ $v: 'a' })``;
+<PolyButtonExplicitAttrs $v="a" color="blue">
+  children still accepted
+</PolyButtonExplicitAttrs>;
+
 // `.attrs()` is permissive too for un-introspectable targets, so arbitrary keys
 // can be backfilled (matching the JSX call site).
 const PolyButtonWithAttrs = styled(PolyButton).attrs({ variant: 'filled', type: 'button' })``;
@@ -915,3 +1028,471 @@ declare const OneEmptyMemberComp: (props: {} | { a: string }) => React.ReactElem
 const StyledOneEmpty = styled(OneEmptyMemberComp)``;
 // @ts-expect-error -- nonsense is on neither member
 <StyledOneEmpty nonsense="y" />;
+
+/* ===========================================================================
+ * Cases ported from reported issues.
+ *
+ * Sections labelled BASELINE-PIN record behavior a reporter wanted changed and
+ * the maintainer ruled deliberate or blocked upstream. The pin exists so a move
+ * in either direction is a visible diff, not so the reporter's wish becomes an
+ * assertion.
+ * =========================================================================== */
+
+/**
+ * #5687: an unannotated ref callback on a bare intrinsic tag must contextually
+ * infer the element type instead of falling to an implicit `any`. The parameter
+ * MUST stay unannotated -- annotating it masks the failure, the same trap the
+ * `StyledCheckbox` case above warns about.
+ */
+const BareRefWrapper = styled.div``;
+<BareRefWrapper
+  ref={ref => {
+    ref;
+  }}
+/>;
+
+/**
+ * #5756 (kkwasny-rtbh) -- BASELINE-PIN. A generic polymorphic component's props
+ * collapse to `{}` under introspection, so the styled wrapper accepts a prop
+ * value the direct call site rejects. #5758 documents this as unavoidable: with
+ * no base type to substitute against, the prop bag must stay permissive. The
+ * direct call below is the positive control -- if it ever stops erroring, its
+ * unused directive fires and the pin has moved.
+ */
+type GenericAsProp<C extends React.ElementType> = { as?: C };
+type GenericPolyProps<C extends React.ElementType, P = object> = React.PropsWithChildren<
+  P & GenericAsProp<C>
+> &
+  Omit<React.ComponentPropsWithoutRef<C>, keyof (GenericAsProp<C> & P)>;
+interface GenericPolyButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary';
+}
+const GenericPolyButton = <C extends React.ElementType = 'button'>(
+  _props: GenericPolyProps<C, GenericPolyButtonProps>
+) => null;
+// @ts-expect-error the direct call site narrows `variant` and rejects this
+<GenericPolyButton variant="totally-fake">x</GenericPolyButton>;
+const StyledGenericPolyButton = styled(GenericPolyButton)``;
+// Pinned: accepted today, because the target carries no introspectable props.
+<StyledGenericPolyButton variant="totally-fake">x</StyledGenericPolyButton>;
+
+/**
+ * #5760: the destructured parameter of `styled.<tag>(fn)` must keep its declared
+ * type. A plain compile proves nothing here because `any` compiles too, so the
+ * directive below is the presence anchor: if `$x` silently widens to `any` the
+ * assignment stops erroring and the unused directive itself fails the build.
+ */
+styled.div<{ $x: number }>(({ $x }) => {
+  // @ts-expect-error a number is not assignable to a string; if this stops
+  // erroring, `$x` has widened to `any`
+  const leak: string = $x;
+  return `content: "${leak}";`;
+});
+
+/**
+ * #4303 (dup of #4076): `.attrs({ x: 'a' })` without `as const` must still
+ * satisfy a required union-typed prop. Every other strict-literal attrs case in
+ * this file uses `as const`; this is the half that does not, and the widened
+ * `string` value is exactly what decides whether the attrs key set is empty.
+ */
+const UnionPropBase = (_props: { x: 'a' | 'b' }) => null;
+const UnionAttrsWidened = styled(UnionPropBase).attrs({ x: 'a' })``;
+const UnionAttrsConst = styled(UnionPropBase).attrs({ x: 'a' as const })``;
+<UnionAttrsWidened />;
+<UnionAttrsConst />;
+
+/**
+ * #4112 -- BASELINE-PIN. `as="button"` does not discard a required prop declared
+ * by the wrapped base: `requiredProp` is not a key of the button prop bag, so
+ * `Substitute` keeps it and the call still demands it. The reporter expected the
+ * `as` target's props to replace the base's wholesale, which is not what
+ * `Substitute` implements, and the thread never corroborated the "fixed" note.
+ */
+const AsRequiredBase = (_props: { className?: string; requiredProp: string }) => null;
+const StyledAsRequiredBase = styled(AsRequiredBase)``;
+// @ts-expect-error requiredProp survives the `as` swap and is still required
+<StyledAsRequiredBase as="button">children</StyledAsRequiredBase>;
+
+/**
+ * #3582: a dashed custom-element string is an accepted `as` and `forwardedAs`
+ * target, falling through to `{}` props rather than being rejected. (What was
+ * reported there was a runtime CSS-application bug, not a typing one.)
+ */
+const CustomElementHost = styled.div``;
+<CustomElementHost as="button">button tag</CustomElementHost>;
+<CustomElementHost forwardedAs="x-button">forwarded custom element</CustomElementHost>;
+<CustomElementHost as="x-button">custom element</CustomElementHost>;
+
+/**
+ * #4305 -- BASELINE-PIN, and sensitive to the installed `@types/react` major.
+ * A styled component is not assignable to the type of the component it wraps:
+ * nested mapped/conditional types do not relate structurally
+ * (microsoft/TypeScript#50896). This pins the `@types/react` 18 behavior, which
+ * is what this repo installs. The same code compiles on `@types/react` 19, so on
+ * a bump this directive is expected to need removing rather than signalling a
+ * regression.
+ */
+const LayerOne = styled.div``;
+const LayerTwo = styled(LayerOne)``;
+const takesLayerOne = (component: typeof LayerOne) => component;
+// @ts-expect-error blocked on TS#50896 under @types/react 18
+takesLayerOne(LayerTwo);
+
+/**
+ * #4052: event-handler parameter inference, both halves together. The extracted
+ * handler type must resolve to a real handler rather than `any`, and the inline
+ * form must contextually type `e` with no annotation.
+ */
+const EventInferenceTarget = styled.div`
+  color: red;
+`;
+type ExtractedOnClick = React.ComponentProps<typeof EventInferenceTarget>['onClick'];
+const extractedClickHandler: NonNullable<ExtractedOnClick> = e => {
+  e.stopPropagation();
+};
+<EventInferenceTarget onClick={extractedClickHandler} />;
+<EventInferenceTarget
+  onClick={e => {
+    e.stopPropagation();
+  }}
+/>;
+
+/**
+ * #4052 (winterbe): not only DOM callbacks. Any function-typed prop on a wrapped
+ * component must contextually type its parameter, so `name` stays unannotated
+ * and must infer to `string`.
+ */
+function FnPropTarget(props: { hello: (name: string) => string }) {
+  return <span>{props.hello('world')}</span>;
+}
+const StyledFnPropTarget = styled(FnPropTarget)`
+  background: pink;
+`;
+<StyledFnPropTarget hello={name => `Hello ${name}`} />;
+
+/**
+ * #4088: annotating the `.attrs()` callback parameter with a type the target
+ * does not have is genuinely wrong and must be rejected, along with reading that
+ * prop back inside an interpolation. Passing the props as the `.attrs<>()`
+ * generic is the accepted form and must compile, with the prop readable.
+ */
+interface BorderlessProps {
+  is_borderless: boolean;
+}
+// @ts-expect-error the div's attrs parameter type is not BorderlessProps
+const WrongAnnotatedAttrs = styled.div.attrs((props: BorderlessProps) => props)`
+  ${props =>
+    // @ts-expect-error is_borderless is not among the div's props
+    props.is_borderless === true ? '' : 'border-bottom: 1px solid red;'}
+`;
+const CorrectAnnotatedAttrs = styled.div.attrs<BorderlessProps>(props => props)`
+  ${props => (props.is_borderless === true ? '' : 'border-bottom: 1px solid red;')}
+`;
+<CorrectAnnotatedAttrs is_borderless />;
+
+/**
+ * #4174 (fabb): prop extraction reached through `ReturnType<>` rather than a JSX
+ * call site. Both the wrapped component's prop and the styled generic's own prop
+ * must survive into `React.ComponentProps`. The mutual-extends check fails in
+ * both directions, so a silent widen to `any` is caught here instead of
+ * compiling quietly.
+ */
+const createFactoryComponent = (Comp: React.FunctionComponent<{ prop1?: string }>) =>
+  styled(Comp)<{ prop2?: string }>``;
+type FactoryComponentProps = React.ComponentProps<ReturnType<typeof createFactoryComponent>>;
+type MutuallyExtends<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const factoryProp1IsString: MutuallyExtends<FactoryComponentProps['prop1'], string | undefined> =
+  true;
+const factoryProp2IsString: MutuallyExtends<FactoryComponentProps['prop2'], string | undefined> =
+  true;
+
+/**
+ * #4151 -- BASELINE-PIN on the rejection half. A bare `data-*` key in `.attrs()`
+ * with no generic stays rejected: auto-widening was considered and refused,
+ * because the index type it needs would let any unspecified prop through
+ * untyped. The JSX call site and the documented `.attrs<DataAttributes>` form
+ * must still compile.
+ */
+const DataAttrPlain = styled.div``;
+<DataAttrPlain data-testid="foo" />;
+const DataAttrBare = styled.div.attrs({
+  // @ts-expect-error data-* keys need the DataAttributes generic; auto-widening
+  // was rejected because the index type accepts any unspecified prop untyped
+  'data-testid': 'box-test',
+})``;
+const DataAttrGeneric = styled.div.attrs<DataAttributes>({
+  'data-testid': 'box-test',
+})``;
+<DataAttrGeneric data-testid="foo" />;
+
+/**
+ * #4340: `.attrs({ as })` chained across two levels, plus the function form that
+ * reads the incoming `as` and defaults it.
+ *
+ * The reporter's concrete type complaint was that the resolved target's own
+ * props were not picked up, so the assertion is that `disabled` is available and
+ * typed. `disabled` alone would pass vacuously against a permissive prop bag, so
+ * three controls sit alongside it: the span level rejects `disabled`, the button
+ * level rejects `href`, and it rejects a wrongly typed `disabled`.
+ */
+const DivAsSpan = styled.div.attrs({ as: 'span' })``;
+const SpanAsButton = styled(DivAsSpan).attrs({ as: 'button' })``;
+<DivAsSpan>I should be a span</DivAsSpan>;
+<SpanAsButton>I should be a button</SpanAsButton>;
+<SpanAsButton as="a">I should be a link</SpanAsButton>;
+// The button target's own prop, resolved through two levels of attrs.
+<SpanAsButton disabled>I should be a disabled button</SpanAsButton>;
+// @ts-expect-error the span level does not have `disabled`, so the line above is
+// evidence the second attrs level re-resolved the target
+<DivAsSpan disabled />;
+// @ts-expect-error the resolved target is a button, so `href` is not among its props
+<SpanAsButton href="#" />;
+// @ts-expect-error `disabled` resolves as a boolean, not as a catch-all
+<SpanAsButton disabled="yes" />;
+// The `as` prop still narrows at the call site, on top of the attrs-resolved target.
+<SpanAsButton as="a" href="#">
+  polymorphic on top of attrs
+</SpanAsButton>;
+
+/**
+ * The reporter's workaround form, which he reported as breaking types. It
+ * compiles. Note what it costs: `as || 'button'` types the resolved target as
+ * the whole `WebTarget` union rather than the `'button'` literal, so the target
+ * cannot be introspected and the prop bag falls back to the permissive shape
+ * documented for un-introspectable targets (#5756). `disabled` is therefore
+ * accepted here for a different reason than above -- do not read this line as
+ * evidence of target resolution.
+ */
+const SpanAsButtonFn = styled(DivAsSpan).attrs(({ as }) => ({ as: as || 'button' }))``;
+<SpanAsButtonFn disabled>permissive, not resolved</SpanAsButtonFn>;
+<SpanAsButtonFn as="a" href="#">
+  the function form still takes `as`
+</SpanAsButtonFn>;
+
+/**
+ * #4196: a CSS custom property declared inside a nested at-rule block in object
+ * styles, in both the outer and the nested scope.
+ */
+styled.div({
+  '--color-a': 'red',
+  background: 'var(--color-a)',
+  '@media(min-width:760px)': {
+    '--color-a': 'blue',
+    background: 'var(--color-a)',
+  },
+});
+
+/**
+ * #4246 -- BASELINE-PIN. Wrapping a generic component loses its type parameter;
+ * TypeScript cannot carry one through a higher-order wrapper. What is pinned
+ * here is the separable, styled-components-side half: wrapping a still-generic
+ * target must not produce a `WebTarget` constraint error, with or without a
+ * trailing `satisfies`.
+ */
+const GenericTarget = <T,>(props: {
+  className?: string;
+  onOpen: (item: T) => void;
+  items: T[];
+}): React.JSX.Element | null => <div className={props.className} />;
+const StyledGenericTargetSatisfies = styled(GenericTarget)`` satisfies typeof GenericTarget;
+const StyledGenericTargetPlain = styled(GenericTarget)``;
+
+/**
+ * #4336: a styled component interpolated into a computed property key in object
+ * syntax. This works because a styled component's type intersects with `string`;
+ * the case exists so dropping that intersection shows up here.
+ */
+const ComputedKeyCard = styled.div({});
+styled.div({
+  [`&:hover > ${ComputedKeyCard}`]: {
+    color: 'red',
+  },
+});
+
+/**
+ * #5531: a plain function component (not `React.FC`) whose required prop is
+ * supplied by `.attrs()` must stop being required at the call site. This chain
+ * substitutes a prop bag with itself, a shape no other case here produces.
+ */
+interface PlainFnProps {
+  type: string;
+  className?: string;
+}
+function PlainFnTarget({ type, className }: PlainFnProps) {
+  return <div className={className}>{type}</div>;
+}
+const PlainFnWithAttrs = styled(PlainFnTarget).attrs({ type: 'element' })``;
+<PlainFnWithAttrs />;
+
+/**
+ * #4138 (davidkarlsson) -- BASELINE-PIN. The reporter's form is rejected, and it
+ * is rejected for two independent reasons, pinned separately below so a
+ * relaxation of either is legible:
+ *
+ *   1. Ordering. A generic written *after* `.attrs()` is not in scope for the
+ *      callback, so annotating the parameter with it asks for a prop the bag
+ *      does not carry yet.
+ *   2. The result key. An arbitrary key in the attrs result is rejected by
+ *      object-literal checking, the same rule as the `data-*` case above.
+ *
+ * The last declaration is the positive control: the generic on `.attrs<>()` plus
+ * a real prop as the result key compiles.
+ */
+type TrailingGenericProps = { $test: string };
+// Both causes at once -- the reporter's own form.
+const TrailingGenericAttrs = styled.div.attrs(
+  // @ts-expect-error the trailing generic is not in scope for the callback param
+  (p: TrailingGenericProps) => ({ 'test-attr': p.$test })
+)<TrailingGenericProps>``;
+// Ordering alone: a real result key does not rescue the trailing generic.
+const TrailingGenericAttrsRealKey = styled.div.attrs(
+  // @ts-expect-error the trailing generic is not in scope for the callback param
+  (p: TrailingGenericProps) => ({ title: p.$test })
+)<TrailingGenericProps>``;
+// Result key alone: correct ordering, arbitrary key still rejected.
+const LeadingGenericAttrsArbitraryKey = styled.div.attrs<TrailingGenericProps>(
+  // @ts-expect-error `test-attr` is not a div prop
+  p => ({ 'test-attr': p.$test })
+)<TrailingGenericProps>``;
+// Neither cause: compiles.
+const LeadingGenericAttrs = styled.div.attrs<TrailingGenericProps>(p => ({
+  title: p.$test,
+}))<TrailingGenericProps>``;
+<LeadingGenericAttrs $test="hello">test</LeadingGenericAttrs>;
+
+/**
+ * #4082: `withTheme` must keep the wrapped component's own props, `children`
+ * included, with no cast at the call site.
+ */
+class WithThemeButton extends React.Component<{
+  onClick: () => void;
+  children?: React.ReactNode;
+}> {}
+const ThemedWithThemeButton = withTheme(WithThemeButton);
+<ThemedWithThemeButton onClick={() => {}}>Test</ThemedWithThemeButton>;
+
+/**
+ * #2673: a class component's static properties must survive `styled()` and stay
+ * readable off the result. The `TargetWithStaticProperties` case above covers a
+ * function component with an attached property, a different declaration form.
+ */
+class TabsWithStatic extends React.Component<{ children?: React.ReactNode }> {
+  static TabPane = (props: { tab: string }) => <div>{props.tab}</div>;
+
+  render() {
+    return <div>{this.props.children}</div>;
+  }
+}
+const StyledTabsWithStatic = styled(TabsWithStatic)``;
+const { TabPane: StyledTabPane } = StyledTabsWithStatic;
+<StyledTabsWithStatic>
+  <StyledTabPane tab="one" />
+</StyledTabsWithStatic>;
+
+/**
+ * #4062 (lrdxg1): a `css<Props>` result returned conditionally from an
+ * interpolation inside a `styled.div<Props>` must not need a cast to
+ * `RuleSet<object>`. What was reported was a variance complaint about the
+ * interpolation's own prop type.
+ */
+interface DrawerContainerProps {
+  appearFrom?: 'top' | 'bottom';
+  height?: 'auto' | number;
+}
+const drawerAutoHeight = css<DrawerContainerProps>`
+  ${({ appearFrom }) =>
+    appearFrom === 'bottom'
+      ? css`
+          transform: translate(0, 100%);
+          bottom: 0;
+        `
+      : ''}
+`;
+styled.div<DrawerContainerProps>`
+  position: fixed;
+
+  ${({ height }) => height === 'auto' && drawerAutoHeight};
+`;
+
+/**
+ * #4062: the v5-to-v6 type replacements named in the close --
+ * `FlattenSimpleInterpolation` to `RuleSet`, `ThemeProps` to
+ * `ExecutionContext & Props`, `SimpleInterpolation` to `Interpolation<object>`,
+ * `StyledComponentProps` to `React.ComponentProps<typeof YourSC>`. Each is
+ * declared and then used, so an accidental export deletion fails here.
+ */
+type V6FlattenSimpleInterpolation = RuleSet<object>;
+type V6ThemeProps<P> = ExecutionContext & P;
+type V6SimpleInterpolation = Interpolation<object>;
+const V6StyledComponent = styled.div<{ $a?: number }>``;
+type V6StyledComponentProps = React.ComponentProps<typeof V6StyledComponent>;
+const v6Rules: V6FlattenSimpleInterpolation = css`
+  color: red;
+`;
+const v6Themed: V6ThemeProps<{ label: string }> = { label: 'hi', theme: {} };
+const v6Interpolation: V6SimpleInterpolation = 'red';
+const v6Props: V6StyledComponentProps = { $a: 1 };
+
+/**
+ * #3359 (aaavakian) -- BASELINE-PIN. `.attrs({ forwardedAs })` does not
+ * substitute the forwarded target's props: only `as` is read when the target is
+ * re-resolved from the attrs result, so an `input`-only prop stays unavailable.
+ * Pinned so a change that starts substituting through `forwardedAs` is visible.
+ */
+const ForwardedAsAttrsBase = (props: { className?: string }) => <div className={props.className} />;
+const ForwardedAsAttrs = styled(ForwardedAsAttrsBase).attrs({ forwardedAs: 'input' })``;
+// @ts-expect-error `value` belongs to the forwardedAs target, which is not substituted
+<ForwardedAsAttrs value="text" />;
+
+/**
+ * #4112 (wojtekmaj): a hand-rolled wrapper that re-declares `as?: WebTarget`
+ * does not thereby gain the `as` target's props. The styled component narrows
+ * `as="a"` to anchor props; the wrapper does not, because its declared props are
+ * the button's. The reporter labelled his own report a mistake, so the wrapper
+ * half is pinned as a rejection rather than encoded as a bug.
+ */
+const AsWrapperButton = styled.button`
+  background-color: yellow;
+`;
+type AsWrapperProps = React.ComponentPropsWithoutRef<typeof AsWrapperButton> & {
+  as?: WebTarget;
+};
+function AsWrapper(props: AsWrapperProps) {
+  return <AsWrapperButton {...props} />;
+}
+<AsWrapperButton type="submit">Test button</AsWrapperButton>;
+<AsWrapperButton as="a" href="https://example.com">
+  Test link
+</AsWrapperButton>;
+<AsWrapper type="submit">Test button</AsWrapper>;
+// @ts-expect-error `href` is not among AsWrapper's declared props, which are the button's
+<AsWrapper as="a" href="https://example.com">
+  Test link
+</AsWrapper>;
+
+/**
+ * #1803 / #3306 -- BASELINE-PIN. `styled()` cannot carry a component's type
+ * parameter through, so the render callback's parameter degrades to `unknown`.
+ * The unwrapped call directly below is the positive control: without it, a
+ * failure on the wrapped one could not be told apart from this section never
+ * having compiled.
+ */
+interface GenericListProps<T> {
+  renderChild: (props: T) => React.ReactNode;
+  values: T[];
+}
+function GenericList<T>(props: GenericListProps<T>) {
+  return <>{props.values.map(props.renderChild)}</>;
+}
+<GenericList
+  values={[{ id: 1, value: 'foo' }]}
+  renderChild={props => <p key={`I_${props.id}`}>{props.value}</p>}
+/>;
+const StyledGenericList = styled(GenericList)`
+  position: relative;
+`;
+<StyledGenericList
+  values={[{ id: 1, value: 'foo' }]}
+  // @ts-expect-error T is lost through styled(), so props degrades to unknown
+  renderChild={props => <p key={`I_${props.id}`}>{props.value}</p>}
+/>;

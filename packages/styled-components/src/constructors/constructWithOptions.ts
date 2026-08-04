@@ -7,12 +7,13 @@ import {
   IStyledComponentFactory,
   KnownTarget,
   MakeAttrsOptional,
+  MergeProps,
   Runtime,
   StyledOptions,
   StyledTarget,
   Styles,
-  Substitute,
-  WidenUntypedProps,
+  TargetProps,
+  WidenForUntypedTarget,
 } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
 import styledError from '../utils/error';
@@ -50,9 +51,18 @@ export interface Styled<
   out AttrsKeys extends keyof any = never,
 > {
   <Props extends object = BaseObject, Statics extends object = BaseObject>(
-    initialStyles: Styles<Substitute<OuterProps, NoInfer<Props>>>,
-    ...interpolations: Interpolation<Substitute<OuterProps, NoInfer<Props>>>[]
-  ): IStyledComponent<R, MakeAttrsOptional<Substitute<OuterProps, Props>, AttrsKeys>> &
+    initialStyles: Styles<MergeProps<OuterProps, NoInfer<Props>>>,
+    ...interpolations: Interpolation<MergeProps<OuterProps, NoInfer<Props>>>[]
+  ): IStyledComponent<
+    R,
+    // Tested against the target, never `OuterProps`: after `.attrs()` those
+    // diverge and the widening would switch off, which is #5756 one layer down.
+    // `TargetProps<R, Target>` is `OuterProps`' own default, so it costs nothing.
+    WidenForUntypedTarget<
+      TargetProps<R, Target>,
+      MakeAttrsOptional<MergeProps<OuterProps, Props>, AttrsKeys>
+    >
+  > &
     OuterStatics &
     Statics &
     (R extends 'web'
@@ -63,13 +73,13 @@ export interface Styled<
 
   attrs: <
     Props extends object = BaseObject,
-    PrivateMergedProps extends object = Substitute<OuterProps, Props>,
+    PrivateMergedProps extends object = MergeProps<OuterProps, Props>,
     // Widen when the merged props are un-introspectable ({}) so attrs can backfill
     // arbitrary keys on e.g. Mantine polymorphic-factory targets, matching the
     // permissive JSX call site. Targets with known props are unaffected.
-    PrivateAttrsArg extends Attrs<WidenUntypedProps<PrivateMergedProps>> = Attrs<
-      WidenUntypedProps<PrivateMergedProps>
-    >,
+    PrivateAttrsArg extends Attrs<
+      WidenForUntypedTarget<TargetProps<R, Target>, PrivateMergedProps>
+    > = Attrs<WidenForUntypedTarget<TargetProps<R, Target>, PrivateMergedProps>>,
     PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>,
   >(
     attrs: PrivateAttrsArg
@@ -77,8 +87,14 @@ export interface Styled<
     R,
     PrivateResolvedTarget,
     PrivateResolvedTarget extends KnownTarget
-      ? Substitute<
-          Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+      ? MergeProps<
+          // `MergeProps` keeps the CSS-variable widening `OuterProps` carries,
+          // which substituting the target's unwidened `style` would drop.
+          // `ComponentPropsWithRef` rather than `TargetProps` is the one place
+          // that stays: a function-form `.attrs` makes this target a union, and
+          // `TargetProps` distributing inside that measured as TS2589. Both in
+          // AGENTS.md.
+          MergeProps<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
           Props
         >
       : PrivateMergedProps,
@@ -94,9 +110,7 @@ export interface Styled<
 export default function constructWithOptions<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  OuterProps extends object = Target extends KnownTarget
-    ? React.ComponentPropsWithRef<Target>
-    : BaseObject,
+  OuterProps extends object = TargetProps<R, Target>,
   OuterStatics extends object = BaseObject,
   AttrsKeys extends keyof any = never,
 >(
@@ -117,13 +131,13 @@ export default function constructWithOptions<
 
   /* This is callable directly as a template function */
   const templateFunction = <Props extends object = BaseObject, Statics extends object = BaseObject>(
-    initialStyles: Styles<Substitute<OuterProps, Props>>,
-    ...interpolations: Interpolation<Substitute<OuterProps, Props>>[]
+    initialStyles: Styles<MergeProps<OuterProps, Props>>,
+    ...interpolations: Interpolation<MergeProps<OuterProps, Props>>[]
   ) =>
-    componentConstructor<Substitute<OuterProps, Props>, Statics>(
+    componentConstructor<MergeProps<OuterProps, Props>, Statics>(
       tag,
-      options as StyledOptions<R, Substitute<OuterProps, Props>>,
-      css<Substitute<OuterProps, Props>>(initialStyles, ...interpolations)
+      options as StyledOptions<R, MergeProps<OuterProps, Props>>,
+      css<MergeProps<OuterProps, Props>>(initialStyles, ...interpolations)
     );
 
   /**
@@ -134,10 +148,10 @@ export default function constructWithOptions<
    */
   templateFunction.attrs = <
     Props extends object = BaseObject,
-    PrivateMergedProps extends object = Substitute<OuterProps, Props>,
-    PrivateAttrsArg extends Attrs<WidenUntypedProps<PrivateMergedProps>> = Attrs<
-      WidenUntypedProps<PrivateMergedProps>
-    >,
+    PrivateMergedProps extends object = MergeProps<OuterProps, Props>,
+    PrivateAttrsArg extends Attrs<
+      WidenForUntypedTarget<TargetProps<R, Target>, PrivateMergedProps>
+    > = Attrs<WidenForUntypedTarget<TargetProps<R, Target>, PrivateMergedProps>>,
     PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>,
   >(
     attrs: PrivateAttrsArg
@@ -146,8 +160,8 @@ export default function constructWithOptions<
       R,
       PrivateResolvedTarget,
       PrivateResolvedTarget extends KnownTarget
-        ? Substitute<
-            Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+        ? MergeProps<
+            MergeProps<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
             Props
           >
         : PrivateMergedProps,

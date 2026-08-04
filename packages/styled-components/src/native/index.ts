@@ -5,7 +5,7 @@ import withTheme from '../hoc/withTheme';
 import _InlineStyle, { cssToStyleObject } from '../models/InlineStyle';
 import _StyledNativeComponent from '../models/StyledNativeComponent';
 import ThemeProvider, { ThemeConsumer, ThemeContext, useTheme } from '../models/ThemeProvider';
-import { NativeTarget, RuleSet } from '../types';
+import { NativeTarget, RuleSet, TargetProps } from '../types';
 import flatten from '../utils/flatten';
 import isStyledComponent from '../utils/isStyledComponent';
 import { joinStringArray } from '../utils/joinStrings';
@@ -62,7 +62,7 @@ type RNComponents = {
 };
 
 const styled = baseStyled as typeof baseStyled & {
-  [E in KnownComponents]: Styled<'native', RNComponents[E], React.ComponentProps<RNComponents[E]>>;
+  [E in KnownComponents]: Styled<'native', RNComponents[E], TargetProps<'native', RNComponents[E]>>;
 };
 
 /* Define a getter for each alias which simply gets the reactNative component
@@ -101,6 +101,7 @@ export {
   CSSObject,
   CSSProperties,
   CSSPseudos,
+  CustomStyle,
   DefaultTheme,
   ExecutionContext,
   ExecutionProps,

@@ -1,5 +1,17 @@
 {
   "count": 100,
-  "maxInstantiations": 913000,
-  "maxTypes": 151000
+  "measured": {
+    "instantiations": 696087,
+    "memoryKb": 189091,
+    "types": 31431
+  },
+  "tolerancePct": {
+    "instantiations": 10,
+    "memoryKb": 12,
+    "types": 10
+  },
+  "versions": {
+    "typescript": "5.9.3",
+    "typesReact": "18.3.28"
+  }
 }

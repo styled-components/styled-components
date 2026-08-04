@@ -1,6 +1,5 @@
-import * as React from 'react';
 import createStyledComponent from '../models/StyledComponent';
-import { BaseObject, KnownTarget, WebTarget } from '../types';
+import { BaseObject, TargetProps, WebTarget } from '../types';
 import domElements, { SupportedHTMLElements } from '../utils/domElements';
 import constructWithOptions, { Styled as StyledInstance } from './constructWithOptions';
 
@@ -15,19 +14,19 @@ import constructWithOptions, { Styled as StyledInstance } from './constructWithO
 const baseStyled = <Target extends WebTarget, InjectedProps extends object = BaseObject>(
   tag: Target
 ) =>
-  constructWithOptions<
-    'web',
-    Target,
-    Target extends KnownTarget ? React.ComponentPropsWithRef<Target> & InjectedProps : InjectedProps
-  >(createStyledComponent, tag);
+  constructWithOptions<'web', Target, TargetProps<'web', Target> & InjectedProps>(
+    createStyledComponent,
+    tag
+  );
 
 const styled = baseStyled as typeof baseStyled & {
-  [E in SupportedHTMLElements]: StyledInstance<'web', E, React.JSX.IntrinsicElements[E]>;
+  [E in SupportedHTMLElements]: StyledInstance<'web', E, TargetProps<'web', E>>;
 };
 
 // Shorthands for all valid HTML Elements.
-// The type assertion avoids 120 Styled<> instantiations during type checking -
-// the correct types are declared on the `styled` const above via the mapped type.
+// The type assertion avoids one Styled<> instantiation per element in
+// domElements during type checking - the correct types are declared on the
+// `styled` const above via the mapped type.
 domElements.forEach(domElement => {
   (styled as any)[domElement] = baseStyled(domElement);
 });

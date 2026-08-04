@@ -1,5 +1,11 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Contract suites are compile-only: a declaration exists to be type-checked,
+    // not read, so "unused" is the normal state here. The base config keeps this
+    // on for shipped source, where an unused local really is a leftover.
+    "noUnusedLocals": false
+  },
   "include": ["src"],
   "exclude": ["dist", ".rollup.cache", "**/*.test.ts", "**/*.test.tsx"]
 }
