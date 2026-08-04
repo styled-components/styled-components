@@ -14,13 +14,13 @@ import constructWithOptions, { Styled as StyledInstance } from './constructWithO
 const baseStyled = <Target extends WebTarget, InjectedProps extends object = BaseObject>(
   tag: Target
 ) =>
-  constructWithOptions<'web', Target, TargetProps<Target> & InjectedProps>(
+  constructWithOptions<'web', Target, TargetProps<'web', Target> & InjectedProps>(
     createStyledComponent,
     tag
   );
 
 const styled = baseStyled as typeof baseStyled & {
-  [E in SupportedHTMLElements]: StyledInstance<'web', E, TargetProps<E>>;
+  [E in SupportedHTMLElements]: StyledInstance<'web', E, TargetProps<'web', E>>;
 };
 
 // Shorthands for all valid HTML Elements.

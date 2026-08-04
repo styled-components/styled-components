@@ -58,9 +58,9 @@ export interface Styled<
     R,
     // Tested against the target, never `OuterProps`: after `.attrs()` those
     // diverge and the widening would switch off, which is #5756 one layer down.
-    // `TargetProps<Target>` is `OuterProps`' own default, so it costs nothing.
+    // `TargetProps<R, Target>` is `OuterProps`' own default, so it costs nothing.
     WidenForUntypedTarget<
-      TargetProps<Target>,
+      TargetProps<R, Target>,
       MakeAttrsOptional<MergeProps<OuterProps, Props>, AttrsKeys>
     >
   > &
@@ -78,8 +78,9 @@ export interface Styled<
     // Widen when the merged props are un-introspectable ({}) so attrs can backfill
     // arbitrary keys on e.g. Mantine polymorphic-factory targets, matching the
     // permissive JSX call site. Targets with known props are unaffected.
-    PrivateAttrsArg extends Attrs<WidenForUntypedTarget<TargetProps<Target>, PrivateMergedProps>> =
-      Attrs<WidenForUntypedTarget<TargetProps<Target>, PrivateMergedProps>>,
+    PrivateAttrsArg extends Attrs<
+      WidenForUntypedTarget<TargetProps<R, Target>, PrivateMergedProps>
+    > = Attrs<WidenForUntypedTarget<TargetProps<R, Target>, PrivateMergedProps>>,
     PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>,
   >(
     attrs: PrivateAttrsArg
@@ -110,7 +111,7 @@ export interface Styled<
 export default function constructWithOptions<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  OuterProps extends object = TargetProps<Target>,
+  OuterProps extends object = TargetProps<R, Target>,
   OuterStatics extends object = BaseObject,
   AttrsKeys extends keyof any = never,
 >(
@@ -149,8 +150,9 @@ export default function constructWithOptions<
   templateFunction.attrs = <
     Props extends object = BaseObject,
     PrivateMergedProps extends object = MergeProps<OuterProps, Props>,
-    PrivateAttrsArg extends Attrs<WidenForUntypedTarget<TargetProps<Target>, PrivateMergedProps>> =
-      Attrs<WidenForUntypedTarget<TargetProps<Target>, PrivateMergedProps>>,
+    PrivateAttrsArg extends Attrs<
+      WidenForUntypedTarget<TargetProps<R, Target>, PrivateMergedProps>
+    > = Attrs<WidenForUntypedTarget<TargetProps<R, Target>, PrivateMergedProps>>,
     PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>,
   >(
     attrs: PrivateAttrsArg

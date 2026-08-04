@@ -62,7 +62,7 @@ type RNComponents = {
 };
 
 const styled = baseStyled as typeof baseStyled & {
-  [E in KnownComponents]: Styled<'native', RNComponents[E], TargetProps<RNComponents[E]>>;
+  [E in KnownComponents]: Styled<'native', RNComponents[E], TargetProps<'native', RNComponents[E]>>;
 };
 
 /* Define a getter for each alias which simply gets the reactNative component

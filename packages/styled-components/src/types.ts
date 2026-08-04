@@ -204,11 +204,15 @@ interface ThemedExecutionProps {
  * call site -- directly via {@link WithCSSVars} on the intrinsic arm, which
  * needs no guard, and via {@link OverrideStyle} on the component arm, which
  * does. See AGENTS.md before changing any of it.
+ *
+ * `R` carries the runtime so the widening stays web-only; it is deliberately
+ * undefaulted, since a default is what would let a native call site pick up web
+ * CSS by omission.
  */
-export type TargetProps<T> = T extends keyof React.JSX.IntrinsicElements
+export type TargetProps<R extends Runtime, T> = T extends keyof React.JSX.IntrinsicElements
   ? IntrinsicProps<T>
   : T extends AnyComponent
-    ? ComponentTargetProps<T>
+    ? ComponentTargetProps<R, T>
     : {};
 
 /**
@@ -226,8 +230,18 @@ type IntrinsicProps<T extends keyof React.JSX.IntrinsicElements> = WithCSSVars<
   React.JSX.IntrinsicElements[T]
 >;
 
-/** Props of a component render target. Named for the same reason as {@link IntrinsicProps}. */
-type ComponentTargetProps<T extends AnyComponent> = OverrideStyle<React.ComponentPropsWithRef<T>>;
+/**
+ * Props of a component render target. Named for the same reason as {@link IntrinsicProps}.
+ *
+ * The `style` widening is web-only: a React Native `style` takes a `ViewStyle`,
+ * which carries neither web CSS nor custom properties. This is the only seam that
+ * knows the runtime, which is why the gate sits here rather than inside
+ * {@link OverrideStyle}. The conditional is over `Runtime` -- two members, concrete
+ * at every entry point -- never over the target union.
+ */
+type ComponentTargetProps<R extends Runtime, T extends AnyComponent> = R extends 'web'
+  ? OverrideStyle<React.ComponentPropsWithRef<T>>
+  : React.ComponentPropsWithRef<T>;
 
 /**
  * Used by PolymorphicComponent to define prop override cascading order.
@@ -238,9 +252,9 @@ export type PolymorphicComponentProps<
   AsTarget extends StyledTarget<R> | (BaseProps extends { as?: infer A } ? A : never) | void,
   ForwardedAsTarget extends StyledTarget<R> | void,
   // props extracted from "as"
-  AsTargetProps extends BaseObject = TargetProps<AsTarget>,
+  AsTargetProps extends BaseObject = TargetProps<R, AsTarget>,
   // props extracted from "forwardedAs"
-  ForwardedAsTargetProps extends BaseObject = TargetProps<ForwardedAsTarget>,
+  ForwardedAsTargetProps extends BaseObject = TargetProps<R, ForwardedAsTarget>,
 > = NoInfer<
   FastOmit<
     MergeProps<

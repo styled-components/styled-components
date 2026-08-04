@@ -54,17 +54,26 @@ declare module '../models/ThemeProvider' {
 }
 
 /* ------------------------------------------------------------------------- *
- * Known gap, characterized rather than asserted: a native `style` accepts
- * web-only CSS. `TargetProps` carries no runtime parameter, so the CSS-variable
- * widening it applies cannot be gated on web vs native at its one application
- * point. Verified identical on 6.4.2, 6.4.4 and today, so this is inherited, not
- * introduced -- but this is the seam that would carry the runtime if it were
- * fixed. If these stop compiling the gap closed and this block should go.
+ * The `style` widening is web-only. A native `style` takes a `ViewStyle`, so web
+ * CSS and custom properties are rejected; `TargetProps` gates the widening on
+ * its runtime parameter. Regression guard: on 6.4.2 through 6.4.4 both of the
+ * rejections below compiled.
  * ------------------------------------------------------------------------- */
 
-const WidenedStyleView = styled.View``;
-<WidenedStyleView style={{ float: 'left' }} />;
-<WidenedStyleView style={{ width: '3em' }} />;
+const NativeStyleView = styled.View``;
+<NativeStyleView style={{ width: 10 }} />;
+// @ts-expect-error `float` is web-only CSS and absent from ViewStyle
+<NativeStyleView style={{ float: 'left' }} />;
+// @ts-expect-error CSS custom properties are web-only
+<NativeStyleView style={{ '--brand': 'red' }} />;
+
+/**
+ * Not a styled-components contract: `@types/react-native` 0.71 types
+ * `FlexStyle['width']` as `number | string`, so a web length is accepted by RN's
+ * own typing. A react-native bump that tightens this to `DimensionValue` stops
+ * the line compiling, which is upstream news rather than a regression here.
+ */
+<NativeStyleView style={{ width: '3em' }} />;
 
 /* ------------------------------------------------------------------------- *
  * Baseline: the shorthand aliases resolve their target's real props.
