@@ -561,6 +561,8 @@ const OwnStyleType = styled.div<{ style?: { width: number } }>``;
 const NoStyleTarget = (props: { label: string }) => <div>{props.label}</div>;
 const StyledNoStyleTarget = styled(NoStyleTarget)``;
 <StyledNoStyleTarget label="x" />;
+// @ts-expect-error the target declares no style prop, so neither does this one
+<StyledNoStyleTarget label="x" style={{ color: 'red' }} />;
 
 /** `style={undefined}` stays assignable under exactOptionalPropertyTypes. */
 <DivWithCSSVariable style={undefined} />;
