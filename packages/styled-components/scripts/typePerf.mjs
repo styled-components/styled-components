@@ -15,8 +15,13 @@
  *
  *   node scripts/typePerf.mjs            check against the budget
  *   node scripts/typePerf.mjs --update   rewrite the budget from this run
- *   node scripts/typePerf.mjs --count 500
  *   node scripts/typePerf.mjs --against node_modules/styled-components
+ *   node scripts/typePerf.mjs --count 500 --against node_modules/styled-components
+ *
+ * `--count` only makes sense alongside `--against`, or with `--update` when the
+ * intent is to move the budget to a new fixture size. A bare `--count` that
+ * disagrees with the recorded one is refused rather than compared, since a
+ * 500-component run and a 100-component budget are not the same measurement.
  *
  * `--against` points the same fixture at some other copy of the package, which
  * is how "did we get better or worse than the version we replace" gets an
@@ -202,8 +207,10 @@ function unit(i) {
 \`;`;
       break;
     case 'chained':
-      // Always reachable: `chained` starts at cursor 8, so i >= 8 here and the
-      // previous unit is always in this same file (PER_FILE governs both).
+      // `C${i - 1}` always resolves because `chained` never starts a file: the
+      // kinds ahead of it in KIND_WEIGHTS occupy the first cursors of every
+      // cycle, and the same PER_FILE governs both the cycle and the file split.
+      // Moving `chained` to the front of KIND_WEIGHTS would break that.
       decl = `const ${N} = styled(C${i - 1})<{ $x${i}?: string }>\`
   border-color: \${p => p.$x${i} ?? 'black'};
 \`;`;
@@ -273,7 +280,7 @@ import styledNative from 'styled-components/native';
 const Canary = styled.button<{ $ok?: boolean }>\`\`;
 // @ts-expect-error not a prop of a styled button
 export const CanaryProp = <Canary notAPropOfButton={1} />;
-// @ts-expect-error 'loop' belongs to video, not to the button this renders as
+// @ts-expect-error 'loop' is a video attribute and this renders a button
 export const CanaryAs = <Canary loop />;
 
 // The web and native entries resolve target props through the same types, so a
@@ -403,19 +410,22 @@ if (against !== undefined) process.exit(0);
 // because a different host can move it. Memory is budgeted at all because 6.4.4
 // has FEWER instantiations than 6.4.3 while using far more of it: a
 // counters-only budget reads that regression as an improvement.
+//
+// The tolerance lives here and only here. The budget file records what was
+// measured, which is a fact about a run; the band is policy about how much drift
+// is acceptable, which belongs with the reasoning above. Writing it into the
+// file too would give a hand-edited band a home the next --update silently
+// overwrites.
 const TOLERANCE_PCT = { instantiations: 10, memoryKb: 12, types: 10 };
 
 if (update) {
-  writeFileSync(
-    budgetFile,
-    `${JSON.stringify({ count, measured, tolerancePct: TOLERANCE_PCT, versions }, null, 2)}\n`
-  );
+  writeFileSync(budgetFile, `${JSON.stringify({ count, measured, versions }, null, 2)}\n`);
   console.log(`type-perf: budget updated in ${budgetFile}`);
   process.exit(0);
 }
 
 const budget = JSON.parse(readFileSync(budgetFile, 'utf8'));
-if (!budget.measured || !budget.tolerancePct) {
+if (!budget.measured) {
   console.error(`type-perf: ${budgetFile} is not in the expected shape, run with --update.`);
   process.exit(1);
 }
@@ -425,7 +435,7 @@ if (!budget.measured || !budget.tolerancePct) {
 // budget" while checking nothing, silently disabling the metric it was added to
 // enforce. Any budget written before a metric existed has exactly this shape.
 for (const metric of Object.keys(TOLERANCE_PCT)) {
-  if (!Number.isFinite(budget.measured[metric]) || !Number.isFinite(budget.tolerancePct[metric])) {
+  if (!Number.isFinite(budget.measured[metric])) {
     console.error(`type-perf: budget is missing '${metric}', run with --update to re-measure.`);
     process.exit(1);
   }
@@ -451,7 +461,7 @@ const LABELS = { instantiations: 'instantiations', memoryKb: 'memory', types: 't
 const over = [];
 const under = [];
 for (const [metric, label] of Object.entries(LABELS)) {
-  const tolerance = budget.tolerancePct[metric] / 100;
+  const tolerance = TOLERANCE_PCT[metric] / 100;
   const actual = measured[metric];
   const baseline = budget.measured[metric];
   if (actual > baseline * (1 + tolerance)) over.push([label, actual, baseline]);

@@ -12,7 +12,6 @@ import {
   StyledOptions,
   StyledTarget,
   Styles,
-  Substitute,
   TargetProps,
   WidenForUntypedTarget,
 } from '../types';

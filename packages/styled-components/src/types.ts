@@ -672,7 +672,7 @@ export type CSSProp = Interpolation<any>;
  * error messages: a conditional alias loses its name the moment it resolves, so
  * an inline branch prints its whole expansion instead.
  */
-export type Substituted<A extends BaseObject, B> = FastOmit<A, keyof B> & B;
+type Substituted<A extends BaseObject, B> = FastOmit<A, keyof B> & B;
 
 // `B` is deliberately unconstrained. Bounding it to BaseObject forces callers
 // passing a still-generic target's props to intersect `& BaseObject` to satisfy
@@ -735,7 +735,7 @@ export type MergeProps<A extends BaseObject, B> = keyof B extends never
  * the target, so the target's `style` and the declared `style` intersect instead
  * of the declaration replacing it.
  */
-export type Merged<A extends BaseObject, B> = FastOmit<A, Exclude<keyof B, 'style'>> & B;
+type Merged<A extends BaseObject, B> = FastOmit<A, Exclude<keyof B, 'style'>> & B;
 
 /**
  * Makes keys in K optional while keeping all others required.
