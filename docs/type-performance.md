@@ -35,10 +35,14 @@ rather than what consumers resolve.
 The `unionTarget` kind wraps a component whose props are a union and passes a member-specific prop at
 the call site. It prices the distributive path in `OverrideStyle`, and because the run fails on any
 fixture compile error it also fails outright if that union ever collapses again (#5787), making it a
-correctness canary sitting inside the perf gate. Adding it moved the recorded budget on its own
-(instantiations 699,924 to 850,438 at 100 components); that jump is fixture growth, not a regression. A
-kind added or a weight changed here changes what the budget means, so re-measure with `--update` and
-say in the commit that the fixture, not the cost, is what moved.
+correctness canary sitting inside the perf gate. It is also the single most expensive kind per
+component, by a wide margin, so adding it moved the recorded budget substantially on its own. That jump
+was fixture growth, not a regression.
+
+A kind added or a weight changed here changes what the budget means, so re-measure with `--update` and
+say in the commit that the fixture, not the cost, is what moved. `type-perf.budget.json` is the live
+figure; `pnpm --filter styled-components type-perf` prints the current one. Do not restate either here,
+since a number copied into prose is a number that silently goes stale.
 
 ## Target prop resolution
 

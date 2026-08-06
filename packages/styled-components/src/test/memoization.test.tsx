@@ -391,9 +391,13 @@ describe('memoization correctness', () => {
     function record<T>(render: () => T): [T, string[]] {
       const calls: string[] = [];
       recording = calls;
-      const result = render();
-      recording = null;
-      return [result, calls];
+      try {
+        return [render(), calls];
+      } finally {
+        // Cleared even when the render throws, so a later render cannot append
+        // to a dead array and turn one failure into a confusing second one.
+        recording = null;
+      }
     }
 
     try {
