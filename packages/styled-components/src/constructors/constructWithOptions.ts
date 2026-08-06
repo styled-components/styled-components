@@ -93,7 +93,7 @@ export interface Styled<
           // `ComponentPropsWithRef` rather than `TargetProps` is the one place
           // that stays: a function-form `.attrs` makes this target a union, and
           // `TargetProps` distributing inside that measured as TS2589. Both in
-          // AGENTS.md.
+          // docs/type-performance.md.
           MergeProps<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
           Props
         >
