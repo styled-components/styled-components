@@ -8,7 +8,7 @@ import _StyledNativeComponent from '../models/StyledNativeComponent';
 import ThemeProvider, { ThemeConsumer, ThemeContext, useTheme } from '../models/ThemeProvider';
 import { buildHashCSS, evaluateForFastPath, FastPathFragment } from '../parser/compile';
 import { getSource, synthesizeSourceForRuleSet } from '../parser/source';
-import { NativeTarget, RuleSet } from '../types';
+import { NativeTarget, RuleSet, TargetProps } from '../types';
 import isStyledComponent from '../utils/isStyledComponent';
 
 // Side-effect: registers the default Animated-based animation adapter.
@@ -69,7 +69,11 @@ type RNComponents = {
 };
 
 const styled = baseStyled as typeof baseStyled & {
-  [E in KnownComponents]: Styled<'native', RNComponents[E], React.ComponentProps<RNComponents[E]>>;
+  // `TargetProps<'native', …>` rather than `ComponentProps`: the runtime
+  // argument is what keeps the web-only `style` widening off this entry, since a
+  // native `style` takes a native style object and accepts neither web CSS nor
+  // custom properties.
+  [E in KnownComponents]: Styled<'native', RNComponents[E], TargetProps<'native', RNComponents[E]>>;
 };
 
 // Scroller baseline. RN's ScrollView-family base style ships

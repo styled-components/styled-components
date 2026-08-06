@@ -161,17 +161,8 @@ function generateId(
   return parentComponentId ? parentComponentId + '-' + componentId : componentId;
 }
 
-function useInjectedStyle<T extends ExecutionContext>(
-  webStyle: WebStyle,
-  resolvedAttrs: T,
-  styleSheet: StyleSheet,
-  compiler: Compiler
-): string {
-  return webStyle.flush(resolvedAttrs, styleSheet, compiler);
-}
-
 /**
- * RSC counterpart to `useInjectedStyle`. Runs `generate()` to produce the
+ * RSC counterpart to `webStyle.flush`. Runs `generate()` to produce the
  * inheritance chain's compiled CSS without writing to the tag; registers
  * each new class name so repeat renders of the same component/props skip
  * compilation. Returns both the class name (for the element) and the
@@ -611,7 +602,7 @@ function useImpl<Props extends BaseObject>(
         cachedGenerated = generated;
         pendingInject = generatedNeedsSheetWrite(generated, ssc.styleSheet) ? generated : null;
       } else {
-        generatedClassName = useInjectedStyle(webStyle, context, ssc.styleSheet, ssc.compiler);
+        generatedClassName = webStyle.flush(context, ssc.styleSheet, ssc.compiler);
       }
 
       let propsKeyCount = 0;
@@ -646,10 +637,12 @@ function useImpl<Props extends BaseObject>(
       generatedStyle = rscFlush(webStyle, context, ssc.styleSheet, ssc.compiler);
       generatedClassName = generatedStyle.className;
     } else {
-      generatedClassName = useInjectedStyle(webStyle, context, ssc.styleSheet, ssc.compiler);
+      generatedClassName = webStyle.flush(context, ssc.styleSheet, ssc.compiler);
     }
   }
 
+  // Outside the render-cache branch: a hook skipped on a cache hit is a hook
+  // count that changes between renders, which React rejects outright.
   if (__DEV__ && React.useDebugValue) {
     React.useDebugValue(generatedClassName);
   }
