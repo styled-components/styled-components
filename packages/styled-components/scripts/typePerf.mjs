@@ -88,6 +88,10 @@ const AS_TAGS = ['a', 'button', 'label', 'section', 'video', 'ul'];
 // Declaration mix per PER_FILE-sized cycle, weighted toward what large apps
 // actually contain. Adjusting a weight changes what the committed budget means,
 // so the numbers must be re-measured with --update afterwards.
+// `unionTarget` prices the distributive prop path (#5787). Without it nothing
+// here contains a union-typed target, so the distribution that keeps `A | B`
+// from collapsing to its shared keys costs nothing measurable -- and the next
+// pass over this area reads "free to remove" off a fixture that never used it.
 const KIND_WEIGHTS = [
   ['plainTag', 8],
   ['wrapComponent', 5],
@@ -95,6 +99,7 @@ const KIND_WEIGHTS = [
   ['attrsTag', 2],
   ['attrsWrap', 1],
   ['genericWrapper', 1],
+  ['unionTarget', 1],
 ];
 const PER_FILE = KIND_WEIGHTS.reduce((sum, [, weight]) => sum + weight, 0);
 
@@ -123,15 +128,21 @@ const Plain = (props: BaseProps & { className?: string; children?: React.ReactNo
 
 const Other = (props: { href?: string; children?: React.ReactNode }) => <a {...props} />;
 
+type PressableProps =
+  | React.ButtonHTMLAttributes<HTMLButtonElement>
+  | React.AnchorHTMLAttributes<HTMLAnchorElement>;
+const Pressable = (_props: PressableProps) => null;
+
 const spreadProps = { className: 'x', id: 'y' };
 `;
 
 function unit(i) {
   const tag = TAGS[i % TAGS.length];
   const N = `C${i}`;
+  const kind = kindOf(i);
   let decl;
 
-  switch (kindOf(i)) {
+  switch (kind) {
     case 'plainTag':
       decl = `const ${N} = styled.${tag}<{ $a${i}?: number; $b${i}?: string; $c${i}?: boolean }>\`
   color: \${p => (p.$c${i} ? 'red' : 'blue')};
@@ -161,6 +172,11 @@ function unit(i) {
   height: \${p => p.$size}px;
 \`;`;
       break;
+    case 'unionTarget':
+      decl = `const ${N} = styled(Pressable)<{ $a${i}?: number }>\`
+  padding: \${p => p.$a${i} ?? 0}px;
+\`;`;
+      break;
     default:
       // Generic wrapper: the shape behind #4246/#1803, where a styled component
       // is consumed through a caller's own type parameter.
@@ -173,10 +189,14 @@ function ${N}<T extends BaseProps>({ item, ...rest }: { item: T } & React.Compon
       break;
   }
 
-  const generic = kindOf(i) === 'genericWrapper';
+  const generic = kind === 'genericWrapper';
   const sites = generic
     ? [`<${N} item={{ label: 'l' }} />`, `<${N} item={{ label: 'l' }} className="x" />`]
     : [`<${N} />`, `<${N} className="x">{'t'}</${N}>`];
+
+  // A member-specific prop is the whole point of the union fixture: a plain call
+  // site resolves against the shared keys and would price the same either way.
+  if (kind === 'unionTarget') sites.push(`<${N} href="/x" />`);
 
   if (!generic) {
     if (i % 5 === 0) sites.push(`<${N} {...spreadProps} />`);

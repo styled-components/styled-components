@@ -88,21 +88,6 @@ function shallowEqualContext(prev: object, next: object, prevKeyCount: number): 
   return nextKeyCount === prevKeyCount;
 }
 
-function useInjectedStyle<T extends ExecutionContext>(
-  componentStyle: ComponentStyle,
-  resolvedAttrs: T,
-  styleSheet: StyleSheet,
-  stylis: Stringifier
-): string {
-  const className = componentStyle.generateAndInjectStyles(resolvedAttrs, styleSheet, stylis);
-
-  if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
-    React.useDebugValue(className);
-  }
-
-  return className;
-}
-
 // Cached render inputs + style result: [prevProps, prevTheme, prevStyleSheet, prevStylis,
 // prevPropsKeyCount, cachedContext, cachedClassName]
 type RenderCache = [
@@ -273,8 +258,11 @@ function useStyledComponentImpl<Props extends BaseObject>(
       generatedClassName = prev[6];
     } else {
       context = resolveContext<Props>(componentAttrs, props, theme);
-      generatedClassName = useInjectedStyle(componentStyle, context, ssc.styleSheet, ssc.stylis);
-
+      generatedClassName = componentStyle.generateAndInjectStyles(
+        context,
+        ssc.styleSheet,
+        ssc.stylis
+      );
       let propsKeyCount = 0;
       for (const key in props) {
         if (hasOwn.call(props, key)) propsKeyCount++;
@@ -292,7 +280,17 @@ function useStyledComponentImpl<Props extends BaseObject>(
     }
   } else {
     context = resolveContext<Props>(componentAttrs, props, theme);
-    generatedClassName = useInjectedStyle(componentStyle, context, ssc.styleSheet, ssc.stylis);
+    generatedClassName = componentStyle.generateAndInjectStyles(
+      context,
+      ssc.styleSheet,
+      ssc.stylis
+    );
+  }
+
+  // Outside the render-cache branch: a hook skipped on a cache hit is a hook
+  // count that changes between renders, which React rejects outright (#5788).
+  if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
+    React.useDebugValue(generatedClassName);
   }
 
   if (process.env.NODE_ENV !== 'production' && forwardedComponent.warnTooManyClasses) {

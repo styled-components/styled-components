@@ -1496,3 +1496,122 @@ const StyledGenericList = styled(GenericList)`
   // @ts-expect-error T is lost through styled(), so props degrades to unknown
   renderChild={props => <p key={`I_${props.id}`}>{props.value}</p>}
 />;
+
+/**
+ * #5787 -- a component whose props are a union keeps every member's props
+ * through `styled()`. `keyof` a union is the keys *common* to every member, so a
+ * prop transform that does not distribute silently narrows `A | B` to their
+ * shared keys and rejects the rest.
+ *
+ * Every accepted prop below is paired with a rejected one. Without the negative
+ * controls, a transform that widened these props to an index signature (the
+ * `WidenUntypedProps` path) would accept everything and pass this whole section
+ * while the union was in fact gone.
+ */
+type UnionButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
+type UnionAnchorProps = React.AnchorHTMLAttributes<HTMLAnchorElement>;
+type PressableProps = UnionButtonProps | UnionAnchorProps;
+
+const Pressable = (_props: PressableProps) => null;
+const StyledPressable = styled(Pressable)`
+  color: red;
+`;
+
+// Positive control: the unwrapped component accepts both members' props, so a
+// failure below is styled()'s doing and not the union's.
+<Pressable href="/x" />;
+<Pressable type="submit" />;
+
+// Anchor-only and button-only props both survive styled().
+<StyledPressable href="/x">link</StyledPressable>;
+<StyledPressable type="submit">button</StyledPressable>;
+// @ts-expect-error `notAProp` belongs to neither union member
+<StyledPressable notAProp="x" />;
+
+// The `style` widening still applies to each member, custom properties included.
+<StyledPressable style={{ '--x': '1px', color: 'red' }} />;
+// @ts-expect-error `color` still has to be a valid CSS value
+<StyledPressable style={{ color: 4 }} />;
+
+// A component's own declared props merge over a union target.
+const StyledPressableWithProps = styled(Pressable)<{ $tone: 'warn' | 'ok' }>`
+  color: ${p => (p.$tone === 'warn' ? 'red' : 'green')};
+`;
+<StyledPressableWithProps $tone="warn" href="/x" />;
+// @ts-expect-error $tone is constrained to the declared union
+<StyledPressableWithProps $tone="nope" href="/x" />;
+
+// attrs on a union-props target.
+const AttrsPressable = styled(Pressable).attrs({ role: 'button' })``;
+<AttrsPressable href="/x" />;
+// @ts-expect-error still not a prop of either member
+<AttrsPressable notAProp="x" />;
+
+// Wrapping a styled union component again keeps the union.
+const ChainedPressable = styled(StyledPressable)`
+  opacity: 0.5;
+`;
+<ChainedPressable href="/x" />;
+// @ts-expect-error still not a prop of either member
+<ChainedPressable notAProp="x" />;
+
+// `as` pointing at a union-props component.
+const AsUnion = styled.div``;
+<AsUnion as={Pressable} href="/x" />;
+// @ts-expect-error still not a prop of either member
+<AsUnion as={Pressable} notAProp="x" />;
+
+/**
+ * #5787, sibling case: a union whose members share NO keys. `keyof` such a union
+ * is `never`, which is also how `Substitute`/`MergeProps` recognize an empty prop
+ * bag, so the fast path used to drop the union wholesale. The union above cannot
+ * catch this: `ButtonHTMLAttributes | AnchorHTMLAttributes` share most of their
+ * keys, so `keyof` is never `never` and the guard is never consulted.
+ *
+ * Predates 6.5.0. Reachable three ways, all pinned here.
+ */
+type DisjointProps = { onlyA: string } | { onlyB: number };
+const Disjoint = (_props: DisjointProps) => null;
+
+// Positive control: unwrapped, both members' props are accepted.
+<Disjoint onlyA="x" />;
+<Disjoint onlyB={1} />;
+
+// Wrapping a disjoint-union target.
+const StyledDisjoint = styled(Disjoint)``;
+<StyledDisjoint onlyA="x" />;
+<StyledDisjoint onlyB={1} />;
+// @ts-expect-error on neither member
+<StyledDisjoint notAProp="x" />;
+
+// Declaring disjoint-union props. This is the path that routes through
+// `Substitute`'s guard directly.
+const DeclaredDisjoint = styled.div<DisjointProps>``;
+<DeclaredDisjoint onlyA="x" />;
+<DeclaredDisjoint onlyB={1} />;
+// the target's own props still merge over the declaration
+<DeclaredDisjoint onlyA="x" id="d" />;
+// @ts-expect-error on neither member
+<DeclaredDisjoint notAProp="x" />;
+// @ts-expect-error a member still requires its own key
+<DeclaredDisjoint id="d" />;
+
+// `as` pointing at a disjoint-union component, which nests the guard inside
+// `MergeProps`.
+<AsUnion as={Disjoint} onlyA="x" />;
+// @ts-expect-error on neither member
+<AsUnion as={Disjoint} notAProp="x" />;
+
+/**
+ * Accepted limitation, characterized rather than fixed: a disjoint union whose
+ * members are ALL-optional still collapses, because `{}` is assignable to every
+ * member and so cannot be told apart from a genuinely empty prop bag. The
+ * complete fix (re-asking `keyof` per member) tips `tsc` into TS2589 against a
+ * caller spreading `as?: WebTarget`. Such a union accepts `{}` regardless, so
+ * declaring the flattened `{ onlyA?: string; onlyB?: number }` is equivalent and
+ * works.
+ */
+type AllOptionalDisjoint = { onlyA?: string } | { onlyB?: number };
+const AllOptional = styled.div<AllOptionalDisjoint>``;
+// @ts-expect-error known limitation: an all-optional disjoint union collapses
+<AllOptional onlyA="x" />;
