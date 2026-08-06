@@ -25,6 +25,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+
+      # Guards consumer type-check cost against the built .d.ts. Regressions
+      # here are invisible to the unit and type-contract suites, which measure
+      # the library's own workload over src (see #5767).
+      - run: pnpm --filter styled-components type-perf
   test:
     runs-on: ubuntu-latest
     steps:

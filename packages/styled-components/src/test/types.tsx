@@ -3,7 +3,7 @@
  * Run via: pnpm --filter styled-components test:types
  */
 import React from 'react';
-import { css, CSSProp, IStyledComponent, StyledObject } from '../index';
+import { css, CSSProp, CustomStyle, IStyledComponent, StyledObject } from '../index';
 import styled from '../index-standalone';
 import { DataAttributes } from '../types';
 import { VeryLargeUnionType } from './veryLargeUnionType';
@@ -892,3 +892,244 @@ const ScButton = styled(FakeAntdButton).attrs({
 const StyledForDefaultPropsCheck = styled.div<{ foo?: string }>``;
 // @ts-expect-error v7 removed defaultProps; use .attrs() instead
 StyledForDefaultPropsCheck.defaultProps = { foo: 'bar' };
+
+/**
+ * #5787 -- a component whose props are a union keeps every member's props
+ * through `styled()`. `keyof` a union is the keys *common* to every member, so a
+ * prop transform that does not distribute silently narrows `A | B` to their
+ * shared keys and rejects the rest.
+ *
+ * Every accepted prop below is paired with a rejected one. Without the negative
+ * controls, a transform that widened these props to an index signature (the
+ * un-introspectable-target path) would accept everything and pass this whole
+ * section while the union was in fact gone.
+ */
+type UnionButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
+type UnionAnchorProps = React.AnchorHTMLAttributes<HTMLAnchorElement>;
+type PressableProps = UnionButtonProps | UnionAnchorProps;
+
+const Pressable = (_props: PressableProps) => null;
+const StyledPressable = styled(Pressable)`
+  color: red;
+`;
+
+// Positive control: the unwrapped component accepts both members' props, so a
+// failure below is styled()'s doing and not the union's.
+<Pressable href="/x" />;
+<Pressable type="submit" />;
+
+// Anchor-only and button-only props both survive styled().
+<StyledPressable href="/x">link</StyledPressable>;
+<StyledPressable type="submit">button</StyledPressable>;
+// @ts-expect-error `notAProp` belongs to neither union member
+<StyledPressable notAProp="x" />;
+
+// The `style` widening still applies to each member, custom properties included.
+<StyledPressable style={{ '--x': '1px', color: 'red' }} />;
+// @ts-expect-error `color` still has to be a valid CSS value
+<StyledPressable style={{ color: 4 }} />;
+
+// A component's own declared props merge over a union target.
+const StyledPressableWithProps = styled(Pressable)<{ $tone: 'warn' | 'ok' }>`
+  color: ${p => (p.$tone === 'warn' ? 'red' : 'green')};
+`;
+<StyledPressableWithProps $tone="warn" href="/x" />;
+// @ts-expect-error $tone is constrained to the declared union
+<StyledPressableWithProps $tone="nope" href="/x" />;
+
+// attrs on a union-props target.
+const AttrsPressable = styled(Pressable).attrs({ role: 'button' })``;
+<AttrsPressable href="/x" />;
+// @ts-expect-error still not a prop of either member
+<AttrsPressable notAProp="x" />;
+
+// Wrapping a styled union component again keeps the union.
+const ChainedPressable = styled(StyledPressable)`
+  opacity: 0.5;
+`;
+<ChainedPressable href="/x" />;
+// @ts-expect-error still not a prop of either member
+<ChainedPressable notAProp="x" />;
+
+// `as` pointing at a union-props component.
+const AsUnion = styled.div``;
+<AsUnion as={Pressable} href="/x" />;
+// @ts-expect-error still not a prop of either member
+<AsUnion as={Pressable} notAProp="x" />;
+
+/**
+ * #5787, sibling case: a union whose members share NO keys. `keyof` such a union
+ * is `never`, which is also how the prop-merge types recognize an empty prop bag,
+ * so the fast path drops the union wholesale. The union above cannot catch this:
+ * `ButtonHTMLAttributes | AnchorHTMLAttributes` share most of their keys, so
+ * `keyof` is never `never` and the guard is never consulted.
+ *
+ * Reachable three ways, all pinned here.
+ */
+type DisjointProps = { onlyA: string } | { onlyB: number };
+const Disjoint = (_props: DisjointProps) => null;
+
+// Positive control: unwrapped, both members' props are accepted.
+<Disjoint onlyA="x" />;
+<Disjoint onlyB={1} />;
+
+// Wrapping a disjoint-union target.
+const StyledDisjoint = styled(Disjoint)``;
+<StyledDisjoint onlyA="x" />;
+<StyledDisjoint onlyB={1} />;
+// @ts-expect-error on neither member
+<StyledDisjoint notAProp="x" />;
+
+// Declaring disjoint-union props. This is the path that routes through the
+// merge guard directly.
+const DeclaredDisjoint = styled.div<DisjointProps>``;
+<DeclaredDisjoint onlyA="x" />;
+<DeclaredDisjoint onlyB={1} />;
+// the target's own props still merge over the declaration
+<DeclaredDisjoint onlyA="x" id="d" />;
+// @ts-expect-error on neither member
+<DeclaredDisjoint notAProp="x" />;
+// @ts-expect-error a member still requires its own key
+<DeclaredDisjoint id="d" />;
+
+// `as` pointing at a disjoint-union component, which nests the guard one level
+// deeper.
+<AsUnion as={Disjoint} onlyA="x" />;
+// @ts-expect-error on neither member
+<AsUnion as={Disjoint} notAProp="x" />;
+
+/**
+ * Accepted limitation, characterized rather than fixed: a disjoint union whose
+ * members are ALL-optional still collapses, because `{}` is assignable to every
+ * member and so cannot be told apart from a genuinely empty prop bag. The
+ * complete fix (re-asking `keyof` per member) tips `tsc` into TS2589 against a
+ * caller spreading `as?: WebTarget`. Such a union accepts `{}` regardless, so
+ * declaring the flattened `{ onlyA?: string; onlyB?: number }` is equivalent and
+ * works.
+ */
+type AllOptionalDisjoint = { onlyA?: string } | { onlyB?: number };
+const AllOptional = styled.div<AllOptionalDisjoint>``;
+// @ts-expect-error known limitation: an all-optional disjoint union collapses
+<AllOptional onlyA="x" />;
+
+/**
+ * #5756 -- a target whose props are un-introspectable (a generic polymorphic
+ * factory resolves to `{}`) must accept props rather than reject every one of
+ * them, `children` included. The widening is decided by the target, so it must
+ * survive the component declaring transient props of its own.
+ *
+ * Paired with negative controls throughout: the widening is an index signature,
+ * so a target that IS introspectable must stay strict, or these cases would pass
+ * for the wrong reason.
+ */
+// Mirrors Mantine v7's polymorphic-factory shape: a generic callable
+// intersected with `FunctionComponent` statics, which is what makes
+// `React.ComponentPropsWithRef` resolve to `{}`.
+type FactoryExtendedProps<Props = {}, OverrideProps = {}> = OverrideProps &
+  Omit<Props, keyof OverrideProps>;
+type FactoryElementType = keyof React.JSX.IntrinsicElements | React.JSXElementConstructor<any>;
+type FactoryPropsOf<C extends FactoryElementType> = React.JSX.LibraryManagedAttributes<
+  C,
+  React.ComponentProps<C>
+>;
+type FactoryComponentProp<C> = { component?: C };
+type FactoryInheritedProps<C extends FactoryElementType, Props = {}> = FactoryExtendedProps<
+  FactoryPropsOf<C>,
+  Props
+>;
+type PolymorphicFactoryProps<C, Props = {}> = C extends React.ElementType
+  ? FactoryInheritedProps<C, Props & FactoryComponentProp<C>> & {
+      ref?: any;
+      renderRoot?: (props: any) => any;
+    }
+  : Props & { component: React.ElementType; renderRoot?: (props: Record<string, any>) => any };
+
+interface PolyButtonProps {
+  variant?: string;
+  color?: string;
+  children?: React.ReactNode;
+}
+type PolymorphicFactoryButton = (<C = 'button'>(
+  props: PolymorphicFactoryProps<C, PolyButtonProps>
+) => React.ReactElement) &
+  Omit<React.FunctionComponent<PolymorphicFactoryProps<any, PolyButtonProps>>, never> & {
+    extend: (p: any) => any;
+  };
+declare const PolyButton: PolymorphicFactoryButton;
+
+// Premise: this target really is un-introspectable. If React's types ever start
+// resolving it, this line fails and the cases below stop testing what they claim.
+type PolyButtonResolvedProps = React.ComponentPropsWithRef<typeof PolyButton>;
+const _polyPremise: keyof PolyButtonResolvedProps extends never ? true : false = true;
+void _polyPremise;
+
+const StyledPolyButton = styled(PolyButton)`
+  color: red;
+`;
+<StyledPolyButton variant="filled" color="blue">
+  hi
+</StyledPolyButton>;
+<StyledPolyButton>just children</StyledPolyButton>;
+
+// Declaring transient props must not switch the widening back off (the bug one
+// layer down: a non-empty prop bag is not an introspectable target).
+const StyledPolyButtonWithOwnProps = styled(PolyButton)<{ $variant: 'a' | 'b' }>`
+  color: ${p => (p.$variant === 'a' ? 'red' : 'blue')};
+`;
+<StyledPolyButtonWithOwnProps $variant="a" variant="filled">
+  hi
+</StyledPolyButtonWithOwnProps>;
+// @ts-expect-error the component's own declared props stay strict
+<StyledPolyButtonWithOwnProps $variant="nope" />;
+
+// attrs on an un-introspectable target is permissive too.
+const PolyButtonWithAttrs = styled(PolyButton).attrs({ variant: 'filled' })``;
+<PolyButtonWithAttrs color="blue">hi</PolyButtonWithAttrs>;
+
+// Negative control: an introspectable target keeps strict `.attrs()` typing.
+declare const TypedAttrsComp: (props: { a: string }) => React.ReactElement;
+// @ts-expect-error `nope` is not a prop of the wrapped component
+styled(TypedAttrsComp).attrs({ nope: 1 })``;
+
+// Negative control: all-optional props have a non-`never` `keyof`, so they stay
+// strict. The widening fires only when there are genuinely no known keys.
+declare const AllOptionalComp: (props: { a?: string }) => React.ReactElement;
+const StyledAllOptional = styled(AllOptionalComp)``;
+// @ts-expect-error unknown prop still rejected
+<StyledAllOptional nonsense="y" />;
+
+// Negative control: a union with one empty member is still introspectable, since
+// not every constituent is empty, so the distributed check must not widen it.
+declare const OneEmptyMemberComp: (props: {} | { a: string }) => React.ReactElement;
+const StyledOneEmpty = styled(OneEmptyMemberComp)``;
+// @ts-expect-error nonsense is on neither member
+<StyledOneEmpty nonsense="y" />;
+
+/**
+ * A declared `style` type constrains the fields it names and leaves the rest of
+ * CSS accepted, rather than replacing the target's `style` outright.
+ */
+const DeclaredStyle = styled.div<{ style?: { width: number } }>``;
+<DeclaredStyle style={{ width: 4 }} />;
+// the rest of CSS still comes through from the target
+<DeclaredStyle style={{ width: 4, color: 'red' }} />;
+// custom properties survive the merge
+<DeclaredStyle style={{ width: 4, '--x': '1px' }} />;
+// @ts-expect-error the declared field is still constrained
+<DeclaredStyle style={{ width: 'wide' }} />;
+
+/** `CustomStyle` ablates everything the declaration does not name. */
+const ExactStyle = styled.div<{ style?: CustomStyle<{ width: number }> }>``;
+<ExactStyle style={{ width: 4 }} />;
+// @ts-expect-error CustomStyle accepts only the fields it was given
+<ExactStyle style={{ width: 4, color: 'red' }} />;
+
+/**
+ * A target that declares no `style` prop at all must not gain one from the
+ * widening: the guard is `'style' extends keyof P`, and the shape it replaced
+ * (`P extends { style?: infer S }`) was vacuously true for every target.
+ */
+declare const NoStyleComp: (props: { a?: string }) => React.ReactElement;
+const StyledNoStyle = styled(NoStyleComp)``;
+// @ts-expect-error the wrapped component has no style prop to widen
+<StyledNoStyle style={{ color: 'red' }} />;

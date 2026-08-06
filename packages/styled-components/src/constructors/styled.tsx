@@ -1,6 +1,6 @@
 import * as React from 'react';
 import createStyledComponent from '../models/StyledComponent';
-import { BaseObject, KnownTarget, WebTarget } from '../types';
+import { BaseObject, TargetProps, WebTarget } from '../types';
 import type { SupportedHTMLElements } from '../utils/domElements';
 import constructWithOptions, { Styled as StyledInstance } from './constructWithOptions';
 
@@ -15,11 +15,10 @@ import constructWithOptions, { Styled as StyledInstance } from './constructWithO
 const baseStyled = <Target extends WebTarget, InjectedProps extends object = BaseObject>(
   tag: Target
 ) =>
-  constructWithOptions<
-    'web',
-    Target,
-    Target extends KnownTarget ? React.ComponentPropsWithRef<Target> & InjectedProps : InjectedProps
-  >(createStyledComponent, tag);
+  constructWithOptions<'web', Target, TargetProps<'web', Target> & InjectedProps>(
+    createStyledComponent,
+    tag
+  );
 
 /**
  * Shape test for a property read that should become a shorthand: all-lowercase
@@ -65,7 +64,7 @@ const styled = new Proxy(baseStyled, {
 
   // The mapped type below is the contract; the trap answers for every member of it.
 }) as typeof baseStyled & {
-  [E in SupportedHTMLElements]: StyledInstance<'web', E, React.JSX.IntrinsicElements[E]>;
+  [E in SupportedHTMLElements]: StyledInstance<'web', E, TargetProps<'web', E>>;
 };
 
 export default styled;

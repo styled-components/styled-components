@@ -50,8 +50,9 @@
       "entry": [
         // Published subpath (styled-components/test-utils).
         "test-utils/index.ts",
-        // Entry of the type-surface project (tsconfig.test-types.json).
+        // Entries of the type-surface project (tsconfig.test-types.json).
         "src/test/types.tsx",
+        "src/test/types.native.tsx",
         // Bun CPU-profiling harnesses, run directly (see AGENTS.md "Profiling").
         "src/parser/profile-harness.ts",
         "src/native/profile*.ts",
