@@ -1,4 +1,5 @@
-NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
+Read this file for the rules. Everything a rule only summarizes is specified in full under `docs/`,
+mapped below.
 
 ## Basics
 
@@ -8,26 +9,42 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 
 ## Critical Constraints
 
-- NEVER use `precedence` or `href` on `<style>` elements -- React 19 Float merges same-precedence tags, strips custom `data-*` attributes, and hoists to `<head>` where source ordering is unpredictable. RSC style tags must be plain inline `<style>` (server component output is not hydrated, so no mismatch).
-- The native entry must NEVER transitively import DOM code via value imports. Use `import type` and branded `Symbol.for()` checks instead of `instanceof`. Verify: `grep -c 'document\.' native/dist/styled-components.native.cjs.js` must be 0. RN/Hermes 0.79+ fails at module evaluation time on `document` references.
-- Server detection requires three mechanisms combined: `__SERVER__` (build-time constant), `IS_RSC` (module-level constant), and `styleSheet.server` (runtime flag from `ServerStyleSheet`). Always use `__SERVER__ || IS_RSC || ssc.styleSheet.server`, with one deliberate exception: `createGlobalStyle`'s server-cache cleanup drops the `IS_RSC` term because the `IS_RSC` branch above it already handled and returned, so reaching that line under RSC means there was nothing to clean. `IS_RSC` is `true` at runtime in React 19 server components because React's `react-server` export condition serves a stripped build without `createContext`. Bundlers (Next.js/Turbopack) use this condition automatically.
-- Turbopack resolves the `browser` entry for SSR of client components, making `__SERVER__` false on the server. `styleSheet.server` is the runtime fallback.
-- `React.useRef` is `undefined` in RSC server components. Gate behind `__SERVER__` for dead-code elimination, never use `typeof React.useRef === 'function'` (runtime conditional hook).
-- `new Array(n)` creates HOLEY_ELEMENTS arrays that infect V8 type feedback -- 3.9x regression observed in GroupedTag.
+- NEVER use `precedence` or `href` on `<style>` elements. React 19 Float merges same-precedence tags,
+  strips custom `data-*` attributes, and hoists to `<head>` where source ordering is unpredictable.
+  See [docs/rsc-style-injection.md](docs/rsc-style-injection.md).
+- The native entry must NEVER transitively import DOM code via a value import. Use `import type` and
+  branded `Symbol.for()` checks instead of `instanceof`. Verify:
+  `grep -c 'document\.' native/dist/styled-components.native.cjs.js` must be 0.
+  See [docs/build-architecture.md](docs/build-architecture.md).
+- Server detection needs all three of `__SERVER__`, `IS_RSC` and `styleSheet.server`. Always write
+  `__SERVER__ || IS_RSC || ssc.styleSheet.server`. The one deliberate exception is documented in
+  [docs/build-architecture.md](docs/build-architecture.md), which also explains why each flag exists
+  and when each one lies.
+- NEVER gate paired cleanup (a `useLayoutEffect` and its teardown) on `__SERVER__` alone. Gate on
+  `styleSheet.server` or `IS_RSC`.
+- NEVER write `typeof React.useRef === 'function'`; that is a runtime conditional hook. Gate on
+  `__SERVER__`.
+- NEVER place a hook on one side of the render cache's hit/miss branch. The hook sequence must be
+  identical whether or not props changed. See
+  [docs/runtime-performance.md](docs/runtime-performance.md).
+- NEVER use `new Array(n)`. It creates HOLEY_ELEMENTS arrays that infect V8 type feedback.
+- NEVER mutate `rule.props` in place on a stylis AST node; allocate a fresh array.
 
 ## Mandates
 
 - React 16.8 compat
-- Always microbenchmark to validate optimizations -- and bench the realistic workload, not a synthetic best case. Revert changes that pessimize the path actual callers take, even if they win in isolation.
+- Always microbenchmark to validate optimizations, and bench the realistic workload rather than a
+  synthetic best case. Revert changes that pessimize the path actual callers take, even if they win in
+  isolation.
 - Optimize for low memory pressure and monomorphic functions
 
 ## Agent Rules
 
 - Create changesets only for user-visible changes (bug fixes, features, breaking changes). Skip internal refactors, build tooling, and test changes. Also skip changesets for fixes to code introduced within the same unreleased version (no user ever saw the bug).
-- Changeset descriptions AND PR descriptions are both consumer-facing. Write so someone who uses the library but hasn't read its source can understand the change -- describe what the user observes change in their app. NO internal API names (`rebuildGroup`, `clearRules`, `instanceRules`, `useLayoutEffect`, `rulesEqual`, etc.), NO mechanism descriptions ("the cleanup effect now runs on..."), NO references to specific code paths. Implementation details belong in commit message bodies and AGENTS.md, never in changesets or PR bodies.
+- Changeset descriptions AND PR descriptions are both consumer-facing. Write so someone who uses the library but hasn't read its source can understand the change -- describe what the user observes change in their app. NO internal API names (`rebuildGroup`, `clearRules`, `instanceRules`, `useLayoutEffect`, `rulesEqual`, etc.), NO mechanism descriptions ("the cleanup effect now runs on..."), NO references to specific code paths. Implementation details belong in commit message bodies and the `docs/` specifications, never in changesets or PR bodies.
 - Do not edit CHANGELOG.md -- it is auto-generated by changesets
 - Always run the formatter (`pnpm --filter styled-components prettier`) before committing code changes
-- Public-facing docs (README, `packages/*/README.md`, `docs/*`, FAQ, sandbox README) describe user-observable behavior only. Implementation details -- React Float/`precedence`, stylis internals, `React.cache`, V8 optimizations -- belong in AGENTS.md unless the answer to a user question specifically requires them.
+- Public-facing docs (README, `packages/*/README.md`, `packages/styled-components/docs/*`, FAQ, sandbox README) describe user-observable behavior only. Implementation details -- React Float/`precedence`, stylis internals, `React.cache`, V8 optimizations -- belong in the repo-root `docs/` specifications unless the answer to a user question specifically requires them.
 - Links to the site use the bare domain (`https://styled-components.com`). There is no `www` subdomain.
 - After editing `packages/styled-components/src/utils/errors.md`, run `pnpm --filter styled-components generateErrors` before tests -- Jest snapshots compare against the compiled error map and will fail silently otherwise.
 - The repo-root `src/utils/errors.md` is a frozen pre-monorepo stub, not a mirror. Nothing reads it: `generateErrorMap.js` and the production error URL both point at the canonical `packages/styled-components/src/utils/errors.md`. It stops at error 13 and its entry 2 already describes a different error than the one shipped, so do not consult it and do not treat it as authoritative. Update links in place if a link fix lands; never change its structure or error numbering. Whether it should exist at all is an open question for the maintainer, not a cleanup to do in passing.
@@ -49,188 +66,23 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - `pnpm --filter styled-components bench:rsc` -- Run RSC benchmarks (renderToString + dedup + React baseline)
 - `pnpm test:prerelease-notes` -- Regenerate prerelease GitHub release-note markdown locally (set `GITHUB_REPOSITORY=owner/name`; optional `CHANGESET_NOTES_ROOT`, `RELEASE_NOTES_OUTDIR`)
 
-## Build Architecture
+## Specifications
 
-- `__SERVER__` is a build-time constant that enables dead-code elimination for SSR paths in browser builds. NEVER use `__SERVER__` as the sole gate for behavior that needs paired cleanup (e.g. `useLayoutEffect`). Jest resolves the server build (`main` field) in jsdom, where `__SERVER__=true` eliminates cleanup but DOM mutations still occur. Gate on `styleSheet.server` or `IS_RSC` instead.
-- `IS_BROWSER` (`typeof window !== 'undefined'`) is a runtime check -- bundlers CANNOT tree-shake code behind it
-- `IS_RSC` (`typeof React.createContext === 'undefined'`) is a module-level constant. React 19's `react-server` export condition strips `createContext` from the server build, so `IS_RSC` is `true` at runtime in server components. In browser/standalone/native builds, rollup replaces the expression with `false` for dead-code elimination.
-- The `browser` field in package.json maps server bundles to browser-specific alternatives. Preferred over `exports` (which caused TS2742 in composite projects).
-- CSS injection ordering: group IDs allocated at call time (when `styled()`, `createGlobalStyle()`, or `keyframes()` is called) -- lower ID = earlier in stylesheet
-- Keyframes eagerly register via `getGroupForId(this.id)` in constructor (not `StyleSheet.registerId`, to avoid DOM imports in native builds)
+Each document is the single home for its subject. A rule above that summarizes one of these points at
+it rather than restating it.
 
-## GlobalStyle Shared-Group Architecture
-
-- All instances of a `createGlobalStyle` share ONE stylesheet group, registered at `createGlobalStyle()` call time via `StyleSheet.registerId(componentId)`
-- The returned component is wrapped in `React.memo`
-- Instance IDs allocated via `allocateGSInstance`: server uses direct allocation (one-shot renders), client uses `useRef` for stability across re-renders
-- `instanceRules: Map<number, { name: string; rules: string[] }>` tracks each mount's compiled CSS on the module-level `GlobalStyle` object
-- `rebuildGroup()` clears the shared group and re-inserts from surviving instances -- O(N) where N is mounted instances (typically 1-3)
-- `computeRules()` flattens + compiles CSS and caches in `instanceRules` -- the single source of truth for rebuild
-- Inline rules-equality comparison skips CSSOM rebuild when CSS is unchanged, but ONLY on the client (`!styleSheet.server`). SSR `clearTag()` invalidates the DOM tag but NOT module-level caches (`instanceRules`), so cache-based fast-paths must check `!styleSheet.server`.
-- Server-side `instanceRules` entries must be explicitly deleted after style collection (no `useLayoutEffect` cleanup runs on server)
-- Client lifecycle uses TWO `useLayoutEffect`s: one runs `renderStyles` on render/dep change, a separate one holds the `removeStyles` cleanup keyed on `[instance, sheet, globalStyle]` so cleanup fires only on unmount/sheet-swap/HMR -- not on every prop change. A single effect with per-render cleanup wipes `instanceRules` before the rulesEqual fast-path can hit, causing a double `rebuildGroup` per render of every dynamic global style (see #5730).
-
-## RSC Style Injection
-
-- RSC components emit plain inline `<style data-styled>` tags (no `precedence`, no `href`). Server component output is NOT hydrated by React, so inline tags cause no hydration mismatch. The `data-styled` attribute is safe because Float only strips attrs during client hydration, which never runs on RSC output.
-- Inline body styles naturally appear after the registry's `<head>` styles in source order, so cross-boundary extensions (RSC extending a client component) win the cascade.
-- Base-level CSS in inheritance chains is wrapped in `:where()` for zero specificity. This prevents duplicate base CSS (from sibling extensions sharing a base) from overriding earlier extensions' styles.
-- No cleanup of RSC style tags is needed -- they are the sole source of CSS for server-only components.
-- RSC inline `<style>` tags are deduplicated per render via name-based tracking in a `React.cache`-scoped Set. Dedup hits skip CSS collection entirely (no getGroup, no :where() wrapping). Dynamic components with multiple variants only emit CSS for new names, not the full accumulated group. Compiled CSS is cached on ComponentStyle/Keyframes via WeakMap (persists across React.cache resets, dead-code eliminated in browser build).
-- Keyframe rules are emitted in a dedicated `<style>` tag, deduped separately by keyframe ID. They must NOT be prepended to component CSS strings--keyframes register mid-render, so prepending them causes inconsistent strings that break `getEmittedCSS` dedup.
-- `mainSheet` is reset once per server render via `React.cache` (clears `names`, `keyframeIds`, `tag`) to prevent stale CSS accumulating across HMR cycles. `keyframeIds` is safe to clear because components re-register keyframes via `keyframe.inject()` during render.
-- `StyleSheetManager` works in RSC via module-level `rscContextOverride` slot. Single-threaded RSC renders + `React.cache` reset per render make this safe. Nested SSMs inherit `stylisPlugins`, `shouldForwardProp`, and `nonce` from parent. `stylisPlugins={[]}` explicitly disables inheritance. `namespace` and `enableVendorPrefixes` are supported in RSC.
-- `stylisPluginRSC` is an opt-in stylis plugin that rewrites `:first-child`/`:last-child`/`:nth-child()` to exclude `style[data-styled]` from the child count using CSS Selectors L4 `of S` syntax. Exported from `index.ts` only (not `base.ts`) for UMD tree-shaking. Uses `/*#__PURE__*/ Object.defineProperty` for stable `.name` after minification.
-- RSC inline `<style>` tags break child-index pseudo-selectors because they become real DOM children. `:first-of-type`/`:nth-of-type()` are naturally immune (filter by tag name). The plugin is needed only for `:*-child` selectors.
-
-## createTheme
-
-- `createTheme(defaultTheme, options?)` returns an object where every leaf is `var(--prefix-path, fallback)` -- usable in both client and RSC styled components
-- Pass the contract to `ThemeProvider` for stable class name hashes across themes (no hydration mismatch on light/dark)
-- `resolve(el?)` reads computed CSS var values from the DOM -- client-only, returns plain object with resolved values
-- `raw` property holds the original theme object
-- `vars` property holds bare CSS custom property names (`--sc-path`) -- same shape as theme, use in `createGlobalStyle` for dark mode overrides: `${vars.colors.bg}: #111;`
-- Options: `prefix` (default `"sc"`), `selector` (default `":root"`, use `":host"` for Shadow DOM)
-- Dark mode: use `vars` + `css` partial for DRY overrides in `@media (prefers-color-scheme: dark)` and `.dark` class -- avoids hydration flash and hand-written var names
-- `reconstructWithOptions` must copy `keyframeIds` Set to the new sheet
-
-## attrs Behavior
-
-- attrs ALWAYS wins over directly passed props (by design)
-- The function form is the escape hatch: `.attrs(({ as }) => ({ as: as || "button" }))`
-- Exception: explicitly passing `undefined` for a prop prevents attrs from overwriting it (PR #5683)
-
-## Performance Patterns (microbenchmark-validated)
-
-| Pattern | Result |
-|---------|--------|
-| String `+=` vs `array.push()+join()` | `+=` is 3-4x faster at all scales (V8 cons string trees) |
-| Object creation | `{...props, theme}` is 4x faster than `Object.assign` or `for..in` copy |
-| Props iteration | `for..in` is 1.7x faster than `Object.keys()` + loop |
-| RegExp creation | Cache via Map is 5x faster; `indexOf` pre-check to skip entirely is 5x more |
-| Template literals | Manual `+` concat is 1.3x faster than `` `${a}${b}` `` in tight loops |
-| `React.createElement` | Raw element objects measure 60-120x faster, but are NOT used on this branch: `StyledComponent` calls React's own `createElement`. Measurement only, not an inventory entry |
-
-## Type Contracts
-
-`src/test/types.tsx` (web) and `src/test/types.native.tsx` (native) are compile-only files with no
-test runner: `test:types` type-checks everything under `src` except `*.test.ts(x)`, so a new
-non-`.test` file is picked up automatically. Most cases are drawn from reported issues and carry the
-issue number.
-
-- Every `@ts-expect-error` is a test, and the compiler already enforces that each one is live: a
-  directive with nothing to suppress is itself an error, `TS2578 Unused '@ts-expect-error'
-  directive`, so `test:types` fails on a dead one with no extra tooling. Do not build a harness to
-  re-check this; one was written here and deleted once TS2578 was measured doing the same job.
-  When TS2578 fires, rewrite the assertion rather than deleting it -- the behavior it described
-  changed, and that is worth a decision. Never delete or relax an existing directive to make a
-  change compile; that is the change being wrong, not the test.
-- TS2578 proves a directive suppresses *something*, not that it suppresses the *right* thing. A
-  directive can go on passing for a reason its comment does not describe: an assertion here about
-  arbitrary CSS being rejected kept passing only because a required field was missing. Name the
-  expected error in the comment, and when editing a case, re-read what it actually catches.
-- A case asserting a type did NOT widen to `any` needs a presence anchor, since `any` compiles
-  clean. Write a deliberate mismatch under `@ts-expect-error` so the widening surfaces as `TS2578`.
-- Never annotate a callback parameter whose inference is the thing under test. An annotation makes
-  the case pass whether or not inference works.
-- A `DefaultTheme` augmentation in a contract suite uses optional keys only. The library defaults the
-  theme to `EMPTY_OBJECT` internally, so a required key fails the library's own source rather than the
-  test file. Read through `NonNullable<...>` where a non-optional view is needed.
-- `tsc` emits semantic diagnostics only when there are zero syntactic ones, so a single syntax error
-  in a contract suite blanks the entire type check and the file reads as "clean except one typo".
-  Fix any syntax error first, then re-read the output before believing a pass.
-- Third-party shapes are hand-written stubs (Mantine's polymorphic factory, Next.js `Link`'s `Url`).
-  Annotate a stub with the package version it was verified against, and pin its premise with an
-  assertion where the stub's whole point is a property of the real type -- the Mantine stub asserts
-  its resolved props have no keys, so the case cannot pass against a stub that became
-  introspectable. Do not add the real package as a dependency to test a type.
-- Four reported issues cannot be pinned in-tree, because each is a union-explosion or
-  recursion-depth cliff that a simplified stub sits clear of and would pass vacuously: antd's
-  `Button` under `.attrs()` (#5725), react-bootstrap 2.8's `Button` (#4166), react-spring's
-  `animated` with the `css` prop (#3496), and preact/compat (#3773). They are verified out of tree
-  against the real packages at the versions reported. Re-verify them by hand when the polymorphic
-  call signature or `Interpolation` changes.
-
-## TypeScript Type Performance
-
-Consumer cost is budgeted in CI: `pnpm --filter styled-components type-perf` type-checks a generated
-fixture against the built `dist/*.d.ts` and fails when types, instantiations or memory drift past what
-`type-perf.budget.json` records. Measure there, not against `src`, since internal files don't reach
-consumers. Raise the budget with `--update` only after understanding why the cost grew.
-
-- The budget stores the measured figures plus a tolerance, not bare ceilings, so an improvement is
-  reported ("run `--update` to bank it") instead of silently becoming slack for the next regression.
-- Memory is budgeted alongside the counters because the counters alone would have read 6.4.4 as an
-  improvement: against the same fixture 6.4.4 has FEWER instantiations than 6.4.3 while using more
-  memory. Types and instantiations are bit-identical run to run; memory is the only host-sensitive
-  figure, which is why the script pins the V8 heap. No metric is wall-clock, so a slower CI box
-  measures the same numbers a laptop does.
-- The budget records the `typescript` and `@types/react` versions it was measured on and warns when
-  they differ, since a dependency bump moves every figure on its own.
-- `skipLibCheck: true` hides a broken `dist`: if the shipped declarations cannot resolve their own
-  dependencies, every export degrades to `any`, the fixture still compiles, and the run reports an
-  enormous fake win (measured: a degraded package reported 3,843 types where the healthy one reported
-  40,398). The fixture's `canary.tsx` is the guard -- `@ts-expect-error` directives that error only
-  while the types are intact, so a degraded package turns them into `TS2578` and fails the clean gate.
-  Verify any change to that file by pointing the fixture at a deliberately broken package.
-- The fixture covers the native entry too. `TargetProps` is shared by both, so a native-only type
-  regression is invisible to a web-only fixture and to `tsconfig.test-types.json`, which checks `src`
-  rather than what consumers resolve.
-
-- `TargetProps<R, T>` (`types.ts`) must stay ONE distributive conditional over `T`. Wrapping it in an outer `T extends KnownTarget ? … : {}` check nests two distributions over the ~153-member target union and costs ~4x the check time; folding the KnownTarget test into the helper's own `AnyComponent` arm is what makes it cheap. The `R` gate inside `ComponentTargetProps` is not that shape: it distributes over `Runtime`, not over `T`.
-- Resolve HTML tag props by indexed access (`React.JSX.IntrinsicElements[T]`), never `React.ComponentPropsWithRef<T>`. On @types/react 18 the latter rebuilds the whole ~265-key prop bag through `Omit` just to strip legacy string refs; the indexed access already carries `ref` via `DetailedHTMLProps`. This was the entire #5767 regression: `ComponentPropsWithRef` went from 496 to 59,944 types in a 100-component fixture.
-- Do NOT "fix" a distributive conditional by bracketing it as `[T] extends [X] ? F<T & X> : …`. The `T & X` intersection cross-products two ~153-member unions and OOMs tsc. Bracketing is only safe when the true branch doesn't need `T` narrowed.
-- The `.attrs()` re-resolution seam in `constructWithOptions` keeps `React.ComponentPropsWithRef<PrivateResolvedTarget>` and must NOT be switched to `TargetProps`, even though `TargetProps` is cheaper everywhere else. The function form `.attrs(({ as }) => ({ as: as || 'button' }))` makes the resolved target a union, and `TargetProps` is two conditionals, so it distributes inside the distribution that seam already performs. Measured on a three-line repro: 6.4.2 157K instantiations, `TargetProps` 6.9M, and TS2589 (excessively deep) with one more chained layer -- a hard failure against both 6.4.2 and 6.4.4, not a slowdown. `ComponentPropsWithRef` there costs ~2% instantiations on the consumer fixture and lands the same repro at 133K, below 6.4.2. Cheaper in count, deeper in nesting is a real trade and this one position is where nesting wins.
-- The `style` widening is web-only, gated on `TargetProps`' first parameter (`R extends Runtime`, deliberately undefaulted -- a default is what would let a native call site pick web CSS up by omission). Only `ComponentTargetProps` carries the gate: `NativeTarget` is `AnyComponent`, so the intrinsic arm is unreachable on native. The conditional is over `Runtime`, two members and concrete at every entry point, which is why it costs nothing measurable (+0.55% instantiations, +0.05% types, memory flat) where a conditional over the target union costs ~4x. Before this, `styled.View` accepted `float` and custom properties on 6.4.2 through 6.4.4 alike; both are pinned as `@ts-expect-error` in the native contract suite. `width: '3em'` is still accepted and is NOT ours -- `@types/react-native` 0.71 types `FlexStyle['width']` as `number | string`.
-- Known limitation, characterized in the contract suite: under `exactOptionalPropertyTypes`, a component declaring its own `style` rejects an explicit `style={undefined}`, because intersecting the declared type leaves no `undefined` arm. Omitting the prop is unaffected and `style?: X | undefined` restores it. Do not "fix" this by reintroducing a conditional in `MergeProps`; that shape measured +54% types. Accepted and documented in the changeset instead.
-- `PolymorphicComponentProps` merges rather than substitutes the `as`/`forwardedAs` target's props over `BaseProps`, so a declared `style` constraint is not escapable by rendering the same component through a different tag. Measured on the consumer fixture: +0.016% types, +0.48% instantiations, memory unchanged. This is the one place a per-JSX-site cost was accepted, and it was accepted only because it buys a contract `CustomStyle` otherwise states falsely.
-- A declared `style` merges rather than replaces, and the merge is an intersection, not a conditional: `MergeProps` simply does not omit `style` from the target, so `CSSPropertiesWithVars & { width: number }` narrows one field and keeps the rest. Both conditional spellings were measured and rejected -- testing `keyof A` tips tsc into TS2590 outright, and testing `keyof B` costs +54% types because it stays deferred while `B` is generic and the checker materializes both branches. `never` ablates a field and `CustomStyle` ablates everything unnamed, so full override stays expressible without making it the default.
-- `CSSProp`'s recursion through `RuleSet` is load-bearing and must not be flattened to "fix" #3496 (`css?: CSSProp` plus react-spring's recursive `animated` types tips TS2589). Ablated against the real packages: react-spring alone is fine and `css?: string` is fine, so the depth is ours, but every shallower `CSSProp` that fixes it also stops `css={cssHelperOutput}` being assignable, which is the primary use of the prop. It reproduces identically on 6.4.2 and 6.4.4, so it is a standing limitation rather than a regression.
-- Permissiveness for an un-introspectable target is decided from the TARGET's props, not from the finished prop bag. `WidenUntypedProps` asks whether the merged bag is empty, which stops being true as soon as a component adds a transient prop, so `styled(PolymorphicTarget)<{ $variant: string }>` silently lost the permissiveness and started rejecting `children` (#5756, on 6.4.2 and 6.4.4 alike). `WidenForUntypedTarget` tests `Target` instead. Applying it over an already-widened bag is a no-op, since the index signature makes `keyof` be `string`.
-- When a cost cliff appears after several changes land together, ablate to the cause before attributing it. The TS2589 above was blamed in turn on the `Exclude` inside `MergeProps` and on `MergeProps` itself; making `MergeProps` byte-identical to `Substitute` still reproduced it, which is what pointed at the `.attrs()` seam. A fix that makes the symptom go away is not evidence about the cause, and a comment recording the wrong cause outlives the session that guessed it.
-- The `style` widening applies once per render target inside `TargetProps`, never to a merged prop bag at a JSX call site. A target's props are shared by every component built on it, so the widening resolves once per tag rather than once per component; the call-site form was the largest single consumer cost (measured 5.2x the types). The cost is per component-type instantiation, not per JSX site: multiplying call sites sixfold moves it only a few percent, so a fixture that grows sites rather than components will not show the difference. Only the component arm (`ComponentTargetProps`) routes through the `OverrideStyle` guard; every intrinsic element provably declares `style` (the set of `React.JSX.IntrinsicElements` keys lacking it is `never`), so `IntrinsicProps` applies `WithCSSVars` directly rather than asking a question with one possible answer. Four things are load-bearing about the current shape, each found by measurement:
-  - The test is `'style' extends keyof P`, not `P extends { style?: infer S }`. `{}` vacuously satisfies the latter, which would hand every un-introspectable target a `style` key and defeat `WidenUntypedProps` (regresses #5756).
-  - `Attrs<Props>` does NOT re-apply it. `Props` already carries the widened style, and re-applying it stops `Attrs<any>` relating to `Attrs<OuterProps>` inside `StyledComponent`/`StyledNativeComponent`.
-  - The explicit `| undefined` keeps `style={undefined}` assignable under `exactOptionalPropertyTypes`, which the call-site form allowed.
-  - `Substitute`'s second parameter is deliberately unbounded. Bounding it to `BaseObject` forces callers to write `TargetProps<R, T> & BaseObject` to satisfy it, and `{}` is retained rather than reduced inside an intersection, so that one bound propagates an unreducible node through every prop bag downstream. Measured cost of adding it back: +47K types and +73% check time on a 100-component fixture. Never intersect `& {}` into a type that flows into prop bags.
-- Rejected alternative, do not re-explore: intersecting instead of omitting inside `OverrideStyle` (`P & { style?: … }`). It measured -33% types and -22% check time but is strictly worse than widening at the source and breaks a component's own narrow `style` type by narrowing rather than replacing it.
-- Use built-in `NoInfer` (TS 5.4+) internally. Never declare a local `NoInfer` alias in a file that also uses it: the local declaration shadows the intrinsic within that module and silently downgrades every reference to the slower deferred form. A re-export (`export type { NoInfer } from './utils/noInfer'`) introduces no local binding and is safe. Do NOT probe which form is in play by testing whether inference is blocked -- the deferred form blocks identically, so the test and its negative control both pass and the probe proves nothing. The only instrument that separates them is resolving the identifier through the compiler API and reading which file the symbol lands in (`lib.es5.d.ts` means the intrinsic).
-- Keep a conditional type's branches as named top-level aliases (`WithCSSVars`, `IntrinsicProps`, `ComponentTargetProps`, `Substituted`). A conditional alias loses its name the moment it resolves, because the checker returns the branch type and drops the `aliasSymbol`, so an inlined branch prints its whole expansion in every hover and error. Naming the branches took a styled component's displayed type from roughly 380 characters to 95 at no measurable cost. Do not inline them back for tidiness; the tidiness is the point.
-- Do NOT reach for the popular `Prettify<T> = { [K in keyof T]: T[K] } & {}` to clean up a displayed type here. It is a homomorphic mapped type (breaks JSX overload resolution) ending in the `& {}` that never reduces. It is fine on a leaf type a user hovers, and poison on anything that flows into prop bags.
-- `tsc --noEmit` cannot see editor behavior. A change to the polymorphic call signature must also be checked by driving a real tsserver at a half-typed JSX attribute (`<Comp as="video" l|>` must still offer `loop`). Always include a positive control in that probe: a caret that lands wrong returns zero completions, which reads identically to a genuine regression.
-- `FastOmit<A, K> & B` (intersection) is 2.4x fewer instantiations than a single mapped type with per-key conditionals
-- Homomorphic mapped types (`{ [K in keyof P]: ... }`) break React JSX overload resolution
-- Flattening nested `Substitute` into parallel `FastOmit`s increases instantiations — TS deduplicates nested structures better
-- Don't replace built-in `Omit` with `FastOmit` in `OverrideStyle` — built-in `Omit` (Pick + Exclude) is more optimized (+17% instantiations when replaced)
-- Variance annotations (`out`/`in out`) on `Styled`, `PolymorphicComponent`, `IStyledComponentBase`, etc. reduce variance computation (-72%) and memory (-16%)
-- `domElements.forEach` uses `(styled as any)` cast — types are already declared via mapped type on the styled const, avoiding one redundant `Styled<>` instantiation per element in `domElements`
-- Profile: `~/.claude/tools/tsc-perf.sh measure tsconfig.test-types.json` or `npx tsc --noEmit --extendedDiagnostics --project tsconfig.test-types.json`. Delete tsbuildinfo for clean measurement.
-- `npx @typescript/analyze-trace /tmp/tsc-perf-trace` detects hot spots and duplicate packages
-
-## V8 Gotchas
-
-- `private` modifier is not allowed on anonymous class expressions (`export const Foo = class { ... }`)
-- `import type * from 'stream'` still triggers bundler module resolution even though TypeScript strips it
-
-## Stylis AST
-
-- `stylis.compile()` can alias the same `props` array between a top-level rule and its `@media`-nested copy. Never mutate `rule.props` in place -- allocate a fresh array. `rule.value` is a plain string and safe to reassign.
-- Character code constants live in `src/utils/charCodes.ts`. Import from there rather than redefining local copies.
-
-## Dynamic Re-render Hot Path
-
-Cache hit (props+theme unchanged -- most common re-render):
-- `shallowEqualContext`: ~0.2us -- compares props via for-in + stored key count
-- Everything else skipped (resolveContext, flatten, hash, generateName, buildPropsForElement still runs)
-
-Cache miss (props changed):
-1. `resolveContext`: object spread + attrs evaluation
-2. `flatten()` fast path: inline function call for string-returning interpolations, ~0.05us each
-3. `dynamicNameCache` lookup: Map.get on CSS string -- O(1), skips phash+generateName on hit
-4. `phash()` + `generateName`: only on dynamicNameCache miss (first time seeing this CSS)
-5. `stylis` compile+serialize: only when `hasNameForId` misses (first injection of this class)
-6. `hasNameForId`: Map.has -- negligible
-
-## Rendering Flow
-
-See [docs/rendering-flow.md](docs/rendering-flow.md) for the full sequence diagram.
+- [docs/build-architecture.md](docs/build-architecture.md) -- build-time constants, the three server
+  detection mechanisms, native entry isolation, module resolution, CSS injection ordering
+- [docs/rendering-flow.md](docs/rendering-flow.md) -- the full render sequence diagram
+- [docs/runtime-performance.md](docs/runtime-performance.md) -- microbenchmark-validated patterns, the
+  dynamic re-render hot path and its render cache, V8 gotchas, stylis AST handling
+- [docs/global-styles.md](docs/global-styles.md) -- `createGlobalStyle`'s shared-group architecture,
+  instance lifecycle, rebuild fast path
+- [docs/rsc-style-injection.md](docs/rsc-style-injection.md) -- how styles reach the page from server
+  components, dedup, `:where()` wrapping, `stylisPluginRSC`
+- [docs/create-theme.md](docs/create-theme.md) -- the `createTheme` CSS-variable contract
+- [docs/attrs.md](docs/attrs.md) -- `attrs` precedence and its escape hatches
+- [docs/type-contracts.md](docs/type-contracts.md) -- how the compile-only type suites are written and
+  read
+- [docs/type-performance.md](docs/type-performance.md) -- the consumer type-check budget and every
+  load-bearing decision in `types.ts`

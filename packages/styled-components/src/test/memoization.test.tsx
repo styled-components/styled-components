@@ -1,8 +1,9 @@
 /**
- * Tests for useInjectedStyle memoization.
+ * Tests for the styled component render cache.
  *
  * Verifies that the useRef-based shallow context comparison correctly
- * caches and invalidates under various scenarios.
+ * caches and invalidates under various scenarios, and that the cache's
+ * hit/miss branch does not change the component's hook sequence.
  */
 import React, { useState } from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
@@ -355,5 +356,78 @@ describe('memoization correctness', () => {
 
     renderer.unmount();
     warnSpy.mockRestore();
+  });
+
+  /**
+   * The render cache splits the render path in two, and only one side runs the
+   * style work. Any hook that ends up on one side of that split is called on a
+   * cache miss and skipped on a cache hit, so the component emits a different
+   * hook sequence depending on whether its props happened to change -- exactly
+   * the shape React rejects with "Rendered fewer hooks than expected" (#5788).
+   *
+   * Asserting the sequence rather than a count: a swap of two hooks keeps the
+   * count identical and still breaks React's ordering rule. The recording is
+   * done by wrapping React's own `use*` exports, so a hook added to the render
+   * path in future is picked up without this test being told about it.
+   */
+  it('emits an identical hook sequence on cache-hit and cache-miss renders', () => {
+    // React's module namespace, typed as what it is here: a bag of hook
+    // functions keyed by name. Spelling it once keeps the casts out of the body.
+    const reactHooks = React as unknown as Record<string, (...args: unknown[]) => unknown>;
+    const hookNames = Object.keys(React).filter(
+      key => key.startsWith('use') && typeof reactHooks[key] === 'function'
+    );
+    // Positive control: if the wrapping ever stops seeing React's hooks, every
+    // sequence below is trivially empty and the comparison passes vacuously.
+    expect(hookNames).toContain('useRef');
+
+    let recording: string[] | null = null;
+    // Restored in `finally`, which the install loop is inside: a throw partway
+    // through installation must not leave React half-patched for later tests.
+    const originals = new Map<string, (...args: unknown[]) => unknown>();
+
+    // Returns what the render produced alongside the hooks it called, so the
+    // renderer needs no `let` declared ahead of its assignment.
+    function record<T>(render: () => T): [T, string[]] {
+      const calls: string[] = [];
+      recording = calls;
+      try {
+        return [render(), calls];
+      } finally {
+        // Cleared even when the render throws, so a later render cannot append
+        // to a dead array and turn one failure into a confusing second one.
+        recording = null;
+      }
+    }
+
+    try {
+      for (const name of hookNames) {
+        const original = reactHooks[name];
+        originals.set(name, original);
+        reactHooks[name] = (...args) => {
+          if (recording) recording.push(name);
+          return original(...args);
+        };
+      }
+
+      const Comp = styled.div<{ $color: string }>`
+        color: ${p => p.$color};
+      `;
+
+      // Rendered as the root so every recorded hook belongs to this component.
+      const [renderer, mount] = record(() => TestRenderer.create(<Comp $color="red" />));
+      // Identical props: the render cache hits and skips the style work.
+      const [, cacheHit] = record(() => renderer.update(<Comp $color="red" />));
+      // Changed props: the cache misses and the style work runs again.
+      const [, cacheMiss] = record(() => renderer.update(<Comp $color="blue" />));
+
+      expect(mount.length).toBeGreaterThan(0);
+      expect(cacheHit).toEqual(cacheMiss);
+      expect(mount).toEqual(cacheHit);
+
+      renderer.unmount();
+    } finally {
+      for (const [name, original] of originals) reactHooks[name] = original;
+    }
   });
 });

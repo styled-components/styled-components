@@ -203,7 +203,7 @@ interface ThemedExecutionProps {
  * The `style` widening happens here, once per target, rather than at every JSX
  * call site -- directly via {@link WithCSSVars} on the intrinsic arm, which
  * needs no guard, and via {@link OverrideStyle} on the component arm, which
- * does. See AGENTS.md before changing any of it.
+ * does. See docs/type-performance.md before changing any of it.
  *
  * `R` carries the runtime so the widening stays web-only; it is deliberately
  * undefaulted, since a default is what would let a native call site pick up web
@@ -483,8 +483,19 @@ type WithCSSVars<P extends BaseObject> = Omit<P, 'style'> & {
  * targets that expose no props at all and defeat `WidenUntypedProps` (#5756).
  * Only {@link ComponentTargetProps} needs the guard; every intrinsic element
  * declares `style`, so {@link IntrinsicProps} applies `WithCSSVars` directly.
+ *
+ * The outer `P extends unknown` is what makes this distribute over a union of
+ * prop shapes, and it is load-bearing (#5787). `keyof` a union is the keys
+ * *common* to every member, so an undistributed pass widens `A | B` against the
+ * shared keys alone and drops every member-specific prop -- a component typed
+ * `ButtonProps | AnchorProps` stops accepting `href`. Widening member by member
+ * keeps the union intact.
  */
-type OverrideStyle<P extends BaseObject> = 'style' extends keyof P ? WithCSSVars<P> : P;
+type OverrideStyle<P extends BaseObject> = P extends unknown
+  ? 'style' extends keyof P
+    ? WithCSSVars<P>
+    : P
+  : never;
 
 export type CSSPseudos = { [K in CSS.Pseudos]?: CSSObject };
 
@@ -546,7 +557,30 @@ export type Substituted<A extends BaseObject, B> = FastOmit<A, keyof B> & B;
 // prop bags: TargetProps returns `{}` for every non-target and `Props` defaults
 // to BaseObject, so without it both cases resolve to `FastOmit<A, never> & {}`,
 // the unreducible node the paragraph above is about.
-export type Substitute<A extends BaseObject, B> = keyof B extends never ? A : Substituted<A, B>;
+//
+// `keyof B extends never` alone cannot carry that guard, because `keyof` a union
+// is the keys *common* to every member: a union of disjoint shapes reports
+// `never` while being a perfectly real prop bag, and the fast path then dropped
+// it wholesale. `{} extends B` separates the two, since an empty object is
+// assignable to `{}` but not to a union whose members each require a key. The
+// taken branch needs no distribution of its own, because `FastOmit<A, never> & B`
+// is an intersection and an intersection over a union distributes already.
+//
+// Do NOT instead re-ask `keyof` per member (`B extends unknown ? …` inside this
+// guard). It is more complete, and it tips `tsc` into TS2589 where a caller
+// spreads props carrying `as?: WebTarget`: the added distribution nests inside
+// the one the polymorphic signature already performs over that ~153-member
+// union. Measured cost of the spelling below: +0.04% instantiations.
+//
+// Known limitation, accepted: a union whose members are ALL-optional (`{a?: 1} |
+// {b?: 2}`) still takes the fast path, because `{}` is assignable to each member.
+// Such a union accepts `{}` anyway, so it is nearly indistinguishable from the
+// flattened `{a?: 1, b?: 2}` that does work.
+export type Substitute<A extends BaseObject, B> = keyof B extends never
+  ? {} extends B
+    ? A
+    : Substituted<A, B>
+  : Substituted<A, B>;
 
 /**
  * A component's own props over its target's props, with `style` merged rather
@@ -559,9 +593,13 @@ export type Substitute<A extends BaseObject, B> = keyof B extends never ? A : Su
  * `style?: X | undefined` to allow it. Omitting the prop is unaffected.
  *
  * Both conditional spellings of this were measured and rejected, one of them
- * fatal. Keep it an intersection; see AGENTS.md before changing the shape.
+ * fatal. Keep it an intersection; see docs/type-performance.md before changing the shape.
  */
-export type MergeProps<A extends BaseObject, B> = keyof B extends never ? A : Merged<A, B>;
+export type MergeProps<A extends BaseObject, B> = keyof B extends never
+  ? {} extends B
+    ? A
+    : Merged<A, B>
+  : Merged<A, B>;
 
 /** The taken branch of {@link MergeProps}, named so hovers print a name rather
  * than the expansion. Keep it named; see {@link Substituted}. */

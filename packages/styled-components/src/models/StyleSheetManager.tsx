@@ -18,7 +18,7 @@ let rscContextOverride: IStyleSheetContext | null = null;
 let rscLastPlugins: stylis.Middleware[] | undefined;
 let rscCachedStylis: Stringifier = mainStylis;
 
-/** Per-render reset to prevent HMR accumulation (see AGENTS.md § RSC Style Injection). */
+/** Per-render reset to prevent HMR accumulation (see docs/rsc-style-injection.md). */
 const ensureSheetReset: (() => void) | null = IS_RSC
   ? (((React as any).cache as (<T extends (...args: any[]) => any>(fn: T) => T) | undefined)?.(
       () => {
