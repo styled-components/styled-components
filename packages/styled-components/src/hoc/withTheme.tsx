@@ -20,6 +20,7 @@ export default function withTheme<T extends AnyComponent>(
   Component: T
 ): React.FC<WithThemeOuterProps<T>> & NonReactStatics<T> {
   const WithTheme: React.FC<WithThemeOuterProps<T>> = props => {
+    // biome-ignore lint/correctness/useHookAtTopLevel: IS_RSC is a load-time constant, so this branch is fixed for the whole bundle rather than varying per render
     const theme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
     const themeProp = determineTheme(props, theme);
 

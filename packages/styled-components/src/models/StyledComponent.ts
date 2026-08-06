@@ -538,11 +538,13 @@ function useImpl<Props extends BaseObject>(
     target,
   } = forwardedComponent;
 
+  // biome-ignore lint/correctness/useHookAtTopLevel: IS_RSC is a load-time constant, so this branch is fixed for the whole bundle rather than varying per render
   const contextTheme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
   const ssc = useStyleSheetContext();
   const shouldForwardProp = forwardedComponent.shouldForwardProp || ssc.shouldForwardProp;
 
   if (__DEV__ && React.useDebugValue) {
+    // biome-ignore lint/correctness/useHookAtTopLevel: __DEV__ is a build-time constant, and useDebugValue allocates no hook slot in any case
     React.useDebugValue(styledComponentId);
   }
 
@@ -557,6 +559,7 @@ function useImpl<Props extends BaseObject>(
   let pendingInject: GeneratedStyle | null = null;
 
   if (!__SERVER__ && !IS_RSC) {
+    // biome-ignore lint/correctness/useHookAtTopLevel: both gates are build or load-time constants, so a given bundle always takes this branch or never does. The hook must NOT move inside the hit/miss branch below, which is data-dependent; memoization.test.tsx gates that.
     const renderCacheRef = React.useRef<RenderCache | null>(null);
     const prev = renderCacheRef.current;
 
@@ -644,6 +647,7 @@ function useImpl<Props extends BaseObject>(
   // Outside the render-cache branch: a hook skipped on a cache hit is a hook
   // count that changes between renders, which React rejects outright.
   if (__DEV__ && React.useDebugValue) {
+    // biome-ignore lint/correctness/useHookAtTopLevel: __DEV__ is a build-time constant. What matters here is the placement, outside the data-dependent cache branch above.
     React.useDebugValue(generatedClassName);
   }
 

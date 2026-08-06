@@ -1255,6 +1255,7 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   // parent decides this at runtime, so the static path reads the cascade
   // and applies the computed width when this component is a direct child
   // of the grid that published the entry.
+  // biome-ignore-start lint/correctness/useHookAtTopLevel: this static render path is reached only past an `if (IS_RSC)` early return above, and IS_RSC is a load-time constant, so a given bundle always runs all of these hooks or none of them
   const nativeStyleCtx = React.useContext(NativeStyleContext);
   const parentCtx = React.useContext(ParentContext);
   let composedStyle = composeStaticStyle(compiled, props.style, styledComponentId);
@@ -1310,6 +1311,7 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
     timelineEntry,
     scrollProps
   );
+  // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the IS_RSC-gated static render path
   const inner = wrapScrollTimeline(
     createFastElement(
       elementToBeCreated,
@@ -1357,6 +1359,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
 ) {
   const { attrs: componentAttrs, nativeStyle, shouldForwardProp, target } = forwardedComponent;
 
+  // biome-ignore-start lint/correctness/useHookAtTopLevel: every gate in this block is IS_RSC, a load-time constant, so a given bundle always takes the same side. The one exception is the anchor gate below, which is noted separately.
   const contextTheme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
   const theme = determineTheme(props, contextTheme) || EMPTY_OBJECT;
 
@@ -1371,8 +1374,14 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   const parentCtx = !IS_RSC ? React.useContext(ParentContext) : DEFAULT_PARENT_CONTEXT;
   // Anchor-rect reactivity: components whose CSS uses anchor() /
   // anchor-size() re-render (and re-key their cache) when any anchor's
-  // rect changes. The gate is lifetime-constant per component, so the
-  // hook branch is stable.
+  // rect changes.
+  //
+  // The only gate here that is not a build constant. `nativeStyle` is fixed
+  // when the styled component is constructed, so `usesAnchorFunctions` cannot
+  // change across renders of a given component and the hook branch is stable
+  // for its whole lifetime. Anything that made this depend on props or state
+  // would be a genuine rules-of-hooks violation, and the enclosing
+  // `biome-ignore-start` would hide it, so keep it derived from `nativeStyle`.
   const anchorVersion =
     !IS_RSC && nativeStyle.usesAnchorFunctions
       ? React.useSyncExternalStore(subscribeAnchors, getAnchorVersion)
@@ -1397,6 +1406,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   const mergedCascadeCacheRef = (
     !IS_RSC ? React.useRef<MergedCascadeCache>(null) : { current: null }
   ) as { current: MergedCascadeCache };
+  // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the IS_RSC-gated region
 
   let context: ExecutionContext & Props;
   let compiled: NativeStyles;
@@ -2070,6 +2080,7 @@ function useScrollerSnapProps(
   elementProps: Dict<any>
 ): Dict<any> {
   let out = withScrollerDefaults(isScroller, compiled.scrollerFlexPin === true, elementProps);
+  // biome-ignore-start lint/correctness/useHookAtTopLevel: these three are called unconditionally here. The rule reports them as "indirect and conditional" because the one caller sits past an IS_RSC-gated early return, and IS_RSC is a load-time constant. Each takes its own enable flag as an argument rather than being called behind a branch, which is what keeps the sequence fixed.
   out = useSnapTargetRegistration(snapTarget, out);
   out = useSnapOffsets(isScroller, timelineEntry, out);
   return useSnapSettle(
@@ -2079,6 +2090,7 @@ function useScrollerSnapProps(
     timelineEntry,
     out
   );
+  // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the snap-props hook sequence
 }
 
 interface ContainerPublisherProps {

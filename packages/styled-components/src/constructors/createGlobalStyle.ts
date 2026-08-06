@@ -46,6 +46,7 @@ export default function createGlobalStyle<Props extends object>(
 
   const GlobalStyleComponent: React.ComponentType<ExecutionProps & Props> = props => {
     const ssc = useStyleSheetContext();
+    // biome-ignore lint/correctness/useHookAtTopLevel: IS_RSC is a load-time constant, so this branch is fixed for the whole bundle rather than varying per render
     const theme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
     const instance = React.useId();
 
@@ -83,6 +84,7 @@ export default function createGlobalStyle<Props extends object>(
         ? [instance, ssc.styleSheet, globalStyle]
         : [instance, props, ssc.styleSheet, theme, ssc.compiler, globalStyle];
 
+      // biome-ignore-start lint/correctness/useHookAtTopLevel: this whole block sits under `if (!__SERVER__ && !IS_RSC)`, both build or load-time constants, so a given bundle always runs all of these hooks or none of them
       const prevGlobalStyleRef = React.useRef(globalStyle);
 
       React.useLayoutEffect(() => {
@@ -108,6 +110,7 @@ export default function createGlobalStyle<Props extends object>(
           }
         };
       }, [instance, ssc.styleSheet, globalStyle]);
+      // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the build-constant-gated region
     }
 
     // RSC mode: output style tag.
