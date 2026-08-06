@@ -1,21 +1,16 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.7/schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
-  // Biome has no Markdown or YAML formatter yet, so those files are simply not
-  // understood rather than misformatted; skip them instead of reporting each one.
-  "files": { "ignoreUnknown": true },
-  "formatter": {
-    "enabled": true,
-    "formatWithErrors": false,
-    "indentStyle": "space",
-    "indentWidth": 2,
-    "lineEnding": "lf",
-    "lineWidth": 100,
-    "attributePosition": "auto",
-    "bracketSameLine": false,
-    "bracketSpacing": true,
-    "expand": "auto",
-    "useEditorconfig": true,
+  // One exclusion list for every Biome tool. Scoping it under `formatter` would
+  // make it a formatter-only fact, so enabling anything else later would read
+  // generated corpora and build output.
+  //
+  // `ignoreUnknown` because Biome has no Markdown or YAML formatter yet, so
+  // those files are not understood rather than misformatted; skip them instead
+  // of reporting each one. The CHANGELOG and lockfile entries below are for when
+  // that changes.
+  "files": {
+    "ignoreUnknown": true,
     "includes": [
       "**",
       "!**/__snapshots__",
@@ -36,36 +31,77 @@
       "!**/.gradle"
     ]
   },
-  // Formatter only, deliberately. `correctness/useHookAtTopLevel` was the reason
-  // to reach for a linter here, and it does not fit this codebase: it is a
-  // syntactic rule, so it cannot tell a data-dependent condition from a
-  // build-time constant. Every gate on `__SERVER__`, `IS_RSC` and `__DEV__` is
-  // flagged (33 sites, all intentional and all documented in AGENTS.md), while
-  // the failure actually worth catching, a hook inside the render cache's
-  // hit/miss branch, looks identical to the rest. Enabling it would mean
-  // suppressing exactly the lines that resemble the bug.
+  // Only the settings that differ from Biome's defaults, which are the settings
+  // the old .prettierrc carried. `expand` is the exception: `auto` is the
+  // default everywhere EXCEPT package.json, which Biome expands unless told
+  // otherwise, so stating it is what keeps package.json arrays on one line.
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "lineWidth": 100,
+    "expand": "auto",
+    "useEditorconfig": true
+  },
+  // Library source only, and rules opted into one at a time.
   //
-  // The hook sequence is guarded by a regression test instead
-  // (`src/test/memoization.test.tsx`), which compares recorded hook sequences
-  // across cache-hit and cache-miss passes and so makes the distinction the
-  // rule cannot.
-  "linter": { "enabled": false },
-  "javascript": {
-    "formatter": {
-      "jsxQuoteStyle": "double",
-      "quoteProperties": "asNeeded",
-      "trailingCommas": "es5",
-      "semicolons": "always",
-      "arrowParentheses": "asNeeded",
-      "bracketSameLine": false,
-      "quoteStyle": "single",
-      "attributePosition": "auto",
-      "bracketSpacing": true
+  // `correctness/useHookAtTopLevel` is the rule this repo most wants and cannot
+  // have. It is syntactic, so it cannot tell a data-dependent condition from a
+  // build-time constant: it reports 33 sites, and every one is a deliberate gate
+  // on `__SERVER__`, `IS_RSC`, `__DEV__`, a hook helper called indirectly, or a
+  // per-instance lifetime constant. The failure actually worth catching, a hook
+  // inside the render cache's hit/miss branch, looks identical to all of them,
+  // so enabling it would mean suppressing exactly the lines that resemble the
+  // bug. That invariant is gated by `src/test/memoization.test.tsx` instead,
+  // which compares recorded hook sequences across a cache-hit and a cache-miss
+  // pass and so makes the distinction the rule cannot.
+  //
+  // Wanted but blocked on pre-existing violations, mostly in test files:
+  // `correctness/noUnusedImports` (30), `suspicious/useIterableCallbackReturn`
+  // (10), `suspicious/noDoubleEquals` (4). See them with
+  // `biome lint . --only=<rule>`. The first would have caught a dead import in
+  // this very change, so it is worth a dedicated pass.
+  "linter": {
+    "enabled": true,
+    "includes": ["packages/styled-components/src/**", "packages/styled-components/scripts/**"],
+    // Set explicitly rather than left to auto-detection: the domain activates on
+    // a declared `react` dependency, and a library declares react as a peer plus
+    // a devDependency. Whether the detector reads those fields is undocumented,
+    // and a domain that silently fails to activate takes its rules with it.
+    "domains": { "react": "none" },
+    "rules": {
+      "recommended": false,
+      "complexity": {
+        "noUselessCatch": "error",
+        "noUselessLoneBlockStatements": "error",
+        "noUselessSwitchCase": "error"
+      },
+      "correctness": {
+        "noConstantCondition": "error",
+        "noInvalidUseBeforeDeclaration": "error",
+        "noPrecisionLoss": "error",
+        "noSwitchDeclarations": "error",
+        "noUnreachable": "error",
+        "noVoidTypeReturn": "error"
+      },
+      "suspicious": {
+        "noDuplicateCase": "error",
+        "noDuplicateObjectKeys": "error",
+        "noDuplicateParameters": "error",
+        "noFallthroughSwitchClause": "error",
+        "noSparseArray": "error",
+        "noUnsafeNegation": "error",
+        "useDefaultSwitchClauseLast": "error"
+      }
     }
   },
-  "assist": {
-    // Import sorting is off on purpose: it is not what Prettier did, and this
-    // codebase has side-effect imports whose order is load-bearing.
-    "enabled": false
-  }
+  "javascript": {
+    "formatter": {
+      "trailingCommas": "es5",
+      "quoteStyle": "single",
+      "arrowParentheses": "asNeeded"
+    }
+  },
+  // Import sorting is off on purpose: it is not what Prettier did, and this
+  // codebase has side-effect imports whose order is load-bearing.
+  "assist": { "enabled": false }
 }
