@@ -10,7 +10,7 @@ NOTE: This file is the only home for these instructions. CLAUDE.md is a one-line
 
 - At the start of each session, read the most recent llms.txt at https://styled-components.com/llms.txt for the current consumer-facing feature summary
 - Use pnpm package manager and associated commands
-- Formatting is prettier (config in `.prettierrc`), enforced by a lint-staged pre-commit hook; `pnpm format` runs it repo-wide (fine to do). Match the config rather than hand-formatting.
+- Formatting is Biome (config in `biome.jsonc`), enforced by a lint-staged pre-commit hook; `pnpm format` runs it repo-wide (fine to do). Match the config rather than hand-formatting. Biome has no Markdown or YAML formatter yet, so those files are left alone; keep them tidy by hand. Suppress a formatting decision with `// biome-ignore format: <reason>` (spaced, not hyphenated, and the hyphenated spelling fails silently), never `// prettier-ignore`, which Biome does not honor. Biome's linter is deliberately off; see the note in `biome.jsonc`.
 - Never run the dev server yourself, ask the user to start it if needed
 - Use conventional commits: `(feat|fix|chore|refactor|test|docs|style|perf|build|ci): [description]`
 - Default to short commit messages: title only, or title plus one tight sentence
@@ -90,7 +90,7 @@ NOTE: This file is the only home for these instructions. CLAUDE.md is a one-line
 - `pnpm --filter styled-components bench:rsc`: `src/bench/rsc.test.tsx`, matched by `jest.config.bench-rsc.js` (node environment, `IS_RSC` server path)
 - `pnpm --filter styled-components type-perf`: Consumer type-check budget, measured against the built `dist` (needs `pnpm build` first). `--against <package root>` measures another copy of the package with the same fixture. See [docs/typescript-performance.md](docs/typescript-performance.md)
 - `pnpm knip`: Dead-code scan (unused files, dependencies, exports); config in `knip.jsonc`. Output is a candidate list, not a delete list
-- `pnpm verify`: Format with autofix (`prettier --write`), knip, changeset-changelog tests, then `pnpm test`
+- `pnpm verify`: Format with autofix (`biome check --write`), knip, changeset-changelog tests, then `pnpm test`
 - Native render perf: use `packages/ios-benchmark` (real Hermes V1 on iOS sim). The previous in-tree native React-rendering bench was retired; `react-test-renderer` 19.2 + RN preset doesn't synchronously invoke function components, and the V8 numbers wouldn't predict Hermes anyway. Algorithm-shape benches (parser, responsive, RSC) still run via `bench:web` / `bench:rsc`.
 
 ## Profiling (Bun)

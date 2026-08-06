@@ -37,9 +37,7 @@
     "webpack": "^5.105.4",
     "webpack-cli": "^5.1.4"
   },
-  "sideEffects": [
-    "*.css"
-  ],
+  "sideEffects": ["*.css"],
   "engines": {
     "node": ">=20"
   }

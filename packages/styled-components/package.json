@@ -34,29 +34,14 @@
     "bench:web": "NODE_OPTIONS='--expose-gc --max-old-space-size=12288' jest -c jest.config.bench.js --verbose --no-coverage --forceExit --runInBand",
     "bench:web:stress": "SC_BENCH_ITER_SCALE=0.2 SC_BENCH_RUNS=3 NODE_OPTIONS='--expose-gc --max-old-space-size=12288' jest -c jest.config.bench.js --verbose --no-coverage --forceExit --runInBand -- src/bench/web.test.js",
     "bench:rsc": "jest -c jest.config.bench-rsc.js --verbose --no-coverage --nodeOptions=--expose-gc",
-    "prettier": "prettier src --write",
-    "prettier:check": "prettier src --check",
     "prepublishOnly": "pnpm run build"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/styled-components/styled-components.git"
   },
-  "files": [
-    "LICENSE",
-    "README.md",
-    "dist",
-    "native",
-    "plugins",
-    "test-utils"
-  ],
-  "keywords": [
-    "react",
-    "css",
-    "css-in-js",
-    "styled-components",
-    "styling"
-  ],
+  "files": ["LICENSE", "README.md", "dist", "native", "plugins", "test-utils"],
+  "keywords": ["react", "css", "css-in-js", "styled-components", "styling"],
   "author": "Glen Maddern",
   "license": "MIT",
   "bugs": {
@@ -112,7 +97,6 @@
     "jest-serializer-html": "^7.1.0",
     "jest-watch-typeahead": "^3.0.1",
     "js-beautify": "^1.15.1",
-    "prettier": "^3.6.2",
     "react": "^19",
     "react-dom": "^19",
     "react-frame-component": "^4.1.3",

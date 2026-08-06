@@ -517,8 +517,9 @@ background-color: green;`)
     });
 
     it('preserves url() at the start of CSS', () => {
-      expect(runCssCompile(`background-image: url(https://example.com/image.png);`))
-        .toMatchInlineSnapshot(`
+      expect(
+        runCssCompile(`background-image: url(https://example.com/image.png);`)
+      ).toMatchInlineSnapshot(`
         [
           ".a{background-image:url(https://example.com/image.png);}",
         ]
@@ -1482,8 +1483,9 @@ background-color: green;`)
 
     it('runs decl transform from rtl plugin', () => {
       const compiler = createCompiler({ plugins: [rtl] });
-      expect(compiler.compile(`margin-left: 8px; padding-left: 4px;`, '.a', undefined, 'a'))
-        .toMatchInlineSnapshot(`
+      expect(
+        compiler.compile(`margin-left: 8px; padding-left: 4px;`, '.a', undefined, 'a')
+      ).toMatchInlineSnapshot(`
         [
           ".a{margin-right:8px;padding-right:4px;}",
         ]
@@ -1492,8 +1494,9 @@ background-color: green;`)
 
     it('runs selector rewrite from rscPlugin', () => {
       const compiler = createCompiler({ plugins: [rscPlugin] });
-      expect(compiler.compile(`color: red;`, '.a:hover:first-child', undefined, 'a'))
-        .toMatchInlineSnapshot(`
+      expect(
+        compiler.compile(`color: red;`, '.a:hover:first-child', undefined, 'a')
+      ).toMatchInlineSnapshot(`
         [
           ".a:hover:nth-child(1 of :not(style[data-styled])){color:red;}",
         ]

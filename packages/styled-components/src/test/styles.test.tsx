@@ -389,7 +389,7 @@ describe('with styles', () => {
   it('should strip a JS-style (invalid) comment in the styles', () => {
     const comment = '// This is an invalid comment';
     const rule = 'color: blue;';
-    // prettier-ignore
+    // biome-ignore format: the template's exact content is what this asserts on
     const Comp = styled.div`
       ${comment}
       ${rule}

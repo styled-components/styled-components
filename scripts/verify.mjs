@@ -6,7 +6,7 @@
 import { spawnSync } from 'node:child_process';
 
 const steps = [
-  { label: 'format (prettier --write)', args: ['run', 'format'] },
+  { label: 'format (biome check --write)', args: ['run', 'format'] },
   { label: 'knip', args: ['run', 'knip'] },
   { label: 'test:changeset-changelog', args: ['run', 'test:changeset-changelog'] },
   { label: 'test (styled-components)', args: ['run', 'test'] },

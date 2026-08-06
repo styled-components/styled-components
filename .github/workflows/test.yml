@@ -11,6 +11,21 @@ permissions:
   contents: read #  to fetch code (actions/checkout)
 
 jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          cache: 'pnpm'
+          node-version-file: '.nvmrc'
+
+      - run: pnpm install --frozen-lockfile
+      # `biome ci` never writes, unlike `biome check --write` behind `pnpm format`.
+      - run: pnpm format:check
   build:
     runs-on: ubuntu-latest
     steps:

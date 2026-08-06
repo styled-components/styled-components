@@ -30,7 +30,7 @@ At this point, the repository is initialized and ready for development! Check th
 Helpful commands:
 
 - run unit tests: `pnpm test`
-- check code style `pnpm prettier` (handled automatically if you have a prettier extension installed in your IDE)
+- check code style: `pnpm format:check` (or `pnpm format` to fix; handled automatically if you have the Biome extension installed in your IDE)
 - run build: `pnpm build`
 - run dev sandbox: `pnpm --filter sandbox dev` (or just `pnpm dev` if you're in that folder)
 
