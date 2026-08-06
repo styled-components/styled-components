@@ -1,0 +1,14 @@
+// useInsertionEffect is still an effect. React documents it for one purpose,
+// injecting styles, so it is permitted only where this library writes to the
+// stylesheet. This plugin's `includes` in biome.jsonc names those files, which
+// is what keeps "stylesheet writes only" enforced rather than asserted.
+//
+// Note the `includes` globs there must be `**/`-prefixed; a repo-root-relative
+// path silently fails to exclude anything.
+`$fn($args)` where {
+  $fn <: or {
+    `$obj.useInsertionEffect`,
+    `useInsertionEffect`
+  },
+  register_diagnostic(span=$fn, message="useInsertionEffect is permitted only for stylesheet writes, in the files named by this plugin's `includes` in biome.jsonc. It cannot schedule updates and runs before refs are attached, so it is not a general effect replacement: use a ref callback for attach or teardown, or useSyncExternalStore for external state.")
+}

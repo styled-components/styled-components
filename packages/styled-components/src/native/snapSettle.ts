@@ -49,6 +49,7 @@ export function useSnapSettle(
   elementProps: Dict<any>
 ): Dict<any> {
   const ref = React.useRef<SettleState | null>(null);
+  // biome-ignore lint/plugin/no-effects: unmount-only teardown, clearing the pending settle timer. Replaceable by a ref callback cleanup composed into the props this hook already returns; the callback identity must be frozen, since an inline arrow re-runs cleanup and setup every render and would cancel the timer mid-settle.
   React.useEffect(
     () => () => {
       const s = ref.current;

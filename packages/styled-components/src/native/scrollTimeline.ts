@@ -445,6 +445,7 @@ export function useScrollTimelinePublisher(
   // steady-state no-op (under JS jank it can momentarily rewind one
   // frame, corrected by the next UI-thread event - strictly better than
   // the pure-JS path that lagged continuously).
+  // biome-ignore lint/plugin/no-effects: imperative attach of a native event mapping, which needs a committed host before it can resolve a view tag. A frozen-identity ref callback on the existing hostRef is the closer fit: it receives the host and makes that precondition structural, where this dep array only assumes it. Frozen, not inline, or the mapping detaches and reattaches every render.
   React.useEffect(() => {
     const trace = __DEV__ && isDebugEnabled();
     if (activeEntry === null || !activeEntry.nativeDriven) {
@@ -791,6 +792,7 @@ export function useSnapTargetRegistration(
   const keyRef = React.useRef<{ reg: SnapTargetRegistry | null } | null>(null);
   if (keyRef.current === null) keyRef.current = { reg: null };
   const key = keyRef.current;
+  // biome-ignore lint/plugin/no-effects: unmount-only deregistration from the snap-target registry. Replaceable by a ref callback cleanup composed into the props this hook already returns. Note the phase shift when it moves: ref detach runs in the mutation phase, effect cleanup after paint, so a scroller reading this registry sees the removal a frame earlier.
   React.useEffect(
     () => () => {
       if (key.reg !== null && key.reg.targets.delete(key)) notifyRegistry(key.reg);
@@ -1059,6 +1061,7 @@ export function useStickyPosition(active: boolean): StickyPosition {
   // Stuck flag for touch routing and accessibility. JS-paced on
   // purpose: it changes only at the crossover, and pointerEvents /
   // accessibility props cannot be driven natively anyway.
+  // biome-ignore lint/plugin/no-effects: a subscription to external mutable state, so useSyncExternalStore is the fit, modeled on useRegistryVersion above. __getValue() already gives a synchronous read, and the snapshot is a boolean, stable under Object.is. That is the granularity win: today every scroll frame calls setStuck and React re-enters this component only to bail, where an unchanged snapshot schedules nothing. subscribe must be useCallback-stable on [entry, layoutY] or the listener is torn down and re-added each render.
   React.useEffect(() => {
     if (entry === null || layoutY === null) return;
     const read = () => {
@@ -1075,6 +1078,7 @@ export function useStickyPosition(active: boolean): StickyPosition {
   // Publish the twin built by register() below. Runs every render: the
   // element captures this render's props/style, and sticky elements
   // re-render rarely (mount, layout change, crossover).
+  // biome-ignore lint/plugin/no-effects: publish-every-commit, paired with the deregistration below. An inline ref callback carries exactly this shape, since an unfrozen identity re-runs per render the way a missing dep array does, and it may notify a registry where useInsertionEffect may not (that would schedule a render of StickyOverlayHost, which React rejects from an insertion effect). The risk to measure before moving: cleanup-then-setup per render would fire notifyRegistry twice where this fires once.
   React.useEffect(() => {
     if (entry === null) return;
     const registry = entry.stickyClones;
@@ -1085,6 +1089,7 @@ export function useStickyPosition(active: boolean): StickyPosition {
     }
   });
 
+  // biome-ignore lint/plugin/no-effects: the deregistration half of the publish above, and it collapses into that same ref callback's cleanup rather than staying its own hook.
   React.useEffect(() => {
     if (entry === null) return;
     const registry = entry.stickyClones;
