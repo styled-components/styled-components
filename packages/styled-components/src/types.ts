@@ -298,7 +298,7 @@ export type TargetProps<R extends Runtime, T> = T extends keyof React.JSX.Intrin
  * Props of an HTML or SVG tag.
  *
  * Both branches of {@link TargetProps} are named rather than inlined, so a
- * component's type reads as `Substituted<IntrinsicProps<"button">, { … }>`
+ * component's type reads as `Merged<IntrinsicProps<"button">, { … }>`
  * instead of the full expansion of every tag attribute. See {@link WithCSSVars}
  * for why a conditional's inline branch cannot keep a name.
  *
@@ -428,8 +428,14 @@ export interface PolymorphicComponent<
  * `Target` must be the target's props, never a bag the component's own props
  * were merged into. Pass the latter and the test degrades: adding one transient
  * prop makes `keyof` non-`never`, the widening switches off, and the target's
- * own props start being rejected again. Every call site passes
- * `TargetProps<R, Target>` for that reason.
+ * own props start being rejected again. Every call site in
+ * `constructWithOptions` passes `TargetProps<R, Target>` for that reason.
+ *
+ * {@link IStyledComponentBase} is the one exception, passing its own `Props` as
+ * both arguments. That seam widens the erased public surface, where `Props`
+ * defaults to `BaseObject` and there is no target to consult; a bag reaching it
+ * from `styled()` was already decided by the target upstream, so the test is a
+ * no-op there rather than the degraded form described above.
  *
  * The test distributes over `Target` first, because `keyof` on a union
  * intersects each member's keys: a union of disjoint shapes has `keyof` of
@@ -584,9 +590,10 @@ export type CustomStyle<T extends object> = T & {
  * loses its name once it resolves, so an inline branch prints its whole
  * expansion in every hover and error.
  *
- * `(P['style'] & {})` is load-bearing under `exactOptionalPropertyTypes`, since
- * it filters `undefined` out so the `?:` stays the sole optional source, and the
- * explicit `| undefined` then restores `style={undefined}`.
+ * The `& {}` on the style arm is load-bearing under
+ * `exactOptionalPropertyTypes`, since it filters `undefined` out so the `?:`
+ * stays the sole optional source, and the explicit `| undefined` then restores
+ * `style={undefined}`.
  *
  * Built-in `Omit` here rather than {@link FastOmit}: `Pick` + `Exclude` is the
  * more optimized pair for this shape (measured +17% instantiations when swapped).
@@ -711,15 +718,17 @@ export type Substitute<A extends BaseObject, B> = keyof B extends never
  * A component's own props over its target's props, with `style` merged rather
  * than replaced, so `styled.div<{ style?: { width: number } }>` constrains
  * `width` and leaves the rest of CSS accepted. A field declared `never` is
- * removed; {@link CustomStyle} removes everything a declaration omits.
+ * forbidden; {@link CustomStyle} forbids everything a declaration omits.
  *
  * Under `exactOptionalPropertyTypes` the intersection leaves no `undefined` arm,
  * so such a component rejects an explicit `style={undefined}`; declare
  * `style?: X | undefined` to allow it. Omitting the prop is unaffected.
  *
- * Keep it an intersection. Testing `keyof A` instead tips `tsc` past its
- * complexity ceiling outright, and testing `keyof B` costs about half again as
- * many types.
+ * Keep the `& B` tail an unconditional intersection. The alternative shape,
+ * omitting `style` from `A` only when `B` actually declares one, was measured
+ * twice and rejected twice: conditioning on `keyof A` tips `tsc` past its
+ * complexity ceiling outright, and conditioning on `keyof B` costs about half
+ * again as many types.
  */
 export type MergeProps<A extends BaseObject, B> = keyof B extends never
   ? {} extends B

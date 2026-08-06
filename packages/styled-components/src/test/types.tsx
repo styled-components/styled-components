@@ -1086,6 +1086,40 @@ const StyledPolyButtonWithOwnProps = styled(PolyButton)<{ $variant: 'a' | 'b' }>
 const PolyButtonWithAttrs = styled(PolyButton).attrs({ variant: 'filled' })``;
 <PolyButtonWithAttrs color="blue">hi</PolyButtonWithAttrs>;
 
+// The function form too, which reads the target's props off the callback
+// argument. This is a separate seam from the object form above: the widening is
+// applied to the `.attrs()` argument type, and without it `props.variant` is
+// not a property of the callback parameter.
+const PolyButtonFnAttrs = styled(PolyButton).attrs(props => ({
+  'data-variant': String(props.variant ?? ''),
+}))``;
+<PolyButtonFnAttrs color="blue">hi</PolyButtonFnAttrs>;
+
+/**
+ * The widening is keyed on the target resolving to no props, so it also fires
+ * for targets that are perfectly introspectable and simply declare none. There
+ * is no discriminator that separates them from a polymorphic factory: both
+ * resolve to `{}`. Characterized rather than fixed, so a future narrowing of the
+ * trigger shows up here as a change rather than as silent strictness.
+ */
+declare const NoPropsFC: React.FC;
+const StyledNoPropsFC = styled(NoPropsFC)``;
+<StyledNoPropsFC anythingAtAll="x" />;
+
+declare const BareReturnFn: () => React.ReactElement;
+const StyledBareReturnFn = styled(BareReturnFn)``;
+<StyledBareReturnFn anythingAtAll="x" />;
+
+/**
+ * The erased public surface is widened too, by the seam in
+ * `IStyledComponentBase` rather than the one in `constructWithOptions`. A bare
+ * `IStyledComponent<'web'>` annotation has no target to consult and its `Props`
+ * default to `BaseObject`, so rejecting every prop would make the annotation
+ * unusable. Nothing produced by `styled()` reaches this branch.
+ */
+declare const ErasedStyled: IStyledComponent<'web'>;
+<ErasedStyled anythingAtAll="x" />;
+
 // Negative control: an introspectable target keeps strict `.attrs()` typing.
 declare const TypedAttrsComp: (props: { a: string }) => React.ReactElement;
 // @ts-expect-error `nope` is not a prop of the wrapped component
@@ -1117,6 +1151,25 @@ const DeclaredStyle = styled.div<{ style?: { width: number } }>``;
 <DeclaredStyle style={{ width: 4, '--x': '1px' }} />;
 // @ts-expect-error the declared field is still constrained
 <DeclaredStyle style={{ width: 'wide' }} />;
+
+/**
+ * `exactOptionalPropertyTypes` is on for this project, and the `& {}` filter in
+ * the style widening is what keeps `?:` the sole source of optionality. A target
+ * that only carries the widening still accepts an explicit `style={undefined}`,
+ * because the widening restores it with an explicit `| undefined` arm.
+ */
+const WidenedStyleOnly = styled.div``;
+<WidenedStyleOnly style={undefined} />;
+
+/**
+ * Declaring a `style` type intersects with that arm and leaves no `undefined`,
+ * so such a component rejects the explicit form. Documented as a limitation in
+ * the changeset; declare `style?: X | undefined` to allow it. Omitting the prop
+ * is unaffected, which the case above the `@ts-expect-error` pins.
+ */
+<DeclaredStyle />;
+// @ts-expect-error a declared style type leaves no `undefined` arm under exactOptionalPropertyTypes
+<DeclaredStyle style={undefined} />;
 
 /** `CustomStyle` ablates everything the declaration does not name. */
 const ExactStyle = styled.div<{ style?: CustomStyle<{ width: number }> }>``;

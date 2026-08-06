@@ -1,4 +1,3 @@
-import * as React from 'react';
 import createStyledComponent from '../models/StyledComponent';
 import { BaseObject, TargetProps, WebTarget } from '../types';
 import type { SupportedHTMLElements } from '../utils/domElements';

@@ -56,7 +56,8 @@ export interface Styled<
   ): IStyledComponent<
     R,
     // Permissiveness is decided by the target, not by the finished prop bag.
-    // `TargetProps<R, Target>` is `OuterProps`' own default, so it costs nothing.
+    // `OuterProps` is built from this same instantiation, so naming it again
+    // re-uses a cached type rather than adding one.
     WidenForUntypedTarget<
       TargetProps<R, Target>,
       MakeAttrsOptional<MergeProps<OuterProps, Props>, AttrsKeys>

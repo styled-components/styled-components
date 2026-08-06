@@ -99,24 +99,27 @@ if (!existsSync(distEntry)) {
   process.exit(1);
 }
 
-// A stale dist measures the previous build while reporting the current one.
-// CI is safe (it builds immediately before), local runs are not. A comparison
-// target is an installed package with no src to be stale against.
+// A stale dist measures the previous build while reporting the current one, so
+// the run refuses rather than reporting a figure. CI is safe (it builds
+// immediately before), local runs are not. A comparison target is an installed
+// package with no src to be stale against.
 //
-// `test/` never reaches dist, and `utils/errors.ts` is generated: the test run
-// rewrites it, so counting either would report a stale dist after every
-// `pnpm test` and train everyone to ignore the warning.
-const IGNORED_SOURCES = new Set([
-  join(pkgRoot, 'src', 'test'),
-  join(pkgRoot, 'src', 'utils', 'errors.ts'),
-]);
+// Nothing that fails to reach dist may count, or the refusal fires on edits that
+// cannot have changed the measurement and everyone learns to work around it.
+// That means every test file, which live in `test/` directories throughout `src`
+// as well as beside the code as `*.test.*`, and the generated `utils/errors.ts`,
+// which the test run rewrites.
+const GENERATED_SOURCE = join(pkgRoot, 'src', 'utils', 'errors.ts');
+const reachesDist = (full, entry) =>
+  full !== GENERATED_SOURCE &&
+  (entry.isDirectory() ? entry.name !== 'test' : !/\.test\.[cm]?[jt]sx?$/.test(entry.name));
 
 if (against === undefined) {
   const newestSource = (function newest(dir) {
     let latest = 0;
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const full = join(dir, entry.name);
-      if (IGNORED_SOURCES.has(full)) continue;
+      if (!reachesDist(full, entry)) continue;
       latest = Math.max(latest, entry.isDirectory() ? newest(full) : statSync(full).mtimeMs);
     }
     return latest;
@@ -230,9 +233,9 @@ function unit(i) {
   padding: \${p => p.$a${i} ?? 0}px;
 \`;`;
       break;
-    default:
-      // Generic wrapper: the shape behind #4246/#1803, where a styled component
-      // is consumed through a caller's own type parameter.
+    case 'genericWrapper':
+      // The shape behind #4246/#1803, where a styled component is consumed
+      // through a caller's own type parameter.
       decl = `const ${N}Inner = styled.${tag}<{ $a${i}?: number }>\`
   opacity: \${p => (p.$a${i} ?? 1)};
 \`;
@@ -240,6 +243,10 @@ function ${N}<T extends BaseProps>({ item, ...rest }: { item: T } & React.Compon
   return <${N}Inner {...rest}>{item.label}</${N}Inner>;
 }`;
       break;
+    default:
+      // A kind added to KIND_WEIGHTS but not here would otherwise emit whatever
+      // the last case happened to be, and price the wrong shape silently.
+      throw new Error(`unhandled fixture kind: ${kind}`);
   }
 
   const generic = kind === 'genericWrapper';
@@ -270,8 +277,9 @@ export const Use${i} = () => (
 
 // `skipLibCheck` hides a broken dist: if the package's own declarations cannot
 // resolve their dependencies, every export degrades to `any`, the fixture still
-// compiles, and the run reports an enormous fake win. These directives error
-// only while the types are intact; once they are not, tsc emits TS2578
+// compiles, and the run reports an enormous fake win. The expressions below
+// error only while the types are intact, which is what keeps their directives
+// used; once the types degrade the errors stop happening, tsc emits TS2578
 // "Unused '@ts-expect-error'" and the clean-compile gate below catches it.
 const CANARY = `import * as React from 'react';
 import styled from 'styled-components';
@@ -281,7 +289,7 @@ const Canary = styled.button<{ $ok?: boolean }>\`\`;
 // @ts-expect-error not a prop of a styled button
 export const CanaryProp = <Canary notAPropOfButton={1} />;
 // @ts-expect-error 'loop' is a video attribute and this renders a button
-export const CanaryAs = <Canary loop />;
+export const CanaryWrongTagAttr = <Canary loop />;
 
 // The web and native entries resolve target props through the same types, so a
 // native-only regression is invisible to a web-only fixture and to
@@ -370,17 +378,36 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-const read = label => Number((out.match(new RegExp(`^${label}:\\s+(\\d+)`, 'm')) ?? [])[1]);
-const measured = {
-  instantiations: read('Instantiations'),
-  // Memory is the axis #5767 reporters actually hit (one build OOM'd where 6.4.2
-  // fit). It also moves when types and instantiations barely do, so dropping it
-  // leaves the regression mechanism unguarded.
-  memoryKb: read('Memory used'),
-  types: read('Types'),
+// One table per metric, not one list per use. The parse, the budget-completeness
+// check and the comparison all iterate this, so a metric cannot be added to some
+// of them and missed by the rest. A metric absent from the comparison's
+// tolerance yields NaN bounds, every comparison against NaN is false, and the
+// run reports "within budget" while checking nothing: the same failure this
+// guards against in the budget file, one level up.
+//
+// Memory is here at all because it is the axis #5767 reporters actually hit (one
+// build OOM'd where 6.4.2 fit). It also moves when types and instantiations
+// barely do, so dropping it leaves the regression mechanism unguarded.
+//
+// All three figures are deterministic run to run, so the bands are headroom for
+// dependency drift, not for noise; memory keeps a slightly wider one only
+// because a different host can move it. The bands live here and only here. The
+// budget file records what was measured, which is a fact about a run; a band is
+// policy about acceptable drift, which belongs with this reasoning. Writing it
+// into the file too would give a hand-edited band a home the next --update
+// silently overwrites.
+const METRICS = {
+  instantiations: { diagnostic: 'Instantiations', label: 'instantiations', tolerancePct: 10 },
+  memoryKb: { diagnostic: 'Memory used', label: 'memory', tolerancePct: 12 },
+  types: { diagnostic: 'Types', label: 'types', tolerancePct: 10 },
 };
 
-if (!measured.types || !measured.instantiations || !measured.memoryKb) {
+const read = label => Number((out.match(new RegExp(`^${label}:\\s+(\\d+)`, 'm')) ?? [])[1]);
+const measured = Object.fromEntries(
+  Object.entries(METRICS).map(([metric, { diagnostic }]) => [metric, read(diagnostic)])
+);
+
+if (Object.values(measured).some(value => !value)) {
   console.error('type-perf: could not parse tsc diagnostics.\n', out);
   process.exit(1);
 }
@@ -405,19 +432,6 @@ console.log(`  memory:         ${Math.round(measured.memoryKb / 1024).toLocaleSt
 // budget belongs to this package's own dist.
 if (against !== undefined) process.exit(0);
 
-// All three figures are deterministic run to run, so these bands are headroom
-// for dependency drift, not for noise; memory keeps a slightly wider one only
-// because a different host can move it. Memory is budgeted at all because 6.4.4
-// has FEWER instantiations than 6.4.3 while using far more of it: a
-// counters-only budget reads that regression as an improvement.
-//
-// The tolerance lives here and only here. The budget file records what was
-// measured, which is a fact about a run; the band is policy about how much drift
-// is acceptable, which belongs with the reasoning above. Writing it into the
-// file too would give a hand-edited band a home the next --update silently
-// overwrites.
-const TOLERANCE_PCT = { instantiations: 10, memoryKb: 12, types: 10 };
-
 if (update) {
   writeFileSync(budgetFile, `${JSON.stringify({ count, measured, versions }, null, 2)}\n`);
   console.log(`type-perf: budget updated in ${budgetFile}`);
@@ -434,7 +448,7 @@ if (!budget.measured) {
 // bounds, every comparison against NaN is false, and the run reports "within
 // budget" while checking nothing, silently disabling the metric it was added to
 // enforce. Any budget written before a metric existed has exactly this shape.
-for (const metric of Object.keys(TOLERANCE_PCT)) {
+for (const metric of Object.keys(METRICS)) {
   if (!Number.isFinite(budget.measured[metric])) {
     console.error(`type-perf: budget is missing '${metric}', run with --update to re-measure.`);
     process.exit(1);
@@ -457,11 +471,10 @@ for (const [name, recorded] of Object.entries(budget.versions ?? {})) {
 // The budget stores what was measured, not a bare ceiling, so the file records
 // the fact and derives the bound. That also makes an improvement visible: a
 // ceiling-only file silently absorbs a win as extra slack for the next regression.
-const LABELS = { instantiations: 'instantiations', memoryKb: 'memory', types: 'types' };
 const over = [];
 const under = [];
-for (const [metric, label] of Object.entries(LABELS)) {
-  const tolerance = TOLERANCE_PCT[metric] / 100;
+for (const [metric, { label, tolerancePct }] of Object.entries(METRICS)) {
+  const tolerance = tolerancePct / 100;
   const actual = measured[metric];
   const baseline = budget.measured[metric];
   if (actual > baseline * (1 + tolerance)) over.push([label, actual, baseline]);

@@ -15,7 +15,7 @@
  * the real reason lives in the nested "Overload N of 2" detail.
  */
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
 import type { ViewProps as RNViewProps } from 'react-native';
 import styled from '../native';
 

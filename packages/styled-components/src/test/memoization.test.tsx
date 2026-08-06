@@ -384,13 +384,19 @@ describe('memoization correctness', () => {
    * populated by pass 1 and takes the hit branch. `React.memo` blocks an
    * ordinary re-render with equal props before it can reach the component at
    * all, and any re-render memo does let through fails the same shallow
-   * comparison the cache uses. Verified by measurement: a StrictMode mount runs
-   * two render passes and exactly one interpolation.
+   * comparison the cache uses.
+   *
+   * Both halves measured, by counting render passes and interpolation runs
+   * separately (counting interpolations alone cannot tell "memo bailed" from
+   * "rendered and hit the cache", since both run zero): an ordinary re-render
+   * with equal props runs ZERO render passes, and a StrictMode mount runs two
+   * render passes with exactly one interpolation.
    *
    * Asserting the sequence rather than a count: a swap of two hooks keeps the
    * count identical and still breaks React's ordering rule. The recording wraps
    * React's own `use*` exports, so a hook added to the render path later is
-   * picked up without this test being told about it.
+   * picked up without this test being told about it, as long as it is called as
+   * `React.useX`; a named `import { useX } from 'react'` is invisible here.
    */
   it('calls the same hooks on the cache-hit pass as on the cache-miss pass', () => {
     // React's module namespace, typed as what it is here: a bag of hook
@@ -399,8 +405,9 @@ describe('memoization correctness', () => {
     const hookNames = Object.keys(React).filter(
       key => key.startsWith('use') && typeof reactHooks[key] === 'function'
     );
-    // Positive control: if the wrapping ever stops seeing React's hooks, every
-    // sequence below is trivially empty and the comparison passes vacuously.
+    // React still exports hooks under `use*` names, so there is something to
+    // wrap. That the wrapping actually intercepts the component's calls is a
+    // separate question, answered by the non-empty segment assertion below.
     expect(hookNames).toContain('useRef');
 
     let recording: string[] | null = null;
@@ -425,10 +432,13 @@ describe('memoization correctness', () => {
      * the injector's first hook belongs to the component, across both StrictMode
      * passes. Splitting that segment in half yields one pass each.
      */
-    function passes(sequence: string[]): [string[], string[]] {
+    function splitStrictModePasses(sequence: string[]): [string[], string[]] {
       const injectorStart = sequence.indexOf('useSyncExternalStore');
-      const own = injectorStart === -1 ? sequence : sequence.slice(0, injectorStart);
-      expect(own.length).toBeGreaterThan(0);
+      // Asserted rather than defaulted. Were the boundary hook to move out of
+      // StyleInjector, a fallback to the whole sequence would still split into
+      // two symmetric halves and pass while measuring the wrong thing.
+      expect(injectorStart).toBeGreaterThan(0);
+      const own = sequence.slice(0, injectorStart);
       // An odd total is itself the defect: the two passes cannot have called the
       // same hooks, so one of them ran a hook the other skipped.
       expect({ hooks: own, oddMeansOnePassSkippedAHook: own.length % 2 }).toEqual({
@@ -467,8 +477,8 @@ describe('memoization correctness', () => {
         )
       );
 
-      const [mountMiss, mountHit] = passes(mountSeq);
-      const [updateMiss, updateHit] = passes(updateSeq);
+      const [mountMiss, mountHit] = splitStrictModePasses(mountSeq);
+      const [updateMiss, updateHit] = splitStrictModePasses(updateSeq);
 
       expect(mountHit).toEqual(mountMiss);
       expect(updateHit).toEqual(updateMiss);

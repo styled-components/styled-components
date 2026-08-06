@@ -40,10 +40,11 @@ Design notes worth keeping:
 - The fixture runs under `skipLibCheck: true`, which hides a broken `dist`: if
   the package's own declarations cannot resolve their dependencies, every export
   degrades to `any`, the fixture still compiles, and the run reports an enormous
-  fake win. `canary.tsx` is the guard. Its `@ts-expect-error` directives error
-  only while the types are intact; once they are not, `tsc` emits TS2578 and the
-  clean-compile gate catches it. Verify any change to that file by pointing
-  `--against` at a deliberately broken package root.
+  fake win. `canary.tsx` is the guard. Its expressions error only while the types
+  are intact, which is what keeps their `@ts-expect-error` directives used; once
+  the types degrade the errors stop, `tsc` emits TS2578 on the now-unused
+  directives, and the clean-compile gate catches it. Verify any change to that
+  file by pointing `--against` at a deliberately broken package root.
 - The fixture covers the native entry too, since both entries resolve target
   props through the same types and a native-only regression is invisible to a
   web-only fixture.
