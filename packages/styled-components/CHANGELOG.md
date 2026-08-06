@@ -1,5 +1,13 @@
 # styled-components
 
+## 6.5.1
+
+### Patch Changes
+
+- a0a92cd: Fix a styled component silently dropping props declared as a union whose members have no prop in common, which left every one of those props rejected. The same applied when `as` pointed at a component with such props. Where every member's props are optional the union is still flattened, so declare the combined optional shape instead.
+- a0a92cd: Styled components now report the same debug value to React DevTools on every render. Previously the value was only reported on renders that recomputed styles, so it disappeared from the DevTools panel whenever a component re-rendered with unchanged style props.
+- a0a92cd: Fix wrapping a component whose props are a union. Since 6.5.0 the wrapped version accepted only the props common to every member of the union, so a prop belonging to just one member was rejected even though the unwrapped component accepted it.
+
 ## 6.5.0
 
 ### Minor Changes
