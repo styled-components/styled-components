@@ -8,10 +8,10 @@
     "release": "pnpm --filter styled-components prepublishOnly && changeset publish",
     "postinstall": "pnpm --filter styled-components generateErrors",
     "prepare": "husky",
-    "format": "prettier . --write",
+    "format": "biome check --write",
+    "format:check": "biome ci",
     "knip": "knip --config knip.jsonc",
     "lint-staged": "lint-staged",
-    "prettier": "prettier . --check",
     "size": "pnpm --filter styled-components size",
     "test": "pnpm --filter styled-components test",
     "test:changeset-changelog": "node --test scripts/release-notes/changelog.test.ts scripts/release-notes/prerelease-aggregation.test.ts scripts/release-notes/build-version-pr-body.test.ts",
@@ -30,16 +30,16 @@
   },
   "packageManager": "pnpm@10.0.0",
   "devDependencies": {
+    "@biomejs/biome": "2.5.7",
     "@changesets/cli": "^2.27.7",
     "@changesets/git": "3.0.4",
     "@changesets/read": "0.6.7",
     "husky": "9.1.7",
     "knip": "6.29.0",
-    "lint-staged": "^15.4.3",
-    "prettier": "^3.6.2"
+    "lint-staged": "^15.4.3"
   },
   "lint-staged": {
-    "*": "prettier --write --ignore-unknown"
+    "*": "biome check --write --no-errors-on-unmatched"
   },
   "pnpm": {
     "overrides": {

@@ -25,8 +25,9 @@ describe('web emitter', () => {
   });
 
   it('handles multiple nested rules inside @media', () => {
-    expect(emit(`@media (min-width: 500px) { &:hover { a: 1; } &:focus { b: 2; } }`))
-      .toMatchInlineSnapshot(`
+    expect(
+      emit(`@media (min-width: 500px) { &:hover { a: 1; } &:focus { b: 2; } }`)
+    ).toMatchInlineSnapshot(`
       [
         "@media (min-width: 500px){.a:hover{a:1;}.a:focus{b:2;}}",
       ]
@@ -34,8 +35,9 @@ describe('web emitter', () => {
   });
 
   it('handles @media with mixed base decl + nested rule', () => {
-    expect(emit(`@media (min-width: 500px) { background: red; &:hover { color: blue; } }`))
-      .toMatchInlineSnapshot(`
+    expect(
+      emit(`@media (min-width: 500px) { background: red; &:hover { color: blue; } }`)
+    ).toMatchInlineSnapshot(`
       [
         "@media (min-width: 500px){.a{background:red;}.a:hover{color:blue;}}",
       ]
@@ -53,8 +55,9 @@ describe('web emitter', () => {
   });
 
   it('prepends parent-space for bare (non-&) nested selectors', () => {
-    expect(emit(`color: red; .foo { color: blue; } .bar .baz { padding: 8px; }`))
-      .toMatchInlineSnapshot(`
+    expect(
+      emit(`color: red; .foo { color: blue; } .bar .baz { padding: 8px; }`)
+    ).toMatchInlineSnapshot(`
       [
         ".a{color:red;}",
         ".a .foo{color:blue;}",
@@ -115,8 +118,9 @@ describe('web emitter', () => {
   });
 
   it('emits @container', () => {
-    expect(emit(`@container card (min-width: 400px) { padding: 16px; &:hover { padding: 24px; } }`))
-      .toMatchInlineSnapshot(`
+    expect(
+      emit(`@container card (min-width: 400px) { padding: 16px; &:hover { padding: 24px; } }`)
+    ).toMatchInlineSnapshot(`
       [
         "@container card (min-width: 400px){.a{padding:16px;}.a:hover{padding:24px;}}",
       ]

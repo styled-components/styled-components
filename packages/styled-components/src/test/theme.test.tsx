@@ -708,13 +708,15 @@ describe('theming', () => {
         two: { main: 'blue', other: 'green' },
       };
 
-      const MyDivOne = withTheme(
-        styled.div.attrs<DataAttributes>(p => ({ 'data-theme': JSON.stringify(p.theme) }))``
-      );
+      const MyDivOne =
+        withTheme(
+          styled.div.attrs<DataAttributes>(p => ({ 'data-theme': JSON.stringify(p.theme) }))``
+        );
       const MyDivWithThemeOne = withTheme(MyDivOne);
-      const MyDivTwo = withTheme(
-        styled.div.attrs<DataAttributes>(p => ({ 'data-theme': JSON.stringify(p.theme) }))``
-      );
+      const MyDivTwo =
+        withTheme(
+          styled.div.attrs<DataAttributes>(p => ({ 'data-theme': JSON.stringify(p.theme) }))``
+        );
       const MyDivWithThemeTwo = withTheme(MyDivTwo);
 
       const wrapper = render(
@@ -773,9 +775,10 @@ describe('theming', () => {
     it('useTheme should get the same theme that is serving ThemeProvider', () => {
       const mainTheme = { main: 'black' };
 
-      const MyDivOne = withTheme(
-        styled.div.attrs<DataAttributes>(p => ({ 'data-theme': JSON.stringify(p.theme) }))``
-      );
+      const MyDivOne =
+        withTheme(
+          styled.div.attrs<DataAttributes>(p => ({ 'data-theme': JSON.stringify(p.theme) }))``
+        );
       const MyDivWithThemeOne = withTheme(MyDivOne);
       const MyDivWithThemeContext = (props: React.PropsWithChildren) => {
         const theme = useTheme();

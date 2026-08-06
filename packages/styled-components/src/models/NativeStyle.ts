@@ -35,7 +35,9 @@ export type { NativeStyles };
 export const resetStyleCache = resetNativeStyleCache;
 
 export default function makeNativeStyleClass<Props extends object>(styleSheet: StyleSheet) {
-  const NativeStyle: INativeStyleConstructor<Props> = class NativeStyle implements INativeStyle<Props> {
+  const NativeStyle: INativeStyleConstructor<Props> = class NativeStyle
+    implements INativeStyle<Props>
+  {
     rules: RuleSet<Props>;
     private staticCSS: string | null;
     private cachedCompiled: NativeStyles | null = null;

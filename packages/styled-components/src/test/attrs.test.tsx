@@ -268,8 +268,9 @@ describe('attrs', () => {
       style: { color: 'red', background: 'blue' },
     }))``;
 
-    expect(render(<Comp style={{ color: 'green', borderStyle: 'dotted' }} />).asFragment())
-      .toMatchInlineSnapshot(`
+    expect(
+      render(<Comp style={{ color: 'green', borderStyle: 'dotted' }} />).asFragment()
+    ).toMatchInlineSnapshot(`
       <DocumentFragment>
         <div
           class="sc-a"

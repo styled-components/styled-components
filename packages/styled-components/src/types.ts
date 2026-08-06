@@ -240,10 +240,8 @@ export interface CommonStatics<out R extends Runtime, in out Props extends BaseO
   postAttrsPlans?: ReadonlyArray<import('./utils/tracePostAttrs').PostAttrsPlan | null> | undefined;
 }
 
-export interface IStyledStatics<
-  out R extends Runtime,
-  in out OuterProps extends BaseObject,
-> extends CommonStatics<R, OuterProps> {
+export interface IStyledStatics<out R extends Runtime, in out OuterProps extends BaseObject>
+  extends CommonStatics<R, OuterProps> {
   webStyle: R extends 'web' ? WebStyle : never;
   // this is here because we want the uppermost displayName retained in a folding scenario
   foldedComponentIds: R extends 'web' ? string : never;
@@ -393,26 +391,26 @@ type PolymorphicCallProps<
  * props from the given rendering target to get proper typing for any
  * specialized props in the target component.
  */
-export interface PolymorphicComponent<
-  out R extends Runtime,
-  in out BaseProps extends BaseObject,
-> extends React.ForwardRefExoticComponent<
-  // FastOmit ahead of the intersection so a wrapped component's own `as` /
-  // `forwardedAs` props (e.g. Next.js Link's `as?: Url`) don't intersect with
-  // our `WebTarget`-typed versions and produce a conflicting required-shape
-  // type (#5734). `React.ComponentProps<typeof StyledComponent>` still
-  // surfaces our `as` / `forwardedAs` (the original #5654 fix).
-  FastOmit<BaseProps, 'as' | 'forwardedAs'> & {
-    as?: StyledTarget<R> | undefined;
-    forwardedAs?: StyledTarget<R> | undefined;
-  }
-> {
+export interface PolymorphicComponent<out R extends Runtime, in out BaseProps extends BaseObject>
+  extends React.ForwardRefExoticComponent<
+    // FastOmit ahead of the intersection so a wrapped component's own `as` /
+    // `forwardedAs` props (e.g. Next.js Link's `as?: Url`) don't intersect with
+    // our `WebTarget`-typed versions and produce a conflicting required-shape
+    // type (#5734). `React.ComponentProps<typeof StyledComponent>` still
+    // surfaces our `as` / `forwardedAs` (the original #5654 fix).
+    FastOmit<BaseProps, 'as' | 'forwardedAs'> & {
+      as?: StyledTarget<R> | undefined;
+      forwardedAs?: StyledTarget<R> | undefined;
+    }
+  > {
   // A single call signature, not overloads: with overloads a mid-typed JSX
   // attribute matches none, resolution fails, and attribute completion drops. The
   // prop-shape branching lives in `PolymorphicCallProps`.
   <
-    AsTarget extends StyledTarget<R> | (BaseProps extends { as?: infer A } ? A : never) | void =
-      void,
+    AsTarget extends
+      | StyledTarget<R>
+      | (BaseProps extends { as?: infer A } ? A : never)
+      | void = void,
     ForwardedAsTarget extends StyledTarget<R> | void = void,
   >(
     props: PolymorphicCallProps<R, BaseProps, AsTarget, ForwardedAsTarget>
@@ -447,18 +445,21 @@ export interface PolymorphicComponent<
  * signature makes `keyof` be `string`.
  */
 export type WidenForUntypedTarget<Target extends BaseObject, Props extends BaseObject> = (
-  Target extends unknown ? (keyof Target extends never ? true : false) : never
+  Target extends unknown
+    ? keyof Target extends never
+      ? true
+      : false
+    : never
 ) extends true
   ? Props & { [key: string]: unknown }
   : Props;
 
 export interface IStyledComponentBase<
-  out R extends Runtime,
-  in out Props extends BaseObject = BaseObject,
->
+    out R extends Runtime,
+    in out Props extends BaseObject = BaseObject,
+  >
   // Widened on the JSX call surface only, never on the statics.
-  extends
-    PolymorphicComponent<R, WidenForUntypedTarget<Props, Props>>,
+  extends PolymorphicComponent<R, WidenForUntypedTarget<Props, Props>>,
     IStyledStatics<R, Props>,
     StyledComponentBrand {
   toString: () => string;
@@ -640,7 +641,8 @@ export type CSSKeyframes = object & { [key: string]: CSSObject };
 export type CSSObject<Props extends BaseObject = BaseObject> = StyledObject<Props>;
 
 export interface StyledObject<Props extends BaseObject = BaseObject>
-  extends CSSProperties, CSSPseudos {
+  extends CSSProperties,
+    CSSPseudos {
   [key: string]:
     | StyledObject<Props>
     | string

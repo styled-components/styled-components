@@ -1,0 +1,71 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.7/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  // Biome has no Markdown or YAML formatter yet, so those files are simply not
+  // understood rather than misformatted; skip them instead of reporting each one.
+  "files": { "ignoreUnknown": true },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 100,
+    "attributePosition": "auto",
+    "bracketSameLine": false,
+    "bracketSpacing": true,
+    "expand": "auto",
+    "useEditorconfig": true,
+    "includes": [
+      "**",
+      "!**/__snapshots__",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/native/dist",
+      "!**/plugins/dist",
+      "!**/coverage",
+      "!**/CHANGELOG.md",
+      "!**/pnpm-lock.yaml",
+      "!packages/styled-components/src/utils/errors.ts",
+      "!packages/styled-components/src/parser/wpt-corpus/raw",
+      "!packages/styled-components/src/parser/wpt-corpus/corpus.json",
+      "!**/vendor/bundle",
+      "!**/.bundle",
+      "!**/ios/build",
+      "!**/android/build",
+      "!**/.gradle"
+    ]
+  },
+  // Formatter only, deliberately. `correctness/useHookAtTopLevel` was the reason
+  // to reach for a linter here, and it does not fit this codebase: it is a
+  // syntactic rule, so it cannot tell a data-dependent condition from a
+  // build-time constant. Every gate on `__SERVER__`, `IS_RSC` and `__DEV__` is
+  // flagged (33 sites, all intentional and all documented in AGENTS.md), while
+  // the failure actually worth catching, a hook inside the render cache's
+  // hit/miss branch, looks identical to the rest. Enabling it would mean
+  // suppressing exactly the lines that resemble the bug.
+  //
+  // The hook sequence is guarded by a regression test instead
+  // (`src/test/memoization.test.tsx`), which compares recorded hook sequences
+  // across cache-hit and cache-miss passes and so makes the distinction the
+  // rule cannot.
+  "linter": { "enabled": false },
+  "javascript": {
+    "formatter": {
+      "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "trailingCommas": "es5",
+      "semicolons": "always",
+      "arrowParentheses": "asNeeded",
+      "bracketSameLine": false,
+      "quoteStyle": "single",
+      "attributePosition": "auto",
+      "bracketSpacing": true
+    }
+  },
+  "assist": {
+    // Import sorting is off on purpose: it is not what Prettier did, and this
+    // codebase has side-effect imports whose order is load-bearing.
+    "enabled": false
+  }
+}

@@ -552,8 +552,9 @@ describe('parseCSSDeclarations', () => {
     });
 
     it('recovers declarations after a selector block', () => {
-      expect(parseCSSDeclarations('.foo { color: red; font-size: 12px; } opacity: 1;'))
-        .toMatchInlineSnapshot(`
+      expect(
+        parseCSSDeclarations('.foo { color: red; font-size: 12px; } opacity: 1;')
+      ).toMatchInlineSnapshot(`
         [
           [
             "opacity",
@@ -574,8 +575,9 @@ describe('parseCSSDeclarations', () => {
     });
 
     it('drops unterminated double quote and recovers', () => {
-      expect(parseCSSDeclarations('font-family: "Unterminated; color: red;'))
-        .toMatchInlineSnapshot(`
+      expect(
+        parseCSSDeclarations('font-family: "Unterminated; color: red;')
+      ).toMatchInlineSnapshot(`
         [
           [
             "font-family",
@@ -586,8 +588,9 @@ describe('parseCSSDeclarations', () => {
     });
 
     it('drops unterminated single quote and recovers', () => {
-      expect(parseCSSDeclarations("font-family: 'Unterminated; color: red;"))
-        .toMatchInlineSnapshot(`
+      expect(
+        parseCSSDeclarations("font-family: 'Unterminated; color: red;")
+      ).toMatchInlineSnapshot(`
         [
           [
             "font-family",
@@ -784,8 +787,9 @@ describe('parseCSSDeclarations', () => {
     });
 
     it('triple backslash: escaped backslash then quote closes string', () => {
-      expect(parseCSSDeclarations('content: "test\\\\\\"more"; color: red;'))
-        .toMatchInlineSnapshot(`
+      expect(
+        parseCSSDeclarations('content: "test\\\\\\"more"; color: red;')
+      ).toMatchInlineSnapshot(`
         [
           [
             "content",
@@ -889,8 +893,9 @@ describe('parseCSSDeclarations', () => {
     });
 
     it('nested comment (CSS does not nest comments)', () => {
-      expect(parseCSSDeclarations('/* outer /* inner */ visible */ color: red;'))
-        .toMatchInlineSnapshot(`
+      expect(
+        parseCSSDeclarations('/* outer /* inner */ visible */ color: red;')
+      ).toMatchInlineSnapshot(`
         [
           [
             "visible  color",
@@ -913,8 +918,9 @@ describe('parseCSSDeclarations', () => {
     });
 
     it('unclosed quote drops and recovers remaining declarations', () => {
-      expect(parseCSSDeclarations("content: 'unclosed; color: red; margin: 10px;"))
-        .toMatchInlineSnapshot(`
+      expect(
+        parseCSSDeclarations("content: 'unclosed; color: red; margin: 10px;")
+      ).toMatchInlineSnapshot(`
         [
           [
             "content",
@@ -925,8 +931,9 @@ describe('parseCSSDeclarations', () => {
     });
 
     it('unclosed paren drops and recovers remaining declarations', () => {
-      expect(parseCSSDeclarations('background: url(broken; color: red; margin: 10px;'))
-        .toMatchInlineSnapshot(`
+      expect(
+        parseCSSDeclarations('background: url(broken; color: red; margin: 10px;')
+      ).toMatchInlineSnapshot(`
         [
           [
             "background",
@@ -1158,8 +1165,9 @@ describe('parseCSSDeclarations', () => {
     });
 
     it('mixed valid and invalid declarations', () => {
-      expect(parseCSSDeclarations('!!!invalid!!!; color: red; @media screen; font-size: 14px;'))
-        .toMatchInlineSnapshot(`
+      expect(
+        parseCSSDeclarations('!!!invalid!!!; color: red; @media screen; font-size: 14px;')
+      ).toMatchInlineSnapshot(`
         [
           [
             "color",
@@ -1174,8 +1182,9 @@ describe('parseCSSDeclarations', () => {
     });
 
     it('garbage before first valid declaration', () => {
-      expect(parseCSSDeclarations('some garbage without colons or semis\ncolor: red;'))
-        .toMatchInlineSnapshot(`
+      expect(
+        parseCSSDeclarations('some garbage without colons or semis\ncolor: red;')
+      ).toMatchInlineSnapshot(`
         [
           [
             "some garbage without colons or semis
@@ -1240,8 +1249,9 @@ describe('parseCSSDeclarations', () => {
 
     it('whitespace: tabs, carriage returns, form feed, and vertical tab', () => {
       // Tabs everywhere
-      expect(parseCSSDeclarations('\t\tcolor\t:\t\tred\t;\t\tfont-size\t:\t12px\t;\t'))
-        .toMatchInlineSnapshot(`
+      expect(
+        parseCSSDeclarations('\t\tcolor\t:\t\tred\t;\t\tfont-size\t:\t12px\t;\t')
+      ).toMatchInlineSnapshot(`
         [
           [
             "color",
@@ -1255,8 +1265,9 @@ describe('parseCSSDeclarations', () => {
       `);
 
       // Carriage returns mixed with newlines
-      expect(parseCSSDeclarations('color: red;\r\n\r\nfont-size: 12px;\r\rmargin: 0;\n\n'))
-        .toMatchInlineSnapshot(`
+      expect(
+        parseCSSDeclarations('color: red;\r\n\r\nfont-size: 12px;\r\rmargin: 0;\n\n')
+      ).toMatchInlineSnapshot(`
         [
           [
             "color",
@@ -1274,8 +1285,9 @@ describe('parseCSSDeclarations', () => {
       `);
 
       // Form feed and vertical tab
-      expect(parseCSSDeclarations('color: red;\x0cfont-size: 12px;\x0bmargin: 0;'))
-        .toMatchInlineSnapshot(`
+      expect(
+        parseCSSDeclarations('color: red;\x0cfont-size: 12px;\x0bmargin: 0;')
+      ).toMatchInlineSnapshot(`
         [
           [
             "color",
@@ -1347,8 +1359,9 @@ describe('parseCSSDeclarations', () => {
     });
 
     it('unclosed paren consumes remainder (tokenizer semantics)', () => {
-      expect(parseCSSDeclarations('transform: rotate(45deg; color: red; margin: 10px;'))
-        .toMatchInlineSnapshot(`
+      expect(
+        parseCSSDeclarations('transform: rotate(45deg; color: red; margin: 10px;')
+      ).toMatchInlineSnapshot(`
         [
           [
             "transform",
@@ -1359,8 +1372,9 @@ describe('parseCSSDeclarations', () => {
     });
 
     it('both unclosed paren and unclosed quote in sequence', () => {
-      expect(parseCSSDeclarations('a: url(broken; b: "unterminated; c: valid; d: 10px;'))
-        .toMatchInlineSnapshot(`
+      expect(
+        parseCSSDeclarations('a: url(broken; b: "unterminated; c: valid; d: 10px;')
+      ).toMatchInlineSnapshot(`
         [
           [
             "a",
