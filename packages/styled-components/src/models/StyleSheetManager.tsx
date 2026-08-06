@@ -117,6 +117,7 @@ export const StyleSheetConsumer = StyleSheetContext.Consumer;
 export type ICompilerContext = Compiler | void;
 
 export function useStyleSheetContext() {
+  // biome-ignore lint/correctness/useHookAtTopLevel: IS_RSC is a load-time constant, so this branch is fixed for the whole bundle rather than varying per render
   if (!IS_RSC) return React.useContext(StyleSheetContext);
 
   // Reset mainSheet once per render to prevent HMR accumulation.
@@ -230,6 +231,7 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     return <>{props.children}</>;
   }
 
+  // biome-ignore-start lint/correctness/useHookAtTopLevel: the early return above is gated on IS_RSC, a load-time constant, so every render in a given bundle either reaches all of these hooks or none of them
   const parentContext = useStyleSheetContext();
   const { styleSheet } = parentContext;
 
@@ -280,6 +282,7 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     }),
     [shouldForwardProp, resolvedStyleSheet, compiler, resolvedPlugins]
   );
+  // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the IS_RSC-gated region
 
   return (
     <StyleSheetContext.Provider value={styleSheetContextValue}>

@@ -44,16 +44,22 @@
   },
   // Library source only, and rules opted into one at a time.
   //
-  // `correctness/useHookAtTopLevel` is the rule this repo most wants and cannot
-  // have. It is syntactic, so it cannot tell a data-dependent condition from a
-  // build-time constant: it reports 33 sites, and every one is a deliberate gate
-  // on `__SERVER__`, `IS_RSC`, `__DEV__`, a hook helper called indirectly, or a
-  // per-instance lifetime constant. The failure actually worth catching, a hook
-  // inside the render cache's hit/miss branch, looks identical to all of them,
-  // so enabling it would mean suppressing exactly the lines that resemble the
-  // bug. That invariant is gated by `src/test/memoization.test.tsx` instead,
-  // which compares recorded hook sequences across a cache-hit and a cache-miss
-  // pass and so makes the distinction the rule cannot.
+  // `correctness/useHookAtTopLevel` is on, with every legitimate placement
+  // carrying a suppression that states why it is safe. The rule is syntactic,
+  // so it cannot tell a data-dependent condition from a build-time constant and
+  // reports all 33 gates on `__SERVER__`, `IS_RSC` and `__DEV__`. Annotating
+  // them beats disabling the rule: each suppression documents a decision at the
+  // site, and anything new is still caught. Verified by planting a
+  // data-dependent conditional hook in an already-suppressed file and watching
+  // it fail.
+  //
+  // Suppress a legitimate placement with a reason naming the constant that
+  // makes the branch stable, and prefer a `biome-ignore-start`/`-end` range for
+  // a whole block behind one build-constant gate. Never reach for a suppression
+  // to quiet a condition that depends on props, state or context; that is the
+  // bug the rule exists to find. The render cache's hit/miss branch is the one
+  // this codebase invites, and `src/test/memoization.test.tsx` gates it by
+  // comparing recorded hook sequences, which the rule alone cannot do.
   //
   // Wanted but blocked on pre-existing violations, mostly in test files:
   // `correctness/noUnusedImports` (30), `suspicious/useIterableCallbackReturn`
@@ -81,6 +87,7 @@
         "noPrecisionLoss": "error",
         "noSwitchDeclarations": "error",
         "noUnreachable": "error",
+        "useHookAtTopLevel": "error",
         "noVoidTypeReturn": "error"
       },
       "suspicious": {

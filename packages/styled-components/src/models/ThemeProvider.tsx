@@ -118,6 +118,7 @@ function mergeTheme(theme: ThemeArgument, outerTheme?: DefaultTheme | undefined)
 /** Returns the current theme; throws if no `ThemeProvider` ancestor. */
 export function useTheme(): DefaultTheme {
   // Skip useContext if we're in an RSC environment without context support
+  // biome-ignore lint/correctness/useHookAtTopLevel: IS_RSC is a load-time constant, so this branch is fixed for the whole bundle rather than varying per render
   const theme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
 
   if (!theme) {
@@ -133,11 +134,13 @@ export default function ThemeProvider(props: Props): React.JSX.Element | null {
     return props.children as React.JSX.Element | null;
   }
 
+  // biome-ignore-start lint/correctness/useHookAtTopLevel: the early return above is gated on IS_RSC, a load-time constant, so every render in a given bundle either reaches all of these hooks or none of them
   const outerTheme = React.useContext(ThemeContext);
   const themeContext = React.useMemo(
     () => mergeTheme(props.theme, outerTheme),
     [props.theme, outerTheme]
   );
+  // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the IS_RSC-gated region
 
   if (!props.children) {
     return null;

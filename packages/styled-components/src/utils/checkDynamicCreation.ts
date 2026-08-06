@@ -33,6 +33,7 @@ export const checkDynamicCreation = (displayName: string, componentId?: string |
       }
     };
     if (typeof React.useState === 'function') {
+      // biome-ignore lint/correctness/useHookAtTopLevel: calling a hook outside a component is the probe, not a mistake. It provokes React's invalid-hook-call warning, which the console.error patch above captures to detect a styled component built during a render. The typeof guard is because RSC builds ship no useState to call.
       React.useState(null);
     }
 
