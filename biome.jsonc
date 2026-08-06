@@ -69,19 +69,37 @@
   "linter": {
     "enabled": true,
     "includes": ["packages/styled-components/src/**", "packages/styled-components/scripts/**"],
-    // Set explicitly rather than left to auto-detection: the domain activates on
-    // a declared `react` dependency, and a library declares react as a peer plus
-    // a devDependency. Whether the detector reads those fields is undocumented,
-    // and a domain that silently fails to activate takes its rules with it.
-    "domains": { "react": "none" },
+    // MUST NOT be "none". A domain of "none" switches its rules off even when a
+    // rule is named "error" under `rules` below, so `useHookAtTopLevel` went
+    // silent while its 33 suppressions stayed in place and CI still passed the
+    // rule. `--only=correctness/useHookAtTopLevel` bypasses the domain and does
+    // report, so a spot check with `--only` cannot detect this: verify by
+    // planting a conditional hook and running a PLAIN `biome ci`.
+    //
+    // "recommended" rather than "all": "all" adds ~150 style and perf opinions
+    // this repo has not opted into (`useComponentExportOnlyModules`,
+    // `noJsxPropsBind`, `noLeakedRender` and kin).
+    "domains": { "react": "recommended" },
     "rules": {
-      "recommended": false,
+      "preset": "none",
       "complexity": {
         "noUselessCatch": "error",
         "noUselessLoneBlockStatements": "error",
         "noUselessSwitchCase": "error"
       },
       "correctness": {
+        // Arrived with the react domain, which carries its own recommended set
+        // that `"recommended": false` above does not reach. Off deliberately:
+        // both fight decisions this repo already made and documented.
+        //
+        // `noChildrenProp`: the SSR and RSC paths build a `<style>` prop bag
+        // programmatically, so `children` belongs in the object.
+        // `useExhaustiveDependencies`: it wants `renderDeps` inlined in
+        // createGlobalStyle, which exists so a static global skips effect
+        // re-runs, and it wants the `globalStyle` dep dropped, which was added
+        // to fix HMR cleanup.
+        "noChildrenProp": "off",
+        "useExhaustiveDependencies": "off",
         "noConstantCondition": "error",
         "noInvalidUseBeforeDeclaration": "error",
         "noPrecisionLoss": "error",
@@ -91,6 +109,11 @@
         "noVoidTypeReturn": "error"
       },
       "suspicious": {
+        // Also from the react domain. The five hits are all test fixtures with
+        // a fixed, non-reordering list, where the index is a stable key. Worth
+        // turning on if it ever reaches library source; see the hits with
+        // `biome lint . --only=suspicious/noArrayIndexKey`.
+        "noArrayIndexKey": "off",
         "noDuplicateCase": "error",
         "noDuplicateObjectKeys": "error",
         "noDuplicateParameters": "error",
