@@ -1,8 +1,9 @@
 /**
- * Tests for useInjectedStyle memoization.
+ * Tests for the render cache.
  *
- * Verifies that the useRef-based shallow context comparison correctly
- * caches and invalidates under various scenarios.
+ * Verifies that the useRef-based shallow context comparison correctly caches
+ * and invalidates under various scenarios, and that the cache's hit/miss branch
+ * does not change the component's hook sequence.
  */
 import { act, fireEvent, render } from '@testing-library/react';
 import React, { useState } from 'react';
@@ -369,5 +370,113 @@ describe('memoization correctness', () => {
 
     unmount();
     warnSpy.mockRestore();
+  });
+
+  /**
+   * The render cache splits the render path in two, and only one side runs the
+   * style work. A hook on the miss side is called when props changed and skipped
+   * when they did not, so the component would emit a different hook sequence
+   * depending on data, which is the shape React rejects outright.
+   *
+   * StrictMode is the instrument because it is the one place the cache-hit path
+   * is reachable through the public API: React invokes the render body twice
+   * back to back, refs survive between the two passes, so pass 2 finds the cache
+   * populated by pass 1 and takes the hit branch. `React.memo` blocks an
+   * ordinary re-render with equal props before it can reach the component at
+   * all, and any re-render memo does let through fails the same shallow
+   * comparison the cache uses. Verified by measurement: a StrictMode mount runs
+   * two render passes and exactly one interpolation.
+   *
+   * Asserting the sequence rather than a count: a swap of two hooks keeps the
+   * count identical and still breaks React's ordering rule. The recording wraps
+   * React's own `use*` exports, so a hook added to the render path later is
+   * picked up without this test being told about it.
+   */
+  it('calls the same hooks on the cache-hit pass as on the cache-miss pass', () => {
+    // React's module namespace, typed as what it is here: a bag of hook
+    // functions keyed by name. Spelling it once keeps the casts out of the body.
+    const reactHooks = React as unknown as Record<string, (...args: unknown[]) => unknown>;
+    const hookNames = Object.keys(React).filter(
+      key => key.startsWith('use') && typeof reactHooks[key] === 'function'
+    );
+    // Positive control: if the wrapping ever stops seeing React's hooks, every
+    // sequence below is trivially empty and the comparison passes vacuously.
+    expect(hookNames).toContain('useRef');
+
+    let recording: string[] | null = null;
+    // Restored in `finally`, which the install loop is inside: a throw partway
+    // through installation must not leave React half-patched for later tests.
+    const originals = new Map<string, (...args: unknown[]) => unknown>();
+
+    function record<T>(renderFn: () => T): [T, string[]] {
+      const calls: string[] = [];
+      recording = calls;
+      try {
+        return [renderFn(), calls];
+      } finally {
+        // Cleared even when the render throws, so a later render cannot append
+        // to a dead array and turn one failure into a confusing second one.
+        recording = null;
+      }
+    }
+
+    /**
+     * The styled component renders before `StyleInjector`, so everything up to
+     * the injector's first hook belongs to the component, across both StrictMode
+     * passes. Splitting that segment in half yields one pass each.
+     */
+    function passes(sequence: string[]): [string[], string[]] {
+      const injectorStart = sequence.indexOf('useSyncExternalStore');
+      const own = injectorStart === -1 ? sequence : sequence.slice(0, injectorStart);
+      expect(own.length).toBeGreaterThan(0);
+      // An odd total is itself the defect: the two passes cannot have called the
+      // same hooks, so one of them ran a hook the other skipped.
+      expect({ hooks: own, oddMeansOnePassSkippedAHook: own.length % 2 }).toEqual({
+        hooks: own,
+        oddMeansOnePassSkippedAHook: 0,
+      });
+      return [own.slice(0, own.length / 2), own.slice(own.length / 2)];
+    }
+
+    try {
+      for (const name of hookNames) {
+        const original = reactHooks[name];
+        originals.set(name, original);
+        reactHooks[name] = (...args) => {
+          if (recording) recording.push(name);
+          return original(...args);
+        };
+      }
+
+      const Comp = styled.div<{ $color: string }>`
+        color: ${p => p.$color};
+      `;
+
+      const [{ rerender, unmount }, mountSeq] = record(() =>
+        render(
+          <React.StrictMode>
+            <Comp $color="red" />
+          </React.StrictMode>
+        )
+      );
+      const [, updateSeq] = record(() =>
+        rerender(
+          <React.StrictMode>
+            <Comp $color="blue" />
+          </React.StrictMode>
+        )
+      );
+
+      const [mountMiss, mountHit] = passes(mountSeq);
+      const [updateMiss, updateHit] = passes(updateSeq);
+
+      expect(mountHit).toEqual(mountMiss);
+      expect(updateHit).toEqual(updateMiss);
+      expect(updateMiss).toEqual(mountMiss);
+
+      unmount();
+    } finally {
+      for (const [name, original] of originals) reactHooks[name] = original;
+    }
   });
 });
