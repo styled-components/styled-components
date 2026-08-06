@@ -2468,6 +2468,7 @@ const animatedAdapter: AnimationAdapter = {
 
     // scratchRef.current is component-scoped and never reassigned, so
     // the cleanup runs exactly once on unmount with stable deps.
+    // biome-ignore lint/plugin/no-effects: carve-out. Unmount-only teardown of the adapter's Animated scratch (listeners and running animations), but an adapter returns a style object rather than props, so there is no element to hang a ref callback on. Retires only if the AnimationAdapter contract grows a ref the styled component composes.
     React.useEffect(() => () => disposeScratch(scratchRef.current!), []);
 
     if (!hasTransition && !hasAnimation && !hasStarting) {

@@ -79,7 +79,6 @@ export default function createGlobalStyle<Props extends object>(
       // unmount/sheet/globalStyle swap, not every render; dynamic globals
       // would otherwise rebuild twice per render (issue #5730). Including
       // globalStyle in deps lets HMR-replaced instances trigger re-injection.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
       const renderDeps = globalStyle.isStatic
         ? [instance, ssc.styleSheet, globalStyle]
         : [instance, props, ssc.styleSheet, theme, ssc.compiler, globalStyle];
@@ -87,6 +86,7 @@ export default function createGlobalStyle<Props extends object>(
       // biome-ignore-start lint/correctness/useHookAtTopLevel: this whole block sits under `if (!__SERVER__ && !IS_RSC)`, both build or load-time constants, so a given bundle always runs all of these hooks or none of them
       const prevGlobalStyleRef = React.useRef(globalStyle);
 
+      // biome-ignore lint/plugin/no-effects: writes global rules to the stylesheet, which is the one job useInsertionEffect exists for. Pending that move, which also lands these rules ahead of any consumer layout effect rather than beside it.
       React.useLayoutEffect(() => {
         if (!ssc.styleSheet.server) {
           // HMR creates a new globalStyle instance but the componentId stays stable
@@ -103,6 +103,7 @@ export default function createGlobalStyle<Props extends object>(
       // Cleanup-only effect: fires on unmount, sheet swap, or HMR globalStyle swap.
       // Closure captures the specific globalStyle/sheet that owned this instance's
       // rules so HMR cleanup targets the prior module's state.
+      // biome-ignore lint/plugin/no-effects: removes this instance's rules from the stylesheet, the cleanup half of the injection above, so it moves to useInsertionEffect with it. Kept separate from that effect on purpose: merging the two rebuilt dynamic globals twice per render (#5730).
       React.useLayoutEffect(() => {
         return () => {
           if (!ssc.styleSheet.server) {

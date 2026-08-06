@@ -79,6 +79,7 @@ const reanimatedAdapter: AnimationAdapter = {
 
     const [startingPass, setStartingPass] = React.useState(0);
 
+    // biome-ignore lint/plugin/no-effects: carve-out. Drives the @starting-style two-pass flip, so scheduling a state update one frame later is the entire point, which rules out useInsertionEffect. A ref callback may set state, but an adapter returns a style object rather than props, so there is no element to attach one to.
     React.useLayoutEffect(() => {
       if (!hasStartingTransition) {
         setStartingPass(0);

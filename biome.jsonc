@@ -1,5 +1,33 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.7/schema.json",
+  // The effect ban. `no-effects` covers every file the linter sees. The
+  // `useInsertionEffect` fence names its exceptions below rather than in prose,
+  // so "stylesheet writes only" is enforced instead of asserted.
+  //
+  // Suppress with `biome-ignore lint/plugin/<file stem>:`. The stem is
+  // validated, so a typo still reports the error rather than passing silently,
+  // and `biome-ignore-start`/`-end` ranges work. The exclusion globs must be
+  // `**/`-prefixed; a repo-root-relative path silently excludes nothing.
+  // Tests are exempt from both. A test that renders a consumer component
+  // calling useEffect is exercising the guarantee, not breaking it: the
+  // promise is that this library adds no effects of its own, never that a
+  // consumer below a styled component cannot have them.
+  "plugins": [
+    {
+      "path": "./.biome/no-effects.grit",
+      "includes": ["**", "!**/test/**", "!**/*.test.*"]
+    },
+    {
+      "path": "./.biome/no-insertion-effect.grit",
+      "includes": [
+        "**",
+        "!**/test/**",
+        "!**/*.test.*",
+        "!**/models/StyledComponent.ts",
+        "!**/constructors/createGlobalStyle.ts"
+      ]
+    }
+  ],
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   // One exclusion list for every Biome tool. Scoping it under `formatter` would
   // make it a formatter-only fact, so enabling anything else later would read
@@ -107,6 +135,24 @@
         "noUnreachable": "error",
         "useHookAtTopLevel": "error",
         "noVoidTypeReturn": "error"
+      },
+      "style": {
+        // The other half of the effect ban. The GritQL plugin matches a call,
+        // so it sees `React.useEffect(...)` and a bare `useEffect(...)`, but it
+        // cannot see the import that produced the bare name. This rule closes
+        // that spelling. Not theoretical: `native/responsive.ts` already
+        // imports hooks by name.
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "react": {
+                "importNames": ["useEffect", "useLayoutEffect"],
+                "message": "This library performs no work in a passive or layout effect. Use a ref callback for attach or teardown, useSyncExternalStore for external state, or useInsertionEffect for stylesheet writes only."
+              }
+            }
+          }
+        }
       },
       "suspicious": {
         // Also from the react domain. The five hits are all test fixtures with

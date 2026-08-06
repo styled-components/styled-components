@@ -82,6 +82,7 @@ export function useAnchorNamePublisher(
 ): Record<string, any> {
   const nameRef = React.useRef<string | undefined>(undefined);
   nameRef.current = name;
+  // biome-ignore lint/plugin/no-effects: unmount-only teardown, dropping this anchor's rect so `anchor()` consumers cannot read a dead one. Replaceable by a ref callback cleanup composed into the props this hook already returns, which also ties the teardown to the host actually having mounted.
   React.useEffect(
     () => () => {
       if (nameRef.current !== undefined) removeAnchor(nameRef.current);

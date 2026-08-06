@@ -1,0 +1,18 @@
+// This library performs no work in a passive or layout effect. See AGENTS.md.
+//
+// Matches the callee rather than the whole call so both `React.useEffect(...)`
+// and a bare `useEffect(...)` land, and so an aliased namespace (`R.useEffect`)
+// does too. `noRestrictedImports` in biome.jsonc covers the import side.
+//
+// The pattern must be a call with the callee constrained by `<:`. Writing the
+// member expression as the pattern root (`$obj.useEffect($$$)`) matches under
+// `biome search` but silently matches nothing as a plugin.
+`$fn($args)` where {
+  $fn <: or {
+    `$obj.useEffect`,
+    `useEffect`,
+    `$obj.useLayoutEffect`,
+    `useLayoutEffect`
+  },
+  register_diagnostic(span=$fn, message="This library performs no work in a passive or layout effect. Use a ref callback for attach or teardown, useSyncExternalStore for external state, or useInsertionEffect for stylesheet writes only. If no non-effect form exists, suppress with `biome-ignore lint/plugin/no-effects:` and name why.")
+}
