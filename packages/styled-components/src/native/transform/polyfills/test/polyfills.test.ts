@@ -5443,7 +5443,7 @@ describe('corner-shape spec compliance (CSS Borders 4 §3.8)', () => {
     expect(transformDecl('corner-shape', 'superellipse(1.4)')).toEqual({});
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy.mock.calls[0][0]).toMatch(/has no React Native equivalent/);
-    expect(warnSpy.mock.calls[0][0]).toMatch(/Concave and bevelled contours cannot be drawn/);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/Concave and beveled contours cannot be drawn/);
     expect(warnSpy.mock.calls[0][0]).toMatch(/`round`, `squircle`, and `square`/);
   });
 
@@ -5573,7 +5573,19 @@ describe('corner-shape spec compliance (CSS Borders 4 §3.8)', () => {
     it('squircle still maps to continuous but warns about Android', () => {
       expect(transformDecl('corner-shape', 'squircle')).toEqual({ borderCurve: 'continuous' });
       const android = warnSpy.mock.calls.find(c =>
-        /renders circular corners on Android/.test(c[0])
+        /renders as an ordinary circular corner on Android/.test(c[0])
+      );
+      expect(android).toBeDefined();
+    });
+
+    // The same warning covers every spelling that resolves to the
+    // continuous curve, so it must not name only the `squircle` keyword.
+    it('superellipse(2) warns with the same curve-level message', () => {
+      expect(transformDecl('corner-shape', 'superellipse(2)')).toEqual({
+        borderCurve: 'continuous',
+      });
+      const android = warnSpy.mock.calls.find(c =>
+        /renders as an ordinary circular corner on Android/.test(c[0])
       );
       expect(android).toBeDefined();
     });

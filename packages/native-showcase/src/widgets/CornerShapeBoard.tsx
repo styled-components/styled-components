@@ -28,7 +28,7 @@ import { theme as t } from '@/theme/tokens';
  *
  * The last two tiles are the cases that look like bugs but are not.
  * `superellipse(2)` is the spec definition of `squircle`, so matching its
- * neighbour exactly is the pass condition. `scoop` has no native contour
+ * neighbor exactly is the pass condition. `scoop` has no native contour
  * at all: the declaration drops with a warning, which is why it is drawn
  * with a dashed outline rather than left to masquerade as a shape that
  * rendered.
@@ -202,7 +202,7 @@ export function CornerShapeBoard() {
           </Item>
         </Row>
         <Markdown variant="hint">
-          {`\`square\` is the one value React Native renders **exactly** rather than approximately, because the spec defines it as the corner \`border-radius: 0\` already draws. Both tiles below still declare a 24px radius, so any rounding that survives is a bug. It is also the only \`corner-shape\` value Android honours.`}
+          {`\`square\` is the one value React Native renders **exactly** rather than approximately, because the spec defines it as the corner \`border-radius: 0\` already draws. Both tiles below still declare a 24px radius, so any rounding that survives is a bug. It is also the only \`corner-shape\` value Android honors.`}
         </Markdown>
         <Row>
           <Item>
