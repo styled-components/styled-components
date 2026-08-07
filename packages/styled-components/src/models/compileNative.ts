@@ -25,6 +25,8 @@ import {
   Resolver,
   substituteVars,
 } from '../native/transform/polyfills/resolvers';
+import { BORDER_RADIUS_KEYS } from '../native/transform/handlers/spacing';
+import { CORNER_SQUARE_SENTINEL_KEY } from '../native/transform/polyfills/cornerShape';
 import { PERSPECTIVE_SENTINEL_KEY } from '../native/transform/polyfills/standaloneTransform';
 import { registerCssProperty } from '../native/propertyRegistry';
 import { tokenize } from '../native/transform/tokenize';
@@ -1385,7 +1387,13 @@ function processDecls(decls: StaticDeclNode[]): {
   // separate surface), so the sentinel never lands in `base` on web and
   // the post-merge fold is dead. Gate the call so terser can DCE both the
   // helper and the sentinel string on the rn-web bundle.
-  if (!__NATIVE_WEB__) foldPerspectiveSentinel(raw, base);
+  if (!__NATIVE_WEB__) {
+    foldPerspectiveSentinel(raw, base);
+    // Both layers, because `corner-shape: square !important` lands the
+    // sentinel in `important` and would otherwise never be folded.
+    foldCornerShapeSquare(raw, base);
+    if (important !== null) foldCornerShapeSquare(raw, important);
+  }
   return { raw, base, resolvers, important, importantResolvers, customProperties, varDeferred };
 }
 
@@ -1469,6 +1477,34 @@ function foldPerspectiveSentinel(raw: Dict<any>, base: Dict<any>): void {
     const composed = persp + ' ' + existing;
     base.transform = composed;
     raw.transform = composed;
+  }
+}
+
+/**
+ * Apply `corner-shape: square` as a zero radius on the corners it names.
+ *
+ * The spec defines `square` as a 90deg convex corner, which is exactly what
+ * `border-radius: 0` draws, so this is the one `corner-shape` value React
+ * Native renders faithfully rather than approximating (and the only one
+ * Android renders at all).
+ *
+ * Runs after the whole block has merged because `corner-shape` and
+ * `border-radius` are independent properties: in CSS a later
+ * `border-radius` resizes the corner area without un-squaring it, so the
+ * zero has to be written last rather than in declaration order.
+ */
+function foldCornerShapeSquare(raw: Dict<any>, layer: Dict<any>): void {
+  const mask = layer[CORNER_SQUARE_SENTINEL_KEY];
+  if (mask === undefined) return;
+  delete layer[CORNER_SQUARE_SENTINEL_KEY];
+  delete raw[CORNER_SQUARE_SENTINEL_KEY];
+  for (let i = 0; i < BORDER_RADIUS_KEYS.length; i++) {
+    if ((mask & (1 << i)) === 0) continue;
+    // The per-corner longhand beats the `borderRadius` shorthand in RN's
+    // own cascade regardless of key order, so the author's radius stays
+    // where it is and only the squared corners flatten.
+    layer[BORDER_RADIUS_KEYS[i]] = 0;
+    raw[BORDER_RADIUS_KEYS[i]] = 0;
   }
 }
 

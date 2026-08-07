@@ -4,6 +4,7 @@ import { transformDecl } from '../../index';
 import { tokenize } from '../../tokenize';
 import { TokenKind } from '../../tokens';
 import { staticColorFunctionToHex } from '../colorMath';
+import { CORNER_SQUARE_SENTINEL_KEY } from '../cornerShape';
 import { parseLinearEasing } from '../linearEasing';
 import { resolveStaticMathFunction } from '../mathFns';
 import { buildResolver } from '../resolvers';
@@ -5442,15 +5443,20 @@ describe('corner-shape spec compliance (CSS Borders 4 §3.8)', () => {
     expect(transformDecl('corner-shape', 'superellipse(1.4)')).toEqual({});
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy.mock.calls[0][0]).toMatch(/has no React Native equivalent/);
-    expect(warnSpy.mock.calls[0][0]).toMatch(/circular or Apple-smooth/);
-    expect(warnSpy.mock.calls[0][0]).toMatch(/Use `round` or `squircle`/);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/Concave and bevelled contours cannot be drawn/);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/`round`, `squircle`, and `square`/);
   });
 
-  // square = superellipse(infinity); RN can't draw an animatable square
-  // contour distinct from the default. Drop + warn.
-  it('square keyword warns and drops', () => {
-    expect(transformDecl('corner-shape', 'square')).toEqual({});
-    expect(warnSpy.mock.calls[0][0]).toMatch(/has no React Native equivalent/);
+  // "square: The corner shape is a convex 90deg angle. Equivalent to
+  // superellipse(infinity)." The spec notes it "looks identical to the
+  // 'normal' square corner you get from border-radius: 0", so RN renders it
+  // exactly, via a zero radius rather than a curve. The sentinel is a corner
+  // mask that compileNative folds into the per-corner radii.
+  it('square keyword emits an all-corner square mask and does not warn', () => {
+    expect(transformDecl('corner-shape', 'square')).toEqual({
+      [CORNER_SQUARE_SENTINEL_KEY]: 0b1111,
+    });
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
   // bevel = superellipse(0) (straight diagonal). Drop + warn.
@@ -5471,10 +5477,52 @@ describe('corner-shape spec compliance (CSS Borders 4 §3.8)', () => {
     expect(warnSpy.mock.calls[0][0]).toMatch(/has no React Native equivalent/);
   });
 
-  // superellipse(infinity) / superellipse(-infinity) are square / notch.
-  it('superellipse(infinity) warns and drops', () => {
-    expect(transformDecl('corner-shape', 'superellipse(infinity)')).toEqual({});
+  // superellipse(infinity) is the square equivalent, so it takes the same
+  // zero-radius path as the keyword.
+  it('superellipse(infinity) is square', () => {
+    expect(transformDecl('corner-shape', 'superellipse(infinity)')).toEqual({
+      [CORNER_SQUARE_SENTINEL_KEY]: 0b1111,
+    });
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  // superellipse(-infinity) is notch, a concave 90deg angle with no RN
+  // contour. It must NOT be mistaken for square.
+  it('superellipse(-infinity) warns and drops', () => {
+    expect(transformDecl('corner-shape', 'superellipse(-infinity)')).toEqual({});
     expect(warnSpy.mock.calls[0][0]).toMatch(/has no React Native equivalent/);
+  });
+
+  // Square corners become radii rather than a curve, so they compose with a
+  // single curve on the remaining corners. Corner order is top-left, then
+  // clockwise, expanded 1->aaaa / 2->abab / 3->abcb / 4->abcd like
+  // border-radius.
+  it('square round squares the top-left and bottom-right only', () => {
+    expect(transformDecl('corner-shape', 'square round')).toEqual({
+      [CORNER_SQUARE_SENTINEL_KEY]: 0b0101,
+      borderCurve: 'circular',
+    });
+  });
+
+  it('round square squares the top-right and bottom-left only', () => {
+    expect(transformDecl('corner-shape', 'round square')).toEqual({
+      [CORNER_SQUARE_SENTINEL_KEY]: 0b1010,
+      borderCurve: 'circular',
+    });
+  });
+
+  it('square mixes with squircle, since square is a radius not a curve', () => {
+    expect(transformDecl('corner-shape', 'square squircle square squircle')).toEqual({
+      [CORNER_SQUARE_SENTINEL_KEY]: 0b0101,
+      borderCurve: 'continuous',
+    });
+  });
+
+  it('three values expand abcb', () => {
+    expect(transformDecl('corner-shape', 'square round square')).toEqual({
+      [CORNER_SQUARE_SENTINEL_KEY]: 0b0101,
+      borderCurve: 'circular',
+    });
   });
 
   // Grammar accepts {1,4} values. All-same mappings collapse to one prop.
@@ -5490,11 +5538,12 @@ describe('corner-shape spec compliance (CSS Borders 4 §3.8)', () => {
     });
   });
 
-  // Mixed mappings can't be one per-view borderCurve → drop + dedicated warn.
-  it('mixed mappings (round squircle) warn and drop', () => {
+  // Two different CURVES can't be one per-view borderCurve → drop + warn.
+  // (Unlike square, which is expressed as a radius and so composes freely.)
+  it('mixed curves (round squircle) warn and drop', () => {
     expect(transformDecl('corner-shape', 'round squircle')).toEqual({});
     expect(warnSpy.mock.calls[0][0]).toMatch(/applies one `borderCurve` to the whole view/);
-    expect(warnSpy.mock.calls[0][0]).toMatch(/round` or `squircle/);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/one curve for every non-`square` corner/);
   });
 
   // A supported value mixed with an unsupported one drops via the
@@ -5529,12 +5578,19 @@ describe('corner-shape spec compliance (CSS Borders 4 §3.8)', () => {
       expect(android).toBeDefined();
     });
 
-    it('round warns about Android too', () => {
+    // `circular` is RN's own default, so Android renders `round` exactly as
+    // authored. Warning there would report a gap that does not exist.
+    it('round does not warn on Android', () => {
       expect(transformDecl('corner-shape', 'round')).toEqual({ borderCurve: 'circular' });
-      const android = warnSpy.mock.calls.find(c =>
-        /renders circular corners on Android/.test(c[0])
-      );
-      expect(android).toBeDefined();
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    // `square` becomes a zero radius, which every platform draws.
+    it('square does not warn on Android', () => {
+      expect(transformDecl('corner-shape', 'square')).toEqual({
+        [CORNER_SQUARE_SENTINEL_KEY]: 0b1111,
+      });
+      expect(warnSpy).not.toHaveBeenCalled();
     });
   });
 
