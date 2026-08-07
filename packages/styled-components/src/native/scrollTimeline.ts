@@ -6,6 +6,7 @@ import type {
   ViewSubjectLayout,
 } from './animation/types';
 import { resolveRangeBoundary, type NamedRangeRect } from './animation/range';
+import { useComposedRef } from './composeRef';
 import { warnOnce } from './transform/dev';
 import { getRN } from './responsive';
 import { isWebPlatform } from './polyfills';
@@ -402,6 +403,103 @@ interface PublisherState {
 }
 
 /**
+ * Drive the entry's offsets from the UI thread as well: native-driver
+ * interpolations (opacity / transform keyframes) then keep pace with the
+ * finger instead of trailing the JS thread. The JS onScroll still runs
+ * for extent bookkeeping, layout-prop interpolations, and anything
+ * reading the values from JS; its setValue echo writes the value the
+ * native mapping already applied for that event, so it is a steady-state
+ * no-op (under JS jank it can momentarily rewind one frame, corrected by
+ * the next UI-thread event - strictly better than the pure-JS path that
+ * lagged continuously).
+ *
+ * Takes the committed host instance rather than looking one up, which is
+ * what lets the caller run this from a ref callback: resolving a view tag
+ * requires a mounted host, and a parameter states that where a dependency
+ * array could only assume it.
+ *
+ * Returns the detach, or undefined when no native mapping was made.
+ */
+export function attachNativeScrollMapping(
+  entry: ScrollTimelineEntry,
+  inst: any
+): (() => void) | undefined {
+  const trace = __DEV__ && isDebugEnabled();
+  if (!entry.nativeDriven) {
+    if (trace) dbg('scroll-timeline attach: skipped, entry is not native-driven');
+    return undefined;
+  }
+  const rn = getRN();
+  const Animated = rn.Animated;
+  if (!Animated || typeof Animated.attachNativeEvent !== 'function') {
+    if (trace) dbg('scroll-timeline attach: skipped, Animated.attachNativeEvent unavailable');
+    return undefined;
+  }
+  if (inst == null) {
+    if (trace) dbg('scroll-timeline attach: skipped, host ref is empty');
+    return undefined;
+  }
+  // Prefer the host component ref like RN's own sticky-header attach;
+  // attachNativeEvent resolves the tag via findNodeHandle internally
+  // and SILENTLY no-ops when it can't, so pre-resolve in dev to make
+  // a failed attachment loud instead of a quiet JS-paced fallback.
+  const node =
+    typeof inst.getNativeScrollRef === 'function'
+      ? inst.getNativeScrollRef()
+      : typeof inst.getScrollableNode === 'function'
+        ? inst.getScrollableNode()
+        : inst;
+  if (node == null) {
+    if (trace) dbg('scroll-timeline attach: skipped, scrollable node is empty');
+    return undefined;
+  }
+  // Pre-resolve the tag: attachNativeEvent silently no-ops on a null
+  // tag (after native-tagging the values), which would leave the echo
+  // disabled with nothing driving the native pair. Test renderers
+  // resolve no tags, so they keep the echo and stay observable.
+  // `getRN()` deliberately exposes no `findNodeHandle` (Fabric public
+  // instances carry the tag directly), so the field reads do the work.
+  const tag = resolveNativeViewTag(node, (rn as any).findNodeHandle ?? null);
+  if (tag === null) {
+    if (trace) dbg('scroll-timeline attach: no native view tag on the scroll host');
+    if (__DEV__ && !isJestLikeHost()) {
+      warnOnce(
+        'native-scroll-timeline-attach-failed',
+        'Could not resolve a native view tag for a styled scroll container, so its scroll timeline (and any position: sticky children) fall back to JavaScript-paced updates and may visibly trail fast scrolling. This usually means the scroll component does not expose its host ref.',
+        'attach'
+      );
+    }
+    return undefined;
+  }
+  try {
+    const sub = Animated.attachNativeEvent(node, 'onScroll', [
+      { nativeEvent: { contentOffset: { x: entry.offsetXNative, y: entry.offsetYNative } } },
+    ]);
+    entry.nativeAttached = true;
+    if (trace) dbg('scroll-timeline attach: ok, native scroll event attached to tag', tag);
+    return () => {
+      entry.nativeAttached = false;
+      if (__DEV__ && isDebugEnabled()) dbg('scroll-timeline attach: detached from tag', tag);
+      sub.detach();
+    };
+  } catch (e) {
+    if (trace) dbg('scroll-timeline attach: attachNativeEvent threw', e);
+    // Hosts without native animated support (test renderers, exotic
+    // scrollables) keep the JS-driven path.
+    if (__DEV__) {
+      warnOnce(
+        'native-scroll-timeline-attach-failed',
+        'Attaching the native scroll event for a styled scroll container threw' +
+          (e instanceof Error ? ` (${e.message})` : '') +
+          '; its scroll timeline and position: sticky children fall back to JavaScript-paced updates.',
+        'threw'
+      );
+    }
+    return undefined;
+  }
+}
+
+/**
  * Render-path hook for styled scroll containers: tracks offsets and
  * extents from the scroller's own events and publishes them through
  * ScrollTimelineContext. Returns the (possibly) augmented element
@@ -434,101 +532,33 @@ export function useScrollTimelinePublisher(
       viewportH: 0,
     };
   }
-  const hostRef = React.useRef<any>(null);
-  const activeEntry = active ? (stateRef.current?.entry ?? null) : null;
-  // Drive the entry's offsets from the UI thread as well: native-driver
-  // interpolations (opacity / transform keyframes) then keep pace with
-  // the finger instead of trailing the JS thread. The JS onScroll below
-  // still runs for extent bookkeeping, layout-prop interpolations, and
-  // anything reading the values from JS; its setValue echo writes the
-  // value the native mapping already applied for that event, so it is a
-  // steady-state no-op (under JS jank it can momentarily rewind one
-  // frame, corrected by the next UI-thread event - strictly better than
-  // the pure-JS path that lagged continuously).
-  // biome-ignore lint/plugin/no-effects: imperative attach of a native event mapping, which needs a committed host before it can resolve a view tag. A frozen-identity ref callback on the existing hostRef is the closer fit: it receives the host and makes that precondition structural, where this dep array only assumes it. Frozen, not inline, or the mapping detaches and reattaches every render.
-  React.useEffect(() => {
-    const trace = __DEV__ && isDebugEnabled();
-    if (activeEntry === null || !activeEntry.nativeDriven) {
-      if (trace && activeEntry !== null)
-        dbg('scroll-timeline attach: skipped, entry is not native-driven');
-      return;
-    }
-    const rn = getRN();
-    const Animated = rn.Animated;
-    if (!Animated || typeof Animated.attachNativeEvent !== 'function') {
-      if (trace) dbg('scroll-timeline attach: skipped, Animated.attachNativeEvent unavailable');
-      return;
-    }
-    const inst = hostRef.current;
-    if (inst == null) {
-      if (trace) dbg('scroll-timeline attach: skipped, host ref is empty');
-      return;
-    }
-    // Prefer the host component ref like RN's own sticky-header attach;
-    // attachNativeEvent resolves the tag via findNodeHandle internally
-    // and SILENTLY no-ops when it can't, so pre-resolve in dev to make
-    // a failed attachment loud instead of a quiet JS-paced fallback.
-    const node =
-      typeof inst.getNativeScrollRef === 'function'
-        ? inst.getNativeScrollRef()
-        : typeof inst.getScrollableNode === 'function'
-          ? inst.getScrollableNode()
-          : inst;
-    if (node == null) {
-      if (trace) dbg('scroll-timeline attach: skipped, scrollable node is empty');
-      return;
-    }
-    // Pre-resolve the tag: attachNativeEvent silently no-ops on a null
-    // tag (after native-tagging the values), which would leave the echo
-    // disabled with nothing driving the native pair. Test renderers
-    // resolve no tags, so they keep the echo and stay observable.
-    // `getRN()` deliberately exposes no `findNodeHandle` (Fabric public
-    // instances carry the tag directly), so the field reads do the work.
-    const tag = resolveNativeViewTag(node, (rn as any).findNodeHandle ?? null);
-    if (tag === null) {
-      if (trace) dbg('scroll-timeline attach: no native view tag on the scroll host');
-      if (__DEV__ && !isJestLikeHost()) {
-        warnOnce(
-          'native-scroll-timeline-attach-failed',
-          'Could not resolve a native view tag for a styled scroll container, so its scroll timeline (and any position: sticky children) fall back to JavaScript-paced updates and may visibly trail fast scrolling. This usually means the scroll component does not expose its host ref.',
-          'attach'
-        );
-      }
-      return;
-    }
-    try {
-      const sub = Animated.attachNativeEvent(node, 'onScroll', [
-        {
-          nativeEvent: {
-            contentOffset: { x: activeEntry.offsetXNative, y: activeEntry.offsetYNative },
-          },
-        },
-      ]);
-      activeEntry.nativeAttached = true;
-      if (trace) dbg('scroll-timeline attach: ok, native scroll event attached to tag', tag);
-      return () => {
-        activeEntry.nativeAttached = false;
-        if (__DEV__ && isDebugEnabled()) dbg('scroll-timeline attach: detached from tag', tag);
-        sub.detach();
-      };
-    } catch (e) {
-      if (trace) dbg('scroll-timeline attach: attachNativeEvent threw', e);
-      // Hosts without native animated support (test renderers, exotic
-      // scrollables) keep the JS-driven path.
-      if (__DEV__) {
-        warnOnce(
-          'native-scroll-timeline-attach-failed',
-          'Attaching the native scroll event for a styled scroll container threw' +
-            (e instanceof Error ? ` (${e.message})` : '') +
-            '; its scroll timeline and position: sticky children fall back to JavaScript-paced updates.',
-          'threw'
-        );
-      }
-      return;
-    }
-  }, [activeEntry]);
   const state = stateRef.current;
   const entry = active ? (state?.entry ?? null) : null;
+  // The native mapping attaches here rather than from an effect because
+  // it needs a committed host to resolve a view tag from, which is
+  // exactly what a ref callback is handed. It also attaches in the layout
+  // phase now, so the UI-thread mapping is live before the first paint
+  // instead of one paint later.
+  //
+  // Keyed on the entry, mirroring the dependency array it replaces: a
+  // per-render identity would detach and reattach the native event every
+  // render, which is the one thing this mapping exists to avoid.
+  const hostAttachRef = useComposedRef<unknown>(
+    inst => {
+      // One guard rather than a null test per statement: the ref only
+      // reaches props past the `entry === null` early return below, so
+      // this is unreachable and everything after it narrows.
+      if (entry === null) return noopUnsubscribe;
+      entry.host = inst;
+      const detach = attachNativeScrollMapping(entry, inst);
+      return () => {
+        if (detach !== undefined) detach();
+        entry.host = null;
+      };
+    },
+    elementProps.ref,
+    [entry]
+  );
   const name = namedDecl?.name;
   // Identity changes only when extents bump `version` (or scope inputs
   // move), so descendants' context subscriptions and render caches stay
@@ -615,18 +645,12 @@ export function useScrollTimelinePublisher(
     if (typeof userOnContentSizeChange === 'function') userOnContentSizeChange(w, h);
   };
 
-  const userRef = elementProps.ref;
   const augmented: Record<string, any> = {
     ...elementProps,
     onScroll,
     onLayout,
     onContentSizeChange,
-    ref: (inst: any) => {
-      hostRef.current = inst;
-      entry.host = inst;
-      if (typeof userRef === 'function') userRef(inst);
-      else if (userRef != null && typeof userRef === 'object') userRef.current = inst;
-    },
+    ref: hostAttachRef,
   };
   if (augmented.scrollEventThrottle === undefined) augmented.scrollEventThrottle = 16;
 
@@ -792,12 +816,25 @@ export function useSnapTargetRegistration(
   const keyRef = React.useRef<{ reg: SnapTargetRegistry | null } | null>(null);
   if (keyRef.current === null) keyRef.current = { reg: null };
   const key = keyRef.current;
-  // biome-ignore lint/plugin/no-effects: unmount-only deregistration from the snap-target registry. Replaceable by a ref callback cleanup composed into the props this hook already returns. Note the phase shift when it moves: ref detach runs in the mutation phase, effect cleanup after paint, so a scroller reading this registry sees the removal a frame earlier.
-  React.useEffect(
-    () => () => {
-      if (key.reg !== null && key.reg.targets.delete(key)) notifyRegistry(key.reg);
-      key.reg = null;
+  // Frozen: the registration is keyed on a stable object rather than on
+  // the entry, so the teardown is unmount-only. It reads `key.reg` at
+  // teardown time, which is whichever registry the last render pointed
+  // it at.
+  // Registration is gated on this, for the same reason as anchor-name:
+  // forwarding `ref` is the composed target's half of the contract, and a
+  // target that forwards onLayout but drops `ref` would register a snap
+  // offset the scroller could never drop again.
+  const attached = React.useRef(false);
+  const ref = useComposedRef<unknown>(
+    () => {
+      attached.current = true;
+      return () => {
+        attached.current = false;
+        if (key.reg !== null && key.reg.targets.delete(key)) notifyRegistry(key.reg);
+        key.reg = null;
+      };
     },
+    elementProps.ref,
     [key]
   );
   if (target === undefined || __NATIVE_WEB__) return elementProps;
@@ -810,30 +847,38 @@ export function useSnapTargetRegistration(
   const onLayout = (e: any) => {
     const l = e?.nativeEvent?.layout;
     if (l !== undefined) {
-      const prev = registry.targets.get(key);
-      if (
-        prev === undefined ||
-        prev.x !== l.x ||
-        prev.y !== l.y ||
-        prev.w !== l.width ||
-        prev.h !== l.height ||
-        prev.align !== target.align ||
-        prev.stop !== target.stop
-      ) {
-        registry.targets.set(key, {
-          align: target.align,
-          h: l.height,
-          stop: target.stop,
-          w: l.width,
-          x: l.x,
-          y: l.y,
-        });
-        notifyRegistry(registry);
+      if (attached.current) {
+        const prev = registry.targets.get(key);
+        if (
+          prev === undefined ||
+          prev.x !== l.x ||
+          prev.y !== l.y ||
+          prev.w !== l.width ||
+          prev.h !== l.height ||
+          prev.align !== target.align ||
+          prev.stop !== target.stop
+        ) {
+          registry.targets.set(key, {
+            align: target.align,
+            h: l.height,
+            stop: target.stop,
+            w: l.width,
+            x: l.x,
+            y: l.y,
+          });
+          notifyRegistry(registry);
+        }
+      } else if (__DEV__) {
+        warnOnce(
+          'native-snap-align-ref-dropped',
+          'scroll-snap-align is inactive because the styled component never received a ref. styled-components registers the snap offset from a ref callback so it can deregister again on unmount; a component that renders its own host without forwarding `ref` cannot participate. Forward the ref to the host element, or move scroll-snap-align onto one that does.',
+          'snap-align'
+        );
       }
     }
     if (typeof userOnLayout === 'function') userOnLayout(e);
   };
-  return { ...elementProps, onLayout };
+  return { ...elementProps, onLayout, ref };
 }
 
 /** Pick the axis keyword from a 1-2 keyword scroll-snap-align value:
@@ -1017,7 +1062,6 @@ let stickyIdCounter = 0;
 export function useStickyPosition(active: boolean): StickyPosition {
   const timelines = React.useContext(ScrollTimelineContext);
   const [layout, setLayout] = React.useState<StickyLayout | null>(null);
-  const [stuck, setStuck] = React.useState(false);
   const layoutRef = React.useRef<StickyLayout | null>(null);
   layoutRef.current = layout;
   const prevLayerRef = React.useRef<StickyPosition['layer']>(null);
@@ -1058,27 +1102,44 @@ export function useStickyPosition(active: boolean): StickyPosition {
   const changed = layer !== prevLayerRef.current;
   prevLayerRef.current = layer;
 
-  // Stuck flag for touch routing and accessibility. JS-paced on
-  // purpose: it changes only at the crossover, and pointerEvents /
-  // accessibility props cannot be driven natively anyway.
-  // biome-ignore lint/plugin/no-effects: a subscription to external mutable state, so useSyncExternalStore is the fit, modeled on useRegistryVersion above. __getValue() already gives a synchronous read, and the snapshot is a boolean, stable under Object.is. That is the granularity win: today every scroll frame calls setStuck and React re-enters this component only to bail, where an unchanged snapshot schedules nothing. subscribe must be useCallback-stable on [entry, layoutY] or the listener is torn down and re-added each render.
-  React.useEffect(() => {
-    if (entry === null || layoutY === null) return;
-    const read = () => {
-      const v = typeof entry.offsetY.__getValue === 'function' ? entry.offsetY.__getValue() : 0;
-      setStuck(v >= layoutY);
-    };
-    read();
-    const sub = entry.offsetY.addListener(({ value }: { value: number }) =>
-      setStuck(value >= layoutY)
-    );
-    return () => entry.offsetY.removeListener(sub);
+  // Stuck flag for touch routing and accessibility. JS-paced on purpose:
+  // it changes only at the crossover, and pointerEvents / accessibility
+  // props cannot be driven natively anyway.
+  //
+  // The Animated.Value is external mutable state, so this subscribes to
+  // it rather than mirroring it into React state from an effect.
+  //
+  // Measured against the effect it replaces, over 120 frames per case
+  // with one commit per frame: frames that do not cross the threshold
+  // render 0 times either way (React's eager bailout already skipped an
+  // unchanged setStuck), and frames that cross render once either way.
+  // The saving is one render per subscribe, because the effect had to
+  // call setStuck after commit to learn a value the render could already
+  // have read. Do not restate this as a per-frame win; it is not one.
+  //
+  // Both callbacks are memoized because useSyncExternalStore treats
+  // `subscribe`'s identity as a dependency array: an inline arrow would
+  // remove and re-add the Animated listener every render.
+  const subscribeStuck = React.useCallback(
+    (onStoreChange: () => void) => {
+      if (entry === null || layoutY === null) return noopUnsubscribe;
+      const sub = entry.offsetY.addListener(onStoreChange);
+      return () => entry.offsetY.removeListener(sub);
+    },
+    [entry, layoutY]
+  );
+  const getStuck = React.useCallback(() => {
+    if (entry === null || layoutY === null) return false;
+    const v = typeof entry.offsetY.__getValue === 'function' ? entry.offsetY.__getValue() : 0;
+    return v >= layoutY;
   }, [entry, layoutY]);
+  const stuck = React.useSyncExternalStore(subscribeStuck, getStuck, getStuck);
 
   // Publish the twin built by register() below. Runs every render: the
   // element captures this render's props/style, and sticky elements
   // re-render rarely (mount, layout change, crossover).
-  // biome-ignore lint/plugin/no-effects: publish-every-commit, paired with the deregistration below. An inline ref callback carries exactly this shape, since an unfrozen identity re-runs per render the way a missing dep array does, and it may notify a registry where useInsertionEffect may not (that would schedule a render of StickyOverlayHost, which React rejects from an insertion effect). The risk to measure before moving: cleanup-then-setup per render would fire notifyRegistry twice where this fires once.
+  //
+  // biome-ignore lint/plugin/no-effects: carve-out, measured rather than assumed. The obvious replacement is one inline ref callback covering this publish and the deregistration below, and it was built and measured against the commit-order baseline: a re-render went from one notifyRegistry call to two, because React runs a changed ref callback's cleanup before its setup, and between those two calls the registry is briefly missing the clone that StickyOverlayHost is subscribed to. Freezing the callback's identity removes the churn but also removes the per-render republish, so the overlay keeps a stale twin. useInsertionEffect cannot take this either: notifyRegistry schedules a render of StickyOverlayHost, which React rejects from an insertion effect. Retire this only if StickyOverlayHost stops re-rendering per notify, or if the clone stops capturing per-render props.
   React.useEffect(() => {
     if (entry === null) return;
     const registry = entry.stickyClones;
@@ -1089,7 +1150,7 @@ export function useStickyPosition(active: boolean): StickyPosition {
     }
   });
 
-  // biome-ignore lint/plugin/no-effects: the deregistration half of the publish above, and it collapses into that same ref callback's cleanup rather than staying its own hook.
+  // biome-ignore lint/plugin/no-effects: carve-out, the deregistration half of the publish above. It stays an effect for the same measured reason and must stay on the same phase as its publish: splitting the pair across the mutation and passive phases would delete the clone before paint and republish it after.
   React.useEffect(() => {
     if (entry === null) return;
     const registry = entry.stickyClones;

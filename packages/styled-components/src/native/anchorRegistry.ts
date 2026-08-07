@@ -12,6 +12,8 @@
  */
 
 import React from 'react';
+import { useComposedRef } from './composeRef';
+import { warnOnce } from './transform/dev';
 
 export interface AnchorRect {
   x: number;
@@ -80,21 +82,46 @@ export function useAnchorNamePublisher(
   name: string | undefined,
   elementProps: Record<string, any>
 ): Record<string, any> {
-  const nameRef = React.useRef<string | undefined>(undefined);
-  nameRef.current = name;
-  // biome-ignore lint/plugin/no-effects: unmount-only teardown, dropping this anchor's rect so `anchor()` consumers cannot read a dead one. Replaceable by a ref callback cleanup composed into the props this hook already returns, which also ties the teardown to the host actually having mounted.
-  React.useEffect(
-    () => () => {
-      if (nameRef.current !== undefined) removeAnchor(nameRef.current);
+  // Keyed on `name`: React runs a ref callback's cleanup when its
+  // identity changes, so a rename releases the old name before the next
+  // layout publishes under the new one. The unmount-only effect this
+  // replaces read the name from a ref and so never fired on rename,
+  // stranding the old rect for `anchor()` consumers to keep reading.
+  // Forwarding `ref` is part of the contract a composed target owes this
+  // hook, not something the library can work around: the rect is
+  // module-global state whose only removal path is the ref cleanup, so a
+  // target that forwards onLayout but drops `ref` would register a rect
+  // nothing could ever remove. Gating publication on the ref makes both
+  // halves share one fate, turning an unfixable leak into an inert
+  // feature plus a dev warning naming what the target must do.
+  const attached = React.useRef(false);
+  const ref = useComposedRef<unknown>(
+    () => {
+      attached.current = true;
+      return () => {
+        attached.current = false;
+        if (name !== undefined) removeAnchor(name);
+      };
     },
-    []
+    elementProps.ref,
+    [name]
   );
   if (name === undefined) return elementProps;
   const userOnLayout = elementProps.onLayout;
   const onLayout = (e: any) => {
     const l = e?.nativeEvent?.layout;
-    if (l) setAnchorRect(name, { x: l.x, y: l.y, width: l.width, height: l.height });
+    if (l) {
+      if (attached.current) {
+        setAnchorRect(name, { x: l.x, y: l.y, width: l.width, height: l.height });
+      } else if (__DEV__) {
+        warnOnce(
+          'native-anchor-name-ref-dropped',
+          `anchor-name: ${name} is inactive because the styled component never received a ref. styled-components publishes the anchor's rect from a ref callback so it can remove it again on unmount; a component that renders its own host without forwarding \`ref\` cannot participate. Forward the ref to the host element, or move anchor-name onto one that does.`,
+          name
+        );
+      }
+    }
     if (typeof userOnLayout === 'function') userOnLayout(e);
   };
-  return { ...elementProps, onLayout };
+  return { ...elementProps, onLayout, ref };
 }

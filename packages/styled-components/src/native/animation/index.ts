@@ -2468,7 +2468,7 @@ const animatedAdapter: AnimationAdapter = {
 
     // scratchRef.current is component-scoped and never reassigned, so
     // the cleanup runs exactly once on unmount with stable deps.
-    // biome-ignore lint/plugin/no-effects: carve-out. Unmount-only teardown of the adapter's Animated scratch (listeners and running animations), but an adapter returns a style object rather than props, so there is no element to hang a ref callback on. Retires only if the AnimationAdapter contract grows a ref the styled component composes.
+    // biome-ignore lint/plugin/no-effects: carve-out. Unmount-only teardown of the adapter's Animated scratch (listeners and running animations). An adapter returns a style object rather than props, so there is no element to hang a ref callback on, but growing the contract a ref would not retire this: the scratch is armed during render because the style depends on it, so the arm half cannot be gated on the ref the way anchor-name and scroll-snap-align gate theirs. A composed target that dropped the ref would then leak listeners and running animations past unmount, which is worse than the effect. An effect is the only teardown that runs whatever the target does with `ref`.
     React.useEffect(() => () => disposeScratch(scratchRef.current!), []);
 
     if (!hasTransition && !hasAnimation && !hasStarting) {
