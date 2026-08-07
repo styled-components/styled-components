@@ -87,7 +87,7 @@ test('the useInsertionEffect allowlist names exactly the files that write to the
   const entry = config.plugins.find((p: { path: string }) =>
     p.path.endsWith('no-insertion-effect.grit')
   );
-  assert.ok(entry, 'biome.jsonc registers no no-insertion-effect plugin entry');
+  assert.ok(entry, 'biome.jsonc has no plugin entry for no-insertion-effect.grit');
 
   const allowed: string[] = entry.includes
     .filter((glob: string) => glob.startsWith('!**/') && !glob.includes('test'))
