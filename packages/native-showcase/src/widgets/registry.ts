@@ -169,7 +169,7 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     slug: 'corner-shape-board',
     title: 'Corner shapes',
     summary:
-      '`corner-shape: squircle` maps to the Apple smooth corner (iOS `borderCurve: continuous`); overlapping round vs squircle squares expose the smoothing delta as corner crescents. `superellipse(2)` joins it; `scoop` has no native contour, warns, and renders default corners (Chrome 139+ scoops it).',
+      '`corner-shape: squircle` maps to the Apple smooth corner (iOS `borderCurve: continuous`), `round` to circular. The tiles look nearly identical and that is the honest ceiling of the mapping: iOS does apply `continuous`, but it smooths curvature rather than squaring the corner, moving the outline about an eighth as far as a true `superellipse(2)` would. Android drops the prop entirely, since `borderCurve` is missing from its view config. The stacked box amplifies what is left - on iOS, a hairline at each corner shoulder. `superellipse(2)` is the spec definition of `squircle`, so matching it exactly is correct; `scoop` has no native contour, warns, and is drawn as an outline (Chrome 139+ scoops it for real). The last row is the one exactly-rendered value: `square` zeroes the radius on the corners it names, so it draws a true rectangle on every platform including Android, and mixes with a curve (`square round`) because it resolves per corner.',
     feature: 'corner-shape',
     category: 'Visual effects',
     Widget: CornerShapeBoard,
