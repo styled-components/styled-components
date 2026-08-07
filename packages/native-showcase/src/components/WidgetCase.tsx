@@ -2,6 +2,7 @@ import React from 'react';
 import styled from 'styled-components/native';
 import { FeatureChip } from '@/components/FeatureChip';
 import { InlineMarkdown } from '@/components/Markdown';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { theme as t } from '@/theme/tokens';
 
 export interface WidgetCaseProps {
@@ -49,7 +50,9 @@ export function WidgetCase({ title, brief, slug, feature, children }: WidgetCase
         <Title>{title}</Title>
         <InlineMarkdown variant="brief">{brief}</InlineMarkdown>
       </Header>
-      <Demo>{children}</Demo>
+      <Demo>
+        <ErrorBoundary label={title}>{children}</ErrorBoundary>
+      </Demo>
     </Section>
   );
 }

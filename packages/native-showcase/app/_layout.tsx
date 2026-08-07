@@ -15,6 +15,7 @@ import React, { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { setAnimationDebug, ThemeProvider } from 'styled-components/native';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { FpsMeter } from '@/components/FpsMeter';
 import { darkTheme, lightTheme } from '@/theme/tokens';
 
@@ -31,12 +32,17 @@ function ThemedStack() {
   return (
     <ThemeProvider theme={theme}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: theme.colors.bg },
-        }}
-      />
+      {/* Inside ThemeProvider so the fallback panel can resolve tokens.
+          A failure above the catalog does unmount it, so the scaffold's
+          restoration has to carry the position on the retry remount. */}
+      <ErrorBoundary label="Showcase" variant="screen">
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: theme.colors.bg },
+          }}
+        />
+      </ErrorBoundary>
       <FpsMeter />
     </ThemeProvider>
   );
