@@ -39,7 +39,11 @@
         // Babel engine, resolved by Metro/expo tooling rather than imported.
         "@babel/core",
         // Not referenced anywhere in the app; knip infers it from expo config.
-        "expo-updates"
+        "expo-updates",
+        // metro.config.js resolves it from the workspace root on purpose, to
+        // pin Metro to the CJS build; declaring it here would claim the app
+        // owns a copy it deliberately does not.
+        "pretty-format"
       ]
     },
     "packages/sandbox": {
