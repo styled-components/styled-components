@@ -77,7 +77,7 @@ function warnUnsupported(raw: string): void {
     'native-corner-shape-unsupported',
     '`corner-shape: ' +
       raw +
-      '` has no React Native equivalent. Concave and bevelled contours cannot be drawn; the reachable shapes are `round`, `squircle`, and `square`.',
+      '` has no React Native equivalent. Concave and beveled contours cannot be drawn; the reachable shapes are `round`, `squircle`, and `square`.',
     raw
   );
 }
@@ -89,7 +89,7 @@ function warnAndroid(): void {
   if (getReactNativePlatformOS() !== 'android') return;
   warnOnce(
     'native-corner-shape-android',
-    '`corner-shape: squircle` renders circular corners on Android. The `borderCurve` it maps to only takes effect on iOS; Android ignores it and falls back to the default rounded corner.'
+    'The Apple-smooth corner curve (`corner-shape: squircle`, or a `superellipse()` value near 2) renders as an ordinary circular corner on Android. The `borderCurve` it maps to is absent from the Android view config, so the prop is dropped. Use `corner-shape: square` for a contour Android draws, or accept the circular fallback.'
   );
 }
 

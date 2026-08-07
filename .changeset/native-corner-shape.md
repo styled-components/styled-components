@@ -8,7 +8,7 @@ React Native: the `corner-shape` property is supported, at the fidelity each val
 
 `squircle` (and nearby `superellipse()` values) maps to Apple's continuous curve, which is an approximation rather than a match. Measured on iOS 26, `continuous` moves the outline by under 1% of the element's side at any radius, roughly an eighth as far as the exponent-4 superellipse the spec asks for, so it looks close to `round`. Android drops `borderCurve` altogether and warns.
 
-Concave and bevelled contours (`bevel`, `notch`, `scoop`, far-out `superellipse()` values) cannot be drawn and drop with a development warning, leaving the initial `round`. Two different curves on different corners also drop, since `borderCurve` applies to the whole view. On the web the value passes through to browsers that support it.
+Concave and beveled contours (`bevel`, `notch`, `scoop`, far-out `superellipse()` values) cannot be drawn and drop with a development warning, leaving the initial `round`. Two different curves on different corners also drop, since `borderCurve` applies to the whole view. On the web the value passes through to browsers that support it.
 
 ```js
 const Card = styled.View`
