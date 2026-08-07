@@ -313,6 +313,21 @@ const STYLE_HIDDEN = { opacity: 0 } as const;
 const VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 1 } as const;
 
 /**
+ * How many estimate-hop-then-retry rounds restoration gets before it
+ * settles wherever it reached. Each round mounts another band of rows, so
+ * a deep index needs several; the ceiling stops a target that can never
+ * resolve (a saved index past the end of a shrunken list) from spinning.
+ */
+const MAX_SCROLL_RETRIES = 6;
+
+/**
+ * Ceiling on the Android reveal gate. Longer than the retry budget would
+ * leave the user staring at a blank list; shorter and they watch the
+ * scrub. Restoration keeps working after the reveal either way.
+ */
+const REVEAL_CEILING_MS = 1500;
+
+/**
  * Virtualized scaffold backed by a `FlatList`. Off-screen items unmount,
  * so heavy widgets (timers, transitions, container queries) only run for
  * what's on screen.
@@ -400,7 +415,16 @@ export function ScreenScaffold<Item>({
       .catch(() => finalize(undefined));
     return () => {
       cancelled = true;
-      if (writeTimerRef.current) clearTimeout(writeTimerRef.current);
+      // Flush rather than drop: a throttled write still pending when the
+      // screen goes away is the most recent position the user had, and
+      // discarding it restores them somewhere they already scrolled past.
+      if (writeTimerRef.current) {
+        clearTimeout(writeTimerRef.current);
+        writeTimerRef.current = null;
+        if (restoreTargetRef.current === null) {
+          AsyncStorage.setItem(storageKey, String(lastIndexRef.current)).catch(() => undefined);
+        }
+      }
     };
   }, [storageKey, focusSlug, anchorIndex, data.length]);
 
@@ -508,7 +532,7 @@ export function ScreenScaffold<Item>({
     // Safety reveal: if the restoration somehow fails to land (e.g.
     // `onScrollToIndexFailed` exhausts its retries silently), unhide
     // after a short ceiling so the user is never permanently blank.
-    const revealTimer = setTimeout(() => setHidden(false), 800);
+    const revealTimer = setTimeout(() => setHidden(false), REVEAL_CEILING_MS);
     return () => {
       cancelAnimationFrame(rafId);
       clearTimeout(revealTimer);
@@ -596,17 +620,45 @@ export function ScreenScaffold<Item>({
   // multiplied by the reported average item length); that motion
   // mounts items in the target region, after which the precise
   // `scrollToIndex` call succeeds.
+  // Bounded because each attempt mounts another band of rows; an
+  // unbounded loop against a target that can never resolve (stale saved
+  // index, data shrunk under us) would spin forever.
+  const failedAttemptsRef = React.useRef(0);
+  const retryTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  React.useEffect(
+    () => () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    },
+    []
+  );
+
   const onScrollToIndexFailed = React.useCallback(
     (info: { index: number; averageItemLength: number }) => {
       if (restoreTargetRef.current === null) return;
+      // One retry is not enough after a reload: the list re-mounts cold,
+      // so the first estimated hop often lands short and the second
+      // measurement is still mid-flight. Giving up here is what surfaced
+      // as "an error sent me back to the top", because the safety reveal
+      // then showed an unrestored list.
+      if (failedAttemptsRef.current >= MAX_SCROLL_RETRIES) {
+        restoreTargetRef.current = null;
+        restorationSettledRef.current = true;
+        setHidden(false);
+        return;
+      }
+      failedAttemptsRef.current += 1;
       listRef.current?.scrollToOffset({
         offset: info.averageItemLength * info.index,
         animated: false,
       });
-      setTimeout(() => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      // Back off a little each round; later attempts are waiting on more
+      // rows to measure than the first one was.
+      retryTimerRef.current = setTimeout(() => {
+        retryTimerRef.current = null;
         if (restoreTargetRef.current === null) return;
         listRef.current?.scrollToIndex({ index: info.index, animated: false, viewPosition: 0 });
-      }, 100);
+      }, 100 * failedAttemptsRef.current);
     },
     []
   );
