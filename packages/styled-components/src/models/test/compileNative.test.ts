@@ -60,6 +60,70 @@ describe('toNativeStyles', () => {
     });
   });
 
+  // CSS Borders 4 §3.7: `square` is a convex 90deg corner, which the spec
+  // notes "looks identical to the 'normal' square corner you get from
+  // border-radius: 0". The polyfill emits a corner mask and this fold turns
+  // it into per-corner radii once the block has merged.
+  describe('corner-shape: square folds into per-corner radii', () => {
+    it('squares every corner and leaves no sentinel behind', () => {
+      const r = compile('border-radius: 20px; corner-shape: square;');
+      expect(r.base).toEqual({
+        borderRadius: 20,
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
+        borderBottomRightRadius: 0,
+        borderBottomLeftRadius: 0,
+      });
+    });
+
+    // The reason the fold exists. `corner-shape` and `border-radius` are
+    // independent properties, so declaration order between them must not
+    // change the result; emitting the zero from the handler would let a
+    // later `border-radius` silently un-square the corners.
+    it('is order-independent against border-radius', () => {
+      const before = compile('corner-shape: square; border-radius: 20px;').base;
+      const after = compile('border-radius: 20px; corner-shape: square;').base;
+      expect(before).toEqual(after);
+      expect(before.borderTopLeftRadius).toBe(0);
+    });
+
+    it('squares only the corners named, keeping the curve on the rest', () => {
+      const r = compile('border-radius: 16px; corner-shape: square squircle;');
+      expect(r.base).toEqual({
+        borderRadius: 16,
+        borderCurve: 'continuous',
+        borderTopLeftRadius: 0,
+        borderBottomRightRadius: 0,
+      });
+    });
+
+    // An author-declared per-corner radius collides with the fold on the
+    // same key; the shape wins, since in CSS the radius only sizes the
+    // corner area and never un-squares it.
+    it('overrides an explicit per-corner radius on a squared corner', () => {
+      const r = compile('border-top-left-radius: 30px; corner-shape: square round;');
+      expect(r.base.borderTopLeftRadius).toBe(0);
+      expect(r.base.borderCurve).toBe('circular');
+    });
+
+    // The fold lives in processDecls, which every layer passes through, so
+    // a conditional block gets it too rather than leaking the sentinel.
+    it('folds inside a media query, not just the base block', () => {
+      const r = compile('@media (min-width: 1px) { border-radius: 20px; corner-shape: square; }');
+      expect(r.conditional[0]).toEqual({
+        type: 'media',
+        condition: '(min-width: 1px)',
+        styles: {
+          borderRadius: 20,
+          borderTopLeftRadius: 0,
+          borderTopRightRadius: 0,
+          borderBottomRightRadius: 0,
+          borderBottomLeftRadius: 0,
+        },
+      });
+    });
+  });
+
   describe('RN unsupported values', () => {
     it('warns and drops fit-content', () => {
       const r = compile('width: fit-content; height: 20px;');

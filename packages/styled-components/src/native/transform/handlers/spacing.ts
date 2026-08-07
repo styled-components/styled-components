@@ -19,7 +19,12 @@ const BORDER_WIDTH_KEYS = [
   'borderBottomWidth',
   'borderLeftWidth',
 ] as const;
-const BORDER_RADIUS_KEYS = [
+/**
+ * Per-corner radius longhands in CSS corner order (top-left, then
+ * clockwise). Shared with the `corner-shape` fold, which zeroes the
+ * corners an author declared `square`.
+ */
+export const BORDER_RADIUS_KEYS = [
   'borderTopLeftRadius',
   'borderTopRightRadius',
   'borderBottomRightRadius',
