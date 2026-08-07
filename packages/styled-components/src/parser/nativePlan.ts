@@ -23,7 +23,6 @@ export type {
   NthSpec,
   PseudoState,
 };
-export { NATIVE_AT_CLASS, NATIVE_RULE_CLASS };
 
 /**
  * Parse-time-classified selector/at-rule metadata for the native runtime.

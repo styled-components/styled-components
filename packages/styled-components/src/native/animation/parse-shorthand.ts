@@ -660,12 +660,6 @@ export const ANIMATION_LONGHAND_KEYS = new Set([
   'animationTimeline',
 ]);
 
-/**
- * Scroller-side timeline declaration keys; lifted off the base style
- * into `NativeStyles.scrollTimeline` by compileNative.
- */
-export const SCROLL_TIMELINE_KEYS = new Set(['scrollTimelineName', 'scrollTimelineAxis']);
-
 export const TRANSITION_LONGHAND_KEYS = new Set([
   'transitionProperty',
   'transitionDuration',

@@ -203,6 +203,7 @@ function joinStringRules(rules: ReadonlyArray<unknown>, separator = ''): string 
 }
 
 // Syntactic gate for anchor() / anchor-size() usage (CSS Anchor
-// Positioning). Mirrors ANCHOR_FN_RE in transform/polyfills/anchorFns;
-// duplicated here to keep NativeStyle free of a polyfill import.
+// Positioning). Declared here rather than imported from the anchor
+// polyfill so NativeStyle, which the web path also loads, pulls in no
+// polyfill module for a one-line regex.
 const ANCHOR_FN_RE = /\banchor(?:-size)?\(/;

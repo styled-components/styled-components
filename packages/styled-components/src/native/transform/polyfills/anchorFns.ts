@@ -121,6 +121,3 @@ export function buildAnchorResolver(value: string, prop: string, isSize: boolean
     return rect.x + rect.width;
   };
 }
-
-/** Quick syntactic gate used by the styled-component construction scan. */
-export const ANCHOR_FN_RE = /\banchor(?:-size)?\(/;

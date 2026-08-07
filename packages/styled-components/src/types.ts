@@ -210,13 +210,6 @@ export interface Compiler {
   ) => string[] | null;
 }
 
-/**
- * @deprecated use {@link Compiler}. The v7 compiler shape replaces the v6
- * `Stringifier` function: it carries `hash` plus dedicated `compile` and
- * `emit` entry points instead of a single callable.
- */
-export type Stringifier = Compiler;
-
 export interface ShouldForwardProp<R extends Runtime> {
   (prop: string, elementToBeCreated: StyledTarget<R>): boolean;
 }
@@ -560,11 +553,6 @@ export interface INativeStyle<Props extends BaseObject> {
   usesAnchorFunctions: boolean;
   compile(executionContext: ExecutionContext & Props): CompileOutput;
 }
-
-/** @deprecated use {@link INativeStyle}. */
-export type IInlineStyle<Props extends BaseObject> = INativeStyle<Props>;
-/** @deprecated use {@link INativeStyleConstructor}. */
-export type IInlineStyleConstructor<Props extends BaseObject> = INativeStyleConstructor<Props>;
 
 export type CSSProperties = CSS.Properties<number | (string & {})>;
 
