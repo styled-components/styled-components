@@ -71,24 +71,19 @@ it('JS-driver progress nodes root at the JS pair', () => {
 describe('resolveNativeViewTag', () => {
   // Fabric public instances (ReactNativeElement) carry the tag directly;
   // RN's own attachNativeEvent path reads it the same way. The cached RN
-  // surface in `getRN()` has no `findNodeHandle`, so the direct read is
-  // the only resolution that works on-device.
+  // surface in `getRN()` has no `findNodeHandle`, so a field read is the
+  // only resolution that works on-device.
   it('reads __nativeTag off a Fabric public instance', () => {
-    expect(resolveNativeViewTag({ __nativeTag: 4856 }, null)).toBe(4856);
+    expect(resolveNativeViewTag({ __nativeTag: 4856 })).toBe(4856);
   });
 
   it('reads _nativeTag off a Paper host instance', () => {
-    expect(resolveNativeViewTag({ _nativeTag: 77 }, null)).toBe(77);
+    expect(resolveNativeViewTag({ _nativeTag: 77 })).toBe(77);
   });
 
-  it('falls back to findNodeHandle when no tag field is present', () => {
-    const find = (n: any) => (n.marker === true ? 9 : null);
-    expect(resolveNativeViewTag({ marker: true }, find)).toBe(9);
-  });
-
-  it('returns null for untagged nodes without a resolver (test renderers)', () => {
-    expect(resolveNativeViewTag({}, null)).toBeNull();
-    expect(resolveNativeViewTag({ __nativeTag: 'not-a-number' }, null)).toBeNull();
+  it('returns null for untagged nodes (test renderers)', () => {
+    expect(resolveNativeViewTag({})).toBeNull();
+    expect(resolveNativeViewTag({ __nativeTag: 'not-a-number' })).toBeNull();
   });
 });
 
