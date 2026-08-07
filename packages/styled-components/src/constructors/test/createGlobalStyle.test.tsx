@@ -802,6 +802,43 @@ describe(`createGlobalStyle`, () => {
       }"
     `);
   });
+
+  /**
+   * Global rules are written from an insertion effect, which React runs
+   * for the whole tree before any layout effect. A consumer measuring in
+   * its own layout effect therefore reads the styled value even when the
+   * global style component is a LATER sibling, where a layout-effect
+   * injection would still be waiting its turn.
+   *
+   * The later-sibling placement is the whole point: with both on the same
+   * phase, React's bottom-up, tree-order flush hands the consumer the
+   * unstyled value, so the ordering is an accident of JSX position rather
+   * than a guarantee.
+   */
+  it(`global rules land before a consumer's layout effect measures`, () => {
+    const Global = createGlobalStyle`
+      .sc-measured { display: none; }
+    `;
+
+    let measured: string | null = null;
+    function Consumer() {
+      const ref = React.useRef<HTMLDivElement | null>(null);
+      React.useLayoutEffect(() => {
+        const node = ref.current;
+        if (node !== null) measured = window.getComputedStyle(node).display;
+      }, []);
+      return <div className="sc-measured" ref={ref} />;
+    }
+
+    render(
+      <>
+        <Consumer />
+        <Global />
+      </>
+    );
+
+    expect(measured).toBe('none');
+  });
 });
 
 describe('createGlobalStyle HMR', () => {
@@ -815,8 +852,8 @@ describe('createGlobalStyle HMR', () => {
    * the wrapper's fiber.  Swapping the render function mimics Fast Refresh
    * replacing the closure without unmounting.
    *
-   * The fix: including `globalStyle` in useLayoutEffect deps so that
-   * the new object reference from the re-evaluated module triggers
+   * The fix: including `globalStyle` in the injection effect's deps so
+   * that the new object reference from the re-evaluated module triggers
    * effect cleanup + re-run.
    */
 
@@ -852,7 +889,7 @@ describe('createGlobalStyle HMR', () => {
 
     // "HMR patch";swap to V2's render function on the SAME fiber.
     // DynamicRenderer's fiber stays mounted; hooks are preserved.
-    // The useLayoutEffect callback now captures V2's globalStyle.
+    // The insertion effect's callback now captures V2's globalStyle.
     // With fix: deps include globalStyle (new ref) → effect re-runs.
     // Without fix: deps are [instance, styleSheet] (unchanged) → effect skipped.
     rerender(<DynamicRenderer renderFn={innerV2} />);
@@ -927,7 +964,7 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
    * These tests exercise WebGlobalStyle.renderStyles() directly to cover
    * the rulesEqual fast-path on the pure model. The React lifecycle
    * path also reaches this fast-path now -- see the lifecycle tests
-   * below (`useLayoutEffect rebuildGroup`).
+   * below (`createGlobalStyle rebuildGroup on cleanup`).
    */
 
   let sheet: StyleSheet;
@@ -1133,7 +1170,7 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
   });
 });
 
-describe('createGlobalStyle useLayoutEffect rebuildGroup (#5730)', () => {
+describe('createGlobalStyle rebuildGroup on cleanup (#5730)', () => {
   beforeEach(() => {
     resetStyled();
   });
