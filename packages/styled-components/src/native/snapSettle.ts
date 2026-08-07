@@ -1,5 +1,6 @@
 import React from 'react';
 import { Dict } from '../types';
+import { useComposedRef } from './composeRef';
 import type { ScrollTimelineEntry } from './scrollTimeline';
 import type { GestureResponderEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 
@@ -48,18 +49,20 @@ export function useSnapSettle(
   entry: ScrollTimelineEntry | null,
   elementProps: Dict<any>
 ): Dict<any> {
-  const ref = React.useRef<SettleState | null>(null);
-  // biome-ignore lint/plugin/no-effects: unmount-only teardown, clearing the pending settle timer. Replaceable by a ref callback cleanup composed into the props this hook already returns; the callback identity must be frozen, since an inline arrow re-runs cleanup and setup every render and would cancel the timer mid-settle.
-  React.useEffect(
+  const stateRef = React.useRef<SettleState | null>(null);
+  // Frozen: the teardown is unmount-only, and reads the pending timer out
+  // of a ref rather than closing over it.
+  const hostAttachRef = useComposedRef<unknown>(
     () => () => {
-      const s = ref.current;
-      if (s !== null && s.timer !== null) clearTimeout(s.timer);
+      const pending = stateRef.current;
+      if (pending !== null && pending.timer !== null) clearTimeout(pending.timer);
     },
+    elementProps.ref,
     []
   );
   if (!active || __NATIVE_WEB__ || entry === null) return elementProps;
-  if (ref.current === null) ref.current = { offX: 0, offY: 0, timer: null };
-  const s = ref.current;
+  if (stateRef.current === null) stateRef.current = { offX: 0, offY: 0, timer: null };
+  const s = stateRef.current;
 
   const horizontal = elementProps.horizontal === true;
   const snapToInterval = elementProps.snapToInterval;
@@ -123,6 +126,7 @@ export function useSnapSettle(
 
   return {
     ...elementProps,
+    ref: hostAttachRef,
     onMomentumScrollEnd: scrollish(elementProps.onMomentumScrollEnd),
     onScroll: scrollish(elementProps.onScroll),
     onScrollEndDrag: scrollish(elementProps.onScrollEndDrag),
