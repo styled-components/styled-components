@@ -2080,9 +2080,22 @@ function useScrollerSnapProps(
   elementProps: Dict<any>
 ): Dict<any> {
   let out = withScrollerDefaults(isScroller, compiled.scrollerFlexPin === true, elementProps);
+  // A scroller only snaps if it declared `scroll-snap-type` itself.
+  // css-scroll-snap-1 §2: the initial `none` makes the element a
+  // non-snapping container, and `scroll-snap-align` on a descendant
+  // "has no effect" there. Both strictnesses lift a prop the polyfill
+  // emits only for this property, so their presence is the declaration:
+  // `mandatory` gives pagingEnabled, `proximity` gives snapToAlignment.
+  // Gating on `isScroller` alone made any styled ScrollView snap as soon
+  // as some child declared scroll-snap-align, which is wrong whenever
+  // two scrollers share a card component and only one opts in.
+  const snapTypeDeclared =
+    compiled.specialCases !== undefined &&
+    (compiled.specialCases.pagingEnabled === true ||
+      compiled.specialCases.snapToAlignment !== undefined);
   // biome-ignore-start lint/correctness/useHookAtTopLevel: these three are called unconditionally here. The rule reports them as "indirect and conditional" because the one caller sits past an IS_RSC-gated early return, and IS_RSC is a load-time constant. Each takes its own enable flag as an argument rather than being called behind a branch, which is what keeps the sequence fixed.
   out = useSnapTargetRegistration(snapTarget, out);
-  out = useSnapOffsets(isScroller, timelineEntry, out);
+  out = useSnapOffsets(isScroller && snapTypeDeclared, timelineEntry, out);
   return useSnapSettle(
     isScroller &&
       compiled.specialCases !== undefined &&

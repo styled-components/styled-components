@@ -68,6 +68,63 @@ function findCards(tree: TestRenderer.ReactTestRenderer) {
   return tree.root.findAllByType(View).filter(n => n.props.testID === 'card');
 }
 
+/**
+ * css-scroll-snap-1 §2: `scroll-snap-type`'s initial `none` makes the
+ * element a non-snapping container, where a descendant's
+ * `scroll-snap-align` "has no effect". A scroller that never declared the
+ * property must therefore drift freely even when its children are
+ * aligned, which is exactly what happens when two scrollers share one
+ * card component and only one of them opts in.
+ */
+describe('a scroller that declares no scroll-snap-type never snaps', () => {
+  const FreeScroller = styled.ScrollView`
+    height: 160px;
+  `;
+
+  it('leaves snapToOffsets unset despite aligned children', () => {
+    const tree = track(
+      TestRenderer.create(
+        <FreeScroller horizontal>
+          <Card testID="card" />
+          <Card testID="card" />
+          <Card testID="card" />
+        </FreeScroller>
+      )
+    );
+    const host = tree.root.findByType(ScrollView);
+    scrollerLayout(host);
+    const cards = findCards(tree);
+    cardLayout(cards[0], 0);
+    cardLayout(cards[1], 200);
+    cardLayout(cards[2], 400);
+
+    const props = tree.root.findByType(ScrollView).props;
+    expect(props.snapToOffsets).toBeUndefined();
+    // The paging approximation must stay off too, or Android snaps by a
+    // different route than snapToOffsets.
+    expect(props.pagingEnabled).not.toBe(true);
+  });
+
+  it('still snaps a sibling scroller that does declare it', () => {
+    const tree = track(
+      TestRenderer.create(
+        <Snapper horizontal>
+          <Card testID="card" />
+          <Card testID="card" />
+        </Snapper>
+      )
+    );
+    const host = tree.root.findByType(ScrollView);
+    scrollerLayout(host);
+    const cards = findCards(tree);
+    cardLayout(cards[0], 0);
+    cardLayout(cards[1], 200);
+    // Control: without this the assertion above could pass because snap
+    // derivation broke everywhere rather than only where it should.
+    expect(tree.root.findByType(ScrollView).props.snapToOffsets).toEqual([0, 200]);
+  });
+});
+
 describe('scroll-snap-align derives snapToOffsets on the scroll container', () => {
   it('start-aligned children produce their content x positions', () => {
     const tree = track(
