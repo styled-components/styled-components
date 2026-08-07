@@ -15,24 +15,16 @@ export interface CssPropertyRegistration {
 }
 
 const registry = new Map<string, CssPropertyRegistration>();
-let anyNonInherited = false;
 
 export function registerCssProperty(name: string, reg: CssPropertyRegistration): void {
   registry.set(name, reg);
-  if (!reg.inherits) anyNonInherited = true;
 }
 
 export function getCssPropertyRegistration(name: string): CssPropertyRegistration | undefined {
   return registry.get(name);
 }
 
-/** Cheap gate for the inherits-aware lookup path. */
-export function hasNonInheritedRegistrations(): boolean {
-  return anyNonInherited;
-}
-
 /** Test-only: clear all registrations. */
 export function resetCssPropertiesForTest(): void {
   registry.clear();
-  anyNonInherited = false;
 }

@@ -154,19 +154,3 @@ export function getSystemColorPlatformColor(keyword: string): unknown | null {
   const PlatformColor = getPlatformColor();
   return PlatformColor === null ? null : PlatformColor(...names);
 }
-
-export const SYSTEM_COLOR_KEYWORDS: readonly string[] = Array.from(
-  new Set(
-    Object.keys(SYSTEM_COLOR_PLATFORM).concat(
-      Object.keys(SYSTEM_COLOR_LITERAL),
-      Object.keys(IOS_SYSTEM_COLOR_LITERAL),
-      Object.keys(ANDROID_SYSTEM_COLOR_LITERAL),
-      Object.keys(IOS_SYSTEM_COLOR_PLATFORM),
-      Object.keys(ANDROID_SYSTEM_COLOR_PLATFORM)
-    )
-  )
-);
-
-export const DEPRECATED_SYSTEM_COLOR_KEYWORDS: readonly string[] = Object.keys(
-  DEPRECATED_SYSTEM_COLOR_ALIAS
-);

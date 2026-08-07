@@ -5,8 +5,6 @@ import isFunction from '../utils/isFunction';
 import isPlainObject from '../utils/isPlainObject';
 import objectToTemplate from '../utils/objectToCSS';
 
-export { getSource } from '../parser/source';
-
 /**
  * Flatten only the array structure (un-nest), dropping `false` / `null` /
  * `undefined` / `''` slots. No function evaluation; that's deferred to

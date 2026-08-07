@@ -7,7 +7,7 @@ import throwStyledError from './error';
 import { SEED, phash } from './hash';
 import { normalize } from './normalize';
 
-export { isEscaped, normalize } from './normalize';
+export { normalize } from './normalize';
 
 /** One rewritten declaration pair. */
 export type DeclResult = { prop: string; value: string };
