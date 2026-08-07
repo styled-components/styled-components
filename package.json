@@ -15,6 +15,7 @@
     "size": "pnpm --filter styled-components size",
     "test": "pnpm --filter styled-components test",
     "test:changeset-changelog": "node --test scripts/release-notes/changelog.test.ts scripts/release-notes/prerelease-aggregation.test.ts scripts/release-notes/build-version-pr-body.test.ts",
+    "test:effect-gate": "node --test scripts/effect-gate.test.ts",
     "dry-run:prerelease-notes": "node scripts/release-notes/build-prerelease-release-notes.ts",
     "dry-run:version-pr-body": "node scripts/release-notes/build-version-pr-body.ts",
     "verify": "node scripts/verify.mjs"

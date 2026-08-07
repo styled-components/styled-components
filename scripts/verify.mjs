@@ -9,6 +9,7 @@ const steps = [
   { label: 'format (biome check --write)', args: ['run', 'format'] },
   { label: 'knip', args: ['run', 'knip'] },
   { label: 'test:changeset-changelog', args: ['run', 'test:changeset-changelog'] },
+  { label: 'test:effect-gate', args: ['run', 'test:effect-gate'] },
   { label: 'test (styled-components)', args: ['run', 'test'] },
 ];
 

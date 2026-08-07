@@ -113,7 +113,14 @@
       "complexity": {
         "noUselessCatch": "error",
         "noUselessLoneBlockStatements": "error",
-        "noUselessSwitchCase": "error"
+        "noUselessSwitchCase": "error",
+        // Load-bearing for the effect ban below, not only tidiness. A GritQL
+        // pattern matches the callee text, so `React['useEffect'](…)` slips
+        // past `no-effects.grit` while `React.useEffect(…)` does not. This
+        // rule rejects the computed spelling outright, which leaves only
+        // `React[someVariable](…)` uncovered, and that is beyond any static
+        // rule. Verified by planting all four spellings and running `biome ci`.
+        "useLiteralKeys": "error"
       },
       "correctness": {
         // Arrived with the react domain, which carries its own recommended set

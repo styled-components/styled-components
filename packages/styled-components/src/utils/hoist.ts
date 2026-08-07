@@ -59,7 +59,7 @@ const TYPE_STATICS: Record<symbol, Record<string, boolean>> = {
 type OmniComponent = AnyComponent;
 
 function getStatics(component: OmniComponent) {
-  return '$$typeof' in component ? TYPE_STATICS[component['$$typeof']] : REACT_STATICS;
+  return '$$typeof' in component ? TYPE_STATICS[component.$$typeof] : REACT_STATICS;
 }
 
 const defineProperty = Object.defineProperty;
