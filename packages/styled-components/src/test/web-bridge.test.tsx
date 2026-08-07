@@ -30,6 +30,24 @@ function readAllCss(): string {
 }
 
 describe('rn-web bridge: View', () => {
+  /**
+   * The bridge sits between the styled component and the rn-web
+   * primitive, so a ref has to survive that extra hop to reach the DOM
+   * node. Nothing else in this suite renders a ref, and the bridge is the
+   * one place a dropped ref would be invisible: classes still land and
+   * every other assertion here still passes.
+   */
+  it('forwards a ref through to the underlying DOM node', () => {
+    const Box = styled.View`
+      background-color: rgb(1, 2, 3);
+    `;
+    const seen: unknown[] = [];
+    render(<Box ref={(node: unknown) => void seen.push(node)} testID="reffed" />);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toBeInstanceOf(HTMLElement);
+    expect((seen[0] as HTMLElement).getAttribute('data-testid')).toBe('reffed');
+  });
+
   it('emits a single styled-components class on the DOM node', () => {
     const Box = styled.View`
       background-color: red;

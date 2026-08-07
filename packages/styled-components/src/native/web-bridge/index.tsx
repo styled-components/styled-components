@@ -187,14 +187,17 @@ function collectDataProps(rest: Record<string, unknown>): {
 function bridgePrimitive<P extends BridgedProps>(
   Component: React.ComponentType<P>,
   displayName: string
-): React.ForwardRefExoticComponent<React.PropsWithoutRef<P> & React.RefAttributes<unknown>> {
-  const Bridged = React.forwardRef<unknown, P>((props, ref) => {
+): React.FunctionComponent<P & React.RefAttributes<unknown>> {
+  // React 19 ref-as-prop; no `React.forwardRef` wrapper, matching
+  // StyledComponent and StyledNativeComponent. The ref arrives in props
+  // and is handed straight back to the primitive below.
+  const Bridged = (props: P & React.RefAttributes<unknown>) => {
     // `pointerEvents` is destructured off (not deleted) because rn-web
     // deprecates the prop in favor of `style.pointerEvents`. Values
     // `auto | none | box-none | box-only` pass through identically to
     // rn-web's own `pointerEventsStyles` map.
-    const augmented = props as P & { pointerEvents?: unknown };
-    const { className, style, pointerEvents } = augmented;
+    const augmented = props as P & { pointerEvents?: unknown; ref?: React.Ref<unknown> };
+    const { className, style, pointerEvents, ref } = augmented;
     // Build `rest` without object-rest destructuring so the bridge bundle does
     // not import tslib's `__rest` helper; the package declares no tslib dep.
     // The container is prototypeless so a prop literally named `__proto__` is
@@ -207,6 +210,7 @@ function bridgePrimitive<P extends BridgedProps>(
         key !== 'className' &&
         key !== 'style' &&
         key !== 'pointerEvents' &&
+        key !== 'ref' &&
         Object.prototype.hasOwnProperty.call(augmented, key)
       ) {
         rest[key] = (augmented as Record<string, unknown>)[key];
@@ -229,7 +233,7 @@ function bridgePrimitive<P extends BridgedProps>(
     const finalProps: Record<string, unknown> = { ...base, ref, style: finalStyle };
     if (dataSet !== undefined) finalProps.dataSet = dataSet;
     return React.createElement(Component, finalProps as unknown as P);
-  });
+  };
   Bridged.displayName = displayName;
   return Bridged;
 }

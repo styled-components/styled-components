@@ -457,9 +457,10 @@ export function attachNativeScrollMapping(
   // tag (after native-tagging the values), which would leave the echo
   // disabled with nothing driving the native pair. Test renderers
   // resolve no tags, so they keep the echo and stay observable.
-  // `getRN()` deliberately exposes no `findNodeHandle` (Fabric public
-  // instances carry the tag directly), so the field reads do the work.
-  const tag = resolveNativeViewTag(node, (rn as any).findNodeHandle ?? null);
+  // Fabric public instances carry the tag directly, so a field read is
+  // the whole resolution; `getRN()` deliberately exposes no
+  // `findNodeHandle` to fall back to.
+  const tag = resolveNativeViewTag(node);
   if (tag === null) {
     if (trace) dbg('scroll-timeline attach: no native view tag on the scroll host');
     if (__DEV__ && !isJestLikeHost()) {
@@ -971,20 +972,12 @@ function identityProps(props: Record<string, any>): Record<string, any> {
 /**
  * Resolve a host instance's native view tag the way RN's animated event
  * attach does: Fabric public instances (ReactNativeElement) carry
- * `__nativeTag`, Paper host instances carry `_nativeTag`, and anything
- * else goes through `findNodeHandle` when one is supplied. Returns null
+ * `__nativeTag` and Paper host instances carry `_nativeTag`. Returns null
  * when no tag exists (test renderers).
  */
-export function resolveNativeViewTag(
-  node: any,
-  findNodeHandle: ((node: any) => number | null) | null
-): number | null {
+export function resolveNativeViewTag(node: any): number | null {
   if (typeof node.__nativeTag === 'number') return node.__nativeTag;
   if (typeof node._nativeTag === 'number') return node._nativeTag;
-  if (typeof findNodeHandle === 'function') {
-    const tag = findNodeHandle(node);
-    return typeof tag === 'number' ? tag : null;
-  }
   return null;
 }
 
