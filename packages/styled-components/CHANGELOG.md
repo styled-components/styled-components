@@ -1,5 +1,23 @@
 # styled-components
 
+## 6.5.2
+
+### Patch Changes
+
+- 00b9ee2: `.attrs()` is cheaper to type-check.
+
+  Two costs on the `.attrs` path are gone. Object-form `.attrs()` left the rendered target unchanged but still re-resolved that target's whole prop bag on every call, making `.attrs` on an HTML or SVG tag far costlier than on a wrapped component; it now reuses the props already resolved for the tag. Separately, making attrs-provided keys optional ran an avoidably expensive pass over the target's full prop set on every attrs component. Together these cut consumer type-check work measurably across every `.attrs` form, with no change to the resulting component's accepted props. Redirecting the target with `.attrs({ as })`, including the function form, is unaffected.
+
+- 00b9ee2: Explicitly annotated styled components type-check faster.
+
+  Assigning a styled component to an explicit type, as `isolatedDeclarations` and any package that emits `.d.ts` files must (` const Button: IStyledComponentBase<'web', ...> = styled.button``), used to be several times more expensive to check than an inferred one, because the annotation's  `style`and the component's widened`style` were two different csstype representations that the checker compared property by property.
+
+  The inline `style` widening now builds on React's own `CSSProperties`, the same type a hand-written annotation carries, so that comparison short-circuits. On a 40-component fixture this cut the types created for the annotated pattern by about 21%, with no change to what `style` accepts: CSS custom properties, a component's own narrow `style`, and `style={undefined}` all behave exactly as before.
+
+- 00b9ee2: `styled()` wrapping a generic polymorphic component keeps its declared props narrow.
+
+  Wrapping a component whose props are generic over an element type, such as the common `<C extends React.ElementType>(props: PolymorphicProps<C, OwnProps>)` pattern, used to let the styled result accept prop values the component itself rejects: `styled(Button)` would take `variant="anything"` even though `<Button variant="anything">` is a type error. The wrapper now narrows those props exactly as the direct component does, so a bad value is caught in both places. Valid props, children, and plain (non-generic) targets are unaffected.
+
 ## 6.5.1
 
 ### Patch Changes
