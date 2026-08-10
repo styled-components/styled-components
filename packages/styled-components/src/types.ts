@@ -648,9 +648,21 @@ export type Merged<A extends BaseObject, B> = FastOmit<A, Exclude<keyof B, 'styl
  * old spelling never short-circuited. Every such component paid an omit plus a
  * `Partial<Pick<...>>` that removed and re-added nothing, and carried both in its
  * displayed type.
+ *
+ * The taken branch distributes over `P` with built-in `Omit`, not `FastOmit`.
+ * This mapped pass over the ~266-key widened intrinsic bag is the largest single
+ * cost of `.attrs` on a tag (measured ~30% of that kind's types); built-in `Omit`
+ * (Pick + Exclude) is more optimized than `FastOmit` here, the same result the
+ * `OverrideStyle` note records. The distribution is load-bearing: a bare
+ * `Omit<A | B, K>` reads `keyof` as the union's *common* keys and collapses a
+ * union-props target (`styled(Pressable).attrs(...)` drops `href`), so the outer
+ * `P extends unknown` runs the omit per member and keeps the union intact. Do NOT
+ * spell it `FastOmit` (slower) or a bare undistributed `Omit` (unsound).
  */
 export type MakeAttrsOptional<P extends BaseObject, K extends keyof any> = [K] extends [never]
   ? P
-  : FastOmit<P, K & keyof P> & Partial<Pick<P, K & keyof P>>;
+  : P extends unknown
+    ? Omit<P, K & keyof P> & Partial<Pick<P, K & keyof P>>
+    : never;
 
 export type InsertionTarget = HTMLElement | ShadowRoot;

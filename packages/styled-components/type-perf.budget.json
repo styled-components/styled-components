@@ -1,9 +1,9 @@
 {
   "count": 100,
   "measured": {
-    "instantiations": 926001,
-    "memoryKb": 207173,
-    "types": 42528
+    "instantiations": 888000,
+    "memoryKb": 205788,
+    "types": 39346
   },
   "tolerancePct": {
     "instantiations": 10,

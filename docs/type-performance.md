@@ -103,6 +103,20 @@ is the single largest per-kind cost in the fixture (`.attrs` on an intrinsic pri
 component before this), and the fast path measured -6.8% instantiations on the 100-component fixture with
 the contract suite and every `.attrs` behavior unchanged.
 
+The seam is not the largest part of the `.attrs` cost. Decomposing the chain, the `.attrs()` call itself
+is cheap; the explosion is in the final `IStyledComponent` production, where `MakeAttrsOptional` runs a
+mapped pass over the ~266-key widened intrinsic bag to make attrs-provided keys optional, per
+structurally-unique component (each bag differs by its own prop names, so nothing caches) -- about 30% of
+the types an `.attrs`-on-a-tag component creates. Its taken branch uses built-in `Omit` distributed
+through an outer `P extends unknown`, not `FastOmit`: built-in `Omit` is the more optimized here (the
+same result the `OverrideStyle` note records), and the distribution runs it per union member so a
+union-props attrs target (`styled(Pressable).attrs(...)`) keeps its member-specific keys rather than
+collapsing to the union's common ones (a bare undistributed `Omit` drops `href`). Measured: -7.5% types,
+-4.1% instantiations on the consumer fixture, memory flat, contract suite and every `.attrs` form
+unchanged. Note the union redirect above is NOT where the cost is: a union redirect and a single-concrete
+redirect price identically, and collapsing the `ComponentPropsWithRef` re-merge moves ~6 types while
+breaking four redirect contracts, so it stays.
+
 ## The style widening
 
 The widening is web-only, gated on `TargetProps`' first parameter (`R extends Runtime`, deliberately
