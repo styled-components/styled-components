@@ -39,6 +39,14 @@ correctness canary sitting inside the perf gate. It is also the single most expe
 component, by a wide margin, so adding it moved the recorded budget substantially on its own. That jump
 was fixture growth, not a regression.
 
+The `annotated` kind prices the declaration site rather than the call site: a `styled.div` result
+assigned to an explicit `IStyledComponent<'web', FastOmit<DivProps, never> & …>` annotation whose prop
+bag is hand-written instead of the shape the library computes. This is what isolatedDeclarations and any
+`.d.ts`-emitting package produce, and it is the one place the style widening costs rather than saves
+(see "The declaration-site relation" below). No other kind annotates a result, so without it a change
+that deepened that relation would move nothing here. Like `unionTarget` it is expensive per component,
+so it too moved the recorded budget on its own -- fixture growth, not a regression.
+
 A kind added or a weight changed here changes what the budget means, so re-measure with `--update` and
 say in the commit that the fixture, not the cost, is what moved. `type-perf.budget.json` is the live
 figure; `pnpm --filter styled-components type-perf` prints the current one. Do not restate either here,
@@ -95,8 +103,20 @@ guard; every intrinsic element provably declares `style` (the set of `React.JSX.
 lacking it is `never`), so `IntrinsicProps` applies `WithCSSVars` directly rather than asking a question
 with one possible answer.
 
-Five things are load-bearing about the current shape, each found by measurement:
+Six things are load-bearing about the current shape, each found by measurement:
 
+- `string extends keyof P` gates the widening off entirely for a prop bag carrying a `[k: string]: any`
+  index signature, returning `P` untouched. A generic polymorphic component
+  (`<C extends ElementType>(p: … & ComponentProps<C>)`) introspects at the `ElementType` constraint,
+  where `ComponentProps<ElementType>` is `any`, so its extracted bag gains that index alongside its
+  narrow props. `WithCSSVars`' `Omit<P, 'style'>` (`Pick<P, Exclude<keyof P, 'style'>>`) would then
+  collapse every narrow key into the index (`keyof P` is `string`, `Exclude<string, 'style'>` is still
+  `string`), widening a declared `variant: 'a' | 'b'` to `any` so `styled(Button)` accepts props the
+  component itself rejects (#5756). Declining to widen keeps the narrow props; the only thing given up is
+  custom-property widening on a `style` that is already `any`, which is moot. The key-preserving
+  alternative, `FastOmit` in `WithCSSVars`, measured ~+11% instantiations on the 100-component fixture
+  (the homomorphic-mapped-type price the intrinsic path avoids) and is rejected for that reason; the gate
+  is instantiation-flat.
 - The test is `'style' extends keyof P`, not `P extends { style?: infer S }`. `{}` vacuously satisfies
   the latter, which would hand every un-introspectable target a `style` key and defeat
   `WidenUntypedProps` (regresses #5756).
@@ -116,6 +136,48 @@ Five things are load-bearing about the current shape, each found by measurement:
   inside an intersection, so that one bound propagates an unreducible node through every prop bag
   downstream. Measured cost of adding it back: +47K types and +73% check time on a 100-component
   fixture. Never intersect `& {}` into a type that flows into prop bags.
+
+## The declaration-site relation
+
+Assigning a `styled` result to an explicit annotation --
+`const X: IStyledComponent<'web', FastOmit<DivProps, never> & P> = styled.div<P>` -- forces an
+assignability check between the inferred component and the hand-written type. The two prop bags differ in
+exactly one field, `style`: the widened `style` a `styled` result carries versus the plain `style` a
+consumer writes. `Props` is invariant (`in out`), so the check relates the two `style` types both ways,
+and the reverse direction is where the cost sits.
+
+Keeping the widened `style` and a hand annotation's `style` on the SAME csstype instantiation is what
+makes that reverse relation cheap. {@link CSSPropertiesWithVars} bases on `React.CSSProperties` -- which
+is what a hand-written `style` is -- so `React.CSSProperties & Vars` relates to `React.CSSProperties` by
+the intersection-member fast path. Before this, the widened style based on the library's `CSSProperties`
+(`CSS.Properties<number | (string & {})>`), a different instantiation than the annotation's
+`CSS.Properties<string | number>`, so the checker walked `StandardProperties` / `VendorLonghandProperties`
+member by member, once per component. That was the whole of the 6.5.0 report from isolatedDeclarations
+packages. On a 40-component fixture the naive annotation cost 8,281 types before the rebase and 6,552
+after (−21%; instantiations 32,651 → 28,731), TS 5.9.3 / @types/react 18, with the call-site budget and
+the web+native type tests unmoved and every widening behavior preserved (custom properties,
+`style={undefined}` under `exactOptionalPropertyTypes`, a component's own narrow `style`, value
+rejection). Only the inline `style` prop rebases; object styles keep the richer numeric
+{@link CSSProperties} base.
+
+Change ONLY the cached base. Rebasing it and also reshaping `WithCSSVars` in the same pass -- dropping the
+`(P[keyof P & 'style'] & {})` union arm, or swapping the `Omit<…, 'style'>` for a raw
+`IntrinsicElements[T] & { style }` intersection -- regresses declaration-site instantiations sharply
+(measured ~+46% and higher, a net loss) because the union arm is the forward-direction identity anchor
+and the `Omit` is what removes the target's own `style` before the widened one is added. The rebase wins
+on its own; the reshape does not, and the two were conflated in the pass that first tried this and wrongly
+recorded the whole idea as rejected.
+
+The rebase narrows the divergence but cannot erase it: a divergent hand annotation cannot reach
+inferred-baseline cost, which needs reference-identity (annotating with `typeof` the component is free).
+Ablation on the same fixture: dropping the widening entirely
+(`IntrinsicProps = React.JSX.IntrinsicElements[T]`) lands at 2,385, so the residual over that floor is the
+`Omit` walk of the ~250 `HTMLAttributes` keys, inherent to any structural relation between two
+differently-built-but-equal bags. A consumer who still annotates explicitly should use the exact shape the
+constructor emits, `IStyledComponent<'web', MergeProps<TargetProps<'web', Tag>, P>>` -- not `Substitute`,
+which omits `style` and lands further from identity -- for an identity-cheap relation, but the rebase
+means plain hand annotations no longer need it. The `annotated` fixture kind guards the axis so a future
+deepening of this relation is caught.
 
 ## The empty-prop-bag guard in Substitute and MergeProps
 

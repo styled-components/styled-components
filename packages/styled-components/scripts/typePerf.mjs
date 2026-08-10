@@ -92,11 +92,24 @@ const AS_TAGS = ['a', 'button', 'label', 'section', 'video', 'ul'];
 // here contains a union-typed target, so the distribution that keeps `A | B`
 // from collapsing to its shared keys costs nothing measurable -- and the next
 // pass over this area reads "free to remove" off a fixture that never used it.
+// `annotated` prices the declaration site: a styled result assigned to an
+// explicit `IStyledComponent<...>` annotation whose prop bag is hand-written
+// (`FastOmit<DivProps, never> & …`) rather than the shape the library computes.
+// isolatedDeclarations and `.d.ts`-emitting packages write this, and it is the
+// one place the 6.5 style widening costs rather than saves: the annotation's
+// plain `style` diverges from the widened `style` on the styled result, forcing
+// a full csstype relation per component (~3x the types of an inferred site, and
+// the whole of the reported 6.5.0 regression on that pattern). Nothing else here
+// annotates a result, so without this the axis is unguarded and a change that
+// deepened that relation would be invisible. Like `unionTarget`, it is expensive
+// per component, so adding it moved the recorded budget on its own -- that jump
+// is fixture growth, not a regression.
 const KIND_WEIGHTS = [
   ['plainTag', 8],
   ['wrapComponent', 5],
   ['chained', 3],
   ['attrsTag', 2],
+  ['annotated', 1],
   ['attrsWrap', 1],
   ['genericWrapper', 1],
   ['unionTarget', 1],
@@ -113,7 +126,9 @@ function kindOf(i) {
 }
 
 const HEADER = `import * as React from 'react';
-import styled from 'styled-components';
+import styled, { type FastOmit, type IStyledComponent } from 'styled-components';
+
+type DivProps = React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
 
 interface BaseProps {
   $variant?: 'primary' | 'secondary';
@@ -165,6 +180,16 @@ function unit(i) {
     case 'attrsTag':
       decl = `const ${N} = styled.${tag}.attrs<{ $a${i}?: number }>({ $a${i}: ${i} })\`
   width: \${p => p.$a${i}}px;
+\`;`;
+      break;
+    case 'annotated':
+      // Explicit declaration-site annotation with a hand-written prop bag (see
+      // KIND_WEIGHTS). Always `styled.div` so the annotation's `DivProps` matches
+      // the target and the fixture compiles clean; the cost is the relation, not
+      // a mismatch. `IStyledComponent<'web', P>` is `IStyledComponentBase<'web', P>
+      // & string`, the public spelling of the type the report annotates against.
+      decl = `const ${N}: IStyledComponent<'web', FastOmit<DivProps, never> & { $a${i}?: number }> = styled.div<{ $a${i}?: number }>\`
+  color: \${p => (p.$a${i} ? 'red' : 'blue')};
 \`;`;
       break;
     case 'attrsWrap':

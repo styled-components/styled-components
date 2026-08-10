@@ -427,7 +427,23 @@ export interface IInlineStyle<Props extends BaseObject> {
 
 export type CSSProperties = CSS.Properties<number | (string & {})>;
 
-export type CSSPropertiesWithVars = CSSProperties & {
+/**
+ * The widened inline `style` prop: every CSS property plus CSS custom properties.
+ *
+ * The base is `React.CSSProperties`, not the library's {@link CSSProperties}
+ * (`CSS.Properties<number | (string & {})>`), on purpose. The two are different
+ * csstype instantiations, and the `style` a consumer hand-writes in a declaration
+ * annotation (`IStyledComponentBase<'web', … & { style?: React.CSSProperties }>`)
+ * is React's. Sharing React's interface lets that assignability check take the
+ * intersection-member fast path (`React.CSSProperties & Vars` relates to
+ * `React.CSSProperties` without walking csstype) instead of relating two csstype
+ * instantiations member by member, once per component -- the declaration-site cost
+ * in docs/type-performance.md. Rebase only this cached base; do NOT also reshape
+ * {@link WithCSSVars}, which regresses instantiations (measured there). Object
+ * styles keep the richer numeric base via {@link CSSProperties}; only the inline
+ * `style` prop widens off React's.
+ */
+export type CSSPropertiesWithVars = React.CSSProperties & {
   [key: `--${string}`]: string | number | undefined;
 };
 
@@ -490,11 +506,28 @@ type WithCSSVars<P extends BaseObject> = Omit<P, 'style'> & {
  * shared keys alone and drops every member-specific prop -- a component typed
  * `ButtonProps | AnchorProps` stops accepting `href`. Widening member by member
  * keeps the union intact.
+ *
+ * `string extends keyof P` gates out a prop bag carrying a string index signature
+ * (`[k: string]: any`), returning it untouched. A generic polymorphic component
+ * (`<C extends ElementType>(p: PropsWithChildren<P & { as?: C }> & ComponentProps<C>)`)
+ * introspects at the `ElementType` constraint, where `ComponentProps<ElementType>`
+ * is `any`, so its extracted bag gains that index. {@link WithCSSVars}' `Omit`
+ * (`Pick<P, Exclude<keyof P, 'style'>>`) would then collapse every narrow named
+ * prop into the index -- `keyof P` is `string`, `Exclude<string, 'style'>` is
+ * still `string` -- widening a declared `variant: 'a' | 'b'` to `any` and letting
+ * `styled(Button)` accept props the component itself rejects (#5756). Declining to
+ * widen such a bag keeps the narrow props; the only thing given up is
+ * custom-property widening on a `style` that is already `any`, which is moot. A
+ * key-preserving `FastOmit` here would instead cost ~+11% instantiations (the
+ * homomorphic-mapped-type price the intrinsic path avoids); see
+ * docs/type-performance.md.
  */
 type OverrideStyle<P extends BaseObject> = P extends unknown
-  ? 'style' extends keyof P
-    ? WithCSSVars<P>
-    : P
+  ? string extends keyof P
+    ? P
+    : 'style' extends keyof P
+      ? WithCSSVars<P>
+      : P
   : never;
 
 export type CSSPseudos = { [K in CSS.Pseudos]?: CSSObject };
