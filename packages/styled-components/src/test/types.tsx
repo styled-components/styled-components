@@ -1052,12 +1052,13 @@ const BareRefWrapper = styled.div``;
 />;
 
 /**
- * #5756 (kkwasny-rtbh) -- BASELINE-PIN. A generic polymorphic component's props
- * collapse to `{}` under introspection, so the styled wrapper accepts a prop
- * value the direct call site rejects. #5758 documents this as unavoidable: with
- * no base type to substitute against, the prop bag must stay permissive. The
- * direct call below is the positive control -- if it ever stops erroring, its
- * unused directive fires and the pin has moved.
+ * #5756 (kkwasny-rtbh). A generic polymorphic component introspects at its
+ * `ElementType` constraint, where `React.ComponentProps<ElementType>` is `any`,
+ * so the extracted bag gains a `[k: string]: any` index signature alongside its
+ * narrow props. `OverrideStyle` declines to widen a bag carrying that index
+ * (types.ts), which keeps the narrow props intact, so the styled wrapper rejects
+ * a bad `variant` exactly as the direct call does. Both directives below are
+ * positive controls: the direct call and the wrapped call must each reject.
  */
 type GenericAsProp<C extends React.ElementType> = { as?: C };
 type GenericPolyProps<C extends React.ElementType, P = object> = React.PropsWithChildren<
@@ -1073,8 +1074,10 @@ const GenericPolyButton = <C extends React.ElementType = 'button'>(
 // @ts-expect-error the direct call site narrows `variant` and rejects this
 <GenericPolyButton variant="totally-fake">x</GenericPolyButton>;
 const StyledGenericPolyButton = styled(GenericPolyButton)``;
-// Pinned: accepted today, because the target carries no introspectable props.
+// @ts-expect-error the wrapper keeps `variant` narrow too and rejects this (#5756)
 <StyledGenericPolyButton variant="totally-fake">x</StyledGenericPolyButton>;
+// a valid variant and children still compile
+<StyledGenericPolyButton variant="primary">x</StyledGenericPolyButton>;
 
 /**
  * #5760: the destructured parameter of `styled.<tag>(fn)` must keep its declared

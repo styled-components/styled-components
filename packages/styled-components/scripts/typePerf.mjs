@@ -92,14 +92,42 @@ const AS_TAGS = ['a', 'button', 'label', 'section', 'video', 'ul'];
 // here contains a union-typed target, so the distribution that keeps `A | B`
 // from collapsing to its shared keys costs nothing measurable -- and the next
 // pass over this area reads "free to remove" off a fixture that never used it.
+// `annotated` prices the declaration site: a styled result assigned to an
+// explicit `IStyledComponent<...>` annotation whose prop bag is hand-written
+// (`FastOmit<DivProps, never> & …`) rather than the shape the library computes.
+// isolatedDeclarations and `.d.ts`-emitting packages write this, and it is the
+// one place the 6.5 style widening costs rather than saves: the annotation's
+// plain `style` diverges from the widened `style` on the styled result, forcing
+// a full csstype relation per component (~3x the types of an inferred site, and
+// the whole of the reported 6.5.0 regression on that pattern). Nothing else here
+// annotates a result, so without this the axis is unguarded and a change that
+// deepened that relation would be invisible. Like `unionTarget`, it is expensive
+// per component, so adding it moved the recorded budget on its own -- that jump
+// is fixture growth, not a regression.
+// The four exotic kinds below each price a `types.ts` conditional arm no other
+// kind reaches, and each doubles as a correctness canary (the run fails on any
+// fixture compile error): `permissiveFactory` the un-introspectable
+// `WidenUntypedProps` fallback (#5756); `genericPoly` the `string extends keyof P`
+// OverrideStyle gate that keeps a generic polymorphic target's declared props
+// narrow (#5756); `attrsAsRedirect` the function-form `.attrs` union-target seam
+// that stays on the `ComponentPropsWithRef` branch (NOT the target-unchanged fast
+// path) and is TS2589-sensitive; `disjointTarget` the `keyof B extends never`
+// empty-bag guard a shared-key union never consults (#5787 sibling). Like
+// `unionTarget` they are expensive per component, so each moved the budget on its
+// own -- fixture growth, not a regression.
 const KIND_WEIGHTS = [
   ['plainTag', 8],
   ['wrapComponent', 5],
   ['chained', 3],
   ['attrsTag', 2],
+  ['annotated', 1],
   ['attrsWrap', 1],
   ['genericWrapper', 1],
   ['unionTarget', 1],
+  ['permissiveFactory', 1],
+  ['genericPoly', 1],
+  ['attrsAsRedirect', 1],
+  ['disjointTarget', 1],
 ];
 const PER_FILE = KIND_WEIGHTS.reduce((sum, [, weight]) => sum + weight, 0);
 
@@ -113,7 +141,9 @@ function kindOf(i) {
 }
 
 const HEADER = `import * as React from 'react';
-import styled from 'styled-components';
+import styled, { type FastOmit, type IStyledComponent } from 'styled-components';
+
+type DivProps = React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
 
 interface BaseProps {
   $variant?: 'primary' | 'secondary';
@@ -134,6 +164,41 @@ type PressableProps =
 const Pressable = (_props: PressableProps) => null;
 
 const spreadProps = { className: 'x', id: 'y' };
+
+// Un-introspectable polymorphic-factory target (Mantine v7 shape). Its generic
+// callable signature makes React.ComponentPropsWithRef resolve to {}, so styled()
+// routes it through the permissive WidenUntypedProps fallback. Verified against
+// @mantine/core@7 in test/types.tsx.
+type FactoryProps<C, P = {}> = C extends React.ElementType
+  ? (Omit<React.ComponentProps<C>, keyof P> & P & { component?: C }) & { ref?: any }
+  : P & { component: React.ElementType };
+interface FactoryOwnProps {
+  variant?: string;
+  children?: React.ReactNode;
+}
+type PolymorphicFactory = (<C = 'button'>(
+  props: FactoryProps<C, FactoryOwnProps>
+) => React.ReactElement) &
+  Omit<React.FunctionComponent<FactoryProps<any, FactoryOwnProps>>, never> & {
+    extend: (p: any) => any;
+  };
+declare const Factory: PolymorphicFactory;
+
+// Generic polymorphic component (#5756). Introspecting it at the ElementType
+// constraint yields an index-signature bag alongside its narrow props; the
+// OverrideStyle string-index gate keeps \`variant\` narrow through styled().
+type PolyProps<C extends React.ElementType, P = object> = React.PropsWithChildren<P & { as?: C }> &
+  Omit<React.ComponentPropsWithoutRef<C>, keyof (P & { as?: C })>;
+interface GenericPolyOwnProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary';
+}
+const GenericPoly = <C extends React.ElementType = 'button'>(_p: PolyProps<C, GenericPolyOwnProps>) =>
+  null;
+
+// Disjoint (no-shared-keys) union target (#5787 sibling). Routes through the
+// \`keyof B extends never\` empty-bag guard in Substitute/MergeProps that a
+// shared-key union never reaches.
+const Disjoint = (_p: { onlyA: string } | { onlyB: number }) => null;
 `;
 
 function unit(i) {
@@ -167,6 +232,16 @@ function unit(i) {
   width: \${p => p.$a${i}}px;
 \`;`;
       break;
+    case 'annotated':
+      // Explicit declaration-site annotation with a hand-written prop bag (see
+      // KIND_WEIGHTS). Always `styled.div` so the annotation's `DivProps` matches
+      // the target and the fixture compiles clean; the cost is the relation, not
+      // a mismatch. `IStyledComponent<'web', P>` is `IStyledComponentBase<'web', P>
+      // & string`, the public spelling of the type the report annotates against.
+      decl = `const ${N}: IStyledComponent<'web', FastOmit<DivProps, never> & { $a${i}?: number }> = styled.div<{ $a${i}?: number }>\`
+  color: \${p => (p.$a${i} ? 'red' : 'blue')};
+\`;`;
+      break;
     case 'attrsWrap':
       decl = `const ${N} = styled(Plain).attrs({ $size: ${i} })\`
   height: \${p => p.$size}px;
@@ -175,6 +250,30 @@ function unit(i) {
     case 'unionTarget':
       decl = `const ${N} = styled(Pressable)<{ $a${i}?: number }>\`
   padding: \${p => p.$a${i} ?? 0}px;
+\`;`;
+      break;
+    case 'permissiveFactory':
+      decl = `const ${N} = styled(Factory)<{ $a${i}?: number }>\`
+  color: \${p => (p.$a${i} ? 'red' : 'blue')};
+\`;`;
+      break;
+    case 'genericPoly':
+      decl = `const ${N} = styled(GenericPoly)<{ $a${i}?: number }>\`
+  color: \${p => (p.$a${i} ? 'red' : 'blue')};
+\`;`;
+      break;
+    case 'attrsAsRedirect':
+      // Function-form `.attrs` that redirects the target: the resolved target
+      // becomes a union, so this stays on the `ComponentPropsWithRef` branch (the
+      // target-unchanged fast path deliberately does not take it) and is the
+      // TS2589-sensitive seam. See docs/type-performance.md.
+      decl = `const ${N} = styled.button.attrs<{ $a${i}?: number }>(({ as }) => ({ as: as || 'button', $a${i}: ${i} }))\`
+  width: \${p => p.$a${i} ?? 0}px;
+\`;`;
+      break;
+    case 'disjointTarget':
+      decl = `const ${N} = styled(Disjoint)<{ $a${i}?: number }>\`
+  color: \${p => (p.$a${i} ? 'red' : 'blue')};
 \`;`;
       break;
     default:
@@ -189,20 +288,39 @@ function ${N}<T extends BaseProps>({ item, ...rest }: { item: T } & React.Compon
       break;
   }
 
-  const generic = kind === 'genericWrapper';
-  const sites = generic
-    ? [`<${N} item={{ label: 'l' }} />`, `<${N} item={{ label: 'l' }} className="x" />`]
-    : [`<${N} />`, `<${N} className="x">{'t'}</${N}>`];
-
-  // A member-specific prop is the whole point of the union fixture: a plain call
-  // site resolves against the shared keys and would price the same either way.
-  if (kind === 'unionTarget') sites.push(`<${N} href="/x" />`);
-
-  if (!generic) {
+  // Kinds whose target does not accept the default `className`/childless sites
+  // (or whose member-specific props are the whole point) get bespoke sites; the
+  // rest share the default two plus the spread/as/style/ref variants below.
+  let sites;
+  if (kind === 'genericWrapper') {
+    sites = [`<${N} item={{ label: 'l' }} />`, `<${N} item={{ label: 'l' }} className="x" />`];
+  } else if (kind === 'disjointTarget') {
+    // A disjoint union's members are required and share no keys, so a childless
+    // or `className` site would not compile: pass each member specifically. This
+    // is what exercises the `keyof B extends never` guard (#5787 sibling).
+    sites = [`<${N} onlyA="x" />`, `<${N} onlyB={1} />`];
+  } else if (kind === 'genericPoly') {
+    sites = [`<${N} variant="primary" />`, `<${N} className="x">{'t'}</${N}>`];
+  } else if (kind === 'permissiveFactory') {
+    // An arbitrary prop is accepted only while the permissive fallback holds.
+    sites = [`<${N} arbitraryProp={${i}} />`, `<${N} className="x">{'t'}</${N}>`];
+  } else {
+    sites = [`<${N} />`, `<${N} className="x">{'t'}</${N}>`];
+    // A member-specific prop is the whole point of the union fixture: a plain
+    // call site resolves against the shared keys and would price the same either way.
+    if (kind === 'unionTarget') sites.push(`<${N} href="/x" />`);
     if (i % 5 === 0) sites.push(`<${N} {...spreadProps} />`);
     if (i % 10 === 0) sites.push(`<${N} as="${AS_TAGS[i % AS_TAGS.length]}" />`);
     if (i % 33 === 0) sites.push(`<${N} as={Other} href="/x" />`);
     if (i % 50 === 0) sites.push(`<${N} forwardedAs="ul" />`);
+    // Price the `style` widening and ref-callback inference from the call-site
+    // direction; no other site passes either. Scoped to `plainTag` (a real
+    // intrinsic tag) so the widened `style` accepts a custom property and the
+    // ref is forwarded, keeping the fixture clean.
+    if (kind === 'plainTag' && i % 7 === 0) {
+      sites.push(`<${N} style={{ color: 'red', '--v': ${i} }} />`);
+    }
+    if (kind === 'plainTag' && i % 11 === 0) sites.push(`<${N} ref={el => { void el; }} />`);
   }
 
   return `${decl}
@@ -229,6 +347,37 @@ const Canary = styled.button<{ $ok?: boolean }>\`\`;
 export const CanaryProp = <Canary notAPropOfButton={1} />;
 // @ts-expect-error 'loop' belongs to video, not to the button this renders as
 export const CanaryAs = <Canary loop />;
+
+// #5756 soundness: the OverrideStyle string-index gate keeps a generic
+// polymorphic target's declared props narrow through styled(), so a valid value
+// compiles and a bad one is rejected. If the gate regresses to accepting the bad
+// value, the directive below goes unused (TS2578) and fails the clean gate.
+type CanaryPolyProps<C extends React.ElementType> = React.PropsWithChildren<{
+  as?: C;
+  variant?: 'a' | 'b';
+}> &
+  Omit<React.ComponentPropsWithoutRef<C>, 'as' | 'variant'>;
+const CanaryPoly = <C extends React.ElementType = 'button'>(_p: CanaryPolyProps<C>) => null;
+const StyledCanaryPoly = styled(CanaryPoly)\`\`;
+export const CanaryPolyOk = <StyledCanaryPoly variant="a" />;
+// @ts-expect-error the gate keeps variant narrow, so a bad value is rejected
+export const CanaryPolyBad = <StyledCanaryPoly variant="fake" />;
+
+// #5756 soundness: an un-introspectable factory target stays permissive, so an
+// arbitrary prop and children are accepted. If the fallback regresses to a closed
+// {}, this must-compile line fails and the clean gate catches it.
+type CanaryFactoryProps<C, P = {}> = C extends React.ElementType
+  ? (Omit<React.ComponentProps<C>, keyof P> & P & { component?: C }) & { ref?: any }
+  : P & { component: React.ElementType };
+type CanaryFactory = (<C = 'button'>(
+  p: CanaryFactoryProps<C, { children?: React.ReactNode }>
+) => React.ReactElement) &
+  Omit<React.FunctionComponent<CanaryFactoryProps<any, { children?: React.ReactNode }>>, never> & {
+    extend: (p: any) => any;
+  };
+declare const canaryFactory: CanaryFactory;
+const StyledCanaryFactory = styled(canaryFactory)\`\`;
+export const CanaryFactoryOk = <StyledCanaryFactory arbitraryProp={1}>{'ok'}</StyledCanaryFactory>;
 
 // Native shares TargetProps with the web entry, so a native-only regression is
 // invisible to a web-only fixture.

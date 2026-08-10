@@ -86,18 +86,26 @@ export interface Styled<
   ) => Styled<
     R,
     PrivateResolvedTarget,
-    PrivateResolvedTarget extends KnownTarget
-      ? MergeProps<
-          // `MergeProps` keeps the CSS-variable widening `OuterProps` carries,
-          // which substituting the target's unwidened `style` would drop.
-          // `ComponentPropsWithRef` rather than `TargetProps` is the one place
-          // that stays: a function-form `.attrs` makes this target a union, and
-          // `TargetProps` distributing inside that measured as TS2589. Both in
-          // docs/type-performance.md.
-          MergeProps<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-          Props
-        >
-      : PrivateMergedProps,
+    // Target-unchanged fast path: when object-form `.attrs` leaves the target
+    // as-is, `OuterProps` already equals `TargetProps<R, Target>`, so re-merging
+    // `ComponentPropsWithRef<Target>` only rebuilds the ~265-key intrinsic bag
+    // the #5767 indexed access avoids. `MergeProps<OuterProps, Props>` is the
+    // same result. The bracket keeps a function-form `.attrs` (union target) off
+    // this branch, preserving its TS2589-avoidance; see docs/type-performance.md.
+    [PrivateResolvedTarget] extends [Target]
+      ? PrivateMergedProps
+      : PrivateResolvedTarget extends KnownTarget
+        ? MergeProps<
+            // `MergeProps` keeps the CSS-variable widening `OuterProps` carries,
+            // which substituting the target's unwidened `style` would drop.
+            // `ComponentPropsWithRef` rather than `TargetProps` is the one place
+            // that stays: a function-form `.attrs` makes this target a union, and
+            // `TargetProps` distributing inside that measured as TS2589. Both in
+            // docs/type-performance.md.
+            MergeProps<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+            Props
+          >
+        : PrivateMergedProps,
     OuterStatics,
     AttrsKeys | keyof AttrsResult<PrivateAttrsArg>
   >;
@@ -159,12 +167,21 @@ export default function constructWithOptions<
     constructWithOptions<
       R,
       PrivateResolvedTarget,
-      PrivateResolvedTarget extends KnownTarget
-        ? MergeProps<
-            MergeProps<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-            Props
-          >
-        : PrivateMergedProps,
+      // Target-unchanged fast path: object-form `.attrs` leaves the target as-is
+      // (`AttrsTarget` returns `Target`), so `OuterProps` already carries the
+      // target's props (`TargetProps<R, Target>`) and re-resolving them through
+      // `ComponentPropsWithRef` only rebuilds the ~265-key intrinsic bag the
+      // #5767 indexed access was written to avoid. The bracket keeps a
+      // function-form `.attrs` (resolved target is a union) off this branch so it
+      // does not distribute here; see docs/type-performance.md.
+      [PrivateResolvedTarget] extends [Target]
+        ? PrivateMergedProps
+        : PrivateResolvedTarget extends KnownTarget
+          ? MergeProps<
+              MergeProps<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+              Props
+            >
+          : PrivateMergedProps,
       OuterStatics,
       AttrsKeys | keyof AttrsResult<PrivateAttrsArg>
     >(componentConstructor, tag, {
