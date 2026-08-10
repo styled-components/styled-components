@@ -47,6 +47,18 @@ bag is hand-written instead of the shape the library computes. This is what isol
 that deepened that relation would move nothing here. Like `unionTarget` it is expensive per component,
 so it too moved the recorded budget on its own -- fixture growth, not a regression.
 
+Four exotic kinds each price a `types.ts` conditional arm no other kind reaches, and each also fails the
+clean-compile gate if its mechanism regresses, so they are correctness canaries sitting inside the perf
+gate the way `unionTarget` is: `permissiveFactory` (a Mantine-style un-introspectable target, the
+"Permissiveness for un-introspectable targets" section), `genericPoly` (a generic polymorphic target, the
+`string extends keyof P` gate under "The style widening"), `attrsAsRedirect` (function-form `.attrs` that
+redirects the target, the TS2589-sensitive seam under "Target prop resolution"), and `disjointTarget` (a
+no-shared-keys union target, "The empty-prop-bag guard"). Two call-site variants on `plainTag` price a
+relation no site otherwise triggers: passing `style` (the widening, from the call-site direction) and a
+`ref` callback (contextual inference, #5687). `canary.tsx` additionally pins the two soundness properties
+a cost kind cannot catch on its own: a `genericPoly` bad value is rejected, and a `permissiveFactory`
+arbitrary prop is accepted.
+
 A kind added or a weight changed here changes what the budget means, so re-measure with `--update` and
 say in the commit that the fixture, not the cost, is what moved. `type-perf.budget.json` is the live
 figure; `pnpm --filter styled-components type-perf` prints the current one. Do not restate either here,
@@ -80,6 +92,16 @@ more chained layer, a hard failure against both 6.4.2 and 6.4.4 rather than a sl
 `ComponentPropsWithRef` there costs ~2% instantiations on the consumer fixture and lands the same repro
 at 133K, below 6.4.2. Cheaper in count but deeper in nesting is a real trade, and this one position is
 where nesting wins.
+
+That `ComponentPropsWithRef` re-merge runs only when `.attrs()` redirects the target. Object-form
+`.attrs()` (the common case) leaves the target unchanged, so `AttrsTarget` returns `Target`,
+`OuterProps` already equals `TargetProps<R, Target>`, and re-merging `ComponentPropsWithRef<Target>`
+rebuilds the ~265-key intrinsic bag only to reproduce what `OuterProps` held. A `[PrivateResolvedTarget]
+extends [Target]` fast path returns `MergeProps<OuterProps, Props>` directly for that case, keeping the
+function-form union on the `ComponentPropsWithRef` branch (the bracket stops it distributing here). It
+is the single largest per-kind cost in the fixture (`.attrs` on an intrinsic priced 27x `.attrs` on a
+component before this), and the fast path measured -6.8% instantiations on the 100-component fixture with
+the contract suite and every `.attrs` behavior unchanged.
 
 ## The style widening
 
