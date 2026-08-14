@@ -223,12 +223,26 @@ export type TargetProps<R extends Runtime, T> = T extends keyof React.JSX.Intrin
  * instead of the full expansion of every tag attribute. See {@link WithCSSVars}
  * for why a conditional's inline branch cannot keep a name.
  *
- * Applies the widening directly rather than through {@link OverrideStyle}: every
- * intrinsic element declares `style`, so the guard has nothing to decide here.
+ * Applies the widening directly unless the props carry a `data-*` index
+ * signature. Running `Omit` over that template-literal key for every intrinsic
+ * element exceeds TypeScript's union complexity limit (#5796).
  */
-type IntrinsicProps<T extends keyof React.JSX.IntrinsicElements> = WithCSSVars<
-  React.JSX.IntrinsicElements[T]
->;
+type IntrinsicElementsHaveDataIndex =
+  keyof DataAttributes extends keyof React.JSX.IntrinsicElements['div'] ? true : false;
+
+/**
+ * Preserves custom-property support without mapping over a template-literal key.
+ * The intersection is confined to the augmented fallback; using it for every
+ * intrinsic element regresses the normal declaration-site relation.
+ */
+type WithCSSVarsForDataIndex<P extends BaseObject> = P & {
+  style?: CSSPropertiesWithVars | undefined;
+};
+
+type IntrinsicProps<T extends keyof React.JSX.IntrinsicElements> =
+  IntrinsicElementsHaveDataIndex extends true
+    ? WithCSSVarsForDataIndex<React.JSX.IntrinsicElements[T]>
+    : WithCSSVars<React.JSX.IntrinsicElements[T]>;
 
 /**
  * Props of a component render target. Named for the same reason as {@link IntrinsicProps}.
