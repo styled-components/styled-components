@@ -134,6 +134,18 @@ const AS_TAGS = ['a', 'button', 'label', 'section', 'video', 'ul'];
 // deepened that relation would be invisible. Like `unionTarget`, it is expensive
 // per component, so adding it moved the recorded budget on its own -- that jump
 // is fixture growth, not a regression.
+// `annotatedPublic*` price the same declaration site as `annotated`, but written
+// with the public `StyledComponent<Target, Props>` alias instead of a hand-assembled
+// `IStyledComponent<'web', …>` bag -- the pattern isolatedDeclarations consumers are
+// told to use. `StyledComponent` resolves to the exact shape the constructor emits,
+// so the relation should stay identity-cheap; a change to `StyledComponent`,
+// `MergeProps`, `TargetProps`, or `WidenForUntypedTarget` that reintroduced a
+// divergent bag would regress these and nothing else. The three cover the alias's
+// three structurally-distinct construction arms: `annotatedPublic` an intrinsic tag,
+// `annotatedPublicWrap` the hoisted-statics intersection a wrapped component adds,
+// and `annotatedPublicFactory` the `WidenForUntypedTarget` arm an un-introspectable
+// target takes. Each is expensive per component like `annotated`, so each moved the
+// budget on its own -- fixture growth, not a regression.
 // The four exotic kinds below each price a `types.ts` conditional arm no other
 // kind reaches, and each doubles as a correctness canary (the run fails on any
 // fixture compile error): `permissiveFactory` the un-introspectable
@@ -151,6 +163,9 @@ const KIND_WEIGHTS = [
   ['chained', 3],
   ['attrsTag', 2],
   ['annotated', 1],
+  ['annotatedPublic', 1],
+  ['annotatedPublicWrap', 1],
+  ['annotatedPublicFactory', 1],
   ['attrsWrap', 1],
   ['genericWrapper', 1],
   ['unionTarget', 1],
@@ -171,7 +186,7 @@ function kindOf(i) {
 }
 
 const HEADER = `import * as React from 'react';
-import styled, { type FastOmit, type IStyledComponent } from 'styled-components';
+import styled, { type FastOmit, type IStyledComponent, type StyledComponent } from 'styled-components';
 
 type DivProps = React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
 
@@ -270,6 +285,31 @@ function unit(i) {
       // & string`, the public spelling of the type the report annotates against.
       decl = `const ${N}: IStyledComponent<'web', FastOmit<DivProps, never> & { $a${i}?: number }> = styled.div<{ $a${i}?: number }>\`
   color: \${p => (p.$a${i} ? 'red' : 'blue')};
+\`;`;
+      break;
+    case 'annotatedPublic':
+      // The public annotation an isolatedDeclarations consumer writes for an
+      // intrinsic tag: `StyledComponent<'div', Props>` in place of the
+      // hand-assembled bag `annotated` uses. Same target and props, so it
+      // compiles clean and the cost measured is the relation, not a mismatch.
+      decl = `const ${N}: StyledComponent<'div', { $a${i}?: number }> = styled.div<{ $a${i}?: number }>\`
+  color: \${p => (p.$a${i} ? 'red' : 'blue')};
+\`;`;
+      break;
+    case 'annotatedPublicWrap':
+      // The wrapped-component variant: `StyledComponent<typeof Plain, Props>`
+      // routes through the hoisted-statics intersection an intrinsic tag never
+      // reaches, so it prices that arm of the alias situationally.
+      decl = `const ${N}: StyledComponent<typeof Plain, { $a${i}?: number }> = styled(Plain)<{ $a${i}?: number }>\`
+  margin: \${p => p.$a${i} ?? 0}px;
+\`;`;
+      break;
+    case 'annotatedPublicFactory':
+      // The un-introspectable factory variant: `StyledComponent<typeof Factory>`
+      // prices the `WidenForUntypedTarget` arm at a declaration site, the third
+      // distinct construction path an intrinsic tag and a plain wrap never reach.
+      decl = `const ${N}: StyledComponent<typeof Factory> = styled(Factory)\`
+  color: ${i % 2 ? 'red' : 'blue'};
 \`;`;
       break;
     case 'attrsWrap':

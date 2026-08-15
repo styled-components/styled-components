@@ -31,7 +31,7 @@ import React, { useRef } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import type { PropsWithChildren } from 'react';
 import type { TextProps as RNTextProps, ViewProps as RNViewProps } from 'react-native';
-import styled, { DefaultTheme } from '../native';
+import styled, { DefaultTheme, StyledComponent } from '../native';
 
 /**
  * Augment DefaultTheme so tests can reference theme properties. This is the
@@ -363,3 +363,27 @@ const extractedNumberOfLines: ExtractedTextProps['numberOfLines'] = 3;
 void extractedNumberOfLines;
 const extractedTargetProps: RNTextProps['ellipsizeMode'] = 'tail';
 void extractedTargetProps;
+
+/* ------------------------------------------------------------------------- *
+ * `StyledComponent<Target, Props>` from the native entry annotates a native
+ * styled-component export the same way the web entry's does. As on web, the
+ * annotation is proven to be the exact type `styled(Target)<Props>` produces:
+ * the inferred component assigns to the annotation and back. Native carries no
+ * hoisted-statics intersection, so a target-wrap case exercises that difference.
+ * ------------------------------------------------------------------------- */
+const _scNativeTag = styled.View<{ $active?: boolean }>``;
+const _scNativeTagAnnotated: StyledComponent<typeof View, { $active?: boolean }> = _scNativeTag;
+const _scNativeTagBack: typeof _scNativeTag = _scNativeTagAnnotated;
+void _scNativeTagBack;
+
+const _scNativeWrap = styled(TextInput)``;
+const _scNativeWrapAnnotated: StyledComponent<typeof TextInput> = _scNativeWrap;
+const _scNativeWrapBack: typeof _scNativeWrap = _scNativeWrapAnnotated;
+void _scNativeWrapBack;
+
+// `.attrs()` follows the same rules as web: an already-optional backfilled prop
+// leaves the type unchanged.
+const _scNativeAttrs = styled.TextInput.attrs({ editable: true })<{ $x?: number }>``;
+const _scNativeAttrsAnnotated: StyledComponent<typeof TextInput, { $x?: number }> = _scNativeAttrs;
+const _scNativeAttrsBack: typeof _scNativeAttrs = _scNativeAttrsAnnotated;
+void _scNativeAttrsBack;
