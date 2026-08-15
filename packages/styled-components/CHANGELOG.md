@@ -1,5 +1,11 @@
 # styled-components
 
+## 6.5.3
+
+### Patch Changes
+
+- 3470387: Fix TypeScript errors in projects that augment React HTML props with a `data-*` template-literal index signature.
+
 ## 6.5.2
 
 ### Patch Changes
