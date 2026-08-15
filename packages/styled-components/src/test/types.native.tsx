@@ -365,11 +365,9 @@ const extractedTargetProps: RNTextProps['ellipsizeMode'] = 'tail';
 void extractedTargetProps;
 
 /* ------------------------------------------------------------------------- *
- * `StyledComponent<Target, Props>` from the native entry annotates a native
- * styled-component export the same way the web entry's does. As on web, the
- * annotation is proven to be the exact type `styled(Target)<Props>` produces:
- * the inferred component assigns to the annotation and back. Native carries no
- * hoisted-statics intersection, so a target-wrap case exercises that difference.
+ * `StyledComponent<Target, Props>` from the native entry, proven exact the same
+ * way as web (assign both directions). Native carries no hoisted-statics
+ * intersection, so a target-wrap case exercises that difference.
  * ------------------------------------------------------------------------- */
 const _scNativeTag = styled.View<{ $active?: boolean }>``;
 const _scNativeTagAnnotated: StyledComponent<typeof View, { $active?: boolean }> = _scNativeTag;

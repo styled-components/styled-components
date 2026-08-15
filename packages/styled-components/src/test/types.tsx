@@ -629,23 +629,12 @@ const StyledNoStyleTarget = styled(NoStyleTarget)``;
 <DivWithCSSVariable style={undefined} />;
 
 /**
- * `StyledComponent<Target, Props>` is the public annotation for an explicit
- * styled-component export, the shape `isolatedDeclarations` and `.d.ts`-emitting
- * packages must write. The block below is the foolproofing contract: it proves
- * the alias resolves to the *exact* type `styled(Target)<Props>` produces across
- * every target kind and construction form, so a consumer who names the target and
- * props the way they wrote them to `styled` gets the real type, never a lossy
- * approximation that drops members (the failure mode of hand-assembling the type).
- *
- * The core guarantee is `_scExact`: it compiles only when the two types are
- * mutually assignable. `Props` is invariant (`in out`), so mutual assignability is
- * identity, not mere one-way compatibility -- a drift between this alias and the
- * constructor's return breaks it. The headline cases below also keep the explicit
- * `const X: StyledComponent<...> = styled...` form, the real-world usage and the
- * exact direction declaration emit exercises.
- *
- * Scope and the two `.attrs()` rules are documented on the type itself in
- * `types.ts`; the cases here enumerate them so a regression in any one fails.
+ * Contract for the public `StyledComponent<Target, Props>` annotation: it must
+ * resolve to the exact type `styled(Target)<Props>` produces for every target kind
+ * and construction form. `_scExact` compiles only when the two types are mutually
+ * assignable; `Props` is invariant, so that is an identity check, not one-way
+ * compatibility. The `.attrs()` rules the cases enumerate are documented in
+ * `types.ts`.
  */
 type _ScExact<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 const _scExact = <_T extends true>(): void => {};
@@ -746,17 +735,10 @@ const _scFactoryBack: typeof _scFactory = _scFactoryAnnotated;
 void _scFactoryBack;
 
 /**
- * `.attrs()` rules. Attrs data (which keys are backfilled, and a target redirect)
- * lives only in the runtime value, so it is not derivable from `<Target, Props>`.
- * Two spellings cover it, both documented on the type:
- *
- * 1. Backfilling a prop that was required makes it optional on the component, so
- *    declare that prop optional in `Props`.
- * 2. An object-form `as` redirect keeps the base target's props and adds the
- *    resolved target's, so pass the resolved target's props as `Props`.
- *
- * Attrs that only backfill already-optional props (the common case) need neither
- * rule -- the type is unchanged.
+ * `.attrs()` rules (backfilled keys and target redirect are not in
+ * `<Target, Props>`): a backfilled required prop becomes optional in `Props`; an
+ * object-form `as` redirect adds the resolved target's props to `Props`. Attrs
+ * over already-optional props (the common case) needs neither.
  */
 const _scAttrsPlain = styled.input.attrs({ type: 'text' })<{ $x?: number }>``;
 _scExact<_ScExact<typeof _scAttrsPlain, StyledComponent<'input', { $x?: number }>>>();
@@ -772,12 +754,9 @@ _scExact<
 >();
 
 /**
- * Foolproofing floor: any annotation that *compiles* is the exact emitted type or
- * a structural equal of it (identical call-site behavior). A genuinely different
- * required prop is rejected -- never silently accepted, and never silently
- * dropped. Structural equivalences (an optional-only prop difference, two
- * intrinsic tags with identical prop shapes like div/span) are inherent to TS and
- * harmless, since equal shapes accept and reject the same props.
+ * A genuinely different required prop is rejected, never silently accepted or
+ * dropped. (Optional-only or structurally-equal mismatches stay assignable, per
+ * TS structural typing, and are harmless: equal shapes behave identically.)
  */
 // @ts-expect-error the real required prop is $y; annotating a required $x is rejected
 const _scWrongReq: StyledComponent<'div', { $x: number }> = styled.div<{ $y: number }>``;

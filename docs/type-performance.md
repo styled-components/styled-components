@@ -48,14 +48,11 @@ that deepened that relation would move nothing here. Like `unionTarget` it is ex
 so it too moved the recorded budget on its own -- fixture growth, not a regression.
 
 Three `annotatedPublic*` kinds price the same declaration site with the public `StyledComponent<Target,
-Props>` alias in place of the hand-written bag, the annotation isolatedDeclarations consumers are told to
-write. They cover the alias's three structurally-distinct construction arms: `annotatedPublic` an
-intrinsic tag, `annotatedPublicWrap` the hoisted-statics intersection a wrapped component adds, and
-`annotatedPublicFactory` the `WidenForUntypedTarget` arm an un-introspectable target takes. `StyledComponent`
-resolves to the exact shape the constructor emits, so the relation stays identity-cheap; a change to it,
-`MergeProps`, `TargetProps`, or `WidenForUntypedTarget` that reintroduced a divergent bag would regress
-these and nothing else. Each is expensive per component like `annotated`, so each moved the budget on its
-own -- fixture growth, not a regression.
+Props>` alias in place of the hand-written bag. They cover its distinct construction arms so a change to
+`StyledComponent`, `MergeProps`, `TargetProps`, or `WidenForUntypedTarget` that reintroduced a divergent
+bag would regress them: `annotatedPublic` an intrinsic tag, `annotatedPublicWrap` the hoisted-statics
+intersection, `annotatedPublicFactory` the `WidenForUntypedTarget` arm. Each is expensive per component,
+so each moved the budget on its own -- fixture growth, not a regression.
 
 Four exotic kinds each price a `types.ts` conditional arm no other kind reaches, and each also fails the
 clean-compile gate if its mechanism regresses, so they are correctness canaries sitting inside the perf

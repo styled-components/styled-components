@@ -437,41 +437,27 @@ export type IStyledComponent<
 
 /**
  * The type of a web styled component, for annotating an explicit export.
- *
- * `isolatedDeclarations` and any package that emits its own `.d.ts` require every
- * exported styled component to carry a nameable type annotation, which inference
- * alone does not survive. Write it by naming the target the same way you passed it
- * to `styled`, and the extra props the same way you passed them to `styled.tag<…>`:
+ * `isolatedDeclarations` and `.d.ts`-emitting packages require one; inference does
+ * not survive declaration emit. Name the target and props as you passed them to
+ * `styled`:
  *
  * ```ts
  * export const Card: StyledComponent<'div', { $active?: boolean }> = styled.div<{ $active?: boolean }>`…`;
  * export const CloseButton: StyledComponent<typeof IconButton> = styled(IconButton)`…`;
  * ```
  *
- * This resolves to the exact type `styled(Target)<Props>` produces -- across every
- * target kind (intrinsic tag, custom element, function, class, `forwardRef`,
- * `memo`, another styled component, a union-props or generic-polymorphic target),
- * `.withConfig(…)`, and hoisted target statics included -- so the annotation is
- * never a lossy approximation and the check against the inferred result stays
- * cheap. Because the prop type is invariant, an annotation that names the wrong
- * required prop or target is rejected at compile time rather than silently
- * mistyped. Prefer annotating with `typeof` an existing component where a call
- * site allows it, which is free; reach for this only where the value being
- * annotated is the component itself.
+ * Resolves to the exact type `styled(Target)<Props>` produces for every target kind
+ * and `.withConfig(…)`, hoisted statics included.
  *
- * `.attrs(…)` carries information no written annotation can see (which props it
- * backfills, and any target redirect), so two rules cover it:
+ * `.attrs(…)` needs two adjustments, since its backfilled keys and target redirect
+ * are not in `<Target, Props>`:
+ * - A backfilled required prop becomes optional: declare it optional in `Props`.
+ * - An object-form `as` redirect (`.attrs({ as: 'a' })`) keeps the base props and
+ *   adds the resolved target's: pass those as `Props`
+ *   (`StyledComponent<'button', React.ComponentPropsWithRef<'a'>>`), or redirect
+ *   with the `as` prop at the call site.
  *
- * - Backfilling a prop that was required makes it optional on the component:
- *   declare that prop optional in `Props`
- *   (`StyledComponent<typeof Field, { name?: string }>`). Attrs that only touch
- *   already-optional props need no change.
- * - An object-form `as` redirect (`.attrs({ as: 'a' })`) keeps the base target's
- *   props and adds the resolved target's: pass the resolved target's props as
- *   `Props` (`StyledComponent<'button', React.ComponentPropsWithRef<'a'>>`), or
- *   redirect with the `as` prop at the call site instead.
- *
- * Web only. See the native entry's `StyledComponent` for React Native.
+ * Web only; the native entry exports a native `StyledComponent`.
  */
 export type StyledComponent<
   Target extends WebTarget,
@@ -484,9 +470,8 @@ export type StyledComponent<
 
 /**
  * The React Native counterpart to {@link StyledComponent}, re-exported as
- * `StyledComponent` from `styled-components/native`. Same annotation pattern,
- * with the native runtime and no hoisted-statics intersection: the constructor's
- * statics widening is web-only, so a native styled component's type carries none.
+ * `StyledComponent` from `styled-components/native`. No hoisted-statics
+ * intersection: the constructor's statics widening is web-only.
  */
 export type NativeStyledComponent<
   Target extends NativeTarget,
