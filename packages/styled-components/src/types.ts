@@ -216,6 +216,36 @@ export type TargetProps<R extends Runtime, T> = T extends keyof React.JSX.Intrin
     : {};
 
 /**
+ * True when an application has augmented `React.HTMLAttributes` with a `data-*`
+ * template-literal index signature, the common pattern for allowing arbitrary
+ * data attributes. Detected by testing whether {@link DataAttributes}' key is
+ * already a key of a stock intrinsic element.
+ *
+ * Scope is exactly `data-${string}`: an `aria-${string}` or other custom-prefix
+ * template augmentation is not detected and still hits the {@link WithCSSVars}
+ * path (#5796). `data-*` is the dominant augmentation, so the narrow probe buys
+ * the common case; widening it means OR-ing another literal prefix in here.
+ */
+type IntrinsicElementsHaveDataIndex =
+  keyof DataAttributes extends keyof React.JSX.IntrinsicElements['div'] ? true : false;
+
+/**
+ * {@link WithCSSVars} for the augmented intrinsic path. Identical widening, but
+ * filters `style` with {@link FastOmit}'s mapped-type `as` clause instead of the
+ * built-in `Omit`. `Omit<P, 'style'>` is `Pick<P, Exclude<keyof P, 'style'>>`,
+ * and distributing that `Exclude` over a template-literal key across every
+ * intrinsic element exceeds TypeScript's union complexity limit (#5796);
+ * `FastOmit` drops the key without the distribution.
+ *
+ * Kept off the normal path: `FastOmit` costs materially more instantiations at
+ * that scale, and the union `style` member (mirroring {@link WithCSSVars}) is
+ * what preserves the declaration-site relation a plain intersection regresses.
+ */
+type WithCSSVarsForDataIndex<P extends BaseObject> = FastOmit<P, 'style'> & {
+  style?: CSSPropertiesWithVars | (P[keyof P & 'style'] & {}) | undefined;
+};
+
+/**
  * Props of an HTML or SVG tag.
  *
  * Both branches of {@link TargetProps} are named rather than inlined, so a
@@ -223,22 +253,11 @@ export type TargetProps<R extends Runtime, T> = T extends keyof React.JSX.Intrin
  * instead of the full expansion of every tag attribute. See {@link WithCSSVars}
  * for why a conditional's inline branch cannot keep a name.
  *
- * Applies the widening directly unless the props carry a `data-*` index
- * signature. Running `Omit` over that template-literal key for every intrinsic
- * element exceeds TypeScript's union complexity limit (#5796).
+ * Applies {@link WithCSSVars} directly except under a `data-*` augmentation,
+ * where {@link WithCSSVarsForDataIndex} avoids the `Omit` that would blow the
+ * union complexity limit. The probe is a global constant, so the common path is
+ * untouched.
  */
-type IntrinsicElementsHaveDataIndex =
-  keyof DataAttributes extends keyof React.JSX.IntrinsicElements['div'] ? true : false;
-
-/**
- * Preserves custom-property support without mapping over a template-literal key.
- * The intersection is confined to the augmented fallback; using it for every
- * intrinsic element regresses the normal declaration-site relation.
- */
-type WithCSSVarsForDataIndex<P extends BaseObject> = P & {
-  style?: CSSPropertiesWithVars | undefined;
-};
-
 type IntrinsicProps<T extends keyof React.JSX.IntrinsicElements> =
   IntrinsicElementsHaveDataIndex extends true
     ? WithCSSVarsForDataIndex<React.JSX.IntrinsicElements[T]>

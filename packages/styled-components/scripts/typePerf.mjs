@@ -14,11 +14,26 @@
  *   node scripts/typePerf.mjs            check against the budget
  *   node scripts/typePerf.mjs --update   rewrite the budget from this run
  *   node scripts/typePerf.mjs --count 500
+ *   node scripts/typePerf.mjs --augment  measure the `data-*`-augmented path
+ *
+ * `--augment` injects the `data-${string}` template-literal index signature onto
+ * `HTMLAttributes` that large apps add for arbitrary data attributes. That routes
+ * every intrinsic element through a distinct `style` widening (#5796), a cost the
+ * default fixture never exercises. It checks against its own budget file, so the
+ * two paths are guarded independently.
  *
  * Requires `pnpm build` first.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,7 +42,6 @@ import { parseArgs } from 'node:util';
 const require = createRequire(import.meta.url);
 const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const workDir = join(pkgRoot, '.type-perf');
-const budgetFile = join(pkgRoot, 'type-perf.budget.json');
 
 // parseArgs over hand-rolled indexOf: it accepts `--count=500` as well as
 // `--count 500`, and throws on an unknown flag or a valueless one instead of
@@ -36,7 +50,11 @@ const budgetFile = join(pkgRoot, 'type-perf.budget.json');
 let parsed;
 try {
   parsed = parseArgs({
-    options: { count: { type: 'string', default: '100' }, update: { type: 'boolean' } },
+    options: {
+      augment: { type: 'boolean' },
+      count: { type: 'string', default: '100' },
+      update: { type: 'boolean' },
+    },
     strict: true,
   });
 } catch (error) {
@@ -45,11 +63,20 @@ try {
 }
 
 const update = parsed.values.update === true;
+const augment = parsed.values.augment === true;
 const count = Number(parsed.values.count);
 if (!Number.isInteger(count) || count < 1) {
   console.error(`type-perf: --count needs a positive integer, got ${parsed.values.count}`);
   process.exit(1);
 }
+
+// The augmented and default paths have different costs and different baselines,
+// so they keep separate budget files; one run never clobbers the other.
+const budgetFile = join(
+  pkgRoot,
+  augment ? 'type-perf.augment.budget.json' : 'type-perf.budget.json'
+);
+const updateHint = augment ? '--augment --update' : '--update';
 
 const distEntry = join(pkgRoot, 'dist', 'index.d.ts');
 if (!existsSync(distEntry)) {
@@ -63,7 +90,10 @@ if (!existsSync(distEntry)) {
 // `test/` never reaches dist, and `utils/errors.ts` is generated -- the test run
 // rewrites it, so counting either would report a stale dist after every
 // `pnpm test` and train everyone to ignore the warning.
-const IGNORED_SOURCES = new Set([join(pkgRoot, 'src', 'test'), join(pkgRoot, 'src', 'utils', 'errors.ts')]);
+const IGNORED_SOURCES = new Set([
+  join(pkgRoot, 'src', 'test'),
+  join(pkgRoot, 'src', 'utils', 'errors.ts'),
+]);
 
 const newestSource = (function newest(dir) {
   let latest = 0;
@@ -387,6 +417,18 @@ export const CanaryNative = <NativeCanary notAPropOfView={1} />;
 export const NativeOk = <NativeCanary testID="ok" />;
 `;
 
+// The `data-*` template-literal augmentation from #5796. A separate module (an
+// `import` makes it one) so the `declare module` merges into every fixture file
+// without editing the shared HEADER. Only written under `--augment`.
+const AUGMENT = `import 'react';
+
+declare module 'react' {
+  interface HTMLAttributes<T> {
+    [dataAttribute: \`data-\${string}\`]: string | undefined;
+  }
+}
+`;
+
 rmSync(workDir, { recursive: true, force: true });
 mkdirSync(join(workDir, 'src'), { recursive: true });
 
@@ -396,6 +438,7 @@ for (let start = 0, f = 0; start < count; start += PER_FILE, f++) {
   writeFileSync(join(workDir, 'src', `mod${f}.tsx`), `${HEADER}\n${body.join('\n')}`);
 }
 writeFileSync(join(workDir, 'src', 'canary.tsx'), CANARY);
+if (augment) writeFileSync(join(workDir, 'src', '_augment.d.ts'), AUGMENT);
 
 writeFileSync(
   join(workDir, 'tsconfig.json'),
@@ -484,7 +527,10 @@ const versions = {
   typesReact: require('@types/react/package.json').version,
 };
 
-console.log(`type-perf: ${count} components, TypeScript ${versions.typescript}, @types/react ${versions.typesReact}`);
+console.log(
+  `type-perf${augment ? ' (augmented)' : ''}: ${count} components, ` +
+    `TypeScript ${versions.typescript}, @types/react ${versions.typesReact}`
+);
 console.log(`  types:          ${measured.types.toLocaleString()}`);
 console.log(`  instantiations: ${measured.instantiations.toLocaleString()}`);
 console.log(`  memory:         ${Math.round(measured.memoryKb / 1024).toLocaleString()} MB`);
@@ -505,9 +551,14 @@ if (update) {
   process.exit(0);
 }
 
+if (!existsSync(budgetFile)) {
+  console.error(`type-perf: ${budgetFile} does not exist -- run with ${updateHint} to create it.`);
+  process.exit(1);
+}
+
 const budget = JSON.parse(readFileSync(budgetFile, 'utf8'));
 if (!budget.measured || !budget.tolerancePct) {
-  console.error(`type-perf: ${budgetFile} is not in the expected shape -- run with --update.`);
+  console.error(`type-perf: ${budgetFile} is not in the expected shape -- run with ${updateHint}.`);
   process.exit(1);
 }
 
@@ -517,7 +568,9 @@ if (!budget.measured || !budget.tolerancePct) {
 // to enforce. Any budget written before a metric existed has exactly this shape.
 for (const metric of Object.keys(TOLERANCE_PCT)) {
   if (!Number.isFinite(budget.measured[metric]) || !Number.isFinite(budget.tolerancePct[metric])) {
-    console.error(`type-perf: budget is missing '${metric}' -- run with --update to re-measure.`);
+    console.error(
+      `type-perf: budget is missing '${metric}' -- run with ${updateHint} to re-measure.`
+    );
     process.exit(1);
   }
 }
@@ -558,7 +611,7 @@ if (over.length > 0) {
   }
   console.error(
     'Consumer type-check cost grew. Find the cause before raising the budget; ' +
-      'run with --update only when the increase is understood and intended.'
+      `run with ${updateHint} only when the increase is understood and intended.`
   );
   process.exit(1);
 }
@@ -566,7 +619,7 @@ if (over.length > 0) {
 for (const [label, actual, baseline] of under) {
   console.log(
     `type-perf: ${label} improved ${Math.round((1 - actual / baseline) * 100)}% ` +
-      `(${baseline.toLocaleString()} -> ${actual.toLocaleString()}); run --update to bank it`
+      `(${baseline.toLocaleString()} -> ${actual.toLocaleString()}); run ${updateHint} to bank it`
   );
 }
 

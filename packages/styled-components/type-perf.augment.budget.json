@@ -1,0 +1,17 @@
+{
+  "count": 100,
+  "measured": {
+    "instantiations": 965491,
+    "memoryKb": 206495,
+    "types": 39584
+  },
+  "tolerancePct": {
+    "instantiations": 10,
+    "memoryKb": 12,
+    "types": 10
+  },
+  "versions": {
+    "typescript": "5.9.3",
+    "typesReact": "18.3.28"
+  }
+}

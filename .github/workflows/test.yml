@@ -46,6 +46,8 @@ jobs:
       # Guards consumer type-check cost against the built .d.ts. Regressions here
       # are invisible to the unit and type-contract suites (see #5767).
       - run: pnpm --filter styled-components type-perf
+      # The `data-*`-augmented path has its own cost and budget (see #5796).
+      - run: pnpm --filter styled-components type-perf:augment
   test:
     runs-on: ubuntu-latest
     steps:
