@@ -134,6 +134,14 @@ const AS_TAGS = ['a', 'button', 'label', 'section', 'video', 'ul'];
 // deepened that relation would be invisible. Like `unionTarget`, it is expensive
 // per component, so adding it moved the recorded budget on its own -- that jump
 // is fixture growth, not a regression.
+// `annotatedPublic*` price the same declaration site with the public
+// `StyledComponent<Target, Props>` alias instead of a hand-assembled bag. The three
+// cover its distinct construction arms so a change to `StyledComponent`,
+// `MergeProps`, `TargetProps`, or `WidenForUntypedTarget` that reintroduced a
+// divergent bag regresses them: `annotatedPublic` an intrinsic tag,
+// `annotatedPublicWrap` the hoisted-statics intersection, `annotatedPublicFactory`
+// the `WidenForUntypedTarget` arm. Expensive per component, so each moved the budget
+// on its own -- fixture growth, not a regression.
 // The four exotic kinds below each price a `types.ts` conditional arm no other
 // kind reaches, and each doubles as a correctness canary (the run fails on any
 // fixture compile error): `permissiveFactory` the un-introspectable
@@ -151,6 +159,9 @@ const KIND_WEIGHTS = [
   ['chained', 3],
   ['attrsTag', 2],
   ['annotated', 1],
+  ['annotatedPublic', 1],
+  ['annotatedPublicWrap', 1],
+  ['annotatedPublicFactory', 1],
   ['attrsWrap', 1],
   ['genericWrapper', 1],
   ['unionTarget', 1],
@@ -171,7 +182,7 @@ function kindOf(i) {
 }
 
 const HEADER = `import * as React from 'react';
-import styled, { type FastOmit, type IStyledComponent } from 'styled-components';
+import styled, { type FastOmit, type IStyledComponent, type StyledComponent } from 'styled-components';
 
 type DivProps = React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
 
@@ -270,6 +281,24 @@ function unit(i) {
       // & string`, the public spelling of the type the report annotates against.
       decl = `const ${N}: IStyledComponent<'web', FastOmit<DivProps, never> & { $a${i}?: number }> = styled.div<{ $a${i}?: number }>\`
   color: \${p => (p.$a${i} ? 'red' : 'blue')};
+\`;`;
+      break;
+    case 'annotatedPublic':
+      // Public annotation on an intrinsic tag (see KIND_WEIGHTS).
+      decl = `const ${N}: StyledComponent<'div', { $a${i}?: number }> = styled.div<{ $a${i}?: number }>\`
+  color: \${p => (p.$a${i} ? 'red' : 'blue')};
+\`;`;
+      break;
+    case 'annotatedPublicWrap':
+      // Public annotation on a wrapped component: the hoisted-statics arm.
+      decl = `const ${N}: StyledComponent<typeof Plain, { $a${i}?: number }> = styled(Plain)<{ $a${i}?: number }>\`
+  margin: \${p => p.$a${i} ?? 0}px;
+\`;`;
+      break;
+    case 'annotatedPublicFactory':
+      // Public annotation on an un-introspectable target: the widening arm.
+      decl = `const ${N}: StyledComponent<typeof Factory> = styled(Factory)\`
+  color: ${i % 2 ? 'red' : 'blue'};
 \`;`;
       break;
     case 'attrsWrap':

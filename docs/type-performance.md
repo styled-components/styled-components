@@ -47,6 +47,13 @@ bag is hand-written instead of the shape the library computes. This is what isol
 that deepened that relation would move nothing here. Like `unionTarget` it is expensive per component,
 so it too moved the recorded budget on its own -- fixture growth, not a regression.
 
+Three `annotatedPublic*` kinds price the same declaration site with the public `StyledComponent<Target,
+Props>` alias in place of the hand-written bag. They cover its distinct construction arms so a change to
+`StyledComponent`, `MergeProps`, `TargetProps`, or `WidenForUntypedTarget` that reintroduced a divergent
+bag would regress them: `annotatedPublic` an intrinsic tag, `annotatedPublicWrap` the hoisted-statics
+intersection, `annotatedPublicFactory` the `WidenForUntypedTarget` arm. Each is expensive per component,
+so each moved the budget on its own -- fixture growth, not a regression.
+
 Four exotic kinds each price a `types.ts` conditional arm no other kind reaches, and each also fails the
 clean-compile gate if its mechanism regresses, so they are correctness canaries sitting inside the perf
 gate the way `unionTarget` is: `permissiveFactory` (a Mantine-style un-introspectable target, the

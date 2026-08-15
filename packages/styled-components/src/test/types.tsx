@@ -11,6 +11,7 @@ import {
   Interpolation,
   IStyledComponent,
   RuleSet,
+  StyledComponent,
   StyledObject,
   WebTarget,
   withTheme,
@@ -626,6 +627,140 @@ const StyledNoStyleTarget = styled(NoStyleTarget)``;
 
 /** `style={undefined}` stays assignable under exactOptionalPropertyTypes. */
 <DivWithCSSVariable style={undefined} />;
+
+/**
+ * Contract for the public `StyledComponent<Target, Props>` annotation: it must
+ * resolve to the exact type `styled(Target)<Props>` produces for every target kind
+ * and construction form. `_scExact` compiles only when the two types are mutually
+ * assignable; `Props` is invariant, so that is an identity check, not one-way
+ * compatibility. The `.attrs()` rules the cases enumerate are documented in
+ * `types.ts`.
+ */
+type _ScExact<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const _scExact = <_T extends true>(): void => {};
+
+/* Headline forms: explicit annotation, both assignment directions. */
+const _scPlain = styled.div<{ $active?: boolean }>``;
+const _scPlainAnnotated: StyledComponent<'div', { $active?: boolean }> = _scPlain;
+const _scPlainBack: typeof _scPlain = _scPlainAnnotated;
+void _scPlainBack;
+
+/** Wrapping a component: hoisted target statics survive into the annotation. */
+function IconButtonBase(props: { label: string; className?: string }) {
+  return <button className={props.className}>{props.label}</button>;
+}
+IconButtonBase.displayName = 'IconButton';
+const _scWrap = styled(IconButtonBase)``;
+const _scWrapAnnotated: StyledComponent<typeof IconButtonBase> = _scWrap;
+const _scWrapBack: typeof _scWrap = _scWrapAnnotated;
+void _scWrapBack;
+
+const _scWrapProps = styled(IconButtonBase)<{ $tone?: 'a' | 'b' }>``;
+const _scWrapPropsAnnotated: StyledComponent<typeof IconButtonBase, { $tone?: 'a' | 'b' }> =
+  _scWrapProps;
+const _scWrapPropsBack: typeof _scWrapProps = _scWrapPropsAnnotated;
+void _scWrapPropsBack;
+
+/* Breadth: every distinct target kind resolves exactly. */
+const _scCustomEl = styled('my-element')``;
+_scExact<_ScExact<typeof _scCustomEl, StyledComponent<'my-element'>>>();
+
+class _ScCls extends React.Component<{ label: string; className?: string }> {
+  render() {
+    return <div className={this.props.className}>{this.props.label}</div>;
+  }
+}
+const _scClass = styled(_ScCls)``;
+_scExact<_ScExact<typeof _scClass, StyledComponent<typeof _ScCls>>>();
+
+const _ScFwd = React.forwardRef<HTMLDivElement, { label: string }>((p, ref) => (
+  <div ref={ref}>{p.label}</div>
+));
+const _scFwd = styled(_ScFwd)``;
+_scExact<_ScExact<typeof _scFwd, StyledComponent<typeof _ScFwd>>>();
+
+const _ScMemo = React.memo(IconButtonBase);
+const _scMemo = styled(_ScMemo)``;
+_scExact<_ScExact<typeof _scMemo, StyledComponent<typeof _ScMemo>>>();
+
+/** styled-of-styled: the wrapped styled component's statics chain through. */
+const _ScBase = styled.button<{ $v?: number }>``;
+const _scOfStyled = styled(_ScBase)<{ $w?: string }>``;
+_scExact<_ScExact<typeof _scOfStyled, StyledComponent<typeof _ScBase, { $w?: string }>>>();
+
+/** union-props target (#5787). */
+const _ScPressable = (
+  _p: React.ButtonHTMLAttributes<HTMLButtonElement> | React.AnchorHTMLAttributes<HTMLAnchorElement>
+) => null;
+const _scUnion = styled(_ScPressable)<{ $x?: number }>``;
+_scExact<_ScExact<typeof _scUnion, StyledComponent<typeof _ScPressable, { $x?: number }>>>();
+
+/** generic polymorphic target (#5756). */
+type _ScPolyProps<C extends React.ElementType, P = object> = React.PropsWithChildren<
+  P & { as?: C }
+> &
+  Omit<React.ComponentPropsWithoutRef<C>, keyof (P & { as?: C })>;
+const _ScPoly = <C extends React.ElementType = 'button'>(
+  _p: _ScPolyProps<C, { variant?: 'primary' | 'secondary' }>
+) => null;
+const _scPoly = styled(_ScPoly)<{ $x?: number }>``;
+_scExact<_ScExact<typeof _scPoly, StyledComponent<typeof _ScPoly, { $x?: number }>>>();
+
+/** disjoint-union target (#5787 sibling). */
+const _ScDisjoint = (_p: { onlyA: string } | { onlyB: number }) => null;
+const _scDisjoint = styled(_ScDisjoint)``;
+_scExact<_ScExact<typeof _scDisjoint, StyledComponent<typeof _ScDisjoint>>>();
+
+/** `.withConfig()` leaves the type unchanged. */
+const _scWithConfig = styled.div.withConfig({ displayName: 'X' })<{ $x?: number }>``;
+_scExact<_ScExact<typeof _scWithConfig, StyledComponent<'div', { $x?: number }>>>();
+
+/**
+ * Un-introspectable factory target (Mantine v7 shape): the annotation carries the
+ * same permissive widening the constructor applies, through `WidenForUntypedTarget`.
+ */
+type SCFactoryProps<C, P = {}> = C extends React.ElementType
+  ? Omit<React.ComponentProps<C>, keyof P> & P & { component?: C } & { ref?: any }
+  : P & { component: React.ElementType };
+type SCFactory = (<C = 'button'>(
+  p: SCFactoryProps<C, { children?: React.ReactNode }>
+) => React.ReactElement) &
+  Omit<React.FunctionComponent<SCFactoryProps<any, { children?: React.ReactNode }>>, never> & {
+    extend: (p: any) => any;
+  };
+declare const scFactory: SCFactory;
+const _scFactory = styled(scFactory)``;
+const _scFactoryAnnotated: StyledComponent<typeof scFactory> = _scFactory;
+const _scFactoryBack: typeof _scFactory = _scFactoryAnnotated;
+void _scFactoryBack;
+
+/**
+ * `.attrs()` rules (backfilled keys and target redirect are not in
+ * `<Target, Props>`): a backfilled required prop becomes optional in `Props`; an
+ * object-form `as` redirect adds the resolved target's props to `Props`. Attrs
+ * over already-optional props (the common case) needs neither.
+ */
+const _scAttrsPlain = styled.input.attrs({ type: 'text' })<{ $x?: number }>``;
+_scExact<_ScExact<typeof _scAttrsPlain, StyledComponent<'input', { $x?: number }>>>();
+
+const _scAttrsBackfill = styled(IconButtonBase).attrs({ label: 'x' })``;
+_scExact<
+  _ScExact<typeof _scAttrsBackfill, StyledComponent<typeof IconButtonBase, { label?: string }>>
+>();
+
+const _scAttrsRedirect = styled.button.attrs({ as: 'a' })``;
+_scExact<
+  _ScExact<typeof _scAttrsRedirect, StyledComponent<'button', React.ComponentPropsWithRef<'a'>>>
+>();
+
+/**
+ * A genuinely different required prop is rejected, never silently accepted or
+ * dropped. (Optional-only or structurally-equal mismatches stay assignable, per
+ * TS structural typing, and are harmless: equal shapes behave identically.)
+ */
+// @ts-expect-error the real required prop is $y; annotating a required $x is rejected
+const _scWrongReq: StyledComponent<'div', { $x: number }> = styled.div<{ $y: number }>``;
+void _scWrongReq;
 
 /** Widening is visible through prop extraction, not only at the call site. */
 const StyleExtractionTarget = styled.div``;

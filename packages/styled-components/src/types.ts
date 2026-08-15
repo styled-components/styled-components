@@ -435,6 +435,55 @@ export type IStyledComponent<
   Props extends BaseObject = BaseObject,
 > = IStyledComponentBase<R, Props> & string;
 
+/**
+ * The type of a web styled component, for annotating an explicit export.
+ * `isolatedDeclarations` and `.d.ts`-emitting packages require one; inference does
+ * not survive declaration emit. Name the target and props as you passed them to
+ * `styled`:
+ *
+ * ```ts
+ * export const Card: StyledComponent<'div', { $active?: boolean }> = styled.div<{ $active?: boolean }>`…`;
+ * export const CloseButton: StyledComponent<typeof IconButton> = styled(IconButton)`…`;
+ * ```
+ *
+ * Resolves to the exact type `styled(Target)<Props>` produces for every target kind
+ * and `.withConfig(…)`, hoisted statics included.
+ *
+ * `.attrs(…)` needs two adjustments, since its backfilled keys and target redirect
+ * are not in `<Target, Props>`:
+ * - A backfilled required prop becomes optional: declare it optional in `Props`.
+ * - An object-form `as` redirect (`.attrs({ as: 'a' })`) keeps the base props and
+ *   adds the resolved target's: pass those as `Props`
+ *   (`StyledComponent<'button', React.ComponentPropsWithRef<'a'>>`), or redirect
+ *   with the `as` prop at the call site.
+ *
+ * Web only; the native entry exports a native `StyledComponent`.
+ */
+export type StyledComponent<
+  Target extends WebTarget,
+  Props extends BaseObject = BaseObject,
+> = IStyledComponent<
+  'web',
+  WidenForUntypedTarget<TargetProps<'web', Target>, MergeProps<TargetProps<'web', Target>, Props>>
+> &
+  (Target extends string ? {} : Omit<Target, keyof React.Component<any>>);
+
+/**
+ * The React Native counterpart to {@link StyledComponent}, re-exported as
+ * `StyledComponent` from `styled-components/native`. No hoisted-statics
+ * intersection: the constructor's statics widening is web-only.
+ */
+export type NativeStyledComponent<
+  Target extends NativeTarget,
+  Props extends BaseObject = BaseObject,
+> = IStyledComponent<
+  'native',
+  WidenForUntypedTarget<
+    TargetProps<'native', Target>,
+    MergeProps<TargetProps<'native', Target>, Props>
+  >
+>;
+
 // corresponds to createStyledComponent
 export interface IStyledComponentFactory<
   out R extends Runtime,
