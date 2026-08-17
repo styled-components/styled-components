@@ -48,6 +48,11 @@ jobs:
       - run: pnpm --filter styled-components type-perf
       # The `data-*`-augmented path has its own cost and budget (see #5796).
       - run: pnpm --filter styled-components type-perf:augment
+      # Guards that the emitted .d.ts compiles under `skipLibCheck: false` against
+      # the min and max supported `@types/react` majors. The contract suite only
+      # runs on the pinned 18, so a name removed in a newer major (e.g.
+      # `WeakValidationMap` on 19) otherwise ships straight into `dist`.
+      - run: pnpm --filter styled-components test:types:dist
   test:
     runs-on: ubuntu-latest
     steps:

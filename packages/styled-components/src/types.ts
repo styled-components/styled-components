@@ -348,20 +348,46 @@ type PolymorphicCallProps<
  * props from the given rendering target to get proper typing for
  * any specialized props in the target component.
  */
-export interface PolymorphicComponent<
-  out R extends Runtime,
-  in out BaseProps extends BaseObject,
-> extends React.ForwardRefExoticComponent<
-  // FastOmit ahead of the intersection so a wrapped component's own `as` /
-  // `forwardedAs` props (e.g. Next.js Link's `as?: Url`) don't intersect with
-  // our `WebTarget`-typed versions and produce conflicting required-shape
-  // types (#5734). `React.ComponentProps<typeof StyledComponent>` still
-  // surfaces our `as` / `forwardedAs` (the original #5654 fix).
-  FastOmit<BaseProps, 'as' | 'forwardedAs'> & {
-    as?: StyledTarget<R> | undefined;
-    forwardedAs?: StyledTarget<R> | undefined;
-  }
-> {
+export interface PolymorphicComponent<out R extends Runtime, in out BaseProps extends BaseObject>
+  // `NamedExoticComponent`, not `ForwardRefExoticComponent`: the latter adds
+  // `defaultProps?: Partial<P>` and `propTypes?: WeakValidationMap<P>`, each a
+  // mapped type over the full widened prop bag `P`. Under the invariant `Props`
+  // those two members are walked both directions at every explicit declaration-site
+  // annotation (`StyledComponent<Tag, P>` / `IStyledComponent<...>`), and on an
+  // intrinsic tag the bag is ~265 keys, so that per-component parameterization
+  // dominates the relation's cost (measured -44% on an intrinsic-tag annotation
+  // fixture, ~-10% on the consumer budget, by removing it). Both members are then
+  // re-declared just below in shapes that are NOT parameterized per component, so
+  // they stay on this public type (nothing is removed, so the change is not a
+  // breaking one) while relating cheaply. Ref forwarding is unaffected either way:
+  // the ref rides in the call-site props via `ComponentPropsWithRef` in
+  // `TargetProps`, not in the exotic base. See docs/type-performance.md.
+  extends React.NamedExoticComponent<
+    // FastOmit ahead of the intersection so a wrapped component's own `as` /
+    // `forwardedAs` props (e.g. Next.js Link's `as?: Url`) don't intersect with
+    // our `WebTarget`-typed versions and produce conflicting required-shape
+    // types (#5734). `React.ComponentProps<typeof StyledComponent>` still
+    // surfaces our `as` / `forwardedAs` (the original #5654 fix).
+    FastOmit<BaseProps, 'as' | 'forwardedAs'> & {
+      as?: StyledTarget<R> | undefined;
+      forwardedAs?: StyledTarget<R> | undefined;
+    }
+  > {
+  // Preserved from the old `ForwardRefExoticComponent` base. `defaultProps` is
+  // free: `IStyledComponentBase` re-declares it (`ExecutionProps & Partial<Props>`),
+  // so on an actual styled component this base member is shadowed and never walked
+  // at a declaration-site relation. `propTypes` is `any` -- exactly what React's own
+  // `ForwardRefExoticComponent` declares on `@types/react` 19, which dropped the old
+  // `WeakValidationMap<P>`. `any` is the only spelling that resolves across the whole
+  // supported peer range (16.8+): `React.WeakValidationMap` does not exist on
+  // `@types/react` 19 and referencing it publishes a `TS2694` into every React 19
+  // consumer's build. It is also a fixed type, so the relation short-circuits (that
+  // per-component `WeakValidationMap<BaseProps>` was the dominant declaration-site
+  // cost), and it stays assignable both directions a consumer uses, so the member is
+  // kept, not narrowed. Cost of the pair vs dropping both: ~+0.4% on the consumer
+  // budget, well worth keeping the change non-breaking.
+  defaultProps?: Partial<BaseProps> | undefined;
+  propTypes?: any;
   // A single call signature, not overloads: with overloads a mid-typed JSX
   // attribute matches none, resolution fails, and attribute completion drops. The
   // prop-shape branching lives in `PolymorphicCallProps`.

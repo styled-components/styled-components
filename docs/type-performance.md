@@ -222,6 +222,55 @@ which omits `style` and lands further from identity -- for an identity-cheap rel
 means plain hand annotations no longer need it. The `annotated` fixture kind guards the axis so a future
 deepening of this relation is caught.
 
+The widening is not the largest part of that relation, and the residual above is not fully inherent. The
+`style` ablation floor stands, but the component interface carried removable cost on top of it:
+`PolymorphicComponent` extended `React.ForwardRefExoticComponent<P>`, which adds two members over
+`React.NamedExoticComponent<P>` -- `defaultProps?: Partial<P>` and `propTypes?: WeakValidationMap<P>` --
+each a mapped type over the FULL widened prop bag (~265 keys on an intrinsic tag). `Props` is invariant, so
+at every explicit declaration-site annotation those two mapped members are walked both directions, per
+structurally-unique component, and they dominate the relation: dropping them by extending
+`NamedExoticComponent` instead measured -44% on an intrinsic-tag annotation fixture and ~-10% on the
+consumer budget (`type-perf.budget.json` holds the live figures; do not restate them here). The cost is the
+per-component PARAMETERIZATION, not the members themselves: both are re-declared in shapes that do not
+depend on the per-component bag, so `PolymorphicComponent` keeps both public members and the change removes
+nothing (it is not a breaking type change).
+
+- `defaultProps?: Partial<BaseProps>` is free: `IStyledComponentBase` re-declares `defaultProps`
+  (`ExecutionProps & Partial<Props>`), so its override shadows this base member on any actual styled
+  component and it is never walked at a declaration-site relation (measured zero delta).
+- `propTypes?: any` replaces the inherited `WeakValidationMap<P>`. It must be `any`, not
+  `WeakValidationMap<...>`: `@types/react` 19 removed `WeakValidationMap` (its `ForwardRefExoticComponent`
+  now declares `propTypes?: any`), and the peer range is `react >= 16.8.0` with no upper bound, so any
+  reference to `React.WeakValidationMap` publishes a `TS2694` into every React 19 consumer's build -- the
+  one spelling that resolves across the whole supported range is `any`. It is also a fixed type, so the
+  relation short-circuits, whereas the per-component `WeakValidationMap<widened-bag>` it replaced was the
+  dominant declaration-site cost; and it stays assignable both directions a consumer uses, so the member is
+  kept, not narrowed. Keeping it rather than dropping it costs well under +1% on the consumer budget, the
+  price of staying non-breaking. The type-contract suite runs only against the pinned `@types/react` 18, so
+  a cross-version hazard like this is invisible to it; `pnpm --filter styled-components test:types:dist` is
+  the guard, compiling the emitted `.d.ts` under `skipLibCheck: false` against the min and max supported
+  `@types/react` majors and failing on any diagnostic in the library's own `dist/`.
+
+Ref forwarding is unaffected: the ref rides in the call-site props via `React.ComponentPropsWithRef` inside
+`TargetProps`, not in the exotic base. Soundness is preserved because the swap touches only covariant OUTPUT
+positions; the call-signature input contract that rejects a bad prop, an unknown prop, or a wrong ref
+element is untouched, all pinned in the contract suite.
+
+Two `Partial<Props>` members over the same bag remain, the library's own: `IStyledComponentBase`'s
+`defaultProps` and `CommonStatics.attrs` (`Attrs<Props>` carries `Partial<Props>` in each arm). Loosening
+both together -- `defaultProps?: ExecutionProps` and `attrs: Attrs<any>[]` -- measured a further step down
+on the same fixture, but only together (while either stays precise its `Partial<Props>` still forces the
+full-bag walk, so loosening one alone is nearly free of benefit). It is deliberately NOT taken: it trades
+away the read precision of `.defaultProps` and `.attrs`, which are part of the public statics contract, for
+a gain on an axis that only bites codebases annotating many intrinsic-tag exports. Revisit only with that
+break accepted, and measure the pair, never one.
+
+`withTheme`'s return type (`hoc/withTheme.tsx`) is the same `ForwardRefExoticComponent` base over a wrapped
+component's prop bag, and was left as `ForwardRefExoticComponent`. The cost there is paid once when
+`withTheme` itself compiles, not multiplied across every styled component, and the return is rarely
+annotated in bulk, so the swap buys nothing measurable and would drop `propTypes` typing from a
+long-released signature for no reason.
+
 ## The empty-prop-bag guard in Substitute and MergeProps
 
 Both aliases short-circuit to `A` when `B` contributes nothing, which keeps `FastOmit<A, never> & {}`

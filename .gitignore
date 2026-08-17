@@ -19,6 +19,8 @@ update-dynamic-styles-trace.json
 .rollup.cache
 # Generated consumer fixture for the type-check budget (`pnpm --filter styled-components type-perf`)
 .type-perf
+# Generated tsconfigs for the published-declaration gate (`pnpm --filter styled-components test:types:dist`)
+.type-check-dist
 .build
 .next
 .expo
