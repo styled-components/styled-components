@@ -17,9 +17,9 @@
  *     useSyncExternalStore).
  *   - The consumer set is the same every render (useDynamicImpl
  *     reads both fields). Splitting wouldn't reduce re-renders.
- *   - One stable object reference per render lets the render cache's
- *     identity check short-circuit cleanly when neither field
- *     changed.
+ *   - One stable object reference per render keeps context consumers
+ *     from re-rendering and lets the merged-cascade cache short-circuit
+ *     cleanly when neither field changed.
  *
  * Theme stays in `ThemeContext` (`models/ThemeProvider`): it's the
  * public ergonomic surface (`<ThemeProvider theme={…}>`) and the

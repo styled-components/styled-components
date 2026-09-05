@@ -215,17 +215,6 @@ export interface AnimatedStyleOutput {
    * the parent and leaking the 3D compositing context into siblings.
    */
   isolate3d?: boolean;
-  /**
-   * When true, the styled component MUST rebuild `elementProps` even
-   * if its inputs (props, theme, env, container) are reference-equal
-   * to the previous render. Set by adapters that update non-Animated
-   * style values from JS timers (e.g. CSS Transitions L2
-   * `allow-discrete` 50%-flip): the host static `display: 'flex'` →
-   * `'none'` swap can't ride the Animated graph because RN's
-   * `Animated.interpolate` requires numeric-bearing strings, so the
-   * adapter sets this flag while the discrete window is open.
-   */
-  invalidateCache?: boolean;
 }
 
 /**

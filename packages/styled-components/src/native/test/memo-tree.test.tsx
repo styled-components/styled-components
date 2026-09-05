@@ -695,7 +695,7 @@ describe('edge cases: trying to break memo', () => {
       expect(counts).toEqual({});
     });
 
-    it('+0 vs -0 prop change is NOT visible (internal cache uses === semantics)', () => {
+    it('+0 vs -0 prop change re-renders (React.memo uses Object.is)', () => {
       function ParentWithSignedZero({ z }: { z: number }) {
         return <StyledLeaf $name="zero-leaf" {...({ $value: z } as any)} />;
       }
@@ -709,17 +709,11 @@ describe('edge cases: trying to break memo', () => {
       TestRenderer.act(() => {
         renderer.update(<ParentWithSignedZero z={-0} />);
       });
-      // Two layers of compare are at play here:
-      //
-      //   1. React.memo uses Object.is. Object.is(+0, -0) === false → memo
-      //      does NOT bail; impl runs.
-      //   2. Our internal shallowEqual (per-instance render cache in
-      //      useImpl) uses ===. 0 === -0 is true → cache reports "equal" and
-      //      returns the cached element without re-running the interpolation.
-      //
-      // Net effect: counter stays put. In practice no CSS property is sensitive
-      // to signed zero, so this divergence has zero user-observable impact.
-      expect(counts).toEqual({});
+      // React.memo uses Object.is, and Object.is(+0, -0) === false, so memo does
+      // not bail and the impl runs. The interpolation runs every render it
+      // reaches (no props-equal render cache short-circuits it), so the counter
+      // ticks once.
+      expect(counts).toEqual({ 'zero-leaf': 1 });
     });
   });
 

@@ -76,7 +76,6 @@ import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import { IS_RSC } from '../utils/isRsc';
 import isStyledComponent from '../utils/isStyledComponent';
-import shallowEqual from '../utils/shallowEqual';
 import { warnOnce } from '../utils/warnOnce';
 import type {
   NativeStyles,
@@ -94,8 +93,6 @@ function get3dIsolationView(): any {
   if (!_View) _View = require('react-native').View;
   return _View;
 }
-
-const hasOwn = Object.prototype.hasOwnProperty;
 
 const HOIST_EXCLUDE = {
   attrs: true,
@@ -1071,32 +1068,6 @@ function pseudoStylesForState(
   return out;
 }
 
-// [props, theme, propsKeyCount, context, compiled, env, nativeStyleCtx,
-//  composedStyle, elementToBeCreated, elementProps, resolveEnv, effectiveBase]
-//
-// Slot 6 holds the full NativeStyleContext (container + cascade), not
-// just the container. The cache must invalidate when an ancestor
-// publishes a fresh cascade (font-size / line-height / direction)
-// even if the container side is unchanged; otherwise em / lh /
-// `text-align: start | end` / sentinel-base relative colors render
-// with stale `ResolveEnv` values.
-type RenderCache = [
-  object,
-  DefaultTheme | undefined,
-  number,
-  object,
-  NativeStyles,
-  MediaQueryEnv,
-  NativeStyleContextValue,
-  any,
-  NativeTarget,
-  Dict<any>,
-  ResolveEnv,
-  Dict<any>,
-  ParentContextValue,
-  number,
-];
-
 /**
  * Compose a static `base` style with the user-supplied `props.style`. RN's
  * `Pressable`/`TextInput` accept a function for `style` (state callback);
@@ -1372,9 +1343,10 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   const nativeStyleCtx = !IS_RSC ? React.useContext(NativeStyleContext) : DEFAULT_NATIVE_STYLE;
   const containerCtx = nativeStyleCtx.container;
   const parentCtx = !IS_RSC ? React.useContext(ParentContext) : DEFAULT_PARENT_CONTEXT;
-  // Anchor-rect reactivity: components whose CSS uses anchor() /
-  // anchor-size() re-render (and re-key their cache) when any anchor's
-  // rect changes.
+  // Anchor-rect reactivity: components whose CSS uses anchor() / anchor-size()
+  // subscribe so any anchor's rect change re-renders them; the always-run
+  // compile and assembly below then re-resolve against the current rects. The
+  // snapshot value is not read, the subscription is the point.
   //
   // The only gate here that is not a build constant. `nativeStyle` is fixed
   // when the styled component is constructed, so `usesAnchorFunctions` cannot
@@ -1382,15 +1354,10 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // for its whole lifetime. Anything that made this depend on props or state
   // would be a genuine rules-of-hooks violation, and the enclosing
   // `biome-ignore-start` would hide it, so keep it derived from `nativeStyle`.
-  const anchorVersion =
-    !IS_RSC && nativeStyle.usesAnchorFunctions
-      ? React.useSyncExternalStore(subscribeAnchors, getAnchorVersion)
-      : 0;
+  if (!IS_RSC && nativeStyle.usesAnchorFunctions) {
+    React.useSyncExternalStore(subscribeAnchors, getAnchorVersion);
+  }
 
-  const renderCacheRef = (!IS_RSC ? React.useRef<RenderCache | null>(null) : { current: null }) as {
-    current: RenderCache | null;
-  };
-  const prev = renderCacheRef.current;
   const publishCacheRef = (
     !IS_RSC ? React.useRef<ParentPublishCache | null>(null) : { current: null }
   ) as { current: ParentPublishCache | null };
@@ -1408,151 +1375,121 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   ) as { current: MergedCascadeCache };
   // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the IS_RSC-gated region
 
-  let context: ExecutionContext & Props;
-  let compiled: NativeStyles;
-  let composedStyle: any;
-  let elementToBeCreated: NativeTarget;
-  let resolveEnv: ResolveEnv;
+  // Interpolations and attrs are the component's own render-body user code: they
+  // run every render so a hook called inside one keeps a stable hook count, and
+  // a value read inside one (a context, ref, or module state outside props and
+  // theme) always reflects its current state (#5788). `compile`'s
+  // content-addressed cache returns a stable reference when the evaluated output
+  // is unchanged, so a repeat render yielding the same styles stays cheap;
+  // cross-render bailout on equal props is the wrapping React.memo's job.
+  const context = resolveContext<Props>(theme, props, componentAttrs);
+  const compiled = nativeStyle.compile(context) as NativeStyles;
+  // resolveContext spreads props before applying attrs, so context.as already
+  // covers props.as; no separate fallback needed.
+  const elementToBeCreated: NativeTarget = (context.as as NativeTarget | undefined) || target;
+
+  // Post-compile attrs phase: clone `compiled.base` (canonical, must stay
+  // intact for reuse by later renders sharing this compiled output) and run
+  // arity-2 attrs in order. Each attr either applies a static plan (folded at
+  // construction) or invokes its callback at runtime via the `ast` accessor.
+  // Skipped entirely when no arity-2 attrs are present.
   let effectiveBase: Dict<any>;
-  let renderCascade: NativeCascadeValues;
-  let propsKeyCount = prev !== null ? prev[2] : 0;
-
-  const propsMatch = prev !== null && prev[1] === theme && shallowEqual(prev[0], props, prev[2]);
-  // parentCtx participates because position-dependent output (nth-child /
-  // combinator matches, sibling-index() resolvers) is baked into the
-  // cached composedStyle. perChildValue identity is stable unless the
-  // parent's sibling shape actually changed, so this only invalidates
-  // when a re-resolve is genuinely required.
-  const fullHit =
-    propsMatch &&
-    prev![5] === env &&
-    prev![6] === nativeStyleCtx &&
-    prev![12] === parentCtx &&
-    prev![13] === anchorVersion;
-
-  if (fullHit) {
-    context = prev![3] as typeof context;
-    compiled = prev![4];
-    composedStyle = prev![7];
-    elementToBeCreated = prev![8];
-    resolveEnv = prev![10];
-    effectiveBase = prev![11];
-    // Full-hit implies (nativeStyleCtx, compiled) reference-equal to the
-    // previous render, so the prior merge result is still authoritative.
-    renderCascade = mergedCascadeCacheRef.current!.merged;
+  if (forwardedComponent.hasPostAttrs === true) {
+    effectiveBase = { ...compiled.base };
+    applyPostAttrs<Props>(
+      context,
+      props,
+      componentAttrs,
+      forwardedComponent.postAttrsPlans,
+      effectiveBase
+    );
   } else {
-    if (propsMatch) {
-      context = prev![3] as typeof context;
-      compiled = prev![4];
-      elementToBeCreated = prev![8];
-      // post-attrs effects depend only on props/theme/context+compiled, all
-      // stable on a partial hit, so the cached effectiveBase is reusable.
-      effectiveBase = prev![11];
-    } else {
-      context = resolveContext<Props>(theme, props, componentAttrs);
-      compiled = nativeStyle.compile(context) as NativeStyles;
-      // resolveContext spreads props before applying attrs, so context.as already
-      // covers props.as; no separate fallback needed.
-      elementToBeCreated = (context.as as NativeTarget | undefined) || target;
-      propsKeyCount = 0;
-      for (const key in props) {
-        if (hasOwn.call(props, key)) propsKeyCount++;
-      }
-      // Post-compile attrs phase: clone `compiled.base` (canonical, must stay
-      // intact for cache reuse) and run arity-2 attrs in order. Each attr
-      // either applies a static plan (folded at construction) or invokes
-      // its callback at runtime via the `ast` accessor. Skipped entirely
-      // when no arity-2 attrs are present (zero overhead for the common case).
-      if (forwardedComponent.hasPostAttrs === true) {
-        effectiveBase = { ...compiled.base };
-        applyPostAttrs<Props>(
-          context,
-          props,
-          componentAttrs,
-          forwardedComponent.postAttrsPlans,
-          effectiveBase
-        );
+    effectiveBase = compiled.base;
+  }
+
+  // Merged custom-property cascade: the same merged Map drives buildResolveEnv
+  // (own var() resolution + conditional bucket resolvers) AND descendant
+  // publishing. Memoized on its two sound inputs (inherited cascade + own
+  // custom properties, the latter carried on the content-addressed compiled
+  // output), so a stable-input render avoids a Map allocation and a spurious
+  // cascade-identity change that would re-render descendants.
+  const ownCustomProps = compiled.customProperties;
+  let renderCascade: NativeCascadeValues;
+  const cachedCascade = mergedCascadeCacheRef.current;
+  if (
+    cachedCascade !== null &&
+    cachedCascade.inherited === nativeStyleCtx.cascade &&
+    cachedCascade.own === ownCustomProps
+  ) {
+    renderCascade = cachedCascade.merged;
+  } else {
+    renderCascade = mergeCustomPropertiesIntoCascade(nativeStyleCtx.cascade, ownCustomProps);
+    mergedCascadeCacheRef.current = {
+      inherited: nativeStyleCtx.cascade,
+      own: ownCustomProps,
+      merged: renderCascade,
+    };
+  }
+
+  const resolveEnv = buildResolveEnv(
+    env,
+    containerCtx,
+    theme as Record<string, any>,
+    renderCascade,
+    parentCtx,
+    props as Record<string, unknown>,
+    compiled.positionAnchor
+  );
+  let varImportant: Dict<any> | undefined;
+  if (compiled.varDeferred !== undefined) {
+    const varOut = applyVarDeferred(
+      compiled.varDeferred,
+      renderCascade.customProperties ?? null,
+      compiled.customProperties ?? null,
+      resolveEnv
+    );
+    if (varOut.normal !== null) {
+      if (effectiveBase === compiled.base) {
+        effectiveBase = { ...compiled.base, ...varOut.normal };
       } else {
-        effectiveBase = compiled.base;
+        Object.assign(effectiveBase, varOut.normal);
       }
     }
-    const ownCustomProps = compiled.customProperties;
-    const cached = mergedCascadeCacheRef.current;
-    if (
-      cached !== null &&
-      cached.inherited === nativeStyleCtx.cascade &&
-      cached.own === ownCustomProps
-    ) {
-      renderCascade = cached.merged;
-    } else {
-      renderCascade = mergeCustomPropertiesIntoCascade(nativeStyleCtx.cascade, ownCustomProps);
-      mergedCascadeCacheRef.current = {
-        inherited: nativeStyleCtx.cascade,
-        own: ownCustomProps,
-        merged: renderCascade,
-      };
-    }
-    resolveEnv = buildResolveEnv(
-      env,
-      containerCtx,
-      theme as Record<string, any>,
-      renderCascade,
-      parentCtx,
-      props as Record<string, unknown>,
-      compiled.positionAnchor
-    );
-    let varImportant: Dict<any> | undefined;
-    if (compiled.varDeferred !== undefined) {
-      const varOut = applyVarDeferred(
-        compiled.varDeferred,
-        renderCascade.customProperties ?? null,
-        compiled.customProperties ?? null,
-        resolveEnv
-      );
-      if (varOut.normal !== null) {
-        if (effectiveBase === compiled.base) {
-          effectiveBase = { ...compiled.base, ...varOut.normal };
-        } else {
-          Object.assign(effectiveBase, varOut.normal);
-        }
-      }
-      if (varOut.important !== null) varImportant = varOut.important;
-    }
-    const baseOverride = effectiveBase !== compiled.base ? effectiveBase : undefined;
-    const baseComposed = hasResponsiveOutput(compiled)
-      ? assembleFinalStyle(
-          compiled,
-          env,
-          containerCtx,
-          theme,
-          props.style,
-          // Generic Props can't structurally satisfy `Record<string, unknown>`
-          // (TS lacks unsealed-object covariance); normalize at the boundary.
-          props as Record<string, unknown>,
-          baseOverride,
-          renderCascade,
-          parentCtx,
-          varImportant,
-          compiled.hasPseudo ? inertStateStyleTargetName(elementToBeCreated) : null
-        )
-      : composeBase(effectiveBase, props.style);
-    composedStyle = injectAutoContainerName(
-      baseComposed,
-      compiled.containerInfo,
-      forwardedComponent.styledComponentId
-    );
-    // Grid item sizing: a direct child of a `display: grid` container
-    // reads the published grid entry and applies a computed width. The
-    // owner check (`parentId === grid.ownerId`) enforces the spec's
-    // direct-children rule; grandchildren do not become grid items.
-    // contentWidth changes flow through `nativeStyleCtx` identity (part
-    // of the fullHit cache key), so the width recomputes on re-layout.
-    const grid = renderCascade.grid;
-    if (grid !== undefined && parentCtx.parentId === grid.ownerId) {
-      composedStyle = appendStyle(composedStyle, {
-        width: computeGridItemWidth(grid, compiled.gridSpan ?? 1),
-      });
-    }
+    if (varOut.important !== null) varImportant = varOut.important;
+  }
+  const baseOverride = effectiveBase !== compiled.base ? effectiveBase : undefined;
+  const baseComposed = hasResponsiveOutput(compiled)
+    ? assembleFinalStyle(
+        compiled,
+        env,
+        containerCtx,
+        theme,
+        props.style,
+        // Generic Props can't structurally satisfy `Record<string, unknown>`
+        // (TS lacks unsealed-object covariance); normalize at the boundary.
+        props as Record<string, unknown>,
+        baseOverride,
+        renderCascade,
+        parentCtx,
+        varImportant,
+        compiled.hasPseudo ? inertStateStyleTargetName(elementToBeCreated) : null
+      )
+    : composeBase(effectiveBase, props.style);
+  let composedStyle = injectAutoContainerName(
+    baseComposed,
+    compiled.containerInfo,
+    forwardedComponent.styledComponentId
+  );
+  // Grid item sizing: a direct child of a `display: grid` container reads the
+  // published grid entry and applies a computed width. The owner check
+  // (`parentId === grid.ownerId`) enforces the spec's direct-children rule;
+  // grandchildren do not become grid items. contentWidth changes flow through
+  // `nativeStyleCtx` identity, so the width recomputes on re-layout.
+  const grid = renderCascade.grid;
+  if (grid !== undefined && parentCtx.parentId === grid.ownerId) {
+    composedStyle = appendStyle(composedStyle, {
+      width: computeGridItemWidth(grid, compiled.gridSpan ?? 1),
+    });
   }
 
   const animationAdapter = getAnimationAdapter() ?? NOOP_ADAPTER;
@@ -1590,41 +1527,17 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     renderType = getAnimatedComponentCached(renderType) ?? renderType;
   }
 
-  let elementProps: Dict<any>;
-  // Adapters with off-React state machinery (allow-discrete 50% flip,
-  // for example) signal `invalidateCache` to force an elementProps
-  // rebuild when their internal state changed despite stable inputs.
-  if (fullHit && !animOut.invalidateCache && !sticky.changed) {
-    elementProps = prev![9];
-  } else {
-    elementProps = applyStylePolyfills(
-      finalizeElementProps(
-        context,
-        renderType,
-        shouldForwardProp,
-        renderStyle,
-        compiled.specialCases,
-        forwardedRef,
-        forwardedComponent
-      ) as Record<string, unknown>
-    ) as Dict<any>;
-    renderCacheRef.current = [
-      props,
-      theme,
-      propsKeyCount,
+  const elementProps = applyStylePolyfills(
+    finalizeElementProps(
       context,
-      compiled,
-      env,
-      nativeStyleCtx,
-      composedStyle,
-      elementToBeCreated,
-      elementProps,
-      resolveEnv,
-      effectiveBase,
-      parentCtx,
-      anchorVersion,
-    ];
-  }
+      renderType,
+      shouldForwardProp,
+      renderStyle,
+      compiled.specialCases,
+      forwardedRef,
+      forwardedComponent
+    ) as Record<string, unknown>
+  ) as Dict<any>;
 
   // `field-sizing: content` dev guard. The polyfill lifts `multiline:
   // true` via SPECIAL_CASE_PROPS, and RN's Yoga measure callback for a
@@ -1852,8 +1765,8 @@ const EMPTY_PREV_SIBLINGS: ReadonlyArray<string> = Object.freeze([]);
  * Non-styled children pass through untouched.
  *
  * Returns the original `children` when no styled children are present
- * so callers can reuse the original `elementProps` reference and keep
- * the render cache identity intact.
+ * so callers can reuse the original `elementProps` reference, keeping it
+ * reference-stable for React.
  *
  * Sibling info reflects literal JSX position among the parent's direct
  * children. Combinator selectors only see immediate styled-child
@@ -2021,7 +1934,7 @@ function indexStyledChildren(
 /**
  * Substitute `children` on `elementProps` with `indexedChildren` if the
  * latter is a fresh reference. When `indexedChildren === elementProps.children`,
- * the original object is returned so the render-cache identity is preserved.
+ * the original object is returned so it stays reference-stable for React.
  */
 function withIndexedChildren(elementProps: Dict<any>, indexedChildren: React.ReactNode): Dict<any> {
   if (indexedChildren === elementProps.children) return elementProps;
@@ -2671,12 +2584,12 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
     const impl = canUseStatic ? useStaticImpl : useDynamicImpl;
 
     // React 19 ref-as-prop; no forwardRef wrapper. Wrapping in `React.memo`
-    // means the parent's re-render skips this component entirely when its
-    // props are shallow-equal to the previous render, eliminating the hook
-    // calls, our render-cache check, and React's reconciliation work for the
-    // child subtree. The internal render-cache in `useDynamicImpl` remains as
-    // a layered fallback for the harder cases (different prop references with
-    // same values, env or container-context shifts) that memo doesn't catch.
+    // means the parent's re-render skips this component entirely when its props
+    // are shallow-equal to the previous render, eliminating the hook calls and
+    // React's reconciliation work for the child subtree. That is the sound place
+    // to bail out: only the caller knows the full input set the interpolations
+    // depend on. When memo does re-run, `NativeStyle`'s content-addressed
+    // compile cache keeps the per-render work cheap.
     const RenderInner: {
       (props: ExecutionProps & OuterProps & { ref?: React.Ref<any> }): React.JSX.Element;
       displayName?: string;
