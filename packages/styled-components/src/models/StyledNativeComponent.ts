@@ -469,6 +469,22 @@ type MergedCascadeCache = {
   merged: NativeCascadeValues;
 } | null;
 
+// Single-slot cache for the built ResolveEnv, keyed on the references it is
+// derived from. buildResolveEnv allocates a fresh object every call, so without
+// this the adapter's env-keyed resolver caches (applyResolvers stash, reanimated
+// useMemos) miss on every render that reaches the component body, including the
+// animation ticks where every input below is reference-stable.
+type ResolveEnvCache = {
+  containerCtx: ContainerContextValue;
+  env: MediaQueryEnv;
+  parentCtx: ParentContextValue;
+  positionAnchor: NativeStyles['positionAnchor'];
+  props: object;
+  renderCascade: NativeCascadeValues;
+  resolveEnv: ResolveEnv;
+  theme: DefaultTheme | undefined;
+} | null;
+
 /**
  * Merge own custom property declarations into the inherited cascade map.
  * Returns the inherited reference unchanged when there is nothing to add,
@@ -1373,6 +1389,9 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   const mergedCascadeCacheRef = (
     !IS_RSC ? React.useRef<MergedCascadeCache>(null) : { current: null }
   ) as { current: MergedCascadeCache };
+  const resolveEnvCacheRef = (
+    !IS_RSC ? React.useRef<ResolveEnvCache>(null) : { current: null }
+  ) as { current: ResolveEnvCache };
   // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the IS_RSC-gated region
 
   // Interpolations and attrs are the component's own render-body user code: they
@@ -1431,15 +1450,45 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     };
   }
 
-  const resolveEnv = buildResolveEnv(
-    env,
-    containerCtx,
-    theme as Record<string, any>,
-    renderCascade,
-    parentCtx,
-    props as Record<string, unknown>,
-    compiled.positionAnchor
-  );
+  // Reuse the prior ResolveEnv when every input it is built from is
+  // reference-stable, so the adapter's env-keyed resolver caches keep hitting on
+  // renders that reach the component body with unchanged inputs (an animation
+  // tick, for example). Keyed on the real inputs, never on props as a proxy.
+  const positionAnchor = compiled.positionAnchor;
+  let resolveEnv: ResolveEnv;
+  const cachedResolveEnv = resolveEnvCacheRef.current;
+  if (
+    cachedResolveEnv !== null &&
+    cachedResolveEnv.env === env &&
+    cachedResolveEnv.containerCtx === containerCtx &&
+    cachedResolveEnv.theme === theme &&
+    cachedResolveEnv.renderCascade === renderCascade &&
+    cachedResolveEnv.parentCtx === parentCtx &&
+    cachedResolveEnv.props === props &&
+    cachedResolveEnv.positionAnchor === positionAnchor
+  ) {
+    resolveEnv = cachedResolveEnv.resolveEnv;
+  } else {
+    resolveEnv = buildResolveEnv(
+      env,
+      containerCtx,
+      theme as Record<string, any>,
+      renderCascade,
+      parentCtx,
+      props as Record<string, unknown>,
+      positionAnchor
+    );
+    resolveEnvCacheRef.current = {
+      containerCtx,
+      env,
+      parentCtx,
+      positionAnchor,
+      props,
+      renderCascade,
+      resolveEnv,
+      theme,
+    };
+  }
   let varImportant: Dict<any> | undefined;
   if (compiled.varDeferred !== undefined) {
     const varOut = applyVarDeferred(
