@@ -1,6 +1,5 @@
 import transformDeclPairs from 'css-to-react-native';
 import {
-  Dict,
   ExecutionContext,
   IInlineStyle,
   IInlineStyleConstructor,
@@ -8,7 +7,6 @@ import {
   StyleSheet,
 } from '../types';
 import flatten from '../utils/flatten';
-import generateComponentId from '../utils/generateComponentId';
 import { joinStringArray } from '../utils/joinStrings';
 
 // List of CSS values not supported by React Native
@@ -161,40 +159,42 @@ export function parseCSSDeclarations(rawCss: string): [string, string][] {
   return pairs;
 }
 
-let generated: Dict<any> = {};
+let generated = new Map<string, any>();
 
 /** Clear the cached CSS-to-style-object mappings. Useful in tests or long-running RN apps with highly dynamic styles. */
 export const resetStyleCache = (): void => {
-  generated = {};
+  generated = new Map();
 };
 
 /**
  * Parse flat CSS into a style object via css-to-react-native, with caching.
+ * Keyed by the flat CSS string itself: the transform is a pure function of it,
+ * and a string key cannot collide the way a 32-bit hash could.
  */
 export function cssToStyleObject(flatCSS: string, styleSheet: StyleSheet) {
-  const hash = generateComponentId(flatCSS);
+  const cached = generated.get(flatCSS);
+  if (cached !== undefined) return cached;
 
-  if (!generated[hash]) {
-    const declPairs: [string, string][] = [];
-    for (const [prop, value] of parseCSSDeclarations(flatCSS)) {
-      if (RN_UNSUPPORTED_VALUES.includes(value)) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(
-            `[styled-components/native] The value "${value}" for property "${prop}" is not supported in React Native and will be ignored.`
-          );
-        }
-      } else {
-        declPairs.push([prop, value]);
+  const declPairs: [string, string][] = [];
+  for (const [prop, value] of parseCSSDeclarations(flatCSS)) {
+    if (RN_UNSUPPORTED_VALUES.includes(value)) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          `[styled-components/native] The value "${value}" for property "${prop}" is not supported in React Native and will be ignored.`
+        );
       }
+    } else {
+      declPairs.push([prop, value]);
     }
-
-    // RN does not support differing border values for Image components (but does for View).
-    // https://github.com/styled-components/styled-components/issues/4181
-    const styleObject = transformDeclPairs(declPairs, ['borderWidth', 'borderColor']);
-
-    generated[hash] = styleSheet.create({ generated: styleObject }).generated;
   }
-  return generated[hash];
+
+  // RN does not support differing border values for Image components (but does for View).
+  // https://github.com/styled-components/styled-components/issues/4181
+  const styleObject = transformDeclPairs(declPairs, ['borderWidth', 'borderColor']);
+
+  const result = styleSheet.create({ generated: styleObject }).generated;
+  generated.set(flatCSS, result);
+  return result;
 }
 
 /**
