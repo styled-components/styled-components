@@ -239,10 +239,9 @@ describe('HMR + createTheme interaction', () => {
     expect(css).toContain('var(--v2-color, red)');
   });
 
-  it('render cache busts when ComponentStyle instance changes (HMR invalidation)', () => {
-    // The render cache tuple stores componentStyle at index [7].
-    // On HMR, styled() creates a new ComponentStyle, so prev[7] !== componentStyle.
-    // This forces re-computation even if props/theme are identical.
+  it('HMR with a new ComponentStyle for identical CSS keeps the same class name', () => {
+    // On HMR, styled() creates a new ComponentStyle instance. Identical CSS must
+    // still hash to the same class name so a hot reload does not churn classes.
     const themeV1 = createTheme({ gap: '8px' });
     const CompV1 = styled.div.withConfig({ componentId: 'sc-hmr-rendercache' })`
       gap: ${themeV1.gap};
@@ -250,11 +249,10 @@ describe('HMR + createTheme interaction', () => {
 
     const { container, rerender } = render(<CompV1 />);
 
-    // Re-render with SAME props - should be a cache hit
     rerender(<CompV1 />);
-    const classAfterCacheHit = container.firstElementChild!.className;
+    const classBefore = container.firstElementChild!.className;
 
-    // Now simulate HMR: new ComponentStyle instance, same CSS
+    // Simulate HMR: a new ComponentStyle instance producing the same CSS.
     const themeV1Copy = createTheme({ gap: '8px' });
     const CompV1Reval = styled.div.withConfig({ componentId: 'sc-hmr-rendercache' })`
       gap: ${themeV1Copy.gap};
@@ -263,8 +261,8 @@ describe('HMR + createTheme interaction', () => {
     rerender(<CompV1Reval />);
     const classAfterHmr = container.firstElementChild!.className;
 
-    // Same CSS -> same generated class name, even though cache was busted
-    expect(classAfterHmr).toBe(classAfterCacheHit);
+    // Same CSS -> same generated class name across the instance swap.
+    expect(classAfterHmr).toBe(classBefore);
   });
 
   it('vars property reflects theme structure changes across HMR', () => {

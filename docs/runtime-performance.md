@@ -26,10 +26,10 @@ The pure work downstream of the produced CSS string is memoized, so a repeat ren
 same CSS is cheap:
 
 1. `resolveContext`: object spread plus attrs evaluation.
-2. `flatten()` fast path: an inline function call for string-returning interpolations, roughly 0.05us
-   each.
-3. `dynamicNameCache` lookup: a `Map.get` on the CSS string, O(1), which skips `phash` and
-   `generateName` on a hit.
+2. Interpolation fast path: an inline function call for string-returning interpolations that bypasses
+   `flatten`'s type dispatch and array allocation, roughly 0.05us each.
+3. `dynamicNameCache` lookup: a `Map.get` on the CSS string (prefixed by the stylis plugin hash when
+   one is set), O(1), which skips `phash` and `generateName` on a hit.
 4. `phash()` and `generateName`: only on a `dynamicNameCache` miss, the first time this CSS is seen.
 5. `stylis` compile and serialize: only when `hasNameForId` misses, the first injection of this class.
 6. `hasNameForId`: a `Map.has`, negligible.

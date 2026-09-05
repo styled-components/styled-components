@@ -27,7 +27,8 @@ mapped below.
 - NEVER skip evaluating interpolations or attr functions across renders, and never reintroduce a
   props-equal render cache that does. They are the component's own render body and may call hooks or
   read state outside props and theme, so skipping them breaks the rules of hooks and serves stale
-  styles (#5788). Keep every styled-components hook call unconditional. See
+  styles (#5788). A hook may be gated only on a build or runtime constant (`__SERVER__`, `IS_RSC`),
+  which is stable across a component's renders, never on per-render state. See
   [docs/runtime-performance.md](docs/runtime-performance.md).
 - NEVER use `new Array(n)`. It creates HOLEY_ELEMENTS arrays that infect V8 type feedback.
 - NEVER mutate `rule.props` in place on a stylis AST node; allocate a fresh array.

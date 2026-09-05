@@ -1,13 +1,12 @@
 /**
- * Tests for the styled component render cache.
- *
- * Verifies that the useRef-based shallow context comparison correctly
- * caches and invalidates under various scenarios, and that the cache's
- * hit/miss branch does not change the component's hook sequence.
+ * Tests for styled component render behavior: class-name stability across
+ * re-renders, and the rules-of-hooks guarantee that interpolations, and any
+ * hooks they call, run on every render (#5788).
  */
 import React, { useState } from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { LIMIT as TOO_MANY_CLASSES_LIMIT } from '../utils/createWarnTooManyClasses';
+import { withHookRecording } from './recordHooks';
 import { getCSS, resetStyled } from './utils';
 
 let styled: ReturnType<typeof resetStyled>;
@@ -359,76 +358,31 @@ describe('memoization correctness', () => {
   });
 
   /**
-   * The render cache splits the render path in two, and only one side runs the
-   * style work. Any hook that ends up on one side of that split is called on a
-   * cache miss and skipped on a cache hit, so the component emits a different
-   * hook sequence depending on whether its props happened to change -- exactly
-   * the shape React rejects with "Rendered fewer hooks than expected" (#5788).
-   *
-   * Asserting the sequence rather than a count: a swap of two hooks keeps the
-   * count identical and still breaks React's ordering rule. The recording is
-   * done by wrapping React's own `use*` exports, so a hook added to the render
-   * path in future is picked up without this test being told about it.
+   * A styled component must emit the same hook sequence on every render.
+   * Recording React's `use*` calls across a mount, a same-props re-render, and a
+   * changed-props re-render and asserting all three match catches a hook that
+   * runs on one render but not another, the shape React rejects with "Rendered
+   * fewer hooks than expected" (#5788). Asserting the sequence, not a count,
+   * also catches a swap of two hooks that keeps the count identical.
    */
-  it('emits an identical hook sequence on cache-hit and cache-miss renders', () => {
-    // React's module namespace, typed as what it is here: a bag of hook
-    // functions keyed by name. Spelling it once keeps the casts out of the body.
-    const reactHooks = React as unknown as Record<string, (...args: unknown[]) => unknown>;
-    const hookNames = Object.keys(React).filter(
-      key => key.startsWith('use') && typeof reactHooks[key] === 'function'
-    );
-    // Positive control: if the wrapping ever stops seeing React's hooks, every
-    // sequence below is trivially empty and the comparison passes vacuously.
-    expect(hookNames).toContain('useRef');
-
-    let recording: string[] | null = null;
-    // Restored in `finally`, which the install loop is inside: a throw partway
-    // through installation must not leave React half-patched for later tests.
-    const originals = new Map<string, (...args: unknown[]) => unknown>();
-
-    // Returns what the render produced alongside the hooks it called, so the
-    // renderer needs no `let` declared ahead of its assignment.
-    function record<T>(render: () => T): [T, string[]] {
-      const calls: string[] = [];
-      recording = calls;
-      try {
-        return [render(), calls];
-      } finally {
-        // Cleared even when the render throws, so a later render cannot append
-        // to a dead array and turn one failure into a confusing second one.
-        recording = null;
-      }
-    }
-
-    try {
-      for (const name of hookNames) {
-        const original = reactHooks[name];
-        originals.set(name, original);
-        reactHooks[name] = (...args) => {
-          if (recording) recording.push(name);
-          return original(...args);
-        };
-      }
-
+  it('emits an identical hook sequence across re-renders', () => {
+    withHookRecording(record => {
       const Comp = styled.div<{ $color: string }>`
         color: ${p => p.$color};
       `;
 
       // Rendered as the root so every recorded hook belongs to this component.
       const [renderer, mount] = record(() => TestRenderer.create(<Comp $color="red" />));
-      // Identical props: the render cache hits and skips the style work.
-      const [, cacheHit] = record(() => renderer.update(<Comp $color="red" />));
-      // Changed props: the cache misses and the style work runs again.
-      const [, cacheMiss] = record(() => renderer.update(<Comp $color="blue" />));
+      const [, sameProps] = record(() => renderer.update(<Comp $color="red" />));
+      const [, changedProps] = record(() => renderer.update(<Comp $color="blue" />));
 
+      // A non-empty mount doubles as a positive control on the recording.
       expect(mount.length).toBeGreaterThan(0);
-      expect(cacheHit).toEqual(cacheMiss);
-      expect(mount).toEqual(cacheHit);
+      expect(sameProps).toEqual(changedProps);
+      expect(mount).toEqual(sameProps);
 
       renderer.unmount();
-    } finally {
-      for (const [name, original] of originals) reactHooks[name] = original;
-    }
+    });
   });
 
   /**
@@ -440,50 +394,23 @@ describe('memoization correctness', () => {
    * + MUI X DataGrid, which calls useGridSelector -> useContext in an interpolation).
    */
   it('runs a hook called inside an interpolation on every render (#5788)', () => {
-    const reactHooks = React as unknown as Record<string, (...args: unknown[]) => unknown>;
     const Ctx = React.createContext('red');
-    const hookNames = Object.keys(React).filter(
-      key => key.startsWith('use') && typeof reactHooks[key] === 'function'
-    );
 
-    let recording: string[] | null = null;
-    const originals = new Map<string, (...args: unknown[]) => unknown>();
-
-    function record<T>(render: () => T): [T, string[]] {
-      const calls: string[] = [];
-      recording = calls;
-      try {
-        return [render(), calls];
-      } finally {
-        recording = null;
-      }
-    }
-
-    try {
-      for (const name of hookNames) {
-        const original = reactHooks[name];
-        originals.set(name, original);
-        reactHooks[name] = (...args) => {
-          if (recording) recording.push(name);
-          return original(...args);
-        };
-      }
-
+    withHookRecording(record => {
       const Comp = styled.div<{ $pad: number }>`
         padding: ${p => p.$pad}px;
         color: ${() => React.useContext(Ctx)};
       `;
 
-      const tree = (
-        <Ctx.Provider value="red">
-          <Comp $pad={1} />
-        </Ctx.Provider>
+      const [renderer, mount] = record(() =>
+        TestRenderer.create(
+          <Ctx.Provider value="red">
+            <Comp $pad={1} />
+          </Ctx.Provider>
+        )
       );
-
-      const [renderer, mount] = record(() => TestRenderer.create(tree));
-      // Identical props: previously a cache hit that skipped the interpolation,
-      // dropping its useContext call and shortening the hook sequence.
-      const [, cacheHit] = record(() =>
+      // Same props: the interpolation, and the useContext it calls, still run.
+      const [, reRender] = record(() =>
         renderer.update(
           <Ctx.Provider value="red">
             <Comp $pad={1} />
@@ -492,19 +419,16 @@ describe('memoization correctness', () => {
       );
 
       expect(mount).toContain('useContext');
-      expect(cacheHit).toEqual(mount);
+      expect(reRender).toEqual(mount);
 
       renderer.unmount();
-    } finally {
-      for (const [name, original] of originals) reactHooks[name] = original;
-    }
+    });
   });
 
   /**
-   * An interpolation may read inputs the (props + theme) cache key does not
-   * capture. Reusing a cached class name when such a hidden input changed serves
-   * a stale style: the class name must track the interpolation's real output,
-   * not the props alone (#5788).
+   * An interpolation may read inputs that props and theme do not capture. The
+   * class name must track the interpolation's real output, so a change to such a
+   * hidden input updates the class even when props are unchanged (#5788).
    */
   it('recomputes when an interpolation reads external state that changed but props did not (#5788)', () => {
     let external = 'red';
@@ -517,7 +441,7 @@ describe('memoization correctness', () => {
     const withRed = renderer.root.findByType('div').props.className;
 
     external = 'blue';
-    // Same props: the former cache would hit and return the stale red class name.
+    // Same props, but the interpolation's external input changed.
     renderer.update(<Comp $pad={1} />);
     const withBlue = renderer.root.findByType('div').props.className;
 
