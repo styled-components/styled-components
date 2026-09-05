@@ -198,13 +198,6 @@ interface AdapterScratch {
   running: Set<AnimationHandle>;
   mounted?: boolean;
   anims?: AnimScratch[];
-  /**
-   * Set when a scroll-driven animation (re)built its interpolations
-   * this render. The styled component's render cache must rebuild
-   * elementProps even on otherwise-stable inputs, because the scroll
-   * timeline context isn't part of its cache key. Cleared after read.
-   */
-  scrollRebuilt?: boolean;
 }
 
 interface NormalizedFrame {
@@ -2256,7 +2249,6 @@ function applyAnimations(
       }
       const key = scrollTimelineKey(desc, target!.entry, target!.axis, viewSubject, canNative);
       if (animS.name !== desc.name || animS.timelineKey !== key) {
-        scratch.scrollRebuilt = true;
         animS.name = desc.name;
         animS.timelineKey = key;
         animS.progress = node;
@@ -2567,26 +2559,11 @@ const animatedAdapter: AnimationAdapter = {
       }
     }
 
-    let invalidateCache = false;
-    if (hasTransition) {
-      for (const [, p] of scratch.props) {
-        if (p.discrete !== undefined) {
-          invalidateCache = true;
-          break;
-        }
-      }
-    }
-    if (scratch.scrollRebuilt) {
-      invalidateCache = true;
-      scratch.scrollRebuilt = false;
-    }
-
     const out: AnimatedStyleOutput = {
       style: outStyle,
       elementType: isAnimating ? wrapTarget(target) : target,
       isolate3d,
     };
-    if (invalidateCache) out.invalidateCache = true;
     return out;
   },
 };

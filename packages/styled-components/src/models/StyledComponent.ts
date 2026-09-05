@@ -49,15 +49,12 @@ import isTag from '../utils/isTag';
 import { joinRules, joinStrings, stripSplitter } from '../utils/joinStrings';
 import { createRSCCache } from '../utils/rscCache';
 import { setToString } from '../utils/setToString';
-import shallowEqual from '../utils/shallowEqual';
 import { warnOnce } from '../utils/warnOnce';
 import WebStyle, { GeneratedStyle } from './WebStyle';
 import { useStyleSheetContext } from './StyleSheetManager';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
 declare const __SERVER__: boolean;
-
-const hasOwn = Object.prototype.hasOwnProperty;
 
 const identifiers: { [key: string]: number } = {};
 
@@ -181,22 +178,6 @@ function rscFlush<T extends ExecutionContext>(
   }
   return generated;
 }
-
-// Cached render inputs + style result: [prevProps, prevTheme, prevStyleSheet, prevCompiler,
-// prevPropsKeyCount, cachedContext, cachedClassName, prevWebStyle, popOverrides,
-// cachedGenerated]
-type RenderCache = [
-  object, // prevProps
-  DefaultTheme | undefined, // prevTheme
-  StyleSheet, // prevStyleSheet
-  Compiler, // prevCompiler
-  number, // prevPropsKeyCount
-  object, // cachedContext
-  string, // cachedClassName
-  WebStyle, // prevWebStyle (for HMR invalidation)
-  Dict<string> | null, // popOverrides (post-compile attrs inline-style override)
-  GeneratedStyle | null, // cachedGenerated (reinject if a discarded attempt left the sheet empty)
-];
 
 function resolveContext<Props extends BaseObject>(
   attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
@@ -558,96 +539,39 @@ function useImpl<Props extends BaseObject>(
   /** The CSSOM write to schedule in the insertion effect (buffered path only). */
   let pendingInject: GeneratedStyle | null = null;
 
-  if (!__SERVER__ && !IS_RSC) {
-    // biome-ignore lint/correctness/useHookAtTopLevel: both gates are build or load-time constants, so a given bundle always takes this branch or never does. The hook must NOT move inside the hit/miss branch below, which is data-dependent; memoization.test.tsx gates that.
-    const renderCacheRef = React.useRef<RenderCache | null>(null);
-    const prev = renderCacheRef.current;
-
-    if (
-      prev !== null &&
-      prev[1] === theme &&
-      prev[2] === ssc.styleSheet &&
-      prev[3] === ssc.compiler &&
-      prev[7] === webStyle &&
-      shallowEqual(prev[0], props, prev[4])
-    ) {
-      context = prev[5] as typeof context;
-      generatedClassName = prev[6];
-      popOverrides = prev[8];
-      // A discarded concurrent attempt may have cached a GeneratedStyle whose
-      // rules never reached the sheet; reinstate the injector when needed.
-      const cachedGenerated = prev[9];
-      if (
-        cachedGenerated != null &&
-        !ssc.styleSheet.server &&
-        generatedNeedsSheetWrite(cachedGenerated, ssc.styleSheet)
-      ) {
-        pendingInject = cachedGenerated;
-      }
-    } else {
-      context = resolveContext<Props>(componentAttrs, props, theme);
-      if (wantsPostAttrs) {
-        popOverrides = applyPostAttrsWeb<Props>(
-          context,
-          props,
-          componentAttrs,
-          forwardedComponent.postAttrsPlans,
-          webStyle
-        );
-      }
-      // ServerStyleSheet SSR never runs insertion effects, so the CSSOM write
-      // must stay synchronous whenever styleSheet.server is set. The browser
-      // path generates during render and injects via StyleInjector.
-      let cachedGenerated: GeneratedStyle | null = null;
-      if (!ssc.styleSheet.server) {
-        const generated = webStyle.generate(context, ssc.styleSheet, ssc.compiler);
-        generatedClassName = generated.className;
-        cachedGenerated = generated;
-        pendingInject = generatedNeedsSheetWrite(generated, ssc.styleSheet) ? generated : null;
-      } else {
-        generatedClassName = webStyle.flush(context, ssc.styleSheet, ssc.compiler);
-      }
-
-      let propsKeyCount = 0;
-      for (const key in props) {
-        if (hasOwn.call(props, key)) propsKeyCount++;
-      }
-      renderCacheRef.current = [
-        props,
-        theme,
-        ssc.styleSheet,
-        ssc.compiler,
-        propsKeyCount,
-        context,
-        generatedClassName,
-        webStyle,
-        popOverrides,
-        cachedGenerated,
-      ];
-    }
+  // Interpolations and arity-2 attrs are the component's own render-body user
+  // code: they run every render so a hook called inside one keeps a stable hook
+  // count, and a value read inside one (a context, ref, or module state outside
+  // props and theme) always reflects its current state (#5788). Cross-render
+  // bailout on equal props is the wrapping React.memo's job, not this path's;
+  // `webStyle`'s content-addressed caches keep a repeat render that yields the
+  // same CSS cheap.
+  context = resolveContext<Props>(componentAttrs, props, theme);
+  if (wantsPostAttrs) {
+    popOverrides = applyPostAttrsWeb<Props>(
+      context,
+      props,
+      componentAttrs,
+      forwardedComponent.postAttrsPlans,
+      webStyle
+    );
+  }
+  if (IS_RSC) {
+    generatedStyle = rscFlush(webStyle, context, ssc.styleSheet, ssc.compiler);
+    generatedClassName = generatedStyle.className;
+  } else if (__SERVER__ || ssc.styleSheet.server) {
+    // ServerStyleSheet SSR (in either a server or a browser build) never runs
+    // insertion effects, so the CSSOM write must stay synchronous.
+    generatedClassName = webStyle.flush(context, ssc.styleSheet, ssc.compiler);
   } else {
-    context = resolveContext<Props>(componentAttrs, props, theme);
-    if (wantsPostAttrs) {
-      popOverrides = applyPostAttrsWeb<Props>(
-        context,
-        props,
-        componentAttrs,
-        forwardedComponent.postAttrsPlans,
-        webStyle
-      );
-    }
-    if (IS_RSC) {
-      generatedStyle = rscFlush(webStyle, context, ssc.styleSheet, ssc.compiler);
-      generatedClassName = generatedStyle.className;
-    } else {
-      generatedClassName = webStyle.flush(context, ssc.styleSheet, ssc.compiler);
-    }
+    // Browser path: generate during render and inject via StyleInjector.
+    const generated = webStyle.generate(context, ssc.styleSheet, ssc.compiler);
+    generatedClassName = generated.className;
+    pendingInject = generatedNeedsSheetWrite(generated, ssc.styleSheet) ? generated : null;
   }
 
-  // Outside the render-cache branch: a hook skipped on a cache hit is a hook
-  // count that changes between renders, which React rejects outright.
   if (__DEV__ && React.useDebugValue) {
-    // biome-ignore lint/correctness/useHookAtTopLevel: __DEV__ is a build-time constant. What matters here is the placement, outside the data-dependent cache branch above.
+    // biome-ignore lint/correctness/useHookAtTopLevel: __DEV__ is a build-time constant, and useDebugValue allocates no hook slot in any case
     React.useDebugValue(generatedClassName);
   }
 
@@ -819,10 +743,10 @@ function createStyledComponent<
    * statics onto the result. The single object literal lets V8 use one
    * hidden class for every styled component instead of walking a fresh
    * transition chain per construction. `React.memo` lets the parent's
-   * re-render skip this component when props are shallow-equal; the
-   * internal render-cache inside `useImpl` is a layered fallback for
-   * cases memo doesn't catch (different prop refs with same values,
-   * theme/sheet shifts, dynamic-only components).
+   * re-render skip this component when props are shallow-equal, which is
+   * the sound place to bail out: only the caller knows the full set of
+   * inputs its interpolations depend on. `webStyle`'s content-addressed
+   * caches keep the per-render work cheap when memo does re-run.
    */
   const RenderInner: {
     (props: ExecutionProps & OuterProps & { ref?: Ref<Element> }): React.JSX.Element;

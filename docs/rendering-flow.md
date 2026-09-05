@@ -32,7 +32,7 @@ sequenceDiagram
     StyleSheetManager-->>useImpl: styleSheet, compiler, shouldForwardProp
 
     Note over useImpl,WebStyle: 3. STYLE PROCESSING (render)
-    useImpl->>useImpl: render-cache check (fast skip on shallow-equal props/theme)
+    Note over useImpl: interpolations + attrs run every render (React.memo bails equal-props re-renders)
     useImpl->>useImpl: resolveContext(attrs, props, theme)
     useImpl->>WebStyle: generate(context, styleSheet, compiler)
     WebStyle->>WebStyle: evaluateForFastPath (fill sentinels in pre-built AST)

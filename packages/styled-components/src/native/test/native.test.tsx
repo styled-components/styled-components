@@ -1854,3 +1854,70 @@ describe('native', () => {
     });
   });
 });
+
+describe('interpolation evaluation on every render (#5788)', () => {
+  // An interpolation may call a React hook (MUI X DataGrid reads a grid selector
+  // via `useContext` inside one) or read state outside props and theme. That
+  // hook is one of the component's hooks and must run every render; a props-equal
+  // cache that skipped the interpolation dropped the hook (React "Rendered fewer
+  // hooks than expected" crash) and served stale styles. A context-driven
+  // re-render leaves the component's own props unchanged, so it exercises the
+  // path a props-equal cache treated as a hit.
+  it('runs a hook called inside an interpolation across a context-driven re-render', () => {
+    const ColorContext = React.createContext('red');
+    const Comp = styled(View)`
+      background-color: ${() => React.useContext(ColorContext)};
+    `;
+
+    function App({ color }: { color: string }) {
+      return (
+        <ColorContext.Provider value={color}>
+          <Comp />
+        </ColorContext.Provider>
+      );
+    }
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    TestRenderer.act(() => {
+      renderer = TestRenderer.create(<App color="red" />);
+    });
+    expect(mergeStyle(renderer.root.findByType(View).props.style).backgroundColor).toBe('red');
+
+    expect(() => {
+      TestRenderer.act(() => {
+        renderer.update(<App color="blue" />);
+      });
+    }).not.toThrow();
+    expect(mergeStyle(renderer.root.findByType(View).props.style).backgroundColor).toBe('blue');
+
+    TestRenderer.act(() => renderer.unmount());
+  });
+
+  it('updates the resolved style when an interpolation reads changed external state', () => {
+    const SizeContext = React.createContext(10);
+    const Comp = styled(View)`
+      padding-top: ${() => React.useContext(SizeContext)}px;
+    `;
+
+    function App({ size }: { size: number }) {
+      return (
+        <SizeContext.Provider value={size}>
+          <Comp />
+        </SizeContext.Provider>
+      );
+    }
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    TestRenderer.act(() => {
+      renderer = TestRenderer.create(<App size={10} />);
+    });
+    expect(mergeStyle(renderer.root.findByType(View).props.style).paddingTop).toBe(10);
+
+    TestRenderer.act(() => {
+      renderer.update(<App size={20} />);
+    });
+    expect(mergeStyle(renderer.root.findByType(View).props.style).paddingTop).toBe(20);
+
+    TestRenderer.act(() => renderer.unmount());
+  });
+});

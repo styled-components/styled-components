@@ -7,8 +7,8 @@
  *
  * Reactivity: rect changes bump a version counter and notify
  * subscribers; components whose CSS uses anchor functions subscribe
- * (useSyncExternalStore) and re-resolve. The version also participates
- * in their render-cache key so a re-render isn't served stale styles.
+ * (useSyncExternalStore) and re-render when the version bumps,
+ * re-resolving against the current rects.
  */
 
 import React from 'react';

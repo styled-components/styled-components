@@ -375,26 +375,28 @@ describe('createTheme', () => {
       `);
     });
 
-    it('render cache busts when WebStyle instance changes (HMR invalidation)', () => {
+    it('HMR with a new WebStyle for identical CSS keeps the same class name', () => {
+      // On HMR, styled() builds a new WebStyle instance. Identical CSS must still
+      // hash to the same class name so a hot reload does not churn classes.
       const themeV1 = createTheme({ gap: '8px' });
-      const CompV1 = styled.div.withConfig({ componentId: 'sc-hmr-rendercache' })`
+      const CompV1 = styled.div.withConfig({ componentId: 'sc-hmr-identical-css' })`
         gap: ${themeV1.gap};
       `;
 
       const { container, rerender } = render(<CompV1 />);
 
       rerender(<CompV1 />);
-      const classAfterCacheHit = container.firstElementChild!.className;
+      const classBefore = container.firstElementChild!.className;
 
       const themeV1Copy = createTheme({ gap: '8px' });
-      const CompV1Reval = styled.div.withConfig({ componentId: 'sc-hmr-rendercache' })`
+      const CompV1Reval = styled.div.withConfig({ componentId: 'sc-hmr-identical-css' })`
         gap: ${themeV1Copy.gap};
       `;
 
       rerender(<CompV1Reval />);
       const classAfterHmr = container.firstElementChild!.className;
 
-      expect(classAfterHmr).toBe(classAfterCacheHit);
+      expect(classAfterHmr).toBe(classBefore);
     });
 
     it('vars property reflects theme structure changes across HMR', () => {

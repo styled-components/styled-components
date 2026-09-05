@@ -238,10 +238,11 @@ describe('buffered style injection (useInsertionEffect)', () => {
     }
   });
 
-  it('injects after a discarded concurrent attempt whose className was cached', async () => {
-    // A transition update that suspends mid-tree can leave a generate() result
-    // in the render cache. The retry must still write the rules that attempt
-    // never committed.
+  it('injects after a discarded concurrent attempt whose className was already claimed', async () => {
+    // A transition update that suspends mid-tree claims the new class name on
+    // the sheet but never runs its insertion effect, so the rules go unwritten.
+    // The retry re-generates, detects the claimed-but-unwritten name, and writes
+    // the rules that attempt never committed.
     let resolve: (() => void) | undefined;
     const promise = new Promise<void>(r => {
       resolve = r;
