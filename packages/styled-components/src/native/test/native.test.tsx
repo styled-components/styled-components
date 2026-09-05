@@ -3,6 +3,7 @@ import { Image, Text, View, ViewProps } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider, css, toStyleSheet } from '../';
 import { RN_UNSUPPORTED_VALUES } from '../../models/InlineStyle';
+import { withHookRecording } from '../../test/recordHooks';
 
 // NOTE: These tests are like the ones for Web but a "light-version" of them
 // This is mostly due to the similar logic
@@ -592,6 +593,62 @@ describe('native', () => {
       expect(props.style).toEqual({ color: 'red' });
       expect(props.passThru).toBe('def');
       expect(props.filterThis).toBeUndefined();
+    });
+  });
+
+  // Mirrors the web coverage in src/test/memoization.test.tsx: an interpolation,
+  // and any hook it calls or external value it reads, runs on every render and is
+  // not skipped on an unchanged-props re-render (#5788).
+  describe('interpolation evaluation on every render (#5788)', () => {
+    it('runs a hook called inside an interpolation on every render', () => {
+      const Ctx = React.createContext('0.5');
+
+      withHookRecording(record => {
+        const Comp = styled.View<{ $pad: number }>`
+          padding: ${p => p.$pad}px;
+          opacity: ${() => React.useContext(Ctx)};
+        `;
+
+        const [wrapper, mount] = record(() =>
+          TestRenderer.create(
+            <Ctx.Provider value="0.5">
+              <Comp $pad={1} />
+            </Ctx.Provider>
+          )
+        );
+        // Same props: the interpolation, and the useContext it calls, still run.
+        const [, reRender] = record(() =>
+          wrapper.update(
+            <Ctx.Provider value="0.5">
+              <Comp $pad={1} />
+            </Ctx.Provider>
+          )
+        );
+
+        expect(mount).toContain('useContext');
+        expect(reRender).toEqual(mount);
+
+        wrapper.unmount();
+      });
+    });
+
+    it('recomputes when an interpolation reads external state that changed but props did not', () => {
+      let external = 'red';
+      const Comp = styled.View<{ $pad: number }>`
+        padding: ${p => p.$pad}px;
+        color: ${() => external};
+      `;
+
+      const padding = { paddingBottom: 1, paddingLeft: 1, paddingRight: 1, paddingTop: 1 };
+      const wrapper = TestRenderer.create(<Comp $pad={1} />);
+      expect(wrapper.root.findByType(View).props.style).toEqual({ color: 'red', ...padding });
+
+      external = 'blue';
+      // Same props, but the interpolation's external input changed.
+      wrapper.update(<Comp $pad={1} />);
+      expect(wrapper.root.findByType(View).props.style).toEqual({ color: 'blue', ...padding });
+
+      wrapper.unmount();
     });
   });
 });
