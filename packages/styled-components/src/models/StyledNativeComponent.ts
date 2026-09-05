@@ -2208,9 +2208,9 @@ function ContainerPublisher({
         : onLayout,
     [onLayout, existingOnLayout]
   );
-  // Render cache reuses the same `elementProps` across cache-hit renders, so
-  // mutating it would feed the composed handler back in as `existingOnLayout`
-  // next render and grow the call chain by one wrapper each time.
+  // Spread into a fresh object rather than mutating `elementProps`: keep the
+  // composed handler off the source bag so it is never read back as
+  // `existingOnLayout` and wrapped a second time.
   const finalProps = { ...elementProps, onLayout: composedOnLayout };
 
   return createElement(
@@ -2346,8 +2346,10 @@ function GridPublisher({
 
 /**
  * Assemble the final `style` value passed to the underlying RN element.
- * Pulled out of the render hook so the cache-hit path can short-circuit
- * to a single property read without paying for any of this work.
+ * A pure function of its inputs, so the render path can call it on every
+ * render (it runs whenever the component body reaches it) and rely on the
+ * content-addressed compile cache and value-keyed resolvers to keep repeat
+ * work cheap, rather than gating the call behind a render cache.
  */
 export function assembleFinalStyle(
   compiled: NativeStyles,
