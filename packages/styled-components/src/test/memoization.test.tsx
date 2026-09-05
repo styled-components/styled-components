@@ -430,4 +430,99 @@ describe('memoization correctness', () => {
       for (const [name, original] of originals) reactHooks[name] = original;
     }
   });
+
+  /**
+   * A hook called inside an interpolation is one of this component's own hooks:
+   * it runs synchronously in the styled component's render body. Skipping the
+   * interpolation on a re-render with unchanged props drops that hook, so the
+   * component emits fewer hooks than the previous render and React crashes with
+   * "Rendered fewer hooks than expected" (#5788, as seen with @mui/styled-engine-sc
+   * + MUI X DataGrid, which calls useGridSelector -> useContext in an interpolation).
+   */
+  it('runs a hook called inside an interpolation on every render (#5788)', () => {
+    const reactHooks = React as unknown as Record<string, (...args: unknown[]) => unknown>;
+    const Ctx = React.createContext('red');
+    const hookNames = Object.keys(React).filter(
+      key => key.startsWith('use') && typeof reactHooks[key] === 'function'
+    );
+
+    let recording: string[] | null = null;
+    const originals = new Map<string, (...args: unknown[]) => unknown>();
+
+    function record<T>(render: () => T): [T, string[]] {
+      const calls: string[] = [];
+      recording = calls;
+      try {
+        return [render(), calls];
+      } finally {
+        recording = null;
+      }
+    }
+
+    try {
+      for (const name of hookNames) {
+        const original = reactHooks[name];
+        originals.set(name, original);
+        reactHooks[name] = (...args) => {
+          if (recording) recording.push(name);
+          return original(...args);
+        };
+      }
+
+      const Comp = styled.div<{ $pad: number }>`
+        padding: ${p => p.$pad}px;
+        color: ${() => React.useContext(Ctx)};
+      `;
+
+      const tree = (
+        <Ctx.Provider value="red">
+          <Comp $pad={1} />
+        </Ctx.Provider>
+      );
+
+      const [renderer, mount] = record(() => TestRenderer.create(tree));
+      // Identical props: previously a cache hit that skipped the interpolation,
+      // dropping its useContext call and shortening the hook sequence.
+      const [, cacheHit] = record(() =>
+        renderer.update(
+          <Ctx.Provider value="red">
+            <Comp $pad={1} />
+          </Ctx.Provider>
+        )
+      );
+
+      expect(mount).toContain('useContext');
+      expect(cacheHit).toEqual(mount);
+
+      renderer.unmount();
+    } finally {
+      for (const [name, original] of originals) reactHooks[name] = original;
+    }
+  });
+
+  /**
+   * An interpolation may read inputs the (props + theme) cache key does not
+   * capture. Reusing a cached class name when such a hidden input changed serves
+   * a stale style: the class name must track the interpolation's real output,
+   * not the props alone (#5788).
+   */
+  it('recomputes when an interpolation reads external state that changed but props did not (#5788)', () => {
+    let external = 'red';
+    const Comp = styled.div<{ $pad: number }>`
+      padding: ${p => p.$pad}px;
+      color: ${() => external};
+    `;
+
+    const renderer = TestRenderer.create(<Comp $pad={1} />);
+    const withRed = renderer.root.findByType('div').props.className;
+
+    external = 'blue';
+    // Same props: the former cache would hit and return the stale red class name.
+    renderer.update(<Comp $pad={1} />);
+    const withBlue = renderer.root.findByType('div').props.className;
+
+    expect(withBlue).not.toBe(withRed);
+
+    renderer.unmount();
+  });
 });

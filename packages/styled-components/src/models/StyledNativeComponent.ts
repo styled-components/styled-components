@@ -23,21 +23,6 @@ import isStyledComponent from '../utils/isStyledComponent';
 import merge from '../utils/mixinDeep';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
-const hasOwn = Object.prototype.hasOwnProperty;
-
-function shallowEqualContext(prev: object, next: object, prevKeyCount: number): boolean {
-  const a = prev as Record<string, unknown>;
-  const b = next as Record<string, unknown>;
-  let nextKeyCount = 0;
-  for (const key in b) {
-    if (hasOwn.call(b, key)) {
-      nextKeyCount++;
-      if (a[key] !== b[key]) return false;
-    }
-  }
-  return nextKeyCount === prevKeyCount;
-}
-
 function resolveContext<Props extends object>(
   theme: DefaultTheme = EMPTY_OBJECT,
   props: Props,
@@ -80,9 +65,6 @@ function buildPropsForElement(
   return propsForElement;
 }
 
-// [prevProps, prevTheme, prevPropsKeyCount, cachedContext, cachedStyles]
-type RenderCache = [object, DefaultTheme | undefined, number, object, any];
-
 function useStyledComponentImpl<Props extends StyledComponentImplProps>(
   forwardedComponent: IStyledComponent<'native', Props>,
   props: Props,
@@ -100,25 +82,14 @@ function useStyledComponentImpl<Props extends StyledComponentImplProps>(
   const contextTheme = React.useContext ? React.useContext(ThemeContext) : undefined;
   const theme = determineTheme(props, contextTheme, defaultProps) || EMPTY_OBJECT;
 
-  let context: ExecutionContext & Props;
-  let generatedStyles: any;
-
-  const renderCacheRef = React.useRef ? React.useRef<RenderCache | null>(null) : { current: null };
-  const prev = renderCacheRef.current;
-
-  if (prev !== null && prev[1] === theme && shallowEqualContext(prev[0], props, prev[2])) {
-    context = prev[3] as typeof context;
-    generatedStyles = prev[4];
-  } else {
-    context = resolveContext<Props>(theme, props, componentAttrs);
-    generatedStyles = inlineStyle.generateStyleObject(context);
-
-    let propsKeyCount = 0;
-    for (const key in props) {
-      if (hasOwn.call(props, key)) propsKeyCount++;
-    }
-    renderCacheRef.current = [props, theme, propsKeyCount, context, generatedStyles];
-  }
+  // Interpolations and attr functions run on every render: they are this
+  // component's own user code and may call hooks or read inputs outside
+  // (props + theme), so skipping their evaluation across renders breaks the
+  // rules of hooks and serves stale styles (#5788). generateStyleObject returns
+  // a stable style reference for equal CSS via InlineStyle's own cache, so the
+  // style useMemo below keeps a stable identity without an outer render cache.
+  const context = resolveContext<Props>(theme, props, componentAttrs);
+  const generatedStyles = inlineStyle.generateStyleObject(context);
 
   const elementToBeCreated: NativeTarget = (context as any).as || props.as || target;
   const propsForElement = buildPropsForElement(context, elementToBeCreated, shouldForwardProp);

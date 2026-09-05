@@ -14,15 +14,16 @@ microbenchmark against the realistic workload, not a synthetic best case.
 | Template literals | Manual `+` concat is 1.3x faster than `` `${a}${b}` `` in tight loops |
 | `React.createElement` | Raw element objects measure 60-120x faster, but are NOT used on this branch: `StyledComponent` calls React's own `createElement`. Measurement only, not an inventory entry |
 
-## Dynamic re-render hot path
+## Dynamic render hot path
 
-On a cache hit, meaning props and theme are unchanged and this is the most common re-render:
+Interpolations and attr functions run on every render. They are the component's own render-body user
+code, so a hook called inside an interpolation (React `useContext` from an `@mui/styled-engine-sc`
+adapter, for example) is one of the component's hooks and must run every render like any other hook
+site. Skipping evaluation on a props-equal re-render would drop that hook and serve a stale class name
+whenever an interpolation reads state outside props and theme (#5788).
 
-- `shallowEqualContext` costs roughly 0.2us, comparing props by `for..in` against a stored key count.
-- Everything else is skipped: `resolveContext`, flatten, hash and `generateName`.
-  `buildPropsForElement` still runs.
-
-On a cache miss, meaning props changed:
+The pure work downstream of the produced CSS string is memoized, so a repeat render that yields the
+same CSS is cheap:
 
 1. `resolveContext`: object spread plus attrs evaluation.
 2. `flatten()` fast path: an inline function call for string-returning interpolations, roughly 0.05us
@@ -33,11 +34,12 @@ On a cache miss, meaning props changed:
 5. `stylis` compile and serialize: only when `hasNameForId` misses, the first injection of this class.
 6. `hasNameForId`: a `Map.has`, negligible.
 
-The render cache splits this path in two, and only the miss side runs the style work. Any hook placed
-on one side of that split is called on a miss and skipped on a hit, which makes the component emit a
-different hook sequence depending on whether its props happened to change. React rejects that outright
-(#5788). `memoization.test.tsx` records the hook sequence across both cache states and asserts they
-match, so a hook added inside the branch fails there rather than in a consumer's app.
+A props-equal re-render bailout belongs at the component boundary via `React.memo`, which only the
+caller can key against the full set of inputs the styles depend on. `memoization.test.tsx` records the
+hook sequence across a re-render with unchanged props and asserts it matches the mount, so a change
+that reintroduces skipped evaluation fails there rather than in a consumer's app. The native path is
+the same: `InlineStyle` caches CSS-to-style-object by content, so `generateStyleObject` returns a
+stable reference for equal styles without an outer render cache.
 
 ## V8 gotchas
 

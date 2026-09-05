@@ -24,8 +24,10 @@ mapped below.
   `styleSheet.server` or `IS_RSC`.
 - NEVER write `typeof React.useRef === 'function'`; that is a runtime conditional hook. Gate on
   `__SERVER__`.
-- NEVER place a hook on one side of the render cache's hit/miss branch. The hook sequence must be
-  identical whether or not props changed. See
+- NEVER skip evaluating interpolations or attr functions across renders, and never reintroduce a
+  props-equal render cache that does. They are the component's own render body and may call hooks or
+  read state outside props and theme, so skipping them breaks the rules of hooks and serves stale
+  styles (#5788). Keep every styled-components hook call unconditional. See
   [docs/runtime-performance.md](docs/runtime-performance.md).
 - NEVER use `new Array(n)`. It creates HOLEY_ELEMENTS arrays that infect V8 type feedback.
 - NEVER mutate `rule.props` in place on a stylis AST node; allocate a fresh array.
@@ -33,6 +35,11 @@ mapped below.
 ## Mandates
 
 - React 16.8 compat
+- The web and native render paths mirror each other: `src/models/StyledComponent.ts` with
+  `ComponentStyle.ts` for web, `src/models/StyledNativeComponent.ts` with `InlineStyle.ts` for native.
+  When changing one, check whether the other needs the same change. A render-path, interpolation, or
+  attr-evaluation fix on web almost always applies to native, and the reverse. Land both together or
+  state why one is exempt.
 - Always microbenchmark to validate optimizations, and bench the realistic workload rather than a
   synthetic best case. Revert changes that pessimize the path actual callers take, even if they win in
   isolation.
@@ -77,7 +84,7 @@ it rather than restating it.
   detection mechanisms, native entry isolation, module resolution, CSS injection ordering
 - [docs/rendering-flow.md](docs/rendering-flow.md) -- the full render sequence diagram
 - [docs/runtime-performance.md](docs/runtime-performance.md) -- microbenchmark-validated patterns, the
-  dynamic re-render hot path and its render cache, V8 gotchas, stylis AST handling
+  dynamic render hot path, V8 gotchas, stylis AST handling
 - [docs/global-styles.md](docs/global-styles.md) -- `createGlobalStyle`'s shared-group architecture,
   instance lifecycle, rebuild fast path
 - [docs/rsc-style-injection.md](docs/rsc-style-injection.md) -- how styles reach the page from server

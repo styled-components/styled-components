@@ -594,4 +594,87 @@ describe('native', () => {
       expect(props.filterThis).toBeUndefined();
     });
   });
+
+  // Mirrors the web coverage in src/test/memoization.test.tsx: skipping style
+  // evaluation on an unchanged-props re-render would drop a hook called inside an
+  // interpolation and serve a stale style object (#5788).
+  describe('interpolation evaluation on every render (#5788)', () => {
+    it('runs a hook called inside an interpolation on every render', () => {
+      const reactHooks = React as unknown as Record<string, (...args: unknown[]) => unknown>;
+      const Ctx = React.createContext('0.5');
+      const hookNames = Object.keys(React).filter(
+        key => key.startsWith('use') && typeof reactHooks[key] === 'function'
+      );
+
+      let recording: string[] | null = null;
+      const originals = new Map<string, (...args: unknown[]) => unknown>();
+
+      function record<T>(render: () => T): [T, string[]] {
+        const calls: string[] = [];
+        recording = calls;
+        try {
+          return [render(), calls];
+        } finally {
+          recording = null;
+        }
+      }
+
+      try {
+        for (const name of hookNames) {
+          const original = reactHooks[name];
+          originals.set(name, original);
+          reactHooks[name] = (...args) => {
+            if (recording) recording.push(name);
+            return original(...args);
+          };
+        }
+
+        const Comp = styled.View<{ $pad: number }>`
+          padding: ${p => p.$pad}px;
+          opacity: ${() => React.useContext(Ctx)};
+        `;
+
+        const [wrapper, mount] = record(() =>
+          TestRenderer.create(
+            <Ctx.Provider value="0.5">
+              <Comp $pad={1} />
+            </Ctx.Provider>
+          )
+        );
+        const [, cacheHit] = record(() =>
+          wrapper.update(
+            <Ctx.Provider value="0.5">
+              <Comp $pad={1} />
+            </Ctx.Provider>
+          )
+        );
+
+        expect(mount).toContain('useContext');
+        expect(cacheHit).toEqual(mount);
+
+        wrapper.unmount();
+      } finally {
+        for (const [name, original] of originals) reactHooks[name] = original;
+      }
+    });
+
+    it('recomputes when an interpolation reads external state that changed but props did not', () => {
+      let external = 'red';
+      const Comp = styled.View<{ $pad: number }>`
+        padding: ${p => p.$pad}px;
+        color: ${() => external};
+      `;
+
+      const padding = { paddingBottom: 1, paddingLeft: 1, paddingRight: 1, paddingTop: 1 };
+      const wrapper = TestRenderer.create(<Comp $pad={1} />);
+      expect(wrapper.root.findByType(View).props.style).toEqual({ color: 'red', ...padding });
+
+      external = 'blue';
+      // Same props: the former cache would hit and return the stale red style.
+      wrapper.update(<Comp $pad={1} />);
+      expect(wrapper.root.findByType(View).props.style).toEqual({ color: 'blue', ...padding });
+
+      wrapper.unmount();
+    });
+  });
 });

@@ -15,7 +15,6 @@ import type {
   IStyledStatics,
   OmitNever,
   RuleSet,
-  Stringifier,
   StyledOptions,
   WebTarget,
 } from '../types';
@@ -39,8 +38,6 @@ import { useStyleSheetContext } from './StyleSheetManager';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
 declare const __SERVER__: boolean;
-
-const hasOwn = Object.prototype.hasOwnProperty;
 
 const identifiers: { [key: string]: number } = {};
 
@@ -70,36 +67,6 @@ function generateId(
 
   return parentComponentId ? parentComponentId + '-' + componentId : componentId;
 }
-
-/**
- * Shallow-compare two context objects using a stored key count to avoid
- * a second iteration pass. Returns true if all own-property values match.
- */
-function shallowEqualContext(prev: object, next: object, prevKeyCount: number): boolean {
-  const a = prev as Record<string, unknown>;
-  const b = next as Record<string, unknown>;
-  let nextKeyCount = 0;
-  for (const key in b) {
-    if (hasOwn.call(b, key)) {
-      nextKeyCount++;
-      if (a[key] !== b[key]) return false;
-    }
-  }
-  return nextKeyCount === prevKeyCount;
-}
-
-// Cached render inputs + style result: [prevProps, prevTheme, prevStyleSheet, prevStylis,
-// prevPropsKeyCount, cachedContext, cachedClassName]
-type RenderCache = [
-  object, // prevProps
-  DefaultTheme | undefined, // prevTheme
-  StyleSheet, // prevStyleSheet
-  Stringifier, // prevStylis
-  number, // prevPropsKeyCount
-  object, // cachedContext
-  string, // cachedClassName
-  ComponentStyle, // prevComponentStyle (for HMR invalidation)
-];
 
 function resolveContext<Props extends BaseObject>(
   attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
@@ -235,60 +202,21 @@ function useStyledComponentImpl<Props extends BaseObject>(
   const theme =
     determineTheme(props, contextTheme, defaultProps) || (IS_RSC ? undefined : EMPTY_OBJECT);
 
-  let context: React.HTMLAttributes<Element> & ExecutionContext & Props;
-  let generatedClassName: string;
+  // Interpolations and attr functions run on every render. They are this
+  // component's own user code and may call hooks or read inputs outside
+  // (props + theme), so skipping their evaluation across renders breaks the
+  // rules of hooks (a hook count that changes between renders) and serves stale
+  // styles (#5788). The pure work downstream of the produced CSS string
+  // (hashing, compile, injection) is already memoized inside ComponentStyle; a
+  // props-equal re-render bailout belongs at the component boundary via
+  // React.memo, which only the caller can key correctly.
+  const context = resolveContext<Props>(componentAttrs, props, theme);
+  const generatedClassName = componentStyle.generateAndInjectStyles(
+    context,
+    ssc.styleSheet,
+    ssc.stylis
+  );
 
-  // Client-only render cache: skip resolveContext and generateAndInjectStyles
-  // when props+theme haven't changed. propsForElement is always rebuilt since
-  // it's mutated with className/ref after construction.
-  // __SERVER__ and IS_RSC are build/module-level constants for dead-code elimination.
-  if (!__SERVER__ && !IS_RSC) {
-    const renderCacheRef = React.useRef<RenderCache | null>(null);
-    const prev = renderCacheRef.current;
-
-    if (
-      prev !== null &&
-      prev[1] === theme &&
-      prev[2] === ssc.styleSheet &&
-      prev[3] === ssc.stylis &&
-      prev[7] === componentStyle &&
-      shallowEqualContext(prev[0], props, prev[4])
-    ) {
-      context = prev[5] as typeof context;
-      generatedClassName = prev[6];
-    } else {
-      context = resolveContext<Props>(componentAttrs, props, theme);
-      generatedClassName = componentStyle.generateAndInjectStyles(
-        context,
-        ssc.styleSheet,
-        ssc.stylis
-      );
-      let propsKeyCount = 0;
-      for (const key in props) {
-        if (hasOwn.call(props, key)) propsKeyCount++;
-      }
-      renderCacheRef.current = [
-        props,
-        theme,
-        ssc.styleSheet,
-        ssc.stylis,
-        propsKeyCount,
-        context,
-        generatedClassName,
-        componentStyle,
-      ];
-    }
-  } else {
-    context = resolveContext<Props>(componentAttrs, props, theme);
-    generatedClassName = componentStyle.generateAndInjectStyles(
-      context,
-      ssc.styleSheet,
-      ssc.stylis
-    );
-  }
-
-  // Outside the render-cache branch: a hook skipped on a cache hit is a hook
-  // count that changes between renders, which React rejects outright (#5788).
   if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
     React.useDebugValue(generatedClassName);
   }
