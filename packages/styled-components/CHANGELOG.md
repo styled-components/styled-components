@@ -1,5 +1,42 @@
 # styled-components
 
+## 6.6.0
+
+### Minor Changes
+
+- 7ce6aea: Added a `StyledComponent<Target, Props>` type for annotating explicitly-typed styled component exports.
+
+  Packages that emit their own declaration files, including any project using `isolatedDeclarations`, must annotate every exported styled component, and there was no public type for it: consumers reached into internal paths or hand-assembled one that dropped members like a wrapped component's hoisted statics.
+
+  `StyledComponent` is exported from the web and native entries. Name the target and props as you passed them to `styled`:
+
+  ```tsx
+  import styled, { type StyledComponent } from 'styled-components';
+
+  export const Card: StyledComponent<'div', { $active?: boolean }> = styled.div<{
+    $active?: boolean;
+  }>`...`;
+  export const CloseButton: StyledComponent<typeof IconButton> = styled(IconButton)`...`;
+  ```
+
+  It resolves to the exact type `styled(Target)<Props>` produces, so the annotation is not lossy.
+
+### Patch Changes
+
+- 3de03c2: Type-checking is faster when you annotate exported styled components with an explicit type, the pattern that packages emitting their own declaration files (including any project using `isolatedDeclarations`) rely on. The improvement is largest in codebases that annotate many components built on intrinsic tags such as `styled.div`, `styled.span`, and `styled.button`, and wrappers over polymorphic components whose props are a union.
+
+  Nothing about the styled component's type changes for your code: props, `defaultProps`, `propTypes`, ref forwarding, and `as` polymorphism all behave exactly as before. This is purely a type-check speedup.
+
+- 52c5f6e: Fixed a crash ("Rendered fewer hooks than expected") and a related stale-style bug for components that call a React hook, or read any value outside their props and theme, from inside a style interpolation. This affected `@mui/styled-engine-sc` with MUI X DataGrid, which calls hooks within an interpolation, and was a regression introduced in 6.4.0.
+
+  Style interpolations now run on every render, so a hook called inside one runs consistently and a value read inside one always reflects its current state.
+
+  If a component re-renders often with unchanged props and its interpolations are expensive, wrap it in `React.memo` to skip those re-renders. That is the right place to bail out, because only the calling code knows the full set of inputs its styles depend on.
+
+- 1c0e309: Fixed styles disappearing from a server-rendered component when it is revealed from behind a React `<Suspense>` boundary, such as a streaming Next.js route (including `cacheComponents`). A component shown first in a Suspense fallback and then in the resolved content kept its class name but lost its CSS, because the rule had been emitted only inside the fallback that React discards on reveal.
+
+  Each server-rendered instance now carries its own inline `<style>`, so its styles always travel with it and survive the boundary. Identical rules compress away under gzip, so the extra output is negligible; only a very large repeated list (thousands of instances of one component on a single page) is worth collapsing into a shared class, and a development-only warning points that out if it happens.
+
 ## 6.5.3
 
 ### Patch Changes
