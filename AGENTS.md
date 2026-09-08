@@ -73,7 +73,7 @@ mapped below.
 - `pnpm --filter styled-components bench` -- Run all benchmarks (web + native + RSC)
 - `pnpm --filter styled-components bench:web` -- Run web benchmarks
 - `pnpm --filter styled-components bench:native` -- Run native benchmarks (parser + render)
-- `pnpm --filter styled-components bench:rsc` -- Run RSC benchmarks (renderToString + dedup + React baseline)
+- `pnpm --filter styled-components bench:rsc` -- Run RSC benchmarks (renderToString + per-instance emission + React baseline)
 - `pnpm test:prerelease-notes` -- Regenerate prerelease GitHub release-note markdown locally (set `GITHUB_REPOSITORY=owner/name`; optional `CHANGESET_NOTES_ROOT`, `RELEASE_NOTES_OUTDIR`)
 
 ## Specifications
@@ -89,7 +89,7 @@ it rather than restating it.
 - [docs/global-styles.md](docs/global-styles.md) -- `createGlobalStyle`'s shared-group architecture,
   instance lifecycle, rebuild fast path
 - [docs/rsc-style-injection.md](docs/rsc-style-injection.md) -- how styles reach the page from server
-  components, dedup, `:where()` wrapping, `stylisPluginRSC`
+  components, per-instance emission, `:where()` wrapping, `stylisPluginRSC`
 - [docs/create-theme.md](docs/create-theme.md) -- the `createTheme` CSS-variable contract
 - [docs/attrs.md](docs/attrs.md) -- `attrs` precedence and its escape hatches
 - [docs/type-contracts.md](docs/type-contracts.md) -- how the compile-only type suites are written and

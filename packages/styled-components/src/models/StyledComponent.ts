@@ -1,8 +1,7 @@
 import isPropValid from '@emotion/is-prop-valid';
 import React, { createElement, PropsWithoutRef, Ref } from 'react';
-import { IS_RSC, SC_ATTR, SC_VERSION, SPLITTER } from '../constants';
+import { IS_RSC, SC_ATTR, SC_VERSION } from '../constants';
 import { getGroupForId } from '../sheet/GroupIDAllocator';
-import type StyleSheet from '../sheet';
 import type {
   AnyComponent,
   Attrs,
@@ -33,7 +32,7 @@ import { joinStrings, stripSplitter } from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
 import { createRSCCache } from '../utils/rscCache';
 import { setToString } from '../utils/setToString';
-import ComponentStyle, { getCompiledCSS } from './ComponentStyle';
+import ComponentStyle, { getCompiledCSSForName } from './ComponentStyle';
 import { useStyleSheetContext } from './StyleSheetManager';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
@@ -110,8 +109,21 @@ function resolveContext<Props extends BaseObject>(
 
 let seenUnknownProps: Set<string> | undefined;
 
-/** Per-render tracking of emitted class names and keyframe IDs for RSC dedup. */
-const getEmittedNames = createRSCCache(() => new Set<string>());
+/**
+ * Dev-only per-request count of inline <style> tags emitted per component, used
+ * to warn when one component floods a server render with redundant tags (a very
+ * large repeated list). Request-scoped via React.cache; over/under-counting
+ * across a Suspense boundary is harmless for a heuristic warning.
+ */
+const getEmitCounts =
+  process.env.NODE_ENV !== 'production' ? createRSCCache(() => new Map<string, number>()) : null;
+
+/**
+ * Warn once a single component emits this many inline <style> tags in one server
+ * render. Set well above any hand-written page; only pathological generated
+ * lists reach it, which is exactly the case that wants a shared className.
+ */
+const RSC_REDUNDANT_EMIT_WARN_THRESHOLD = 1000;
 
 /** Cache RegExp objects for :where() wrapping to avoid recompilation per render */
 const whereRegExpCache = new Map<string, RegExp>();
@@ -124,15 +136,15 @@ function getWhereRegExp(name: string): RegExp {
   return re;
 }
 
-/** Wrap base-level CSS class selectors in :where() for zero specificity (RSC inheritance). */
-function wrapBaseInWhere(levelCss: string, componentId: string, styleSheet: StyleSheet): string {
-  const names = styleSheet.names.get(componentId);
-  if (names) {
-    for (const name of names) {
-      const re = getWhereRegExp(name);
-      re.lastIndex = 0;
-      levelCss = levelCss.replace(re, ':where(.' + name + ')');
-    }
+/** Wrap the given base-level class selectors in :where() for zero specificity
+ *  (RSC inheritance). Only this render's base names are passed, never the base
+ *  component's full accumulated variant set, so an extended component with a
+ *  dynamic base stays O(chain) per instance instead of O(variants). */
+function wrapBaseInWhere(levelCss: string, names: string[]): string {
+  for (let i = 0; i < names.length; i++) {
+    const re = getWhereRegExp(names[i]);
+    re.lastIndex = 0;
+    levelCss = levelCss.replace(re, ':where(.' + names[i] + ')');
   }
   return levelCss;
 }
@@ -251,94 +263,99 @@ function useStyledComponentImpl<Props extends BaseObject>(
 
   const element = createElement(elementToBeCreated, propsForElement);
 
-  // RSC mode: emit this component's CSS (and its inheritance chain + keyframes)
-  // as an inline <style> tag. No `precedence` — server component output isn't
-  // hydrated, so no mismatch. Inline body styles come after the registry's
-  // <head> styles in source order, so extensions naturally win (#5672).
-  if (IS_RSC) {
-    const emitted = getEmittedNames ? getEmittedNames() : null;
+  // RSC mode: emit exactly this render's own classes (the leaf plus its
+  // :where()-wrapped base chain) and the keyframes it references as an inline
+  // <style> sibling, once per instance. No request-scoped dedup ledger: a
+  // ledger keyed on React.cache is request-wide and outlives a Suspense
+  // fallback's DOM, so a rule emitted only inside a fallback would be dropped
+  // for the resolved child and then removed with the fallback, leaving it
+  // unstyled (#5808). React exposes no per-boundary scope to key a safe ledger
+  // on. Styles stay inline rather than hoisted via `precedence` so cross-
+  // boundary extensions keep winning by source order (#5672) and the child-
+  // index selector plugin stays correct; byte-identical duplicates cost about a
+  // byte each after gzip.
+  if (IS_RSC && generatedClassName) {
+    // generateAndInjectStyles returns this render's whole chain of class names,
+    // base to leaf, so it names exactly the rules this instance needs.
+    const renderNames = generatedClassName.split(' ');
 
-    let newNames: string[] | null = null;
-    let totalNames = 0;
     let css = '';
-    let usedCache = true;
-
     let walk: ComponentStyle | null | undefined = componentStyle;
     while (walk) {
-      const names = ssc.styleSheet.names.get(walk.componentId);
-      if (names) {
-        totalNames += names.size;
-        for (const name of names) {
-          if (!emitted || !emitted.has(name)) {
-            if (!newNames) newNames = [];
-            newNames.push(name);
-            if (emitted) emitted.add(name);
-          }
+      const groupNames = ssc.styleSheet.names.get(walk.componentId);
+      if (groupNames) {
+        // This render's names at this level (one per level in the common case).
+        const levelNames: string[] = [];
+        for (let i = 0; i < renderNames.length; i++) {
+          if (groupNames.has(renderNames[i])) levelNames.push(renderNames[i]);
         }
-      }
 
-      if (newNames && usedCache) {
-        let levelCss = getCompiledCSS(walk, ssc.styleSheet);
-        if (levelCss === null) {
-          usedCache = false;
-        } else {
-          if (walk !== componentStyle) {
-            levelCss = wrapBaseInWhere(levelCss, walk.componentId, ssc.styleSheet);
+        if (levelNames.length) {
+          // Every name reaching the sheet in RSC was compiled into the cache by
+          // generateAndInjectStyles before it registered, so the lookup hits.
+          let levelCss = '';
+          for (let i = 0; i < levelNames.length; i++) {
+            levelCss += getCompiledCSSForName(walk, levelNames[i]) || '';
           }
-          css = levelCss + css;
+
+          if (levelCss) {
+            if (walk !== componentStyle) {
+              levelCss = wrapBaseInWhere(levelCss, levelNames);
+            }
+            css = levelCss + css;
+          }
         }
       }
 
       walk = walk.baseStyle;
     }
 
-    if (newNames && !usedCache) {
-      css = '';
-      const tag = ssc.styleSheet.getTag();
-      let cs: ComponentStyle | null | undefined = componentStyle;
-      while (cs) {
-        let levelCss = tag.getGroup(getGroupForId(cs.componentId));
-        if (levelCss && cs !== componentStyle) {
-          levelCss = wrapBaseInWhere(levelCss, cs.componentId, ssc.styleSheet);
-        }
-        css = levelCss + css;
-        cs = cs.baseStyle;
-      }
-    }
-
     let kfCss = '';
-    if (ssc.styleSheet.keyframeIds.size > 0) {
+    if (css && ssc.styleSheet.keyframeIds.size > 0) {
       const kfTag = ssc.styleSheet.getTag();
       for (const kfId of ssc.styleSheet.keyframeIds) {
-        if (emitted && emitted.has(kfId)) continue;
-        const kfRules = kfTag.getGroup(getGroupForId(kfId));
-        if (kfRules) {
-          kfCss += kfRules;
-          if (emitted) emitted.add(kfId);
-        }
-      }
-    }
-
-    if (css && emitted && newNames && newNames.length < totalNames) {
-      const rules = css.split(SPLITTER);
-      let filtered = '';
-      for (let i = 0; i < rules.length; i++) {
-        const rule = rules[i];
-        if (!rule) continue;
-        for (let j = 0; j < newNames.length; j++) {
-          const re = getWhereRegExp(newNames[j]);
-          re.lastIndex = 0;
-          if (re.test(rule)) {
-            filtered += rule + SPLITTER;
+        const kfNames = ssc.styleSheet.names.get(kfId);
+        if (!kfNames) continue;
+        // Substring match: a name that happens to be a substring of another
+        // token only over-emits one gzip-cheap keyframe block, and a genuinely
+        // referenced name always appears verbatim, so a reference is never missed.
+        let referenced = false;
+        for (const kfName of kfNames) {
+          if (css.indexOf(kfName) !== -1) {
+            referenced = true;
             break;
           }
         }
+        if (referenced) {
+          const kfRules = kfTag.getGroup(getGroupForId(kfId));
+          if (kfRules) kfCss += kfRules;
+        }
       }
-      css = filtered;
     }
 
     const combined = stripSplitter(kfCss + css);
     if (combined) {
+      if (process.env.NODE_ENV !== 'production' && getEmitCounts) {
+        const counts = getEmitCounts();
+        const count = (counts.get(componentStyle.componentId) || 0) + 1;
+        counts.set(componentStyle.componentId, count);
+        if (count === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
+          const name = forwardedComponent.displayName || styledComponentId;
+          console.warn(
+            `Over ${count} instances of the styled component ${name} were rendered on one server-rendered page, so its styles repeat that many times in the HTML.\n` +
+              "This is fine at normal sizes. To trim a very large list, move each item's changing values into a style object with the attrs method so every item shares one class.\n" +
+              'Example:\n' +
+              '  const Component = styled.div.attrs(props => ({\n' +
+              '    style: {\n' +
+              '      background: props.background,\n' +
+              '    },\n' +
+              '  }))`width: 100%;`\n\n' +
+              '  <Component />\n' +
+              'If every item looks the same, style them from a parent element and render plain children instead.'
+          );
+        }
+      }
+
       const styleElement = React.createElement('style', {
         [SC_ATTR]: '',
         key: 'sc-' + componentStyle.componentId,

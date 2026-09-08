@@ -211,7 +211,7 @@ describe('styled RSC mode', () => {
 
       // Avatar's base styles and LargeAvatar's own styles
       expect(allCSS).toMatchInlineSnapshot(
-        `".gA-dcpr{width:48px;height:48px;border-radius:50%;object-fit:cover;}.bmhOVL{width:96px;height:96px;border:3px solid #fff;}"`
+        `".gA-dcpr{width:48px;height:48px;border-radius:50%;object-fit:cover;}:where(.gA-dcpr){width:48px;height:48px;border-radius:50%;object-fit:cover;}.bmhOVL{width:96px;height:96px;border:3px solid #fff;}"`
       );
     });
 
@@ -238,7 +238,7 @@ describe('styled RSC mode', () => {
       // All CSS should be present
       const allCSS = extractStyleContents(html);
       expect(allCSS).toMatchInlineSnapshot(
-        `".lluOde{display:flex;padding:16px;}.inzFhn{color:red;}"`
+        `".lluOde{display:flex;padding:16px;}:where(.lluOde){display:flex;padding:16px;}.inzFhn{color:red;}"`
       );
     });
 
@@ -269,7 +269,7 @@ describe('styled RSC mode', () => {
 
       // Base styles and each variant's own styles
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.jZzqsQ){padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;}.dqxjmS{background:#007bff;color:#fff;}.gffCwu{background:#dc3545;color:#fff;}"`
+        `":where(.jZzqsQ){padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;}.dqxjmS{background:#007bff;color:#fff;}:where(.jZzqsQ){padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;}.gffCwu{background:#dc3545;color:#fff;}"`
       );
     });
 
@@ -295,7 +295,7 @@ describe('styled RSC mode', () => {
 
       // Both dynamic variants must be present
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.UggJu){background:red;padding:16px;}.gMmhUh{border:1px solid #ccc;}:where(.ezOOCn){background:blue;padding:16px;}"`
+        `":where(.UggJu){background:red;padding:16px;}.gMmhUh{border:1px solid #ccc;}:where(.ezOOCn){background:blue;padding:16px;}.gMmhUh{border:1px solid #ccc;}"`
       );
     });
   });
@@ -483,7 +483,7 @@ describe('styled RSC mode', () => {
 
       assertValidWhereSelectors(allCSS);
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.YKVKw){color:red;}.bYbnUR{font-size:16px;}:where(.jDUPMZ){color:blue;}"`
+        `":where(.YKVKw){color:red;}.bYbnUR{font-size:16px;}:where(.jDUPMZ){color:blue;}.bYbnUR{font-size:16px;}"`
       );
     });
 
@@ -509,7 +509,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.bHuNuc){display:flex;padding:16px;background:white;}.fDRrJU{background:red;}.hpcalM{background:blue;}"`
+        `":where(.bHuNuc){display:flex;padding:16px;background:white;}.fDRrJU{background:red;}:where(.bHuNuc){display:flex;padding:16px;background:white;}.hpcalM{background:blue;}"`
       );
       // Both extension selectors must NOT be wrapped
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*background:red/);
@@ -1174,8 +1174,12 @@ describe('styled RSC mode', () => {
     });
   });
 
-  describe('RSC style tag deduplication', () => {
-    it('should emit only one style tag for multiple instances of the same static component', () => {
+  describe('RSC per-instance style emission', () => {
+    // Each server-rendered instance emits its own inline <style> so a rule is
+    // never left recorded-but-absent when React discards a Suspense fallback
+    // that emitted it (#5808). Byte-identical duplicates compress away under
+    // gzip; they are not merged in the DOM.
+    it('should emit a style tag for each instance of the same static component', () => {
       const Button = styled.button`
         padding: 8px;
         color: blue;
@@ -1191,13 +1195,13 @@ describe('styled RSC mode', () => {
         </div>
       );
 
-      expect(countStyleTags(html)).toBe(1);
+      expect(countStyleTags(html)).toBe(5);
       expect(extractStyleContents(html)).toMatchInlineSnapshot(
-        `".iIYYsP{padding:8px;color:blue;}"`
+        `".iIYYsP{padding:8px;color:blue;}.iIYYsP{padding:8px;color:blue;}.iIYYsP{padding:8px;color:blue;}.iIYYsP{padding:8px;color:blue;}.iIYYsP{padding:8px;color:blue;}"`
       );
     });
 
-    it('should emit only one style tag for dynamic components with identical props', () => {
+    it('should emit a style tag per instance for dynamic components with identical props', () => {
       const Box = styled.div<{ $color: string }>`
         color: ${p => p.$color};
       `;
@@ -1210,8 +1214,10 @@ describe('styled RSC mode', () => {
         </div>
       );
 
-      expect(countStyleTags(html)).toBe(1);
-      expect(extractStyleContents(html)).toMatchInlineSnapshot(`".YKVKw{color:red;}"`);
+      expect(countStyleTags(html)).toBe(3);
+      expect(extractStyleContents(html)).toMatchInlineSnapshot(
+        `".YKVKw{color:red;}.YKVKw{color:red;}.YKVKw{color:red;}"`
+      );
     });
 
     it('should emit separate style tags for dynamic components with different props', () => {
@@ -1234,7 +1240,7 @@ describe('styled RSC mode', () => {
       );
     });
 
-    it('should deduplicate across multiple instances of extended component', () => {
+    it('should emit a tag per instance of an extended component (base chain included each time)', () => {
       const Base = styled.div`
         display: flex;
       `;
@@ -1250,13 +1256,15 @@ describe('styled RSC mode', () => {
         </div>
       );
 
-      // All three Extended instances produce the same CSS → one tag
-      expect(countStyleTags(html)).toBe(1);
+      // Each instance emits its own base(:where())+extension pair.
+      expect(countStyleTags(html)).toBe(3);
       const allCSS = extractStyleContents(html);
-      expect(allCSS).toMatchInlineSnapshot(`":where(.jYQgFj){display:flex;}.inzFhn{color:red;}"`);
+      expect(allCSS).toMatchInlineSnapshot(
+        `":where(.jYQgFj){display:flex;}.inzFhn{color:red;}:where(.jYQgFj){display:flex;}.inzFhn{color:red;}:where(.jYQgFj){display:flex;}.inzFhn{color:red;}"`
+      );
     });
 
-    it('should not retain rules for prefix-colliding class names in partial dedup', () => {
+    it('should emit only this render’s base variant, never a sibling variant', () => {
       const DynamicBase = styled.div<{ $v: string }>`
         color: ${p => p.$v};
       `;
@@ -1273,7 +1281,56 @@ describe('styled RSC mode', () => {
       );
 
       const styles = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]);
-      expect(styles[styles.length - 1]).toMatchInlineSnapshot(`".gEYtIK{font-weight:bold;}"`);
+      expect(styles[styles.length - 1]).toMatchInlineSnapshot(
+        `":where(.YKVKw){color:red;}.gEYtIK{font-weight:bold;}"`
+      );
+    });
+
+    it('should keep a component self-contained across a Suspense boundary (#5808)', () => {
+      // The failure: a component rendered in a Suspense fallback recorded its
+      // class in a request-scoped ledger; the resolved child then emitted no
+      // <style>, and React discarded the fallback (rule and all) on reveal,
+      // leaving the resolved element unstyled. renderToString can't model the
+      // reveal, but the invariant that prevents it is that every instance is
+      // self-contained: the same component in two positions each carries its
+      // own <style>, so neither depends on the other surviving.
+      const Panel = styled.div`
+        color: crimson;
+      `;
+
+      const fallback = ReactDOMServer.renderToString(<Panel>skeleton</Panel>);
+      const resolved = ReactDOMServer.renderToString(<Panel>loaded</Panel>);
+
+      expect(extractStyleContents(fallback)).toMatchInlineSnapshot(`".iyTfYQ{color:crimson;}"`);
+      expect(extractStyleContents(resolved)).toBe(extractStyleContents(fallback));
+    });
+
+    it('warns in development when one component floods a server render with inline tags', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        const Cell = styled.span`
+          color: red;
+        `;
+
+        ReactDOMServer.renderToString(
+          <div>
+            {Array.from({ length: 1000 }, (_, i) => (
+              <Cell key={i} />
+            ))}
+          </div>
+        );
+
+        const guardrail = warn.mock.calls.filter(
+          ([msg]) => typeof msg === 'string' && msg.includes('instances of the styled component')
+        );
+        expect(guardrail).toHaveLength(1);
+        expect(guardrail[0][0]).toContain('Over 1000 instances');
+        // Remediation is attached and free of internals jargon.
+        expect(guardrail[0][0]).toContain('attrs method');
+        expect(guardrail[0][0]).not.toMatch(/Suspense|inline <style>|React\.cache/);
+      } finally {
+        warn.mockRestore();
+      }
     });
 
     it('should emit separate tags for base and extended rendered together', () => {
@@ -1316,7 +1373,7 @@ describe('styled RSC mode', () => {
       expect(countStyleTags(html)).toBe(1);
     });
 
-    it('should deduplicate keyframes across multiple components', () => {
+    it('should emit the referenced keyframes alongside each component that uses them', () => {
       const fade = keyframes`
         0% { opacity: 1; }
         100% { opacity: 0; }
@@ -1336,14 +1393,14 @@ describe('styled RSC mode', () => {
         </>
       );
 
-      // @keyframes should appear exactly once despite two components using it
+      // Each component emits the @keyframes it references, in its own tag.
       expect(extractStyleContents(html)).toMatchInlineSnapshot(
-        `"@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}.eGskDT{animation:gZZrBJ 1s;}.ctTFiD{animation:gZZrBJ 2s;}"`
+        `"@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}.eGskDT{animation:gZZrBJ 1s;}@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}.ctTFiD{animation:gZZrBJ 2s;}"`
       );
       expect(countStyleTags(html)).toBe(2);
     });
 
-    it('should emit keyframes even when component CSS is deduped', () => {
+    it('should emit the keyframes for every instance so none is lost to a discarded fallback', () => {
       const spin = keyframes`
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
@@ -1360,11 +1417,12 @@ describe('styled RSC mode', () => {
         </>
       );
 
-      // Two instances, but only one set of styles (component CSS + keyframe both deduped)
+      // Both instances carry their own keyframe + rule, so a Suspense reveal
+      // that discards one instance never strips the other's animation (#5808).
       expect(extractStyleContents(html)).toMatchInlineSnapshot(
-        `"@keyframes dnfVul{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}.gjRflG{animation:dnfVul 1s linear infinite;}"`
+        `"@keyframes dnfVul{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}.gjRflG{animation:dnfVul 1s linear infinite;}@keyframes dnfVul{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}.gjRflG{animation:dnfVul 1s linear infinite;}"`
       );
-      expect(countStyleTags(html)).toBe(1);
+      expect(countStyleTags(html)).toBe(2);
     });
   });
 
@@ -1398,7 +1456,7 @@ describe('styled RSC mode', () => {
 
       const allCSS = extractStyleContents(html);
       expect(allCSS).toMatchInlineSnapshot(
-        `".iHLfpj:nth-child(1 of :not(style[data-styled])){color:red;}.iHLfpj:nth-last-child(1 of :not(style[data-styled])){color:blue;}.iHLfpj:nth-child(2 of :not(style[data-styled])){color:green;}"`
+        `".iHLfpj:nth-child(1 of :not(style[data-styled])){color:red;}.iHLfpj:nth-last-child(1 of :not(style[data-styled])){color:blue;}.iHLfpj:nth-child(2 of :not(style[data-styled])){color:green;}.iHLfpj:nth-child(1 of :not(style[data-styled])){color:red;}.iHLfpj:nth-last-child(1 of :not(style[data-styled])){color:blue;}.iHLfpj:nth-child(2 of :not(style[data-styled])){color:green;}.iHLfpj:nth-child(1 of :not(style[data-styled])){color:red;}.iHLfpj:nth-last-child(1 of :not(style[data-styled])){color:blue;}.iHLfpj:nth-child(2 of :not(style[data-styled])){color:green;}"`
       );
       expect(allCSS).not.toContain(':first-child');
       expect(allCSS).not.toContain(':last-child');

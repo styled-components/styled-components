@@ -10,7 +10,11 @@ Server component output is not hydrated by React, so an inline tag causes no hyd
 which never runs over RSC output.
 
 Inline body styles land after the registry's `<head>` styles in source order, so a cross-boundary
-extension (an RSC component extending a client component) wins the cascade.
+extension (an RSC component extending a client component) wins the cascade. This source-order
+placement is load-bearing and is why styles are not hoisted to `<head>` via `precedence`: the server
+never sees a client component's base class, so it cannot make the extension win by specificity, and
+`precedence` buckets order the RSC render ahead of the client registry, which would flip the cascade
+(#5672). The child-index selector plugin below likewise depends on the tag staying an inline sibling.
 
 No cleanup of RSC style tags is needed: they are the sole source of CSS for server-only components.
 
@@ -20,20 +24,35 @@ Base-level CSS in an inheritance chain is wrapped in `:where()` for zero specifi
 duplicate base CSS from sibling extensions sharing a base would override an earlier extension's
 styles.
 
-## Deduplication
+## Per-instance emission
 
-Inline `<style>` tags are deduplicated per render through name-based tracking in a `React.cache`-scoped
-Set. A dedup hit skips CSS collection entirely: no `getGroup`, no `:where()` wrapping. A dynamic
-component with several variants therefore emits CSS only for new names rather than for the full
-accumulated group. Compiled CSS is cached on `ComponentStyle` and `Keyframes` through a `WeakMap`,
-which persists across `React.cache` resets and is dead-code eliminated in the browser build.
+Each server-rendered instance emits its own inline `<style>` holding exactly that render's classes:
+the leaf class from `generateAndInjectStyles` plus each `:where()`-wrapped base level. Rules are read
+per name from the compiled cache (`getCompiledCSSForName`), so emission is O(chain length) per
+instance rather than re-scanning a component's whole accumulated variant group. Compiled CSS is cached
+on `ComponentStyle` and `Keyframes` through a `WeakMap`, which is dead-code eliminated in the browser
+build. Every name reaching emission was compiled by `generateAndInjectStyles` before it registered its
+class, so the per-name lookup always hits; there is no tag-group fallback.
 
-Keyframe rules are deduplicated separately, by keyframe ID rather than by class name, against the same
-per-render Set. On this branch they are concatenated ahead of the component CSS and emitted in the
-*same* `<style>` tag: a styled component renders at most one style element, as
-`Fragment(styleElement, element)`. Dedup survives the concatenation because each keyframe ID is
-recorded as it is emitted, so a keyframe already written this render contributes nothing to the next
-component's string.
+There is deliberately no cross-instance or cross-request deduplication. A request-scoped `React.cache`
+Set was tried and removed: `React.cache` is request-wide with no per-Suspense-boundary scope, so a
+rule emitted only inside a Suspense fallback was recorded once, skipped for the resolved child, then
+removed with the fallback when React revealed the boundary, leaving the resolved element with a class
+but no rule (#5808). The alternatives were ruled out by their costs, not overlooked: hoisting via
+`precedence` would dedup and survive the reveal but breaks #5672 and the child-index plugin (see
+above); no per-boundary cache scope exists to make a ledger safe. Byte-identical duplicates are the
+only output dedup ever collapsed, and they cost about a byte each after gzip (measured: 1000 identical
+tags compress to ~0.5% of their raw size), so per-instance emission is the minimal correct behavior.
+
+Keyframes are emitted per instance too, scoped to the render by matching each keyframe group's
+resolved name against the render's CSS. A referenced keyframe's rules are concatenated ahead of the
+component CSS in the _same_ `<style>` tag: a styled component renders at most one style element, as
+`Fragment(styleElement, element)`.
+
+A development-only warning fires once a single component emits `RSC_REDUNDANT_EMIT_WARN_THRESHOLD`
+(1000) tags in one render, the point at which a very large repeated list should share one className
+instead. The counter is `React.cache`-scoped and gated on `NODE_ENV`, so production drops both the
+warning and its bookkeeping.
 
 ## Per-render reset
 
@@ -73,7 +92,7 @@ Object.defineProperty` to keep a stable `.name` after minification. It does two 
 **Child-index pseudo-selectors.** `:first-child`, `:last-child`, `:only-child`, `:nth-child()` and
 `:nth-last-child()` are rewritten with CSS Selectors Level 4 `of S` syntax to exclude
 `style[data-styled]` from the count. `:only-child` becomes the conjunction of a first and a last test.
-An `:nth-child()`/`:nth-last-child()` that already carries its own ` of ` clause is left alone rather
+An `:nth-child()`/`:nth-last-child()` that already carries its own `of` clause is left alone rather
 than double-wrapped. This is a precise, spec-level fix, and it requires browser support for `of S`
 (Chrome 111+, Firefox 113+, Safari 9+).
 
