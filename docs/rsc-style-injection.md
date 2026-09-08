@@ -31,8 +31,8 @@ the leaf class from `generateAndInjectStyles` plus each `:where()`-wrapped base 
 per name from the compiled cache (`getCompiledCSSForName`), so emission is O(chain length) per
 instance rather than re-scanning a component's whole accumulated variant group. Compiled CSS is cached
 on `ComponentStyle` and `Keyframes` through a `WeakMap`, which is dead-code eliminated in the browser
-build; a cache miss (a name rehydrated from SSR markup) falls back to slicing the level's tag group by
-the render's names.
+build. Every name reaching emission was compiled by `generateAndInjectStyles` before it registered its
+class, so the per-name lookup always hits; there is no tag-group fallback.
 
 There is deliberately no cross-instance or cross-request deduplication. A request-scoped `React.cache`
 Set was tried and removed: `React.cache` is request-wide with no per-Suspense-boundary scope, so a
@@ -46,7 +46,7 @@ tags compress to ~0.5% of their raw size), so per-instance emission is the minim
 
 Keyframes are emitted per instance too, scoped to the render by matching each keyframe group's
 resolved name against the render's CSS. A referenced keyframe's rules are concatenated ahead of the
-component CSS in the *same* `<style>` tag: a styled component renders at most one style element, as
+component CSS in the _same_ `<style>` tag: a styled component renders at most one style element, as
 `Fragment(styleElement, element)`.
 
 A development-only warning fires once a single component emits `RSC_REDUNDANT_EMIT_WARN_THRESHOLD`
@@ -92,7 +92,7 @@ Object.defineProperty` to keep a stable `.name` after minification. It does two 
 **Child-index pseudo-selectors.** `:first-child`, `:last-child`, `:only-child`, `:nth-child()` and
 `:nth-last-child()` are rewritten with CSS Selectors Level 4 `of S` syntax to exclude
 `style[data-styled]` from the count. `:only-child` becomes the conjunction of a first and a last test.
-An `:nth-child()`/`:nth-last-child()` that already carries its own ` of ` clause is left alone rather
+An `:nth-child()`/`:nth-last-child()` that already carries its own `of` clause is left alone rather
 than double-wrapped. This is a precise, spec-level fix, and it requires browser support for `of S`
 (Chrome 111+, Firefox 113+, Safari 9+).
 
