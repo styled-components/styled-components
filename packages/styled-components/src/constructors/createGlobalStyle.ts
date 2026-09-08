@@ -14,7 +14,12 @@ import css from './css';
 
 declare const __SERVER__: boolean;
 
-/** Per-render dedup for RSC global style tags (same pattern as StyledComponent). */
+/**
+ * Per-render dedup for RSC global style tags: a global style rendered several
+ * times in one request emits a single tag. This is documented behavior, so it
+ * stays even though it carries the same request-scoped Suspense edge that
+ * per-instance emission removed from styled components (#5808).
+ */
 const getEmittedGlobalCSS = createRSCCache(() => new Set<string>());
 
 /**
