@@ -28,6 +28,9 @@ export const EMPTY_SAFE_AREA_INSETS: SafeAreaInsets = Object.freeze({
 
 type InsetsContext = React.Context<SafeAreaInsets | null>;
 
+/** Used when the optional peer is absent so `useContext` stays unconditional. */
+const FALLBACK_INSETS_CONTEXT: InsetsContext = React.createContext<SafeAreaInsets | null>(null);
+
 let peerPresent: boolean | undefined;
 let SafeAreaInsetsContext: InsetsContext | undefined;
 
@@ -55,22 +58,14 @@ export function hasSafeAreaContextPeer(): boolean {
 /**
  * Hook that returns live safe-area insets when the optional peer is
  * installed and a provider is present, otherwise the frozen zero insets.
- * The peer-presence branch is fixed for the process lifetime, so the
- * hook call on each side is stable (same pattern as `IS_RSC` /
- * `usesAnchorFunctions` gates).
+ * Always calls `useContext` (fallback context when the peer is absent) so
+ * the hook sequence stays stable across peer-present and peer-absent
+ * bundles.
  */
 export function useSafeAreaInsets(): SafeAreaInsets {
   loadPeer();
-  const ctx = SafeAreaInsetsContext;
-  // `peerPresent` / `ctx` are fixed after the first require attempt for
-  // this process, so the hook-vs-empty branch does not change between
-  // renders of a given component (same lifetime-constant rule as the
-  // `usesSafeAreaInsets` gate at the call site).
-  if (peerPresent === true && ctx !== undefined) {
-    const insets = React.useContext(ctx);
-    return insets ?? EMPTY_SAFE_AREA_INSETS;
-  }
-  return EMPTY_SAFE_AREA_INSETS;
+  const insets = React.useContext(SafeAreaInsetsContext ?? FALLBACK_INSETS_CONTEXT);
+  return insets ?? EMPTY_SAFE_AREA_INSETS;
 }
 
 /** Test-only: clear the cached require so mocks can be swapped mid-suite. */
