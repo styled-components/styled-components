@@ -52,22 +52,13 @@ function hasCompiledCSS(cs: ComponentStyle, name: string): boolean {
 }
 
 /**
- * Get all compiled CSS for a ComponentStyle's registered names.
- * Returns null on any cache miss (caller falls back to getGroup).
+ * Get compiled CSS for a single class name (RSC only). Returns null on a cache
+ * miss so the caller can fall back to reading the tag group. Lets the RSC
+ * emission path pull exactly the current render's class without concatenating
+ * (and then filtering) every dynamic variant a component has produced.
  */
-export function getCompiledCSS(cs: ComponentStyle, styleSheet: StyleSheet): string | null {
-  if (!compiledCSSCache) return null;
-  const map = compiledCSSCache.get(cs);
-  if (!map) return null;
-  const names = styleSheet.names.get(cs.componentId);
-  if (!names) return null;
-  let css = '';
-  for (const name of names) {
-    const compiled = map.get(name);
-    if (!compiled) return null;
-    css += compiled;
-  }
-  return css;
+export function getCompiledCSSForName(cs: ComponentStyle, name: string): string | null {
+  return compiledCSSCache?.get(cs)?.get(name) ?? null;
 }
 
 /**

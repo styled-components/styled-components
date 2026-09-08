@@ -4,8 +4,8 @@
  * Run: pnpm --filter styled-components bench:rsc
  *
  * Measures server-side renderToString performance with IS_RSC=true,
- * including inline style tag emission, dedup, :where() wrapping,
- * and keyframe handling.
+ * including inline style tag emission, per-instance emission of repeated
+ * components, :where() wrapping, and keyframe handling.
  */
 
 // Mock React.cache - scoped per render via manual clear
@@ -163,8 +163,8 @@ describe('RSC benchmarks', () => {
     });
   });
 
-  it('dedup efficiency', () => {
-    console.log('\n--- Dedup (1K iterations, median of 5) ---');
+  it('repeated-component emission efficiency', () => {
+    console.log('\n--- Repeated-component emission (1K iterations, median of 5) ---');
 
     const Item = styled.div`
       color: red;
