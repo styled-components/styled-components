@@ -552,12 +552,18 @@ export interface INativeStyle<Props extends BaseObject> {
    */
   usesAnchorFunctions: boolean;
   /**
-   * Set at construction; true when the CSS uses
-   * `env(safe-area-inset-*)`. Gates the optional
-   * `react-native-safe-area-context` subscription in the dynamic
+   * Set at construction; true when the CSS may use `env(safe-area-inset-*)`
+   * (a static literal or, conservatively, any function interpolation). Gates
+   * the optional `react-native-safe-area-context` subscription in the dynamic
    * render path (lifetime-constant, so the hook branch is stable).
    */
   usesSafeAreaInsets: boolean;
+  /**
+   * Set at construction; true only when a static CSS part literally contains
+   * `env(safe-area-inset-*)`. Gates the dev "no inset source" warning, so a
+   * function interpolation that never emits `env()` does not warn.
+   */
+  usesSafeAreaInsetsStatically: boolean;
   compile(executionContext: ExecutionContext & Props): CompileOutput;
 }
 

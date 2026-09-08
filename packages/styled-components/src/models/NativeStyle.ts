@@ -50,6 +50,7 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
     staticCompiled: NativeStyles | null = null;
     usesAnchorFunctions = false;
     usesSafeAreaInsets = false;
+    usesSafeAreaInsetsStatically = false;
 
     constructor(rules: RuleSet<Props>) {
       this.rules = rules;
@@ -69,9 +70,12 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
       // Gates the SafeAreaProvider subscription for env(safe-area-inset-*).
       // Same lifetime-constant rule as usesAnchorFunctions: opaque function
       // interpolations may emit env(), so they opt in conservatively.
-      if (SAFE_AREA_ENV_RE.test(joined) || hasFn) {
-        this.usesSafeAreaInsets = true;
-      }
+      const hasStaticSafeAreaEnv = SAFE_AREA_ENV_RE.test(joined);
+      this.usesSafeAreaInsets = hasStaticSafeAreaEnv || hasFn;
+      // Certain usage: a static env(safe-area-inset-*) literal. Gates the dev
+      // "no inset source" warning so a function interpolation that never emits
+      // env() does not trigger a false "install the peer" nudge.
+      this.usesSafeAreaInsetsStatically = hasStaticSafeAreaEnv;
       if (this.staticCSS !== null) {
         const compiled = toNativeStyles(this.staticCSS, styleSheet);
         this.staticCompiled = compiled;

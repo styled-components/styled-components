@@ -1629,6 +1629,20 @@ describe('NativeStyle class;compile() fast-paths', () => {
       const inline = new NativeStyle(['padding-bottom: ', fn, ';'] as any);
       expect(inline.usesSafeAreaInsets).toBe(true);
     });
+
+    it('flags static env() as `usesSafeAreaInsetsStatically`, but a function interpolation as only conservative', () => {
+      const staticEnv = new NativeStyle(['padding-top: env(safe-area-inset-top);'] as any);
+      expect(staticEnv.usesSafeAreaInsets).toBe(true);
+      expect(staticEnv.usesSafeAreaInsetsStatically).toBe(true);
+
+      const fnInterp = new NativeStyle(['color: ', () => 'red', ';'] as any);
+      expect(fnInterp.usesSafeAreaInsets).toBe(true);
+      expect(fnInterp.usesSafeAreaInsetsStatically).toBe(false);
+
+      const plain = new NativeStyle(['padding-top: 10px;'] as any);
+      expect(plain.usesSafeAreaInsets).toBe(false);
+      expect(plain.usesSafeAreaInsetsStatically).toBe(false);
+    });
   });
 
   describe('dynamic same-CSS dedup', () => {

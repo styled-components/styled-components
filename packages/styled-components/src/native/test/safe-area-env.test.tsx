@@ -24,7 +24,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
-import styled from '../';
+import styled, { SafeAreaInsetsProvider } from '../';
 import { resetSafeAreaPeerForTest } from '../safeArea';
 import { resetWarnOnce } from '../../utils/warnOnce';
 
@@ -139,5 +139,88 @@ describe('env(safe-area-inset-*) SafeAreaProvider wiring', () => {
       padding-top: env(safe-area-inset-top);
     `;
     expect(Pad.nativeStyle.usesSafeAreaInsets).toBe(true);
+  });
+});
+
+describe('SafeAreaInsetsProvider', () => {
+  beforeEach(() => {
+    resetSafeAreaPeerForTest();
+    resetWarnOnce();
+  });
+
+  const Pad = styled.View`
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+  `;
+
+  it('feeds insets explicitly, no peer provider needed', () => {
+    const tree = TestRenderer.create(
+      <SafeAreaInsetsProvider insets={{ top: 10, right: 11, bottom: 12, left: 13 }}>
+        <Pad />
+      </SafeAreaInsetsProvider>
+    );
+    expect(tree.root.findByType(View).props.style).toEqual({
+      paddingTop: 10,
+      paddingRight: 11,
+      paddingBottom: 12,
+      paddingLeft: 13,
+    });
+  });
+
+  it('overrides the ambient SafeAreaProvider insets', () => {
+    const tree = renderWithInsets(
+      <SafeAreaInsetsProvider insets={{ top: 100, right: 0, bottom: 0, left: 0 }}>
+        <Pad />
+      </SafeAreaInsetsProvider>,
+      { top: 47, right: 5, bottom: 34, left: 5 }
+    );
+    // Explicit value wins over the peer context on every edge.
+    expect(tree.root.findByType(View).props.style).toEqual({
+      paddingTop: 100,
+      paddingRight: 0,
+      paddingBottom: 0,
+      paddingLeft: 0,
+    });
+  });
+
+  it('a fresh inline insets object with equal values does not re-resolve descendants', () => {
+    const Leaf = styled.View`
+      padding-top: env(safe-area-inset-top);
+    `;
+
+    // `tick` changes each update to force a real re-render of the wrapper,
+    // which hands SafeAreaInsetsProvider a brand-new inline object every time
+    // with identical scalar values.
+    function Wrapper({ tick }: { tick: number }) {
+      void tick;
+      return (
+        <SafeAreaInsetsProvider insets={{ top: 20, right: 0, bottom: 0, left: 0 }}>
+          <Leaf />
+        </SafeAreaInsetsProvider>
+      );
+    }
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    TestRenderer.act(() => {
+      renderer = TestRenderer.create(<Wrapper tick={0} />);
+    });
+    // The resolved style object is referentially reused only on a full render-cache
+    // hit; a slot-14 (safe-area) miss rebuilds it. Capturing its identity across
+    // updates is the sensor for "kept hitting the cache."
+    const styleAfterMount = renderer.root.findByType(View).props.style;
+    expect(styleAfterMount).toEqual({ paddingTop: 20 });
+
+    TestRenderer.act(() => renderer.update(<Wrapper tick={1} />));
+    TestRenderer.act(() => renderer.update(<Wrapper tick={2} />));
+    TestRenderer.act(() => renderer.update(<Wrapper tick={3} />));
+
+    // The memoized context value keeps its reference across those re-renders,
+    // so the safe-area cache slot never changes and the resolved style object
+    // stays identical. Drop the useMemo (or its scalar dep array) in
+    // SafeAreaInsetsProvider and each fresh inline object flows through as a new
+    // context value, missing the cache and rebuilding the style every tick.
+    expect(renderer.root.findByType(View).props.style).toBe(styleAfterMount);
   });
 });

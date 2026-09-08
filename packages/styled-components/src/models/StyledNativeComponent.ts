@@ -47,12 +47,7 @@ import {
   useStickyPosition,
   useViewTimelineSubject,
 } from '../native/scrollTimeline';
-import {
-  EMPTY_SAFE_AREA_INSETS,
-  hasSafeAreaContextPeer,
-  type SafeAreaInsets,
-  useSafeAreaInsets,
-} from '../native/safeArea';
+import { EMPTY_SAFE_AREA_INSETS, type SafeAreaInsets, useSafeAreaInsets } from '../native/safeArea';
 import { applyResolvers, ResolveEnv } from '../native/transform/polyfills/resolvers';
 import { concatSourceInputs } from '../parser/source';
 import type {
@@ -392,7 +387,7 @@ function buildResolveEnv(
   cascade: NativeCascadeValues,
   parentCtx: ParentContextValue,
   props: Record<string, unknown>,
-  insets: SafeAreaInsets = EMPTY_SAFE_AREA_INSETS,
+  insets: SafeAreaInsets,
   positionAnchor?: string
 ): ResolveEnv {
   // Untracked position (parent isn't an indexing styled component)
@@ -1384,12 +1379,13 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // anchor-size() re-render (and re-key their cache) when any anchor's
   // rect changes.
   //
-  // The only gate here that is not a build constant. `nativeStyle` is fixed
-  // when the styled component is constructed, so `usesAnchorFunctions` cannot
+  // This anchor gate and the safe-area gate below are the two here that are
+  // not build constants. `nativeStyle` is fixed when the styled component is
+  // constructed, so `usesAnchorFunctions` (like `usesSafeAreaInsets`) cannot
   // change across renders of a given component and the hook branch is stable
-  // for its whole lifetime. Anything that made this depend on props or state
+  // for its whole lifetime. Anything that made either depend on props or state
   // would be a genuine rules-of-hooks violation, and the enclosing
-  // `biome-ignore-start` would hide it, so keep it derived from `nativeStyle`.
+  // `biome-ignore-start` would hide it, so keep both derived from `nativeStyle`.
   const anchorVersion =
     !IS_RSC && nativeStyle.usesAnchorFunctions
       ? React.useSyncExternalStore(subscribeAnchors, getAnchorVersion)
@@ -1397,14 +1393,13 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // Safe-area reactivity for env(safe-area-inset-*). `usesSafeAreaInsets`
   // is fixed at construction (same lifetime-constant rule as the anchor
   // gate above), so this hook branch is stable for the component.
+  // Pass the static-usage flag so the hook warns (once, in dev, when no inset
+  // source is present) only for components that literally wrote
+  // env(safe-area-inset-*), not the conservative function-interpolation opt-in.
   const safeAreaInsets =
-    !IS_RSC && nativeStyle.usesSafeAreaInsets ? useSafeAreaInsets() : EMPTY_SAFE_AREA_INSETS;
-  if (__DEV__ && !IS_RSC && nativeStyle.usesSafeAreaInsets && !hasSafeAreaContextPeer()) {
-    warnOnce(
-      'native-safe-area-peer-missing',
-      '`env(safe-area-inset-*)` resolves to 0 because `react-native-safe-area-context` is not installed. Install it and wrap your tree in `<SafeAreaProvider>` so insets match the device safe area.'
-    );
-  }
+    !IS_RSC && nativeStyle.usesSafeAreaInsets
+      ? useSafeAreaInsets(nativeStyle.usesSafeAreaInsetsStatically)
+      : EMPTY_SAFE_AREA_INSETS;
 
   const renderCacheRef = (!IS_RSC ? React.useRef<RenderCache | null>(null) : { current: null }) as {
     current: RenderCache | null;

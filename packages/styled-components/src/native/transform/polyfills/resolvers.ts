@@ -13,14 +13,22 @@ import { identToNumeric, NumericResult, resolveStaticMathFunction, unifyUnits } 
  * Environment passed to each {@link Resolver} at render time. Composes
  * everything needed to finish any deferred CSS evaluation.
  */
+/** The four safe-area insets `env(safe-area-inset-*)` resolves against (CSS top/right/bottom/left order). */
+export interface SafeAreaInsets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
 export interface ResolveEnv {
   media: MediaQueryEnv;
   /** Nearest named / unnamed container dimensions. */
   container: { width: number; height: number } | null;
   /** Current theme object (deep-merged from ThemeProvider stack on native). */
   theme: Record<string, any>;
-  /** Safe-area insets from optional peer `react-native-safe-area-context`. */
-  insets: { top: number; right: number; bottom: number; left: number };
+  /** Safe-area insets for `env(safe-area-inset-*)`, supplied by the native render path. */
+  insets: SafeAreaInsets;
   /** Root font-size for `rem` resolution (defaults to 16). */
   rootFontSize: number;
   /**
