@@ -551,6 +551,13 @@ export interface INativeStyle<Props extends BaseObject> {
    * stable).
    */
   usesAnchorFunctions: boolean;
+  /**
+   * Set at construction; true when the CSS uses
+   * `env(safe-area-inset-*)`. Gates the optional
+   * `react-native-safe-area-context` subscription in the dynamic
+   * render path (lifetime-constant, so the hook branch is stable).
+   */
+  usesSafeAreaInsets: boolean;
   compile(executionContext: ExecutionContext & Props): CompileOutput;
 }
 

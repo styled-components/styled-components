@@ -49,22 +49,28 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
     staticEligible = false;
     staticCompiled: NativeStyles | null = null;
     usesAnchorFunctions = false;
+    usesSafeAreaInsets = false;
 
     constructor(rules: RuleSet<Props>) {
       this.rules = rules;
       synthesizeSourceForRuleSet(rules);
       this.staticCSS = isAllStaticStrings(rules) ? joinStringRules(rules) : null;
+      const joined = joinStringRules(rules, '\n');
+      const hasFn = hasFunctionInterpolation(rules);
       // Gates the anchor-registry subscription in the dynamic render
       // path; lifetime-constant so the hook branch is stable. Function
       // interpolations are opaque at construction time and may return an
       // anchor() value, so they conservatively enable the subscription;
       // otherwise such a component would never re-resolve when an anchor
       // rect moves.
-      if (
-        !__NATIVE_WEB__ &&
-        (ANCHOR_FN_RE.test(joinStringRules(rules, '\n')) || hasFunctionInterpolation(rules))
-      ) {
+      if (!__NATIVE_WEB__ && (ANCHOR_FN_RE.test(joined) || hasFn)) {
         this.usesAnchorFunctions = true;
+      }
+      // Gates the SafeAreaProvider subscription for env(safe-area-inset-*).
+      // Same lifetime-constant rule as usesAnchorFunctions: opaque function
+      // interpolations may emit env(), so they opt in conservatively.
+      if (SAFE_AREA_ENV_RE.test(joined) || hasFn) {
+        this.usesSafeAreaInsets = true;
       }
       if (this.staticCSS !== null) {
         const compiled = toNativeStyles(this.staticCSS, styleSheet);
@@ -207,3 +213,6 @@ function joinStringRules(rules: ReadonlyArray<unknown>, separator = ''): string 
 // polyfill so NativeStyle, which the web path also loads, pulls in no
 // polyfill module for a one-line regex.
 const ANCHOR_FN_RE = /\banchor(?:-size)?\(/;
+
+/** Syntactic gate for env(safe-area-inset-*) (CSS Environment Variables §2.1). */
+const SAFE_AREA_ENV_RE = /\benv\(\s*safe-area-inset-(?:top|right|bottom|left)\b/;

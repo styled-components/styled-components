@@ -55,7 +55,8 @@
     "react": ">= 19.0.0",
     "react-dom": ">= 19.0.0",
     "react-native": ">= 0.85.0",
-    "react-native-reanimated": ">= 4.0.0"
+    "react-native-reanimated": ">= 4.0.0",
+    "react-native-safe-area-context": ">= 4.0.0"
   },
   "peerDependenciesMeta": {
     "react-dom": {
@@ -65,6 +66,9 @@
       "optional": true
     },
     "react-native-reanimated": {
+      "optional": true
+    },
+    "react-native-safe-area-context": {
       "optional": true
     }
   },

@@ -1709,7 +1709,8 @@ describe('env() spec compliance (CSS Environment Variables Level 1 §3)', () => 
   // Spec source: https://drafts.csswg.org/css-env-1/
   // Grammar: env() = env( <custom-ident> <integer [0,∞]>*, <declaration-value>? )
   // Polyfill scope on RN: safe-area-inset-{top,right,bottom,left} from
-  // SafeAreaProvider. Other UA-defined names (safe-area-max-inset-*,
+  // `react-native-safe-area-context` (`useSafeAreaInsets` under
+  // SafeAreaProvider). Other UA-defined names (safe-area-max-inset-*,
   // viewport-segment-*, preferred-text-scale) and any user-defined
   // (`--*`) names fall through to the fallback per §3 substitution
   // step 2; without a fallback the property drops per step 3.
