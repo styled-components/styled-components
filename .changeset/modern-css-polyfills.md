@@ -27,7 +27,7 @@ const Card = styled.View`
 - Viewport units `vw` / `vh` / `vmin` / `vmax` / `dvh` / `svh` / `lvh` scale to the current window dimensions.
 - Container query units `cqw` / `cqh` / `cqmin` / `cqmax` scale to the nearest ancestor container.
 - `light-dark(light, dark)` swaps based on OS appearance.
-- `env(safe-area-inset-top | right | bottom | left)` reads from the device safe area.
+- `env(safe-area-inset-top | right | bottom | left)` reads from `useSafeAreaInsets()` when `react-native-safe-area-context` is installed and the tree is wrapped in `<SafeAreaProvider>`. Without that optional peer the names still resolve (to `0`), matching a rectangular display.
 - Logical shorthands `margin-inline`, `margin-block`, `padding-inline`, `padding-block`, `inset-inline`, `inset-block` apply as authored.
 - `line-clamp: N` truncates to N lines.
 - `&:is(:hover, :focus)` and `&:where(:pressed, :disabled)` apply the styles to each listed state.

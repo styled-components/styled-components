@@ -19,7 +19,7 @@ export interface ResolveEnv {
   container: { width: number; height: number } | null;
   /** Current theme object (deep-merged from ThemeProvider stack on native). */
   theme: Record<string, any>;
-  /** Safe-area insets from SafeAreaView / safe-area-context. */
+  /** Safe-area insets from optional peer `react-native-safe-area-context`. */
   insets: { top: number; right: number; bottom: number; left: number };
   /** Root font-size for `rem` resolution (defaults to 16). */
   rootFontSize: number;
