@@ -177,6 +177,8 @@ export type {
 } from './NativeStyleContext';
 export { ParentContext, useParentContext } from './ParentContext';
 export type { ParentContextValue } from './ParentContext';
+export { SafeAreaInsetsProvider } from './safeArea';
+export type { SafeAreaInsets, SafeAreaInsetsProviderProps } from './safeArea';
 export {
   createTheme,
   css,

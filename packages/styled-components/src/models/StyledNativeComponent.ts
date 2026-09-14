@@ -47,6 +47,7 @@ import {
   useStickyPosition,
   useViewTimelineSubject,
 } from '../native/scrollTimeline';
+import { EMPTY_SAFE_AREA_INSETS, type SafeAreaInsets, useSafeAreaInsets } from '../native/safeArea';
 import { applyResolvers, ResolveEnv } from '../native/transform/polyfills/resolvers';
 import { concatSourceInputs } from '../parser/source';
 import type {
@@ -379,8 +380,6 @@ function applySpecialCases(
   }
 }
 
-const EMPTY_INSETS = Object.freeze({ top: 0, right: 0, bottom: 0, left: 0 });
-
 function buildResolveEnv(
   env: MediaQueryEnv,
   containerCtx: ContainerContextValue,
@@ -388,6 +387,7 @@ function buildResolveEnv(
   cascade: NativeCascadeValues,
   parentCtx: ParentContextValue,
   props: Record<string, unknown>,
+  insets: SafeAreaInsets,
   positionAnchor?: string
 ): ResolveEnv {
   // Untracked position (parent isn't an indexing styled component)
@@ -398,7 +398,7 @@ function buildResolveEnv(
     media: env,
     container: containerCtx.nearest,
     theme: theme ?? EMPTY_OBJECT,
-    insets: EMPTY_INSETS,
+    insets,
     rootFontSize: cascade.rootFontSize,
     fontSize: cascade.fontSize,
     lineHeight: cascade.lineHeight,
@@ -1072,14 +1072,16 @@ function pseudoStylesForState(
 }
 
 // [props, theme, propsKeyCount, context, compiled, env, nativeStyleCtx,
-//  composedStyle, elementToBeCreated, elementProps, resolveEnv, effectiveBase]
+//  composedStyle, elementToBeCreated, elementProps, resolveEnv, effectiveBase,
+//  parentCtx, anchorVersion, safeAreaInsets]
 //
 // Slot 6 holds the full NativeStyleContext (container + cascade), not
 // just the container. The cache must invalidate when an ancestor
 // publishes a fresh cascade (font-size / line-height / direction)
 // even if the container side is unchanged; otherwise em / lh /
 // `text-align: start | end` / sentinel-base relative colors render
-// with stale `ResolveEnv` values.
+// with stale `ResolveEnv` values. Slot 14 holds safe-area insets so
+// env(safe-area-inset-*) re-resolves when the SafeAreaProvider updates.
 type RenderCache = [
   object,
   DefaultTheme | undefined,
@@ -1095,6 +1097,7 @@ type RenderCache = [
   Dict<any>,
   ParentContextValue,
   number,
+  SafeAreaInsets,
 ];
 
 /**
@@ -1376,16 +1379,27 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // anchor-size() re-render (and re-key their cache) when any anchor's
   // rect changes.
   //
-  // The only gate here that is not a build constant. `nativeStyle` is fixed
-  // when the styled component is constructed, so `usesAnchorFunctions` cannot
+  // This anchor gate and the safe-area gate below are the two here that are
+  // not build constants. `nativeStyle` is fixed when the styled component is
+  // constructed, so `usesAnchorFunctions` (like `usesSafeAreaInsets`) cannot
   // change across renders of a given component and the hook branch is stable
-  // for its whole lifetime. Anything that made this depend on props or state
+  // for its whole lifetime. Anything that made either depend on props or state
   // would be a genuine rules-of-hooks violation, and the enclosing
-  // `biome-ignore-start` would hide it, so keep it derived from `nativeStyle`.
+  // `biome-ignore-start` would hide it, so keep both derived from `nativeStyle`.
   const anchorVersion =
     !IS_RSC && nativeStyle.usesAnchorFunctions
       ? React.useSyncExternalStore(subscribeAnchors, getAnchorVersion)
       : 0;
+  // Safe-area reactivity for env(safe-area-inset-*). `usesSafeAreaInsets`
+  // is fixed at construction (same lifetime-constant rule as the anchor
+  // gate above), so this hook branch is stable for the component.
+  // Pass the static-usage flag so the hook warns (once, in dev, when no inset
+  // source is present) only for components that literally wrote
+  // env(safe-area-inset-*), not the conservative function-interpolation opt-in.
+  const safeAreaInsets =
+    !IS_RSC && nativeStyle.usesSafeAreaInsets
+      ? useSafeAreaInsets(nativeStyle.usesSafeAreaInsetsStatically)
+      : EMPTY_SAFE_AREA_INSETS;
 
   const renderCacheRef = (!IS_RSC ? React.useRef<RenderCache | null>(null) : { current: null }) as {
     current: RenderCache | null;
@@ -1428,7 +1442,8 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     prev![5] === env &&
     prev![6] === nativeStyleCtx &&
     prev![12] === parentCtx &&
-    prev![13] === anchorVersion;
+    prev![13] === anchorVersion &&
+    prev![14] === safeAreaInsets;
 
   if (fullHit) {
     context = prev![3] as typeof context;
@@ -1499,6 +1514,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
       renderCascade,
       parentCtx,
       props as Record<string, unknown>,
+      safeAreaInsets,
       compiled.positionAnchor
     );
     let varImportant: Dict<any> | undefined;
@@ -1533,7 +1549,8 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
           renderCascade,
           parentCtx,
           varImportant,
-          compiled.hasPseudo ? inertStateStyleTargetName(elementToBeCreated) : null
+          compiled.hasPseudo ? inertStateStyleTargetName(elementToBeCreated) : null,
+          safeAreaInsets
         )
       : composeBase(effectiveBase, props.style);
     composedStyle = injectAutoContainerName(
@@ -1623,6 +1640,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
       effectiveBase,
       parentCtx,
       anchorVersion,
+      safeAreaInsets,
     ];
   }
 
@@ -2447,7 +2465,8 @@ export function assembleFinalStyle(
   cascade: NativeCascadeValues = DEFAULT_CASCADE,
   parentCtx: ParentContextValue = DEFAULT_PARENT_CONTEXT,
   varImportant?: Dict<any>,
-  inertStateTarget?: string | null
+  inertStateTarget?: string | null,
+  insets: SafeAreaInsets = EMPTY_SAFE_AREA_INSETS
 ): any {
   const nonPseudoEntries = compiled.nonPseudoEntries;
   const pseudoEntries = compiled.pseudoEntries;
@@ -2460,6 +2479,7 @@ export function assembleFinalStyle(
     cascade,
     parentCtx,
     props,
+    insets,
     compiled.positionAnchor
   );
 

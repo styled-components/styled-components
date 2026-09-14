@@ -1608,6 +1608,43 @@ describe('NativeStyle class;compile() fast-paths', () => {
     });
   });
 
+  describe('safe-area subscription gate (usesSafeAreaInsets)', () => {
+    it('flags env(safe-area-inset-*) in static string parts', () => {
+      const inline = new NativeStyle(['padding-top: env(safe-area-inset-top);'] as any);
+      expect(inline.usesSafeAreaInsets).toBe(true);
+    });
+
+    it('flags env() inside calc()', () => {
+      const inline = new NativeStyle(['padding-top: calc(env(safe-area-inset-top) + 8px);'] as any);
+      expect(inline.usesSafeAreaInsets).toBe(true);
+    });
+
+    it('does not flag static rules without safe-area env()', () => {
+      const inline = new NativeStyle(['padding-top: 10px;'] as any);
+      expect(inline.usesSafeAreaInsets).toBe(false);
+    });
+
+    it('conservatively flags a function interpolation', () => {
+      const fn = () => 'env(safe-area-inset-bottom)';
+      const inline = new NativeStyle(['padding-bottom: ', fn, ';'] as any);
+      expect(inline.usesSafeAreaInsets).toBe(true);
+    });
+
+    it('flags static env() as `usesSafeAreaInsetsStatically`, but a function interpolation as only conservative', () => {
+      const staticEnv = new NativeStyle(['padding-top: env(safe-area-inset-top);'] as any);
+      expect(staticEnv.usesSafeAreaInsets).toBe(true);
+      expect(staticEnv.usesSafeAreaInsetsStatically).toBe(true);
+
+      const fnInterp = new NativeStyle(['color: ', () => 'red', ';'] as any);
+      expect(fnInterp.usesSafeAreaInsets).toBe(true);
+      expect(fnInterp.usesSafeAreaInsetsStatically).toBe(false);
+
+      const plain = new NativeStyle(['padding-top: 10px;'] as any);
+      expect(plain.usesSafeAreaInsets).toBe(false);
+      expect(plain.usesSafeAreaInsetsStatically).toBe(false);
+    });
+  });
+
   describe('dynamic same-CSS dedup', () => {
     it('returns the same compiled result across calls when function output is stable', () => {
       // Function returns the same value regardless of context;common with
