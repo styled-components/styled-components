@@ -325,38 +325,6 @@ describe('rehydrateSheet', () => {
       document.body.removeChild(hostElement);
     });
 
-    it('removes global style tags inside Shadow DOM when target is provided', async () => {
-      const { removeGlobalStyleTag } = await import('../dom');
-
-      // Create a host element and attach a shadow root
-      const hostElement = document.createElement('div');
-      document.body.appendChild(hostElement);
-      const shadowRoot = hostElement.attachShadow({ mode: 'open' });
-
-      // Simulate SSR-rendered global style tag inside shadow root
-      const globalStyleTag = document.createElement('style');
-      globalStyleTag.setAttribute('data-styled-global', 'sc-global-test');
-      globalStyleTag.textContent = 'body { margin: 0; }';
-      shadowRoot.appendChild(globalStyleTag);
-
-      // Also add one to the document
-      const docStyleTag = document.createElement('style');
-      docStyleTag.setAttribute('data-styled-global', 'sc-global-test');
-      docStyleTag.textContent = 'body { margin: 0; }';
-      document.head.appendChild(docStyleTag);
-
-      // With target, removeGlobalStyleTag finds the shadow DOM tag
-      removeGlobalStyleTag('sc-global-test', shadowRoot);
-      expect(globalStyleTag.parentNode).toBe(null);
-
-      // Without target, it cleans up document-level tags
-      removeGlobalStyleTag('sc-global-test');
-      expect(docStyleTag.parentNode).toBe(null);
-
-      // Cleanup
-      document.body.removeChild(hostElement);
-    });
-
     it('rehydrates from both document and Shadow DOM separately', () => {
       // Add styles to document
       document.head.innerHTML = `
