@@ -52,6 +52,9 @@
     "csstype": "3.2.3"
   },
   "peerDependencies": {
+    "@types/node": "*",
+    "@types/react": ">= 19.0.0",
+    "@types/react-dom": ">= 19.0.0",
     "react": ">= 19.0.0",
     "react-dom": ">= 19.0.0",
     "react-native": ">= 0.85.0",
@@ -59,6 +62,15 @@
     "react-native-safe-area-context": ">= 5.0.0"
   },
   "peerDependenciesMeta": {
+    "@types/node": {
+      "optional": true
+    },
+    "@types/react": {
+      "optional": true
+    },
+    "@types/react-dom": {
+      "optional": true
+    },
     "react-dom": {
       "optional": true
     },
