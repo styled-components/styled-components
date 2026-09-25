@@ -435,6 +435,21 @@ describe('native', () => {
       expect(view.props.test).toBeUndefined();
     });
 
+    it('an identity-spread attrs function still forwards an explicitly passed undefined prop to a wrapped component (#5807)', () => {
+      const Comp = styled(ComponentWithProps).attrs<{ first?: string }>(
+        ({ first = 'x', ...rest }) => ({
+          first,
+          ...rest,
+        })
+      )``;
+
+      const wrapper = TestRenderer.create(<Comp test={undefined} />);
+      const view = wrapper.root.findByType(View);
+
+      expect('test' in view.props).toBe(true);
+      expect(view.props.test).toBeUndefined();
+    });
+
     it('should still strip undefined values from attrs (parity)', () => {
       const Comp = styled(ComponentWithProps).attrs<{ test?: string }>(() => ({
         test: undefined,

@@ -67,17 +67,25 @@ function generateId(
   return parentComponentId ? parentComponentId + '-' + componentId : componentId;
 }
 
+/**
+ * Resolves attrs against props into a render context, plus the list of keys
+ * an attrs call cleared (needed by buildPropsForElement to keep those keys
+ * from being forwarded). Returned alongside context rather than a module-level
+ * variable, so nothing leaks between concurrent renders.
+ */
 function resolveContext<Props extends BaseObject>(
   attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
   props: ExecutionProps & Props,
   theme: DefaultTheme | undefined
-): React.HTMLAttributes<Element> & ExecutionContext & Props {
+): [React.HTMLAttributes<Element> & ExecutionContext & Props, string[] | null] {
   const context: React.HTMLAttributes<Element> & ExecutionContext & Props = {
     ...props,
     // unset, add `props.className` back at the end so props always "wins"
     className: undefined,
     theme,
   } as React.HTMLAttributes<Element> & ExecutionContext & Props;
+
+  let clearedKeys: string[] | null = null;
 
   const needsCopy = attrs.length > 1;
   for (let i = 0; i < attrs.length; i++) {
@@ -92,10 +100,27 @@ function resolveContext<Props extends BaseObject>(
       } else if (key === 'style') {
         context.style = { ...context.style, ...(resolvedAttrDef[key] as React.CSSProperties) };
       } else if ((resolvedAttrDef as Dict<any>)[key] === undefined) {
-        // Deleted, not assigned, so buildPropsForElement never forwards an
-        // attrs-produced undefined (docs/attrs.md).
-        // @ts-expect-error attrs can dynamically add arbitrary properties
-        delete context[key];
+        // Never `delete` from context: removing a key mid-object flips it to
+        // V8 dictionary mode, which slows every subsequent `for..in` read in
+        // this render, including buildPropsForElement's
+        // (docs/runtime-performance.md). Assign undefined instead, which
+        // keeps the object's shape stable, and only record the key as
+        // cleared when context held a defined value: an identity-spread
+        // attrs function (`attrs(({ type = 'button', ...rest }) => ({ type,
+        // ...rest }))`) carries the caller's own explicit `undefined` back
+        // through `resolvedAttrDef`, and that caller-passed undefined must
+        // stay forwardable to a wrapped component rather than being cleared
+        // (docs/attrs.md). A key never present on context (attrs mentioning
+        // a key the caller never passed and no earlier attrs call set) is
+        // left untouched rather than materialized as an own `undefined`
+        // property.
+        if (key in context) {
+          if ((context as Dict<any>)[key] !== undefined) {
+            (clearedKeys || (clearedKeys = [])).push(key);
+          }
+          // @ts-expect-error attrs can dynamically add arbitrary properties
+          context[key] = undefined;
+        }
       } else {
         // @ts-expect-error attrs can dynamically add arbitrary properties
         context[key] = resolvedAttrDef[key];
@@ -107,7 +132,7 @@ function resolveContext<Props extends BaseObject>(
     context.className = joinStrings(context.className, props.className);
   }
 
-  return context;
+  return [context, clearedKeys];
 }
 
 let seenUnknownProps: Set<string> | undefined;
@@ -163,10 +188,11 @@ function buildPropsForElement(
   context: Record<string, any>,
   elementToBeCreated: WebTarget,
   theme: DefaultTheme | undefined,
-  shouldForwardProp: ((prop: string, el: WebTarget) => boolean) | undefined
+  shouldForwardProp: ((prop: string, el: WebTarget) => boolean) | undefined,
+  isDOMTarget: boolean,
+  clearedKeys: string[] | null
 ): Dict<any> {
   const propsForElement: Dict<any> = {};
-  const isDOMTarget = isTag(elementToBeCreated);
 
   for (const key in context) {
     if (key[0] === '$' || key === 'as' || (key === 'theme' && context.theme === theme)) {
@@ -178,9 +204,13 @@ function buildPropsForElement(
     } else if (context[key] === undefined) {
       // A caller's explicit undefined reaches wrapped components, never DOM
       // tags (docs/attrs.md). className is a placeholder here, set below.
+      // An attrs call that cleared this key (resolveContext's clearedKeys)
+      // keeps it out entirely, matching an attrs-produced undefined that was
+      // never forwarded.
       if (
         key !== 'className' &&
         !isDOMTarget &&
+        (clearedKeys === null || clearedKeys.indexOf(key) === -1) &&
         (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated))
       ) {
         propsForElement[key] = undefined;
@@ -243,7 +273,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
   // (hashing, compile, injection) is already memoized inside ComponentStyle; a
   // props-equal re-render bailout belongs at the component boundary via
   // React.memo, which only the caller can key correctly.
-  const context = resolveContext<Props>(componentAttrs, props, theme);
+  const [context, clearedKeys] = resolveContext<Props>(componentAttrs, props, theme);
   const generatedClassName = componentStyle.generateAndInjectStyles(
     context,
     ssc.styleSheet,
@@ -259,11 +289,18 @@ function useStyledComponentImpl<Props extends BaseObject>(
   }
 
   const elementToBeCreated: WebTarget = context.as || target;
+  // Computed once and reused below (the class/className site): isTag reads
+  // process.env.NODE_ENV at runtime in the unbundled dist and under Jest, so
+  // calling it twice per render doubles that cost for no benefit
+  // (docs/runtime-performance.md).
+  const isDOMTarget = isTag(elementToBeCreated);
   const propsForElement = buildPropsForElement(
     context,
     elementToBeCreated,
     theme,
-    shouldForwardProp
+    shouldForwardProp,
+    isDOMTarget,
+    clearedKeys
   );
 
   let classString = joinStrings(foldedComponentIds, styledComponentId);
@@ -274,9 +311,8 @@ function useStyledComponentImpl<Props extends BaseObject>(
     classString += ' ' + context.className;
   }
 
-  propsForElement[
-    isTag(elementToBeCreated) && elementToBeCreated.includes('-') ? 'class' : 'className'
-  ] = classString;
+  propsForElement[isDOMTarget && elementToBeCreated.includes('-') ? 'class' : 'className'] =
+    classString;
 
   if (forwardedRef) {
     propsForElement.ref = forwardedRef;

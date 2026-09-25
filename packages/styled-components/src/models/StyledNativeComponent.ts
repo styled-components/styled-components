@@ -23,12 +23,20 @@ import isStyledComponent from '../utils/isStyledComponent';
 import merge from '../utils/mixinDeep';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
+/**
+ * Resolves attrs against props into a render context, plus the list of keys
+ * an attrs call cleared (needed by buildPropsForElement to keep those keys
+ * from being forwarded). Returned alongside context rather than a module-level
+ * variable, so nothing leaks between concurrent renders.
+ */
 function resolveContext<Props extends object>(
   theme: DefaultTheme = EMPTY_OBJECT,
   props: Props,
   attrs: Attrs<Props>[]
-): ExecutionContext & Props {
+): [ExecutionContext & Props, string[] | null] {
   const context: ExecutionContext & Props = { ...props, theme };
+
+  let clearedKeys: string[] | null = null;
 
   for (let i = 0; i < attrs.length; i++) {
     const resolvedAttrDef = isFunction(attrs[i])
@@ -37,10 +45,24 @@ function resolveContext<Props extends object>(
 
     for (const key in resolvedAttrDef) {
       if ((resolvedAttrDef as Dict<any>)[key] === undefined) {
-        // Deleted, not assigned, so an attrs-produced undefined is never
-        // forwarded (docs/attrs.md).
-        // @ts-expect-error bad types
-        delete context[key];
+        // Never `delete` from context: removing a key mid-object flips it to
+        // V8 dictionary mode, which slows every subsequent `for..in` read in
+        // this render, including buildPropsForElement's
+        // (docs/runtime-performance.md). Assign undefined instead, which
+        // keeps the object's shape stable, and only record the key as
+        // cleared when context held a defined value: an identity-spread
+        // attrs function carries the caller's own explicit undefined back
+        // through resolvedAttrDef, and that caller-passed undefined must
+        // stay forwardable to the wrapped component rather than being
+        // cleared (docs/attrs.md). A key never present on context is left
+        // untouched rather than materialized as an own `undefined` property.
+        if (key in context) {
+          if ((context as Dict<any>)[key] !== undefined) {
+            (clearedKeys || (clearedKeys = [])).push(key);
+          }
+          // @ts-expect-error bad types
+          context[key] = undefined;
+        }
       } else {
         // @ts-expect-error bad types
         context[key] = resolvedAttrDef[key];
@@ -48,7 +70,7 @@ function resolveContext<Props extends object>(
     }
   }
 
-  return context;
+  return [context, clearedKeys];
 }
 
 interface StyledComponentImplProps extends ExecutionProps {
@@ -58,13 +80,22 @@ interface StyledComponentImplProps extends ExecutionProps {
 function buildPropsForElement(
   context: Record<string, any>,
   elementToBeCreated: NativeTarget,
-  shouldForwardProp: ((prop: string, el: NativeTarget) => boolean) | undefined
+  shouldForwardProp: ((prop: string, el: NativeTarget) => boolean) | undefined,
+  clearedKeys: string[] | null
 ): Dict<any> {
   const propsForElement: Dict<any> = {};
   for (const key in context) {
     if (key[0] === '$' || key === 'as' || key === 'theme') continue;
     else if (key === 'forwardedAs') {
       propsForElement.as = context[key];
+    } else if (
+      context[key] === undefined &&
+      clearedKeys !== null &&
+      clearedKeys.indexOf(key) !== -1
+    ) {
+      // An attrs call cleared this key: keep it out entirely, matching an
+      // attrs-produced undefined that was never forwarded (docs/attrs.md).
+      continue;
     } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
       propsForElement[key] = context[key];
     }
@@ -95,11 +126,16 @@ function useStyledComponentImpl<Props extends StyledComponentImplProps>(
   // rules of hooks and serves stale styles (#5788). generateStyleObject returns
   // a stable style reference for equal CSS via InlineStyle's own cache, so the
   // style useMemo below keeps a stable identity without an outer render cache.
-  const context = resolveContext<Props>(theme, props, componentAttrs);
+  const [context, clearedKeys] = resolveContext<Props>(theme, props, componentAttrs);
   const generatedStyles = inlineStyle.generateStyleObject(context);
 
   const elementToBeCreated: NativeTarget = (context as any).as || props.as || target;
-  const propsForElement = buildPropsForElement(context, elementToBeCreated, shouldForwardProp);
+  const propsForElement = buildPropsForElement(
+    context,
+    elementToBeCreated,
+    shouldForwardProp,
+    clearedKeys
+  );
 
   // Guard exists for RSC: useMemo is undefined in server component environments
   propsForElement.style = React.useMemo

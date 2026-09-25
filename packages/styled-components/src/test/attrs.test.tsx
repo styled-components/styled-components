@@ -616,6 +616,29 @@ describe('attrs', () => {
     expect(container.querySelector('button')!.getAttribute('type')).toBe('button');
   });
 
+  it('an identity-spread attrs function still forwards an explicitly passed undefined prop to a wrapped component (#5807)', () => {
+    const Inner = (props: { onClick?: () => void; children?: React.ReactNode }) => (
+      <div data-has-onclick={String('onClick' in props)} />
+    );
+
+    const StyledInner = styled(Inner).attrs<{ type?: string }>(({ type = 'button', ...rest }) => ({
+      type,
+      ...rest,
+    }))``;
+
+    const { container } = render(<StyledInner onClick={undefined} />);
+    expect(container.querySelector('div')!.getAttribute('data-has-onclick')).toBe('true');
+  });
+
+  it('attrs explicitly returning undefined for a key removes a value the caller passed, even with an identity spread in play (#5807)', () => {
+    const Comp = styled.div.attrs<{ 'data-foo'?: string }>(() => ({
+      'data-foo': undefined,
+    }))``;
+
+    const { container } = render(<Comp data-foo="original" />);
+    expect(container.querySelector('div')!.hasAttribute('data-foo')).toBe(false);
+  });
+
   it('object-form attrs restores its default over an explicit undefined prop (#5807)', () => {
     const StyledButton = styled.button.attrs({ type: 'button' })``;
 
