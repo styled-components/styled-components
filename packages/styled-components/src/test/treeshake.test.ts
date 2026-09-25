@@ -1,18 +1,69 @@
 /**
- * Tree-shaking and dead-code elimination tests.
+ * Tree-shaking, dead-code elimination, and published-package shape tests.
  *
  * These verify that the built output correctly eliminates code based on
- * build-time constants and that the ESM/browser/native builds don't
- * include code intended for other targets.
+ * build-time constants, that the ESM/browser/native builds don't
+ * include code intended for other targets, and that the package manifest
+ * declares what the built output needs.
  */
 import fs from 'fs';
 import path from 'path';
+import { findFreeNodeGlobalRefs, NODE_GLOBAL_NAMES } from './nodeGlobalScan';
 
 const distDir = path.resolve(__dirname, '../../dist');
 const nativeDistDir = path.resolve(__dirname, '../../native/dist');
 
 const read = (file: string) => fs.readFileSync(path.join(distDir, file), 'utf8');
 const readNative = (file: string) => fs.readFileSync(path.join(nativeDistDir, file), 'utf8');
+
+describe('findFreeNodeGlobalRefs', () => {
+  it('flags a free reference reached through a member expression', () => {
+    const refs = findFreeNodeGlobalRefs('function f() {\n  return process.versions;\n}');
+    expect(refs).toHaveLength(1);
+    expect(refs[0].name).toBe('process');
+    expect(refs[0].snippet).toContain('process.versions');
+  });
+
+  it('flags a free reference used as a call target', () => {
+    const refs = findFreeNodeGlobalRefs(';Buffer.from(x)');
+    expect(refs).toHaveLength(1);
+    expect(refs[0].name).toBe('Buffer');
+    expect(refs[0].snippet).toContain('Buffer.from(x)');
+  });
+
+  it('allows the direct operand of typeof', () => {
+    expect(findFreeNodeGlobalRefs('if (typeof process !== "undefined") {}')).toEqual([]);
+  });
+
+  it('allows process.env member access', () => {
+    expect(findFreeNodeGlobalRefs('const env = process.env.NODE_ENV;')).toEqual([]);
+  });
+
+  it('does not flag a string literal that merely contains the word "process"', () => {
+    expect(
+      findFreeNodeGlobalRefs('const msg = "the rehydration process, a missing theme";')
+    ).toEqual([]);
+  });
+
+  it('covers every documented Node-only global name', () => {
+    for (const name of NODE_GLOBAL_NAMES) {
+      const refs = findFreeNodeGlobalRefs(`f(${name});`);
+      expect(refs).toHaveLength(1);
+      expect(refs[0].name).toBe(name);
+    }
+  });
+
+  it("does not flag a declaration that happens to share a global's name", () => {
+    // A syntactic check, not a scope resolver: it skips the binding position
+    // itself (so declaring `process` is never flagged), but a later read of
+    // that same name is indistinguishable from a real global reference and
+    // is still flagged. A bundler has no reason to name a variable exactly
+    // `process`, `Buffer`, etc., so this is an accepted limitation.
+    expect(findFreeNodeGlobalRefs('function process(a, b) { return a + b; }')).toEqual([]);
+    expect(findFreeNodeGlobalRefs('const process = 1;')).toEqual([]);
+    expect(findFreeNodeGlobalRefs('import { process } from "x";')).toEqual([]);
+  });
+});
 
 describe('dead-code elimination: browser build', () => {
   let browserESM: string;
@@ -35,6 +86,21 @@ describe('dead-code elimination: browser build', () => {
 
   it('exports createTheme', () => {
     expect(browserESM).toContain('createTheme');
+  });
+
+  /**
+   * Bundlers replace `process.env.NODE_ENV` but leave the bare `process` global
+   * (and the other Node-only globals below) alone, so any other unguarded read
+   * throws in a browser without a polyfill (#5819). An AST walk (not a regex)
+   * so a free reference is never missed by a punctuation lookbehind (a regex
+   * requiring an operator before `process` misses `return process.versions`,
+   * since a space precedes it there) and prose in dev warning strings never
+   * trips a false positive (a string literal is opaque to the parser, unlike
+   * a looser regex matching the word "process" anywhere).
+   */
+  it('never references a Node-only global outside a typeof guard or process.env', () => {
+    expect(findFreeNodeGlobalRefs(browserESM)).toEqual([]);
+    expect(findFreeNodeGlobalRefs(browserCJS)).toEqual([]);
   });
 
   it('eliminates ServerStyleSheet streaming internals', () => {
@@ -280,5 +346,70 @@ describe('ESM tree-shakeability', () => {
     expect(pkg.browser['./dist/styled-components.esm.js']).toBe(
       './dist/styled-components.browser.esm.js'
     );
+  });
+});
+
+/** Rules in docs/build-architecture.md, "Type package dependencies". */
+describe('published type dependencies', () => {
+  const pkgRoot = path.resolve(__dirname, '../..');
+  const pkg = JSON.parse(fs.readFileSync(path.join(pkgRoot, 'package.json'), 'utf8'));
+  const dependencies: Record<string, string> = pkg.dependencies ?? {};
+
+  /** Bare package names imported anywhere in the emitted declarations. */
+  const importedByDeclarations = (): Set<string> => {
+    const names = new Set<string>();
+    const specifier = /(?:\bfrom\s+|\bimport\s*\(\s*)['"]([^'"]+)['"]/g;
+
+    const visit = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+
+        if (entry.isDirectory()) visit(full);
+        else if (entry.name.endsWith('.d.ts')) {
+          for (const [, spec] of fs.readFileSync(full, 'utf8').matchAll(specifier)) {
+            if (spec.startsWith('.')) continue;
+            const parts = spec.split('/');
+            names.add(spec.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0]);
+          }
+        }
+      }
+    };
+
+    visit(distDir);
+    return names;
+  };
+
+  const shipsOwnTypes = (name: string) => {
+    const dir = path.dirname(require.resolve(`${name}/package.json`, { paths: [pkgRoot] }));
+    const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
+    return (
+      Boolean(manifest.types || manifest.typings) || fs.existsSync(path.join(dir, 'index.d.ts'))
+    );
+  };
+
+  const major = (range: string) => range.replace(/^\D*/, '').split('.')[0];
+
+  it('declares no @types package as a peer dependency', () => {
+    const typesPeers = Object.keys(pkg.peerDependencies ?? {}).filter(name =>
+      name.startsWith('@types/')
+    );
+
+    expect(typesPeers).toEqual([]);
+  });
+
+  it('carries a matching @types dependency for every untyped dependency the declarations import', () => {
+    const imported = importedByDeclarations();
+
+    /** Positive controls: a scan that matched nothing would pass vacuously. */
+    expect(imported).toContain('react');
+    expect(imported).toContain('stylis');
+
+    const untyped = [...imported].filter(name => name in dependencies && !shipsOwnTypes(name));
+    const unmatched = untyped.filter(
+      name => major(dependencies[`@types/${name}`] ?? '') !== major(dependencies[name])
+    );
+
+    expect(untyped).toContain('stylis');
+    expect(unmatched).toEqual([]);
   });
 });

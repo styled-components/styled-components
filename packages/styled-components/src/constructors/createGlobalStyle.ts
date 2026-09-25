@@ -1,5 +1,5 @@
 import React from 'react';
-import { IS_RSC, STATIC_EXECUTION_CONTEXT } from '../constants';
+import { IS_RSC, RSC_REDUNDANT_EMIT_WARN_THRESHOLD, STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
@@ -14,8 +14,19 @@ import css from './css';
 
 declare const __SERVER__: boolean;
 
-/** Per-render dedup for RSC global style tags (same pattern as StyledComponent). */
-const getEmittedGlobalCSS = createRSCCache(() => new Set<string>());
+/**
+ * Dev-only per-request count of inline <style> tags emitted per global style
+ * component, used to warn when one repeats excessively in a server render.
+ * Mirrors StyledComponent.ts's getEmitCounts, including the guard ordering:
+ * IS_RSC leads so the browser build, where IS_RSC is the constant false,
+ * drops the whole expression. With the NODE_ENV check first, both branches
+ * fold to null and the minifier keeps a bare `process;` statement, which
+ * throws in a browser without a `process` global (#5819).
+ */
+const getGlobalEmitCounts =
+  IS_RSC && process.env.NODE_ENV !== 'production'
+    ? createRSCCache(() => new Map<string, number>())
+    : null;
 
 /**
  * Create a component that injects global CSS when mounted. Supports theming and dynamic props.
@@ -144,6 +155,9 @@ export default function createGlobalStyle<Props extends object>(
     // `precedence` attribute because it makes style tags persist as permanent
     // resources even after unmount. Global styles need lifecycle-based cleanup
     // for conditional rendering (e.g. body lock on modal open/close).
+    //
+    // Every server-rendered instance emits its own tag, never deduped across
+    // the request; see "Per-instance emission" in docs/rsc-style-injection.md.
     if (IS_RSC) {
       const entry =
         typeof window === 'undefined' ? globalStyle.instanceRules.get(instance) : undefined;
@@ -152,13 +166,16 @@ export default function createGlobalStyle<Props extends object>(
       if (css) {
         globalStyle.instanceRules.delete(instance);
 
-        // Dedup: static by componentId + stylis hash, dynamic by CSS string.
-        // Stylis hash ensures different SSM configs emit separate variants.
-        const emitted = getEmittedGlobalCSS ? getEmittedGlobalCSS() : null;
-        if (emitted) {
-          const key = globalStyle.isStatic ? styledComponentId + ssc.stylis.hash : css;
-          if (emitted.has(key)) return null;
-          emitted.add(key);
+        if (process.env.NODE_ENV !== 'production' && getGlobalEmitCounts) {
+          const counts = getGlobalEmitCounts();
+          const count = (counts.get(styledComponentId) || 0) + 1;
+          counts.set(styledComponentId, count);
+          if (count === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
+            console.warn(
+              `Over ${count} instances of the global style ${styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML.\n` +
+                'A global style is normally mounted once, at the root of the app. Move it higher in the tree so it renders only once per page.'
+            );
+          }
         }
 
         return React.createElement('style', {

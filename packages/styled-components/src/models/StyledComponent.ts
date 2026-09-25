@@ -1,6 +1,6 @@
 import isPropValid from '@emotion/is-prop-valid';
 import React, { createElement, PropsWithoutRef, Ref } from 'react';
-import { IS_RSC, SC_ATTR, SC_VERSION } from '../constants';
+import { IS_RSC, RSC_REDUNDANT_EMIT_WARN_THRESHOLD, SC_ATTR, SC_VERSION } from '../constants';
 import { getGroupForId } from '../sheet/GroupIDAllocator';
 import type {
   AnyComponent,
@@ -67,17 +67,25 @@ function generateId(
   return parentComponentId ? parentComponentId + '-' + componentId : componentId;
 }
 
+/**
+ * Resolves attrs against props into a render context, plus the list of keys
+ * an attrs call cleared (needed by buildPropsForElement to keep those keys
+ * from being forwarded). Returned alongside context rather than a module-level
+ * variable, so nothing leaks between concurrent renders.
+ */
 function resolveContext<Props extends BaseObject>(
   attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
   props: ExecutionProps & Props,
   theme: DefaultTheme | undefined
-): React.HTMLAttributes<Element> & ExecutionContext & Props {
+): [React.HTMLAttributes<Element> & ExecutionContext & Props, string[] | null] {
   const context: React.HTMLAttributes<Element> & ExecutionContext & Props = {
     ...props,
     // unset, add `props.className` back at the end so props always "wins"
     className: undefined,
     theme,
   } as React.HTMLAttributes<Element> & ExecutionContext & Props;
+
+  let clearedKeys: string[] | null = null;
 
   const needsCopy = attrs.length > 1;
   for (let i = 0; i < attrs.length; i++) {
@@ -91,9 +99,29 @@ function resolveContext<Props extends BaseObject>(
         context.className = joinStrings(context.className, resolvedAttrDef[key] as string);
       } else if (key === 'style') {
         context.style = { ...context.style, ...(resolvedAttrDef[key] as React.CSSProperties) };
-      } else if (!(key in props && (props as any)[key] === undefined)) {
-        // Apply attr value unless the user explicitly passed undefined for this prop,
-        // which signals intent to reset the value.
+      } else if ((resolvedAttrDef as Dict<any>)[key] === undefined) {
+        // Never `delete` from context: removing a key mid-object flips it to
+        // V8 dictionary mode, which slows every subsequent `for..in` read in
+        // this render, including buildPropsForElement's
+        // (docs/runtime-performance.md). Assign undefined instead, which
+        // keeps the object's shape stable, and only record the key as
+        // cleared when context held a defined value: an identity-spread
+        // attrs function (`attrs(({ type = 'button', ...rest }) => ({ type,
+        // ...rest }))`) carries the caller's own explicit `undefined` back
+        // through `resolvedAttrDef`, and that caller-passed undefined must
+        // stay forwardable to a wrapped component rather than being cleared
+        // (docs/attrs.md). A key never present on context (attrs mentioning
+        // a key the caller never passed and no earlier attrs call set) is
+        // left untouched rather than materialized as an own `undefined`
+        // property.
+        if (key in context) {
+          if ((context as Dict<any>)[key] !== undefined) {
+            (clearedKeys || (clearedKeys = [])).push(key);
+          }
+          // @ts-expect-error attrs can dynamically add arbitrary properties
+          context[key] = undefined;
+        }
+      } else {
         // @ts-expect-error attrs can dynamically add arbitrary properties
         context[key] = resolvedAttrDef[key];
       }
@@ -104,7 +132,7 @@ function resolveContext<Props extends BaseObject>(
     context.className = joinStrings(context.className, props.className);
   }
 
-  return context;
+  return [context, clearedKeys];
 }
 
 let seenUnknownProps: Set<string> | undefined;
@@ -114,16 +142,16 @@ let seenUnknownProps: Set<string> | undefined;
  * to warn when one component floods a server render with redundant tags (a very
  * large repeated list). Request-scoped via React.cache; over/under-counting
  * across a Suspense boundary is harmless for a heuristic warning.
+ *
+ * IS_RSC leads the condition so the browser build, where IS_RSC is the constant
+ * false, drops the whole expression. With the NODE_ENV check first, both branches
+ * fold to null and the minifier keeps a bare `process;` statement, which throws in
+ * a browser without a `process` global (#5819).
  */
 const getEmitCounts =
-  process.env.NODE_ENV !== 'production' ? createRSCCache(() => new Map<string, number>()) : null;
-
-/**
- * Warn once a single component emits this many inline <style> tags in one server
- * render. Set well above any hand-written page; only pathological generated
- * lists reach it, which is exactly the case that wants a shared className.
- */
-const RSC_REDUNDANT_EMIT_WARN_THRESHOLD = 1000;
+  IS_RSC && process.env.NODE_ENV !== 'production'
+    ? createRSCCache(() => new Map<string, number>())
+    : null;
 
 /** Cache RegExp objects for :where() wrapping to avoid recompilation per render */
 const whereRegExpCache = new Map<string, RegExp>();
@@ -153,17 +181,33 @@ function buildPropsForElement(
   context: Record<string, any>,
   elementToBeCreated: WebTarget,
   theme: DefaultTheme | undefined,
-  shouldForwardProp: ((prop: string, el: WebTarget) => boolean) | undefined
+  shouldForwardProp: ((prop: string, el: WebTarget) => boolean) | undefined,
+  isDOMTarget: boolean,
+  clearedKeys: string[] | null
 ): Dict<any> {
   const propsForElement: Dict<any> = {};
 
   for (const key in context) {
-    if (context[key] === undefined) {
-      // Omit undefined values from props passed to wrapped element.
-    } else if (key[0] === '$' || key === 'as' || (key === 'theme' && context.theme === theme)) {
+    if (key[0] === '$' || key === 'as' || (key === 'theme' && context.theme === theme)) {
       // Omit transient props and execution props.
     } else if (key === 'forwardedAs') {
-      propsForElement.as = context.forwardedAs;
+      if (context.forwardedAs !== undefined) {
+        propsForElement.as = context.forwardedAs;
+      }
+    } else if (context[key] === undefined) {
+      // A caller's explicit undefined reaches wrapped components, never DOM
+      // tags (docs/attrs.md). className is a placeholder here, set below.
+      // An attrs call that cleared this key (resolveContext's clearedKeys)
+      // keeps it out entirely, matching an attrs-produced undefined that was
+      // never forwarded.
+      if (
+        key !== 'className' &&
+        !isDOMTarget &&
+        (clearedKeys === null || clearedKeys.indexOf(key) === -1) &&
+        (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated))
+      ) {
+        propsForElement[key] = undefined;
+      }
     } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
       propsForElement[key] = context[key];
 
@@ -222,7 +266,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
   // (hashing, compile, injection) is already memoized inside ComponentStyle; a
   // props-equal re-render bailout belongs at the component boundary via
   // React.memo, which only the caller can key correctly.
-  const context = resolveContext<Props>(componentAttrs, props, theme);
+  const [context, clearedKeys] = resolveContext<Props>(componentAttrs, props, theme);
   const generatedClassName = componentStyle.generateAndInjectStyles(
     context,
     ssc.styleSheet,
@@ -238,11 +282,18 @@ function useStyledComponentImpl<Props extends BaseObject>(
   }
 
   const elementToBeCreated: WebTarget = context.as || target;
+  // Computed once and reused below (the class/className site): isTag reads
+  // process.env.NODE_ENV at runtime in the unbundled dist and under Jest, so
+  // calling it twice per render doubles that cost for no benefit
+  // (docs/runtime-performance.md).
+  const isDOMTarget = isTag(elementToBeCreated);
   const propsForElement = buildPropsForElement(
     context,
     elementToBeCreated,
     theme,
-    shouldForwardProp
+    shouldForwardProp,
+    isDOMTarget,
+    clearedKeys
   );
 
   let classString = joinStrings(foldedComponentIds, styledComponentId);
@@ -253,9 +304,8 @@ function useStyledComponentImpl<Props extends BaseObject>(
     classString += ' ' + context.className;
   }
 
-  propsForElement[
-    isTag(elementToBeCreated) && elementToBeCreated.includes('-') ? 'class' : 'className'
-  ] = classString;
+  propsForElement[isDOMTarget && elementToBeCreated.includes('-') ? 'class' : 'className'] =
+    classString;
 
   if (forwardedRef) {
     propsForElement.ref = forwardedRef;
@@ -272,8 +322,9 @@ function useStyledComponentImpl<Props extends BaseObject>(
   // unstyled (#5808). React exposes no per-boundary scope to key a safe ledger
   // on. Styles stay inline rather than hoisted via `precedence` so cross-
   // boundary extensions keep winning by source order (#5672) and the child-
-  // index selector plugin stays correct; byte-identical duplicates cost about a
-  // byte each after gzip.
+  // index selector plugin stays correct; see docs/rsc-style-injection.md's
+  // "Per-instance emission" section for the compression cost of
+  // byte-identical duplicates.
   if (IS_RSC && generatedClassName) {
     // generateAndInjectStyles returns this render's whole chain of class names,
     // base to leaf, so it names exactly the rules this instance needs.

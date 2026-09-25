@@ -195,6 +195,120 @@ describe('parseCSSDeclarations', () => {
     expect(parseCSSDeclarations('/* nothing here */')).toEqual([]);
   });
 
+  it('strips a line comment at the end of a declaration (issue #5613)', () => {
+    expect(parseCSSDeclarations('color: red; // some comment\nfont-size: 12px;')).toEqual([
+      ['color', 'red'],
+      ['font-size', '12px'],
+    ]);
+  });
+
+  it('strips a line comment at the start of the input', () => {
+    expect(parseCSSDeclarations('// leading comment\ncolor: red;')).toEqual([['color', 'red']]);
+  });
+
+  it('strips a line comment on its own line between declarations', () => {
+    expect(
+      parseCSSDeclarations('color: red;\n// a comment on its own line\nfont-size: 12px;')
+    ).toEqual([
+      ['color', 'red'],
+      ['font-size', '12px'],
+    ]);
+  });
+
+  it('strips a line comment after a function-call value', () => {
+    expect(parseCSSDeclarations('transform: scale(1.5); // grow it\ncolor: red;')).toEqual([
+      ['transform', 'scale(1.5)'],
+      ['color', 'red'],
+    ]);
+  });
+
+  it('strips an unterminated line comment through to the end of input', () => {
+    expect(parseCSSDeclarations('color: red; // trailing comment with no newline')).toEqual([
+      ['color', 'red'],
+    ]);
+  });
+
+  it('preserves // inside a quoted string', () => {
+    expect(parseCSSDeclarations('content: "http://example.com"; color: red;')).toEqual([
+      ['content', '"http://example.com"'],
+      ['color', 'red'],
+    ]);
+  });
+
+  it('preserves // inside url() so protocol URLs are untouched', () => {
+    expect(
+      parseCSSDeclarations('background: url(http://example.com/image.png); // comment\ncolor: red;')
+    ).toEqual([
+      ['background', 'url(http://example.com/image.png)'],
+      ['color', 'red'],
+    ]);
+  });
+
+  it('preserves a bare unquoted URL value that is not wrapped in url()', () => {
+    // The `//` directly follows the scheme colon (`https:`), which is the same
+    // shape as a protocol URL rather than a JS-style comment, so it is kept.
+    expect(parseCSSDeclarations('--api-url: https://example.com:8080/path;')).toEqual([
+      ['--api-url', 'https://example.com:8080/path'],
+    ]);
+  });
+
+  it('preserves a protocol-relative URL value that starts right after the colon', () => {
+    // The property colon is followed by a space, then `//` with no scheme:
+    // the nearest preceding non-whitespace character is still `:`, so this
+    // is a value that just started, not a JS-style comment.
+    expect(parseCSSDeclarations('--cdn: //cdn.example.com/x.png;\ncolor: red;')).toEqual([
+      ['--cdn', '//cdn.example.com/x.png'],
+      ['color', 'red'],
+    ]);
+  });
+
+  it('preserves a protocol-relative URL value with no space after the colon', () => {
+    expect(parseCSSDeclarations('--cdn://cdn.example.com/x.png;\ncolor: red;')).toEqual([
+      ['--cdn', '//cdn.example.com/x.png'],
+      ['color', 'red'],
+    ]);
+  });
+
+  it('preserves a protocol-relative URL wrapped in url()', () => {
+    expect(parseCSSDeclarations('background: url(//cdn.example.com/x.png); color: red;')).toEqual([
+      ['background', 'url(//cdn.example.com/x.png)'],
+      ['color', 'red'],
+    ]);
+  });
+
+  it('preserves // inside an uppercase URL() function', () => {
+    expect(
+      parseCSSDeclarations('background: URL(//cdn.example.com/x.png); // c\ncolor: red;')
+    ).toEqual([
+      ['background', 'URL(//cdn.example.com/x.png)'],
+      ['color', 'red'],
+    ]);
+  });
+
+  it('strips a // comment inside a multi-line function argument list', () => {
+    expect(
+      parseCSSDeclarations(
+        'color: rgba(255, 0, 0, // alpha\n1);\nwidth: calc(100% - // gutter\n10px);'
+      )
+    ).toEqual([
+      ['color', 'rgba(255, 0, 0, \n1)'],
+      ['width', 'calc(100% - \n10px)'],
+    ]);
+  });
+
+  it('mixes line comments and block comments on the same declaration', () => {
+    expect(parseCSSDeclarations('color: /* inline */ red; // trailing\nfont-size: 12px;')).toEqual([
+      ['color', 'red'],
+      ['font-size', '12px'],
+    ]);
+  });
+
+  it('strips a block comment inside parens when the input also contains a line comment', () => {
+    expect(parseCSSDeclarations('margin: calc(1px /* a */ + 2px); // trailing')).toEqual([
+      ['margin', 'calc(1px  + 2px)'],
+    ]);
+  });
+
   it('warns on unclosed parenthesis in dev mode', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     parseCSSDeclarations('color: rgb(255, 0, 0; font-size: 12px;');

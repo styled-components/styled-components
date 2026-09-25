@@ -208,6 +208,11 @@ interface ThemedExecutionProps {
  * `R` carries the runtime so the widening stays web-only; it is deliberately
  * undefaulted, since a default is what would let a native call site pick up web
  * CSS by omission.
+ *
+ * A {@link SupportedHTMLElements} tag the resolved `@types/react` does not
+ * declare falls through to `{}` like any non-target, which is what keeps it
+ * permissive; see docs/type-performance.md, "Tags missing from older
+ * @types/react".
  */
 export type TargetProps<R extends Runtime, T> = T extends keyof React.JSX.IntrinsicElements
   ? IntrinsicProps<T>
@@ -262,6 +267,17 @@ type IntrinsicProps<T extends keyof React.JSX.IntrinsicElements> =
   IntrinsicElementsHaveDataIndex extends true
     ? WithCSSVarsForDataIndex<React.JSX.IntrinsicElements[T]>
     : WithCSSVars<React.JSX.IntrinsicElements[T]>;
+
+/**
+ * `React.ComponentPropsWithRef` for a {@link KnownTarget}, minus its `ElementType`
+ * constraint, which rejects a tag the resolved `@types/react` does not declare.
+ * Such a tag gets `{}`, what `ComponentPropsWithRef` itself resolves it to, so
+ * the published declarations compile without changing any prop bag. See
+ * docs/type-performance.md, "Tags missing from older @types/react".
+ */
+export type KnownTargetPropsWithRef<T> = T extends React.ElementType
+  ? React.ComponentPropsWithRef<T>
+  : {};
 
 /**
  * Props of a component render target. Named for the same reason as {@link IntrinsicProps}.

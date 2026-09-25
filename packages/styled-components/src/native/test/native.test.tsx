@@ -122,6 +122,19 @@ describe('native', () => {
     }
   });
 
+  // https://github.com/styled-components/styled-components/issues/5613
+  it('strips a JS-style line comment from a style declaration', () => {
+    const Comp = styled.View`
+      opacity: 0.5; // this comment used to break the declaration after it
+      padding-top: 5px;
+    `;
+    const wrapper = TestRenderer.create(<Comp />);
+    const view = wrapper.root.findByType(View);
+
+    expect(view.props.style).toEqual({ opacity: 0.5, paddingTop: 5 });
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
   // https://github.com/styled-components/styled-components/issues/1266
   it('should update when props change', () => {
     const Comp = styled.View<{ opacity?: number }>`
@@ -148,6 +161,18 @@ describe('native', () => {
     const wrapper = TestRenderer.create(<Comp2 forwardedAs={Text} />);
 
     expect(wrapper.root.findByType(Text)).not.toBeUndefined();
+  });
+
+  it('does not forward an undefined "forwardedAs" as an "as" prop (web parity)', () => {
+    const Inner = (props: Record<string, unknown>) => <View testID={String('as' in props)} />;
+    const Plain = styled(Inner)``;
+    const Cleared = styled(Inner).attrs({ forwardedAs: undefined })``;
+
+    const explicit = TestRenderer.create(<Plain forwardedAs={undefined} />);
+    const cleared = TestRenderer.create(<Cleared forwardedAs={Text} />);
+
+    expect(explicit.root.findByType(View).props.testID).toBe('false');
+    expect(cleared.root.findByType(View).props.testID).toBe('false');
   });
 
   it('should not add different border values for Image component as its not supported', () => {
@@ -396,6 +421,58 @@ describe('native', () => {
         selectionColor: 'red',
         style: {},
       });
+    });
+
+    it('attrs wins over an explicitly passed undefined prop (#5807, #4338 parity)', () => {
+      const Comp = styled(ComponentWithProps).attrs<{ test?: string }>(() => ({
+        test: 'from-attrs',
+      }))``;
+
+      const wrapper = TestRenderer.create(<Comp test={undefined} />);
+      const view = wrapper.root.findByType(View);
+
+      expect(view.props).toEqual({
+        style: {},
+        test: 'from-attrs',
+      });
+    });
+
+    it('forwards an explicitly passed undefined prop to the wrapped component (#4338 parity)', () => {
+      const Comp = styled(ComponentWithProps)``;
+
+      const wrapper = TestRenderer.create(<Comp test={undefined} />);
+      const view = wrapper.root.findByType(View);
+
+      expect('test' in view.props).toBe(true);
+      expect(view.props.test).toBeUndefined();
+    });
+
+    it('an identity-spread attrs function still forwards an explicitly passed undefined prop to a wrapped component (#5807)', () => {
+      const Comp = styled(ComponentWithProps).attrs<{ first?: string }>(
+        ({ first = 'x', ...rest }) => ({
+          first,
+          ...rest,
+        })
+      )``;
+
+      const wrapper = TestRenderer.create(<Comp test={undefined} />);
+      const view = wrapper.root.findByType(View);
+
+      expect('test' in view.props).toBe(true);
+      expect(view.props.test).toBeUndefined();
+    });
+
+    it('should still strip undefined values from attrs (parity)', () => {
+      const Comp = styled(ComponentWithProps).attrs<{ test?: string }>(() => ({
+        test: undefined,
+      }))``;
+
+      const wrapper = TestRenderer.create(<Comp test="original" />);
+      const view = wrapper.root.findByType(View);
+
+      // The attrs-sourced undefined removes the key entirely, unlike the
+      // caller-passed undefined preserved above.
+      expect('test' in view.props).toBe(false);
     });
 
     it('theme prop works', () => {

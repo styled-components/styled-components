@@ -5,7 +5,7 @@ import { ServerStyleSheet, StyleSheetManager } from '../../base';
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../../constants';
 import { resetStyled } from '../../test/utils';
 import * as GroupIDAllocator from '../GroupIDAllocator';
-import { outputSheet, rehydrateSheet } from '../Rehydration';
+import { outputSheet, rehydrateSheet, resetVersionMismatchWarning } from '../Rehydration';
 import StyleSheet from '../Sheet';
 
 let styled: ReturnType<typeof resetStyled>;
@@ -211,38 +211,6 @@ data-styled.g23[id=\"sc-kqxcKS\"]{content:\"a,\"}/*!sc*/
       document.body.removeChild(hostElement);
     });
 
-    it('removes global style tags inside Shadow DOM when target is provided', async () => {
-      const { removeGlobalStyleTag } = await import('../dom');
-
-      // Create a host element and attach a shadow root
-      const hostElement = document.createElement('div');
-      document.body.appendChild(hostElement);
-      const shadowRoot = hostElement.attachShadow({ mode: 'open' });
-
-      // Simulate SSR-rendered global style tag inside shadow root
-      const globalStyleTag = document.createElement('style');
-      globalStyleTag.setAttribute('data-styled-global', 'sc-global-test');
-      globalStyleTag.textContent = 'body { margin: 0; }';
-      shadowRoot.appendChild(globalStyleTag);
-
-      // Also add one to the document
-      const docStyleTag = document.createElement('style');
-      docStyleTag.setAttribute('data-styled-global', 'sc-global-test');
-      docStyleTag.textContent = 'body { margin: 0; }';
-      document.head.appendChild(docStyleTag);
-
-      // With target, removeGlobalStyleTag finds the shadow DOM tag
-      removeGlobalStyleTag('sc-global-test', shadowRoot);
-      expect(globalStyleTag.parentNode).toBe(null);
-
-      // Without target, it cleans up document-level tags
-      removeGlobalStyleTag('sc-global-test');
-      expect(docStyleTag.parentNode).toBe(null);
-
-      // Cleanup
-      document.body.removeChild(hostElement);
-    });
-
     it('rehydrates from both document and Shadow DOM separately', () => {
       // Add styles to document
       document.head.innerHTML = `
@@ -278,6 +246,102 @@ data-styled.g23[id=\"sc-kqxcKS\"]{content:\"a,\"}/*!sc*/
       // Cleanup
       document.body.removeChild(hostElement);
     });
+  });
+});
+
+describe('version mismatch warning', () => {
+  let warnSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    resetVersionMismatchWarning();
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  it('warns once with the exact message when a mismatched-version tag exists', () => {
+    document.head.innerHTML = `
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="5.4.0">
+        .a {}/*!sc*/
+        ${SC_ATTR}.g11[id="idA"]{content:"nameA,"}/*!sc*/
+      </style>
+    `;
+
+    const sheet = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheet);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(
+      `Found server-rendered styles from styled-components 5.4.0, but this copy is ${SC_VERSION}. If both come from the same app, class names will not match and hydration will fail: make sure the server and the browser load the same version (run \`npm ls styled-components\` to find duplicates). Pages that intentionally host separate apps on different versions can ignore this.`
+    );
+  });
+
+  it('does not warn when the server and browser versions match', () => {
+    document.head.innerHTML = `
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="${SC_VERSION}">
+        .a {}/*!sc*/
+        ${SC_ATTR}.g11[id="idA"]{content:"nameA,"}/*!sc*/
+      </style>
+    `;
+
+    const sheet = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheet);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not warn when there are no style tags', () => {
+    document.head.innerHTML = '';
+
+    const sheet = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheet);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not warn about a mismatched-version active tag created at runtime by another client copy', () => {
+    // dom.ts's makeStyleTag stamps data-styled-version on browser-created
+    // "active" tags too, so a second client copy at a different version
+    // looks the same shape as a server-rendered tag. That case is already
+    // covered by the separate multiple-instances warning in base.ts.
+    document.head.innerHTML = `
+      <style ${SC_ATTR}="${SC_ATTR_ACTIVE}" ${SC_ATTR_VERSION}="5.4.0">.a {}/*!sc*/</style>
+    `;
+
+    const sheet = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheet);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('still warns once about a genuine server-rendered mismatched-version tag', () => {
+    document.head.innerHTML = `
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="5.4.0">.a {}/*!sc*/</style>
+    `;
+
+    const sheet = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheet);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('warns once even with several mismatched-version tags, across multiple rehydration calls', () => {
+    document.head.innerHTML = `
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="5.4.0">.a {}/*!sc*/</style>
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="5.5.0">.b {}/*!sc*/</style>
+    `;
+
+    const sheetA = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheetA);
+
+    // Neither mismatched tag matches SELECTOR, so both remain in the DOM for
+    // a second rehydration call to see again.
+    const sheetB = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheetB);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 });
 

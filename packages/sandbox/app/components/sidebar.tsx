@@ -12,6 +12,7 @@ const sections = [
     items: [
       { href: '/rsc', label: 'RSC' },
       { href: '/suspense-5808', label: 'Suspense (#5808)' },
+      { href: '/suspense-globals', label: 'Suspense Globals' },
       { href: '/client-example', label: 'Client Components' },
       { href: '/global-style-test', label: 'Global Styles' },
     ],

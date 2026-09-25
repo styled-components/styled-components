@@ -524,20 +524,71 @@ describe('attrs', () => {
     `);
   });
 
-  it('should preserve explicitly passed undefined props', () => {
+  it('attrs wins over an explicitly passed undefined prop (#5807, #4338)', () => {
     const Inner = (props: { role?: string; children?: React.ReactNode }) => (
       <div role={props.role} data-has-role={String('role' in props)} />
     );
 
     const Comp = styled(Inner).attrs({ role: 'button' })``;
 
-    // Without explicit prop, attrs value is used
+    // Without an explicit prop, the attrs value is used.
     const withAttrs = render(<Comp />);
     expect(withAttrs.container.querySelector('div')!.getAttribute('role')).toBe('button');
 
-    // Explicitly passing undefined should override attrs
+    // Attrs still wins when the caller explicitly passes undefined for the same key.
     const withUndefined = render(<Comp role={undefined} />);
-    expect(withUndefined.container.querySelector('div')!.getAttribute('role')).toBe(null);
+    expect(withUndefined.container.querySelector('div')!.getAttribute('role')).toBe('button');
+  });
+
+  it('forwards an explicitly passed undefined prop to a wrapped component so it can reset its own default (#4338)', () => {
+    const Inner = (props: { role?: string; children?: React.ReactNode }) => (
+      <div role={props.role} data-has-role={String('role' in props)} />
+    );
+
+    // No attrs here: the wrapped component's own default (not shown by Inner,
+    // but this is the shape MUI's ButtonBase relies on) should see the key.
+    const Comp = styled(Inner)``;
+
+    const rendered = render(<Comp role={undefined} />);
+    const div = rendered.container.querySelector('div')!;
+    expect(div.getAttribute('data-has-role')).toBe('true');
+    expect(div.hasAttribute('role')).toBe(false);
+  });
+
+  it('the MUI ButtonBase shape resets its own default when the caller passes an explicit undefined (#4338)', () => {
+    const Base = (props: { role?: string; children?: React.ReactNode }) => (
+      <div role="button" {...props} />
+    );
+    const StyledBase = styled(Base)``;
+
+    const { container } = render(<StyledBase role={undefined} />);
+    expect(container.querySelector('div')!.hasAttribute('role')).toBe(false);
+  });
+
+  it('applies shouldForwardProp and drops transient props when forwarding an explicit undefined to a component', () => {
+    const Inner = (props: {
+      keep?: string;
+      drop?: string;
+      $transient?: string;
+      children?: React.ReactNode;
+    }) => (
+      <div
+        data-has-keep={String('keep' in props)}
+        data-has-drop={String('drop' in props)}
+        data-has-transient={String('$transient' in props)}
+      />
+    );
+
+    const Comp = styled(Inner).withConfig({
+      shouldForwardProp: prop => prop !== 'drop',
+    })``;
+
+    const { container } = render(<Comp keep={undefined} drop={undefined} $transient={undefined} />);
+    const div = container.querySelector('div')!;
+
+    expect(div.getAttribute('data-has-keep')).toBe('true');
+    expect(div.getAttribute('data-has-drop')).toBe('false');
+    expect(div.getAttribute('data-has-transient')).toBe('false');
   });
 
   it('should still strip undefined values from attrs', () => {
@@ -545,6 +596,74 @@ describe('attrs', () => {
 
     const { container } = render(<Comp />);
     expect(container.querySelector('div')!.hasAttribute('data-removed')).toBe(false);
+  });
+
+  it('does not forward an explicitly passed undefined prop to a DOM target, and does not warn', () => {
+    const Comp = styled.div``;
+
+    const { container } = render(<Comp title={undefined} />);
+    expect(container.querySelector('div')!.hasAttribute('title')).toBe(false);
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('function-form attrs restores its destructured default over an explicit undefined prop (#5807)', () => {
+    const StyledButton = styled.button.attrs<{ type?: string }>(({ type = 'button', ...rest }) => ({
+      type,
+      ...rest,
+    }))``;
+
+    const { container } = render(<StyledButton type={undefined} />);
+    expect(container.querySelector('button')!.getAttribute('type')).toBe('button');
+  });
+
+  it('an identity-spread attrs function still forwards an explicitly passed undefined prop to a wrapped component (#5807)', () => {
+    const Inner = (props: { onClick?: () => void; children?: React.ReactNode }) => (
+      <div data-has-onclick={String('onClick' in props)} />
+    );
+
+    const StyledInner = styled(Inner).attrs<{ type?: string }>(({ type = 'button', ...rest }) => ({
+      type,
+      ...rest,
+    }))``;
+
+    const { container } = render(<StyledInner onClick={undefined} />);
+    expect(container.querySelector('div')!.getAttribute('data-has-onclick')).toBe('true');
+  });
+
+  it('attrs explicitly returning undefined for a key removes a value the caller passed, even with an identity spread in play (#5807)', () => {
+    const Comp = styled.div.attrs<{ 'data-foo'?: string }>(() => ({
+      'data-foo': undefined,
+    }))``;
+
+    const { container } = render(<Comp data-foo="original" />);
+    expect(container.querySelector('div')!.hasAttribute('data-foo')).toBe(false);
+  });
+
+  it('object-form attrs restores its default over an explicit undefined prop (#5807)', () => {
+    const StyledButton = styled.button.attrs({ type: 'button' })``;
+
+    const { container } = render(<StyledButton type={undefined} />);
+    expect(container.querySelector('button')!.getAttribute('type')).toBe('button');
+  });
+
+  it('a wrapper spreading props over object-form attrs still gets the default (#5807)', () => {
+    const StyledButton = styled.button.attrs({ type: 'button' })``;
+    const Wrapper = ({ type, ...rest }: { type?: string }) => (
+      <StyledButton type={type} {...rest} />
+    );
+
+    const { container } = render(<Wrapper />);
+    expect(container.querySelector('button')!.getAttribute('type')).toBe('button');
+  });
+
+  it("supports the documented `'key' in props` opt-out for clearing an attrs default", () => {
+    const Comp = styled.a.attrs<{ rel?: string }>(p => ('rel' in p ? {} : { rel: 'noopener' }))``;
+
+    const withUndefined = render(<Comp rel={undefined} />);
+    expect(withUndefined.container.querySelector('a')!.hasAttribute('rel')).toBe(false);
+
+    const withoutProp = render(<Comp />);
+    expect(withoutProp.container.querySelector('a')!.getAttribute('rel')).toBe('noopener');
   });
 
   it('should not mutate the props object passed to attrs callbacks', () => {

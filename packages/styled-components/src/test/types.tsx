@@ -3,6 +3,7 @@
  * Run via: pnpm --filter styled-components test:types
  */
 import React from 'react';
+import type { PipeableStream } from 'react-dom/server';
 import {
   css,
   CSSProp,
@@ -11,13 +12,14 @@ import {
   Interpolation,
   IStyledComponent,
   RuleSet,
+  ServerStyleSheet,
   StyledComponent,
   StyledObject,
   WebTarget,
   withTheme,
 } from '../index';
 import styled from '../index-standalone';
-import { DataAttributes } from '../types';
+import { DataAttributes, KnownTargetPropsWithRef } from '../types';
 import { VeryLargeUnionType } from './veryLargeUnionType';
 
 // Augment DefaultTheme so tests can reference theme properties.
@@ -1753,3 +1755,42 @@ type AllOptionalDisjoint = { onlyA?: string } | { onlyB?: number };
 const AllOptional = styled.div<AllOptionalDisjoint>``;
 // @ts-expect-error known limitation: an all-optional disjoint union collapses
 <AllOptional onlyA="x" />;
+
+/**
+ * `interleaveWithNodeStream` takes React 18's own `PipeableStream` (what
+ * `renderToPipeableStream` returns) and a Node readable stream. The published
+ * declaration types the former structurally rather than importing it, so the
+ * types still compile on React 16/17, whose `react-dom/server` lacks it.
+ */
+declare const pipeable: PipeableStream;
+declare const readable: NodeJS.ReadableStream;
+new ServerStyleSheet().interleaveWithNodeStream(pipeable);
+new ServerStyleSheet().interleaveWithNodeStream(readable);
+// @ts-expect-error neither a pipeable nor a readable stream
+new ServerStyleSheet().interleaveWithNodeStream({ abort() {} });
+
+/**
+ * The `.attrs()` redirect seam resolves a target's props through
+ * `KnownTargetPropsWithRef`, which exists only to lift `ComponentPropsWithRef`'s
+ * `ElementType` constraint so the published declarations compile on an
+ * `@types/react` lacking a tag's intrinsic (`<search>` before 18.2.12); see
+ * docs/type-performance.md, "Tags missing from older @types/react". Pinned
+ * identical to `ComponentPropsWithRef` for a declared tag, a union of tags (a
+ * function-form redirect) and a component, so it cannot change a prop bag this
+ * version resolves. The cross-version cases live in
+ * `test-types/published-types-consumer.tsx`, compiled by `test:types:dist`.
+ *
+ * `_Identical`, not `_ScExact`: mutual assignability ignores an optional member
+ * one side lacks.
+ */
+type _Identical<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
+_scExact<_Identical<KnownTargetPropsWithRef<'search'>, React.ComponentPropsWithRef<'search'>>>();
+_scExact<
+  _Identical<KnownTargetPropsWithRef<'a' | 'button'>, React.ComponentPropsWithRef<'a' | 'button'>>
+>();
+_scExact<
+  _Identical<KnownTargetPropsWithRef<typeof _ScFwd>, React.ComponentPropsWithRef<typeof _ScFwd>>
+>();
+const _searchShorthand = styled.search``;
+_scExact<_ScExact<typeof _searchShorthand, StyledComponent<'search'>>>();

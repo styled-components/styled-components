@@ -6,6 +6,49 @@ import { Sheet } from './types';
 const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
 const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\].*?"([^"]*)`);
 
+let warnedVersionMismatch = false;
+
+/** Test-only: clears the warn-once flag between test cases. */
+export const resetVersionMismatchWarning = () => {
+  warnedVersionMismatch = false;
+};
+
+/**
+ * Warns once, in development, when `container` holds a server-rendered
+ * `<style data-styled>` tag whose `data-styled-version` differs from the
+ * running `SC_VERSION`. `SELECTOR` only ever matches the running version
+ * (#5737), so a mismatched tag is invisible to rehydration: its styles are
+ * silently ignored and every class name it produced goes stale, with no
+ * other symptom.
+ *
+ * Only considers tags whose `data-styled` value is not `SC_ATTR_ACTIVE`:
+ * `dom.ts`'s `makeStyleTag` stamps `data-styled-version` on browser-created
+ * "active" tags too, so a second client copy of styled-components at a
+ * different version looks the same shape as a server-rendered tag here. That
+ * case is a live, same-page version mismatch, not a stale rehydration
+ * target, and is already covered by the separate multiple-instances warning
+ * in base.ts.
+ */
+const warnOnVersionMismatch = (container: Document | ShadowRoot) => {
+  if (process.env.NODE_ENV !== 'production') {
+    if (warnedVersionMismatch) return;
+
+    const tags = container.querySelectorAll(`style[${SC_ATTR}]`);
+    for (let i = 0, l = tags.length; i < l; i++) {
+      if (tags[i].getAttribute(SC_ATTR) === SC_ATTR_ACTIVE) continue;
+
+      const serverVersion = tags[i].getAttribute(SC_ATTR_VERSION);
+      if (serverVersion !== null && serverVersion !== SC_VERSION) {
+        warnedVersionMismatch = true;
+        console.warn(
+          `Found server-rendered styles from styled-components ${serverVersion}, but this copy is ${SC_VERSION}. If both come from the same app, class names will not match and hydration will fail: make sure the server and the browser load the same version (run \`npm ls styled-components\` to find duplicates). Pages that intentionally host separate apps on different versions can ignore this.`
+        );
+        return;
+      }
+    }
+  }
+};
+
 /**
  * Type guard to check if a node is a ShadowRoot.
  * Uses instanceof when available, with duck-typing fallback for cross-realm scenarios.
@@ -122,6 +165,9 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
 
 export const rehydrateSheet = (sheet: Sheet) => {
   const container = getRehydrationContainer(sheet.options.target);
+
+  warnOnVersionMismatch(container);
+
   const nodes = container.querySelectorAll(SELECTOR);
 
   for (let i = 0, l = nodes.length; i < l; i++) {

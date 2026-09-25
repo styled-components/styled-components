@@ -356,6 +356,46 @@ describe('with styles', () => {
     `);
   });
 
+  // https://github.com/styled-components/styled-components/issues/5613
+  it('should strip a // comment placed after a multiline calc() with interpolations', () => {
+    const a = '10px';
+    const b = '20px';
+    const c = '30px';
+    const Comp = styled.div`
+      max-height: calc(${a} + ${b} + ${c}); // This comment causes a parsing error
+    `;
+    render(<Comp />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a {
+        max-height: calc(10px + 20px + 30px);
+      }"
+    `);
+  });
+
+  // https://github.com/styled-components/styled-components/issues/5613
+  it('should keep a nested interpolated-component selector after a // comment on a preceding multiline declaration', () => {
+    const AnotherComponent = styled.span`
+      color: blue;
+    `;
+
+    const Comp = styled.div`
+      grid-template-rows: auto auto minmax(0, 1fr); // long comment which makes prettier format it on multiple lines
+
+      ${AnotherComponent} {
+        color: hotpink;
+      }
+    `;
+    render(<Comp />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a {
+        grid-template-rows: auto auto minmax(0, 1fr);
+      }
+      .a .sc-dBNzsr {
+        color: hotpink;
+      }"
+    `);
+  });
+
   it('should respect removed rules', () => {
     const Heading = styled.h1`
       color: red;

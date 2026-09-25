@@ -41,6 +41,9 @@ Server-side `instanceRules` entries must be deleted explicitly once styles are c
 `rebuildGroup` must run synchronously. Nothing may yield between `clearRules` and the re-insert loop,
 or the group is observable while empty.
 
+RSC emission (each server-rendered instance gets its own tag, no dedup) is covered under
+"Per-instance emission" in [docs/rsc-style-injection.md](rsc-style-injection.md).
+
 ## Client lifecycle
 
 The client uses two separate `useLayoutEffect`s:

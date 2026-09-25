@@ -4,4 +4,10 @@ const elements = [
 ] as const;
 
 export default new Set(elements);
+
+/**
+ * Every runtime tag, whether or not the consumer's `@types/react` declares it as
+ * a JSX intrinsic. See docs/type-performance.md, "Tags missing from older
+ * @types/react".
+ */
 export type SupportedHTMLElements = (typeof elements)[number];

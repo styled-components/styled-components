@@ -50,6 +50,30 @@ Verify with `grep -c 'document\.' native/dist/styled-components.native.cjs.js`, 
 The `browser` field in `package.json` maps server bundles to their browser-specific alternatives. It
 is preferred over `exports`, which caused TS2742 in composite TypeScript projects.
 
+## Type package dependencies
+
+The published `.d.ts` files import types from `react`, `react-native`, `csstype`, `stylis` and the
+`NodeJS` globals. Where each one's types come from:
+
+- Never declare an `@types/*` package as a peer dependency, optional or not. pnpm folds every resolved
+  peer into the package's install identity, so two workspace projects on different `@types/node` (or
+  `@types/react`) versions each get their own physical copy of styled-components: two module
+  instances, and a `ThemeProvider` in one never reaches components from the other. Verified on pnpm
+  10 with a two-project workspace.
+- `react` and `react-native` types are the consumer's, installed alongside the peer itself.
+  `@types/node` is the consumer's too; only server-rendering signatures reference it.
+- A type from a peer that an older supported major does not declare is written locally as a
+  structural type covering only the members read, never imported. `ServerStyleSheet` does this for
+  React 18's `PipeableStream`, which `react-dom/server` types before 18 do not export.
+  `pnpm --filter styled-components test:types:dist` catches a regression, compiling the emitted
+  `.d.ts` against the oldest supported `@types/react` patch of each major.
+- A regular dependency that ships no types of its own carries its `@types` package as a regular
+  dependency, pinned to match: `stylis` pairs with `@types/stylis`. Regular dependencies do not enter
+  the install identity, so this cannot fork the package.
+
+The "published type dependencies" block in `src/test/treeshake.test.ts` (run by `test:build`)
+enforces the first and last rules against the built declarations.
+
 ## CSS injection ordering
 
 Group IDs are allocated at call time, when `styled()`, `createGlobalStyle()` or `keyframes()` runs,

@@ -47,5 +47,15 @@ export const DISABLE_SPEEDY = Boolean(
 
 export const KEYFRAMES_ID_PREFIX = 'sc-keyframes-';
 
+/**
+ * Warn once a single styled component or global style emits this many inline
+ * <style> tags in one server render. Set well above any hand-written page;
+ * only a pathological generated list reaches it, which is exactly the case
+ * that wants a shared className (styled components) or a single mount point
+ * higher in the tree (global styles). Shared by StyledComponent.ts and
+ * createGlobalStyle.ts.
+ */
+export const RSC_REDUNDANT_EMIT_WARN_THRESHOLD = 1000;
+
 // Shared empty execution context when generating static styles
 export const STATIC_EXECUTION_CONTEXT = {};

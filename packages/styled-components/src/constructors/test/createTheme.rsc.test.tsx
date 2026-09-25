@@ -2,7 +2,8 @@
  * @jest-environment node
  */
 
-// Mock React.cache (not available in React 18 test env, but needed for RSC dedup)
+// Mock React.cache (not available in React 18 test env, but needed for
+// StyleSheetManager's per-render reset; see docs/rsc-style-injection.md)
 const mockCacheStore = new Map<Function, any>();
 
 jest.mock('react', () => {
