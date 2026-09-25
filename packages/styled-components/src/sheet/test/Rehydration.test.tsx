@@ -5,7 +5,7 @@ import { ServerStyleSheet, StyleSheetManager } from '../../base';
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../../constants';
 import { resetStyled } from '../../test/utils';
 import * as GroupIDAllocator from '../GroupIDAllocator';
-import { outputSheet, rehydrateSheet } from '../Rehydration';
+import { outputSheet, rehydrateSheet, resetVersionMismatchWarning } from '../Rehydration';
 import StyleSheet from '../Sheet';
 
 let styled: ReturnType<typeof resetStyled>;
@@ -246,6 +246,76 @@ data-styled.g23[id=\"sc-kqxcKS\"]{content:\"a,\"}/*!sc*/
       // Cleanup
       document.body.removeChild(hostElement);
     });
+  });
+});
+
+describe('version mismatch warning', () => {
+  let warnSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    resetVersionMismatchWarning();
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  it('warns once with the exact message when a mismatched-version tag exists', () => {
+    document.head.innerHTML = `
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="5.4.0">
+        .a {}/*!sc*/
+        ${SC_ATTR}.g11[id="idA"]{content:"nameA,"}/*!sc*/
+      </style>
+    `;
+
+    const sheet = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheet);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(
+      `The server rendered styles with styled-components 5.4.0, but the browser is running ${SC_VERSION}, so class names will not match and hydration will fail. Make sure the server and the browser load the same copy of styled-components (run \`npm ls styled-components\` to find duplicates).`
+    );
+  });
+
+  it('does not warn when the server and browser versions match', () => {
+    document.head.innerHTML = `
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="${SC_VERSION}">
+        .a {}/*!sc*/
+        ${SC_ATTR}.g11[id="idA"]{content:"nameA,"}/*!sc*/
+      </style>
+    `;
+
+    const sheet = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheet);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not warn when there are no style tags', () => {
+    document.head.innerHTML = '';
+
+    const sheet = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheet);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('warns once even with several mismatched-version tags, across multiple rehydration calls', () => {
+    document.head.innerHTML = `
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="5.4.0">.a {}/*!sc*/</style>
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="5.5.0">.b {}/*!sc*/</style>
+    `;
+
+    const sheetA = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheetA);
+
+    // Neither mismatched tag matches SELECTOR, so both remain in the DOM for
+    // a second rehydration call to see again.
+    const sheetB = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheetB);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 });
 

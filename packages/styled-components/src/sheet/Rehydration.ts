@@ -6,6 +6,39 @@ import { Sheet } from './types';
 const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
 const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\].*?"([^"]*)`);
 
+let warnedVersionMismatch = false;
+
+/** Test-only: clears the warn-once flag between test cases. */
+export const resetVersionMismatchWarning = () => {
+  warnedVersionMismatch = false;
+};
+
+/**
+ * Warns once, in development, when `container` holds a server-rendered
+ * `<style data-styled>` tag whose `data-styled-version` differs from the
+ * running `SC_VERSION`. `SELECTOR` only ever matches the running version
+ * (#5737), so a mismatched tag is invisible to rehydration: its styles are
+ * silently ignored and every class name it produced goes stale, with no
+ * other symptom.
+ */
+const warnOnVersionMismatch = (container: Document | ShadowRoot) => {
+  if (process.env.NODE_ENV !== 'production') {
+    if (warnedVersionMismatch) return;
+
+    const tags = container.querySelectorAll(`style[${SC_ATTR}]`);
+    for (let i = 0, l = tags.length; i < l; i++) {
+      const serverVersion = tags[i].getAttribute(SC_ATTR_VERSION);
+      if (serverVersion !== null && serverVersion !== SC_VERSION) {
+        warnedVersionMismatch = true;
+        console.warn(
+          `The server rendered styles with styled-components ${serverVersion}, but the browser is running ${SC_VERSION}, so class names will not match and hydration will fail. Make sure the server and the browser load the same copy of styled-components (run \`npm ls styled-components\` to find duplicates).`
+        );
+        return;
+      }
+    }
+  }
+};
+
 /**
  * Type guard to check if a node is a ShadowRoot.
  * Uses instanceof when available, with duck-typing fallback for cross-realm scenarios.
@@ -122,6 +155,9 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
 
 export const rehydrateSheet = (sheet: Sheet) => {
   const container = getRehydrationContainer(sheet.options.target);
+
+  warnOnVersionMismatch(container);
+
   const nodes = container.querySelectorAll(SELECTOR);
 
   for (let i = 0, l = nodes.length; i < l; i++) {
