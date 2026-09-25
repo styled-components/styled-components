@@ -2,7 +2,8 @@
  * @jest-environment node
  */
 
-// Mock React.cache (not available in React 18 test env, but needed for RSC dedup)
+// Mock React.cache (not available in React 18 test env, but needed for
+// StyleSheetManager's per-render reset; see docs/rsc-style-injection.md)
 const mockCacheStore = new Map<Function, any>();
 
 jest.mock('react', () => {
@@ -101,8 +102,8 @@ describe('createGlobalStyle RSC mode', () => {
       body { background: ${props => props.$bg}; }
     `;
 
-    // Identical props previously deduped to a single tag keyed on the
-    // resulting CSS string. Per-instance emission drops that key entirely.
+    // Per-instance emission: each instance emits its own tag, even when
+    // props (and the resulting CSS) are identical to another instance's.
     const html = ReactDOMServer.renderToString(
       <>
         <GlobalStyle $bg="red" />

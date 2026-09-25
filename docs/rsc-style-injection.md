@@ -34,13 +34,13 @@ on `ComponentStyle` and `Keyframes` through a `WeakMap`, which is dead-code elim
 build. Every name reaching emission was compiled by `generateAndInjectStyles` before it registered its
 class, so the per-name lookup always hits; there is no tag-group fallback.
 
-There is deliberately no cross-instance or cross-request deduplication. A request-scoped `React.cache`
-Set was tried and removed: `React.cache` is request-wide with no per-Suspense-boundary scope, so a
-rule emitted only inside a Suspense fallback was recorded once, skipped for the resolved child, then
-removed with the fallback when React revealed the boundary, leaving the resolved element with a class
-but no rule (#5808). The alternatives were ruled out by their costs, not overlooked: hoisting via
-`precedence` would dedup and survive the reveal but breaks #5672 and the child-index plugin (see
-above); no per-boundary cache scope exists to make a ledger safe.
+There is deliberately no cross-instance or cross-request deduplication. A dedup ledger keyed on
+`React.cache` cannot be made safe: `React.cache` is request-wide with no per-Suspense-boundary scope,
+so a rule emitted only inside a Suspense fallback would be recorded once, skipped for the resolved
+child, then removed with the fallback when React reveals the boundary, leaving the resolved element
+with a class but no rule (#5808). Hoisting via `precedence` would dedup and survive the reveal, but it
+breaks #5672 and the child-index plugin (see above), and no per-boundary cache scope exists to make
+either approach safe.
 
 Byte-identical duplicates are the only output dedup ever collapsed, and their cost depends on distance
 in the compressed stream. Within gzip's 32 KB back-reference window, a repeat costs about a byte each
@@ -51,15 +51,19 @@ Brotli's window is far larger, so a brotli-compressed response stays near zero c
 duplicate regardless of distance. Per-instance emission accepts this bounded cost as the minimal
 correct behavior.
 
-`createGlobalStyle` follows the same no-dedup rule, for the same reason: its own request-scoped
-`React.cache` Set carried the identical Suspense hazard and was removed. Three failure modes motivated
-this: a Suspense fallback rendering the global and the resolved content rendering it again, where the
-fallback instance wins the ledger and the tag disappears when React discards the fallback on reveal; a
-synchronous fallback that never reaches the HTML at all, so the global goes missing even with
-JavaScript disabled; and an async layout and its page both rendering the global, where the page wins
-the same ledger key and a later client-side navigation to a sibling page removes the only tag, since
-the layout that still needs it never re-renders. Every server-rendered `createGlobalStyle` instance now
-emits its own tag, with no shared ledger between them.
+`createGlobalStyle` follows the same no-dedup rule, for the same reason: a request-scoped
+`React.cache` ledger carries the identical Suspense hazard. Three failure modes rule it out:
+
+- A Suspense fallback rendering the global and the resolved content rendering it again: the fallback
+  instance wins the ledger, and the tag disappears when React discards the fallback on reveal.
+- A synchronous fallback that never reaches the HTML at all: the global goes missing even with
+  JavaScript disabled.
+- An async layout and its page both rendering the global: the page wins the same ledger key, and a
+  later client-side navigation to a sibling page removes the only tag, since the layout that still
+  needs it never re-renders.
+
+Every server-rendered `createGlobalStyle` instance emits its own tag, with no shared ledger between
+them.
 
 Keyframes are emitted per instance too, scoped to the render by matching each keyframe group's
 resolved name against the render's CSS. A referenced keyframe's rules are concatenated ahead of the

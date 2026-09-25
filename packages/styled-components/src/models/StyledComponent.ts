@@ -329,8 +329,9 @@ function useStyledComponentImpl<Props extends BaseObject>(
   // unstyled (#5808). React exposes no per-boundary scope to key a safe ledger
   // on. Styles stay inline rather than hoisted via `precedence` so cross-
   // boundary extensions keep winning by source order (#5672) and the child-
-  // index selector plugin stays correct; byte-identical duplicates cost about a
-  // byte each after gzip.
+  // index selector plugin stays correct; see docs/rsc-style-injection.md's
+  // "Per-instance emission" section for the compression cost of
+  // byte-identical duplicates.
   if (IS_RSC && generatedClassName) {
     // generateAndInjectStyles returns this render's whole chain of class names,
     // base to leaf, so it names exactly the rules this instance needs.
