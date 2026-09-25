@@ -1,5 +1,73 @@
 # styled-components
 
+## 6.6.0
+
+### Minor Changes
+
+- 7ce6aea: Added a `StyledComponent<Target, Props>` type for annotating explicitly-typed styled component exports.
+
+  Packages that emit their own declaration files, including any project using `isolatedDeclarations`, must annotate every exported styled component, and there was no public type for it: consumers reached into internal paths or hand-assembled one that dropped members like a wrapped component's hoisted statics.
+
+  `StyledComponent` is exported from the web and native entries. Name the target and props as you passed them to `styled`:
+
+  ```tsx
+  import styled, { type StyledComponent } from 'styled-components';
+
+  export const Card: StyledComponent<'div', { $active?: boolean }> = styled.div<{
+    $active?: boolean;
+  }>`...`;
+  export const CloseButton: StyledComponent<typeof IconButton> = styled(IconButton)`...`;
+  ```
+
+  It resolves to the exact type `styled(Target)<Props>` produces, so the annotation is not lossy.
+
+### Patch Changes
+
+- 7afbd11: Fixed `attrs` no longer applying its value when a prop was explicitly passed as `undefined` (the 6.3.12 to 6.5.x behavior). `styled.button.attrs(({ type = 'button', ...rest }) => ({ type, ...rest }))` rendered without `type="button"` when the caller passed `type={undefined}`, and an object-form default such as `.attrs({ type: 'button' })` was lost the same way, including through a wrapper component that spreads its own props over the styled component. `attrs` now always wins for the keys it returns, matching every other case where a prop is passed alongside `attrs`.
+
+  Also fixed: a prop passed explicitly as `undefined` (and not overridden by `attrs`) is now forwarded to a wrapped component so that component can fall back to its own default, the pattern MUI's `ButtonBase` relies on (for example `<Root role="button" {...props} />`). Wrapped components have dropped this prop entirely since v6.0, so a component that checks `'role' in props` or merges `{...defaults, ...props}` to detect an explicitly-passed prop may see and behave differently now that the key is present again. This only applies when wrapping another component; a DOM tag such as `styled.div` still drops the `undefined` prop entirely, since browsers have no notion of an "undefined" attribute.
+
+  If you were relying on an explicit `undefined` to clear an `attrs` default, use the function form and check for the prop's presence instead:
+
+  ```js
+  styled.a.attrs(props => ('rel' in props ? {} : { rel: 'noopener' }))``;
+  ```
+
+  Passing `rel={undefined}` now renders no `rel` attribute, and omitting the prop renders `rel="noopener"`.
+
+  React Native already forwarded an explicit `undefined` prop to a wrapped component; it now also matches web in never forwarding an `undefined` that `attrs` itself produced.
+
+- 3de03c2: Type-checking is faster when you annotate exported styled components with an explicit type, the pattern that packages emitting their own declaration files (including any project using `isolatedDeclarations`) rely on. The improvement is largest in codebases that annotate many components built on intrinsic tags such as `styled.div`, `styled.span`, and `styled.button`, and wrappers over polymorphic components whose props are a union.
+
+  Nothing about the styled component's type changes for your code: props, `defaultProps`, `propTypes`, ref forwarding, and `as` polymorphism all behave exactly as before. This is purely a type-check speedup.
+
+- 7afbd11: Fixed a typo in the `useTheme` error message's example code (a misspelled component name in error 18), so the copy-pasted example compiles as written.
+- 7afbd11: Fixed global styles from `createGlobalStyle` disappearing in React Server Components: a global style rendered in a loading state (a React `<Suspense>` fallback) and again once the real content streamed in could vanish entirely once the fallback was replaced. The same loss could happen across a client-side navigation when a global style was rendered by both a layout and one of its pages, and the layout's copy never re-rendered.
+
+  Each server-rendered instance of a global style now carries its own styles, so a global style shown in more than one place in a request always survives, whether the page reveals streamed content or the user navigates to a sibling route.
+
+- 52c5f6e: Fixed a crash ("Rendered fewer hooks than expected") and a related stale-style bug for components that call a React hook, or read any value outside their props and theme, from inside a style interpolation. This affected `@mui/styled-engine-sc` with MUI X DataGrid, which calls hooks within an interpolation, and was a regression introduced in 6.4.0.
+
+  Style interpolations now run on every render, so a hook called inside one runs consistently and a value read inside one always reflects its current state.
+
+  If a component re-renders often with unchanged props and its interpolations are expensive, wrap it in `React.memo` to skip those re-renders. That is the right place to bail out, because only the calling code knows the full set of inputs its styles depend on.
+
+- 7afbd11: Fixed `//` JavaScript-style line comments in React Native style declarations. Only `/* */` block comments were recognized before; a `//` comment left in a template literal was parsed as part of the surrounding CSS, which could drop or corrupt the styles that followed it on the same line. Line comments are now stripped the same way block comments already were, while a URL used as a raw value (for example `url(http://example.com/image.png)` or an unquoted `https://` value in a custom property) is left untouched.
+- 1c0e309: Fixed styles disappearing from a server-rendered component when it is revealed from behind a React `<Suspense>` boundary, such as a streaming Next.js route (including `cacheComponents`). A component shown first in a Suspense fallback and then in the resolved content kept its class name but lost its CSS, because the rule had been emitted only inside the fallback that React discards on reveal.
+
+  Each server-rendered instance now carries its own inline `<style>`, so its styles always travel with it and survive the boundary. Nearby duplicates still compress away almost for free under gzip, but gzip can only look back about 32 KB, so once repeats are farther apart on the page each one costs roughly its own compressed size; brotli's much larger window keeps it cheap regardless of distance. Only a very large repeated list (thousands of instances of one component on a single page) is worth collapsing into a shared class, and a development-only warning points that out if it happens.
+
+- 7afbd11: styled-components now installs the stylis type declarations its own published types rely on.
+
+  The shipped declarations reference types from `stylis` (the `stylisPlugins` option and `stylisPluginRSC`), and `stylis` ships no types of its own. With `skipLibCheck` turned off, a project that had not installed `@types/stylis` itself could fail to type-check with an error inside styled-components' declarations. Nothing changes at runtime.
+
+- 7afbd11: Fixed the shipped types failing to compile, with `skipLibCheck` turned off, against `@types/react` 16, 17, and 18.2.6 through 18.2.11. Those versions don't declare the `<search>` HTML element, and styled-components' types assumed they did. The published types now compile on every supported `@types/react`.
+
+  `styled.search` is present in the types on every version, and accepts the same props it did before, so no existing code stops compiling.
+
+- 7afbd11: Fixed an error inside styled-components' own type declarations, with `skipLibCheck` turned off, for projects using React 16 or 17 type packages or without `@types/react-dom` installed. The `ServerStyleSheet` streaming API's types referenced a type that only `@types/react-dom` 18 and later provide. `interleaveWithNodeStream` still accepts the result of `renderToPipeableStream` and Node readable streams exactly as before.
+- 7afbd11: Added a development-only warning for when the server and the browser are running different versions of styled-components. Class names are derived in part from the library's own version, so a mismatch made every server-rendered class name silently fail to match on the client, with no hint as to why styles disappeared or hydration broke. The warning names both versions and points at `npm ls styled-components` to find the duplicate. A page that intentionally hosts more than one app, each on its own styled-components version (for example a micro-frontend setup), can ignore it. It is stripped from production builds.
+
 ## 6.5.3
 
 ### Patch Changes
