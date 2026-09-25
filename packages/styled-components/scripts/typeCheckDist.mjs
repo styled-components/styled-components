@@ -11,25 +11,29 @@
  * compiled clean on 18 and shipped a `TS2694` into every strict React 19
  * consumer's build (`WeakValidationMap` was removed on `@types/react` 19).
  *
- * This checks the built declarations under `skipLibCheck: false` against the
- * minimum and maximum supported `@types/react` majors, failing on any diagnostic
- * located in the package's own `dist/`. Errors inside dependency `.d.ts`
- * (react-native, node/dom global collisions) are filtered out: they are
- * pre-existing ecosystem conflicts, not this library's contract, and letting them
- * through would both mask a real break and manufacture false ones. `skipLibCheck:
- * true` is NOT a valid gate here -- it suppresses the very declaration errors this
- * catches (verified: the WeakValidationMap break reports zero errors under it).
+ * This checks the built declarations under `skipLibCheck: false` against three
+ * `@types/react` targets -- the project's own pinned 18 (`min`), the oldest
+ * supported 18 patch (`floor`, 18.2.6, the version that first carries the
+ * `React.JSX` namespace `src/types.ts` relies on -- see #5760), and the newest
+ * supported major (`max`) -- failing on any diagnostic located in the package's
+ * own `dist/`. Errors inside dependency `.d.ts` (react-native, node/dom global
+ * collisions) are filtered out: they are pre-existing ecosystem conflicts, not
+ * this library's contract, and letting them through would both mask a real
+ * break and manufacture false ones. `skipLibCheck: true` is NOT a valid gate
+ * here -- it suppresses the very declaration errors this catches (verified: the
+ * WeakValidationMap break reports zero errors under it).
  *
- * Isolation matters, and is why the peer majors are NOT project devDependencies.
- * The repo pins `@types/react` 18; adding a second copy under `node_modules/@types`
- * would make TypeScript auto-include BOTH majors' ambient globals into every normal
- * type-check at once (the repo leaves `types` unset), so "which React is in scope"
- * would be both, and only `skipLibCheck: true` would hide the resulting global
- * collisions. Instead the min resolves from the project's own pinned copy and the
- * max is installed into a gitignored, path-scoped folder that no other tsconfig
- * sees. Each run compiles against EXACTLY ONE major, chosen by explicit `paths`
- * with `types: ['node']` so no `@types/react` is ambiently included, and prints the
- * resolved version so the log always says what was tested.
+ * Isolation matters, and is why the floor and max majors are NOT project
+ * devDependencies. The repo pins `@types/react` 18; adding a second copy under
+ * `node_modules/@types` would make TypeScript auto-include BOTH majors' ambient
+ * globals into every normal type-check at once (the repo leaves `types` unset),
+ * so "which React is in scope" would be both, and only `skipLibCheck: true`
+ * would hide the resulting global collisions. Instead `min` resolves from the
+ * project's own pinned copy, and `floor` and `max` are each installed into their
+ * own gitignored, path-scoped folder that no other tsconfig sees. Each run
+ * compiles against EXACTLY ONE version, chosen by explicit `paths` with `types:
+ * ['node']` so no `@types/react` is ambiently included, and prints the resolved
+ * version so the log always says what was tested.
  *
  * Requires `pnpm build` first.
  */
@@ -55,16 +59,24 @@ if (!existsSync(join(distDir, 'index.d.ts'))) {
 // ceiling; the minimum comes from the project's own pinned `@types/react`.
 const MAX = { react: '@types/react@19.2.18', reactDom: '@types/react-dom@19.2.3' };
 
+// The oldest @types/react 18 patch carrying the `React.JSX` namespace (#5760),
+// which src/types.ts resolves intrinsic element props through. One patch older
+// (18.2.5) lacks the namespace, so props and the theme silently widen to `any`
+// under skipLibCheck instead of erroring. Pinned exactly, not the project's own
+// `^18` (which resolves higher), so this run tests the true floor rather than
+// whatever patch happens to be installed.
+const FLOOR = { react: '@types/react@18.2.6', reactDom: '@types/react-dom@18.2.6' };
+
 const pkgDir = spec => dirname(require.resolve(`${spec}/package.json`));
 const versionAt = dir => JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')).version;
 
-/** Install the max-major @types into a path-scoped folder no other tsconfig sees. */
-function isolatedMax() {
-  const root = join(workDir, 'max');
+/** Install an exact-pinned @types pair into a path-scoped folder no other tsconfig sees. */
+function isolatedInstall(kind, spec) {
+  const root = join(workDir, kind);
   if (!existsSync(join(root, 'node_modules', '@types', 'react', 'package.json'))) {
     mkdirSync(root, { recursive: true });
     writeFileSync(join(root, 'package.json'), '{"private":true}\n');
-    execFileSync('npm', ['install', '--no-save', '--no-package-lock', MAX.react, MAX.reactDom], {
+    execFileSync('npm', ['install', '--no-save', '--no-package-lock', spec.react, spec.reactDom], {
       cwd: root,
       stdio: 'ignore',
     });
@@ -120,9 +132,11 @@ function ownDistErrors(output) {
 mkdirSync(workDir, { recursive: true });
 
 const min = { react: pkgDir('@types/react'), reactDom: pkgDir('@types/react-dom') };
-const max = isolatedMax();
+const floor = isolatedInstall('floor', FLOOR);
+const max = isolatedInstall('max', MAX);
 const targets = [
   { kind: 'min', ...min },
+  { kind: 'floor', ...floor },
   { kind: 'max', ...max },
 ];
 

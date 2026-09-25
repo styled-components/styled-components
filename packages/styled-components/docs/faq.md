@@ -173,3 +173,9 @@ While this isn't how you would normally write CSS, it's not actually a big issue
 
 - On the server, you can gzip your CSS to take care of any duplication.
 - On the client, this only increases the amount of _generated_ CSS (and not the size of the bundle sent by the server), which doesn't have any noticeable performance impact.
+
+### My interpolation props or theme are typed as `any`
+
+This usually means your project's `@types/react` package is older than the version styled-components' types require: 16.14.41 for React 16, 17.0.59 for React 17, or 18.2.6 for React 18. On an older patch release, TypeScript silently falls back to a looser type for HTML element props, and the props passed into your style interpolations and the `theme` object lose their types along with it, without an error.
+
+Upgrade `@types/react` to at least the version listed for your React major, or simplest, install the latest patch release of whichever major you're already on.
