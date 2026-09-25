@@ -52,6 +52,20 @@ describe('dead-code elimination: browser build', () => {
     expect(unguarded(browserCJS)).toEqual([]);
   });
 
+  /**
+   * Node-only globals with no browser counterpart throw the same way when
+   * referenced unguarded. Same lookbehind as above, so "global style" in a dev
+   * warning string and `typeof X` guards (preceded by a space) are skipped.
+   */
+  it('references no other Node-only globals', () => {
+    const nodeGlobals = (code: string) =>
+      code.match(/(?<=^|[;,(){}[=!&|?:])(Buffer|global|__dirname|__filename|setImmediate)\b/gm) ??
+      [];
+
+    expect(nodeGlobals(browserESM)).toEqual([]);
+    expect(nodeGlobals(browserCJS)).toEqual([]);
+  });
+
   it('eliminates ServerStyleSheet streaming internals', () => {
     expect(browserESM).not.toContain('CLOSING_TAG');
     expect(browserESM).not.toContain('appendStyleChunks');
