@@ -37,6 +37,21 @@ describe('dead-code elimination: browser build', () => {
     expect(browserESM).toContain('createTheme');
   });
 
+  /**
+   * Bundlers replace `process.env.NODE_ENV` but leave the bare `process` global
+   * alone, so any other read throws in a browser without a polyfill (#5819).
+   * Allowed: `typeof process` guards and `process.env` member reads. The
+   * lookbehind requires an operator or punctuator before `process`, so prose in
+   * dev error strings ("the rehydration process, a missing theme") is skipped.
+   */
+  it('reads `process` only behind a typeof guard or as process.env', () => {
+    const unguarded = (code: string) =>
+      code.match(/(?<=^|[;,(){}[=!&|?:])process\b(?!\.env\b)/gm) ?? [];
+
+    expect(unguarded(browserESM)).toEqual([]);
+    expect(unguarded(browserCJS)).toEqual([]);
+  });
+
   it('eliminates ServerStyleSheet streaming internals', () => {
     expect(browserESM).not.toContain('CLOSING_TAG');
     expect(browserESM).not.toContain('appendStyleChunks');

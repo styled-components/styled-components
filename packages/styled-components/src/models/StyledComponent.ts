@@ -114,9 +114,16 @@ let seenUnknownProps: Set<string> | undefined;
  * to warn when one component floods a server render with redundant tags (a very
  * large repeated list). Request-scoped via React.cache; over/under-counting
  * across a Suspense boundary is harmless for a heuristic warning.
+ *
+ * IS_RSC leads the condition so the browser build, where IS_RSC is the constant
+ * false, drops the whole expression. With the NODE_ENV check first, both branches
+ * fold to null and the minifier keeps a bare `process;` statement, which throws in
+ * a browser without a `process` global (#5819).
  */
 const getEmitCounts =
-  process.env.NODE_ENV !== 'production' ? createRSCCache(() => new Map<string, number>()) : null;
+  IS_RSC && process.env.NODE_ENV !== 'production'
+    ? createRSCCache(() => new Map<string, number>())
+    : null;
 
 /**
  * Warn once a single component emits this many inline <style> tags in one server
