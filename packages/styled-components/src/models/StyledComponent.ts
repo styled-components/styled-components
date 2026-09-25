@@ -1,6 +1,6 @@
 import isPropValid from '@emotion/is-prop-valid';
 import React, { createElement, PropsWithoutRef, Ref } from 'react';
-import { IS_RSC, SC_ATTR, SC_VERSION } from '../constants';
+import { IS_RSC, RSC_REDUNDANT_EMIT_WARN_THRESHOLD, SC_ATTR, SC_VERSION } from '../constants';
 import { getGroupForId } from '../sheet/GroupIDAllocator';
 import type {
   AnyComponent,
@@ -152,13 +152,6 @@ const getEmitCounts =
   IS_RSC && process.env.NODE_ENV !== 'production'
     ? createRSCCache(() => new Map<string, number>())
     : null;
-
-/**
- * Warn once a single component emits this many inline <style> tags in one server
- * render. Set well above any hand-written page; only pathological generated
- * lists reach it, which is exactly the case that wants a shared className.
- */
-const RSC_REDUNDANT_EMIT_WARN_THRESHOLD = 1000;
 
 /** Cache RegExp objects for :where() wrapping to avoid recompilation per render */
 const whereRegExpCache = new Map<string, RegExp>();

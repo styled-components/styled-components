@@ -1,5 +1,5 @@
 import React from 'react';
-import { IS_RSC, STATIC_EXECUTION_CONTEXT } from '../constants';
+import { IS_RSC, RSC_REDUNDANT_EMIT_WARN_THRESHOLD, STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
@@ -9,9 +9,24 @@ import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
 import { joinRules, stripSplitter } from '../utils/joinStrings';
+import { createRSCCache } from '../utils/rscCache';
 import css from './css';
 
 declare const __SERVER__: boolean;
+
+/**
+ * Dev-only per-request count of inline <style> tags emitted per global style
+ * component, used to warn when one repeats excessively in a server render.
+ * Mirrors StyledComponent.ts's getEmitCounts, including the guard ordering:
+ * IS_RSC leads so the browser build, where IS_RSC is the constant false,
+ * drops the whole expression. With the NODE_ENV check first, both branches
+ * fold to null and the minifier keeps a bare `process;` statement, which
+ * throws in a browser without a `process` global (#5819).
+ */
+const getGlobalEmitCounts =
+  IS_RSC && process.env.NODE_ENV !== 'production'
+    ? createRSCCache(() => new Map<string, number>())
+    : null;
 
 /**
  * Create a component that injects global CSS when mounted. Supports theming and dynamic props.
@@ -150,6 +165,18 @@ export default function createGlobalStyle<Props extends object>(
 
       if (css) {
         globalStyle.instanceRules.delete(instance);
+
+        if (process.env.NODE_ENV !== 'production' && getGlobalEmitCounts) {
+          const counts = getGlobalEmitCounts();
+          const count = (counts.get(styledComponentId) || 0) + 1;
+          counts.set(styledComponentId, count);
+          if (count === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
+            console.warn(
+              `Over ${count} instances of the global style ${styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML.\n` +
+                'A global style is normally mounted once, at the root of the app. Move it higher in the tree so it renders only once per page.'
+            );
+          }
+        }
 
         return React.createElement('style', {
           key: styledComponentId + '-' + instance,

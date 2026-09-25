@@ -241,4 +241,32 @@ describe('createGlobalStyle RSC mode', () => {
       </h1>
     `);
   });
+
+  it('warns in development when one global style repeats excessively in a server render', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const GlobalStyle = createGlobalStyle`
+        body { margin: 0; }
+      `;
+
+      ReactDOMServer.renderToString(
+        <div>
+          {Array.from({ length: 1000 }, (_, i) => (
+            <GlobalStyle key={i} />
+          ))}
+        </div>
+      );
+
+      const guardrail = warn.mock.calls.filter(
+        ([msg]) => typeof msg === 'string' && msg.includes('instances of the global style')
+      );
+      expect(guardrail).toHaveLength(1);
+      expect(guardrail[0][0]).toContain('Over 1000 instances');
+      // Remediation is attached and free of internals jargon.
+      expect(guardrail[0][0]).toContain('Move it higher in the tree');
+      expect(guardrail[0][0]).not.toMatch(/Suspense|inline <style>|React\.cache|instanceRules/);
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });
