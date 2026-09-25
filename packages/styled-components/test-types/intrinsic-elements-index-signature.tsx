@@ -4,16 +4,12 @@ import styled from '../src';
 /**
  * A consumer (a UI kit, a codegen tool) can globally augment
  * `React.JSX.IntrinsicElements` with a string index signature, for example to
- * allow arbitrary custom-element tag names. `SupportedHTMLElements`
- * (`utils/domElements.ts`) narrows the runtime tag list with
- * `Extract<(typeof elements)[number], keyof React.JSX.IntrinsicElements>`,
- * and `keyof` an interface carrying a string index signature is `string`
- * (it absorbs every specific literal key), not the original literal union.
- * `Extract<T, string>` must still return `T` unchanged when every member of
- * `T` is itself a string literal, so the augmentation must neither drop a
- * known tag from `SupportedHTMLElements` nor widen a known tag's own props
- * (`TargetProps` resolves those by indexed access on the *explicit* member,
- * which co-exists with the index signature) to `any`.
+ * allow arbitrary custom-element tag names. `keyof` an interface carrying a
+ * string index signature is `string`, which absorbs every specific literal key,
+ * so every tag string now takes `TargetProps`' intrinsic arm. The augmentation
+ * must still not widen a known tag's own props to `any`: `TargetProps` resolves
+ * those by indexed access on the *explicit* member, which co-exists with the
+ * index signature.
  */
 declare module 'react' {
   namespace JSX {

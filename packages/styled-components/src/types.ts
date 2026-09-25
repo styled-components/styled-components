@@ -208,12 +208,17 @@ interface ThemedExecutionProps {
  * `R` carries the runtime so the widening stays web-only; it is deliberately
  * undefaulted, since a default is what would let a native call site pick up web
  * CSS by omission.
+ *
+ * The last arm catches a {@link SupportedHTMLElements} tag the resolved
+ * `@types/react` does not declare; see {@link UndeclaredTagProps}.
  */
 export type TargetProps<R extends Runtime, T> = T extends keyof React.JSX.IntrinsicElements
   ? IntrinsicProps<T>
   : T extends AnyComponent
     ? ComponentTargetProps<R, T>
-    : {};
+    : T extends SupportedHTMLElements
+      ? UndeclaredIntrinsicProps
+      : {};
 
 /**
  * True when an application has augmented `React.HTMLAttributes` with a `data-*`
@@ -262,6 +267,31 @@ type IntrinsicProps<T extends keyof React.JSX.IntrinsicElements> =
   IntrinsicElementsHaveDataIndex extends true
     ? WithCSSVarsForDataIndex<React.JSX.IntrinsicElements[T]>
     : WithCSSVars<React.JSX.IntrinsicElements[T]>;
+
+/**
+ * Props for a {@link SupportedHTMLElements} tag the resolved `@types/react` does
+ * not declare as a JSX intrinsic (`<search>` on every 16.x and 17.x, and on
+ * 18.2.6-18.2.11): what later versions declare for it, a plain `HTMLElement`.
+ * See docs/type-performance.md, "Tags missing from older @types/react".
+ */
+export type UndeclaredTagProps = React.DetailedHTMLProps<
+  React.HTMLAttributes<HTMLElement>,
+  HTMLElement
+>;
+
+/** {@link UndeclaredTagProps} widened the way {@link IntrinsicProps} widens a declared tag. */
+type UndeclaredIntrinsicProps = IntrinsicElementsHaveDataIndex extends true
+  ? WithCSSVarsForDataIndex<UndeclaredTagProps>
+  : WithCSSVars<UndeclaredTagProps>;
+
+/**
+ * `React.ComponentPropsWithRef` for a {@link KnownTarget}, with
+ * {@link UndeclaredTagProps} for a tag the resolved `@types/react` does not
+ * declare, which `ComponentPropsWithRef`'s `ElementType` constraint rejects.
+ */
+export type KnownTargetPropsWithRef<T> = T extends React.ElementType
+  ? React.ComponentPropsWithRef<T>
+  : UndeclaredTagProps;
 
 /**
  * Props of a component render target. Named for the same reason as {@link IntrinsicProps}.

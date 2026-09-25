@@ -6,6 +6,7 @@ import {
   IStyledComponent,
   IStyledComponentFactory,
   KnownTarget,
+  KnownTargetPropsWithRef,
   MakeAttrsOptional,
   MergeProps,
   Runtime,
@@ -102,7 +103,7 @@ export interface Styled<
             // that stays: a function-form `.attrs` makes this target a union, and
             // `TargetProps` distributing inside that measured as TS2589. Both in
             // docs/type-performance.md.
-            MergeProps<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+            MergeProps<OuterProps, KnownTargetPropsWithRef<PrivateResolvedTarget>>,
             Props
           >
         : PrivateMergedProps,
@@ -178,7 +179,7 @@ export default function constructWithOptions<
         ? PrivateMergedProps
         : PrivateResolvedTarget extends KnownTarget
           ? MergeProps<
-              MergeProps<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+              MergeProps<OuterProps, KnownTargetPropsWithRef<PrivateResolvedTarget>>,
               Props
             >
           : PrivateMergedProps,

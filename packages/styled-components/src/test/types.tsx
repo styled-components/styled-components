@@ -19,7 +19,7 @@ import {
   withTheme,
 } from '../index';
 import styled from '../index-standalone';
-import { DataAttributes } from '../types';
+import { DataAttributes, UndeclaredTagProps } from '../types';
 import { VeryLargeUnionType } from './veryLargeUnionType';
 
 // Augment DefaultTheme so tests can reference theme properties.
@@ -1768,3 +1768,20 @@ new ServerStyleSheet().interleaveWithNodeStream(pipeable);
 new ServerStyleSheet().interleaveWithNodeStream(readable);
 // @ts-expect-error neither a pipeable nor a readable stream
 new ServerStyleSheet().interleaveWithNodeStream({ abort() {} });
+
+/**
+ * A tag the consumer's `@types/react` does not declare as a JSX intrinsic
+ * (`<search>` before 18.2.12) takes `UndeclaredTagProps`; see
+ * docs/type-performance.md, "Tags missing from older @types/react". Pinned to be
+ * exactly what this version declares for `<search>`, so the fallback cannot drift
+ * from the real element's props. The cross-version cases live in
+ * `test-types/published-types-consumer.tsx`, compiled by `test:types:dist`.
+ *
+ * `_Identical`, not `_ScExact`: mutual assignability ignores an optional member
+ * one side lacks, so it would accept a fallback missing `ref` and `key`.
+ */
+type _Identical<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
+_scExact<_Identical<UndeclaredTagProps, React.JSX.IntrinsicElements['search']>>();
+const _searchShorthand = styled.search``;
+_scExact<_ScExact<typeof _searchShorthand, StyledComponent<'search'>>>();
