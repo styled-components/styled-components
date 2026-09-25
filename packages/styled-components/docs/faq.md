@@ -22,7 +22,7 @@ export default function Page() {
 }
 ```
 
-RSC environments are detected automatically - no configuration required. Styles are emitted alongside each component's markup and deduplicated per render.
+RSC environments are detected automatically - no configuration required. Styles are emitted alongside each component's markup.
 
 **For Next.js App Router (SSR Style Extraction):**
 
