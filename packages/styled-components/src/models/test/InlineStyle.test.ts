@@ -252,6 +252,30 @@ describe('parseCSSDeclarations', () => {
     ]);
   });
 
+  it('preserves a protocol-relative URL value that starts right after the colon', () => {
+    // The property colon is followed by a space, then `//` with no scheme:
+    // the nearest preceding non-whitespace character is still `:`, so this
+    // is a value that just started, not a JS-style comment.
+    expect(parseCSSDeclarations('--cdn: //cdn.example.com/x.png;\ncolor: red;')).toEqual([
+      ['--cdn', '//cdn.example.com/x.png'],
+      ['color', 'red'],
+    ]);
+  });
+
+  it('preserves a protocol-relative URL value with no space after the colon', () => {
+    expect(parseCSSDeclarations('--cdn://cdn.example.com/x.png;\ncolor: red;')).toEqual([
+      ['--cdn', '//cdn.example.com/x.png'],
+      ['color', 'red'],
+    ]);
+  });
+
+  it('preserves a protocol-relative URL wrapped in url()', () => {
+    expect(parseCSSDeclarations('background: url(//cdn.example.com/x.png); color: red;')).toEqual([
+      ['background', 'url(//cdn.example.com/x.png)'],
+      ['color', 'red'],
+    ]);
+  });
+
   it('mixes line comments and block comments on the same declaration', () => {
     expect(parseCSSDeclarations('color: /* inline */ red; // trailing\nfont-size: 12px;')).toEqual([
       ['color', 'red'],

@@ -12,38 +12,71 @@ import { joinStringArray } from '../utils/joinStrings';
 // List of CSS values not supported by React Native
 export const RN_UNSUPPORTED_VALUES = ['fit-content', 'min-content', 'max-content'];
 
+/**
+ * True when the nearest preceding non-whitespace character before index `i`
+ * is `:`, meaning a `//` starting at `i` is a value that just started (a
+ * protocol-relative URL, e.g. `--cdn: //cdn.example.com/x.png`) rather than
+ * a JS-style line comment.
+ */
+function isPrecededByColon(css: string, i: number): boolean {
+  let j = i - 1;
+  while (j >= 0) {
+    const code = css.charCodeAt(j);
+    // space, tab, newline, carriage return, form feed
+    if (code === 32 || code === 9 || code === 10 || code === 13 || code === 12) {
+      j--;
+      continue;
+    }
+    return code === 58; // :
+  }
+  return false;
+}
+
+/**
+ * Strips `/* *\/` block comments. Builds the output by copying whole runs
+ * between comment boundaries (`substring`), not character by character, and
+ * returns the original string unchanged when no comment was actually
+ * removed (e.g. a `/*` that only ever appears inside a quoted string).
+ */
 function stripComments(css: string): string {
   if (css.indexOf('/*') === -1) return css;
   let result = '';
+  let start = 0;
   let i = 0;
   let quote = 0; // 0 = none, 34 = ", 39 = '
+  let sawComment = false;
   const len = css.length;
   while (i < len) {
     const ch = css.charCodeAt(i);
     if (quote) {
       if (ch === 92) {
-        // backslash: copy it and the next char (escape sequence)
-        result += css.substring(i, i + 2);
+        // backslash: skip the escape sequence without ending the quote
         i += 2;
         continue;
       }
       if (ch === quote) quote = 0;
-      result += css[i];
       i++;
     } else if (ch === 34 || ch === 39) {
       quote = ch;
-      result += css[i];
       i++;
     } else if (ch === 47 && css.charCodeAt(i + 1) === 42) {
       // /* comment */
+      result += css.substring(start, i);
+      sawComment = true;
       const end = css.indexOf('*/', i + 2);
-      if (end === -1) break;
+      if (end === -1) {
+        start = len;
+        i = len;
+        break;
+      }
       i = end + 2;
+      start = i;
     } else {
-      result += css[i];
       i++;
     }
   }
+  if (!sawComment) return css;
+  result += css.substring(start, len);
   return result;
 }
 
@@ -53,62 +86,81 @@ function stripComments(css: string): string {
  * is never mistaken for a line comment. Only reached when the input
  * actually contains `//`; a `/* *\/`-only input uses the cheaper
  * `stripComments` above instead, which needs no paren tracking.
+ *
+ * Builds the output by copying whole runs between comment boundaries
+ * (`substring`), not character by character, and returns the original
+ * string unchanged when no comment was actually removed (e.g. a bare `//`
+ * that only ever appears inside a quoted string, a url(), or right after a
+ * colon).
  */
 function stripAllComments(css: string): string {
   let result = '';
+  let start = 0;
   let i = 0;
   let quote = 0; // 0 = none, 34 = ", 39 = '
   let parenDepth = 0;
+  let sawComment = false;
   const len = css.length;
   while (i < len) {
     const ch = css.charCodeAt(i);
     if (quote) {
       if (ch === 92) {
-        // backslash: copy it and the next char (escape sequence)
-        result += css.substring(i, i + 2);
+        // backslash: skip the escape sequence without ending the quote
         i += 2;
         continue;
       }
       if (ch === quote) quote = 0;
-      result += css[i];
       i++;
     } else if (ch === 34 || ch === 39) {
       quote = ch;
-      result += css[i];
       i++;
     } else if (ch === 47 && css.charCodeAt(i + 1) === 42) {
       // /* comment */. Checked before the paren-depth branches below so a
       // block comment inside a function call (e.g. `calc(1px /* a */ + 2px)`)
       // is stripped the same way it is outside one.
+      result += css.substring(start, i);
+      sawComment = true;
       const end = css.indexOf('*/', i + 2);
-      if (end === -1) break;
+      if (end === -1) {
+        start = len;
+        i = len;
+        break;
+      }
       i = end + 2;
+      start = i;
     } else if (ch === 40) {
       // Inside a function call (url(), calc(), etc.), leave everything else
       // untouched so protocol fragments like url(http://...) survive.
       parenDepth++;
-      result += css[i];
       i++;
     } else if (ch === 41) {
       if (parenDepth > 0) parenDepth--;
-      result += css[i];
       i++;
     } else if (parenDepth > 0) {
-      result += css[i];
       i++;
-    } else if (ch === 47 && css.charCodeAt(i + 1) === 47 && css.charCodeAt(i - 1) !== 58) {
+    } else if (ch === 47 && css.charCodeAt(i + 1) === 47 && !isPrecededByColon(css, i)) {
       // JS-style // line comment, through the next newline (or end of input).
-      // Skipped when immediately preceded by `:` so a bare, unquoted URL
-      // scheme outside of url()/quotes (e.g. `--api-url: https://host/path`)
-      // is left alone rather than treated as a comment.
+      // Skipped when the nearest preceding non-whitespace character is `:`
+      // so a bare, unquoted URL scheme or protocol-relative value outside of
+      // url()/quotes (e.g. `--api-url: https://host/path` or
+      // `--cdn: //cdn.example.com/x.png`) is left alone rather than treated
+      // as a comment.
+      result += css.substring(start, i);
+      sawComment = true;
       const nl = css.indexOf('\n', i);
-      if (nl === -1) break;
+      if (nl === -1) {
+        start = len;
+        i = len;
+        break;
+      }
       i = nl;
+      start = i;
     } else {
-      result += css[i];
       i++;
     }
   }
+  if (!sawComment) return css;
+  result += css.substring(start, len);
   return result;
 }
 
