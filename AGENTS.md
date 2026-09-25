@@ -83,7 +83,8 @@ Each document is the single home for its subject. A rule above that summarizes o
 it rather than restating it.
 
 - [docs/build-architecture.md](docs/build-architecture.md) -- build-time constants, the three server
-  detection mechanisms, native entry isolation, module resolution, CSS injection ordering
+  detection mechanisms, native entry isolation, module resolution, where the published types'
+  dependencies come from (never `@types/*` peers), CSS injection ordering
 - [docs/rendering-flow.md](docs/rendering-flow.md) -- the full render sequence diagram
 - [docs/runtime-performance.md](docs/runtime-performance.md) -- microbenchmark-validated patterns, the
   dynamic render hot path, V8 gotchas, stylis AST handling

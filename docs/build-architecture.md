@@ -50,6 +50,22 @@ Verify with `grep -c 'document\.' native/dist/styled-components.native.cjs.js`, 
 The `browser` field in `package.json` maps server bundles to their browser-specific alternatives. It
 is preferred over `exports`, which caused TS2742 in composite TypeScript projects.
 
+## Type package dependencies
+
+The published `.d.ts` files import types from `react`, `react-dom`, `react-native`, `csstype`,
+`stylis` and the `NodeJS` globals. Where each one's types come from:
+
+- Never declare an `@types/*` package as a peer dependency, optional or not. pnpm folds every resolved
+  peer into the package's install identity, so two workspace projects on different `@types/node` (or
+  `@types/react`) versions each get their own physical copy of styled-components: two module
+  instances, and a `ThemeProvider` in one never reaches components from the other. Verified on pnpm
+  10 with a two-project workspace.
+- `react`, `react-dom` and `react-native` types are the consumer's, installed alongside the peer
+  itself. `@types/node` is the consumer's too; only server-rendering signatures reference it.
+- A regular dependency that ships no types of its own carries its `@types` package as a regular
+  dependency, pinned to match: `stylis` pairs with `@types/stylis`. Regular dependencies do not enter
+  the install identity, so this cannot fork the package.
+
 ## CSS injection ordering
 
 Group IDs are allocated at call time, when `styled()`, `createGlobalStyle()` or `keyframes()` runs,

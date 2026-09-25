@@ -1,9 +1,10 @@
 /**
- * Tree-shaking and dead-code elimination tests.
+ * Tree-shaking, dead-code elimination, and published-package shape tests.
  *
  * These verify that the built output correctly eliminates code based on
- * build-time constants and that the ESM/browser/native builds don't
- * include code intended for other targets.
+ * build-time constants, that the ESM/browser/native builds don't
+ * include code intended for other targets, and that the package manifest
+ * declares what the built output needs.
  */
 import fs from 'fs';
 import path from 'path';
@@ -309,5 +310,70 @@ describe('ESM tree-shakeability', () => {
     expect(pkg.browser['./dist/styled-components.esm.js']).toBe(
       './dist/styled-components.browser.esm.js'
     );
+  });
+});
+
+/** Rules in docs/build-architecture.md, "Type package dependencies". */
+describe('published type dependencies', () => {
+  const pkgRoot = path.resolve(__dirname, '../..');
+  const pkg = JSON.parse(fs.readFileSync(path.join(pkgRoot, 'package.json'), 'utf8'));
+  const dependencies: Record<string, string> = pkg.dependencies ?? {};
+
+  /** Bare package names imported anywhere in the emitted declarations. */
+  const importedByDeclarations = (): Set<string> => {
+    const names = new Set<string>();
+    const specifier = /(?:\bfrom\s+|\bimport\s*\(\s*)['"]([^'"]+)['"]/g;
+
+    const visit = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+
+        if (entry.isDirectory()) visit(full);
+        else if (entry.name.endsWith('.d.ts')) {
+          for (const [, spec] of fs.readFileSync(full, 'utf8').matchAll(specifier)) {
+            if (spec.startsWith('.')) continue;
+            const parts = spec.split('/');
+            names.add(spec.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0]);
+          }
+        }
+      }
+    };
+
+    visit(distDir);
+    return names;
+  };
+
+  const shipsOwnTypes = (name: string) => {
+    const dir = path.dirname(require.resolve(`${name}/package.json`, { paths: [pkgRoot] }));
+    const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
+    return (
+      Boolean(manifest.types || manifest.typings) || fs.existsSync(path.join(dir, 'index.d.ts'))
+    );
+  };
+
+  const major = (range: string) => range.replace(/^\D*/, '').split('.')[0];
+
+  it('declares no @types package as a peer dependency', () => {
+    const typesPeers = Object.keys(pkg.peerDependencies ?? {}).filter(name =>
+      name.startsWith('@types/')
+    );
+
+    expect(typesPeers).toEqual([]);
+  });
+
+  it('carries a matching @types dependency for every untyped dependency the declarations import', () => {
+    const imported = importedByDeclarations();
+
+    /** Positive controls: a scan that matched nothing would pass vacuously. */
+    expect(imported).toContain('react');
+    expect(imported).toContain('stylis');
+
+    const untyped = [...imported].filter(name => name in dependencies && !shipsOwnTypes(name));
+    const unmatched = untyped.filter(
+      name => major(dependencies[`@types/${name}`] ?? '') !== major(dependencies[name])
+    );
+
+    expect(untyped).toContain('stylis');
+    expect(unmatched).toEqual([]);
   });
 });
