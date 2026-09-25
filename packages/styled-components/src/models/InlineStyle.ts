@@ -48,12 +48,75 @@ function stripComments(css: string): string {
 }
 
 /**
+ * Strips both `/* *\/` block comments and `//` line comments, with
+ * paren-depth tracking so a bare url() argument (e.g. `url(http://...)`)
+ * is never mistaken for a line comment. Only reached when the input
+ * actually contains `//`; a `/* *\/`-only input uses the cheaper
+ * `stripComments` above instead, which needs no paren tracking.
+ */
+function stripAllComments(css: string): string {
+  let result = '';
+  let i = 0;
+  let quote = 0; // 0 = none, 34 = ", 39 = '
+  let parenDepth = 0;
+  const len = css.length;
+  while (i < len) {
+    const ch = css.charCodeAt(i);
+    if (quote) {
+      if (ch === 92) {
+        // backslash: copy it and the next char (escape sequence)
+        result += css.substring(i, i + 2);
+        i += 2;
+        continue;
+      }
+      if (ch === quote) quote = 0;
+      result += css[i];
+      i++;
+    } else if (ch === 34 || ch === 39) {
+      quote = ch;
+      result += css[i];
+      i++;
+    } else if (ch === 40) {
+      // Inside a function call (url(), calc(), etc.), leave everything
+      // untouched so protocol fragments like url(http://...) survive.
+      parenDepth++;
+      result += css[i];
+      i++;
+    } else if (ch === 41) {
+      if (parenDepth > 0) parenDepth--;
+      result += css[i];
+      i++;
+    } else if (parenDepth > 0) {
+      result += css[i];
+      i++;
+    } else if (ch === 47 && css.charCodeAt(i + 1) === 42) {
+      // /* comment */
+      const end = css.indexOf('*/', i + 2);
+      if (end === -1) break;
+      i = end + 2;
+    } else if (ch === 47 && css.charCodeAt(i + 1) === 47 && css.charCodeAt(i - 1) !== 58) {
+      // JS-style // line comment, through the next newline (or end of input).
+      // Skipped when immediately preceded by `:` so a bare, unquoted URL
+      // scheme outside of url()/quotes (e.g. `--api-url: https://host/path`)
+      // is left alone rather than treated as a comment.
+      const nl = css.indexOf('\n', i);
+      if (nl === -1) break;
+      i = nl;
+    } else {
+      result += css[i];
+      i++;
+    }
+  }
+  return result;
+}
+
+/**
  * Extract CSS declaration pairs from flat CSS text.
  * Only handles `property: value;` - selectors, at-rules, and nesting
  * are not supported (and not expected in the native inline style path).
  */
 export function parseCSSDeclarations(rawCss: string): [string, string][] {
-  const css = stripComments(rawCss);
+  const css = rawCss.indexOf('//') !== -1 ? stripAllComments(rawCss) : stripComments(rawCss);
   const pairs: [string, string][] = [];
   const len = css.length;
   let i = 0;

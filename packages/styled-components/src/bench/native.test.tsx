@@ -66,6 +66,21 @@ const CSS_WITH_COMMENTS = `
   border-radius: 8px;
 `;
 
+// https://github.com/styled-components/styled-components/issues/5613
+const CSS_WITH_LINE_COMMENTS = `
+  // header styles
+  color: red;
+  // layout
+  flex: 1;
+  justify-content: center;
+  // spacing
+  padding: 10px;
+  margin: 20px;
+  // visual
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+`;
+
 let r: any;
 
 describe('native parser benchmarks', () => {
@@ -82,6 +97,9 @@ describe('native parser benchmarks', () => {
     });
     bench('with comments (6 comments, 6 declarations)', 100_000, () => {
       r = parseCSSDeclarations(CSS_WITH_COMMENTS);
+    });
+    bench('with // line comments (6 comments, 6 declarations)', 100_000, () => {
+      r = parseCSSDeclarations(CSS_WITH_LINE_COMMENTS);
     });
     bench('empty string', 100_000, () => {
       r = parseCSSDeclarations('');

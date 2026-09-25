@@ -122,6 +122,19 @@ describe('native', () => {
     }
   });
 
+  // https://github.com/styled-components/styled-components/issues/5613
+  it('strips a JS-style line comment from a style declaration', () => {
+    const Comp = styled.View`
+      opacity: 0.5; // this comment used to break the declaration after it
+      padding-top: 5px;
+    `;
+    const wrapper = TestRenderer.create(<Comp />);
+    const view = wrapper.root.findByType(View);
+
+    expect(view.props.style).toEqual({ opacity: 0.5, paddingTop: 5 });
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
   // https://github.com/styled-components/styled-components/issues/1266
   it('should update when props change', () => {
     const Comp = styled.View<{ opacity?: number }>`
