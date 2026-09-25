@@ -68,13 +68,17 @@ describe('createGlobalStyle RSC mode', () => {
     `);
   });
 
-  it('renders multiple instances of the same static global style in one tree', () => {
+  it('renders one tag per instance of the same static global style in one tree', () => {
     const GlobalStyle = createGlobalStyle`
       body { margin: 0; }
     `;
 
     // Two instances in one render - simulates a non-hydrating RSC page
     // where the same global style appears in multiple server components
+    // (e.g. a Suspense fallback and the resolved content, or an async layout
+    // and its page). Each instance carries its own tag: a request-scoped
+    // dedup ledger would drop the wrong one when React discards a fallback's
+    // DOM on reveal (#5808's failure mode for createGlobalStyle).
     const html = ReactDOMServer.renderToString(
       <>
         <GlobalStyle />
@@ -86,7 +90,62 @@ describe('createGlobalStyle RSC mode', () => {
       <style data-styled-global="sc-global-yXuMc">
         body{margin:0;}
       </style>
+      <style data-styled-global="sc-global-yXuMc">
+        body{margin:0;}
+      </style>
     `);
+  });
+
+  it('renders one tag per instance of a dynamic global style even with identical props', () => {
+    const GlobalStyle = createGlobalStyle<{ $bg: string }>`
+      body { background: ${props => props.$bg}; }
+    `;
+
+    // Identical props previously deduped to a single tag keyed on the
+    // resulting CSS string. Per-instance emission drops that key entirely.
+    const html = ReactDOMServer.renderToString(
+      <>
+        <GlobalStyle $bg="red" />
+        <GlobalStyle $bg="red" />
+      </>
+    );
+
+    expect(html).toMatchInlineSnapshot(`
+      <style data-styled-global="sc-global-kVtqfD">
+        body{background:red;}
+      </style>
+      <style data-styled-global="sc-global-kVtqfD">
+        body{background:red;}
+      </style>
+    `);
+  });
+
+  it('keeps a global style self-contained across a Suspense boundary (#5808)', () => {
+    // The failure this guards against: a global style rendered in a Suspense
+    // fallback recorded itself in a request-scoped ledger; the resolved
+    // content then emitted nothing because the ledger already held the key,
+    // and React discarded the fallback (tag and all) on reveal, leaving the
+    // page with no global styles at all. renderToString can't model the
+    // reveal itself, but the invariant that prevents the bug is that every
+    // instance is self-contained: fallback and resolved content each carry
+    // their own tag within the same request-scoped React.cache, so neither
+    // depends on the other surviving.
+    const GlobalStyle = createGlobalStyle`
+      body { background: papayawhip; }
+    `;
+
+    // Both renders share the same mocked React.cache scope (mockCacheStore is
+    // only cleared in beforeEach), simulating one request where a Suspense
+    // fallback renders before the resolved content.
+    const fallback = ReactDOMServer.renderToString(<GlobalStyle />);
+    const resolved = ReactDOMServer.renderToString(<GlobalStyle />);
+
+    expect(fallback).toMatchInlineSnapshot(`
+      <style data-styled-global="sc-global-HzwfG">
+        body{background:papayawhip;}
+      </style>
+    `);
+    expect(resolved).toBe(fallback);
   });
 
   it('renders multiple instances with different dynamic props in one tree', () => {

@@ -9,18 +9,9 @@ import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
 import { joinRules, stripSplitter } from '../utils/joinStrings';
-import { createRSCCache } from '../utils/rscCache';
 import css from './css';
 
 declare const __SERVER__: boolean;
-
-/**
- * Per-render dedup for RSC global style tags: a global style rendered several
- * times in one request emits a single tag. This is documented behavior, so it
- * stays even though it carries the same request-scoped Suspense edge that
- * per-instance emission removed from styled components (#5808).
- */
-const getEmittedGlobalCSS = createRSCCache(() => new Set<string>());
 
 /**
  * Create a component that injects global CSS when mounted. Supports theming and dynamic props.
@@ -149,6 +140,9 @@ export default function createGlobalStyle<Props extends object>(
     // `precedence` attribute because it makes style tags persist as permanent
     // resources even after unmount. Global styles need lifecycle-based cleanup
     // for conditional rendering (e.g. body lock on modal open/close).
+    //
+    // Every server-rendered instance emits its own tag, never deduped across
+    // the request; see "Per-instance emission" in docs/rsc-style-injection.md.
     if (IS_RSC) {
       const entry =
         typeof window === 'undefined' ? globalStyle.instanceRules.get(instance) : undefined;
@@ -156,15 +150,6 @@ export default function createGlobalStyle<Props extends object>(
 
       if (css) {
         globalStyle.instanceRules.delete(instance);
-
-        // Dedup: static by componentId + stylis hash, dynamic by CSS string.
-        // Stylis hash ensures different SSM configs emit separate variants.
-        const emitted = getEmittedGlobalCSS ? getEmittedGlobalCSS() : null;
-        if (emitted) {
-          const key = globalStyle.isStatic ? styledComponentId + ssc.stylis.hash : css;
-          if (emitted.has(key)) return null;
-          emitted.add(key);
-        }
 
         return React.createElement('style', {
           key: styledComponentId + '-' + instance,

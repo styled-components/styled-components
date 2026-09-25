@@ -178,11 +178,11 @@ const test8Checks: TestCheck[] = [
 
 const test9Checks: TestCheck[] = [
   {
-    ref: 'dedup-marker',
+    ref: 'per-instance-marker',
     type: 'style',
     prop: 'border-style',
     expected: 'dashed',
-    label: 'Dedup marker has dashed border',
+    label: 'Marker has dashed border from a repeated global style',
   },
 ];
 
@@ -195,7 +195,7 @@ const rscSuites = [
   { name: '6. as prop', checks: test6Checks },
   { name: '7. CSS vars', checks: test7Checks },
   { name: '8. Child-index selectors', checks: test8Checks },
-  { name: '9. GlobalStyle dedup', checks: test9Checks },
+  { name: '9. GlobalStyle per-instance emission', checks: test9Checks },
 ];
 
 export default function RSCTestPage() {
@@ -480,32 +480,32 @@ export default function RSCTestPage() {
         </Demo>
       </Section>
 
-      {/* 9. GlobalStyle dedup in RSC */}
+      {/* 9. GlobalStyle per-instance emission in RSC */}
       <Section>
         <SectionTitle>
-          9. GlobalStyle dedup in RSC <TestStatus checks={test9Checks} />
+          9. GlobalStyle per-instance emission in RSC <TestStatus checks={test9Checks} />
         </SectionTitle>
         <SectionDesc>
           Multiple instances of the same static <Code>createGlobalStyle</Code> in one RSC render
-          should emit only one <Code>&lt;style&gt;</Code> tag (identical CSS is deduped via{' '}
-          <Code>React.cache</Code>). Inspect the HTML source to verify only one{' '}
-          <Code>data-styled-global=&quot;{DedupGlobalStyle.styledComponentId}&quot;</Code> tag
-          exists.
+          each emit their own <Code>&lt;style data-styled-global&gt;</Code> tag: there is no
+          request-wide dedup ledger. Inspect the HTML source to verify three separate tags exist,
+          one per <Code>&lt;RepeatedGlobalStyle /&gt;</Code> instance below.
         </SectionDesc>
         <HintText>
-          If broken: you&apos;ll see multiple identical{' '}
-          <Code>&lt;style data-styled-global&gt;</Code> tags in the page source. The visual test
-          below just confirms the global style applied.
+          If broken: the marker below has no dashed border because the global style went missing.
+          Per-instance emission exists so a global style rendered in a Suspense fallback and again
+          in the resolved content, or in both an async layout and its page, survives the reveal or
+          navigation instead of disappearing (see <Code>app/suspense-globals</Code>).
         </HintText>
-        <DedupGlobalStyle />
-        <DedupGlobalStyle />
-        <DedupGlobalStyle />
+        <RepeatedGlobalStyle />
+        <RepeatedGlobalStyle />
+        <RepeatedGlobalStyle />
         <Demo>
-          <DedupMarker data-testid="dedup-marker">
-            This box has a dashed border from <Code>DedupGlobalStyle</Code>. Check page source — the
-            global style tag should appear only once despite three{' '}
-            <Code>&lt;DedupGlobalStyle /&gt;</Code> instances above.
-          </DedupMarker>
+          <PerInstanceMarker data-testid="per-instance-marker">
+            This box has a dashed border from <Code>RepeatedGlobalStyle</Code>. Check page source:
+            the global style tag should appear three times, once per{' '}
+            <Code>&lt;RepeatedGlobalStyle /&gt;</Code> instance above.
+          </PerInstanceMarker>
         </Demo>
       </Section>
     </Container>
@@ -808,16 +808,16 @@ const NthChildItem = styled(NthBaseItem)`
 `;
 
 // ---------------------------------------------------------------------------
-// 9. GlobalStyle dedup
+// 9. GlobalStyle per-instance emission
 // ---------------------------------------------------------------------------
 
-const DedupGlobalStyle = createGlobalStyle`
-  [data-testid="dedup-marker"] {
+const RepeatedGlobalStyle = createGlobalStyle`
+  [data-testid="per-instance-marker"] {
     border-style: dashed !important;
   }
 `;
 
-const DedupMarker = styled.div`
+const PerInstanceMarker = styled.div`
   padding: 16px;
   border: 2px solid ${theme.colors.border};
   border-radius: 8px;

@@ -270,7 +270,7 @@ describe('RSC benchmarks', () => {
       ReactDOMServer.renderToString(React.createElement(GlobalStatic));
     });
 
-    bench('3 instances of same static global (dedup)', 1_000, () => {
+    bench('3 instances of same static global (per-instance)', 1_000, () => {
       ReactDOMServer.renderToString(
         React.createElement(
           React.Fragment,
