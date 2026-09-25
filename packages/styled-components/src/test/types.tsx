@@ -19,7 +19,7 @@ import {
   withTheme,
 } from '../index';
 import styled from '../index-standalone';
-import { DataAttributes, UndeclaredTagProps } from '../types';
+import { DataAttributes, KnownTargetPropsWithRef } from '../types';
 import { VeryLargeUnionType } from './veryLargeUnionType';
 
 // Augment DefaultTheme so tests can reference theme properties.
@@ -1770,18 +1770,27 @@ new ServerStyleSheet().interleaveWithNodeStream(readable);
 new ServerStyleSheet().interleaveWithNodeStream({ abort() {} });
 
 /**
- * A tag the consumer's `@types/react` does not declare as a JSX intrinsic
- * (`<search>` before 18.2.12) takes `UndeclaredTagProps`; see
- * docs/type-performance.md, "Tags missing from older @types/react". Pinned to be
- * exactly what this version declares for `<search>`, so the fallback cannot drift
- * from the real element's props. The cross-version cases live in
+ * The `.attrs()` redirect seam resolves a target's props through
+ * `KnownTargetPropsWithRef`, which exists only to lift `ComponentPropsWithRef`'s
+ * `ElementType` constraint so the published declarations compile on an
+ * `@types/react` lacking a tag's intrinsic (`<search>` before 18.2.12); see
+ * docs/type-performance.md, "Tags missing from older @types/react". Pinned
+ * identical to `ComponentPropsWithRef` for a declared tag, a union of tags (a
+ * function-form redirect) and a component, so it cannot change a prop bag this
+ * version resolves. The cross-version cases live in
  * `test-types/published-types-consumer.tsx`, compiled by `test:types:dist`.
  *
  * `_Identical`, not `_ScExact`: mutual assignability ignores an optional member
- * one side lacks, so it would accept a fallback missing `ref` and `key`.
+ * one side lacks.
  */
 type _Identical<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
-_scExact<_Identical<UndeclaredTagProps, React.JSX.IntrinsicElements['search']>>();
+_scExact<_Identical<KnownTargetPropsWithRef<'search'>, React.ComponentPropsWithRef<'search'>>>();
+_scExact<
+  _Identical<KnownTargetPropsWithRef<'a' | 'button'>, React.ComponentPropsWithRef<'a' | 'button'>>
+>();
+_scExact<
+  _Identical<KnownTargetPropsWithRef<typeof _ScFwd>, React.ComponentPropsWithRef<typeof _ScFwd>>
+>();
 const _searchShorthand = styled.search``;
 _scExact<_ScExact<typeof _searchShorthand, StyledComponent<'search'>>>();

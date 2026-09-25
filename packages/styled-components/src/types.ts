@@ -209,16 +209,16 @@ interface ThemedExecutionProps {
  * undefaulted, since a default is what would let a native call site pick up web
  * CSS by omission.
  *
- * The last arm catches a {@link SupportedHTMLElements} tag the resolved
- * `@types/react` does not declare; see {@link UndeclaredTagProps}.
+ * A {@link SupportedHTMLElements} tag the resolved `@types/react` does not
+ * declare falls through to `{}` like any non-target, which is what keeps it
+ * permissive; see docs/type-performance.md, "Tags missing from older
+ * @types/react".
  */
 export type TargetProps<R extends Runtime, T> = T extends keyof React.JSX.IntrinsicElements
   ? IntrinsicProps<T>
   : T extends AnyComponent
     ? ComponentTargetProps<R, T>
-    : T extends SupportedHTMLElements
-      ? UndeclaredIntrinsicProps
-      : {};
+    : {};
 
 /**
  * True when an application has augmented `React.HTMLAttributes` with a `data-*`
@@ -269,29 +269,15 @@ type IntrinsicProps<T extends keyof React.JSX.IntrinsicElements> =
     : WithCSSVars<React.JSX.IntrinsicElements[T]>;
 
 /**
- * Props for a {@link SupportedHTMLElements} tag the resolved `@types/react` does
- * not declare as a JSX intrinsic (`<search>` on every 16.x and 17.x, and on
- * 18.2.6-18.2.11): what later versions declare for it, a plain `HTMLElement`.
- * See docs/type-performance.md, "Tags missing from older @types/react".
- */
-export type UndeclaredTagProps = React.DetailedHTMLProps<
-  React.HTMLAttributes<HTMLElement>,
-  HTMLElement
->;
-
-/** {@link UndeclaredTagProps} widened the way {@link IntrinsicProps} widens a declared tag. */
-type UndeclaredIntrinsicProps = IntrinsicElementsHaveDataIndex extends true
-  ? WithCSSVarsForDataIndex<UndeclaredTagProps>
-  : WithCSSVars<UndeclaredTagProps>;
-
-/**
- * `React.ComponentPropsWithRef` for a {@link KnownTarget}, with
- * {@link UndeclaredTagProps} for a tag the resolved `@types/react` does not
- * declare, which `ComponentPropsWithRef`'s `ElementType` constraint rejects.
+ * `React.ComponentPropsWithRef` for a {@link KnownTarget}, minus its `ElementType`
+ * constraint, which rejects a tag the resolved `@types/react` does not declare.
+ * Such a tag gets `{}`, what `ComponentPropsWithRef` itself resolves it to, so
+ * the published declarations compile without changing any prop bag. See
+ * docs/type-performance.md, "Tags missing from older @types/react".
  */
 export type KnownTargetPropsWithRef<T> = T extends React.ElementType
   ? React.ComponentPropsWithRef<T>
-  : UndeclaredTagProps;
+  : {};
 
 /**
  * Props of a component render target. Named for the same reason as {@link IntrinsicProps}.

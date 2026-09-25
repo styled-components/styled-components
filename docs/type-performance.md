@@ -127,35 +127,47 @@ breaking four redirect contracts, so it stays.
 ## Tags missing from older @types/react
 
 `SupportedHTMLElements` is the full runtime tag list, so `styled.<tag>` exists for every tag on every
-supported `@types/react`. A tag the consumer's version does not declare as a JSX intrinsic (`<search>`
-on every 16.x and 17.x and on 18.2.6-18.2.11; 18.2.12 added it) resolves to `UndeclaredTagProps`, the
-`DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement>` later versions declare for `<search>`, at
-the two seams that look a tag up:
+supported `@types/react`. Some supported versions do not declare every tag as a JSX intrinsic:
+`<search>` is missing from every 16.x and 17.x and from 18.2.6-18.2.11 (18.2.12 added it). On those
+versions, at the two seams that look a tag up:
 
-- `TargetProps` ends in a third arm, `T extends SupportedHTMLElements ? UndeclaredIntrinsicProps : {}`,
-  widened like every declared tag. It sits in the false branch, reached only by a member that is
-  neither a declared tag nor a component, so declared tags and components never evaluate it, and a
-  custom-element string still falls through to `{}`.
+- `TargetProps` sends the tag through its non-target arm to `{}`, so `styled.search`, `styled('search')`
+  and an `.attrs({ as: 'search' })` redirect take the permissive bag for un-introspectable targets and
+  accept any prop. `as="search"` merges `{}` and keeps the component's own props.
 - The `.attrs()` redirect seam wraps `ComponentPropsWithRef` in `KnownTargetPropsWithRef`, which asks
-  `T extends React.ElementType` before calling it. Without that, an undeclared tag inside `KnownTarget`
-  fails `ComponentPropsWithRef`'s `ElementType` constraint: a TS2344 inside the published
-  `constructWithOptions.d.ts` under `skipLibCheck: false`. The test runs inside the true branch of the
-  seam's existing `extends KnownTarget` distribution, one member at a time, so it adds no second
-  distribution. `KnownTarget` stays the outer gate; testing `ElementType` there instead would start
-  re-merging props for intrinsic tags outside the runtime list.
+  `T extends React.ElementType` first and otherwise returns `{}`, the same `{}` `ComponentPropsWithRef`
+  itself resolves the tag to. The wrapper only lifts the `ElementType` constraint, which an undeclared
+  tag inside `KnownTarget` fails: a TS2344 inside the published `constructWithOptions.d.ts` under
+  `skipLibCheck: false`. The test runs inside the true branch of the seam's existing `extends
+  KnownTarget` distribution, one member at a time, so it adds no second distribution. `KnownTarget`
+  stays the outer gate; testing `ElementType` there instead would start re-merging props for
+  intrinsic tags outside the runtime list.
+
+Rule: never narrow these fallbacks in a non-major release. The permissive bag is what shipped, and a
+typed one rejects props that compile today, which is a breaking type change.
+
+Preferred direction for the next major: type an undeclared tag with the bag later versions declare for
+it, `DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement>`, widened like a declared tag, as a
+third false-branch arm in `TargetProps` (`T extends SupportedHTMLElements ? … : {}`, which declared
+tags and components never reach) and as the false branch of `KnownTargetPropsWithRef`. It was built
+and measured, then deferred on semver alone: +12 types and +28 instantiations over the permissive
+shape on the consumer fixture, memory flat, and every contract otherwise unchanged.
 
 Rejected: narrowing the union to `Extract<tags, keyof React.JSX.IntrinsicElements>`. It removed
 `styled.search` from the types (TS2339, even under `skipLibCheck: true`) on every version lacking the
 intrinsic, to fix an error only `skipLibCheck: false` reports.
 
-Measured on TS 5.9.3 and the pinned `@types/react` 18: the consumer fixture moved +6 types (+0.02%)
-and -1,504 instantiations (-0.20%, the `Extract` over every intrinsic key being gone), memory flat, and
-the augmented fixture moved identically. A three-layer function-form `.attrs` redirect chain plus two
-object-form redirects measured +0.46% types and +0.93% instantiations with no TS2589, and it compiles
-on `@types/react` 16.14.41, where the `as: 'search'` redirect previously failed.
+Measured on TS 5.9.3 and the pinned `@types/react` 18, against the `Extract` shape: the consumer
+fixture moved -6 types and -1,532 instantiations (-0.21%, the `Extract` over every intrinsic key being
+gone), memory flat, and the augmented fixture moved identically. A three-layer function-form `.attrs`
+redirect chain plus two object-form redirects measured +0.44% types and +0.93% instantiations with no
+TS2589, and it compiles on `@types/react` 16.14.41, where the `as: 'search'` redirect previously
+failed.
 
-`test-types/published-types-consumer.tsx` pins the cross-version behavior through `test:types:dist`;
-`src/test/types.tsx` pins `UndeclaredTagProps` as identical to the pinned version's `<search>`.
+`test-types/published-types-consumer.tsx` pins, through `test:types:dist`, that the three forms accept
+any prop exactly on the versions lacking the intrinsic, and that `as="search"` rejects an unknown prop
+everywhere. `src/test/types.tsx` pins `KnownTargetPropsWithRef` as identical to `ComponentPropsWithRef`
+for every target the pinned version declares.
 
 ## The style widening
 

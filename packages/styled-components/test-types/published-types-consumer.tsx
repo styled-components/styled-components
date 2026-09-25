@@ -1,5 +1,5 @@
 import * as React from 'react';
-import styled, { ServerStyleSheet } from 'styled-components';
+import styled, { type IStyledComponent, ServerStyleSheet } from 'styled-components';
 
 /**
  * Consumer-side contract for the published declarations. `test:types:dist`
@@ -27,35 +27,44 @@ new ServerStyleSheet().interleaveWithNodeStream(nodeStream);
 /**
  * Every tag shorthand exists on every supported `@types/react`, including a tag
  * that version does not declare as a JSX intrinsic: `<search>` is missing from
- * every 16.x and 17.x and from 18.2.6-18.2.11. There the tag takes the props
- * later versions declare for it, those of a plain `HTMLElement`, through the
- * shorthand, the call form, an `as` prop, and an `.attrs()` redirect alike.
+ * every 16.x and 17.x and from 18.2.6-18.2.11. There the shorthand, the call
+ * form and an `.attrs()` redirect accept any prop, as released; a version that
+ * declares the tag types its props. The `as` prop keeps the component's own props
+ * on every version. See docs/type-performance.md, "Tags missing from older
+ * @types/react".
  */
 const Search = styled.search`
   display: block;
 `;
+const SearchByCall = styled('search')``;
+const DivAsSearch = styled.div.attrs({ as: 'search' })``;
 const searchRef = React.createRef<HTMLElement>();
 
 <Search role="search" aria-label="Site" ref={searchRef} style={{ '--gap': '1rem' }} />;
-
-// @ts-expect-error an unknown prop is rejected rather than accepted by a catch-all
-<Search notAProp="x" />;
-
-const SearchByCall = styled('search')``;
-
 <SearchByCall role="search" />;
-
-// @ts-expect-error the call form types the same props as the shorthand
-<SearchByCall notAProp="x" />;
-
+<DivAsSearch role="search" />;
 <Box as="search" role="search" />;
 
-// @ts-expect-error `as` merges the same props, so an unknown prop is still rejected
+// @ts-expect-error `as` keeps the component's own props, so an unknown prop is rejected
 <Box as="search" notAProp="x" />;
 
-const DivAsSearch = styled.div.attrs({ as: 'search' })``;
+/**
+ * Accepting any prop shows as a string index in the component's prop bag. The
+ * pins compile only when that index is present exactly where the resolved
+ * `@types/react` lacks the `<search>` intrinsic. The controls keep the probe
+ * honest: a custom element is permissive on every version, a `div` never is.
+ */
+type AcceptsAnyProp<C> =
+  C extends IStyledComponent<'web', infer P> ? (string extends keyof P ? true : false) : 'no match';
+type SearchUndeclared = 'search' extends keyof React.JSX.IntrinsicElements ? false : true;
+type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const pin = <_T extends true>(): void => {};
 
-<DivAsSearch role="search" />;
+pin<Same<AcceptsAnyProp<typeof Search>, SearchUndeclared>>();
+pin<Same<AcceptsAnyProp<typeof SearchByCall>, SearchUndeclared>>();
+pin<Same<AcceptsAnyProp<typeof DivAsSearch>, SearchUndeclared>>();
 
-// @ts-expect-error the redirect merges the same props, so an unknown prop is still rejected
-<DivAsSearch notAProp="x" />;
+const CustomElement = styled('custom-element')``;
+
+pin<Same<AcceptsAnyProp<typeof CustomElement>, true>>();
+pin<Same<AcceptsAnyProp<typeof Box>, false>>();
