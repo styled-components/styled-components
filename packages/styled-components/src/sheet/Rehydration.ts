@@ -31,7 +31,7 @@ const warnOnVersionMismatch = (container: Document | ShadowRoot) => {
       if (serverVersion !== null && serverVersion !== SC_VERSION) {
         warnedVersionMismatch = true;
         console.warn(
-          `The server rendered styles with styled-components ${serverVersion}, but the browser is running ${SC_VERSION}, so class names will not match and hydration will fail. Make sure the server and the browser load the same copy of styled-components (run \`npm ls styled-components\` to find duplicates).`
+          `Found server-rendered styles from styled-components ${serverVersion}, but this copy is ${SC_VERSION}. If both come from the same app, class names will not match and hydration will fail: make sure the server and the browser load the same version (run \`npm ls styled-components\` to find duplicates). Pages that intentionally host separate apps on different versions can ignore this.`
         );
         return;
       }
