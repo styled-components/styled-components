@@ -71,6 +71,9 @@ The published `.d.ts` files import types from `react`, `react-native`, `csstype`
   dependency, pinned to match: `stylis` pairs with `@types/stylis`. Regular dependencies do not enter
   the install identity, so this cannot fork the package.
 
+The "published type dependencies" block in `src/test/treeshake.test.ts` (run by `test:build`)
+enforces the first and last rules against the built declarations.
+
 ## CSS injection ordering
 
 Group IDs are allocated at call time, when `styled()`, `createGlobalStyle()` or `keyframes()` runs,
