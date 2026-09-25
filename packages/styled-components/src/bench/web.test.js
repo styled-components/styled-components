@@ -329,6 +329,99 @@ describe('stress benchmarks', () => {
     });
   });
 
+  it('attrs render-path guardrails (dictionary mode + isTag + undefined forwarding)', () => {
+    console.log(
+      '\n--- attrs render-path guardrails (delete-vs-assign, isTag call count, undefined forwarding) ---'
+    );
+
+    // An attrs function that clears a real, ever-changing caller-supplied
+    // prop every render. Exercises resolveContext's undefined-attrs branch
+    // on a key that always holds a defined value first, the same path a
+    // `delete context[key]` would flip to V8 dictionary mode
+    // (docs/runtime-performance.md).
+    const ClearsRealProp = styled.div.attrs(() => ({ 'data-cleared': undefined }))`
+      color: ${p => p.$color || 'red'};
+    `;
+
+    function ClearsPropParent({ count, n }) {
+      const children = [];
+      for (let i = 0; i < n; i++) {
+        children.push(
+          React.createElement(ClearsRealProp, {
+            key: i,
+            $color: COLORS[(i + count) % 30],
+            'data-cleared': 'v' + ((i + count) % 30),
+          })
+        );
+      }
+      return React.createElement('div', null, ...children);
+    }
+
+    // A DOM-tag target with no attrs, receiving an explicit `undefined` prop
+    // every render. Exercises buildPropsForElement's undefined branch and
+    // the isTag call it and the class/className site each make.
+    const DomExplicitUndefined = styled.div`
+      color: ${p => p.$color || 'red'};
+    `;
+
+    function DomUndefParent({ count, n }) {
+      const children = [];
+      for (let i = 0; i < n; i++) {
+        children.push(
+          React.createElement(DomExplicitUndefined, {
+            key: i,
+            $color: COLORS[(i + count) % 30],
+            title: undefined,
+          })
+        );
+      }
+      return React.createElement('div', null, ...children);
+    }
+
+    // A wrapped (non-DOM) component target, receiving an explicit
+    // `undefined` prop every render, which must reach the wrapped component
+    // (docs/attrs.md).
+    const WrappedTarget = props =>
+      React.createElement('div', { 'data-has-onclick': String('onClick' in props) });
+    const WrappedExplicitUndefined = styled(WrappedTarget)`
+      color: ${p => p.$color || 'red'};
+    `;
+
+    function WrappedUndefParent({ count, n }) {
+      const children = [];
+      for (let i = 0; i < n; i++) {
+        children.push(
+          React.createElement(WrappedExplicitUndefined, {
+            key: i,
+            $color: COLORS[(i + count) % 30],
+            onClick: undefined,
+          })
+        );
+      }
+      return React.createElement('div', null, ...children);
+    }
+
+    let renderer = TestRenderer.create(
+      React.createElement(ClearsPropParent, { count: 0, n: 1000 })
+    );
+    bench('1K children, attrs clears a real prop, cycling colors', 500, i => {
+      renderer.update(React.createElement(ClearsPropParent, { count: i, n: 1000 }));
+    });
+    renderer.unmount();
+
+    renderer = TestRenderer.create(React.createElement(DomUndefParent, { count: 0, n: 1000 }));
+    bench('1K children, explicit undefined to DOM tag, cycling colors', 500, i => {
+      renderer.update(React.createElement(DomUndefParent, { count: i, n: 1000 }));
+    });
+    renderer.unmount();
+
+    renderer = TestRenderer.create(React.createElement(WrappedUndefParent, { count: 0, n: 1000 }));
+    bench('1K children, explicit undefined to wrapped component, cycling colors', 500, i => {
+      renderer.update(React.createElement(WrappedUndefParent, { count: i, n: 1000 }));
+    });
+    renderer.unmount();
+  });
+
   it('10K decomposition (cache-miss cycling colors)', () => {
     const N = 10_000;
     const ITERS = 50;

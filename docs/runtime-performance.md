@@ -46,6 +46,25 @@ stable reference for equal styles without an outer render cache.
 `new Array(n)` creates HOLEY_ELEMENTS arrays, which infect V8 type feedback. A 3.9x regression was
 observed in `GroupedTag` from this alone.
 
+Never `delete` a key from the render context object (`resolveContext` in `StyledComponent.ts` and
+`StyledNativeComponent.ts`). Removing a key mid-object flips it to V8 dictionary mode, which slows
+every subsequent `for..in` read of that object for the rest of the render, including
+`buildPropsForElement`'s. Assign `undefined` instead (stable shape, no mode transition), and track
+which keys should end up absent from the forwarded props in a separate list rather than by actually
+removing them. Measured: an attrs function clearing a real, ever-changing caller-supplied prop every
+render costs about 1.34x versus the assign-and-track version, at 1,000 children cycling colors
+(`attrs render-path guardrails` in `src/bench/web.test.js`).
+
+A helper that reads `process.env.NODE_ENV` (`isTag`, for example) must not be called more than once
+per render for the same input. Unbundled Node and Jest read `process.env` at runtime rather than
+having it replaced at build time, so a second call doubles that cost for no benefit. Compute it once
+and pass the result along (a plain boolean loses the call's type-narrowing, so re-narrow at any site
+that still needs the original predicate). Measured: calling `isTag` once instead of twice per render
+(the class/className site reusing the buildPropsForElement value) costs about 1.09x on an explicit
+`undefined` prop forwarded to a DOM tag; a component target sees no measurable difference, since
+`isTag` short-circuits on `typeof target === 'string'` before ever reading `process.env` for a
+non-string target.
+
 The `private` modifier is not allowed on anonymous class expressions
 (`export const Foo = class { ... }`).
 
