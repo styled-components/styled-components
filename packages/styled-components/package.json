@@ -23,7 +23,7 @@
     "test:build": "jest -c jest.config.build.js",
     "pretest": "pnpm run generateErrors",
     "test": "pnpm run test:web && pnpm run test:native && pnpm run test:types",
-    "test:types": "tsc --noEmit --project tsconfig.test-types.json && tsc --noEmit --project tsconfig.test-template-index.json",
+    "test:types": "tsc --noEmit --project tsconfig.test-types.json && tsc --noEmit --project tsconfig.test-template-index.json && tsc --noEmit --project tsconfig.test-intrinsic-index-signature.json",
     "test:types:dist": "node scripts/typeCheckDist.mjs",
     "type-perf": "node scripts/typePerf.mjs",
     "type-perf:augment": "node scripts/typePerf.mjs --augment",

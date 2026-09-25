@@ -10,11 +10,17 @@ export default new Set(elements);
 /**
  * Every runtime tag in `elements` that the resolved `@types/react` actually
  * declares as a JSX intrinsic. `<search>` was added to `React.JSX.IntrinsicElements`
- * after 18.2.6 (the oldest supported patch, #5760), so this `Extract` drops it
- * only for a consumer on that older patch -- `styled.search` keeps working at
- * runtime there via the general `WebTarget` string overload, just without its
- * own strongly-typed shorthand. On every currently-supported @types/react this
- * resolves to the full list unchanged.
+ * in `@types/react` 18.2.12 (the oldest supported version, 18.2.6, predates it),
+ * so this `Extract` drops it only for a consumer still on 18.2.6-18.2.11. On
+ * those versions `styled.search` does not exist on the `styled` object's type
+ * (a property-access error) because it is a key of the mapped type built from
+ * this union; `styled('search')` still type-checks there, since that goes
+ * through `WebTarget`'s general string overload instead, which accepts any
+ * string regardless of this union. The runtime shorthand is unaffected either
+ * way -- `domElements.forEach` in `constructors/styled.tsx` assigns
+ * `styled.search` unconditionally, so only its type is missing. On every
+ * other currently-supported @types/react version this resolves to the full
+ * list unchanged.
  */
 export type SupportedHTMLElements = Extract<
   (typeof elements)[number],
