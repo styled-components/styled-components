@@ -87,7 +87,7 @@ function buildPropsForElement(
   for (const key in context) {
     if (key[0] === '$' || key === 'as' || key === 'theme') continue;
     else if (key === 'forwardedAs') {
-      propsForElement.as = context[key];
+      if (context[key] !== undefined) propsForElement.as = context[key];
     } else if (
       context[key] === undefined &&
       clearedKeys !== null &&

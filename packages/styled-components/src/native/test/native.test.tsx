@@ -163,6 +163,18 @@ describe('native', () => {
     expect(wrapper.root.findByType(Text)).not.toBeUndefined();
   });
 
+  it('does not forward an undefined "forwardedAs" as an "as" prop (web parity)', () => {
+    const Inner = (props: Record<string, unknown>) => <View testID={String('as' in props)} />;
+    const Plain = styled(Inner)``;
+    const Cleared = styled(Inner).attrs({ forwardedAs: undefined })``;
+
+    const explicit = TestRenderer.create(<Plain forwardedAs={undefined} />);
+    const cleared = TestRenderer.create(<Cleared forwardedAs={Text} />);
+
+    expect(explicit.root.findByType(View).props.testID).toBe('false');
+    expect(cleared.root.findByType(View).props.testID).toBe('false');
+  });
+
   it('should not add different border values for Image component as its not supported', () => {
     const Comp = styled.Image`
       border-width: 10px;
