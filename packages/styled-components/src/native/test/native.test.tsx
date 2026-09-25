@@ -411,6 +411,43 @@ describe('native', () => {
       });
     });
 
+    it('attrs wins over an explicitly passed undefined prop (#5807, #4338 parity)', () => {
+      const Comp = styled(ComponentWithProps).attrs<{ test?: string }>(() => ({
+        test: 'from-attrs',
+      }))``;
+
+      const wrapper = TestRenderer.create(<Comp test={undefined} />);
+      const view = wrapper.root.findByType(View);
+
+      expect(view.props).toEqual({
+        style: {},
+        test: 'from-attrs',
+      });
+    });
+
+    it('forwards an explicitly passed undefined prop to the wrapped component (#4338 parity)', () => {
+      const Comp = styled(ComponentWithProps)``;
+
+      const wrapper = TestRenderer.create(<Comp test={undefined} />);
+      const view = wrapper.root.findByType(View);
+
+      expect('test' in view.props).toBe(true);
+      expect(view.props.test).toBeUndefined();
+    });
+
+    it('should still strip undefined values from attrs (parity)', () => {
+      const Comp = styled(ComponentWithProps).attrs<{ test?: string }>(() => ({
+        test: undefined,
+      }))``;
+
+      const wrapper = TestRenderer.create(<Comp test="original" />);
+      const view = wrapper.root.findByType(View);
+
+      // The attrs-sourced undefined removes the key entirely, unlike the
+      // caller-passed undefined preserved above.
+      expect('test' in view.props).toBe(false);
+    });
+
     it('theme prop works', () => {
       const Comp = styled.Text`
         color: ${({ theme }) => theme.myColor};

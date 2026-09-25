@@ -36,8 +36,15 @@ function resolveContext<Props extends object>(
       : attrs[i];
 
     for (const key in resolvedAttrDef) {
-      // @ts-expect-error bad types
-      context[key] = resolvedAttrDef[key];
+      if ((resolvedAttrDef as Dict<any>)[key] === undefined) {
+        // Deleted, not assigned, so an attrs-produced undefined is never
+        // forwarded (docs/attrs.md).
+        // @ts-expect-error bad types
+        delete context[key];
+      } else {
+        // @ts-expect-error bad types
+        context[key] = resolvedAttrDef[key];
+      }
     }
   }
 

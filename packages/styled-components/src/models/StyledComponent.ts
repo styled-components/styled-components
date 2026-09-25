@@ -91,9 +91,12 @@ function resolveContext<Props extends BaseObject>(
         context.className = joinStrings(context.className, resolvedAttrDef[key] as string);
       } else if (key === 'style') {
         context.style = { ...context.style, ...(resolvedAttrDef[key] as React.CSSProperties) };
-      } else if (!(key in props && (props as any)[key] === undefined)) {
-        // Apply attr value unless the user explicitly passed undefined for this prop,
-        // which signals intent to reset the value.
+      } else if ((resolvedAttrDef as Dict<any>)[key] === undefined) {
+        // Deleted, not assigned, so buildPropsForElement never forwards an
+        // attrs-produced undefined (docs/attrs.md).
+        // @ts-expect-error attrs can dynamically add arbitrary properties
+        delete context[key];
+      } else {
         // @ts-expect-error attrs can dynamically add arbitrary properties
         context[key] = resolvedAttrDef[key];
       }
@@ -163,14 +166,25 @@ function buildPropsForElement(
   shouldForwardProp: ((prop: string, el: WebTarget) => boolean) | undefined
 ): Dict<any> {
   const propsForElement: Dict<any> = {};
+  const isDOMTarget = isTag(elementToBeCreated);
 
   for (const key in context) {
-    if (context[key] === undefined) {
-      // Omit undefined values from props passed to wrapped element.
-    } else if (key[0] === '$' || key === 'as' || (key === 'theme' && context.theme === theme)) {
+    if (key[0] === '$' || key === 'as' || (key === 'theme' && context.theme === theme)) {
       // Omit transient props and execution props.
     } else if (key === 'forwardedAs') {
-      propsForElement.as = context.forwardedAs;
+      if (context.forwardedAs !== undefined) {
+        propsForElement.as = context.forwardedAs;
+      }
+    } else if (context[key] === undefined) {
+      // A caller's explicit undefined reaches wrapped components, never DOM
+      // tags (docs/attrs.md). className is a placeholder here, set below.
+      if (
+        key !== 'className' &&
+        !isDOMTarget &&
+        (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated))
+      ) {
+        propsForElement[key] = undefined;
+      }
     } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
       propsForElement[key] = context[key];
 
