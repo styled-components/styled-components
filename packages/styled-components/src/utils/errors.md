@@ -98,7 +98,7 @@ Accessing `useTheme` hook outside of a `<ThemeProvider>` element.
 
 ```jsx
 import { useTheme } from 'styled-components';
-export function StyledCompoent({ children }) {
+export function StyledComponent({ children }) {
   const theme = useTheme();
   return <div style={{ width: theme.sizes.full }}>{children}</div>;
 }
