@@ -301,6 +301,32 @@ describe('version mismatch warning', () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
+  it('does not warn about a mismatched-version active tag created at runtime by another client copy', () => {
+    // dom.ts's makeStyleTag stamps data-styled-version on browser-created
+    // "active" tags too, so a second client copy at a different version
+    // looks the same shape as a server-rendered tag. That case is already
+    // covered by the separate multiple-instances warning in base.ts.
+    document.head.innerHTML = `
+      <style ${SC_ATTR}="${SC_ATTR_ACTIVE}" ${SC_ATTR_VERSION}="5.4.0">.a {}/*!sc*/</style>
+    `;
+
+    const sheet = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheet);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('still warns once about a genuine server-rendered mismatched-version tag', () => {
+    document.head.innerHTML = `
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="5.4.0">.a {}/*!sc*/</style>
+    `;
+
+    const sheet = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheet);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('warns once even with several mismatched-version tags, across multiple rehydration calls', () => {
     document.head.innerHTML = `
       <style ${SC_ATTR} ${SC_ATTR_VERSION}="5.4.0">.a {}/*!sc*/</style>
