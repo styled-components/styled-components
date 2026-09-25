@@ -3,6 +3,7 @@
  * Run via: pnpm --filter styled-components test:types
  */
 import React from 'react';
+import type { PipeableStream } from 'react-dom/server';
 import {
   css,
   CSSProp,
@@ -11,6 +12,7 @@ import {
   Interpolation,
   IStyledComponent,
   RuleSet,
+  ServerStyleSheet,
   StyledComponent,
   StyledObject,
   WebTarget,
@@ -1753,3 +1755,16 @@ type AllOptionalDisjoint = { onlyA?: string } | { onlyB?: number };
 const AllOptional = styled.div<AllOptionalDisjoint>``;
 // @ts-expect-error known limitation: an all-optional disjoint union collapses
 <AllOptional onlyA="x" />;
+
+/**
+ * `interleaveWithNodeStream` takes React 18's own `PipeableStream` (what
+ * `renderToPipeableStream` returns) and a Node readable stream. The published
+ * declaration types the former structurally rather than importing it, so the
+ * types still compile on React 16/17, whose `react-dom/server` lacks it.
+ */
+declare const pipeable: PipeableStream;
+declare const readable: NodeJS.ReadableStream;
+new ServerStyleSheet().interleaveWithNodeStream(pipeable);
+new ServerStyleSheet().interleaveWithNodeStream(readable);
+// @ts-expect-error neither a pipeable nor a readable stream
+new ServerStyleSheet().interleaveWithNodeStream({ abort() {} });

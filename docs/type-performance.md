@@ -248,8 +248,9 @@ nothing (it is not a breaking type change).
   kept, not narrowed. Keeping it rather than dropping it costs well under +1% on the consumer budget, the
   price of staying non-breaking. The type-contract suite runs only against the pinned `@types/react` 18, so
   a cross-version hazard like this is invisible to it; `pnpm --filter styled-components test:types:dist` is
-  the guard, compiling the emitted `.d.ts` under `skipLibCheck: false` against the min and max supported
-  `@types/react` majors and failing on any diagnostic in the library's own `dist/`.
+  the guard, compiling the emitted `.d.ts` under `skipLibCheck: false` against the oldest supported
+  `@types/react` patch of each major, the pinned 18, and the newest supported major, and failing on any
+  diagnostic in the library's own `dist/`.
 
 Ref forwarding is unaffected: the ref rides in the call-site props via `React.ComponentPropsWithRef` inside
 `TargetProps`, not in the exotic base. Soundness is preserved because the swap touches only covariant OUTPUT

@@ -69,7 +69,7 @@ mapped below.
 - `pnpm --filter styled-components test:web` -- Test web build
 - `pnpm --filter styled-components test:native` -- Test React Native
 - `pnpm --filter styled-components test:types` -- Type contract suites (compile-only, no runner)
-- `pnpm --filter styled-components test:types:dist` -- Compile the emitted `.d.ts` under `skipLibCheck: false` against the min and max supported `@types/react` majors (needs `pnpm build` first). The contract suite only covers the pinned 18; this catches a name removed in a newer major before it ships.
+- `pnpm --filter styled-components test:types:dist` -- Compile the emitted `.d.ts` and the consumer fixture `test-types/published-types-consumer.tsx` under `skipLibCheck: false` against the oldest supported `@types/react` patch of each major, the pinned 18, and the newest supported major (needs `pnpm build` first). The contract suite only covers the pinned 18; this catches a name missing from another supported version before it ships. Targets and failure rules are in the script's header.
 - `pnpm --filter styled-components type-perf` -- Consumer type-check budget (needs `pnpm build` first)
 - `pnpm --filter styled-components bench` -- Run all benchmarks (web + native + RSC)
 - `pnpm --filter styled-components bench:web` -- Run web benchmarks
