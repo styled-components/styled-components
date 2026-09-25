@@ -71,6 +71,7 @@
     "@types/node": "*",
     "@types/react": "*",
     "@types/react-dom": "*",
+    "@types/stylis": "*",
     "css-to-react-native": ">= 3.2.0",
     "react": ">= 16.8.0",
     "react-dom": ">= 16.8.0",
@@ -84,6 +85,9 @@
       "optional": true
     },
     "@types/react-dom": {
+      "optional": true
+    },
+    "@types/stylis": {
       "optional": true
     },
     "css-to-react-native": {
