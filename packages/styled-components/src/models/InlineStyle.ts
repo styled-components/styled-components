@@ -32,6 +32,16 @@ function isPrecededByColon(css: string, i: number): boolean {
   return false;
 }
 
+/** True when the `(` at index `i` opens a `url(` function, in any letter case. */
+function isUrlOpen(css: string, i: number): boolean {
+  return (
+    i >= 3 &&
+    (css.charCodeAt(i - 3) | 32) === 117 &&
+    (css.charCodeAt(i - 2) | 32) === 114 &&
+    (css.charCodeAt(i - 1) | 32) === 108
+  );
+}
+
 /**
  * Strips `/* *\/` block comments. Builds the output by copying whole runs
  * between comment boundaries (`substring`), not character by character, and
@@ -98,7 +108,7 @@ function stripAllComments(css: string): string {
   let start = 0;
   let i = 0;
   let quote = 0; // 0 = none, 34 = ", 39 = '
-  let parenDepth = 0;
+  let urlDepth = 0;
   let sawComment = false;
   const len = css.length;
   while (i < len) {
@@ -128,15 +138,15 @@ function stripAllComments(css: string): string {
       }
       i = end + 2;
       start = i;
-    } else if (ch === 40) {
-      // Inside a function call (url(), calc(), etc.), leave everything else
-      // untouched so protocol fragments like url(http://...) survive.
-      parenDepth++;
+    } else if (urlDepth > 0) {
+      // Inside url(...), leave everything untouched so url(//cdn/...) and
+      // url(http://...) survive. Other function calls (calc, rgba) are not
+      // shielded, so a line comment inside their arguments is stripped.
+      if (ch === 40) urlDepth++;
+      else if (ch === 41) urlDepth--;
       i++;
-    } else if (ch === 41) {
-      if (parenDepth > 0) parenDepth--;
-      i++;
-    } else if (parenDepth > 0) {
+    } else if (ch === 40 && isUrlOpen(css, i)) {
+      urlDepth = 1;
       i++;
     } else if (ch === 47 && css.charCodeAt(i + 1) === 47 && !isPrecededByColon(css, i)) {
       // JS-style // line comment, through the next newline (or end of input).

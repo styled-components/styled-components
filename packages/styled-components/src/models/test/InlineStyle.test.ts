@@ -276,6 +276,26 @@ describe('parseCSSDeclarations', () => {
     ]);
   });
 
+  it('preserves // inside an uppercase URL() function', () => {
+    expect(
+      parseCSSDeclarations('background: URL(//cdn.example.com/x.png); // c\ncolor: red;')
+    ).toEqual([
+      ['background', 'URL(//cdn.example.com/x.png)'],
+      ['color', 'red'],
+    ]);
+  });
+
+  it('strips a // comment inside a multi-line function argument list', () => {
+    expect(
+      parseCSSDeclarations(
+        'color: rgba(255, 0, 0, // alpha\n1);\nwidth: calc(100% - // gutter\n10px);'
+      )
+    ).toEqual([
+      ['color', 'rgba(255, 0, 0, \n1)'],
+      ['width', 'calc(100% - \n10px)'],
+    ]);
+  });
+
   it('mixes line comments and block comments on the same declaration', () => {
     expect(parseCSSDeclarations('color: /* inline */ red; // trailing\nfont-size: 12px;')).toEqual([
       ['color', 'red'],
