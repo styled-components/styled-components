@@ -8,12 +8,62 @@
  */
 import fs from 'fs';
 import path from 'path';
+import { findFreeNodeGlobalRefs, NODE_GLOBAL_NAMES } from './nodeGlobalScan';
 
 const distDir = path.resolve(__dirname, '../../dist');
 const nativeDistDir = path.resolve(__dirname, '../../native/dist');
 
 const read = (file: string) => fs.readFileSync(path.join(distDir, file), 'utf8');
 const readNative = (file: string) => fs.readFileSync(path.join(nativeDistDir, file), 'utf8');
+
+describe('findFreeNodeGlobalRefs', () => {
+  it('flags a free reference reached through a member expression', () => {
+    const refs = findFreeNodeGlobalRefs('function f() {\n  return process.versions;\n}');
+    expect(refs).toHaveLength(1);
+    expect(refs[0].name).toBe('process');
+    expect(refs[0].snippet).toContain('process.versions');
+  });
+
+  it('flags a free reference used as a call target', () => {
+    const refs = findFreeNodeGlobalRefs(';Buffer.from(x)');
+    expect(refs).toHaveLength(1);
+    expect(refs[0].name).toBe('Buffer');
+    expect(refs[0].snippet).toContain('Buffer.from(x)');
+  });
+
+  it('allows the direct operand of typeof', () => {
+    expect(findFreeNodeGlobalRefs('if (typeof process !== "undefined") {}')).toEqual([]);
+  });
+
+  it('allows process.env member access', () => {
+    expect(findFreeNodeGlobalRefs('const env = process.env.NODE_ENV;')).toEqual([]);
+  });
+
+  it('does not flag a string literal that merely contains the word "process"', () => {
+    expect(
+      findFreeNodeGlobalRefs('const msg = "the rehydration process, a missing theme";')
+    ).toEqual([]);
+  });
+
+  it('covers every documented Node-only global name', () => {
+    for (const name of NODE_GLOBAL_NAMES) {
+      const refs = findFreeNodeGlobalRefs(`f(${name});`);
+      expect(refs).toHaveLength(1);
+      expect(refs[0].name).toBe(name);
+    }
+  });
+
+  it("does not flag a declaration that happens to share a global's name", () => {
+    // A syntactic check, not a scope resolver: it skips the binding position
+    // itself (so declaring `process` is never flagged), but a later read of
+    // that same name is indistinguishable from a real global reference and
+    // is still flagged. A bundler has no reason to name a variable exactly
+    // `process`, `Buffer`, etc., so this is an accepted limitation.
+    expect(findFreeNodeGlobalRefs('function process(a, b) { return a + b; }')).toEqual([]);
+    expect(findFreeNodeGlobalRefs('const process = 1;')).toEqual([]);
+    expect(findFreeNodeGlobalRefs('import { process } from "x";')).toEqual([]);
+  });
+});
 
 describe('dead-code elimination: browser build', () => {
   let browserESM: string;
@@ -40,31 +90,17 @@ describe('dead-code elimination: browser build', () => {
 
   /**
    * Bundlers replace `process.env.NODE_ENV` but leave the bare `process` global
-   * alone, so any other read throws in a browser without a polyfill (#5819).
-   * Allowed: `typeof process` guards and `process.env` member reads. The
-   * lookbehind requires an operator or punctuator before `process`, so prose in
-   * dev error strings ("the rehydration process, a missing theme") is skipped.
+   * (and the other Node-only globals below) alone, so any other unguarded read
+   * throws in a browser without a polyfill (#5819). An AST walk (not a regex)
+   * so a free reference is never missed by a punctuation lookbehind (a regex
+   * requiring an operator before `process` misses `return process.versions`,
+   * since a space precedes it there) and prose in dev warning strings never
+   * trips a false positive (a string literal is opaque to the parser, unlike
+   * a looser regex matching the word "process" anywhere).
    */
-  it('reads `process` only behind a typeof guard or as process.env', () => {
-    const unguarded = (code: string) =>
-      code.match(/(?<=^|[;,(){}[=!&|?:])process\b(?!\.env\b)/gm) ?? [];
-
-    expect(unguarded(browserESM)).toEqual([]);
-    expect(unguarded(browserCJS)).toEqual([]);
-  });
-
-  /**
-   * Node-only globals with no browser counterpart throw the same way when
-   * referenced unguarded. Same lookbehind as above, so "global style" in a dev
-   * warning string and `typeof X` guards (preceded by a space) are skipped.
-   */
-  it('references no other Node-only globals', () => {
-    const nodeGlobals = (code: string) =>
-      code.match(/(?<=^|[;,(){}[=!&|?:])(Buffer|global|__dirname|__filename|setImmediate)\b/gm) ??
-      [];
-
-    expect(nodeGlobals(browserESM)).toEqual([]);
-    expect(nodeGlobals(browserCJS)).toEqual([]);
+  it('never references a Node-only global outside a typeof guard or process.env', () => {
+    expect(findFreeNodeGlobalRefs(browserESM)).toEqual([]);
+    expect(findFreeNodeGlobalRefs(browserCJS)).toEqual([]);
   });
 
   it('eliminates ServerStyleSheet streaming internals', () => {
