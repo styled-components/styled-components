@@ -76,8 +76,15 @@ function stripAllComments(css: string): string {
       quote = ch;
       result += css[i];
       i++;
+    } else if (ch === 47 && css.charCodeAt(i + 1) === 42) {
+      // /* comment */. Checked before the paren-depth branches below so a
+      // block comment inside a function call (e.g. `calc(1px /* a */ + 2px)`)
+      // is stripped the same way it is outside one.
+      const end = css.indexOf('*/', i + 2);
+      if (end === -1) break;
+      i = end + 2;
     } else if (ch === 40) {
-      // Inside a function call (url(), calc(), etc.), leave everything
+      // Inside a function call (url(), calc(), etc.), leave everything else
       // untouched so protocol fragments like url(http://...) survive.
       parenDepth++;
       result += css[i];
@@ -89,11 +96,6 @@ function stripAllComments(css: string): string {
     } else if (parenDepth > 0) {
       result += css[i];
       i++;
-    } else if (ch === 47 && css.charCodeAt(i + 1) === 42) {
-      // /* comment */
-      const end = css.indexOf('*/', i + 2);
-      if (end === -1) break;
-      i = end + 2;
     } else if (ch === 47 && css.charCodeAt(i + 1) === 47 && css.charCodeAt(i - 1) !== 58) {
       // JS-style // line comment, through the next newline (or end of input).
       // Skipped when immediately preceded by `:` so a bare, unquoted URL

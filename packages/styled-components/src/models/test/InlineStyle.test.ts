@@ -259,6 +259,12 @@ describe('parseCSSDeclarations', () => {
     ]);
   });
 
+  it('strips a block comment inside parens when the input also contains a line comment', () => {
+    expect(parseCSSDeclarations('margin: calc(1px /* a */ + 2px); // trailing')).toEqual([
+      ['margin', 'calc(1px  + 2px)'],
+    ]);
+  });
+
   it('warns on unclosed parenthesis in dev mode', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     parseCSSDeclarations('color: rgb(255, 0, 0; font-size: 12px;');
