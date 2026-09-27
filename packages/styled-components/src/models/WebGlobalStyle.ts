@@ -103,19 +103,16 @@ export default class WebGlobalStyle<Props extends object> {
         fragments,
         keyframes
       );
-      if (filled !== null) {
-        // Write referenced keyframes before the global rules so they sort
-        // ahead in the sheet (group IDs were claimed at construction time).
-        flushKeyframes(styleSheet, keyframes);
-        const out = compiler.emit(
-          source,
-          filled,
-          '',
-          this.componentId,
-          hasAnyFragment(fragments) ? fragments : null
-        );
-        if (out !== null) rules = out;
-      }
+      // Write referenced keyframes before the global rules so they sort
+      // ahead in the sheet (group IDs were claimed at construction time).
+      flushKeyframes(styleSheet, keyframes);
+      rules = compiler.emit(
+        source,
+        filled,
+        '',
+        this.componentId,
+        hasAnyFragment(fragments) ? fragments : null
+      );
     }
     const entry: InstanceEntry = {
       name: this.isStatic ? this.componentId : this.componentId + instance,

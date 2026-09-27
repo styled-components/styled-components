@@ -834,6 +834,25 @@ describe('attrs', () => {
       expect((container.firstChild as HTMLElement).getAttribute('data-tint')).toBe('red');
     });
 
+    it('reads the declarations a value `;` splits a templated decl into', () => {
+      const Comp = styled.div.attrs<{ 'data-color'?: string; 'data-opacity'?: string }>(
+        (_p, ast) => ({
+          'data-color': ast.peek('color'),
+          'data-opacity': ast.peek('opacity'),
+        })
+      )`
+        color: ${(p: { theme: { c: string } }) => p.theme.c};
+      `;
+      const { container } = render(
+        <ThemeProvider theme={{ c: 'red; opacity: 0.5' }}>
+          <Comp />
+        </ThemeProvider>
+      );
+      const el = container.firstChild as HTMLElement;
+      expect(el.getAttribute('data-color')).toBe('red');
+      expect(el.getAttribute('data-opacity')).toBe('0.5');
+    });
+
     it('templated decl falls back to per-render invocation', () => {
       const cb = jest.fn((_p: any, ast: any) => ({
         'data-tint': ast.pop('color'),

@@ -20,6 +20,9 @@ export interface CompiledKeyframes {
   rules: string[];
 }
 
+/** The part of a compiler that names and serializes keyframes. */
+export type KeyframesCompiler = Pick<Compiler, 'compile' | 'hash'>;
+
 export default class Keyframes implements KeyframesType {
   readonly [KEYFRAMES_SYMBOL] = true as const;
 
@@ -48,13 +51,13 @@ export default class Keyframes implements KeyframesType {
    * the result through their own generate→inject pipeline so the parser stays
    * side-effect-free.
    */
-  compile(compiler: Compiler = mainCompiler): CompiledKeyframes {
+  compile(compiler: KeyframesCompiler = mainCompiler): CompiledKeyframes {
     const name = this.getName(compiler);
     const rules = compiler.compile(this.rules, name, '@keyframes');
     return { id: this.id, name, rules };
   }
 
-  getName(compiler: Compiler = mainCompiler): string {
+  getName(compiler: Pick<Compiler, 'hash'> = mainCompiler): string {
     return compiler.hash ? this.name + generateAlphabeticName(+compiler.hash >>> 0) : this.name;
   }
 }

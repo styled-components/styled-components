@@ -1282,6 +1282,143 @@ describe('ssr', () => {
       expect(tags).not.toMatch(/<script/);
     });
 
+    /**
+     * Every payload renders beside a static declaration and a static nested
+     * rule, and the SSR text is read back by a CSS Syntax 3 reader: the rule
+     * list must hold exactly the authored rules, every selector scoped.
+     */
+    describe('interpolated values cannot escape their construct', () => {
+      const scoped = (payload: string) => {
+        const Comp = styled.div<{ $v: string }>`
+          color: ${p => p.$v};
+          background: blue;
+          & span {
+            margin: 0;
+          }
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(sheet.collectStyles(<Comp $v={payload} />));
+        return readRules(sheet.getStyleTags());
+      };
+
+      it.each([
+        ['a closing brace', '} body{background:red} a{b:c'],
+        ['an opening brace', '{ x'],
+        ['a raw newline inside a string', '"\n} body{background:red} a{b:"'],
+        ['a quote inside a comment', '/* " */ } body{background:red} /* " */'],
+        ['a bad url', 'url(a"b) } body{background:red} x"'],
+        ['an unbalanced quote', '"abc'],
+        ['an unbalanced parenthesis', 'calc(1px'],
+        ['an unbalanced comment', 'red /* x'],
+        ['a trailing backslash', 'red\\'],
+      ])('drops the declaration holding %s', (_, payload) => {
+        expect(scoped(payload)).toEqual([
+          { prelude: '.b', props: ['background'], rules: [] },
+          { prelude: '.b span', props: ['margin'], rules: [] },
+        ]);
+      });
+
+      it('adds only declarations of the same rule for a value `;`', () => {
+        expect(scoped('red; position: fixed')).toEqual([
+          { prelude: '.b', props: ['color', 'position', 'background'], rules: [] },
+          { prelude: '.b span', props: ['margin'], rules: [] },
+        ]);
+      });
+
+      it('adds no @import through a value', () => {
+        expect(scoped('red; @import url(https://evil.example/x.css)')).toEqual([
+          { prelude: '.b', props: ['color', 'background'], rules: [] },
+          { prelude: '.b span', props: ['margin'], rules: [] },
+        ]);
+      });
+
+      it('scopes every selector a comma list in a selector slot adds', () => {
+        const Comp = styled.div<{ $sel: string }>`
+          & ${p => p.$sel} {
+            color: red;
+          }
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(sheet.collectStyles(<Comp $sel="a, body" />));
+        expect(readRules(sheet.getStyleTags())).toEqual([
+          { prelude: '.b a,.b body', props: ['color'], rules: [] },
+        ]);
+      });
+
+      it.each([
+        ['a `;`', 'h1; body'],
+        ['a brace', 'h1 {} body'],
+      ])('drops the rule whose selector slot holds %s', (_, payload) => {
+        const Comp = styled.div<{ $sel: string }>`
+          @media (min-width: 1px) {
+            & ${p => p.$sel} {
+              color: red;
+            }
+          }
+          color: blue;
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(sheet.collectStyles(<Comp $sel={payload} />));
+        expect(readRules(sheet.getStyleTags())).toEqual([
+          { prelude: '.b', props: ['color'], rules: [] },
+        ]);
+      });
+
+      it('drops the declaration whose property slot holds a brace', () => {
+        const Comp = styled.div<{ $p: string }>`
+          ${p => p.$p}: red;
+          background: blue;
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(sheet.collectStyles(<Comp $p="x} body{color" />));
+        expect(readRules(sheet.getStyleTags())).toEqual([
+          { prelude: '.b', props: ['background'], rules: [] },
+        ]);
+      });
+
+      it.each([
+        ['a `;`', 'screen; body'],
+        ['a brace', 'screen{} body'],
+      ])('drops the at-rule whose prelude slot holds %s', (_, payload) => {
+        const Comp = styled.div<{ $q: string }>`
+          @media ${p => p.$q} {
+            color: red;
+          }
+          background: blue;
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(sheet.collectStyles(<Comp $q={payload} />));
+        expect(readRules(sheet.getStyleTags())).toEqual([
+          { prelude: '.b', props: ['background'], rules: [] },
+        ]);
+      });
+
+      it('keeps every selector a global value adds under its authored selector', () => {
+        const Global = createGlobalStyle<{ $sel: string; $v: string }>`
+          .root {
+            & ${p => p.$sel} {
+              color: ${p => p.$v};
+            }
+          }
+          body {
+            margin: 0;
+          }
+        `;
+        const render = (sel: string, v: string) => {
+          const sheet = new ServerStyleSheet();
+          renderToString(sheet.collectStyles(<Global $sel={sel} $v={v} />));
+          return readRules(sheet.getStyleTags());
+        };
+        expect(render('a, body', 'red')).toEqual([
+          { prelude: '.root a,.root body', props: ['color'], rules: [] },
+          { prelude: 'body', props: ['margin'], rules: [] },
+        ]);
+        expect(render('a', 'red } html { background: red')).toEqual([
+          { prelude: 'body', props: ['margin'], rules: [] },
+        ]);
+      });
+    });
+
     it('passes a benign nonce through unchanged', () => {
       const sheet = new ServerStyleSheet({ nonce: 'abcDEF123/+=' });
       const Comp = styled.div`
@@ -1321,3 +1458,210 @@ describe('ssr', () => {
     `);
   });
 });
+
+interface ReadRule {
+  /** Declaration names, in order. */
+  props: string[];
+  /** Selector text, or `@name prelude` for an at-rule. */
+  prelude: string;
+  /** Rules nested in a conditional group rule or a nested block. */
+  rules: ReadRule[];
+}
+
+type CssToken = {
+  kind: '{' | '}' | '(' | ')' | '[' | ']' | ';' | 'at' | 'ws' | 'text';
+  text: string;
+};
+
+const CONDITIONAL_GROUP_RULES = new Set([
+  '@container',
+  '@layer',
+  '@media',
+  '@scope',
+  '@starting-style',
+  '@supports',
+]);
+
+/**
+ * Read SSR style tags the way a browser does, as a check independent of the
+ * library's own parser. Tokenizes per CSS Syntax 3 §4.3 (comments, strings
+ * that end at a raw newline, escapes, unquoted `url(` with bad-url remnants)
+ * and reads the rule list per §5.5 (a `;` ends a qualified rule inside a
+ * block). The library's `data-styled` marker rules are left out.
+ */
+function readRules(tags: string): ReadRule[] {
+  const text = tags.slice(tags.indexOf('>') + 1, tags.lastIndexOf('</style>'));
+  const tokens = tokenizeCss(text);
+  const rules = readRuleList(tokens, { i: 0 }, false);
+  return rules.filter(rule => !rule.prelude.startsWith('data-styled.'));
+}
+
+function tokenizeCss(s: string): CssToken[] {
+  const isNewline = (c: string | undefined) => c === '\n' || c === '\r' || c === '\f';
+  const isSpace = (c: string | undefined) => c === ' ' || c === '\t' || isNewline(c);
+  const isIdent = (c: string | undefined) => c !== undefined && /[A-Za-z0-9_\-\u0080-￿]/.test(c);
+  const out: CssToken[] = [];
+  const n = s.length;
+  let i = 0;
+  while (i < n) {
+    const c = s[i];
+    if (c === '/' && s[i + 1] === '*') {
+      const end = s.indexOf('*/', i + 2);
+      i = end === -1 ? n : end + 2;
+      continue;
+    }
+    if (isSpace(c)) {
+      while (i < n && isSpace(s[i])) i++;
+      out.push({ kind: 'ws', text: ' ' });
+      continue;
+    }
+    if (c === '"' || c === "'") {
+      let j = i + 1;
+      while (j < n && s[j] !== c && !isNewline(s[j])) j += s[j] === '\\' ? 2 : 1;
+      const end = j < n && s[j] === c ? j + 1 : Math.min(j, n);
+      out.push({ kind: 'text', text: s.slice(i, end) });
+      i = end;
+      continue;
+    }
+    if (c === '\\' && i + 1 < n && !isNewline(s[i + 1])) {
+      out.push({ kind: 'text', text: s.slice(i, i + 2) });
+      i += 2;
+      continue;
+    }
+    if (c === '@' && isIdent(s[i + 1])) {
+      let j = i + 1;
+      while (j < n && isIdent(s[j])) j++;
+      out.push({ kind: 'at', text: s.slice(i, j) });
+      i = j;
+      continue;
+    }
+    if (c === '(' && /(^|[^A-Za-z0-9_\-\\])url$/i.test(s.slice(Math.max(0, i - 4), i))) {
+      let j = i + 1;
+      while (j < n && isSpace(s[j])) j++;
+      if (s[j] !== '"' && s[j] !== "'") {
+        // §4.3.6 Consume a url token, with §4.3.15 bad-url remnants.
+        let bad = false;
+        while (j < n && s[j] !== ')') {
+          const d = s[j];
+          if (d === '\\' && j + 1 < n && !isNewline(s[j + 1])) {
+            j += 2;
+            continue;
+          }
+          if (!bad && isSpace(d)) {
+            while (j < n && isSpace(s[j])) j++;
+            if (j < n && s[j] !== ')') bad = true;
+            continue;
+          }
+          if (d === '"' || d === "'" || d === '(' || d === '\\') bad = true;
+          j++;
+        }
+        out.push({ kind: 'text', text: s.slice(i, Math.min(j + 1, n)) });
+        i = j + 1;
+        continue;
+      }
+    }
+    if ('{}()[];'.includes(c)) {
+      out.push({ kind: c as CssToken['kind'], text: c });
+      i++;
+      continue;
+    }
+    out.push({ kind: 'text', text: c });
+    i++;
+  }
+  return out;
+}
+
+/** Read one component value's text starting at `pos`; `()`, `[]`, and `{}` groups read whole. */
+function readComponentValue(tokens: CssToken[], pos: { i: number }): string {
+  const open = tokens[pos.i];
+  pos.i++;
+  const close = open.kind === '(' ? ')' : open.kind === '[' ? ']' : open.kind === '{' ? '}' : null;
+  if (close === null) return open.text;
+  let text = open.text;
+  while (pos.i < tokens.length && tokens[pos.i].kind !== close) {
+    text += readComponentValue(tokens, pos);
+  }
+  if (pos.i < tokens.length) text += tokens[pos.i++].text;
+  return text;
+}
+
+/** Read up to a top-level token of one of `stops`; returns the text and the stop reached. */
+function readUntil(
+  tokens: CssToken[],
+  pos: { i: number },
+  stops: ReadonlyArray<CssToken['kind']>
+): [string, CssToken['kind'] | 'eof'] {
+  let text = '';
+  while (pos.i < tokens.length) {
+    const kind = tokens[pos.i].kind;
+    if (stops.includes(kind)) return [text.trim(), kind];
+    text += readComponentValue(tokens, pos);
+  }
+  return [text.trim(), 'eof'];
+}
+
+function readRuleList(tokens: CssToken[], pos: { i: number }, nested: boolean): ReadRule[] {
+  const rules: ReadRule[] = [];
+  while (pos.i < tokens.length) {
+    const token = tokens[pos.i];
+    if (token.kind === 'ws' || (nested && token.kind === ';')) {
+      pos.i++;
+      continue;
+    }
+    if (nested && token.kind === '}') {
+      pos.i++;
+      return rules;
+    }
+    if (token.kind === 'at') {
+      pos.i++;
+      const [prelude, stop] = readUntil(tokens, pos, nested ? [';', '{', '}'] : [';', '{']);
+      const name = prelude ? token.text + ' ' + prelude : token.text;
+      if (stop === '{') {
+        pos.i++;
+        if (CONDITIONAL_GROUP_RULES.has(token.text)) {
+          rules.push({ prelude: name, props: [], rules: readRuleList(tokens, pos, true) });
+        } else {
+          rules.push({ prelude: name, ...readBlock(tokens, pos) });
+        }
+      } else {
+        if (stop === ';') pos.i++;
+        rules.push({ prelude: name, props: [], rules: [] });
+      }
+      continue;
+    }
+    const [prelude, stop] = readUntil(tokens, pos, nested ? ['{', ';', '}'] : ['{']);
+    if (stop === ';') {
+      pos.i++;
+      continue;
+    }
+    if (stop !== '{') continue;
+    pos.i++;
+    rules.push({ prelude, ...readBlock(tokens, pos) });
+  }
+  return rules;
+}
+
+/** Read a style block after its `{`: declaration names, and any nested rule. */
+function readBlock(tokens: CssToken[], pos: { i: number }): Omit<ReadRule, 'prelude'> {
+  const props: string[] = [];
+  const rules: ReadRule[] = [];
+  while (pos.i < tokens.length) {
+    const token = tokens[pos.i];
+    if (token.kind === 'ws' || token.kind === ';') {
+      pos.i++;
+      continue;
+    }
+    if (token.kind === '}') {
+      pos.i++;
+      break;
+    }
+    const [text, stop] = readUntil(tokens, pos, [';', '{', '}']);
+    if (stop === '{') {
+      pos.i++;
+      rules.push({ prelude: text, ...readBlock(tokens, pos) });
+    } else if (text.indexOf(':') !== -1) {
+      props.push(text.slice(0, text.indexOf(':')).trim());
+    }
+  }
+  return { props, rules };
+}

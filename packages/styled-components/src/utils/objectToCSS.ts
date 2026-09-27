@@ -76,11 +76,14 @@ export default function objectToTemplate(obj: Record<string, unknown>): ObjectTe
  * interpolations (`css(p => ({color: p.fg}))`, `${p => ({...})}`). Resolves
  * nested function values against the supplied fill context (mirroring
  * legacy `flatten`'s recursive call behavior) and emits a flat CSS text
- * string. Returns `null` when an unsupported shape (e.g. an unresolved
- * `css\`...\`` fragment inside an object value, deeply nested arrays) is
- * encountered so the caller can fall through to a legacy path.
+ * string. A `css\`...\`` fragment value becomes the text `fragmentText`
+ * gives it, or is left out without one.
  */
-export function objectToCSS(obj: Record<string, unknown>, fillContext?: unknown): string | null {
+export function objectToCSS(
+  obj: Record<string, unknown>,
+  fillContext?: unknown,
+  fragmentText?: (fragment: unknown) => string
+): string {
   let css = '';
   for (const key in obj) {
     if (!hasOwn.call(obj, key)) continue;
@@ -99,13 +102,12 @@ export function objectToCSS(obj: Record<string, unknown>, fillContext?: unknown)
         css += hyphenate(key) + ':' + formatted + ';';
         continue;
       }
-      const inner = objectToCSS(val as Record<string, unknown>, fillContext);
-      if (inner === null) return null;
-      css += key + '{' + inner + '}';
+      css +=
+        key + '{' + objectToCSS(val as Record<string, unknown>, fillContext, fragmentText) + '}';
     } else if (isCssProduct(val)) {
-      // Tagged css`` fragment inside an object value; needs Source-aware
-      // splicing the caller can do with the slot variant.
-      return null;
+      if (fragmentText === undefined) continue;
+      const text = fragmentText(val);
+      if (text !== '') css += hyphenate(key) + ':' + text + ';';
     } else {
       const formatted = addUnitIfNeeded(key, val);
       if (formatted === '') continue;
