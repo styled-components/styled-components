@@ -1145,4 +1145,69 @@ describe('with styles', () => {
       `);
     });
   });
+
+  /**
+   * CSS Syntax 3 §9 (https://drafts.csswg.org/css-syntax-3/#serialization):
+   * "The tokenizer described in this specification does not produce tokens
+   * for comments, or otherwise preserve them in any way. Implementations may
+   * preserve the contents of comments and their location in the token
+   * stream. If they do, this preserved information must have no effect on
+   * the parsing step."
+   */
+  describe('comments next to interpolations', () => {
+    it('nests a component selector when a comment precedes `{`', () => {
+      const Child = styled.span``;
+      const Comp = styled.div`
+        ${Child} /* note */ {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(`.a .${Child.styledComponentId} {\n  color: red;\n}`);
+    });
+
+    it('keeps a declaration whose property name is interpolated before a comment', () => {
+      const Comp = styled.div`
+        ${'color'} /* note */: red;
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+        }"
+      `);
+    });
+
+    it('applies a mixin that follows a comment', () => {
+      const mixin = css`
+        margin: 0;
+      `;
+      const Comp = styled.div`
+        color: red;
+        /* note */ ${mixin}
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+          margin: 0;
+        }"
+      `);
+    });
+
+    it('keeps a value fragment in its declaration when a comment in it holds a `;`', () => {
+      const frag = css`red /* fallback; see docs */`;
+      const Comp = styled.div`
+        border: 1px solid ${frag};
+        color: blue;
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          border: 1px solid red;
+          color: blue;
+        }"
+      `);
+    });
+  });
 });
