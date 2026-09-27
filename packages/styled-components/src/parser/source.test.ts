@@ -309,6 +309,49 @@ describe('parseSource', () => {
     });
   });
 
+  describe('slots that start a statement', () => {
+    const a = () => 'x';
+    const b = () => 'y';
+
+    it('embeds consecutive function slots that head a rule selector', () => {
+      expect(tagged`${a} ${b} { color: red; }`.ast).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: [tv('\0I0\0 \0I1\0')],
+          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+        },
+      ]);
+    });
+
+    it('keeps consecutive mixins standalone before a declaration', () => {
+      const src = tagged`
+        ${a}
+        ${b}
+        color: red;`;
+      expect(src.ast).toEqual([
+        { kind: NodeKind.Interpolation, index: 0 },
+        { kind: NodeKind.Interpolation, index: 1 },
+        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+      ]);
+    });
+
+    it('keeps a mixin standalone before an at-rule', () => {
+      expect(tagged`${a} @media (min-width: 1px) { color: red; }`.ast[0]).toEqual({
+        kind: NodeKind.Interpolation,
+        index: 0,
+      });
+    });
+
+    it('ignores a `{` inside a string or parentheses when finding where a statement ends', () => {
+      expect(tagged`${a} content: "{" ; ${b} background: url({);`.ast).toEqual([
+        { kind: NodeKind.Interpolation, index: 0 },
+        { kind: NodeKind.Decl, prop: 'content', value: '"{"' },
+        { kind: NodeKind.Interpolation, index: 1 },
+        { kind: NodeKind.Decl, prop: 'background', value: 'url({)' },
+      ]);
+    });
+  });
+
   describe('block-position interpolations', () => {
     it('emits Interpolation node when slot follows `;`', () => {
       const fn = () => 'background: blue;';
