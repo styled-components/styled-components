@@ -4,7 +4,7 @@ import { ThemeProvider } from '../base';
 import css from '../constructors/css';
 import { mainSheet } from '../models/StyleSheetManager';
 import * as nonce from '../utils/nonce';
-import { getRenderedCSS, resetStyled } from './utils';
+import { getCSS, getRenderedCSS, resetStyled } from './utils';
 
 jest.mock('../utils/nonce');
 jest.spyOn(nonce, 'default').mockImplementation(() => 'foo');
@@ -1206,6 +1206,121 @@ describe('with styles', () => {
         ".a {
           border: 1px solid red;
           color: blue;
+        }"
+      `);
+    });
+  });
+
+  describe('component selectors followed by more selector text', () => {
+    it('keeps the component in a descendant selector ending in a type selector', () => {
+      const Child = styled.span``;
+      const Comp = styled.div`
+        color: green;
+        ${Child} h2 {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(
+        `.a {\n  color: green;\n}\n.a .${Child.styledComponentId} h2 {\n  color: red;\n}`
+      );
+    });
+
+    it('keeps the component in a selector list', () => {
+      const Child = styled.span``;
+      const Comp = styled.div`
+        ${Child}, h2 {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(`.a .${Child.styledComponentId}, .a h2 {\n  color: red;\n}`);
+    });
+
+    it('keeps both components in a descendant selector of two components', () => {
+      const Outer = styled.span``;
+      const Inner = styled.em``;
+      const Comp = styled.div`
+        ${Outer} ${Inner} {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(
+        `.a .${Outer.styledComponentId} .${Inner.styledComponentId} {\n  color: red;\n}`
+      );
+    });
+  });
+
+  describe('interpolations inside quoted strings', () => {
+    it('substitutes a slot that follows a `;` inside a string', () => {
+      const Comp = styled.div`
+        content: "a;${'x'}";
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          content: "a;x";
+        }"
+      `);
+    });
+
+    it('substitutes a slot that follows a `{` inside a string', () => {
+      const Static = styled.div`
+        content: '{x}';
+      `;
+      const Interpolated = styled.div`
+        content: '{${'x'}}';
+      `;
+      render(
+        <>
+          <Static />
+          <Interpolated />
+        </>
+      );
+      const [staticRule, interpolatedRule] = getCSS(document).split('\n');
+      expect(interpolatedRule.slice(interpolatedRule.indexOf('{'))).toEqual(
+        staticRule.slice(staticRule.indexOf('{'))
+      );
+    });
+
+    it('substitutes every slot in a string that spans several slots', () => {
+      const Comp = styled.div`
+        content: "${'a'};${'b'}";
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          content: "a;b";
+        }"
+      `);
+    });
+
+    it('keeps a string open past an escaped quote', () => {
+      const Comp = styled.div`
+        content: "a\\";${'b'}";
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          content: "a\\";b";
+        }"
+      `);
+    });
+
+    it('applies a mixin that follows a declaration whose string holds a `;`', () => {
+      const mixin = css`
+        margin: 0;
+      `;
+      const Comp = styled.div`
+        content: "a;b";
+        ${mixin}
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          content: "a;b";
+          margin: 0;
         }"
       `);
     });

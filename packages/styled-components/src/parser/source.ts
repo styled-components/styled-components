@@ -5,6 +5,7 @@ import {
   COLON,
   COMMA,
   DOT,
+  DOUBLE_QUOTE,
   GT,
   HASH,
   isWS,
@@ -18,7 +19,7 @@ import {
 } from '../utils/charCodes';
 import type { RuleSet } from '../types';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
-import { normalize } from '../utils/normalize';
+import { isEscaped, normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
 import { DYN, Node, NodeKind, Root } from './ast';
 import { parse, ParseOptions } from './parser';
@@ -95,8 +96,7 @@ export function parseSource(
   interpolations: ReadonlyArray<unknown>,
   options?: ParseOptions
 ): Source {
-  const css = interleaveWithSentinels(strings, interpolations);
-  const preprocessed = normalize(css);
+  const preprocessed = interleaveWithSentinels(strings, interpolations);
   // `templates: true` widens the parse() return type to
   // `Root<string | TemplateValue>` since `interleaveWithSentinels` may
   // have emitted `\0I` slots that `templateOrString` will turn into
@@ -396,31 +396,50 @@ export function concatSourceInputs(
   return combinedRules;
 }
 
+/**
+ * Join the template around slot sentinels and return it normalized, ready
+ * for `parse`. A styled-component ref is always a selector, and a slot inside
+ * a quoted string is always part of that string, so both stay embedded.
+ */
 function interleaveWithSentinels(
   strings: ReadonlyArray<string>,
   interpolations: ReadonlyArray<unknown>
 ): string {
   const count = interpolations.length;
-  if (count === 0) return strings.length > 0 ? strings[0] : '';
+  if (count === 0) return normalize(strings.length > 0 ? strings[0] : '');
 
   const stripped = stripComments(strings);
   const chunks = stripped === null ? strings : stripped.chunks;
   const slots = stripped === null ? null : stripped.slots;
   const surviving = chunks.length - 1;
   let prevWasStandalone = true; // start of input is a statement boundary
+  // Open quote (0 for none) at the end of `chunks[scanned - 1]`. Advanced
+  // only when a slot would leave its surrounding text, so each chunk is
+  // scanned at most once.
+  let quote = 0;
+  let scanned = 0;
   let out = chunks[0] || '';
   for (let k = 0; k < surviving; k++) {
     const i = slots === null ? k : slots[k];
     const prefix = chunks[k] || '';
     const suffix = chunks[k + 1] || '';
-    let standalone = isStandaloneSlot(prefix, suffix, prevWasStandalone);
-    if (!standalone && shouldRecoverFragmentSlot(prefix, interpolations[i])) {
-      // User forgot a `;` before what is clearly a block-style fragment
-      // (its source carries top-level `;`/`{`/`}`). Inject the missing
-      // terminator and promote the slot to standalone so the pending
-      // decl closes instead of swallowing the fragment as part of its
-      // value. Value-position fragments (prefix ends in `:`, `,`, `(`,
-      // `/`) are out of scope.
+    const value = interpolations[i];
+    let standalone: boolean =
+      isStandaloneSlot(prefix, suffix, prevWasStandalone) && !isComponentRef(value);
+    // User forgot a `;` before what is clearly a block-style fragment (its
+    // source carries top-level `;`/`{`/`}`). Inject the missing terminator
+    // and promote the slot to standalone so the pending decl closes instead
+    // of swallowing the fragment as part of its value. Value-position
+    // fragments (prefix ends in `:`, `,`, `(`, `/`) are out of scope.
+    const recover = !standalone && shouldRecoverFragmentSlot(prefix, value);
+    let inString = false;
+    if (standalone || recover) {
+      for (; scanned <= k; scanned++) quote = quoteAfter(chunks[scanned] || '', quote);
+      inString = quote !== 0;
+    }
+    if (inString) {
+      standalone = false;
+    } else if (recover) {
       out += ';';
       standalone = true;
     }
@@ -430,7 +449,46 @@ function interleaveWithSentinels(
     out += suffix;
     prevWasStandalone = standalone;
   }
-  return out;
+  // The stripping pass already normalized the chunks; the only later edits
+  // are sentinels and recovery `;`s, which cannot unbalance braces.
+  return stripped === null ? normalize(out) : out;
+}
+
+function isComponentRef(value: unknown): boolean {
+  const t = typeof value;
+  return (
+    (t === 'function' || (t === 'object' && value !== null)) &&
+    (value as { styledComponentId?: string }).styledComponentId !== undefined
+  );
+}
+
+/**
+ * Return the quote still open after `s` (0 for none), given the one open
+ * before it. Mirrors the string tracking in `normalize` and the parser, which
+ * both keep a string open across a newline. Jumps between quote characters
+ * rather than visiting every character.
+ */
+function quoteAfter(s: string, quote: number): number {
+  let at = 0;
+  let nextDouble = -2;
+  let nextSingle = -2;
+  for (;;) {
+    if (quote === 0) {
+      if (nextDouble !== -1 && nextDouble < at) nextDouble = s.indexOf('"', at);
+      if (nextSingle !== -1 && nextSingle < at) nextSingle = s.indexOf("'", at);
+      if (nextDouble === -1 && nextSingle === -1) return 0;
+      at =
+        nextDouble === -1 || (nextSingle !== -1 && nextSingle < nextDouble)
+          ? nextSingle
+          : nextDouble;
+      if (!isEscaped(s, at)) quote = s.charCodeAt(at);
+    } else {
+      at = s.indexOf(quote === DOUBLE_QUOTE ? '"' : "'", at);
+      if (at === -1) return quote;
+      if (!isEscaped(s, at)) quote = 0;
+    }
+    at++;
+  }
 }
 
 interface CommentFreeTemplate {
@@ -441,7 +499,8 @@ interface CommentFreeTemplate {
 
 /**
  * Strip comments from a template's string chunks so slot classification sees
- * what the parser will. Returns `null` when no chunk contains a comment. A
+ * what the parser will. Returns `null` when {@link mayHoldComment} rules out
+ * every chunk, in which case the chunks are used as written. A
  * slot written inside a comment is removed along with it, so `slots` can be
  * shorter than the interpolation list. The chunks are joined around `\0P<n>\0`
  * placeholders and run through `normalize` as one string, which keeps its

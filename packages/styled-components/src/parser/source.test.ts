@@ -377,6 +377,22 @@ describe('parseSource', () => {
     });
   });
 
+  describe('slots inside quoted strings', () => {
+    it('embeds a slot that follows a `;` inside a string', () => {
+      expect(tagged`content: "a;${'b'}";`.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'content', value: tv('"a;\0I0\0"') },
+      ]);
+    });
+
+    it('keeps a string open across a newline, as the parser does', () => {
+      const src = tagged`content: "a
+        color: 'x'; ${'b'}`;
+      expect(src.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'content', value: tv(`"a\n        color: 'x'; \0I0\0`) },
+      ]);
+    });
+  });
+
   /**
    * CSS Syntax 3 §9 (https://drafts.csswg.org/css-syntax-3/#serialization):
    * "The tokenizer described in this specification does not produce tokens
