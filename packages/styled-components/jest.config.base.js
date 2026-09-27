@@ -4,6 +4,12 @@ module.exports = {
   fakeTimers: {
     legacyFakeTimers: true,
   },
+  /**
+   * Biome formats this repo. Without this, Jest writes inline snapshots
+   * through a transitively installed Prettier, which reformats the whole test
+   * file, including the CSS inside styled templates.
+   */
+  prettierPath: null,
   rootDir: '.',
   snapshotSerializers: ['jest-serializer-html'],
   testEnvironmentOptions: {
