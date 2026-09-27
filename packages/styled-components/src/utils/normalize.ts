@@ -25,13 +25,16 @@ export function isEscaped(css: string, i: number): boolean {
   return (backslashes & 1) === 1;
 }
 
-/** Strip JS-style line comments + CSS block comments and validate brace balance in one pass. */
-export function normalize(css: string): string {
+/**
+ * Strip JS-style line comments + CSS block comments and validate brace balance in one pass.
+ * `sanitize: false` strips comments only, leaving unbalanced braces for a later pass.
+ */
+export function normalize(css: string, sanitize = true): string {
   const hasLineComments = css.indexOf('//') !== -1;
   const hasBlockComments = css.indexOf('/*') !== -1;
   const hasCloseBrace = css.indexOf('}') !== -1;
 
-  if (!hasLineComments && !hasBlockComments && !hasCloseBrace) return css;
+  if (!hasLineComments && !hasBlockComments && (!hasCloseBrace || !sanitize)) return css;
 
   if (!hasLineComments && !hasBlockComments) return sanitizeBraces(css);
 
@@ -136,13 +139,13 @@ export function normalize(css: string): string {
   }
 
   if (!modified) {
-    if (braceDepth === 0) return css;
+    if (braceDepth === 0 || !sanitize) return css;
     return sanitizeBraces(css);
   }
 
   if (start < len) out += css.substring(start);
 
-  if (braceDepth === 0) return out;
+  if (braceDepth === 0 || !sanitize) return out;
   return sanitizeBraces(out);
 }
 

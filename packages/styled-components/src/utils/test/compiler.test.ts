@@ -1168,6 +1168,22 @@ background-color: green;`)
     });
   });
 
+  describe('normalize without brace sanitizing', () => {
+    it('strips comments and keeps a stray `}` and what follows it', () => {
+      expect(normalize('a: b; /* c */ } d: e;', false)).toEqual('a: b; } d: e;');
+    });
+
+    it('keeps a stray `}` in comment-free input', () => {
+      expect(normalize('a: b; } d: e;', false)).toEqual('a: b; } d: e;');
+    });
+
+    it('returns comment-bearing input with a stray `}` unchanged when nothing is stripped', () => {
+      expect(normalize('background: url(//x/*.png); } d: e;', false)).toEqual(
+        'background: url(//x/*.png); } d: e;'
+      );
+    });
+  });
+
   describe('normalize unified-path edge cases', () => {
     // Path 3j: comment stripping + brace imbalance fire together
     it('handles comment stripping that reveals brace imbalance', () => {
