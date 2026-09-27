@@ -14,16 +14,6 @@ import {
 } from './ast';
 import { isKeyframesName } from './atRuleNames';
 
-export type {
-  AttrSelector,
-  ConditionalAttr,
-  NativeAtClass,
-  NativeRuleClass,
-  NthOfBranch,
-  NthSpec,
-  PseudoState,
-};
-
 /**
  * Parse-time-classified selector/at-rule metadata for the native runtime.
  * Lives on the AST node directly via Symbol-keyed non-enumerable
