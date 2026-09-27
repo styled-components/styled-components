@@ -1,4 +1,4 @@
-import { Token, TokenKind } from './tokens';
+import { Token } from './tokens';
 
 /**
  * Rewindable cursor over a {@link Token} array. Shorthand parsers use
@@ -35,26 +35,5 @@ export class TokenStream {
 
   rewind(saved: number): void {
     this.pos = saved;
-  }
-
-  matchKind(kind: TokenKind): Token | null {
-    const t = this.tokens[this.pos];
-    if (t !== undefined && t.kind === kind) {
-      this.pos++;
-      return t;
-    }
-    return null;
-  }
-
-  /**
-   * Match an ident by its lowercased name. Advances on match.
-   */
-  matchIdent(name: string): boolean {
-    const t = this.tokens[this.pos];
-    if (t !== undefined && t.kind === TokenKind.Ident && t.name === name) {
-      this.pos++;
-      return true;
-    }
-    return false;
   }
 }
