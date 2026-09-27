@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import React from 'react';
 import { ThemeProvider } from '../base';
 import css from '../constructors/css';
+import keyframes from '../constructors/keyframes';
 import { mainSheet } from '../models/StyleSheetManager';
 import * as nonce from '../utils/nonce';
 import { getCSS, getRenderedCSS, resetStyled } from './utils';
@@ -1218,6 +1219,31 @@ describe('with styles', () => {
       `);
     });
 
+    it('never calls a function written inside a comment', () => {
+      const commentedOut = jest.fn(() => 'color: blue;');
+      const Comp = styled.div`
+        /* ${commentedOut} */
+        color: red;
+      `;
+      render(<Comp />);
+      expect(commentedOut).not.toHaveBeenCalled();
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+        }"
+      `);
+    });
+
+    it('never injects keyframes written inside a comment', () => {
+      const fade = keyframes`from { opacity: 0; } to { opacity: 1; }`;
+      const Comp = styled.div`
+        // animation: ${fade} 1s;
+        color: red;
+      `;
+      render(<Comp />);
+      expect(getCSS(document)).not.toContain('@keyframes');
+    });
+
     it('recovers from a stray `}` the same way with or without a comment', () => {
       const frag = css`margin: 0;`;
       // biome-ignore format: the stray brace is what this asserts on
@@ -1292,6 +1318,81 @@ describe('with styles', () => {
       expect(getRenderedCSS()).toEqual(
         `.a .${Outer.styledComponentId} .${Inner.styledComponentId} {\n  color: red;\n}`
       );
+    });
+
+    it('keeps a component returned by a function in a descendant selector', () => {
+      const Child = styled.span``;
+      const Comp = styled.div`
+        color: green;
+        ${() => Child} h2 {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(
+        `.a {\n  color: green;\n}\n.a .${Child.styledComponentId} h2 {\n  color: red;\n}`
+      );
+    });
+
+    it('keeps a component returned by a function in a selector list', () => {
+      const Child = styled.span``;
+      const Comp = styled.div`
+        ${() => Child}, h2 {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(`.a .${Child.styledComponentId}, .a h2 {\n  color: red;\n}`);
+    });
+
+    it('applies a declaration mixin that directly precedes a nested rule', () => {
+      const Comp = styled.div`
+        ${() => 'color: red;'}
+        h2 {
+          color: blue;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+        }
+        .a h2 {
+          color: blue;
+        }"
+      `);
+    });
+
+    it('keeps a nested rule intact when the mixin before it renders nothing', () => {
+      const Comp = styled.div<{ $on?: boolean }>`
+        ${p => p.$on && 'color: red;'}
+        h2 {
+          color: blue;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a h2 {
+          color: blue;
+        }"
+      `);
+    });
+
+    it('keeps an at-rule intact when the mixin before it renders nothing', () => {
+      const Comp = styled.div<{ $on?: boolean }>`
+        ${p => p.$on && 'color: red;'}
+        @media (min-width: 1px) {
+          color: blue;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        "@media (min-width:1px) {
+          .a {
+            color: blue;
+          }
+        }"
+      `);
     });
   });
 

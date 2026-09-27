@@ -1,5 +1,6 @@
 import {
   AMPERSAND,
+  AT,
   ASTERISK,
   CLOSE_BRACE,
   CLOSE_PAREN,
@@ -98,20 +99,32 @@ export function parseSource(
   interpolations: ReadonlyArray<unknown>,
   options?: ParseOptions
 ): Source {
-  const preprocessed = interleaveWithSentinels(strings, interpolations);
+  const n = interpolations.length;
+  const stripped = n === 0 ? null : stripComments(strings);
+  const preprocessed = interleaveWithSentinels(strings, interpolations, stripped);
   // `templates: true` widens the parse() return type to
   // `Root<string | TemplateValue>` since `interleaveWithSentinels` may
   // have emitted `\0I` slots that `templateOrString` will turn into
   // TemplateValue fields. The runtime parser behavior is unchanged; the
   // flag is a type-system witness.
   const ast = parse(preprocessed, { ...options, templates: true });
-  const n = interpolations.length;
   const kinds: InterpolationKind[] = [];
   const staticValues: string[] = [];
+  // A slot written inside a comment was stripped with it; mark it Static-empty
+  // so it is never called, compiled, or injected.
+  let live: boolean[] | null = null;
+  if (stripped !== null && stripped.slots.length < n) {
+    live = [];
+    for (let i = 0; i < n; i++) live[i] = false;
+    for (let k = 0; k < stripped.slots.length; k++) live[stripped.slots[k]] = true;
+  }
   for (let i = 0; i < n; i++) {
     const slot = interpolations[i];
     const t = typeof slot;
-    if (t === 'string') {
+    if (live !== null && !live[i]) {
+      kinds[i] = InterpolationKind.Static;
+      staticValues[i] = '';
+    } else if (t === 'string') {
       kinds[i] = InterpolationKind.Static;
       staticValues[i] = slot as string;
     } else if (t === 'number') {
@@ -405,12 +418,12 @@ export function concatSourceInputs(
  */
 function interleaveWithSentinels(
   strings: ReadonlyArray<string>,
-  interpolations: ReadonlyArray<unknown>
+  interpolations: ReadonlyArray<unknown>,
+  stripped: CommentFreeTemplate | null
 ): string {
   const count = interpolations.length;
   if (count === 0) return normalize(strings.length > 0 ? strings[0] : '');
 
-  const stripped = stripComments(strings);
   const chunks = stripped === null ? strings : stripped.chunks;
   const slots = stripped === null ? null : stripped.slots;
   const surviving = chunks.length - 1;
@@ -420,6 +433,10 @@ function interleaveWithSentinels(
   // scanned at most once.
   let quote = 0;
   let scanned = 0;
+  // Where the last look-ahead found the end of a statement. Every slot before
+  // that chunk shares the same statement end, so each chunk is read once.
+  let aheadChunk = -1;
+  let aheadCode = -1;
   let out = chunks[0] || '';
   for (let k = 0; k < surviving; k++) {
     const i = slots === null ? k : slots[k];
@@ -444,6 +461,44 @@ function interleaveWithSentinels(
     } else if (recover) {
       out += ';';
       standalone = true;
+    } else if (
+      standalone &&
+      nonWsCharCode(suffix, 0, 1) !== AT &&
+      !shouldRecoverFragmentSlot(prefix, value)
+    ) {
+      // A slot that starts a statement ending in `{` is the head of a rule's
+      // selector (`${() => Child} h2 { … }`). A function that turns out to
+      // return declarations there makes the fill bail to the string path,
+      // which flattens the template.
+      if (k + 1 > aheadChunk) {
+        aheadChunk = chunks.length;
+        aheadCode = -1;
+        let aheadQuote = 0;
+        let parenDepth = 0;
+        outer: for (let j = k + 1; j < chunks.length; j++) {
+          const s = chunks[j] || '';
+          for (let c = 0; c < s.length; c++) {
+            const code = s.charCodeAt(c);
+            if (aheadQuote !== 0) {
+              if (code === aheadQuote && !isEscaped(s, c)) aheadQuote = 0;
+            } else if ((code === DOUBLE_QUOTE || code === SINGLE_QUOTE) && !isEscaped(s, c)) {
+              aheadQuote = code;
+            } else if (code === OPEN_PAREN) {
+              parenDepth++;
+            } else if (code === CLOSE_PAREN) {
+              if (parenDepth > 0) parenDepth--;
+            } else if (
+              parenDepth === 0 &&
+              (code === SEMICOLON || code === OPEN_BRACE || code === CLOSE_BRACE)
+            ) {
+              aheadChunk = j;
+              aheadCode = code;
+              break outer;
+            }
+          }
+        }
+      }
+      if (aheadCode === OPEN_BRACE) standalone = false;
     }
     out += standalone ? '\0J' : '\0I';
     out += i;
