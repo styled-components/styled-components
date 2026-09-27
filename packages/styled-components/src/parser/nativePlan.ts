@@ -1,4 +1,5 @@
 import * as $ from '../utils/charCodes';
+import { isEscaped } from '../utils/normalize';
 import {
   AtRuleNode,
   AttrSelector,
@@ -13,6 +14,13 @@ import {
   RuleNode,
 } from './ast';
 import { isKeyframesName } from './atRuleNames';
+
+/** U+000C FORM FEED; CSS Syntax whitespace, not aliased in charCodes.ts. */
+const FORM_FEED = 0x0c;
+
+function isSelectorWhitespace(c: number): boolean {
+  return c === $.SPACE || c === $.TAB || c === $.LF || c === $.CR || c === FORM_FEED;
+}
 
 export type {
   AttrSelector,
@@ -125,11 +133,90 @@ export function stampAtClass(node: AtRuleNode): void {
 }
 
 /**
+ * Collapse each run of whitespace outside a quoted string to one space and
+ * trim the ends, so the detectors below, which expect single spaces, also
+ * match selectors written across lines (`${Foo}\n  &`). Quoted attribute
+ * values are left intact. Selectors with nothing to collapse are returned
+ * as-is without allocating.
+ */
+function collapseSelectorWhitespace(sel: string): string {
+  const len = sel.length;
+  if (len === 0) return sel;
+
+  let needsWork =
+    isSelectorWhitespace(sel.charCodeAt(0)) || isSelectorWhitespace(sel.charCodeAt(len - 1));
+  if (!needsWork) {
+    for (let i = 0; i < len; i++) {
+      const c = sel.charCodeAt(i);
+      if (c === $.TAB || c === $.LF || c === $.CR || c === FORM_FEED) {
+        needsWork = true;
+        break;
+      }
+      if (c === $.SPACE && sel.charCodeAt(i + 1) === $.SPACE) {
+        needsWork = true;
+        break;
+      }
+    }
+  }
+  if (!needsWork) return sel;
+
+  let start = 0;
+  let end = len;
+  while (start < end && isSelectorWhitespace(sel.charCodeAt(start))) start++;
+  while (end > start && isSelectorWhitespace(sel.charCodeAt(end - 1))) end--;
+
+  let out = '';
+  let i = start;
+  let segStart = start;
+  let quote = 0;
+  while (i < end) {
+    const c = sel.charCodeAt(i);
+    if (quote !== 0) {
+      if (c === quote && !isEscaped(sel, i)) quote = 0;
+      i++;
+      continue;
+    }
+    if ((c === $.SINGLE_QUOTE || c === $.DOUBLE_QUOTE) && !isEscaped(sel, i)) {
+      quote = c;
+      i++;
+      continue;
+    }
+    if (isSelectorWhitespace(c)) {
+      out += sel.substring(segStart, i) + ' ';
+      i++;
+      while (i < end && isSelectorWhitespace(sel.charCodeAt(i))) i++;
+      segStart = i;
+      continue;
+    }
+    i++;
+  }
+  out += sel.substring(segStart, end);
+  return out;
+}
+
+/**
+ * Normalize every selector's whitespace before classification. Returns
+ * the original array unallocated when no selector needed a change (the
+ * dominant case: single-line authored selectors already carry a single
+ * ASCII space).
+ */
+function normalizeSelectors(selectors: string[]): string[] {
+  let out: string[] | null = null;
+  for (let i = 0; i < selectors.length; i++) {
+    const normalized = collapseSelectorWhitespace(selectors[i]);
+    if (out === null && normalized !== selectors[i]) out = selectors.slice(0, i);
+    if (out !== null) out.push(normalized);
+  }
+  return out === null ? selectors : out;
+}
+
+/**
  * Render-time fallback when parse-time classification was skipped because
  * the selectors contained interpolation sentinels. Operates on the
  * (filled) selectors string array; never mutates the node.
  */
-export function classifyRuleNow(selectors: string[]): NativeRuleClass {
+export function classifyRuleNow(rawSelectors: string[]): NativeRuleClass {
+  const selectors = normalizeSelectors(rawSelectors);
   const direct = detectPseudo(selectors);
   if (direct !== null) return { kind: 'pseudo', pseudo: direct };
   const fanOut = detectIsWhereStates(selectors) || detectMultiPseudo(selectors);

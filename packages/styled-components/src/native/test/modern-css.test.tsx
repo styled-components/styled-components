@@ -2031,6 +2031,102 @@ describe('modern CSS on React Native', () => {
     });
   });
 
+  // https://drafts.csswg.org/selectors-4/#descendant-combinators
+  // "A descendant combinator is whitespace that separates two compound
+  // selectors."
+  //
+  // https://drafts.csswg.org/css-syntax-3/#whitespace
+  // "whitespace: A newline, U+0009 CHARACTER TABULATION, or U+0020 SPACE."
+  // https://drafts.csswg.org/css-syntax-3/#newline
+  // "newline: U+000A LINE FEED. Note that U+000D CARRIAGE RETURN and
+  // U+000C FORM FEED are not included in this definition, as they are
+  // converted to U+000A LINE FEED during preprocessing."
+  //
+  // A template literal keeps the author's line breaks and indentation
+  // verbatim, so `${Foo}` on its own line followed by `&` on the next
+  // produces a selector string with an embedded newline (plus whatever
+  // indentation precedes `&`). Per the spec quotes above, every one of
+  // those raw characters is still "whitespace that separates two
+  // compound selectors": the combinator must fire the same as the
+  // single-space form.
+  describe('multi-line component-ancestor selectors (CSS Selectors 4 §14.1; CSS Syntax 3 §4.2 whitespace)', () => {
+    it('descendant combinator matches when `${Foo}` and `&` are separated by a newline', () => {
+      const Foo = styled.View.withConfig({ displayName: 'CombDescNlFoo' })`
+        background: blue;
+      `;
+      const Bar = styled.View.withConfig({ displayName: 'CombDescNlBar' })`
+        color: green;
+        ${Foo}
+          & {
+          color: red;
+        }
+      `;
+      const tree = TestRenderer.create(
+        <Foo>
+          <Bar />
+        </Foo>
+      );
+      const inner = tree.root.findAllByType(View)[1];
+      expect(inner.props.style).toEqual([{ color: 'green' }, { color: 'red' }]);
+    });
+
+    it('child combinator matches when `${Foo}`, `>`, and `&` are separated by newlines', () => {
+      const Foo = styled.View.withConfig({ displayName: 'CombChildNlFoo' })`
+        background: blue;
+      `;
+      const Bar = styled.View.withConfig({ displayName: 'CombChildNlBar' })`
+        color: green;
+        ${Foo}
+          > & {
+          color: red;
+        }
+      `;
+      const tree = TestRenderer.create(
+        <Foo>
+          <Bar />
+        </Foo>
+      );
+      const inner = tree.root.findAllByType(View)[1];
+      expect(inner.props.style).toEqual([{ color: 'green' }, { color: 'red' }]);
+    });
+
+    it('descendant combinator matches when `${Foo}` and `&` are separated by a tab', () => {
+      const Foo = styled.View.withConfig({ displayName: 'CombDescTabFoo' })`
+        background: blue;
+      `;
+      const Bar = styled.View.withConfig({ displayName: 'CombDescTabBar' })`
+        color: green;
+        ${Foo}\t& {
+          color: red;
+        }
+      `;
+      const tree = TestRenderer.create(
+        <Foo>
+          <Bar />
+        </Foo>
+      );
+      const inner = tree.root.findAllByType(View)[1];
+      expect(inner.props.style).toEqual([{ color: 'green' }, { color: 'red' }]);
+    });
+
+    it('preserves a double space inside a quoted attribute value (not a combinator)', () => {
+      const Comp = styled.View<{ 'data-label'?: string }>`
+        color: black;
+        &[data-label='a  b'] {
+          color: red;
+        }
+      `;
+      const matchTree = TestRenderer.create(<Comp data-label="a  b" />);
+      expect(matchTree.root.findByType(View).props.style).toEqual([
+        { color: 'black' },
+        { color: 'red' },
+      ]);
+
+      const collapsedTree = TestRenderer.create(<Comp data-label="a b" />);
+      expect(collapsedTree.root.findByType(View).props.style).toEqual({ color: 'black' });
+    });
+  });
+
   // https://drafts.csswg.org/selectors-4/#combinators
   describe('sibling combinators spec compliance (CSS Selectors 4: combinators)', () => {
     it('adjacent sibling `${Foo} + &` fires when the previous sibling is Foo', () => {
