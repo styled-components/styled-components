@@ -11,6 +11,12 @@ jest.spyOn(nonce, 'default').mockImplementation(() => 'foo');
 
 let styled: ReturnType<typeof resetStyled>;
 
+/** Injected rule bodies in order, without their class selectors. */
+const ruleBodies = () =>
+  getCSS(document)
+    .split('\n')
+    .map(rule => rule.slice(rule.indexOf('{')));
+
 describe('with styles', () => {
   /**
    * Make sure the setup is the same for every test
@@ -1195,6 +1201,43 @@ describe('with styles', () => {
       `);
     });
 
+    it('closes a declaration missing its `;` before a block fragment that follows a comment', () => {
+      const frag = css`
+        margin: 0;
+      `;
+      // biome-ignore format: the missing `;` is what this asserts on
+      const Comp = styled.div`
+        color: red /* note */ ${frag}
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+          margin: 0;
+        }"
+      `);
+    });
+
+    it('recovers from a stray `}` the same way with or without a comment', () => {
+      const frag = css`margin: 0;`;
+      // biome-ignore format: the stray brace is what this asserts on
+      const Plain = styled.div`
+        color: blue; } color: red ${frag} padding: 1px;
+      `;
+      // biome-ignore format: the stray brace is what this asserts on
+      const Commented = styled.div`
+        color: blue; /* note */ } color: red ${frag} padding: 1px;
+      `;
+      render(
+        <>
+          <Plain />
+          <Commented />
+        </>
+      );
+      const [plainBody, commentedBody] = ruleBodies();
+      expect(commentedBody).toEqual(plainBody);
+    });
+
     it('keeps a value fragment in its declaration when a comment in it holds a `;`', () => {
       const frag = css`red /* fallback; see docs */`;
       const Comp = styled.div`
@@ -1252,7 +1295,63 @@ describe('with styles', () => {
     });
   });
 
+  /**
+   * CSS Syntax 3 §4.3.5 (https://drafts.csswg.org/css-syntax-3/#consume-string-token):
+   * "Repeatedly consume the next input code point from the stream: ending
+   * code point: Return the <string-token>."
+   */
   describe('interpolations inside quoted strings', () => {
+    it('never leaks a slot placeholder when a fragment is written inside a string', () => {
+      const frag = css`
+        margin: 0;
+      `;
+      const Comp = styled.div`
+        content: "a ${frag}";
+      `;
+      render(<Comp />);
+      expect(getCSS(document)).not.toContain('\0');
+    });
+
+    it('keeps a fragment holding a quoted data URL in its declaration', () => {
+      const icon = css`url("data:image/svg+xml;utf8,<svg/>")`;
+      const Static = styled.div`
+        background: no-repeat url("data:image/svg+xml;utf8,<svg/>");
+        color: red;
+      `;
+      const Interpolated = styled.div`
+        background: no-repeat ${icon};
+        color: red;
+      `;
+      render(
+        <>
+          <Static />
+          <Interpolated />
+        </>
+      );
+      const [staticBody, interpolatedBody] = ruleBodies();
+      expect(interpolatedBody).toEqual(staticBody);
+    });
+
+    it('keeps a fragment holding an unquoted data URL in its declaration', () => {
+      const icon = css`url(data:image/png;base64,AAAA)`;
+      const Static = styled.div`
+        background: no-repeat url(data:image/png;base64,AAAA);
+        color: red;
+      `;
+      const Interpolated = styled.div`
+        background: no-repeat ${icon};
+        color: red;
+      `;
+      render(
+        <>
+          <Static />
+          <Interpolated />
+        </>
+      );
+      const [staticBody, interpolatedBody] = ruleBodies();
+      expect(interpolatedBody).toEqual(staticBody);
+    });
+
     it('substitutes a slot that follows a `;` inside a string', () => {
       const Comp = styled.div`
         content: "a;${'x'}";
@@ -1278,10 +1377,8 @@ describe('with styles', () => {
           <Interpolated />
         </>
       );
-      const [staticRule, interpolatedRule] = getCSS(document).split('\n');
-      expect(interpolatedRule.slice(interpolatedRule.indexOf('{'))).toEqual(
-        staticRule.slice(staticRule.indexOf('{'))
-      );
+      const [staticBody, interpolatedBody] = ruleBodies();
+      expect(interpolatedBody).toEqual(staticBody);
     });
 
     it('substitutes every slot in a string that spans several slots', () => {

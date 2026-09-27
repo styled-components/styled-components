@@ -384,6 +384,15 @@ describe('parseSource', () => {
       ]);
     });
 
+    /**
+     * Deviation from CSS Syntax 3 §4.3.5
+     * (https://drafts.csswg.org/css-syntax-3/#consume-string-token):
+     * "newline: This is a parse error. Reconsume the current input code
+     * point, create a <bad-string-token>, and return it." The parser and
+     * `normalize` keep the string open instead, and slot classification
+     * follows them so a slot is never read differently from the text around
+     * it.
+     */
     it('keeps a string open across a newline, as the parser does', () => {
       const src = tagged`content: "a
         color: 'x'; ${'b'}`;

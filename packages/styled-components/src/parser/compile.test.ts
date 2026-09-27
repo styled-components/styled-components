@@ -514,12 +514,6 @@ describe('compileWeb', () => {
     });
 
     it('does not crash on a fragment whose only top-level `;` lives inside a quoted string', () => {
-      // `content: "hi;there"` — the recovery scan walks raw strings
-      // without honoring quotes, so the in-string `;` triggers the
-      // promotion. The behavior is correct in this case because the
-      // surrounding context (a styled component's body) makes the
-      // fragment a sibling decl regardless. Lock that no crash + a
-      // sensible decl output happens.
       const frag = css`
         content: 'hi;there';
       `;

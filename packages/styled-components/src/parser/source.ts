@@ -2,6 +2,7 @@ import {
   AMPERSAND,
   ASTERISK,
   CLOSE_BRACE,
+  CLOSE_PAREN,
   COLON,
   COMMA,
   DOT,
@@ -14,6 +15,7 @@ import {
   OPEN_PAREN,
   PLUS,
   SEMICOLON,
+  SINGLE_QUOTE,
   SLASH,
   TILDE,
 } from '../utils/charCodes';
@@ -449,9 +451,9 @@ function interleaveWithSentinels(
     out += suffix;
     prevWasStandalone = standalone;
   }
-  // The stripping pass already normalized the chunks; the only later edits
-  // are sentinels and recovery `;`s, which cannot unbalance braces.
-  return stripped === null ? normalize(out) : out;
+  // Normalized again even after stripping: a recovery `;` changes where
+  // `normalize` resumes after a stray `}`.
+  return normalize(out);
 }
 
 function isComponentRef(value: unknown): boolean {
@@ -519,7 +521,7 @@ function stripComments(strings: ReadonlyArray<string>): CommentFreeTemplate | nu
   let joined = strings[0] || '';
   for (let i = 1; i < strings.length; i++) joined += '\0P' + (i - 1) + '\0' + (strings[i] || '');
 
-  const css = normalize(joined);
+  const css = normalize(joined, false);
   const chunks: string[] = [];
   const slots: number[] = [];
   let start = 0;
@@ -561,7 +563,8 @@ function mayHoldComment(s: string): boolean {
  * Return `true` when an embedded-classified slot should be flipped to
  * standalone with a `;` injected before its sentinel. Triggers only
  * when the interpolation is a `css\`...\`` fragment whose source
- * strings carry top-level `;`/`{`/`}` (so it can't be just a value)
+ * strings carry `;`/`{`/`}` outside comments, strings, and parentheses
+ * (so it can't be just a value)
  * AND the prefix does not end in a value-continuation character
  * (`:` `,` `(` `/`).
  */
@@ -578,11 +581,21 @@ function shouldRecoverFragmentSlot(prefix: string, interpolation: unknown): bool
   const stripped = stripComments(strings);
   const chunks = stripped === null ? strings : stripped.chunks;
   let blockLike = false;
+  let quote = 0;
+  let parenDepth = 0;
   outer: for (let i = 0; i < chunks.length; i++) {
     const s = chunks[i];
     for (let j = 0; j < s.length; j++) {
       const c = s.charCodeAt(j);
-      if (c === SEMICOLON || c === OPEN_BRACE || c === CLOSE_BRACE) {
+      if (quote !== 0) {
+        if (c === quote && !isEscaped(s, j)) quote = 0;
+      } else if ((c === DOUBLE_QUOTE || c === SINGLE_QUOTE) && !isEscaped(s, j)) {
+        quote = c;
+      } else if (c === OPEN_PAREN) {
+        parenDepth++;
+      } else if (c === CLOSE_PAREN) {
+        if (parenDepth > 0) parenDepth--;
+      } else if (parenDepth === 0 && (c === SEMICOLON || c === OPEN_BRACE || c === CLOSE_BRACE)) {
         blockLike = true;
         break outer;
       }
