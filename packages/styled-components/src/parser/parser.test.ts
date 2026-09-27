@@ -291,23 +291,21 @@ describe('parser', () => {
   });
 
   describe('interpolation sentinels', () => {
-    // `\0J<index>\0` = standalone block-level interpolation (emit Interpolation node).
-    // `\0I<index>\0` = embedded interpolation (stays opaque inside value/selector strings).
-    // Both kinds are emitted by `parseSource` based on surrounding template-literal
-    // context. Sentinel detection is gated on `options.templates` so untrusted
-    // CSS routed through the static-input parse path (e.g. via the
-    // `buildHashCSS` fallback after a fast-path bail) cannot fabricate
-    // sentinel-looking content into structural Interpolation / TemplateValue
-    // nodes.
+    // `\0S<index>\0` marks a slot. `parseSource` joins the template around
+    // these and the parser assigns each slot its role from where it sits.
+    // Slot detection is gated on `options.templates` so untrusted CSS routed
+    // through the static-input parse path (e.g. via the `buildHashCSS`
+    // fallback after a fast-path bail) cannot fabricate slot-looking content
+    // into structural Interpolation / TemplateValue nodes.
 
-    it('emits Interpolation node for a standalone sentinel (templates: true)', () => {
-      expect(parse('\0J0\0', { templates: true })).toEqual([
+    it('emits an Interpolation node for a slot alone in the block (templates: true)', () => {
+      expect(parse('\0S0\0', { templates: true })).toEqual([
         { kind: NodeKind.Interpolation, index: 0 },
       ]);
     });
 
-    it('emits Interpolation between decls (templates: true)', () => {
-      expect(parse('color: red; \0J0\0 margin: 0;', { templates: true })).toEqual([
+    it('emits an Interpolation node between decls (templates: true)', () => {
+      expect(parse('color: red; \0S0\0 margin: 0;', { templates: true })).toEqual([
         { kind: NodeKind.Decl, prop: 'color', value: 'red' },
         { kind: NodeKind.Interpolation, index: 0 },
         { kind: NodeKind.Decl, prop: 'margin', value: '0' },
@@ -315,15 +313,15 @@ describe('parser', () => {
     });
 
     it('handles multi-digit indices (templates: true)', () => {
-      expect(parse('\0J0\0\0J12\0\0J345\0', { templates: true })).toEqual([
+      expect(parse('\0S0\0\0S12\0\0S345\0', { templates: true })).toEqual([
         { kind: NodeKind.Interpolation, index: 0 },
         { kind: NodeKind.Interpolation, index: 12 },
         { kind: NodeKind.Interpolation, index: 345 },
       ]);
     });
 
-    it('lifts embedded sentinels in declaration values to TemplateValue', () => {
-      expect(parse('color: \0I0\0;', { templates: true })).toEqual([
+    it('lifts slots in declaration values to TemplateValue', () => {
+      expect(parse('color: \0S0\0;', { templates: true })).toEqual([
         {
           kind: NodeKind.Decl,
           prop: 'color',
@@ -332,69 +330,81 @@ describe('parser', () => {
       ]);
     });
 
-    it('lifts embedded sentinels in selectors to TemplateValue', () => {
-      // `${OtherComponent} & { ... }` becomes `\0I0\0 & { ... }`. The
-      // selector with the embedded sentinel converts to a TemplateValue
-      // (chunks + slot indices) so the fill path can splice without
-      // re-scanning the string at render time.
-      expect(parse('\0I0\0 & { color: red; }', { templates: true })).toEqual([
+    it('lifts a slot glued to selector text to a TemplateValue selector', () => {
+      expect(parse('\0S0\0& { color: red; }', { templates: true })).toEqual([
         {
           kind: NodeKind.Rule,
-          selectors: [{ chunks: ['', ' &'], slots: [0] }],
+          selectors: [{ chunks: ['', '&'], slots: [0] }],
           children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
         },
       ]);
     });
 
+    it('reads a slot followed by whitespace and selector text as a rule Head', () => {
+      expect(parse('\0S0\0 & { color: red; }', { templates: true })).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: [],
+          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+          head: { gaps: [' '], rest: '&', slots: [0] },
+        },
+      ]);
+    });
+
     it('keeps existing `\0sc:...` theme sentinels as opaque value content', () => {
-      // Native theme sentinels start with `\0s` (lowercase), distinct from `\0I`/`\0J`.
+      // Native theme sentinels start with `\0s` (lowercase), distinct from `\0S`.
       expect(parse('color: \0sc:fg:#000\0;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: '\0sc:fg:#000\0' },
+      ]);
+      expect(parse('color: \0sc:fg:#000\0;', { templates: true })).toEqual([
         { kind: NodeKind.Decl, prop: 'color', value: '\0sc:fg:#000\0' },
       ]);
     });
 
-    it('falls through on malformed sentinels (no digits)', () => {
-      // `\0J\0` with no digits between the markers should not be recognized.
-      // Malformed input is treated as a stray decl and silently dropped.
-      expect(parse('\0J\0', { templates: true })).toEqual([]);
+    it('falls through on malformed slots (no digits)', () => {
+      // `\0S\0` with no digits between the markers is not a slot. Malformed
+      // input is treated as a stray decl and silently dropped.
+      expect(parse('\0S\0', { templates: true })).toEqual([]);
     });
 
-    it('does not emit Interpolation node for embedded `\0I` sentinels', () => {
-      // Even if an `\0I0\0` lands in block position, the parser treats it as
-      // opaque text. A bug in parseSource would surface as malformed CSS,
-      // not as a misclassified node.
-      expect(parse('\0I0\0', { templates: true })).toEqual([]);
-    });
-
-    // The static-input gate. Untrusted CSS routed through `parse()` without
-    // `{ templates: true }` (e.g. the `buildHashCSS` → `toNativeStyles`
-    // fallback) must NEVER fabricate sentinel structure. These guard the
-    // attack surface where a user-supplied interpolation value contains
-    // sentinel-shaped bytes plus structural CSS chars (`;`/`{`/`}`);the
-    // primary fast-path bails on the structural chars, and the fallback
-    // re-parse must treat the sentinel bytes as opaque content.
-
-    it('default mode: standalone-sentinel bytes do NOT emit Interpolation node', () => {
-      // Without `{ templates: true }`, `\0J0\0` is opaque CSS content.
-      // The decl-scanning loop falls through and the malformed bytes drop.
-      expect(parse('\0J0\0')).toEqual([]);
-    });
-
-    it('default mode: embedded sentinel bytes stay as plain string content', () => {
-      // The whole construct is treated as a normal decl: prop=color,
-      // value=`\0I0\0`. No TemplateValue, no Interpolation node, no crash.
-      expect(parse('color: \0I0\0;')).toEqual([
+    it('treats other NUL-led letters as opaque text', () => {
+      expect(parse('\0J0\0', { templates: true })).toEqual([]);
+      expect(parse('color: \0I0\0;', { templates: true })).toEqual([
         { kind: NodeKind.Decl, prop: 'color', value: '\0I0\0' },
       ]);
     });
 
-    it('default mode: sentinel-shaped user value in a value position is opaque', () => {
-      // What `buildHashCSS` would produce when a user-supplied filled[] slot
-      // contains the encoded sentinel pattern. The parser must not lift
-      // anything into TemplateValue here;that's how the value would crash
-      // downstream string-only consumers.
-      expect(parse('color: red\0J0\0blue;')).toEqual([
-        { kind: NodeKind.Decl, prop: 'color', value: 'red\0J0\0blue' },
+    // The static-input gate. Untrusted CSS routed through `parse()` without
+    // `{ templates: true }` (e.g. the `buildHashCSS` → `toNativeStyles`
+    // fallback) must NEVER fabricate slot structure. These guard the attack
+    // surface where a user-supplied interpolation value contains slot-shaped
+    // bytes plus structural CSS chars (`;`/`{`/`}`); the primary fast path
+    // bails on the structural chars, and the fallback re-parse must treat the
+    // slot bytes as opaque content.
+
+    it('default mode: slot bytes at a statement start do NOT emit an Interpolation node', () => {
+      expect(parse('\0S0\0')).toEqual([]);
+    });
+
+    it('default mode: slot bytes in a value stay as plain string content', () => {
+      expect(parse('color: \0S0\0;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: '\0S0\0' },
+      ]);
+    });
+
+    it('default mode: slot bytes before a rule do not form a Head', () => {
+      expect(parse('\0S0\0 h2 { color: red; }')).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: ['\0S0\0 h2'],
+          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+        },
+      ]);
+    });
+
+    it('default mode: slot-shaped user value in a value position is opaque', () => {
+      expect(parse('color: red\0S0\0blue;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: 'red\0S0\0blue' },
       ]);
     });
   });

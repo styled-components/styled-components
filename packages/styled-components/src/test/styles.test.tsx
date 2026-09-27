@@ -1523,4 +1523,242 @@ describe('with styles', () => {
       `);
     });
   });
+
+  describe('slots before a nested rule', () => {
+    const red = css`
+      color: red;
+    `;
+    const margin = () => 'margin: 0;';
+
+    it('applies a mixin ending in `;` before a type selector rule', () => {
+      const Comp = styled.div`
+        ${red}
+        h2 {
+          color: blue;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+        }
+        .a h2 {
+          color: blue;
+        }"
+      `);
+    });
+
+    it('applies stacked mixins ending in `;` before a type selector rule', () => {
+      const Comp = styled.ul`
+        ${red}
+        ${margin}
+        li {
+          color: blue;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+          margin: 0;
+        }
+        .a li {
+          color: blue;
+        }"
+      `);
+    });
+
+    it('applies two mixins before an at-rule', () => {
+      const Comp = styled.div`
+        ${red}
+        ${margin}
+        @media (min-width: 1px) {
+          color: blue;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+          margin: 0;
+        }
+        @media (min-width:1px) {
+          .a {
+            color: blue;
+          }
+        }"
+      `);
+    });
+
+    it('applies a mixin inside a nested block before a type selector rule', () => {
+      const Comp = styled.div`
+        &:hover {
+          ${red}
+          span {
+            color: blue;
+          }
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a:hover {
+          color: red;
+        }
+        .a:hover span {
+          color: blue;
+        }"
+      `);
+    });
+
+    it('applies an attribute-selector rule after a mixin', () => {
+      const Comp = styled.div`
+        ${red}
+        &[data-active="true"] {
+          color: blue;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+        }
+        .a[data-active="true"] {
+          color: blue;
+        }"
+      `);
+    });
+
+    it('keeps a mixin before a component selector rule', () => {
+      const Child = styled.span``;
+      const Comp = styled.div`
+        ${red}
+        ${Child} & {
+          color: blue;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(
+        `.a {\n  color: red;\n}\n.${Child.styledComponentId} .a {\n  color: blue;\n}`
+      );
+    });
+
+    it('renders only the declaration after a stray component reference on its own line', () => {
+      const Child = styled.span``;
+      const Comp = styled.div`
+        ${Child}
+        color: red;
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+        }"
+      `);
+    });
+
+    it('turns a static media helper string into a media rule', () => {
+      const md = '@media (min-width: 900px)';
+      const Comp = styled.div`
+        color: blue;
+        ${md} {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: blue;
+        }
+        @media (min-width:900px) {
+          .a {
+            color: red;
+          }
+        }"
+      `);
+    });
+
+    it('turns a theme media helper into a media rule', () => {
+      const theme = { up: (size: string) => `@media (min-width: ${size === 'md' ? 900 : 0}px)` };
+      const Comp = styled.div`
+        color: blue;
+        ${(p: { theme: typeof theme }) => p.theme.up('md')} {
+          color: red;
+        }
+      `;
+      render(
+        <ThemeProvider theme={theme}>
+          <Comp />
+        </ThemeProvider>
+      );
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: blue;
+        }
+        @media (min-width:900px) {
+          .a {
+            color: red;
+          }
+        }"
+      `);
+    });
+
+    it('reads a function stop and splices a frame-list mixin in inline @keyframes', () => {
+      const toFrame = css`
+        to {
+          opacity: 1;
+        }
+      `;
+      const Comp = styled.div`
+        @keyframes fade {
+          ${() => 'from'} {
+            opacity: 0;
+          }
+          ${toFrame}
+        }
+        animation: fade 1s;
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          animation: fade 1s;
+        }
+        @keyframes fade {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }"
+      `);
+    });
+
+    it('never leaks slot bytes for a block fragment inside parentheses', () => {
+      const block = css`
+        margin: 0;
+      `;
+      const Media = styled.div`
+        @media (min-width: 1px ${block}) {
+          color: red;
+        }
+      `;
+      const Url = styled.div`
+        background: url(a ${block});
+        color: red;
+      `;
+      // Read the rule text handed to the sheet: the browser's CSSOM rejects a
+      // rule holding NUL bytes, so the injected sheet alone would hide a leak.
+      const insert = jest.spyOn(mainSheet, 'insertRules');
+      render(
+        <>
+          <Media />
+          <Url />
+        </>
+      );
+      const inserted = insert.mock.calls.map(call => call[2].join('\n')).join('\n');
+      insert.mockRestore();
+      expect(inserted).toContain('color:red;');
+      expect(inserted).not.toContain('\0');
+    });
+  });
 });

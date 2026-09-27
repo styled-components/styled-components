@@ -2,6 +2,7 @@ import css from '../constructors/css';
 import Keyframes from '../models/Keyframes';
 import StyleSheet from '../sheet';
 import createCompiler from '../utils/compiler';
+import { resetWarnOnce } from '../utils/warnOnce';
 import { compileWeb } from './compile';
 import { parseSource } from './source';
 
@@ -572,6 +573,147 @@ describe('compileWeb', () => {
       expect(
         compileWeb(src, { fast: false }, '.a', { selfRefSelector: '.a', componentId: 'a' })
       ).toEqual(legacy('animation: spin2 2s linear;'));
+    });
+  });
+
+  /**
+   * A Run of slots before the selector text of a rule is a Head. Each slot's
+   * realized text is read front to back: everything through its last `;` or
+   * `}` is spliced before the rule as statements, and what remains prefixes
+   * the rule's selector (or, for a listed at-keyword, turns the rule into a
+   * conditional group rule).
+   */
+  describe('rule heads', () => {
+    const opts = { selfRefSelector: '.a', componentId: 'a' };
+    const Other = Object.assign(function FakeComponent() {}, { styledComponentId: 'sc-other' });
+    let warn: jest.SpyInstance;
+
+    beforeEach(() => {
+      resetWarnOnce();
+      warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      warn.mockRestore();
+    });
+
+    const warnings = () => warn.mock.calls.map(call => String(call[0]));
+
+    it('prefixes the selector with a styled component returned by a function', () => {
+      const src = tagged`${() => Other} h2 { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('.sc-other h2 { color: red; }'));
+    });
+
+    it('splices a function result ending in `;` before the rule', () => {
+      const src = tagged`${() => 'opacity: 0.5;'} h2 { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('opacity: 0.5; h2 { color: red; }'));
+      expect(warnings()).toEqual([]);
+    });
+
+    it('prefixes the selector with a declaration missing its `;`, with a dev warning', () => {
+      const src = tagged`${() => 'opacity: 0.5'} h2 { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('opacity: 0.5 h2 { color: red; }'));
+      expect(warnings()).toEqual([
+        expect.stringContaining('`opacity: 0.5` is written before a nested rule'),
+      ]);
+    });
+
+    it('applies the rule to its own selector text when the Head is empty', () => {
+      const src = tagged`${() => ''} h2 { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('h2 { color: red; }'));
+    });
+
+    it('applies the block to the parent when the Head and the selector text are empty', () => {
+      const src = tagged`color: blue; ${() => ''} { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue; & { color: red; }'));
+    });
+
+    it('splices a block css fragment before the rule', () => {
+      const frag = css`
+        color: blue;
+      `;
+      const src = tagged`${frag} h2 { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue; h2 { color: red; }'));
+    });
+
+    it('reads a css fragment holding a selector as selector text', () => {
+      const hover = css`
+        ${Other}:hover
+      `;
+      const src = tagged`${hover} { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('.sc-other:hover { color: red; }'));
+    });
+
+    it.each([
+      ['a:hover'],
+      ['&:hover'],
+      ['LI:first-child'],
+      ['my-el:hover'],
+      ['input[type="text"]:focus'],
+    ])('reads `%s` as selector text without a warning', selector => {
+      const src = tagged`${() => selector} { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy(`${selector} { color: red; }`));
+      expect(warnings()).toEqual([]);
+    });
+
+    it('turns a static media query string into a conditional group rule', () => {
+      const src = tagged`${'@media (min-width: 900px)'} { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(
+        legacy('@media (min-width: 900px) { color: red; }')
+      );
+    });
+
+    it('turns a media query returned by a function into a conditional group rule', () => {
+      const src = tagged`
+        color: blue;
+        ${() => '@media (min-width: 900px)'} {
+          color: red;
+        }
+      `;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(
+        legacy('color: blue; @media (min-width: 900px) { color: red; }')
+      );
+    });
+
+    it('drops the rule for another at-keyword, with a dev warning', () => {
+      const src = tagged`color: blue; ${'@import url(x)'} { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue;'));
+      expect(warnings()).toEqual([expect.stringContaining('@import')]);
+    });
+
+    it('splices statements and prefixes the selector with what follows them', () => {
+      const src = tagged`${() => 'a: b; h1'} { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('a: b; h1 { color: red; }'));
+    });
+
+    it('resolves stacked Head slots front to back', () => {
+      const src = tagged`${() => 'color: blue;'} ${() => '.x'} ${() => '.y'} h2 { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(
+        legacy('color: blue; .x .y h2 { color: red; }')
+      );
+    });
+
+    it('resolves stacked Head slots ending in an at-rule remainder', () => {
+      const src = tagged`${() => 'color: blue;'} ${() => ''} ${() => '@media (min-width: 1px)'} { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(
+        legacy('color: blue; @media (min-width: 1px) { color: red; }')
+      );
+    });
+
+    it('splits the built selector on top-level commas', () => {
+      const src = tagged`${() => '.x, .y'} h2 { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('.x, .y h2 { color: red; }'));
+    });
+
+    it('keeps a static styled component reference in the selector', () => {
+      const src = tagged`${Other} & { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('.sc-other & { color: red; }'));
+    });
+
+    it('drops the rule for a client reference that cannot be resolved', () => {
+      const clientRef = { $$typeof: Symbol.for('react.client.reference'), $$id: 'x#Child' };
+      const src = tagged`color: blue; ${clientRef} h2 { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue;'));
     });
   });
 

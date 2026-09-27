@@ -188,18 +188,45 @@ export interface DeclNode<F = string | TemplateValue> {
   [DYN]?: boolean;
 }
 
+/**
+ * The slots of a Run heading a rule or keyframe frame. Resolved from the
+ * slots' values at fill time; the parse-time `selectors` (or `stops`) of a
+ * node carrying a head are empty.
+ */
+export interface SlotHead {
+  /** Raw whitespace written after each slot, parallel to `slots`. */
+  gaps: string[];
+  /** Selector (or stop) text after the Run, unsplit. */
+  rest: string | TemplateValue;
+  slots: number[];
+  /**
+   * Set by `parseSource` when a slot's value is a client reference, whose
+   * class name the server cannot read: the rule is dropped, so its selector
+   * never widens to the text around the slot.
+   */
+  unresolved?: true;
+}
+
+/**
+ * Parse-time-only field types. The fill turns every head and slot splice
+ * into plain nodes, so the static (`F = string`) forms cannot carry them.
+ */
+type HeadField<F> = [F] extends [string] ? never : SlotHead;
+type SlotSplice<F> = [F] extends [string] ? never : InterpolationNode;
+
 export interface RuleNode<F = string | TemplateValue> {
   kind: NodeKind.Rule;
   selectors: F[];
   children: Node<F>[];
   [DYN]?: boolean;
+  head?: HeadField<F>;
   /**
    * Parse-time native-plan classification. Stamped by `stampRuleClass`
    * (parser/nativePlan.ts) on native builds at construction time.
    * Symbol-keyed and non-enumerable so test fixtures and JSON
-   * serialization see the original AST shape. Absent when any selector
-   * is a TemplateValue at construction time; the render path then
-   * re-classifies on the filled selectors.
+   * serialization see the original AST shape. Absent when the rule has a
+   * head or any selector is a TemplateValue at construction time; the
+   * render path then re-classifies on the filled selectors.
    */
   [NATIVE_RULE_CLASS]?: NativeRuleClass;
 }
@@ -220,14 +247,17 @@ export interface AtRuleNode<F = string | TemplateValue> {
 
 export interface KeyframeFrame<F = string | TemplateValue> {
   stops: F[];
-  children: DeclNode<F>[];
+  /** A slot among the declarations splices declarations. */
+  children: Array<DeclNode<F> | SlotSplice<F>>;
+  head?: HeadField<F>;
 }
 
 export interface KeyframesNode<F = string | TemplateValue> {
   kind: NodeKind.Keyframes;
   name: F;
   prelude: F;
-  frames: KeyframeFrame<F>[];
+  /** A slot in the frame list splices frames. */
+  frames: Array<KeyframeFrame<F> | SlotSplice<F>>;
   [DYN]?: boolean;
 }
 

@@ -622,24 +622,23 @@ describe('toNativeStyles', () => {
     // `toNativeStyles(rawCSS)` is the static-input parse path; it's reachable
     // from the `NativeStyle.compile` fallback after a fast-path bail, where
     // the `rawCSS` is `buildHashCSS`'s output (template strings + filled
-    // user values verbatim). Sentinel detection in `parse()` is gated on
+    // user values verbatim). Slot detection in `parse()` is gated on
     // `options.templates`, so user-supplied values that happen to contain
-    // `\0I<n>\0` / `\0J<n>\0` byte patterns cannot lift to a TemplateValue
-    // / Interpolation node and crash downstream string-only consumers.
+    // `\0S<n>\0` byte patterns cannot lift to a TemplateValue, Interpolation
+    // node, or rule Head and crash downstream string-only consumers.
 
-    it('treats `\\0I<n>\\0` in a value as opaque text (no TemplateValue lift)', () => {
-      const r = compile('color: red\0I0\0blue;');
-      expect(r.base).toEqual({ color: 'red\0I0\0blue' });
+    it('treats `\\0S<n>\\0` in a value as opaque text (no TemplateValue lift)', () => {
+      const r = compile('color: red\0S0\0blue;');
+      expect(r.base).toEqual({ color: 'red\0S0\0blue' });
     });
 
-    it('treats `\\0J<n>\\0` inside a value as opaque text (no Interpolation node)', () => {
-      // With the gate closed, the J-marker doesn't trigger the standalone-
-      // sentinel fast dispatch. The bytes ride inside the value string.
-      // Critical: NO TemplateValue lift and NO Interpolation node;
-      // downstream consumers (transformDecl, the StyleSheet writer) see a
-      // plain string field exactly as they expect.
-      const r = compile('color: red\0J0\0blue;');
-      expect(r.base).toEqual({ color: 'red\0J0\0blue' });
+    it('treats `\\0S<n>\\0` at a statement start as opaque text (no Interpolation node)', () => {
+      // With the gate closed, the bytes are not read as a slot. A statement
+      // starting with them is an ordinary declaration whose property name
+      // holds the bytes; downstream consumers (transformDecl, the StyleSheet
+      // writer) see plain string fields exactly as they expect.
+      const r = compile('\0S0\0color: red; padding-top: 1px;');
+      expect(r.base).toEqual({ '\0S0\0color': 'red', paddingTop: 1 });
     });
   });
 });
