@@ -16,7 +16,8 @@ How a `${...}` slot in a styled template (styled components, `css`, `createGloba
 - Glued: a slot at a statement start followed immediately, with no whitespace, by statement text (`${p}: red`, `${x}-color: red`, `${A}:hover {`, `${A}, h2 {`, `${A}{`). Treated as Inside.
 - Run: slots at a statement start separated only by whitespace or nothing (`${a} ${b}`, `${a}${b}`). A Run is classified as a whole by what follows it; its last slot may be Glued.
 - Standalone: a Run followed by `;`, `}`, the end of the block, `@`, or a statement that ends in `;`, `}`, or the end of the block (a declaration). Each value is spliced as sibling statements (a mixin).
-- Property: a Run whose last slot is Glued to `:` in a statement that ends in `;`, `}`, or the end of the block. The last slot is part of the property name; earlier slots are Standalone.
+- Property: a Run followed by `:`, with or without whitespace between, in a statement that ends in `;`, `}`, or the end of the block. The last slot is part of the property name; earlier slots are Standalone.
+- `@` ends a Run even with no whitespace before it (`${a}@media ...`): the Run is Standalone.
 - Head: a Run followed, after whitespace, by statement text of a statement that ends in `{`. A Run whose last slot is Glued to that text keeps the Glued slot in the selector and resolves the earlier slots as Head.
 - Head resolution, per slot front to back, from the realized value text (a css fragment realizes to its filled source text):
   - through the last `;` or `}` outside strings, parentheses, and brackets: statements, spliced before the rule;
@@ -26,8 +27,8 @@ How a `${...}` slot in a styled template (styled components, `css`, `createGloba
   - once a slot contributes a selector or at-rule remainder, every later slot in the Run joins that remainder as text.
   - A Head whose value is a styled component reference, or a client reference that cannot be resolved on the server, is selector text; an unresolved client reference drops the rule with a dev warning rather than widening its selector.
   - Empty following selector text (`${x} { ... }`): the block applies to the parent as `& { ... }` does; at the top level of `createGlobalStyle`, where there is no parent, the block is dropped with a dev warning.
-- Missing-`;` recovery: a css fragment interpolated directly (not returned by a function) whose source holds a `;`, `{`, or `}` outside strings and parentheses, met Inside a declaration at parenthesis depth 0 whose previous significant item is not `:`, `,`, `(`, or `/`, ends that declaration and becomes Standalone. A preceding slot counts as a value item (recovery applies). Never inside strings or parentheses.
-- Keyframes: in a frame list, Glued and Head apply as in a block (`${() => '0%'} { ... }` is a stop); a Standalone Run splices frames. Inside a frame, a Standalone Run splices declarations. A spliced value of the wrong kind (rules inside a frame, declarations in a frame list) is dropped with a dev warning.
+- Missing-`;` recovery: a css fragment interpolated directly (not returned by a function) whose source holds a `;`, `{`, or `}` outside strings and parentheses, met Inside a declaration (after the statement's top-level `:`) at parenthesis depth 0 whose previous significant item is not `:`, `,`, `(`, or `/`, ends that declaration and becomes Standalone. A preceding slot counts as a value item (recovery applies). Never inside strings or parentheses.
+- Keyframes: in a frame list, Glued and Head apply as in a block (`${() => '0%'} { ... }` is a stop); a Run followed by `;`, `}`, `@`, or the end of the list is Standalone and splices frames. A stop Head whose remainder starts with `@` drops the frame with a dev warning; one that resolves to no stops drops the frame. Inside a frame every Run at a statement start is Standalone and splices declarations. A spliced value of the wrong kind (rules inside a frame, declarations in a frame list) is dropped with a dev warning.
 
 ## Value shapes
 
