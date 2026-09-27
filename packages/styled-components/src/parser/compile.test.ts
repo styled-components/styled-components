@@ -1,9 +1,11 @@
+import React from 'react';
 import css from '../constructors/css';
 import Keyframes from '../models/Keyframes';
 import StyleSheet from '../sheet';
 import createCompiler from '../utils/compiler';
 import { resetWarnOnce } from '../utils/warnOnce';
-import { compileWeb } from './compile';
+import { NodeKind } from './ast';
+import { compileWeb, fillSource } from './compile';
 import { parseSource } from './source';
 
 const compiler = createCompiler();
@@ -273,12 +275,12 @@ describe('compileWeb', () => {
       expect(sheet.hasNameForId(kf.id, resolvedName)).toBe(true);
     });
 
-    it('bails when sheet/compiler are not supplied', () => {
-      // Native and test paths that don't provide sheet+compiler can't
-      // register keyframes; fast path falls through to legacy.
+    it('substitutes the main compiler name when no compiler is supplied', () => {
       const kf = new Keyframes('fade', '@keyframes fade {}');
       const src = tagged`animation-name: ${kf};`;
-      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toBeNull();
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual(
+        legacy('animation-name: fade;')
+      );
     });
 
     it('substitutes a function-returning keyframes ref', () => {
@@ -299,31 +301,57 @@ describe('compileWeb', () => {
     });
   });
 
-  describe('at-rule name interpolation bails to the string path', () => {
-    // Slot in the at-rule name position can change the at-rule's identity
-    // (e.g. `@${'-webkit-'}keyframes` should reclassify from AtRule to
-    // Keyframes after substitution). The fast path can't safely reparse the
-    // substituted text, so it returns null and the caller falls through to
-    // the string-input slow path.
+  /**
+   * A templated at-rule name resolves at fill time: the realized name must be
+   * an identifier, and a keyframes name turns the block into a @keyframes rule.
+   */
+  describe('templated at-rule and keyframes names', () => {
     const id = '.a';
     const opts = { selfRefSelector: '.a', componentId: 'a' };
+    let warn: jest.SpyInstance;
 
-    it('returns null for a dynamic at-rule name', () => {
+    beforeEach(() => {
+      resetWarnOnce();
+      warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      warn.mockRestore();
+    });
+
+    const warnings = () => warn.mock.calls.map(call => String(call[0]));
+
+    it('resolves a templated at-rule name', () => {
       const src = tagged`@${'media'} (min-width: 600px) { padding: 8px; }`;
-      expect(compileWeb(src, {}, id, opts)).toBeNull();
+      expect(compileWeb(src, {}, id, opts)).toEqual(
+        legacy('@media (min-width: 600px) { padding: 8px; }')
+      );
     });
 
-    it('returns null for a vendor prefix on @keyframes', () => {
+    it('reads a templated vendor-prefixed keyframes name as @keyframes', () => {
       const src = tagged`@${'-webkit-'}keyframes anim { from { opacity: 0; } to { opacity: 1; } }`;
-      expect(compileWeb(src, {}, id, opts)).toBeNull();
+      expect(compileWeb(src, {}, id, opts)).toEqual(
+        legacy('@-webkit-keyframes anim { from { opacity: 0; } to { opacity: 1; } }')
+      );
     });
 
-    it('does not bail when the slot lives in the prelude (e.g. @keyframes ${name})', () => {
+    it('drops the at-rule when the realized name is not an identifier, with a dev warning', () => {
+      const src = tagged`color: blue; @${'media x'} (min-width: 600px) { padding: 8px; }`;
+      expect(compileWeb(src, {}, id, opts)).toEqual(legacy('color: blue;'));
+      expect(warnings()).toEqual([expect.stringContaining('`@media x`')]);
+    });
+
+    it('resolves a templated keyframes name in the prelude', () => {
       const src = tagged`@keyframes ${'spin'} { from { opacity: 0; } to { opacity: 1; } }`;
-      // Prelude-only interpolation still resolves on the fast path.
       expect(compileWeb(src, {}, id, opts)).toEqual(
         legacy('@keyframes spin { from { opacity: 0; } to { opacity: 1; } }')
       );
+    });
+
+    it('drops @keyframes whose templated name is not an identifier, with a dev warning', () => {
+      const src = tagged`color: blue; @keyframes ${'a b'} { to { opacity: 1; } }`;
+      expect(compileWeb(src, {}, id, opts)).toEqual(legacy('color: blue;'));
+      expect(warnings()).toEqual([expect.stringContaining('`a b`')]);
     });
   });
 
@@ -717,15 +745,21 @@ describe('compileWeb', () => {
     });
   });
 
-  describe('bailout cases', () => {
-    it('returns null for object interpolation', () => {
+  describe('block-level string interpolations', () => {
+    it('splits an object value in a declaration into declarations at its `;`', () => {
+      // The object converts to `raw:red;`; its `;` splits the realized
+      // `color:raw:red;` into one declaration, `color` with `raw:red`.
       const src = tagged`color: ${{ raw: 'red' } as unknown};`;
-      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toBeNull();
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
+        '.a{color:raw:red;}',
+      ]);
     });
 
-    it('returns null for array interpolation', () => {
+    it('joins an array value in a declaration', () => {
       const src = tagged`color: ${['red', 'blue'] as unknown};`;
-      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toBeNull();
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
+        '.a{color:redblue;}',
+      ]);
     });
 
     it('parses block-level string interpolations containing CSS structure (Phase D)', () => {
@@ -752,6 +786,330 @@ describe('compileWeb', () => {
       expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual(
         legacy('color: red; background: blue; margin: 0;', 'a')
       );
+    });
+  });
+
+  /**
+   * Every Inside, Glued, Property, and Head-remainder value is read with CSS
+   * Syntax 3 tokenization from the state at its position in the template. A
+   * failing value drops its enclosing declaration, rule, at-rule, or frame;
+   * the rest of the component renders.
+   */
+  describe('value checks (CSS Syntax 3 tokenization)', () => {
+    const opts = { selfRefSelector: '.a', componentId: 'a' };
+    let warn: jest.SpyInstance;
+
+    beforeEach(() => {
+      resetWarnOnce();
+      warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      warn.mockRestore();
+    });
+
+    const warnings = () => warn.mock.calls.map(call => String(call[0]));
+    const out = (src: ReturnType<typeof tagged>) => compileWeb(src, {}, '.a', opts);
+
+    it.each([
+      ['a closing brace', 'red } body { background: red'],
+      ['an opening brace', 'red { x'],
+      ['a closing brace inside a string', '"}"'],
+      ['an opening brace inside a comment', '/* { */ red'],
+    ])('drops the declaration for %s, with a dev warning', (_, value) => {
+      const src = tagged`color: ${value}; margin: 0;`;
+      expect(out(src)).toEqual(legacy('margin: 0;'));
+      expect(warnings()).toEqual([expect.stringContaining('`color`')]);
+    });
+
+    it.each([
+      ['an unclosed string', '"abc'],
+      ['an unclosed parenthesis', 'calc(1px'],
+      ['a parenthesis it did not open', '1px) , x'],
+      ['a bracket it did not open', 'a ] b'],
+      ['an unclosed bracket', '[a'],
+      ['an unclosed comment', 'red /* x'],
+      ['a trailing backslash', 'red\\'],
+    ])('drops the declaration for %s', (_, value) => {
+      const src = tagged`color: ${value}; margin: 0;`;
+      expect(out(src)).toEqual(legacy('margin: 0;'));
+    });
+
+    // CSS Syntax 3 §4.3.5 Consume a string token: "newline: This is a parse
+    // error. Reconsume the current input code point, create a
+    // <bad-string-token>, and return it."
+    it('drops the declaration for a raw newline inside a string', () => {
+      // Read by the tokenizer, `"a` ends at the newline and `"c"` is a whole
+      // string, so the value ends outside any string; the newline rule still
+      // drops it, since readers that let a string span the newline disagree.
+      const src = tagged`content: ${'"a\nb"c"'}; margin: 0;`;
+      expect(out(src)).toEqual(legacy('margin: 0;'));
+    });
+
+    // CSS Syntax 3 §4.3.2 Consume comments: "If the next two input code point
+    // are U+002F SOLIDUS (/) followed by a U+002A ASTERISK (*), consume them
+    // and all following code points up to and including the first U+002A
+    // ASTERISK (*) followed by a U+002F SOLIDUS (/), or up to an EOF code
+    // point."
+    it('reads a quote inside a comment as comment text', () => {
+      const src = tagged`color: ${'/* " */ red'}; margin: 0;`;
+      expect(out(src)).toEqual(['.a{color:/* " */ red;margin:0;}']);
+    });
+
+    it('does not split at a `;` inside a comment', () => {
+      const src = tagged`color: ${'red /* ; */'};`;
+      expect(out(src)).toEqual(['.a{color:red /* ; */;}']);
+    });
+
+    it('splits at a `;` after a comment holding a quote', () => {
+      const src = tagged`color: ${'red /* " */; margin: 0'};`;
+      expect(out(src)).toEqual(['.a{color:red /* " */;margin:0;}']);
+    });
+
+    it.each([
+      ['a slash before the slot', tagged`font: 12px/${'* x'};`],
+      ['a slash ending the value', tagged`width: calc(${'10px/'}*2);`],
+      ['two adjacent values', tagged`color: ${'/'}${'* x'};`],
+      ['an empty value between a slash and an asterisk', tagged`font: 12px/${''}*2;`],
+    ])('drops the declaration when %s opens a comment', (_, src) => {
+      expect(out(src)).toEqual([]);
+    });
+
+    // CSS Syntax 3 §4.3.6 Consume a url token: "U+0022 QUOTATION MARK (")
+    // U+0027 APOSTROPHE (') U+0028 LEFT PARENTHESIS (() non-printable code
+    // point: This is a parse error. Consume the remnants of a bad url, create
+    // a <bad-url-token>, and return it." §4.3.15 Consume the remnants of a bad
+    // url: "U+0029 RIGHT PARENTHESIS ()) EOF: Return."
+    it('reads a quote inside an unquoted url( as a bad url that ends at `)`', () => {
+      const src = tagged`background: ${'url(a"b) ; x: y'};`;
+      expect(out(src)).toEqual(['.a{background:url(a"b);x:y;}']);
+    });
+
+    it('drops a bad url payload carrying braces', () => {
+      const src = tagged`background: ${'url(a"b) } body{background:red} x"'}; margin: 0;`;
+      expect(out(src)).toEqual(legacy('margin: 0;'));
+    });
+
+    // CSS Syntax 3 §4.3.4 Consume an ident-like token: "If string’s value is
+    // an ASCII case-insensitive match for "url", and the next input code point
+    // is U+0028 LEFT PARENTHESIS ((), consume it." The identifier is read
+    // across the slot boundary, so text before the slot decides whether `(`
+    // opens a url.
+    it('reads url( across the slot boundary', () => {
+      const src = tagged`background: u${'rl(a"b)'};`;
+      expect(out(src)).toEqual(['.a{background:url(a"b);}']);
+    });
+
+    it('reads `url(` extended by an identifier before the slot as a function', () => {
+      const src = tagged`background: x${'url(a"b)'}; margin: 0;`;
+      expect(out(src)).toEqual(legacy('margin: 0;'));
+    });
+
+    it('drops the declaration when an identifier value turns the following `(` into url(', () => {
+      const src = tagged`background: ${'ur'}l(a); margin: 0;`;
+      expect(out(src)).toEqual(legacy('margin: 0;'));
+    });
+
+    it('keeps a data URI with `;` in an unquoted url( as one declaration', () => {
+      const src = tagged`background: ${'url(data:image/png;base64,AAAA)'};`;
+      expect(out(src)).toEqual(['.a{background:url(data:image/png;base64,AAAA);}']);
+    });
+
+    it('keeps a data URI value inside an authored url( as one declaration', () => {
+      const src = tagged`src: url(${'data:font/woff2;base64,AAAA'});`;
+      expect(out(src)).toEqual(['.a{src:url(data:font/woff2;base64,AAAA);}']);
+    });
+
+    it('keeps a quoted `;` in content as one declaration', () => {
+      const src = tagged`content: ${'"a;b"'};`;
+      expect(out(src)).toEqual(['.a{content:"a;b";}']);
+    });
+
+    it('drops a value closing the url( it sits in', () => {
+      const src = tagged`background: url(${'a) ; x: y ; z: url(b'}); margin: 0;`;
+      expect(out(src)).toEqual(legacy('margin: 0;'));
+    });
+
+    // CSS Syntax 3 §4.3.5 Consume a string token: "U+005C REVERSE SOLIDUS (\):
+    // If the next input code point is EOF, do nothing. Otherwise, if the next
+    // input code point is a newline, consume it. Otherwise, (the stream starts
+    // with a valid escape) consume an escaped code point".
+    it('substitutes a value after a backslash inside a string', () => {
+      const src = tagged`content: "\\${'f101'}";`;
+      expect(out(src)).toEqual(['.a{content:"\\f101";}']);
+    });
+
+    it('drops the declaration when an empty value leaves a backslash escaping the closing quote', () => {
+      const src = tagged`content: "\\${''}"; margin: 0;`;
+      expect(out(src)).toEqual(legacy('margin: 0;'));
+    });
+
+    it('splits a declaration at a `;` in a value', () => {
+      const src = tagged`color: ${'red; position: fixed'};`;
+      expect(out(src)).toEqual(['.a{color:red;position:fixed;}']);
+    });
+
+    it('keeps only declarations when a value `;` is followed by an at-rule', () => {
+      const src = tagged`color: ${'red; @import url(x)'};`;
+      expect(out(src)).toEqual(['.a{color:red;}']);
+    });
+
+    it('splits after a value closes the string it sits in', () => {
+      const src = tagged`content: "${'a"; b: "c'}";`;
+      expect(out(src)).toEqual(['.a{content:"a";b:"c";}']);
+    });
+
+    it('splits a property value at its `;`', () => {
+      const src = tagged`${'x; position'}: fixed;`;
+      expect(out(src)).toEqual(['.a{position:fixed;}']);
+    });
+
+    // CSS Syntax 3 §5.5.5 Consume a block's contents: "consume a qualified rule
+    // from input, with nested set to true, and <semicolon-token> as the stop
+    // token." A `;` in a selector ends the rule inside a conditional group
+    // rule, and what follows reads as a new rule.
+    it('drops a rule whose selector value holds a `;`, with a dev warning', () => {
+      const src = tagged`color: blue; & ${'h1; body'} { color: red; }`;
+      expect(out(src)).toEqual(legacy('color: blue;'));
+      expect(warnings()).toEqual([expect.stringContaining('& ${…}')]);
+    });
+
+    // CSS Syntax 3 §5.5.2 Consume an at-rule: "<semicolon-token> <EOF-token>
+    // Discard a token from input. If rule is valid in the current context,
+    // return it". A `;` in a prelude ends the at-rule.
+    it.each([
+      ['a `;`', 'screen; body'],
+      ['a brace', 'screen { } body {'],
+    ])('drops an at-rule whose prelude value holds %s', (_, value) => {
+      const src = tagged`color: blue; @media ${value} { color: red; }`;
+      expect(out(src)).toEqual(legacy('color: blue;'));
+    });
+
+    it('drops a rule whose Head remainder holds a brace, keeping the rest', () => {
+      const src = tagged`color: blue; ${() => 'a { b'} h2 { color: red; } margin: 0;`;
+      expect(out(src)).toEqual(legacy('color: blue; margin: 0;'));
+      expect(warnings()).toEqual([expect.stringContaining('a { b')]);
+    });
+
+    it('drops a rule whose later Head slot holds a brace', () => {
+      const src = tagged`${() => '.x'} ${() => '} body {'} h2 { color: red; } margin: 0;`;
+      expect(out(src)).toEqual(legacy('margin: 0;'));
+    });
+  });
+
+  /**
+   * After substitution a selector list or keyframe stop list is split on
+   * top-level commas again, so every selector a value adds stays scoped.
+   */
+  describe('comma re-split after substitution', () => {
+    const opts = { selfRefSelector: '.a', componentId: 'a' };
+
+    it('scopes every selector an Inside value adds', () => {
+      const src = tagged`& ${'h1, h2, h3'} { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(['.a h1,.a h2,.a h3{color:red;}']);
+    });
+
+    it('scopes every selector a Glued value adds', () => {
+      const src = tagged`${'h1, h2'}:hover { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(['.a h1,.a h2:hover{color:red;}']);
+    });
+
+    it('scopes an unscoped selector smuggled into an Inside value', () => {
+      const src = tagged`& ${'a, body'} { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(['.a a,.a body{color:red;}']);
+    });
+
+    it('scopes every selector a Head value adds', () => {
+      const src = tagged`${() => 'h1, body'} { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(['.a h1,.a body{color:red;}']);
+    });
+
+    it('splits a stop list an Inside value adds into stops', () => {
+      const src = tagged`@keyframes k { from, ${'50%, 60%'} { opacity: 0; } }`;
+      const filled = fillSource(src, src.staticValues, null);
+      expect(filled).toEqual([
+        {
+          kind: NodeKind.Keyframes,
+          name: 'keyframes',
+          prelude: 'k',
+          frames: [
+            {
+              stops: ['from', '50%', '60%'],
+              children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '0' }],
+            },
+          ],
+        },
+      ]);
+    });
+  });
+
+  describe('value shapes', () => {
+    const opts = { selfRefSelector: '.a', componentId: 'a' };
+    let warn: jest.SpyInstance;
+
+    beforeEach(() => {
+      resetWarnOnce();
+      warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      warn.mockRestore();
+    });
+
+    const warnings = () => warn.mock.calls.map(call => String(call[0]));
+
+    it('splices a static array in order', () => {
+      const src = tagged`${['color: red', css`margin: 0;`]}`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: red; margin: 0;'));
+    });
+
+    it('splices an array a function returns in order', () => {
+      const src = tagged`${() => ['color: red', 'margin: 0']} padding: 0;`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: red; margin: 0; padding: 0;'));
+    });
+
+    it('splices an array of css fragments a function returns', () => {
+      const src = tagged`${() => [css`color: red;`, css`margin: 0;`]}`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: red; margin: 0;'));
+    });
+
+    it('joins an array in a Head as selector text', () => {
+      const Other = Object.assign(function FakeComponent() {}, { styledComponentId: 'sc-other' });
+      const src = tagged`${() => [Other, ':hover']} & { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('.sc-other:hover & { color: red; }'));
+    });
+
+    it('reads `true` as empty', () => {
+      const src = tagged`color: red; ${() => true} margin: 0${true};`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: red; margin: 0;'));
+    });
+
+    it('calls a function of two parameters with the render context', () => {
+      const src = tagged`color: ${(p: { fg: string }, _unused?: unknown) => p.fg};`;
+      expect(compileWeb(src, { fg: 'tomato' }, '.a', opts)).toEqual(legacy('color: tomato;'));
+    });
+
+    it('stringifies a css fragment inside a plain object value', () => {
+      const src = tagged`${() => ({ color: css`red` })}`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: red;'));
+    });
+
+    it('drops the rule a non-styled component heads, with a dev warning', () => {
+      function Plain() {
+        return React.createElement('div');
+      }
+      const src = tagged`color: blue; ${Plain} h2 { color: red; } margin: 0;`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue; margin: 0;'));
+      expect(warnings()).toEqual([expect.stringContaining('Plain is not a styled component')]);
+    });
+
+    it('drops only the value slot of a non-styled component', () => {
+      const Forwarded = { $$typeof: Symbol.for('react.forward_ref'), displayName: 'Forwarded' };
+      const src = tagged`color: blue; content: "${() => Forwarded}"; margin: 0;`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(
+        legacy('color: blue; content: ""; margin: 0;')
+      );
+      expect(warnings()).toEqual([expect.stringContaining('Forwarded is not a styled component')]);
     });
   });
 

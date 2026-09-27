@@ -168,9 +168,8 @@ export interface Keyframes {
 export interface Compiler {
   hash: string;
   /**
-   * String-input emit path. Used by callers that have a freshly-built CSS
-   * string and a parent selector (keyframes, global styles, and the rare
-   * fallback when a `RuleSet` has no construction-time `Source` attached).
+   * String-input emit path, for callers holding a finished CSS string and a
+   * parent selector (keyframes registration).
    *
    * Wraps the input in `prefix + selector { css }`, runs `normalize +
    * parser + emit-web` with the active plugin set + namespace, and returns
@@ -180,7 +179,7 @@ export interface Compiler {
    *
    * `prefix` carries at-rule wrapping (e.g. `'@keyframes'` for keyframe
    * registration). When both `selector` and `prefix` are empty the input
-   * is parsed unwrapped (used by `createGlobalStyle`).
+   * is parsed unwrapped.
    */
   compile: (
     css: string,
@@ -189,17 +188,16 @@ export interface Compiler {
     componentId?: string | undefined
   ) => string[];
   /**
-   * Source-input fast emit path. Walks the construction-time AST + filled
+   * Source-input emit path. Walks the construction-time AST + filled
    * interpolation values, skipping the per-render `normalize + parse`
-   * work `compile` performs against a freshly joined CSS string. Returns
-   * `null` only on shape bailouts the fast path doesn't yet cover; callers
-   * fall through to `compile` in that case.
+   * work `compile` performs against a freshly joined CSS string. A slot
+   * value that cannot be used drops only its own construct.
    *
    * `fragments` is the parallel side table populated by
    * `evaluateForFastPath` for slots that resolved to a `css\`...\`` fragment.
    * Same plugin set, namespace, and decl/selector transforms feed through;
-   * output is byte-equal to `compile` by construction (same parser, same
-   * emitter).
+   * for slot values that pass their checks, output is byte-equal to
+   * `compile` on the joined CSS (same parser, same emitter).
    */
   emit: (
     source: import('./parser/source').Source,
@@ -207,7 +205,7 @@ export interface Compiler {
     parentSelector: string,
     componentId: string,
     fragments?: ReadonlyArray<import('./parser/compile').FastPathFragment | null> | null
-  ) => string[] | null;
+  ) => string[];
 }
 
 export interface ShouldForwardProp<R extends Runtime> {

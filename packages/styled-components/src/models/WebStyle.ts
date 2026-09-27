@@ -148,18 +148,14 @@ export default class WebStyle {
         this.fragmentsBuffer,
         this.keyframesBuffer
       );
-      if (filled !== null) {
-        fastFilled = filled;
-        fastFragments = hasAnyFragment(this.fragmentsBuffer) ? this.fragmentsBuffer : null;
-        interpKey = buildInterpKey(filled, fastFragments, compiler.hash);
-        name = this.interpKeyCache && this.interpKeyCache.get(interpKey);
-        if (name === undefined) {
-          css = buildHashCSS(source.strings, filled, fastFragments);
-        }
+      fastFilled = filled;
+      fastFragments = hasAnyFragment(this.fragmentsBuffer) ? this.fragmentsBuffer : null;
+      interpKey = buildInterpKey(filled, fastFragments, compiler.hash);
+      name = this.interpKeyCache && this.interpKeyCache.get(interpKey);
+      if (name === undefined) {
+        css = buildHashCSS(source.strings, filled, fastFragments);
       }
-    }
-
-    if (name === undefined && fastFilled === null) {
+    } else {
       // Defensive: every constructor input path attaches a Source. A miss
       // here means a hand-built styles input bypassed `css()`; render no CSS.
       if (__DEV__) {
@@ -216,19 +212,12 @@ export default class WebStyle {
     let rules: string[];
     if (!claimed) {
       rules = styleSheet.getProvisionalRules(this.componentId, name) ?? EMPTY_RULES;
-    } else if (source !== null && fastFilled !== null) {
-      const fast = compiler.emit(source, fastFilled, '.' + name, this.componentId, fastFragments);
-      if (fast !== null) {
-        rules = fast;
-      } else {
-        // AST-direct emit bailed (e.g. structural char in a substitution);
-        // fall back to the string-input emit on the joined CSS.
-        if (!css) css = buildHashCSS(source.strings, fastFilled, fastFragments);
-        rules = compiler.compile(css, '.' + name, undefined, this.componentId);
-      }
-      styleSheet.stashProvisionalRules(this.componentId, name, rules);
     } else {
-      rules = compiler.compile(css, '.' + name, undefined, this.componentId);
+      // A name exists only when the source path above ran.
+      rules =
+        source !== null && fastFilled !== null
+          ? compiler.emit(source, fastFilled, '.' + name, this.componentId, fastFragments)
+          : EMPTY_RULES;
       styleSheet.stashProvisionalRules(this.componentId, name, rules);
     }
 

@@ -183,7 +183,7 @@ export interface SlotTable {
 }
 
 /** Entry state of a slot at the top level of a statement. Shared, never mutated. */
-const TOP_LEVEL: SlotEntry = Object.freeze({ parenDepth: 0, quote: 0, url: false });
+export const TOP_LEVEL: SlotEntry = Object.freeze({ parenDepth: 0, quote: 0, url: false });
 
 /**
  * Parse a preprocessed CSS string into a parser AST.
@@ -603,7 +603,9 @@ function templateOrString(ctx: ParseContext, s: string): string | TemplateValue 
       }
     }
     if (c === BACKSLASH) {
-      i++;
+      // A backslash before a slot escapes the value's first code point, which
+      // the fill reads; the marker itself is never escaped.
+      if (s.charCodeAt(i + 1) !== NUL) i++;
     } else if (quote !== 0) {
       if (c === quote) quote = 0;
     } else if (url !== 0) {
@@ -844,7 +846,8 @@ function parseKeyframesBody(ctx: ParseContext): Array<KeyframeFrame | Interpolat
 
     if (j >= len || css.charCodeAt(j) !== OPEN_BRACE) {
       if (run !== null) pushRunSlots(ctx, frames, run, lead);
-      ctx.i = j + 1;
+      // Stop at the `}`: it closes the @keyframes block itself.
+      ctx.i = j;
       continue;
     }
 

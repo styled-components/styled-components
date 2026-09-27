@@ -1,12 +1,15 @@
+import type { CompiledKeyframes, KeyframesCompiler } from './Keyframes';
+import type { StaticRoot } from '../parser/ast';
 import {
-  buildHashCSS,
   buildInterpKey,
   evaluateForFastPath,
   FastPathFragment,
-  fillAst,
+  fillSource,
   hasAnyFragment,
 } from '../parser/compile';
+import { parse } from '../parser/parser';
 import type { Source } from '../parser/source';
+import { normalize } from '../utils/normalize';
 import { getSource, synthesizeSourceForRuleSet } from '../parser/source';
 import {
   ExecutionContext,
@@ -34,18 +37,69 @@ export type { NativeStyles };
 /** Clear the cached CSS-to-style-object mappings. Useful in tests or long-running RN apps with highly dynamic styles. */
 export const resetStyleCache = resetNativeStyleCache;
 
+/**
+ * Names and serializes `${kf}` slots on native: a keyframes value keeps its
+ * authored name, and its compiled rule is the `@keyframes` block that
+ * {@link fillNativeSource} adds for the style walker to collect.
+ */
+const NATIVE_KEYFRAMES_COMPILER: KeyframesCompiler = {
+  hash: '',
+  compile: (css, name, prefix) => [prefix + ' ' + name + '{' + css + '}'],
+};
+
+const keyframesRuleCache = new Map<string, StaticRoot>();
+
+/**
+ * Fill a source for the native style walker, adding the `@keyframes` block
+ * of every keyframes value its slots referenced.
+ */
+function fillNativeSource(
+  source: Source,
+  filled: ReadonlyArray<string>,
+  fragments: ReadonlyArray<FastPathFragment | null> | null,
+  keyframes: ReadonlyArray<CompiledKeyframes>
+): StaticRoot {
+  const ast = fillSource(source, filled, fragments);
+  if (keyframes.length === 0) return ast;
+  const out = ast.slice();
+  for (let i = 0; i < keyframes.length; i++) {
+    const rule = keyframes[i].rules[0];
+    let nodes = keyframesRuleCache.get(rule);
+    if (nodes === undefined) {
+      nodes = parse(normalize(rule));
+      fifoSet(keyframesRuleCache, rule, nodes, TOO_MANY_CLASSES_LIMIT);
+    }
+    for (let j = 0; j < nodes.length; j++) out.push(nodes[j]);
+  }
+  return out;
+}
+
+/** Evaluate and fill a source for native with a given render context. */
+export function evaluateNativeSource(source: Source, context: unknown): StaticRoot {
+  const fragments: (FastPathFragment | null)[] = [];
+  const keyframes: CompiledKeyframes[] = [];
+  const filled = evaluateForFastPath(
+    source,
+    context,
+    undefined,
+    NATIVE_KEYFRAMES_COMPILER,
+    fragments,
+    keyframes
+  );
+  return fillNativeSource(source, filled, hasAnyFragment(fragments) ? fragments : null, keyframes);
+}
+
 export default function makeNativeStyleClass<Props extends object>(styleSheet: StyleSheet) {
   const NativeStyle: INativeStyleConstructor<Props> = class NativeStyle
     implements INativeStyle<Props>
   {
     rules: RuleSet<Props>;
     private staticCSS: string | null;
-    private cachedCompiled: NativeStyles | null = null;
-    private cachedCSS: string | null = null;
     private interpKeyCache: Map<string, NativeStyles> | undefined;
     private resolvedSource: Source | null | undefined = undefined;
     private filledBuffer: string[] | undefined;
     private fragmentsBuffer: (FastPathFragment | null)[] | undefined;
+    private keyframesBuffer: CompiledKeyframes[] | undefined;
     staticEligible = false;
     staticCompiled: NativeStyles | null = null;
     usesAnchorFunctions = false;
@@ -113,64 +167,44 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
         this.resolvedSource = getSource(this.rules) ?? null;
       }
       const source = this.resolvedSource;
-      let interpKey: string | undefined;
-      let filled: ReadonlyArray<string> | null = null;
-      let fragments: (FastPathFragment | null)[] | null = null;
-      if (source !== null) {
-        // Pre-fill via push so V8 keeps these PACKED_ELEMENTS. `new
-        // Array(n)` creates HOLEY_ELEMENTS even after every slot is
-        // overwritten, which infects the IC for the per-slot reads in
-        // `evaluateForFastPath` and the `hasAnyFragment` scan.
-        // See feedback_v8_class_vs_struct_empirical / GroupedTag note
-        // in AGENTS.md.
-        if (this.filledBuffer === undefined) {
-          const n = source.interpolations.length;
-          const buf: string[] = [];
-          for (let i = 0; i < n; i++) buf.push('');
-          this.filledBuffer = buf;
-        }
-        if (this.fragmentsBuffer === undefined) {
-          const n = source.interpolations.length;
-          const buf: (FastPathFragment | null)[] = [];
-          for (let i = 0; i < n; i++) buf.push(null);
-          this.fragmentsBuffer = buf;
-        }
-        filled = evaluateForFastPath(
-          source,
-          executionContext,
-          this.filledBuffer,
-          undefined,
-          this.fragmentsBuffer
-        );
-        if (filled !== null) {
-          fragments = hasAnyFragment(this.fragmentsBuffer) ? this.fragmentsBuffer : null;
-          interpKey = buildInterpKey(filled, fragments);
-          const cached = this.interpKeyCache && this.interpKeyCache.get(interpKey);
-          if (cached !== undefined) return cached;
-        }
+      if (source === null) return toNativeStyles('', styleSheet);
+      // Pre-fill via push so V8 keeps these PACKED_ELEMENTS. `new
+      // Array(n)` creates HOLEY_ELEMENTS even after every slot is
+      // overwritten, which infects the IC for the per-slot reads in
+      // `evaluateForFastPath` and the `hasAnyFragment` scan.
+      // See feedback_v8_class_vs_struct_empirical / GroupedTag note
+      // in AGENTS.md.
+      if (this.filledBuffer === undefined) {
+        const n = source.interpolations.length;
+        const buf: string[] = [];
+        for (let i = 0; i < n; i++) buf.push('');
+        this.filledBuffer = buf;
       }
-
-      if (source !== null && filled !== null) {
-        const filledAst = fillAst(source.ast, filled, fragments);
-        if (filledAst !== null) {
-          const compiled = astToNativeStyles(filledAst, styleSheet);
-          this.cachedCompiled = compiled;
-          this.cachedCSS = null;
-          if (interpKey !== undefined) this.recordInterpKey(interpKey, compiled);
-          return compiled;
-        }
+      if (this.fragmentsBuffer === undefined) {
+        const n = source.interpolations.length;
+        const buf: (FastPathFragment | null)[] = [];
+        for (let i = 0; i < n; i++) buf.push(null);
+        this.fragmentsBuffer = buf;
       }
-
-      const css =
-        filled !== null && source !== null ? buildHashCSS(source.strings, filled, fragments) : '';
-      if (css === this.cachedCSS && this.cachedCompiled !== null) {
-        if (interpKey !== undefined) this.recordInterpKey(interpKey, this.cachedCompiled);
-        return this.cachedCompiled;
-      }
-      this.cachedCSS = css;
-      const compiled = toNativeStyles(css, styleSheet);
-      this.cachedCompiled = compiled;
-      if (interpKey !== undefined) this.recordInterpKey(interpKey, compiled);
+      if (this.keyframesBuffer === undefined) this.keyframesBuffer = [];
+      else this.keyframesBuffer.length = 0;
+      const filled = evaluateForFastPath(
+        source,
+        executionContext,
+        this.filledBuffer,
+        NATIVE_KEYFRAMES_COMPILER,
+        this.fragmentsBuffer,
+        this.keyframesBuffer
+      );
+      const fragments = hasAnyFragment(this.fragmentsBuffer) ? this.fragmentsBuffer : null;
+      const interpKey = buildInterpKey(filled, fragments);
+      const cached = this.interpKeyCache && this.interpKeyCache.get(interpKey);
+      if (cached !== undefined) return cached;
+      const compiled = astToNativeStyles(
+        fillNativeSource(source, filled, fragments, this.keyframesBuffer),
+        styleSheet
+      );
+      this.recordInterpKey(interpKey, compiled);
       return compiled;
     }
 

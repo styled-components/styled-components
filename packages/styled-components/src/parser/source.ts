@@ -22,8 +22,8 @@ import { parse, ParseOptions, SlotEntry, SlotTable } from './parser';
  * - `Static`: primitive baked at construction (`${10}px`); also styled-
  *   component refs (pre-stringified to `.${styledComponentId}`), and slots
  *   the parse removed (written inside a comment), baked to `''`.
- * - `General`: arrays, plain objects, complex functions; full walk,
- *   bail on shapes the fast emitter doesn't cover.
+ * - `General`: arrays, plain objects, functions of two or more parameters,
+ *   class components; resolved by shape on every fill.
  * - `Keyframes`: `${kf}` ref; resolved at fill time against the active
  *   sheet/compiler since the hashed name varies per StyleSheetManager.
  * - `Fragment`: `${mixin}` ref; resolved recursively into FastPathFragment.
@@ -121,7 +121,7 @@ export function parseSource(
     } else if (t === 'number') {
       kinds.push(InterpolationKind.Static);
       staticValues.push(String(slot));
-    } else if (slot === null || slot === undefined || slot === false) {
+    } else if (slot === null || slot === undefined || typeof slot === 'boolean') {
       kinds.push(InterpolationKind.Static);
       staticValues.push('');
     } else if (
@@ -150,7 +150,11 @@ export function parseSource(
       clientRefs[i] = true;
       kinds.push(InterpolationKind.Static);
       staticValues.push('');
-    } else if (t === 'function' && (slot as Function).length <= 1) {
+    } else if (
+      t === 'function' &&
+      (slot as Function).length <= 1 &&
+      !(slot as { prototype?: { isReactComponent?: unknown } }).prototype?.isReactComponent
+    ) {
       kinds.push(InterpolationKind.StatelessFn);
       staticValues.push('');
     } else {

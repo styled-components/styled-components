@@ -1,3 +1,6 @@
+import css from '../../constructors/css';
+import keyframes from '../../constructors/keyframes';
+import type { ExecutionContext } from '../../types';
 import makeNativeStyleClass from '../NativeStyle';
 import {
   extractBaseDeclPairs as parseCSSDeclarations,
@@ -1573,6 +1576,47 @@ describe('NativeStyle class;compile() fast-paths', () => {
       const inline = new NativeStyle([{ color: 'red', padding: 8 } as any] as any);
       const a = inline.compile({} as any);
       expect(a.base).toEqual({ color: 'red', padding: 8 });
+    });
+
+    const renderContext: ExecutionContext = { theme: {} };
+
+    it('splits a declaration at a `;` in a value', () => {
+      const inline = new NativeStyle(css`
+        opacity: ${() => '0.5; margin-top: 4px'};
+      `);
+      expect(inline.compile(renderContext).base).toEqual({ opacity: 0.5, marginTop: 4 });
+    });
+
+    it('collects the @keyframes block of an interpolated keyframes value', () => {
+      const fade = keyframes`
+        from { opacity: 0; }
+        to { opacity: 1; }
+      `;
+      const inline = new NativeStyle(css`
+        animation: ${fade} 1s linear;
+      `);
+      const out = inline.compile(renderContext);
+      expect(out.keyframes).toEqual([
+        {
+          name: fade.name,
+          frames: [
+            { stops: ['from'], decls: { opacity: 0 } },
+            { stops: ['to'], decls: { opacity: 1 } },
+          ],
+        },
+      ]);
+      expect(out.animations).toBeDefined();
+    });
+
+    it('renders the rest when a value holds a brace', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const inline = new NativeStyle(css`
+        opacity: ${() => '0.5 } x {'};
+        margin-top: 4px;
+      `);
+      expect(inline.compile(renderContext).base).toEqual({ marginTop: 4 });
+      expect(warn).toHaveBeenCalledTimes(1);
+      warn.mockRestore();
     });
   });
 

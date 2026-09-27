@@ -3,10 +3,10 @@ import constructWithOptions, { Styled } from '../constructors/constructWithOptio
 import createTheme from '../constructors/createTheme.native';
 import css from '../constructors/css';
 import withTheme from '../hoc/withTheme';
-import _NativeStyle, { cssToStyleObject } from '../models/NativeStyle';
+import { astToNativeStyles } from '../models/compileNative';
+import _NativeStyle, { cssToStyleObject, evaluateNativeSource } from '../models/NativeStyle';
 import _StyledNativeComponent from '../models/StyledNativeComponent';
 import ThemeProvider, { ThemeConsumer, ThemeContext, useTheme } from '../models/ThemeProvider';
-import { buildHashCSS, evaluateForFastPath, FastPathFragment } from '../parser/compile';
 import { getSource, synthesizeSourceForRuleSet } from '../parser/source';
 import { NativeTarget, RuleSet, TargetProps } from '../types';
 import isStyledComponent from '../utils/isStyledComponent';
@@ -122,22 +122,8 @@ aliases.forEach(alias =>
 const toStyleSheet = (rules: RuleSet<object>) => {
   synthesizeSourceForRuleSet(rules);
   const source = getSource(rules);
-  let flatCSS = '';
-  if (source !== undefined) {
-    const fragments: (FastPathFragment | null)[] = [];
-    const filled = evaluateForFastPath(source, {}, undefined, undefined, fragments);
-    if (filled !== null) {
-      let hasFragments = false;
-      for (let i = 0; i < fragments.length; i++) {
-        if (fragments[i] !== null) {
-          hasFragments = true;
-          break;
-        }
-      }
-      flatCSS = buildHashCSS(source.strings, filled, hasFragments ? fragments : null);
-    }
-  }
-  return cssToStyleObject(flatCSS, reactNative.StyleSheet);
+  if (source === undefined) return cssToStyleObject('', reactNative.StyleSheet);
+  return astToNativeStyles(evaluateNativeSource(source, {}), reactNative.StyleSheet).base;
 };
 
 export {

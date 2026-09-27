@@ -606,6 +606,7 @@ describe('with styles', () => {
   it('should preserve styles after a malformed declaration with unbalanced brace', () => {
     // Ensures unbalanced braces in interpolated values don't break subsequent styles
     // In v6, a syntax error like an extra `}` in a value would cause all subsequent styles to be ignored
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const Comp = styled.div`
       width: 100px;
       height: 100px;
@@ -614,6 +615,10 @@ describe('with styles', () => {
       background-color: green;
     `;
     render(<Comp />);
+    expect(warn.mock.calls.map(call => String(call[0]))).toEqual([
+      expect.stringContaining('The declaration `line-height` was dropped'),
+    ]);
+    warn.mockRestore();
 
     // The malformed line-height should be dropped, but background-color should still apply
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -1749,6 +1754,7 @@ describe('with styles', () => {
       // Read the rule text handed to the sheet: the browser's CSSOM rejects a
       // rule holding NUL bytes, so the injected sheet alone would hide a leak.
       const insert = jest.spyOn(mainSheet, 'insertRules');
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
       render(
         <>
           <Media />
@@ -1759,6 +1765,79 @@ describe('with styles', () => {
       insert.mockRestore();
       expect(inserted).toContain('color:red;');
       expect(inserted).not.toContain('\0');
+      // `url(a ` is already a bad url, so the fragment leaves it unclosed.
+      expect(warn.mock.calls.map(call => String(call[0]))).toEqual([
+        expect.stringContaining('The declaration `background` was dropped'),
+      ]);
+      warn.mockRestore();
+    });
+  });
+
+  describe('one slot never removes the rest of the styles', () => {
+    it('renders the rest when a value holds a brace', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const Comp = styled.div<{ $c: string }>`
+        color: ${p => p.$c};
+        margin: 0;
+      `;
+      render(<Comp $c="red } body { background: red" />);
+      expect(warn).toHaveBeenCalledTimes(1);
+      warn.mockRestore();
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          margin: 0;
+        }"
+      `);
+    });
+
+    it('renders the rest when a non-styled component heads a rule', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const Plain = () => <span />;
+      const Comp = styled.div`
+        ${Plain} & {
+          color: red;
+        }
+        margin: 0;
+      `;
+      render(<Comp />);
+      warn.mockRestore();
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          margin: 0;
+        }"
+      `);
+    });
+
+    it('calls a two-parameter function interpolation', () => {
+      const Comp = styled.div<{ $c: string }>`
+        color: ${(p: { $c: string }, _unused?: unknown) => p.$c};
+      `;
+      render(<Comp $c="red" />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+        }"
+      `);
+    });
+
+    it('splices an array of css fragments a function returns', () => {
+      const Comp = styled.div`
+        ${() => [
+          css`
+            color: red;
+          `,
+          css`
+            margin: 0;
+          `,
+        ]}
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+          margin: 0;
+        }"
+      `);
     });
   });
 });

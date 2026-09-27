@@ -27,8 +27,13 @@ import type {
   StyledOptions,
   WebTarget,
 } from '../types';
-import { NodeKind, type Root, type TemplateValue } from '../parser/ast';
-import { evaluateForFastPath, type FastPathFragment } from '../parser/compile';
+import { NodeKind, type StaticRoot } from '../parser/ast';
+import {
+  evaluateForFastPath,
+  type FastPathFragment,
+  fillSource,
+  hasAnyFragment,
+} from '../parser/compile';
 import { getSource, Source } from '../parser/source';
 import { themeValue } from '../utils/themePath';
 import { tracePostAttr, type PostAttrsPlan } from '../utils/tracePostAttrs';
@@ -260,42 +265,15 @@ function wrapLevelInWhere(levelCss: string, name: string): string {
 }
 
 /**
- * Resolve a `TemplateValue` (interleaved chunks + slot indices) against the
- * already-evaluated `filled[]` array. Mirrors the `chunks[0] + filled[s] +
- * chunks[1] + ...` join the parser produces, without allocating an
- * intermediate array.
+ * Linear scan of the filled AST (the form the emitter reads) for a
+ * top-level declaration matching `prop`. Used by `ast.peek` / `ast.pop` to
+ * surface a CSS-style value into the post-compile attrs callback without
+ * building a full Map upfront.
  */
-function resolveTemplateValue(tv: TemplateValue, filled: ReadonlyArray<string>): string {
-  let s = tv.chunks[0];
-  for (let i = 0; i < tv.slots.length; i++) {
-    s += filled[tv.slots[i]] + tv.chunks[i + 1];
-  }
-  return s;
-}
-
-/**
- * Linear scan of the source AST for a top-level (non-nested) declaration
- * matching `prop`. Used by `ast.peek` / `ast.pop` to surface a CSS-style
- * value into the post-compile attrs callback without building a full Map
- * upfront. `filled` is the per-render evaluated interpolation array
- * (lazy;only requested when an attrs callback actually reads).
- */
-function findBaseDecl(
-  ast: Root,
-  filled: ReadonlyArray<string> | null,
-  prop: string
-): string | undefined {
+function findBaseDecl(ast: StaticRoot, prop: string): string | undefined {
   for (let i = 0; i < ast.length; i++) {
     const node = ast[i];
-    if (node.kind !== NodeKind.Decl) continue;
-    if (typeof node.prop !== 'string' || node.prop !== prop) continue;
-    const v = node.value;
-    if (typeof v === 'string') return v;
-    // Templated value: resolve interpolations against `filled`. If the
-    // fast-path evaluator bailed (`filled === null`), the value is
-    // unresolvable for this render; treat as absent.
-    if (filled === null) return undefined;
-    return resolveTemplateValue(v, filled);
+    if (node.kind === NodeKind.Decl && node.prop === prop) return node.value;
   }
   return undefined;
 }
@@ -352,8 +330,7 @@ function applyPostAttrsWeb<Props extends BaseObject>(
   let lazyState:
     | {
         source: Source;
-        ast: Root;
-        filled: ReadonlyArray<string> | null | undefined;
+        filled: StaticRoot | undefined;
       }
     | null
     | undefined = undefined;
@@ -382,14 +359,14 @@ function applyPostAttrsWeb<Props extends BaseObject>(
     // pay this cost when we actually need to invoke the user's callback.
     if (lazyState === undefined) {
       const source = getSource(webStyle.rules);
-      lazyState = source ? { source, ast: source.ast, filled: undefined } : null;
+      lazyState = source ? { source, filled: undefined } : null;
     }
     if (lazyState === null) continue;
     const state = lazyState;
 
     if (astAccessor === null) {
-      const ensureFilled = (): ReadonlyArray<string> | null => {
-        if (state.filled !== undefined) return state.filled as ReadonlyArray<string> | null;
+      const ensureFilled = (): StaticRoot => {
+        if (state.filled !== undefined) return state.filled;
         const src = state.source;
         // Push-fill to keep these PACKED_ELEMENTS; `new Array(n)` stays
         // HOLEY_ELEMENTS and infects the IC for `evaluateForFastPath`.
@@ -398,13 +375,14 @@ function applyPostAttrsWeb<Props extends BaseObject>(
         for (let i = 0; i < n; i++) buf.push('');
         const fragBuf: (FastPathFragment | null)[] = [];
         for (let i = 0; i < n; i++) fragBuf.push(null);
-        state.filled = evaluateForFastPath(
+        const filled = evaluateForFastPath(
           src,
           context as ExecutionContext,
           buf,
           undefined,
           fragBuf
         );
+        state.filled = fillSource(src, filled, hasAnyFragment(fragBuf) ? fragBuf : null);
         return state.filled;
       };
       const theme = (context as { theme?: unknown }).theme;
@@ -419,7 +397,7 @@ function applyPostAttrsWeb<Props extends BaseObject>(
         if (keyOrPath.indexOf('.') !== -1) {
           v = themeValue(theme, keyOrPath);
         } else {
-          v = findBaseDecl(state.ast, ensureFilled(), keyOrPath);
+          v = findBaseDecl(ensureFilled(), keyOrPath);
         }
         cache.set(keyOrPath, v);
         return v;

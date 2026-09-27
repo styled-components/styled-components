@@ -243,6 +243,20 @@ describe('parser', () => {
     ]);
   });
 
+  it('ends @keyframes at its own brace when a frame-list statement has no block', () => {
+    expect(parse('@keyframes k { junk } color: red;')).toEqual([
+      { kind: NodeKind.Keyframes, name: 'keyframes', prelude: 'k', frames: [] },
+      { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+    ]);
+  });
+
+  it('ends @keyframes at its own brace after a slot followed by blockless text', () => {
+    expect(parse('@keyframes k { \0S0\0junk } color: red;', { templates: true })).toEqual([
+      { kind: NodeKind.Keyframes, name: 'keyframes', prelude: 'k', frames: [] },
+      { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+    ]);
+  });
+
   it('splits comma-separated selectors', () => {
     expect(splitSelectors('.a, .b, .c')).toEqual(['.a', '.b', '.c']);
   });
@@ -347,6 +361,16 @@ describe('parser', () => {
           selectors: [],
           children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
           head: { gaps: [' '], rest: '&', slots: [0] },
+        },
+      ]);
+    });
+
+    it('lifts a slot written after a backslash to a TemplateValue', () => {
+      expect(parse('content: "\\\0S0\0";', { templates: true })).toEqual([
+        {
+          kind: NodeKind.Decl,
+          prop: 'content',
+          value: { chunks: ['"\\', '"'], slots: [0] },
         },
       ]);
     });
