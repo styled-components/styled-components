@@ -534,10 +534,6 @@ describe('compileWeb', () => {
     });
 
     it('handles a fragment whose only braces live inside a comment', () => {
-      // `/* {} */` braces trigger the look-like-block check but the
-      // recovery is harmless when the slot is already at a statement
-      // boundary. Lock that the comment is stripped and the surrounding
-      // decls compile.
       const frag = css`
         /* {} */
         color: red;

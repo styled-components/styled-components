@@ -403,11 +403,16 @@ function interleaveWithSentinels(
   const count = interpolations.length;
   if (count === 0) return strings.length > 0 ? strings[0] : '';
 
+  const stripped = stripComments(strings);
+  const chunks = stripped === null ? strings : stripped.chunks;
+  const slots = stripped === null ? null : stripped.slots;
+  const surviving = chunks.length - 1;
   let prevWasStandalone = true; // start of input is a statement boundary
-  let out = strings[0] || '';
-  for (let i = 0; i < count; i++) {
-    const prefix = strings[i] || '';
-    const suffix = strings[i + 1] || '';
+  let out = chunks[0] || '';
+  for (let k = 0; k < surviving; k++) {
+    const i = slots === null ? k : slots[k];
+    const prefix = chunks[k] || '';
+    const suffix = chunks[k + 1] || '';
     let standalone = isStandaloneSlot(prefix, suffix, prevWasStandalone);
     if (!standalone && shouldRecoverFragmentSlot(prefix, interpolations[i])) {
       // User forgot a `;` before what is clearly a block-style fragment
@@ -428,6 +433,71 @@ function interleaveWithSentinels(
   return out;
 }
 
+interface CommentFreeTemplate {
+  chunks: string[];
+  /** Original interpolation index of each slot left between `chunks`. */
+  slots: number[];
+}
+
+/**
+ * Strip comments from a template's string chunks so slot classification sees
+ * what the parser will. Returns `null` when no chunk contains a comment. A
+ * slot written inside a comment is removed along with it, so `slots` can be
+ * shorter than the interpolation list. The chunks are joined around `\0P<n>\0`
+ * placeholders and run through `normalize` as one string, which keeps its
+ * string, paren, and URL state intact across slot boundaries.
+ */
+function stripComments(strings: ReadonlyArray<string>): CommentFreeTemplate | null {
+  let hasComment = false;
+  for (let i = 0; i < strings.length; i++) {
+    if (mayHoldComment(strings[i] || '')) {
+      hasComment = true;
+      break;
+    }
+  }
+  if (!hasComment) return null;
+
+  let joined = strings[0] || '';
+  for (let i = 1; i < strings.length; i++) joined += '\0P' + (i - 1) + '\0' + (strings[i] || '');
+
+  const css = normalize(joined);
+  const chunks: string[] = [];
+  const slots: number[] = [];
+  let start = 0;
+  let at = css.indexOf('\0P');
+  while (at !== -1) {
+    const end = css.indexOf('\0', at + 2);
+    chunks.push(css.substring(start, at));
+    slots.push(+css.substring(at + 2, end));
+    start = end + 1;
+    at = css.indexOf('\0P', start);
+  }
+  chunks.push(css.substring(start));
+  return { chunks, slots };
+}
+
+/**
+ * Cheap pre-check for {@link stripComments}. A `//` right after `:` or `(`
+ * is never a comment to `normalize` (`https://`, `url(//cdn…)`), and URLs are
+ * common enough in templates that sending them down the stripping path costs
+ * measurable parse time. Any other `//` or `/*` answers `true`; a false
+ * positive only costs that pass.
+ */
+function mayHoldComment(s: string): boolean {
+  let at = s.indexOf('/');
+  while (at !== -1) {
+    const next = s.charCodeAt(at + 1);
+    if (next === ASTERISK) return true;
+    if (next === SLASH) {
+      const before = at > 0 ? s.charCodeAt(at - 1) : 0;
+      if (before !== COLON && before !== OPEN_PAREN) return true;
+      at++;
+    }
+    at = s.indexOf('/', at + 1);
+  }
+  return false;
+}
+
 /**
  * Return `true` when an embedded-classified slot should be flipped to
  * standalone with a `;` injected before its sentinel. Triggers only
@@ -446,9 +516,11 @@ function shouldRecoverFragmentSlot(prefix: string, interpolation: unknown): bool
   if (cached !== undefined) return cached;
   const strings = slot[2] !== null ? slot[2].strings : slot[0];
   if (strings === null) return false;
+  const stripped = stripComments(strings);
+  const chunks = stripped === null ? strings : stripped.chunks;
   let blockLike = false;
-  outer: for (let i = 0; i < strings.length; i++) {
-    const s = strings[i];
+  outer: for (let i = 0; i < chunks.length; i++) {
+    const s = chunks[i];
     for (let j = 0; j < s.length; j++) {
       const c = s.charCodeAt(j);
       if (c === SEMICOLON || c === OPEN_BRACE || c === CLOSE_BRACE) {

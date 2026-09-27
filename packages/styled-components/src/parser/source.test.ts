@@ -376,4 +376,117 @@ describe('parseSource', () => {
       ]);
     });
   });
+
+  /**
+   * CSS Syntax 3 §9 (https://drafts.csswg.org/css-syntax-3/#serialization):
+   * "The tokenizer described in this specification does not produce tokens
+   * for comments, or otherwise preserve them in any way. Implementations may
+   * preserve the contents of comments and their location in the token
+   * stream. If they do, this preserved information must have no effect on
+   * the parsing step."
+   *
+   * Slot classification reads the characters around each slot, so it has to
+   * see the template as the parser will: with comments already gone. JS-style
+   * `//` line comments are a styled-components extension held to the same
+   * rule.
+   */
+  describe('comments next to a slot', () => {
+    const Child = { sentinel: true };
+    const fn = () => 'margin: 0;';
+    const nestedRule = [
+      { kind: NodeKind.Decl, prop: 'color', value: 'green' },
+      {
+        kind: NodeKind.Rule,
+        selectors: [tv('\0I0\0')],
+        children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+      },
+    ];
+
+    it('keeps a component selector embedded when a block comment precedes `{`', () => {
+      expect(tagged`color: green; ${Child} /* note */ { color: red; }`.ast).toEqual(nestedRule);
+    });
+
+    it('keeps a component selector embedded when a line comment precedes `{`', () => {
+      const src = tagged`color: green; ${Child} // note
+        { color: red; }`;
+      expect(src.ast).toEqual(nestedRule);
+    });
+
+    it('keeps a component selector embedded when a comment precedes `&`', () => {
+      expect(tagged`color: green; ${Child} /* note */ & { color: red; }`.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: 'green' },
+        {
+          kind: NodeKind.Rule,
+          selectors: [tv('\0I0\0 &')],
+          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+        },
+      ]);
+    });
+
+    it('keeps a property-name slot embedded when a comment precedes `:`', () => {
+      expect(tagged`color: green; ${'color'} /* note */: red;`.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: 'green' },
+        { kind: NodeKind.Decl, prop: tv('\0I0\0'), value: 'red' },
+      ]);
+    });
+
+    it('keeps a mixin standalone when a block comment follows `;`', () => {
+      expect(tagged`color: red; /* note */ ${fn}`.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+        { kind: NodeKind.Interpolation, index: 0 },
+      ]);
+    });
+
+    it('keeps a mixin standalone when a line comment follows `;`', () => {
+      const src = tagged`color: red; // note
+        ${fn}`;
+      expect(src.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+        { kind: NodeKind.Interpolation, index: 0 },
+      ]);
+    });
+
+    it('keeps a mixin standalone when a comment follows `{`', () => {
+      expect(tagged`& { /* note */ ${fn} }`.ast).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: ['&'],
+          children: [{ kind: NodeKind.Interpolation, index: 0 }],
+        },
+      ]);
+    });
+
+    it('keeps both mixins standalone when a comment separates them', () => {
+      expect(tagged`${fn} /* note */ ${fn}`.ast).toEqual([
+        { kind: NodeKind.Interpolation, index: 0 },
+        { kind: NodeKind.Interpolation, index: 1 },
+      ]);
+    });
+
+    it('drops a slot that sits inside a comment and keeps later slot indices', () => {
+      expect(tagged`/* ${fn} */ color: ${'red'};`.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: tv('\0I1\0') },
+      ]);
+    });
+
+    it('leaves an absolute URL intact around a value slot', () => {
+      expect(tagged`background: url(https://cdn.example/${'a'}.png);`.ast).toEqual([
+        {
+          kind: NodeKind.Decl,
+          prop: 'background',
+          value: tv('url(https://cdn.example/\0I0\0.png)'),
+        },
+      ]);
+    });
+
+    it('leaves a protocol-relative URL intact around a value slot', () => {
+      expect(tagged`background: url(//cdn.example/${'a'}.png);`.ast).toEqual([
+        {
+          kind: NodeKind.Decl,
+          prop: 'background',
+          value: tv('url(//cdn.example/\0I0\0.png)'),
+        },
+      ]);
+    });
+  });
 });
