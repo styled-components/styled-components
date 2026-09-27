@@ -2,18 +2,31 @@ import type KeyframesClass from '../models/Keyframes';
 import type { CompiledKeyframes } from '../models/Keyframes';
 import type StyleSheet from '../sheet';
 import type { Compiler, RuleSet } from '../types';
-import { isWS } from '../utils/charCodes';
+import {
+  AT,
+  CLOSE_BRACE,
+  COLON,
+  isIdentChar,
+  isWS,
+  OPEN_BRACE,
+  SEMICOLON,
+} from '../utils/charCodes';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import getComponentName from '../utils/getComponentName';
 import isPlainObject from '../utils/isPlainObject';
 import { fifoSet } from '../utils/fifoMap';
+import { normalize } from '../utils/normalize';
 import { objectToCSS } from '../utils/objectToCSS';
 import { warnOnce } from '../utils/warnOnce';
 import {
+  DeclNode,
   DYN,
+  InterpolationNode,
   Node,
   NodeKind,
   Root,
+  RuleNode,
+  SlotHead,
   StaticAtRuleNode,
   StaticDeclNode,
   StaticKeyframeFrame,
@@ -24,7 +37,7 @@ import {
   TemplateValue,
 } from './ast';
 import { emitWeb, EmitOptions } from './emit-web';
-import { isCustomProperty, parse, stripCommaSpaces } from './parser';
+import { isCustomProperty, parse, scanQPB, splitTopLevelCommas, stripCommaSpaces } from './parser';
 import { CLIENT_REFERENCE, getSource, InterpolationKind, Source } from './source';
 
 /**
@@ -512,6 +525,7 @@ function fillNode(
       return decl;
     }
     case NodeKind.Rule: {
+      if (node.head !== undefined) return fillHeadRule(node, node.head, filled, fragments);
       // Realize every selector. If the input was already string-only and
       // children identity is preserved, we return the input node by
       // reference (Phase A fast path). The cast widens the field-type
@@ -556,26 +570,42 @@ function fillNode(
       const frames: StaticKeyframeFrame[] = [];
       for (let i = 0; i < node.frames.length; i++) {
         const frame = node.frames[i];
-        const decls: StaticDeclNode[] = [];
-        for (let j = 0; j < frame.children.length; j++) {
-          const decl = frame.children[j];
-          const value = realize(decl.value, filled);
-          if (value === null) return null;
-          // decl.prop in keyframe frames is preserved as-authored; if it
-          // happened to be a TemplateValue we'd realize it too, but the
-          // grammar (`50% { color: red }`) doesn't admit prop interpolation
-          // here in practice. Treat it identically for safety.
-          const propRaw = realize(decl.prop, filled);
-          if (propRaw === null) return null;
-          decls[j] = { kind: NodeKind.Decl, prop: propRaw, value };
+        if ('kind' in frame) {
+          const spliced = spliceNodes(frame.index, filled, fragments);
+          if (spliced === null) return null;
+          appendFrames(spliced, frames);
+          continue;
         }
-        const stops: string[] = [];
-        for (let k = 0; k < frame.stops.length; k++) {
-          const stop = realize(frame.stops[k], filled);
-          if (stop === null) return null;
-          stops[k] = stop;
+        const decls = fillFrameDecls(frame.children, filled, fragments);
+        if (decls === null) return null;
+        let stops: string[];
+        if (frame.head !== undefined) {
+          const head = readHead(frame.head, filled, fragments);
+          if (head === null) return null;
+          if (head === undefined) continue;
+          appendFrames(head.statements, frames);
+          if (head.remainder !== null && head.remainder.charCodeAt(0) === AT) {
+            if (__DEV__) {
+              warnOnce(
+                'head-at-rule',
+                `\`${head.remainder}\` cannot stand before a @keyframes frame, so the frame was dropped. A value before a frame block may only give its stops, like \`50%\`.`,
+                head.remainder
+              );
+            }
+            continue;
+          }
+          const text = head.remainder === null ? head.rest : head.remainder + head.gap + head.rest;
+          stops = splitTopLevelCommas(text, true);
+          if (stops.length === 0) continue;
+        } else {
+          stops = [];
+          for (let k = 0; k < frame.stops.length; k++) {
+            const stop = realize(frame.stops[k], filled);
+            if (stop === null) return null;
+            stops[k] = stop;
+          }
         }
-        frames[i] = { stops, children: decls };
+        frames.push({ stops, children: decls });
       }
       const kf: StaticKeyframesNode = {
         kind: NodeKind.Keyframes,
@@ -586,22 +616,257 @@ function fillNode(
       return kf;
     }
     case NodeKind.Interpolation: {
-      // Fragment slot: splice the child's filled AST as siblings. The child's
-      // splices resolve in its own index space.
-      const frag = fragments ? fragments[node.index] : null;
-      if (frag !== null && frag !== undefined) {
-        const childFilled = fillAst(frag.source.ast, frag.filled, frag.fragments);
-        if (childFilled === null) return null;
-        return childFilled.length === 0 ? undefined : childFilled;
-      }
-      const fragment = filled[node.index];
-      if (fragment === '' || fragment === undefined) return undefined;
-      // String fragment: parse the substituted text and splice. The cache
-      // amortizes the round-trip across repeated dynamic strings.
-      const parsed = parseStringFragment(fragment);
-      return parsed.length === 0 ? undefined : parsed;
+      const spliced = spliceNodes(node.index, filled, fragments);
+      if (spliced === null) return null;
+      return spliced.length === 0 ? undefined : spliced;
     }
   }
+}
+
+/**
+ * The statements a standalone slot splices. A fragment slot splices the
+ * child's filled AST (its splices resolve in its own index space); a string
+ * is parsed, with the cache amortizing the round-trip across repeated
+ * dynamic strings.
+ */
+function spliceNodes(
+  index: number,
+  filled: ReadonlyArray<string>,
+  fragments: ReadonlyArray<FastPathFragment | null> | null | undefined
+): StaticRoot | null {
+  const frag = fragments ? fragments[index] : null;
+  if (frag !== null && frag !== undefined) {
+    return fillAst(frag.source.ast, frag.filled, frag.fragments);
+  }
+  const text = filled[index];
+  if (text === '' || text === undefined) return EMPTY_ROOT;
+  return parseStringFragment(text);
+}
+
+const EMPTY_ROOT: StaticRoot = [];
+
+/** A head's slot values read front to back, per the head resolution rules. */
+interface ResolvedHead {
+  /** Whitespace written after the head's last slot. */
+  gap: string;
+  /** Selector or at-rule text the slots contribute; `null` when none. */
+  remainder: string | null;
+  /** The realized text after the head. */
+  rest: string;
+  /** Statements to splice before the rule or frame. */
+  statements: StaticNode[];
+}
+
+/**
+ * Read a head's slot values. Returns `undefined` when the rule must be
+ * dropped (a client reference the server cannot resolve), and `null` to
+ * bail when a value would add structure to the selector.
+ */
+function readHead(
+  head: SlotHead,
+  filled: ReadonlyArray<string>,
+  fragments: ReadonlyArray<FastPathFragment | null> | null | undefined
+): ResolvedHead | null | undefined {
+  if (head.unresolved === true) return undefined;
+  const statements: StaticNode[] = [];
+  let remainder: string | null = null;
+  for (let k = 0; k < head.slots.length; k++) {
+    const index = head.slots[k];
+    const frag = fragments ? fragments[index] : null;
+    const hasFrag = frag !== null && frag !== undefined;
+    const raw = hasFrag
+      ? buildHashCSS(frag.source.strings, frag.filled, frag.fragments)
+      : filled[index];
+    if (raw === undefined) return null;
+    if (remainder !== null) {
+      // Once a slot starts the selector, later slots join it as text.
+      if (hasStructuralChar(raw)) return null;
+      remainder += head.gaps[k - 1] + raw;
+      continue;
+    }
+    const text = normalize(raw, false);
+    const cut = lastStatementEnd(text);
+    const rest = trimWhitespace(text.substring(cut + 1));
+    if (cut !== -1) {
+      let spliced: StaticRoot | null;
+      if (hasFrag && rest === '') spliced = fillAst(frag.source.ast, frag.filled, frag.fragments);
+      else spliced = parseStringFragment(text.substring(0, cut + 1));
+      if (spliced === null) return null;
+      for (let j = 0; j < spliced.length; j++) statements.push(spliced[j]);
+    }
+    if (rest !== '') {
+      if (rest.indexOf('{') !== -1) return null;
+      remainder = rest;
+    }
+  }
+  const rest = realize(head.rest, filled);
+  if (rest === null) return null;
+  return {
+    gap: head.gaps[head.gaps.length - 1],
+    remainder,
+    rest: trimWhitespace(rest),
+    statements,
+  };
+}
+
+/** At-keywords a head may turn its rule into: the conditional group rules. */
+const HEAD_AT_RULES: ReadonlySet<string> = new Set([
+  'container',
+  'layer',
+  'media',
+  'scope',
+  'starting-style',
+  'supports',
+]);
+
+/**
+ * Fill a rule headed by slots: the statements the head values hold splice
+ * before it, and the rule takes its selector (or conditional group at-rule)
+ * from what remains plus the selector text after the head.
+ */
+function fillHeadRule(
+  node: RuleNode,
+  head: SlotHead,
+  filled: ReadonlyArray<string>,
+  fragments: ReadonlyArray<FastPathFragment | null> | null | undefined
+): StaticNode[] | undefined | null {
+  const resolved = readHead(head, filled, fragments);
+  if (resolved === null) return null;
+  if (resolved === undefined) return undefined;
+  const children = fillAst(node.children, filled, fragments);
+  if (children === null) return null;
+  const out = resolved.statements;
+  const remainder = resolved.remainder;
+  if (remainder === null) {
+    const selectors = splitTopLevelCommas(resolved.rest, true);
+    if (selectors.length === 0) selectors.push('&');
+    out.push({ kind: NodeKind.Rule, selectors, children });
+    return out;
+  }
+  if (remainder.charCodeAt(0) === AT) {
+    let end = 1;
+    while (end < remainder.length && isIdentChar(remainder.charCodeAt(end))) end++;
+    const name = remainder.substring(1, end);
+    if (!HEAD_AT_RULES.has(name.toLowerCase())) {
+      if (__DEV__) {
+        warnOnce(
+          'head-at-rule',
+          `\`@${name}\` cannot stand before a nested rule, so the rule was dropped. Only @media, @supports, @container, @layer, @scope, and @starting-style can wrap a rule this way.`,
+          name
+        );
+      }
+      return out.length === 0 ? undefined : out;
+    }
+    const prelude = trimWhitespace(remainder.substring(end) + resolved.gap + resolved.rest);
+    out.push({ kind: NodeKind.AtRule, name, prelude, children });
+    return out;
+  }
+  if (__DEV__ && looksLikeDeclaration(remainder)) {
+    warnOnce(
+      'head-declaration',
+      `\`${remainder}\` is written before a nested rule and reads as part of its selector. End a mixin placed before a rule with \`;\`.`,
+      remainder
+    );
+  }
+  const selectors = splitTopLevelCommas(remainder + resolved.gap + resolved.rest, true);
+  out.push({ kind: NodeKind.Rule, selectors, children });
+  return out;
+}
+
+/** Index of the last `;` or `}` outside strings, parentheses, and brackets; -1 for none. */
+function lastStatementEnd(text: string): number {
+  let last = -1;
+  let i = 0;
+  const len = text.length;
+  while (i < len) {
+    const end = scanQPB(text, i, len, SEMICOLON, CLOSE_BRACE, -1, -1);
+    if (end >= len) break;
+    last = end;
+    i = end + 1;
+  }
+  return last;
+}
+
+/**
+ * Whether selector text reads as a `name: value` declaration: an identifier,
+ * a colon, then whitespace or nothing. A pseudo-class never has whitespace
+ * after its colon.
+ */
+function looksLikeDeclaration(text: string): boolean {
+  const len = text.length;
+  let i = 0;
+  while (i < len && isIdentChar(text.charCodeAt(i))) i++;
+  if (i === 0) return false;
+  while (i < len && isWS(text.charCodeAt(i))) i++;
+  if (text.charCodeAt(i) !== COLON) return false;
+  return i + 1 >= len || isWS(text.charCodeAt(i + 1));
+}
+
+function hasStructuralChar(value: string): boolean {
+  for (let j = 0; j < value.length; j++) {
+    const c = value.charCodeAt(j);
+    if (c === SEMICOLON || c === OPEN_BRACE || c === CLOSE_BRACE) return true;
+  }
+  return false;
+}
+
+/**
+ * Append spliced statements to a frame list: a rule becomes a frame whose
+ * selectors are its stops. Anything else does not belong in a frame list
+ * and is dropped with a dev warning.
+ */
+function appendFrames(nodes: StaticRoot, frames: StaticKeyframeFrame[]): void {
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (node.kind === NodeKind.Rule) {
+      const decls: StaticDeclNode[] = [];
+      keepDecls(node.children, decls);
+      frames.push({ stops: node.selectors, children: decls });
+    } else if (__DEV__) {
+      warnOnce(
+        'keyframes-splice',
+        'a value spliced into a @keyframes frame list held something other than frame blocks (like `to { opacity: 1; }`); it was dropped.'
+      );
+    }
+  }
+}
+
+/** Keep the declarations of `nodes`; anything else is dropped with a dev warning. */
+function keepDecls(nodes: StaticRoot, out: StaticDeclNode[]): void {
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (node.kind === NodeKind.Decl) {
+      out.push(node);
+    } else if (__DEV__) {
+      warnOnce(
+        'keyframes-splice-frame',
+        'a value spliced into a @keyframes frame held a nested rule or at-rule; only declarations belong in a frame, so it was dropped.'
+      );
+    }
+  }
+}
+
+function fillFrameDecls(
+  children: ReadonlyArray<DeclNode | InterpolationNode>,
+  filled: ReadonlyArray<string>,
+  fragments: ReadonlyArray<FastPathFragment | null> | null | undefined
+): StaticDeclNode[] | null {
+  const decls: StaticDeclNode[] = [];
+  for (let j = 0; j < children.length; j++) {
+    const child = children[j];
+    if (child.kind === NodeKind.Interpolation) {
+      const spliced = spliceNodes(child.index, filled, fragments);
+      if (spliced === null) return null;
+      keepDecls(spliced, decls);
+      continue;
+    }
+    const value = realize(child.value, filled);
+    if (value === null) return null;
+    const prop = realize(child.prop, filled);
+    if (prop === null) return null;
+    decls.push({ kind: NodeKind.Decl, prop, value });
+  }
+  return decls;
 }
 
 /**
@@ -610,10 +875,6 @@ function fillNode(
  * characters (`;` `{` `}`), forcing the caller to bail the fast path
  * to the string-input compile path. The slot-out-of-bounds case also
  * returns `null` for safety.
- *
- * Phase C: replaces the v7-pre-Phase-C `substitute(s, filled)` scan over
- * a `\0I<n>\0` sentinel string with a direct splice over pre-extracted
- * chunks + slot indices.
  */
 function realize(field: string | TemplateValue, filled: ReadonlyArray<string>): string | null {
   if (typeof field === 'string') return field;
@@ -665,9 +926,9 @@ function normalizeSubstituted(value: string): string {
  * Per-string AST cache for block-level fragments returned as raw CSS text.
  * Bounded so streaming unique strings can't leak.
  *
- * The fragment string `s` is a runtime-resolved value (filled[node.index]
- * for an InterpolationNode), so it carries no `\0I` interpolation
- * sentinels;the parser produces a fully-static AST.
+ * The fragment string `s` is a runtime-resolved value (a standalone or head
+ * slot's text), parsed without `templates`, so any slot-shaped bytes in it
+ * stay opaque and the parser produces a fully-static AST.
  */
 const stringFragmentCache = new Map<string, StaticRoot>();
 const STRING_FRAGMENT_CACHE_LIMIT = 200;

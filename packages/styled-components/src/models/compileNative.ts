@@ -1870,8 +1870,8 @@ function pushBucket(
 
 /**
  * Read parse-time classification when present; otherwise re-classify
- * on the filled selectors (fallback path for selectors that carried
- * `\0I` sentinels at parse time).
+ * on the filled selectors (fallback path for rules whose selectors held
+ * interpolation slots, or were built from a slot head, at parse time).
  */
 function readRuleClass(node: StaticRuleNode): NativeRuleClass {
   const stamped = node[NATIVE_RULE_CLASS];

@@ -45,10 +45,10 @@ export type {
  * The classification is computed once per AST and survives across every
  * cache-miss render. Phase A's `fillAst` returns static subtrees by
  * reference, so static Rule / AtRule nodes carry the same classification
- * through to `astToNativeStyles`. Dynamic-selector nodes (those whose
- * selectors carry `\0I` interpolation sentinels) skip classification at
- * parse time; the render path falls through to the legacy inline classifier
- * once values are filled in (rare in practice).
+ * through to `astToNativeStyles`. Dynamic-selector nodes (a slot head, or
+ * selectors holding interpolation slots) skip classification at parse
+ * time; the render path falls through to the legacy inline classifier once
+ * values are filled in (rare in practice).
  */
 
 const KNOWN_PSEUDOS: Record<string, PseudoState> = {
@@ -65,12 +65,14 @@ const KNOWN_PSEUDOS: Record<string, PseudoState> = {
  * builds skip these calls entirely via the `__NATIVE__` build constant
  * (rollup tree-shakes the import after dead-code elimination).
  *
- * Selectors carrying interpolations (TemplateValue) skip classification;
- * the render path retries via {@link classifyRuleNow} on the filled
- * (now-string) selectors. This is the rare path; `&:hover` /
- * `&[aria-pressed]` style selectors don't typically interpolate.
+ * Rules with a slot head, and selectors carrying interpolations
+ * (TemplateValue), skip classification; the render path retries via
+ * {@link classifyRuleNow} on the filled (now-string) selectors. This is the
+ * rare path; `&:hover` / `&[aria-pressed]` style selectors don't typically
+ * interpolate.
  */
 export function stampRuleClass(node: RuleNode): void {
+  if (node.head !== undefined) return;
   const selectors = node.selectors;
   for (let i = 0; i < selectors.length; i++) {
     if (typeof selectors[i] !== 'string') return;

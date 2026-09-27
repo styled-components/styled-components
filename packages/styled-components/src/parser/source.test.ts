@@ -1,16 +1,16 @@
+import css from '../constructors/css';
 import { NodeKind, TemplateValue } from './ast';
-import { parseSource } from './source';
+import { InterpolationKind, parseSource } from './source';
 
 // Helper to make tagged-template test inputs feel natural.
 const tagged = (strings: ReadonlyArray<string>, ...interps: unknown[]) =>
   parseSource(strings, interps);
 
-// Convert the readable `\0I<n>\0` sentinel form (matching the v7-pre-Phase-C
-// internal wire format) into the TemplateValue chunks+slots structure the
-// parser now produces. Lets test fixtures stay legible while asserting the
-// post-Phase-C AST shape directly.
+// Convert the readable `\0S<n>\0` slot form (the parser's wire format) into
+// the TemplateValue chunks+slots structure the parser produces. Lets test
+// fixtures stay legible while asserting the AST shape directly.
 function tv(s: string): TemplateValue {
-  const re = /\0I(\d+)\0/g;
+  const re = /\0S(\d+)\0/g;
   const chunks: string[] = [];
   const slots: number[] = [];
   let last = 0;
@@ -23,6 +23,8 @@ function tv(s: string): TemplateValue {
   chunks.push(s.substring(last));
   return { chunks, slots };
 }
+
+const redDecl = { kind: NodeKind.Decl, prop: 'color', value: 'red' };
 
 describe('parseSource', () => {
   describe('static templates (no interpolations)', () => {
@@ -39,32 +41,27 @@ describe('parseSource', () => {
   });
 
   describe('value-position interpolations', () => {
-    it('embeds sentinel when slot follows a colon', () => {
+    it('embeds a slot that follows a colon', () => {
       const src = tagged`color: ${'red'};`;
-      // Sentinel rides inside the value string (kind `\0I`); no Interpolation node.
-      expect(src.ast).toEqual([{ kind: NodeKind.Decl, prop: 'color', value: tv('\0I0\0') }]);
+      expect(src.ast).toEqual([{ kind: NodeKind.Decl, prop: 'color', value: tv('\0S0\0') }]);
       expect(src.interpolations).toEqual(['red']);
     });
 
-    it('embeds sentinel when slot is wedged between value tokens', () => {
+    it('embeds a slot wedged between value tokens', () => {
       const src = tagged`padding: 0 ${10}px;`;
-      expect(src.ast).toEqual([{ kind: NodeKind.Decl, prop: 'padding', value: tv('0 \0I0\0px') }]);
+      expect(src.ast).toEqual([{ kind: NodeKind.Decl, prop: 'padding', value: tv('0 \0S0\0px') }]);
     });
 
     it('keeps both slots embedded when value has two space-separated slots before `;`', () => {
       const src = tagged`padding: ${'8px'} ${'16px'};`;
       expect(src.ast).toEqual([
-        { kind: NodeKind.Decl, prop: 'padding', value: tv('\0I0\0 \0I1\0') },
+        { kind: NodeKind.Decl, prop: 'padding', value: tv('\0S0\0 \0S1\0') },
       ]);
     });
   });
 
-  // Shorthand patterns that previously misclassified the trailing slot as a
-  // standalone block-level interpolation. The classifier shipped with v7
-  // returned `standalone` whenever a slot's prefix was whitespace-only AND
-  // the suffix's first non-whitespace was `;`/`,`/etc., which collapsed
-  // values like `${a} ${b};` to a half-filled decl. These guard against
-  // regressing across the common multi-value CSS shorthand surface area.
+  // Common multi-value shorthands: every slot after the colon stays in the
+  // declaration value, however many whitespace-separated slots it holds.
   describe('multi-slot decl values stay embedded', () => {
     it('padding 4-value shorthand', () => {
       const src = tagged`padding: ${'1px'} ${'2px'} ${'3px'} ${'4px'};`;
@@ -72,7 +69,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'padding',
-          value: tv('\0I0\0 \0I1\0 \0I2\0 \0I3\0'),
+          value: tv('\0S0\0 \0S1\0 \0S2\0 \0S3\0'),
         },
       ]);
     });
@@ -83,7 +80,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'margin',
-          value: tv('\0I0\0 \0I1\0 \0I2\0'),
+          value: tv('\0S0\0 \0S1\0 \0S2\0'),
         },
       ]);
     });
@@ -91,7 +88,7 @@ describe('parseSource', () => {
     it('border shorthand: width style color', () => {
       const src = tagged`border: ${'1px'} solid ${'#000'};`;
       expect(src.ast).toEqual([
-        { kind: NodeKind.Decl, prop: 'border', value: tv('\0I0\0 solid \0I1\0') },
+        { kind: NodeKind.Decl, prop: 'border', value: tv('\0S0\0 solid \0S1\0') },
       ]);
     });
 
@@ -101,7 +98,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'box-shadow',
-          value: tv('\0I0\0 \0I1\0 \0I2\0 \0I3\0'),
+          value: tv('\0S0\0 \0S1\0 \0S2\0 \0S3\0'),
         },
       ]);
     });
@@ -112,7 +109,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'box-shadow',
-          value: tv('\0I0\0 \0I1\0 \0I2\0 \0I3\0,\0I4\0 \0I5\0 \0I6\0 \0I7\0'),
+          value: tv('\0S0\0 \0S1\0 \0S2\0 \0S3\0,\0S4\0 \0S5\0 \0S6\0 \0S7\0'),
         },
       ]);
     });
@@ -123,7 +120,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'transition',
-          value: tv('\0I0\0 \0I1\0 \0I2\0'),
+          value: tv('\0S0\0 \0S1\0 \0S2\0'),
         },
       ]);
     });
@@ -134,7 +131,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'animation',
-          value: tv('\0I0\0 \0I1\0 \0I2\0'),
+          value: tv('\0S0\0 \0S1\0 \0S2\0'),
         },
       ]);
     });
@@ -145,7 +142,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'font',
-          value: tv('\0I0\0/\0I1\0 \0I2\0'),
+          value: tv('\0S0\0/\0S1\0 \0S2\0'),
         },
       ]);
     });
@@ -156,7 +153,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'grid-template',
-          value: tv('\0I0\0 / \0I1\0'),
+          value: tv('\0S0\0 / \0S1\0'),
         },
       ]);
     });
@@ -167,7 +164,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'background',
-          value: tv('\0I0\0 \0I1\0 \0I2\0'),
+          value: tv('\0S0\0 \0S1\0 \0S2\0'),
         },
       ]);
     });
@@ -178,7 +175,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'transform',
-          value: tv('translate(\0I0\0, \0I1\0) rotate(\0I2\0)'),
+          value: tv('translate(\0S0\0, \0S1\0) rotate(\0S2\0)'),
         },
       ]);
     });
@@ -189,7 +186,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'width',
-          value: tv('calc(\0I0\0 - \0I1\0)'),
+          value: tv('calc(\0S0\0 - \0S1\0)'),
         },
       ]);
     });
@@ -200,7 +197,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'font-size',
-          value: tv('clamp(\0I0\0, \0I1\0, \0I2\0)'),
+          value: tv('clamp(\0S0\0, \0S1\0, \0S2\0)'),
         },
       ]);
     });
@@ -211,7 +208,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'background',
-          value: tv('linear-gradient(\0I0\0, \0I1\0, \0I2\0)'),
+          value: tv('linear-gradient(\0S0\0, \0S1\0, \0S2\0)'),
         },
       ]);
     });
@@ -222,7 +219,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'color',
-          value: tv('color-mix(in srgb, \0I0\0 50%, \0I1\0)'),
+          value: tv('color-mix(in srgb, \0S0\0 50%, \0S1\0)'),
         },
       ]);
     });
@@ -230,98 +227,469 @@ describe('parseSource', () => {
     it('multiple decls with multi-slot values do not cross-contaminate', () => {
       const src = tagged`padding: ${'8px'} ${'16px'}; margin: ${'4px'} ${'8px'};`;
       expect(src.ast).toEqual([
-        { kind: NodeKind.Decl, prop: 'padding', value: tv('\0I0\0 \0I1\0') },
-        { kind: NodeKind.Decl, prop: 'margin', value: tv('\0I2\0 \0I3\0') },
+        { kind: NodeKind.Decl, prop: 'padding', value: tv('\0S0\0 \0S1\0') },
+        { kind: NodeKind.Decl, prop: 'margin', value: tv('\0S2\0 \0S3\0') },
       ]);
     });
   });
 
   describe('selector-position interpolations', () => {
-    it('embeds sentinel inside a selector that ends in `{`', () => {
+    it('reads a slot heading a selector that ends in `{` as a Head', () => {
       const otherComponent = { sentinel: true };
       const src = tagged`${otherComponent} & { color: red; }`;
-      // Selector text contains `\0I0\0 &`; the sentinel passes through and the
-      // compiler resolves it at fill time. No Interpolation node.
       expect(src.ast).toEqual([
         {
           kind: NodeKind.Rule,
-          selectors: [tv('\0I0\0 &')],
-          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+          selectors: [],
+          children: [redDecl],
+          head: { gaps: [' '], rest: '&', slots: [0] },
         },
       ]);
       expect(src.interpolations).toEqual([otherComponent]);
+      expect(src.slotIsStandalone).toEqual([true]);
     });
 
-    it('embeds sentinel inside an attribute selector', () => {
+    it('embeds a slot inside an attribute selector', () => {
       const src = tagged`&[${'aria-pressed'}='true'] { color: red; }`;
       expect(src.ast).toEqual([
         {
           kind: NodeKind.Rule,
-          selectors: [tv(`&[\0I0\0='true']`)],
-          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+          selectors: [tv(`&[\0S0\0='true']`)],
+          children: [redDecl],
         },
       ]);
     });
 
-    it('embeds sentinel when slot prefix terminates a statement and suffix starts a selector', () => {
-      // Regression lock for the component-selector case: a slot whose prefix
-      // ends in `;` (statement terminator) but whose suffix starts with a
-      // selector-continuation char must still be embedded, because the slot
-      // is a selector prefix (`${Foo} & { ... }`), not a block-level
-      // interpolation. Without this disambiguation the rule's selector
-      // collapses to `&` and the descendant prefix evaporates.
+    it('reads a Head after a declaration', () => {
       const otherComponent = { sentinel: true };
       const src = tagged`color: green; ${otherComponent} & { color: red; }`;
       expect(src.ast).toEqual([
         { kind: NodeKind.Decl, prop: 'color', value: 'green' },
         {
           kind: NodeKind.Rule,
-          selectors: [tv('\0I0\0 &')],
-          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+          selectors: [],
+          children: [redDecl],
+          head: { gaps: [' '], rest: '&', slots: [0] },
         },
       ]);
     });
 
-    it('embeds sentinel for the `${Foo} > &` child-combinator form after `;`', () => {
+    it('keeps the child combinator in the text after a Head', () => {
       const otherComponent = { sentinel: true };
       const src = tagged`color: green; ${otherComponent} > & { color: red; }`;
+      expect(src.ast[1]).toEqual({
+        kind: NodeKind.Rule,
+        selectors: [],
+        children: [redDecl],
+        head: { gaps: [' '], rest: '> &', slots: [0] },
+      });
+    });
+
+    it('reads `${Foo} { ... }` as a Head with empty following selector text', () => {
+      const otherComponent = { sentinel: true };
+      const src = tagged`color: green; ${otherComponent} { color: red; }`;
+      expect(src.ast[1]).toEqual({
+        kind: NodeKind.Rule,
+        selectors: [],
+        children: [redDecl],
+        head: { gaps: [' '], rest: '', slots: [0] },
+      });
+    });
+  });
+
+  /**
+   * Roles come from the one reading of the template the parser does, with
+   * each slot as an opaque placeholder. A Run is the group of slots at a
+   * statement start separated only by whitespace; it is classified as a
+   * whole by what follows it.
+   */
+  describe('slot roles', () => {
+    const a = () => 'x';
+    const b = () => 'y';
+
+    it('Standalone: a whitespace-separated Run before a declaration', () => {
+      const src = tagged`${a} ${b} color: red;`;
       expect(src.ast).toEqual([
-        { kind: NodeKind.Decl, prop: 'color', value: 'green' },
+        { kind: NodeKind.Interpolation, index: 0 },
+        { kind: NodeKind.Interpolation, index: 1 },
+        redDecl,
+      ]);
+      expect(src.slotIsStandalone).toEqual([true, true]);
+    });
+
+    it('Standalone: a Run with nothing between its slots', () => {
+      expect(tagged`${a}${b}`.ast).toEqual([
+        { kind: NodeKind.Interpolation, index: 0 },
+        { kind: NodeKind.Interpolation, index: 1 },
+      ]);
+      expect(tagged`${a}${b}\ncolor: red;`.ast).toEqual([
+        { kind: NodeKind.Interpolation, index: 0 },
+        { kind: NodeKind.Interpolation, index: 1 },
+        redDecl,
+      ]);
+    });
+
+    it('Standalone: a Run followed by `;` or `}`', () => {
+      expect(tagged`${a}; color: red;`.ast).toEqual([
+        { kind: NodeKind.Interpolation, index: 0 },
+        redDecl,
+      ]);
+      expect(tagged`& { ${a} }`.ast).toEqual([
         {
           kind: NodeKind.Rule,
-          selectors: [tv('\0I0\0 > &')],
-          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+          selectors: ['&'],
+          children: [{ kind: NodeKind.Interpolation, index: 0 }],
         },
       ]);
     });
 
-    it('embeds sentinel for the `${Foo} { ... }` selector-only form after `;`', () => {
-      const otherComponent = { sentinel: true };
-      const src = tagged`color: green; ${otherComponent} { color: red; }`;
-      expect(src.ast).toEqual([
-        { kind: NodeKind.Decl, prop: 'color', value: 'green' },
+    it('Standalone: a Run followed by `@`', () => {
+      expect(tagged`${a} ${b} @media (min-width: 1px) { color: red; }`.ast).toEqual([
+        { kind: NodeKind.Interpolation, index: 0 },
+        { kind: NodeKind.Interpolation, index: 1 },
         {
-          kind: NodeKind.Rule,
-          selectors: [tv('\0I0\0')],
-          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+          kind: NodeKind.AtRule,
+          name: 'media',
+          prelude: '(min-width: 1px)',
+          children: [redDecl],
         },
       ]);
+    });
+
+    it('Glued: a slot continuing a property name', () => {
+      const src = tagged`${'background'}-color: red;`;
+      expect(src.ast).toEqual([{ kind: NodeKind.Decl, prop: tv('\0S0\0-color'), value: 'red' }]);
+      expect(src.slotIsStandalone).toEqual([false]);
+    });
+
+    it('Glued: a slot glued to a pseudo-class in a selector', () => {
+      expect(tagged`${a}:hover { color: red; }`.ast).toEqual([
+        { kind: NodeKind.Rule, selectors: [tv('\0S0\0:hover')], children: [redDecl] },
+      ]);
+    });
+
+    it('Glued: a slot glued to `{`', () => {
+      expect(tagged`${a}{ color: red; }`.ast).toEqual([
+        { kind: NodeKind.Rule, selectors: [tv('\0S0\0')], children: [redDecl] },
+      ]);
+    });
+
+    it('Glued: a slot glued to `,` in a selector list', () => {
+      expect(tagged`${a}, h2 { color: red; }`.ast).toEqual([
+        { kind: NodeKind.Rule, selectors: [tv('\0S0\0'), 'h2'], children: [redDecl] },
+      ]);
+    });
+
+    it('Property: the last slot of a Run glued to `:`', () => {
+      const src = tagged`${a} ${'color'}: red;`;
+      expect(src.ast).toEqual([
+        { kind: NodeKind.Interpolation, index: 0 },
+        { kind: NodeKind.Decl, prop: tv('\0S1\0'), value: 'red' },
+      ]);
+      expect(src.slotIsStandalone).toEqual([true, false]);
+    });
+
+    it('Head: a Run before selector text of a rule', () => {
+      const src = tagged`${a} ${b} h2 { color: red; }`;
+      expect(src.ast).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: [],
+          children: [redDecl],
+          head: { gaps: [' ', ' '], rest: 'h2', slots: [0, 1] },
+        },
+      ]);
+      expect(src.slotIsStandalone).toEqual([true, true]);
+    });
+
+    it('Head: a Run whose last slot is glued to the selector text', () => {
+      const src = tagged`${a} ${b}:hover { color: red; }`;
+      expect(src.ast).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: [],
+          children: [redDecl],
+          head: { gaps: [' '], rest: tv('\0S1\0:hover'), slots: [0] },
+        },
+      ]);
+      expect(src.slotIsStandalone).toEqual([true, false]);
+    });
+
+    it('Head: empty following selector text', () => {
+      expect(tagged`${a} ${b} { color: red; }`.ast).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: [],
+          children: [redDecl],
+          head: { gaps: [' ', ' '], rest: '', slots: [0, 1] },
+        },
+      ]);
+    });
+
+    it('keeps the raw whitespace after each Head slot', () => {
+      const src = tagged`
+        ${a}
+        ${b}
+        h2 { color: red; }`;
+      expect(src.ast).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: [],
+          children: [redDecl],
+          head: { gaps: ['\n        ', '\n        '], rest: 'h2', slots: [0, 1] },
+        },
+      ]);
+    });
+
+    it('reads statements after a Run in order', () => {
+      const src = tagged`
+        ${a}
+        color: red;
+        ${b}
+        h2 { color: red; }`;
+      expect(src.ast).toEqual([
+        { kind: NodeKind.Interpolation, index: 0 },
+        redDecl,
+        {
+          kind: NodeKind.Rule,
+          selectors: [],
+          children: [redDecl],
+          head: { gaps: ['\n        '], rest: 'h2', slots: [1] },
+        },
+      ]);
+    });
+
+    it('reads a Run nested inside a rule', () => {
+      expect(tagged`& { ${a} span { color: red; } }`.ast).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: ['&'],
+          children: [
+            {
+              kind: NodeKind.Rule,
+              selectors: [],
+              children: [redDecl],
+              head: { gaps: [' '], rest: 'span', slots: [0] },
+            },
+          ],
+        },
+      ]);
+    });
+
+    it('keeps later slots in the selector text as Inside', () => {
+      expect(tagged`${a} .x ${b} { color: red; }`.ast).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: [],
+          children: [redDecl],
+          head: { gaps: [' '], rest: tv('.x \0S1\0'), slots: [0] },
+        },
+      ]);
+    });
+  });
+
+  describe('keyframes', () => {
+    const a = () => '0%';
+    const b = () => 'opacity: 1;';
+
+    it('reads a Run before a frame block as a stop Head', () => {
+      const src = tagged`@keyframes x { ${a} { opacity: 0; } }`;
+      expect(src.ast).toEqual([
+        {
+          kind: NodeKind.Keyframes,
+          name: 'keyframes',
+          prelude: 'x',
+          frames: [
+            {
+              children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '0' }],
+              head: { gaps: [' '], rest: '', slots: [0] },
+              stops: [],
+            },
+          ],
+        },
+      ]);
+      expect(src.slotIsStandalone).toEqual([true]);
+    });
+
+    it('keeps a slot glued to a stop Inside the stop', () => {
+      const src = tagged`@keyframes x { ${a}{ opacity: 0; } }`;
+      expect(src.ast).toEqual([
+        {
+          kind: NodeKind.Keyframes,
+          name: 'keyframes',
+          prelude: 'x',
+          frames: [
+            {
+              children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '0' }],
+              stops: [tv('\0S0\0')],
+            },
+          ],
+        },
+      ]);
+      expect(src.slotIsStandalone).toEqual([false]);
+    });
+
+    it('reads a Standalone Run in the frame list as a frame splice', () => {
+      const src = tagged`@keyframes x { from { opacity: 0; } ${b} }`;
+      expect(src.ast).toEqual([
+        {
+          kind: NodeKind.Keyframes,
+          name: 'keyframes',
+          prelude: 'x',
+          frames: [
+            { children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '0' }], stops: ['from'] },
+            { kind: NodeKind.Interpolation, index: 0 },
+          ],
+        },
+      ]);
+      expect(src.slotIsStandalone).toEqual([true]);
+    });
+
+    it('reads a Standalone Run inside a frame as a declaration splice', () => {
+      const src = tagged`@keyframes x { to { ${b} color: red; } }`;
+      expect(src.ast).toEqual([
+        {
+          kind: NodeKind.Keyframes,
+          name: 'keyframes',
+          prelude: 'x',
+          frames: [
+            {
+              children: [{ kind: NodeKind.Interpolation, index: 0 }, redDecl],
+              stops: ['to'],
+            },
+          ],
+        },
+      ]);
+      expect(src.slotIsStandalone).toEqual([true]);
+    });
+  });
+
+  /**
+   * A css fragment interpolated directly whose source holds `;`, `{`, or `}`
+   * outside strings and parentheses, met in a declaration value whose
+   * previous significant item is a value item, ends that declaration.
+   */
+  describe('missing-`;` recovery', () => {
+    const block = css`
+      margin: 0;
+    `;
+
+    it('ends a declaration before a block fragment', () => {
+      const src = tagged`color: red ${block}`;
+      expect(src.ast).toEqual([redDecl, { kind: NodeKind.Interpolation, index: 0 }]);
+      expect(src.slotIsStandalone).toEqual([true]);
+    });
+
+    it('counts a preceding slot as a value item', () => {
+      const src = parseSource(['margin: 0 ', 'px\n', ';'], [10, block]);
+      expect(src.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'margin', value: tv('0 \0S0\0px') },
+        { kind: NodeKind.Interpolation, index: 1 },
+      ]);
+    });
+
+    it('applies after a slot value directly', () => {
+      const src = tagged`padding: ${'1px'} ${block} color: red;`;
+      expect(src.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'padding', value: tv('\0S0\0') },
+        { kind: NodeKind.Interpolation, index: 1 },
+        redDecl,
+      ]);
+    });
+
+    it('does not apply right after `:`', () => {
+      expect(tagged`color: ${block};`.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: tv('\0S0\0') },
+      ]);
+    });
+
+    it('never applies inside parentheses', () => {
+      expect(tagged`@media (${block}) { color: red; }`.ast).toEqual([
+        { kind: NodeKind.AtRule, name: 'media', prelude: tv('(\0S0\0)'), children: [redDecl] },
+      ]);
+      expect(tagged`background: url(${block});`.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'background', value: tv('url(\0S0\0)') },
+      ]);
+      expect(tagged`width: calc(1px ${block});`.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'width', value: tv('calc(1px \0S0\0)') },
+      ]);
+      expect(tagged`@media (min-width: 1px ${block}) { color: red; }`.ast).toEqual([
+        {
+          kind: NodeKind.AtRule,
+          name: 'media',
+          prelude: tv('(min-width: 1px \0S0\0)'),
+          children: [redDecl],
+        },
+      ]);
+      expect(tagged`background: url(a ${block});`.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'background', value: tv('url(a \0S0\0)') },
+      ]);
+    });
+
+    it('never applies inside a string', () => {
+      expect(tagged`content: "a ${block}";`.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'content', value: tv('"a \0S0\0"') },
+      ]);
+    });
+
+    it('does not apply to a fragment returned by a function', () => {
+      expect(tagged`color: red ${() => block}`.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: tv('red \0S0\0') },
+      ]);
+    });
+
+    it('does not apply to a fragment without `;`, `{`, or `}`', () => {
+      const valueFragment = css`blue`;
+      expect(tagged`color: red ${valueFragment}`.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: tv('red \0S0\0') },
+      ]);
+    });
+  });
+
+  describe('slot bookkeeping', () => {
+    it('makes a slot inside a comment Static-empty', () => {
+      const fn = jest.fn(() => 'color: blue;');
+      const src = tagged`/* ${fn} */ color: ${'red'};`;
+      expect(src.kinds).toEqual([InterpolationKind.Static, InterpolationKind.Static]);
+      expect(src.staticValues).toEqual(['', 'red']);
+    });
+
+    it('makes a slot in a dropped statement Static-empty', () => {
+      const fn = jest.fn(() => 'x');
+      const src = tagged`${fn}junk; color: red;`;
+      expect(src.ast).toEqual([redDecl]);
+      expect(src.kinds).toEqual([InterpolationKind.Static]);
+      expect(src.staticValues).toEqual(['']);
+    });
+
+    it('records the entry state of each kept slot', () => {
+      const src = tagged`
+        ${'a'}
+        content: "x ${'b'}";
+        background: url(${'c'}) no-repeat;
+        width: calc((${'d'}));
+        color: ${'e'};
+        /* ${'f'} */
+      `;
+      expect(src.slotEntries).toEqual([
+        { parenDepth: 0, quote: 0, url: false },
+        { parenDepth: 0, quote: 34, url: false },
+        { parenDepth: 1, quote: 0, url: true },
+        { parenDepth: 2, quote: 0, url: false },
+        { parenDepth: 0, quote: 0, url: false },
+        null,
+      ]);
+    });
+
+    it('records a quoted url( argument as a string, not an unquoted url', () => {
+      const src = tagged`background: url("${'a'}");`;
+      expect(src.slotEntries).toEqual([{ parenDepth: 1, quote: 34, url: false }]);
     });
   });
 
   describe('slots that start a statement', () => {
     const a = () => 'x';
     const b = () => 'y';
-
-    it('embeds consecutive function slots that head a rule selector', () => {
-      expect(tagged`${a} ${b} { color: red; }`.ast).toEqual([
-        {
-          kind: NodeKind.Rule,
-          selectors: [tv('\0I0\0 \0I1\0')],
-          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
-        },
-      ]);
-    });
 
     it('keeps consecutive mixins standalone before a declaration', () => {
       const src = tagged`
@@ -331,15 +699,8 @@ describe('parseSource', () => {
       expect(src.ast).toEqual([
         { kind: NodeKind.Interpolation, index: 0 },
         { kind: NodeKind.Interpolation, index: 1 },
-        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+        redDecl,
       ]);
-    });
-
-    it('keeps a mixin standalone before an at-rule', () => {
-      expect(tagged`${a} @media (min-width: 1px) { color: red; }`.ast[0]).toEqual({
-        kind: NodeKind.Interpolation,
-        index: 0,
-      });
     });
 
     it('ignores a `{` inside a string or parentheses when finding where a statement ends', () => {
@@ -357,7 +718,7 @@ describe('parseSource', () => {
       const fn = () => 'background: blue;';
       const src = tagged`color: red; ${fn} margin: 0;`;
       expect(src.ast).toEqual([
-        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+        redDecl,
         { kind: NodeKind.Interpolation, index: 0 },
         { kind: NodeKind.Decl, prop: 'margin', value: '0' },
       ]);
@@ -371,29 +732,21 @@ describe('parseSource', () => {
       expect(src.interpolations).toEqual([fn]);
     });
 
-    it('emits Interpolation nodes for slots that follow `{`', () => {
-      const fn = () => 'color: red;';
-      const src = tagged`& { ${fn} }`;
-      expect(src.ast).toEqual([
-        {
-          kind: NodeKind.Rule,
-          selectors: ['&'],
-          children: [{ kind: NodeKind.Interpolation, index: 0 }],
-        },
-      ]);
-    });
-
     it('emits Interpolation nodes for slots that follow `}`', () => {
       const fn = () => 'margin: 0;';
       const src = tagged`& { color: red; } ${fn}`;
       expect(src.ast).toEqual([
-        {
-          kind: NodeKind.Rule,
-          selectors: ['&'],
-          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
-        },
+        { kind: NodeKind.Rule, selectors: ['&'], children: [redDecl] },
         { kind: NodeKind.Interpolation, index: 0 },
       ]);
+    });
+
+    it('reads a stray component reference on its own line as Standalone', () => {
+      const Child = { styledComponentId: 'sc-child' };
+      const src = tagged`
+        ${Child}
+        color: red;`;
+      expect(src.ast).toEqual([{ kind: NodeKind.Interpolation, index: 0 }, redDecl]);
     });
   });
 
@@ -402,28 +755,18 @@ describe('parseSource', () => {
       const fn = () => 'background: blue;';
       const src = tagged`color: ${'red'}; ${fn} margin: 0;`;
       expect(src.ast).toEqual([
-        { kind: NodeKind.Decl, prop: 'color', value: tv('\0I0\0') },
+        { kind: NodeKind.Decl, prop: 'color', value: tv('\0S0\0') },
         { kind: NodeKind.Interpolation, index: 1 },
         { kind: NodeKind.Decl, prop: 'margin', value: '0' },
       ]);
       expect(src.interpolations).toEqual(['red', fn]);
-    });
-
-    it('treats consecutive standalone slots as siblings', () => {
-      const a = () => 'color: red;';
-      const b = () => 'background: blue;';
-      const src = tagged`${a} ${b}`;
-      expect(src.ast).toEqual([
-        { kind: NodeKind.Interpolation, index: 0 },
-        { kind: NodeKind.Interpolation, index: 1 },
-      ]);
     });
   });
 
   describe('slots inside quoted strings', () => {
     it('embeds a slot that follows a `;` inside a string', () => {
       expect(tagged`content: "a;${'b'}";`.ast).toEqual([
-        { kind: NodeKind.Decl, prop: 'content', value: tv('"a;\0I0\0"') },
+        { kind: NodeKind.Decl, prop: 'content', value: tv('"a;\0S0\0"') },
       ]);
     });
 
@@ -432,15 +775,14 @@ describe('parseSource', () => {
      * (https://drafts.csswg.org/css-syntax-3/#consume-string-token):
      * "newline: This is a parse error. Reconsume the current input code
      * point, create a <bad-string-token>, and return it." The parser and
-     * `normalize` keep the string open instead, and slot classification
-     * follows them so a slot is never read differently from the text around
-     * it.
+     * `normalize` keep the string open instead, and a slot inside it is read
+     * the same way as the text around it.
      */
     it('keeps a string open across a newline, as the parser does', () => {
       const src = tagged`content: "a
         color: 'x'; ${'b'}`;
       expect(src.ast).toEqual([
-        { kind: NodeKind.Decl, prop: 'content', value: tv(`"a\n        color: 'x'; \0I0\0`) },
+        { kind: NodeKind.Decl, prop: 'content', value: tv(`"a\n        color: 'x'; \0S0\0`) },
       ]);
     });
   });
@@ -453,54 +795,57 @@ describe('parseSource', () => {
    * stream. If they do, this preserved information must have no effect on
    * the parsing step."
    *
-   * Slot classification reads the characters around each slot, so it has to
-   * see the template as the parser will: with comments already gone. JS-style
-   * `//` line comments are a styled-components extension held to the same
-   * rule.
+   * Comments are removed before the template is read, so a slot's role never
+   * depends on a comment next to it. JS-style `//` line comments are a
+   * styled-components extension held to the same rule.
    */
   describe('comments next to a slot', () => {
     const Child = { sentinel: true };
     const fn = () => 'margin: 0;';
-    const nestedRule = [
+    const nestedRule = (gap: string) => [
       { kind: NodeKind.Decl, prop: 'color', value: 'green' },
       {
         kind: NodeKind.Rule,
-        selectors: [tv('\0I0\0')],
-        children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+        selectors: [],
+        children: [redDecl],
+        head: { gaps: [gap], rest: '', slots: [0] },
       },
     ];
 
-    it('keeps a component selector embedded when a block comment precedes `{`', () => {
-      expect(tagged`color: green; ${Child} /* note */ { color: red; }`.ast).toEqual(nestedRule);
+    it('reads a component Head when a block comment precedes `{`', () => {
+      expect(tagged`color: green; ${Child} /* note */ { color: red; }`.ast).toEqual(
+        nestedRule(' ')
+      );
     });
 
-    it('keeps a component selector embedded when a line comment precedes `{`', () => {
+    it('reads a component Head when a line comment precedes `{`', () => {
       const src = tagged`color: green; ${Child} // note
         { color: red; }`;
-      expect(src.ast).toEqual(nestedRule);
+      expect(src.ast).toEqual(nestedRule(' \n        '));
     });
 
-    it('keeps a component selector embedded when a comment precedes `&`', () => {
+    it('reads a component Head when a comment precedes `&`', () => {
       expect(tagged`color: green; ${Child} /* note */ & { color: red; }`.ast).toEqual([
         { kind: NodeKind.Decl, prop: 'color', value: 'green' },
         {
           kind: NodeKind.Rule,
-          selectors: [tv('\0I0\0 &')],
-          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+          selectors: [],
+          children: [redDecl],
+          head: { gaps: [' '], rest: '&', slots: [0] },
         },
       ]);
     });
 
-    it('keeps a property-name slot embedded when a comment precedes `:`', () => {
+    it('keeps a property-name slot in its declaration when a comment precedes `:`', () => {
       expect(tagged`color: green; ${'color'} /* note */: red;`.ast).toEqual([
         { kind: NodeKind.Decl, prop: 'color', value: 'green' },
-        { kind: NodeKind.Decl, prop: tv('\0I0\0'), value: 'red' },
+        { kind: NodeKind.Decl, prop: tv('\0S0\0'), value: 'red' },
       ]);
     });
 
     it('keeps a mixin standalone when a block comment follows `;`', () => {
       expect(tagged`color: red; /* note */ ${fn}`.ast).toEqual([
-        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+        redDecl,
         { kind: NodeKind.Interpolation, index: 0 },
       ]);
     });
@@ -508,10 +853,7 @@ describe('parseSource', () => {
     it('keeps a mixin standalone when a line comment follows `;`', () => {
       const src = tagged`color: red; // note
         ${fn}`;
-      expect(src.ast).toEqual([
-        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
-        { kind: NodeKind.Interpolation, index: 0 },
-      ]);
+      expect(src.ast).toEqual([redDecl, { kind: NodeKind.Interpolation, index: 0 }]);
     });
 
     it('keeps a mixin standalone when a comment follows `{`', () => {
@@ -533,7 +875,7 @@ describe('parseSource', () => {
 
     it('drops a slot that sits inside a comment and keeps later slot indices', () => {
       expect(tagged`/* ${fn} */ color: ${'red'};`.ast).toEqual([
-        { kind: NodeKind.Decl, prop: 'color', value: tv('\0I1\0') },
+        { kind: NodeKind.Decl, prop: 'color', value: tv('\0S1\0') },
       ]);
     });
 
@@ -542,7 +884,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'background',
-          value: tv('url(https://cdn.example/\0I0\0.png)'),
+          value: tv('url(https://cdn.example/\0S0\0.png)'),
         },
       ]);
     });
@@ -552,7 +894,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'background',
-          value: tv('url(//cdn.example/\0I0\0.png)'),
+          value: tv('url(//cdn.example/\0S0\0.png)'),
         },
       ]);
     });

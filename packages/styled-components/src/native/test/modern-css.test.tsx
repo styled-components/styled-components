@@ -1,7 +1,7 @@
 import React from 'react';
 import { Appearance, Dimensions, Text, View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
-import styled, { NativeStyleContext } from '../';
+import styled, { css, NativeStyleContext } from '../';
 import { DEFAULT_CASCADE } from '../NativeStyleContext';
 import { resetResponsiveCache } from '../responsive';
 import { resetWarningsForTest } from '../transform/dev';
@@ -2124,6 +2124,50 @@ describe('modern CSS on React Native', () => {
 
       const collapsedTree = TestRenderer.create(<Comp data-label="a b" />);
       expect(collapsedTree.root.findByType(View).props.style).toEqual({ color: 'black' });
+    });
+  });
+
+  describe('slots heading a rule', () => {
+    it('keeps a mixin before a `${Foo} &` rule and applies both', () => {
+      const Foo = styled.View.withConfig({ displayName: 'HeadMixinFoo' })`
+        background: blue;
+      `;
+      const mixin = css`
+        color: green;
+      `;
+      const Bar = styled.View.withConfig({ displayName: 'HeadMixinBar' })`
+        ${mixin}
+        ${Foo} & {
+          color: red;
+        }
+      `;
+      const nested = TestRenderer.create(
+        <Foo>
+          <Bar />
+        </Foo>
+      );
+      expect(nested.root.findAllByType(View)[1].props.style).toEqual([
+        { color: 'green' },
+        { color: 'red' },
+      ]);
+
+      const alone = TestRenderer.create(<Bar />);
+      expect(alone.root.findByType(View).props.style).toEqual({ color: 'green' });
+    });
+
+    it('turns a media query returned by a function into a conditional rule', () => {
+      // The RN jest mock reports a 750-wide window.
+      const Comp = styled.View`
+        color: red;
+        ${() => '@media (min-width: 500px)'} {
+          color: blue;
+        }
+        ${() => '@media (min-width: 2000px)'} {
+          padding-top: 10px;
+        }
+      `;
+      const tree = TestRenderer.create(<Comp />);
+      expect(tree.root.findByType(View).props.style).toEqual([{ color: 'red' }, { color: 'blue' }]);
     });
   });
 
