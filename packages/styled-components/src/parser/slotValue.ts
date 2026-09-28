@@ -121,6 +121,36 @@ function isUrlName(ident: string): boolean {
 }
 
 /**
+ * Whether `url(` (any case) ends at `open` in `text`, with the code point
+ * directly before that `u` at or above U+0080. `before` extends `text`
+ * backward when that code point, or part of `url`, falls outside it. CSS
+ * Syntax 3 revisions disagree on whether such a code point continues an
+ * identifier, so the value has no single reading and always fails.
+ */
+function urlPrecededByNonAscii(text: string, open: number, before: string): boolean {
+  // `open` is well past `text`'s start for almost every call (a `(` deep in
+  // an ordinary value); a plain length check skips ever touching `before`,
+  // and no closure is allocated per call.
+  if (open >= 4) {
+    return (
+      (text.charCodeAt(open - 1) | 0x20) === LOWER_L &&
+      (text.charCodeAt(open - 2) | 0x20) === LOWER_R &&
+      (text.charCodeAt(open - 3) | 0x20) === LOWER_U &&
+      text.charCodeAt(open - 4) >= 0x80
+    );
+  }
+  const joined = before + text.substring(0, open);
+  const end = joined.length;
+  return (
+    end >= 4 &&
+    (joined.charCodeAt(end - 1) | 0x20) === LOWER_L &&
+    (joined.charCodeAt(end - 2) | 0x20) === LOWER_R &&
+    (joined.charCodeAt(end - 3) | 0x20) === LOWER_U &&
+    joined.charCodeAt(end - 4) >= 0x80
+  );
+}
+
+/**
  * The identifier `before` ends with, or `null` when an escape could make it
  * part of a longer identifier the text does not show.
  */
@@ -161,6 +191,7 @@ function onlyFunctionParens(value: string, i: number, before: string): boolean {
   while (i < len) {
     const c = value.charCodeAt(i);
     if (c === OPEN_PAREN) {
+      if (urlPrecededByNonAscii(value, i, before)) return false;
       let k = i;
       while (k > 0 && isIdentCode(value.charCodeAt(k - 1))) k--;
       if (k === 0 && before.length > 0 && isIdentCode(before.charCodeAt(before.length - 1))) {
@@ -289,6 +320,7 @@ export function checkSlotValue(raw: string, entry: SlotEntry, before: string): n
     if (c === DOUBLE_QUOTE || c === SINGLE_QUOTE) {
       quote = c;
     } else if (c === OPEN_PAREN) {
+      if (urlPrecededByNonAscii(value, i, before)) return VALUE_FAILED;
       const kind = parenKind(value, i, identStart, identEscaped, before);
       if (kind === Paren.Strict) {
         // Both readings agree only when the text up to the first `)` holds
