@@ -38,6 +38,17 @@ export const UNRESOLVED: FastPathFragment = {
   fragments: null,
 };
 
+/** Whether a fragment, or a fragment nested in it, holds a value that could not be resolved. */
+export function holdsUnresolved(frag: FastPathFragment): boolean {
+  const fragments = frag.fragments;
+  if (fragments === null) return false;
+  for (let i = 0; i < fragments.length; i++) {
+    const child = fragments[i];
+    if (child === UNRESOLVED || (child !== null && holdsUnresolved(child))) return true;
+  }
+  return false;
+}
+
 /**
  * True when any slot in a fast-path fragments buffer resolved to a fragment.
  * A plain for-loop, not `.some()`: this runs on the per-render fast path and
@@ -112,6 +123,9 @@ export function evaluateForFastPath(
       filled[i] = resolveValue(result, resolver, i, source.slotIsStandalone[i], fn);
     } else if (kind === InterpolationKind.Static) {
       filled[i] = statics[i];
+    } else if (kind === InterpolationKind.Unresolved) {
+      filled[i] = '';
+      if (outFragments !== undefined) outFragments[i] = UNRESOLVED;
     } else {
       if (resolver === null) {
         resolver = {
@@ -147,8 +161,7 @@ function resolveValue(
   if (t === 'number' || t === 'bigint') return String(value);
   // `true`, `false`, `undefined`, symbols, and `null` substitute nothing.
   if ((t !== 'function' && t !== 'object') || value === null) return '';
-  const styledId = (value as { styledComponentId?: string }).styledComponentId;
-  if (styledId !== undefined) return '.' + styledId;
+  // Read first: a client reference proxy throws on any other property read.
   const brand = (value as { $$typeof?: symbol }).$$typeof;
   if (brand === CLIENT_REFERENCE) {
     unresolved(r, index);
@@ -160,6 +173,8 @@ function resolveValue(
     }
     return '';
   }
+  const styledId = (value as { styledComponentId?: string }).styledComponentId;
+  if (styledId !== undefined) return '.' + styledId;
   if (t === 'object' && KEYFRAMES_SYMBOL in (value as object)) {
     return keyframesName(value as KeyframesClass, r);
   }
@@ -169,6 +184,10 @@ function resolveValue(
       if (frag === null) return '';
       if (standalone && r.fragments !== undefined) {
         r.fragments[index] = frag;
+        return '';
+      }
+      if (holdsUnresolved(frag)) {
+        unresolved(r, index);
         return '';
       }
       const text = fragmentText(frag);

@@ -19,6 +19,8 @@ import { parse, ParseOptions, scanQP, SlotEntry, SlotTable } from './parser';
  * - `Keyframes`: `${kf}` ref; resolved at fill time against the active
  *   sheet/compiler since the hashed name varies per StyleSheetManager.
  * - `Fragment`: `${mixin}` ref; resolved recursively into FastPathFragment.
+ * - `Unresolved`: a client reference, whose class name the server cannot
+ *   read; never called or read at fill time.
  */
 export const enum InterpolationKind {
   StatelessFn = 1,
@@ -26,6 +28,7 @@ export const enum InterpolationKind {
   General = 3,
   Keyframes = 4,
   Fragment = 5,
+  Unresolved = 6,
 }
 
 /**
@@ -114,7 +117,13 @@ export function parseSource(
     } else if (t === 'number') {
       text = String(slot);
     } else if (slot !== null && slot !== undefined && t !== 'boolean') {
-      if (
+      if (isClientReference(slot)) {
+        // Checked first: a client reference proxy throws when called, and on
+        // any property read other than its own markers.
+        kind = InterpolationKind.Unresolved;
+        if (clientRefs === null) clientRefs = falseFlags(n);
+        clientRefs[i] = true;
+      } else if (
         (t === 'function' || t === 'object') &&
         (slot as { styledComponentId?: string }).styledComponentId !== undefined
       ) {
@@ -130,11 +139,6 @@ export function parseSource(
           if (recover === null) recover = falseFlags(n);
           recover[i] = true;
         }
-      } else if (isClientReference(slot)) {
-        // Client reference proxies throw when invoked from a server component.
-        // Classify as Static-empty so the rest of the template renders.
-        if (clientRefs === null) clientRefs = falseFlags(n);
-        clientRefs[i] = true;
       } else if (
         t === 'function' &&
         (slot as Function).length <= 1 &&
