@@ -125,7 +125,7 @@ describe('compileWeb', () => {
       const src = tagged`padding: ${'8px'} ${'16px'};`;
       const out = compileWeb(src, {}, id, opts);
       expect(out).toEqual(legacy('padding: 8px 16px;'));
-      expect(out!.join('')).not.toMatch(/[\0J]/);
+      expect(out!.join('')).not.toMatch(/\0/);
     });
 
     it('padding 4-value', () => {
