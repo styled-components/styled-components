@@ -27,6 +27,7 @@ import {
 import {
   AtRuleNode,
   DeclNode,
+  DYN,
   InterpolationNode,
   KeyframeFrame,
   KeyframesNode,
@@ -173,6 +174,11 @@ export interface SlotEntry {
 
 /** Per-slot knowledge shared between `parseSource` and the parser. */
 export interface SlotTable {
+  /**
+   * Slots whose value is a client reference, which the server cannot
+   * resolve; a head holding one is marked `unresolved`. `null` when none is.
+   */
+  clientRefs: ReadonlyArray<boolean> | null;
   /** Written by the parser: the entry state of each slot it keeps, `null` for the rest. */
   entries: Array<SlotEntry | null>;
   /**
@@ -180,6 +186,8 @@ export interface SlotTable {
    * declaration's value; `null` when no slot can.
    */
   recover: ReadonlyArray<boolean> | null;
+  /** Written by the parser: `true` for each slot whose value splices as statements (standalone and head slots). */
+  standalone: boolean[];
 }
 
 /** Entry state of a slot at the top level of a statement. Shared, never mutated. */
@@ -203,6 +211,7 @@ export function parse(css: string, options?: ParseOptions): Root<string | Templa
   const slots = templates && options?.slots !== undefined ? options.slots : null;
   const ctx: ParseContext = {
     css,
+    dyn: false,
     len: css.length,
     i: 0,
     keepCommaSpaces: !!options?.keepCommaSpaces,
@@ -215,6 +224,12 @@ export function parse(css: string, options?: ParseOptions): Root<string | Templa
 
 interface ParseContext {
   css: string;
+  /**
+   * Whether the node being read so far holds a slot: a {@link TemplateValue}
+   * field, a head, or a splice. Saved and cleared around each node that
+   * carries {@link DYN}, then merged back so it bubbles to the parent.
+   */
+  dyn: boolean;
   len: number;
   i: number;
   keepCommaSpaces: boolean;
@@ -259,6 +274,28 @@ function slotIndex(css: string, start: number, end: number): number {
 
 function keepSlot(ctx: ParseContext, index: number, entry: SlotEntry): void {
   if (ctx.slots !== null) ctx.slots.entries[index] = entry;
+}
+
+/** Keep a slot whose value splices as statements (a standalone or head slot). */
+function keepSplice(ctx: ParseContext, index: number): void {
+  ctx.dyn = true;
+  if (ctx.slots !== null) {
+    ctx.slots.entries[index] = TOP_LEVEL;
+    ctx.slots.standalone[index] = true;
+  }
+}
+
+const DYN_FLAG: PropertyDescriptor = { configurable: true, enumerable: false, value: true };
+
+/**
+ * Tag a node that holds a slot, or has a descendant that does, with
+ * `[DYN] = true`; absence is the static encoding. Non-enumerable so the flag
+ * is invisible to `toEqual`, `JSON.stringify`, `Object.keys`, and `for..in`
+ * (Jest's `equals()` walks both `Object.keys` and
+ * `Object.getOwnPropertySymbols`, and skips only a non-enumerable symbol).
+ */
+function markDyn(node: Node): void {
+  Object.defineProperty(node, DYN, DYN_FLAG);
 }
 
 /**
@@ -310,18 +347,25 @@ function pushRunSlots<T>(
 ): void {
   for (let k = 0; k < count; k++) {
     out.push({ kind: NodeKind.Interpolation, index: run.slots[k] });
-    keepSlot(ctx, run.slots[k], TOP_LEVEL);
+    keepSplice(ctx, run.slots[k]);
   }
 }
 
 /** Head for the first `count` slots of `run`, with `restText` following them. */
 function runHead(ctx: ParseContext, run: Run, count: number, restText: string): SlotHead {
-  for (let k = 0; k < count; k++) keepSlot(ctx, run.slots[k], TOP_LEVEL);
-  return {
+  const clientRefs = ctx.slots !== null ? ctx.slots.clientRefs : null;
+  let unresolved = false;
+  for (let k = 0; k < count; k++) {
+    keepSplice(ctx, run.slots[k]);
+    if (clientRefs !== null && clientRefs[run.slots[k]]) unresolved = true;
+  }
+  const head: SlotHead = {
     gaps: count === run.gaps.length ? run.gaps : run.gaps.slice(0, count),
     rest: templateOrString(ctx, restText),
     slots: count === run.slots.length ? run.slots : run.slots.slice(0, count),
   };
+  if (unresolved) head.unresolved = true;
+  return head;
 }
 
 /**
@@ -463,7 +507,7 @@ function parseBlock(ctx: ParseContext): Node[] {
           pushDecl(ctx, out, declStart, colon, stop);
           const index = slotIndex(css, stop, end);
           out.push({ kind: NodeKind.Interpolation, index });
-          keepSlot(ctx, index, TOP_LEVEL);
+          keepSplice(ctx, index);
           ctx.i = end;
           break;
         }
@@ -475,6 +519,8 @@ function parseBlock(ctx: ParseContext): Node[] {
         const lead =
           run === null ? 0 : run.next === run.lastEnd ? run.slots.length - 1 : run.slots.length;
         ctx.i = stop + 1;
+        const outerDyn = ctx.dyn;
+        ctx.dyn = false;
         let node: RuleNode;
         if (run !== null && lead > 0) {
           const head = runHead(ctx, run, lead, selectorText);
@@ -491,6 +537,8 @@ function parseBlock(ctx: ParseContext): Node[] {
             children,
           };
         }
+        if (ctx.dyn) markDyn(node);
+        else ctx.dyn = outerDyn;
         // Native build only: stamp parse-time classification for the
         // bucket router in `compileNative.ts`. Web bundles tree-shake
         // this branch out via `__NATIVE__ === false` literal replace.
@@ -537,11 +585,11 @@ function pushDecl(ctx: ParseContext, out: Node[], start: number, colon: number, 
   // (CSS Custom Properties L1) used by scroll-driven animations and other
   // techniques that rely on the empty value as a "guaranteed-invalid" sentinel.
   if (!value && !isCustomProperty(prop)) return;
-  out.push({
-    kind: NodeKind.Decl,
-    prop: templateOrString(ctx, prop),
-    value: templateOrString(ctx, value),
-  });
+  const propField = templateOrString(ctx, prop);
+  const valueField = templateOrString(ctx, value);
+  const node: DeclNode = { kind: NodeKind.Decl, prop: propField, value: valueField };
+  if (propField !== prop || valueField !== value) markDyn(node);
+  out.push(node);
 }
 
 /** Apply {@link templateOrString} to each entry; allocate fresh array only if any entry converts. */
@@ -624,6 +672,7 @@ function templateOrString(ctx: ParseContext, s: string): string | TemplateValue 
   }
   if (chunks === null) return s;
   chunks.push(s.substring(last));
+  ctx.dyn = true;
   return { chunks, slots };
 }
 
@@ -731,6 +780,15 @@ function isNameStop(code: number): boolean {
 }
 
 function parseAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode {
+  const outerDyn = ctx.dyn;
+  ctx.dyn = false;
+  const node = readAtRule(ctx);
+  if (ctx.dyn) markDyn(node);
+  else ctx.dyn = outerDyn;
+  return node;
+}
+
+function readAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode {
   const css = ctx.css;
   const len = ctx.len;
   let j = ctx.i + 1;
@@ -758,18 +816,7 @@ function parseAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode {
   const nameField = templateOrString(ctx, name);
   const preludeField = templateOrString(ctx, prelude);
 
-  if (j >= len) {
-    ctx.i = j;
-    const node: AtRuleNode = {
-      kind: NodeKind.AtRule,
-      name: nameField,
-      prelude: preludeField,
-      children: null,
-    };
-    if (__NATIVE__) stampAtClass(node);
-    return node;
-  }
-
+  // Past the end, `charCodeAt` is NaN: neither `{` nor `;`.
   const delim = css.charCodeAt(j);
   if (delim !== OPEN_BRACE) {
     ctx.i = delim === SEMICOLON ? j + 1 : j;
@@ -934,7 +981,7 @@ function parseFrameDecls(ctx: ParseContext): Array<DeclNode | InterpolationNode>
           pushDecl(ctx, decls, start, colon, stop);
           const index = slotIndex(css, stop, end);
           decls.push({ kind: NodeKind.Interpolation, index });
-          keepSlot(ctx, index, TOP_LEVEL);
+          keepSplice(ctx, index);
           ctx.i = end;
           break;
         }

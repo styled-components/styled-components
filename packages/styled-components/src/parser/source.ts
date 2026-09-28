@@ -11,7 +11,7 @@ import type { RuleSet } from '../types';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import { isEscaped, normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
-import { DYN, Node, NodeKind, Root, SlotHead, TemplateValue } from './ast';
+import type { Root } from './ast';
 import { parse, ParseOptions, SlotEntry, SlotTable } from './parser';
 
 /**
@@ -168,18 +168,16 @@ export function parseSource(
 
   const entries: Array<SlotEntry | null> = [];
   for (let i = 0; i < n; i++) entries.push(null);
-  const slots: SlotTable = { entries, recover };
+  const standalone = falseFlags(n);
+  const slots: SlotTable = { clientRefs, entries, recover, standalone };
   const ast = parse(normalize(joined), { ...options, slots, templates: true });
-  const marks: SlotMarks = { clientRefs, live: falseFlags(n), standalone: falseFlags(n) };
-  markDynamic(ast, marks);
 
   for (let i = 0; i < n; i++) {
-    if (!marks.live[i]) {
+    if (entries[i] === null) {
       // Removed by the parse (inside a comment, or in a dropped statement):
       // never called, compiled, or injected.
       kinds[i] = InterpolationKind.Static;
       staticValues[i] = '';
-      entries[i] = null;
     } else if (__DEV__ && clientRefs !== null && clientRefs[i]) {
       warnClientReference(interpolations[i]);
     }
@@ -190,7 +188,7 @@ export function parseSource(
     interpolations,
     kinds,
     staticValues,
-    slotIsStandalone: marks.standalone,
+    slotIsStandalone: standalone,
     slotEntries: entries,
   };
 }
@@ -202,128 +200,6 @@ function falseFlags(n: number): boolean[] {
   const flags: boolean[] = [];
   for (let i = 0; i < n; i++) flags.push(false);
   return flags;
-}
-
-/** Mark every slot of a field live; `true` when the field holds any. */
-function markField(field: string | TemplateValue, live: boolean[]): boolean {
-  if (typeof field === 'string') return false;
-  for (let i = 0; i < field.slots.length; i++) live[field.slots[i]] = true;
-  return true;
-}
-
-function markSplice(slot: number, marks: SlotMarks): void {
-  marks.standalone[slot] = true;
-  marks.live[slot] = true;
-}
-
-function markHead(head: SlotHead, marks: SlotMarks): void {
-  for (let i = 0; i < head.slots.length; i++) {
-    const slot = head.slots[i];
-    marks.standalone[slot] = true;
-    marks.live[slot] = true;
-    if (marks.clientRefs !== null && marks.clientRefs[slot]) head.unresolved = true;
-  }
-  markField(head.rest, marks.live);
-}
-
-/** What the walk records per slot, parallel to the interpolations. */
-interface SlotMarks {
-  /** Slots whose value is a client reference; `null` when there are none. */
-  clientRefs: ReadonlyArray<boolean> | null;
-  live: boolean[];
-  standalone: boolean[];
-}
-
-/**
- * Walk the AST once. Tags every node whose own fields or descendants carry
- * a slot ({@link TemplateValue} field, head, or InterpolationNode) with
- * `node[DYN] = true` (absence is the static encoding), records which slots
- * splice as statements (standalone and head slots), and which slots appear
- * anywhere at all.
- *
- * `dynamic(node)` in `compile.ts` reads the flag via a single property
- * access; descendants don't need to be re-walked because the flag bubbles
- * up here. Native classifications for Rule / AtRule nodes are stamped by
- * the parser at construction time and ride through here untouched.
- */
-function markDynamic(nodes: ReadonlyArray<Node>, marks: SlotMarks): boolean {
-  const live = marks.live;
-  let any = false;
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    let dyn = false;
-    switch (node.kind) {
-      case NodeKind.Decl:
-        if (markField(node.prop, live)) dyn = true;
-        if (markField(node.value, live)) dyn = true;
-        break;
-      case NodeKind.Rule: {
-        for (let j = 0; j < node.selectors.length; j++) {
-          if (markField(node.selectors[j], live)) dyn = true;
-        }
-        // A head resolves from its slot values on every fill, even when the
-        // text after it is static.
-        if (node.head !== undefined) {
-          markHead(node.head, marks);
-          dyn = true;
-        }
-        if (markDynamic(node.children, marks)) dyn = true;
-        break;
-      }
-      case NodeKind.AtRule: {
-        if (markField(node.name, live)) dyn = true;
-        if (markField(node.prelude, live)) dyn = true;
-        if (node.children !== null && markDynamic(node.children, marks)) dyn = true;
-        break;
-      }
-      case NodeKind.Keyframes: {
-        if (markField(node.name, live)) dyn = true;
-        if (markField(node.prelude, live)) dyn = true;
-        for (let f = 0; f < node.frames.length; f++) {
-          const frame = node.frames[f];
-          if ('kind' in frame) {
-            markSplice(frame.index, marks);
-            dyn = true;
-            continue;
-          }
-          if (frame.head !== undefined) {
-            markHead(frame.head, marks);
-            dyn = true;
-          }
-          for (let s = 0; s < frame.stops.length; s++) {
-            if (markField(frame.stops[s], live)) dyn = true;
-          }
-          for (let d = 0; d < frame.children.length; d++) {
-            const child = frame.children[d];
-            if (child.kind === NodeKind.Interpolation) {
-              markSplice(child.index, marks);
-              dyn = true;
-            } else {
-              if (markField(child.prop, live)) dyn = true;
-              if (markField(child.value, live)) dyn = true;
-            }
-          }
-        }
-        break;
-      }
-      case NodeKind.Interpolation:
-        markSplice(node.index, marks);
-        dyn = true;
-        break;
-    }
-    if (dyn) {
-      // Define non-enumerable so the flag is invisible to `toEqual`,
-      // `JSON.stringify`, `Object.keys`, and `for..in`. Symbol-keyed +
-      // non-enumerable is the only combination where Jest's `equals()`
-      // (which calls both `Object.keys` and `Object.getOwnPropertySymbols`)
-      // skips the property entirely. Write happens once per Source; read
-      // happens per fillNode call, which V8 still inline-caches as a
-      // single hidden-class slot load.
-      Object.defineProperty(node, DYN, { value: true, enumerable: false, configurable: true });
-      any = true;
-    }
-  }
-  return any;
 }
 
 /**

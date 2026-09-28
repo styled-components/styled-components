@@ -453,7 +453,7 @@ export function compileWeb(
 }
 
 /**
- * Read the parse-time `[DYN]` flag set by `markDynamic` in `source.ts`.
+ * Read the parse-time `[DYN]` flag set by the templated parse in `parser.ts`.
  * `true` means the node, or any descendant, depends on a runtime
  * interpolation slot, so `fillNode` must walk it. Falsy means the subtree
  * is structurally fixed across renders, so `fillNode` returns the existing
@@ -519,7 +519,7 @@ function fillNodes(nodes: Root, fill: Fill): StaticRoot {
 }
 
 function fillNode(node: Node, fill: Fill): StaticNode | StaticNode[] | undefined {
-  // Static subtree: `markDynamic` guarantees no TemplateValue field anywhere
+  // Static subtree: the parse guarantees no TemplateValue field anywhere
   // below, so the node already has the `StaticNode` shape at runtime.
   if (!dynamic(node)) return node as StaticNode;
 

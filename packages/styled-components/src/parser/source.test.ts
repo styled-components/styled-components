@@ -1,5 +1,5 @@
 import css from '../constructors/css';
-import { NodeKind, TemplateValue } from './ast';
+import { DYN, NodeKind, RuleNode, TemplateValue } from './ast';
 import { InterpolationKind, parseSource } from './source';
 
 // Helper to make tagged-template test inputs feel natural.
@@ -678,6 +678,42 @@ describe('parseSource', () => {
         { parenDepth: 2, quote: 0, url: false },
         { parenDepth: 0, quote: 0, url: false },
         null,
+      ]);
+    });
+
+    it('tags exactly the nodes that hold a slot, or have a descendant that does, as dynamic', () => {
+      const f = () => 'x';
+      const src = tagged`
+        color: red;
+        width: ${f};
+        &:hover { color: blue; }
+        .a { .b { margin: ${f}; } }
+        @media (min-width: 1px) { color: red; }
+        @media ${f} { color: red; }
+        @supports (display: grid) { ${f} }
+        @keyframes k { from { opacity: 0; } }
+        @keyframes k2 { from { opacity: ${f}; } }
+        ${f} h1 { color: red; }
+      `;
+      const isDyn = (node: object) => (node as { [DYN]?: boolean })[DYN] === true;
+      const hover = src.ast[2] as RuleNode;
+      const inner = (src.ast[3] as RuleNode).children[0] as RuleNode;
+      expect(src.ast.map(isDyn)).toEqual([
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        true,
+      ]);
+      expect([isDyn(inner), isDyn(inner.children[0]), isDyn(hover.children[0])]).toEqual([
+        true,
+        true,
+        false,
       ]);
     });
 
