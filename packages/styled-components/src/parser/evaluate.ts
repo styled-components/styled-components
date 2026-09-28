@@ -8,6 +8,7 @@ import isPlainObject from '../utils/isPlainObject';
 import { walkObject } from '../utils/objectToCSS';
 import { warnOnce } from '../utils/warnOnce';
 import { trimRange } from './parser';
+import { replaceNul } from './reader';
 import {
   CLIENT_REFERENCE,
   emptyTemplate,
@@ -107,7 +108,7 @@ export function evaluateForFastPath(
       const fn = interps[i] as (ctx: unknown) => unknown;
       const result = fn(fillContext);
       if (typeof result === 'string') {
-        filled[i] = result;
+        filled[i] = replaceNul(result);
         continue;
       }
       if (typeof result === 'number') {
@@ -159,7 +160,7 @@ function resolveValue(
   owner: unknown
 ): string {
   const t = typeof value;
-  if (t === 'string') return value as string;
+  if (t === 'string') return replaceNul(value as string);
   if (t === 'number' || t === 'bigint') return String(value);
   // `true`, `false`, `undefined`, symbols, and `null` substitute nothing.
   if ((t !== 'function' && t !== 'object') || value === null) return '';
@@ -219,18 +220,20 @@ function resolveValue(
     return nonStyled(element ? owner : value, r, index);
   }
   if (isPlainObject(value)) {
-    if (Object.prototype.hasOwnProperty.call(value, 'toString')) return String(value);
+    if (Object.prototype.hasOwnProperty.call(value, 'toString')) return replaceNul(String(value));
     const walked = walkObject(value as Record<string, unknown>, {
       context: r.context,
       fragmentText: frag => fragmentValueText(frag as RuleSet<any>, r),
     });
     const interpolations = walked.interpolations;
     // Only ordinary values: the text parses as a mixin, as template text does.
-    if (interpolations === null || walked.strings === null) return walked.pending;
+    if (interpolations === null || walked.strings === null) return replaceNul(walked.pending);
     const strings = walked.strings;
     strings.push(walked.pending);
     const values: string[] = [];
-    for (let i = 0; i < interpolations.length; i++) values.push(String(interpolations[i]));
+    for (let i = 0; i < interpolations.length; i++) {
+      values.push(replaceNul(String(interpolations[i])));
+    }
     if (standalone && r.fragments !== undefined) {
       r.fragments[index] = {
         source: objectSource(strings, values),
@@ -241,7 +244,7 @@ function resolveValue(
     }
     return buildHashCSS(strings, values);
   }
-  return String(value);
+  return replaceNul(String(value));
 }
 
 /**

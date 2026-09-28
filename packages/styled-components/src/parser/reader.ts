@@ -44,6 +44,16 @@ export function isIdentCode(c: number): boolean {
   return isIdentChar(c) || c >= 0x80 || c === NUL;
 }
 
+const NUL_ALL = /\0/g;
+
+/**
+ * `value` with each NUL written as U+FFFD, as CSS preprocessing reads it.
+ * The native build keeps NUL, which its theme tokens (`\0sc:`) are made of.
+ */
+export function replaceNul(value: string): string {
+  return __NATIVE__ || value.indexOf('\0') === -1 ? value : value.replace(NUL_ALL, '�');
+}
+
 /** CSS whitespace, form feed included. */
 export function isSpace(c: number): boolean {
   return isWS(c) || c === FORM_FEED;
