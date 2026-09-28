@@ -1332,6 +1332,48 @@ describe('ssr', () => {
         ]);
       });
 
+      describe('style object values', () => {
+        const fontFace = 'red; @font-face { font-family: x; src: url(//evil.example/f) }';
+        const renderRules = (Comp: React.ComponentType<{ $v: string }>, payload: string) => {
+          const sheet = new ServerStyleSheet();
+          renderToString(sheet.collectStyles(<Comp $v={payload} />));
+          return readRules(sheet.getStyleTags());
+        };
+        const fromFunction = () =>
+          styled.div<{ $v: string }>(p => ({
+            color: p.$v,
+            background: 'blue',
+            '& span': { margin: p.$v },
+          }));
+        const fromStatic = (payload: string) => () =>
+          styled.div<{ $v: string }>({
+            color: payload,
+            background: 'blue',
+            '& span': { margin: payload },
+          });
+
+        it.each([
+          ['an object a function returns', () => fromFunction()],
+          ['a static object', () => fromStatic(fontFace)()],
+        ])('adds no rule through a value in %s', (_, make) => {
+          const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+          expect(renderRules(make(), fontFace)).toEqual([
+            { prelude: '.b', props: ['background'], rules: [] },
+          ]);
+          warn.mockRestore();
+        });
+
+        it.each([
+          ['an object a function returns', () => fromFunction()],
+          ['a static object', () => fromStatic('red; position: fixed')()],
+        ])('adds only declarations of the same rule for a value `;` in %s', (_, make) => {
+          expect(renderRules(make(), 'red; position: fixed')).toEqual([
+            { prelude: '.b', props: ['color', 'position', 'background'], rules: [] },
+            { prelude: '.b span', props: ['margin', 'position'], rules: [] },
+          ]);
+        });
+      });
+
       it('scopes every selector a comma list in a selector slot adds', () => {
         const Comp = styled.div<{ $sel: string }>`
           & ${p => p.$sel} {
