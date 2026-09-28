@@ -157,9 +157,9 @@ function parenKind(
  * only at its end (an escape, a `/`, or an identifier that joins the value).
  *
  * The value fails when it holds `{` or `}` anywhere, a raw newline inside a
- * string, a trailing escape, a `)` or `]` it did not open, or ends in a
- * different state than it started (string, comment, parenthesis, bracket,
- * `url(`).
+ * string, a trailing escape (also before trailing whitespace), a `)` or `]`
+ * it did not open, or ends in a different state than it started (string,
+ * comment, parenthesis, bracket, `url(`).
  */
 export function checkSlotValue(raw: string, entry: SlotEntry, before: string): number {
   const plain = entry.quote === 0 && !entry.url;
@@ -172,6 +172,9 @@ export function checkSlotValue(raw: string, entry: SlotEntry, before: string): n
   // so the value is read with that backslash in front of it.
   const value = escaped ? '\\' + raw : raw;
   const len = value.length;
+  let end = len;
+  while (end > 0 && isSpace(value.charCodeAt(end - 1))) end--;
+  if (end < len && isEscaped(value, end)) return VALUE_FAILED;
 
   let quote = entry.quote;
   /** 0 outside `url(`, 1 reading a url, 2 reading a bad url's remnants. */

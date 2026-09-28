@@ -1,9 +1,17 @@
 import type { CompiledKeyframes } from '../models/Keyframes';
 import type StyleSheet from '../sheet';
 import type { Compiler } from '../types';
-import { AT, CLOSE_BRACE, COLON, isIdentChar, isWS, SEMICOLON } from '../utils/charCodes';
+import {
+  AT,
+  BACKSLASH,
+  CLOSE_BRACE,
+  COLON,
+  isIdentChar,
+  isWS,
+  SEMICOLON,
+} from '../utils/charCodes';
 import { fifoSet } from '../utils/fifoMap';
-import { normalize } from '../utils/normalize';
+import { isEscaped, normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
 import {
   DeclNode,
@@ -241,11 +249,28 @@ function realizeList(list: ReadonlyArray<string | TemplateValue>, fill: Fill): s
     if (text.indexOf(',') === -1) {
       out.push(text);
     } else {
-      const parts = splitTopLevelCommas(text, true);
+      const parts = splitList(text);
+      if (parts === null) return null;
       for (let j = 0; j < parts.length; j++) out.push(parts[j]);
     }
   }
   return out;
+}
+
+/**
+ * Split realized selector or stop text on top-level commas, trimming each
+ * part. `null` when trimming leaves a part ending in a backslash, which would
+ * escape the character written after the part.
+ */
+function splitList(text: string): string[] | null {
+  const parts = splitTopLevelCommas(text, true);
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (part.charCodeAt(part.length - 1) === BACKSLASH && isEscaped(part, part.length)) {
+      return null;
+    }
+  }
+  return parts;
 }
 
 function fillRule(node: RuleNode, fill: Fill): StaticNode | StaticNode[] | undefined {
@@ -370,7 +395,11 @@ function fillKeyframes(
         }
         continue;
       }
-      stops = splitTopLevelCommas(head.text, true);
+      stops = splitList(head.text);
+      if (stops === null) {
+        if (__DEV__) warnDropped('@keyframes frame `' + head.text + '`');
+        continue;
+      }
       if (stops.length === 0) continue;
     } else {
       stops = realizeList(frame.stops, fill);
@@ -524,7 +553,11 @@ function fillHeadRule(node: RuleNode, head: SlotHead, fill: Fill): StaticNode[] 
       remainder
     );
   }
-  const selectors = splitTopLevelCommas(text, true);
+  const selectors = splitList(text);
+  if (selectors === null) {
+    if (__DEV__) warnDropped('rule `' + text + '`');
+    return out.length === 0 ? undefined : out;
+  }
   if (remainder === null && selectors.length === 0) {
     if (fill.root) {
       if (__DEV__) {
@@ -681,7 +714,7 @@ function listText(list: ReadonlyArray<string | TemplateValue>): string {
 function warnDropped(construct: string): void {
   warnOnce(
     'slot-value',
-    `The ${construct} was dropped: an interpolated value in it holds \`{\` or \`}\`, a \`;\` outside a declaration value, or leaves a string, comment, parenthesis, bracket, or \`url(\` open. Interpolate plain values, and write rules and blocks in the template or a css\`\` mixin.`,
+    `The ${construct} was dropped: an interpolated value in it holds \`{\` or \`}\`, a \`;\` outside a declaration value, ends in a backslash, or leaves a string, comment, parenthesis, bracket, or \`url(\` open. Interpolate plain values, and write rules and blocks in the template or a css\`\` mixin.`,
     construct
   );
 }

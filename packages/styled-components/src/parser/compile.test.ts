@@ -861,6 +861,93 @@ describe('compileWeb', () => {
       expect(out(src)).toEqual(legacy('margin: 0;'));
     });
 
+    // CSS Syntax 3 §4.3.8 Check if two code points are a valid escape: "If the
+    // first code point is not U+005C REVERSE SOLIDUS (\), return false.
+    // Otherwise, if the second code point is a newline, return false.
+    // Otherwise, return true." Substituted text is trimmed, so a backslash
+    // left before trimmed whitespace escapes whatever the template writes next.
+    describe('a value ending in an escaping backslash before whitespace', () => {
+      it.each([
+        ['a space', 'x\\ '],
+        ['a tab', 'x\\\t'],
+        ['a newline', 'x\\\n'],
+        ['a space after an escaped backslash pair', 'x\\\\\\ '],
+      ])('drops the declaration for %s', (_, value) => {
+        const src = tagged`color: ${value}; padding: 0;`;
+        expect(out(src)).toEqual(legacy('padding: 0;'));
+        expect(warnings()).toEqual([expect.stringContaining('`color`')]);
+      });
+
+      it('keeps a value ending in an escaped backslash before whitespace', () => {
+        const src = tagged`content: ${'x\\\\ '}; padding: 0;`;
+        expect(out(src)).toEqual(['.a{content:x\\\\;padding:0;}']);
+      });
+
+      it('drops the declaration for a property value', () => {
+        const src = tagged`${'x\\ '}: red; padding: 0;`;
+        expect(out(src)).toEqual(legacy('padding: 0;'));
+      });
+
+      it.each([
+        ['an Inside selector value', tagged`color: blue; & ${'x\\ '} { color: red; }`],
+        ['a Glued selector value', tagged`color: blue; ${'x\\ '}:hover { color: red; }`],
+        ['a later Head slot', tagged`color: blue; ${() => 'p'} ${'x\\ '} { color: red; }`],
+        ['an at-rule prelude', tagged`color: blue; @media ${'x\\\n'} { color: red; }`],
+        ['a statement at-rule prelude', tagged`color: blue; @import ${'url(a.css) x\\\n'};`],
+      ])('drops the rule for %s', (_, src) => {
+        expect(out(src)).toEqual(legacy('color: blue;'));
+      });
+
+      it.each([
+        ['an Inside selector value', tagged`color: blue; & ${'x\\ ,'} { color: red; }`],
+        [
+          'an Inside selector value with a tab',
+          tagged`color: blue; & ${'x\\\t, y'} { color: red; }`,
+        ],
+        ['a Head value', tagged`color: blue; ${() => 'x\\ , y'} { color: red; }`],
+      ])('drops the rule when a comma split leaves a part ending in an escape: %s', (_, src) => {
+        expect(out(src)).toEqual(legacy('color: blue;'));
+      });
+
+      it.each([
+        ['a stop Head', tagged`@keyframes k { ${'\\\t,, '} { opacity: 0; } to { opacity: 1; } }`],
+        [
+          'an Inside stop',
+          tagged`@keyframes k { from, ${'x\\ '} { opacity: 0; } to { opacity: 1; } }`,
+        ],
+        [
+          'an Inside stop split by a comma',
+          tagged`@keyframes k { from, ${'x\\ , 50%'} { opacity: 0; } to { opacity: 1; } }`,
+        ],
+      ])('drops the frame for %s', (_, src) => {
+        expect(out(src)).toEqual(['@keyframes k{to{opacity:1;}}']);
+      });
+    });
+
+    // CSS Syntax 3 §4.3.5 Consume a string token: "U+005C REVERSE SOLIDUS (\):
+    // If the next input code point is EOF, do nothing. Otherwise, if the next
+    // input code point is a newline, consume it." Outside a string a backslash
+    // before a newline is a <delim-token>, and §4.3.6 Consume a url token:
+    // "U+005C REVERSE SOLIDUS (\): If the stream starts with a valid escape,
+    // consume an escaped code point ... Otherwise, this is a parse error.
+    // Consume the remnants of a bad url".
+    describe('a backslash before a newline in the middle of a value', () => {
+      it('continues a string', () => {
+        const src = tagged`content: "${'a\\\nb'}";`;
+        expect(out(src)).toEqual(['.a{content:"a\\\nb";}']);
+      });
+
+      it('reads as a delimiter outside strings', () => {
+        const src = tagged`color: ${'a\\\nb'};`;
+        expect(out(src)).toEqual(['.a{color:a\\\nb;}']);
+      });
+
+      it('turns an unquoted url( into a bad url, which the value cannot leave open', () => {
+        const src = tagged`background: url(${'a\\\nb'}); margin: 0;`;
+        expect(out(src)).toEqual(legacy('margin: 0;'));
+      });
+    });
+
     // CSS Syntax 3 §4.3.5 Consume a string token: "newline: This is a parse
     // error. Reconsume the current input code point, create a
     // <bad-string-token>, and return it."
