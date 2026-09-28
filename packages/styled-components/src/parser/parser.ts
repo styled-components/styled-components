@@ -219,7 +219,7 @@ export function parse(css: string, options?: ParseOptions): Root<string | Templa
     slots,
     templates,
   };
-  return parseBlock(ctx, false);
+  return parseBlock(ctx);
 }
 
 interface ParseContext {
@@ -459,18 +459,11 @@ function scanQPOrNul(
   return end;
 }
 
-/**
- * Single-pass parse of a CSS block body. A keyframe frame's body (`frame`)
- * holds only declarations and splices: `{` does not stop the statement scan
- * and `@` does not start an at-rule, so either reads as declaration text.
- */
-function parseBlock(ctx: ParseContext, frame: true): Array<DeclNode | InterpolationNode>;
-function parseBlock(ctx: ParseContext, frame: false): Node[];
-function parseBlock(ctx: ParseContext, frame: boolean): Node[] {
+/** Single-pass parse of a CSS block body. */
+function parseBlock(ctx: ParseContext): Node[] {
   const css = ctx.css;
   const len = ctx.len;
   const out: Node[] = [];
-  const openBrace = frame ? -1 : OPEN_BRACE;
 
   while (ctx.i < len) {
     // Skip leading whitespace and stray semicolons
@@ -492,7 +485,7 @@ function parseBlock(ctx: ParseContext, frame: boolean): Node[] {
       return out;
     }
 
-    if (first === AT && !frame) {
+    if (first === AT) {
       ctx.i = i;
       out.push(parseAtRule(ctx));
       continue;
@@ -512,8 +505,8 @@ function parseBlock(ctx: ParseContext, frame: boolean): Node[] {
     while (true) {
       const stop =
         ctx.recover === null
-          ? scanQP(css, i, len, COLON, openBrace, SEMICOLON, CLOSE_BRACE)
-          : scanQPOrNul(css, i, len, COLON, openBrace, SEMICOLON, CLOSE_BRACE);
+          ? scanQP(css, i, len, COLON, OPEN_BRACE, SEMICOLON, CLOSE_BRACE)
+          : scanQPOrNul(css, i, len, COLON, OPEN_BRACE, SEMICOLON, CLOSE_BRACE);
       if (stop >= len) {
         // EOF reached. Treat as terminal declaration if we saw a colon.
         const declStart = run === null ? start : leadDecl(ctx, out, run);
@@ -549,13 +542,13 @@ function parseBlock(ctx: ParseContext, frame: boolean): Node[] {
         let node: RuleNode;
         if (run !== null && lead > 0) {
           const head = runHead(ctx, run, lead, selectorText);
-          node = { kind: NodeKind.Rule, selectors: [], children: parseBlock(ctx, false), head };
+          node = { kind: NodeKind.Rule, selectors: [], children: parseBlock(ctx), head };
         } else {
           const selectors =
             selectorText.indexOf(',') === -1
               ? [selectorText]
               : splitTopLevelCommas(selectorText, true);
-          const children = parseBlock(ctx, false);
+          const children = parseBlock(ctx);
           node = {
             kind: NodeKind.Rule,
             selectors: selectorsToTemplate(ctx, selectors),
@@ -863,7 +856,7 @@ function readAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode {
     return { kind: NodeKind.Keyframes, name: nameField, prelude: preludeField, frames };
   }
 
-  const children = parseBlock(ctx, false);
+  const children = parseBlock(ctx);
   const node: AtRuleNode = {
     kind: NodeKind.AtRule,
     name: nameField,
@@ -917,17 +910,96 @@ function parseKeyframesBody(ctx: ParseContext): Array<KeyframeFrame | Interpolat
 
     if (run !== null && lead > 0) {
       const head = runHead(ctx, run, lead, stopsText);
-      frames.push({ stops: [], children: parseBlock(ctx, true), head });
+      frames.push({ stops: [], children: parseFrameDecls(ctx), head });
       continue;
     }
 
     const stopsRaw =
       stopsText.indexOf(',') === -1 ? [stopsText] : splitTopLevelCommas(stopsText, true);
-    const children = parseBlock(ctx, true);
+    const children = parseFrameDecls(ctx);
     frames.push({ stops: selectorsToTemplate(ctx, stopsRaw), children });
   }
 
   return frames;
+}
+
+/**
+ * A keyframe frame's body: declarations and splices only. `{` does not stop
+ * the statement scan and `@` does not start an at-rule, so either reads as
+ * declaration text.
+ */
+function parseFrameDecls(ctx: ParseContext): Array<DeclNode | InterpolationNode> {
+  const css = ctx.css;
+  const len = ctx.len;
+  const decls: Array<DeclNode | InterpolationNode> = [];
+
+  while (ctx.i < len) {
+    let i = ctx.i;
+    while (i < len) {
+      const c = css.charCodeAt(i);
+      if (isWS(c) || c === SEMICOLON) i++;
+      else break;
+    }
+    if (i >= len) {
+      ctx.i = i;
+      break;
+    }
+
+    const first = css.charCodeAt(i);
+    if (first === CLOSE_BRACE) {
+      ctx.i = i + 1;
+      return decls;
+    }
+
+    // Inside a frame every Run splices declarations, except a last slot
+    // that names the property of the declaration after it.
+    const run = first === NUL ? statementRun(ctx, decls, i) : null;
+    if (run === false) continue;
+    const start = run === null ? i : leadDecl(ctx, decls, run);
+    i = start;
+
+    let colon = -1;
+    // `while (true)` (not `while (i < len)`) so that a COLON found at the
+    // very last position can still reach the EOF branch on the next scan.
+    while (true) {
+      const stop =
+        ctx.recover === null
+          ? scanQP(css, i, len, COLON, SEMICOLON, CLOSE_BRACE, -1)
+          : scanQPOrNul(css, i, len, COLON, SEMICOLON, CLOSE_BRACE, -1);
+      if (stop >= len) {
+        if (colon !== -1) pushDecl(ctx, decls, start, colon, stop);
+        ctx.i = stop;
+        return decls;
+      }
+      const c = css.charCodeAt(stop);
+      if (c === COLON) {
+        if (colon === -1) colon = stop;
+        i = stop + 1;
+        continue;
+      }
+      if (c === NUL) {
+        const end = slotEnd(css, stop, len);
+        if (end !== -1 && recoversAt(ctx, stop, end, colon)) {
+          pushDecl(ctx, decls, start, colon, stop);
+          pushSplice(ctx, decls, slotIndex(css, stop, end));
+          ctx.i = end;
+          break;
+        }
+        i = end === -1 ? stop + 1 : end;
+        continue;
+      }
+      // c is SEMICOLON or CLOSE_BRACE
+      if (colon !== -1) pushDecl(ctx, decls, start, colon, stop);
+      if (c === CLOSE_BRACE) {
+        ctx.i = stop + 1;
+        return decls;
+      }
+      ctx.i = stop + 1;
+      break;
+    }
+  }
+
+  return decls;
 }
 
 /**
