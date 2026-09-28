@@ -19,7 +19,16 @@ export const enum NodeKind {
 export interface TemplateValue {
   chunks: string[];
   slots: number[];
+  [ALWAYS_READ]?: true;
 }
+
+/**
+ * Parse-time flag on a {@link TemplateValue} whose template text, with plain
+ * text in place of each slot, does not read as a balanced field, so every
+ * fill reads the field whatever its values hold. Set only when true, and
+ * non-enumerable like {@link DYN}.
+ */
+export const ALWAYS_READ: unique symbol = Symbol('alwaysRead');
 
 /**
  * Parse-time eager flag set by the templated parse in `parser.ts`: `true` when

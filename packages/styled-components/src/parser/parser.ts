@@ -2,23 +2,21 @@ import {
   AT,
   BACKSLASH,
   CLOSE_BRACE,
-  CLOSE_PAREN,
   COLON,
   COMMA,
   DIGIT_0,
   DIGIT_9,
-  DOUBLE_QUOTE,
   HYPHEN,
   isWS,
   NUL,
   OPEN_BRACE,
   OPEN_PAREN,
   SEMICOLON,
-  SINGLE_QUOTE,
   SLASH,
   UPPER_S,
 } from '../utils/charCodes';
 import {
+  ALWAYS_READ,
   AtRuleNode,
   DeclNode,
   DYN,
@@ -32,7 +30,15 @@ import {
   TemplateValue,
 } from './ast';
 import { stampAtClass, stampRuleClass } from './nativePlan';
-import { BRACKETS, isEscaped, isSpace, opensUrl, removeComments, scan, stops } from './reader';
+import {
+  BRACKETS,
+  isEscaped,
+  isSpace,
+  removeComments,
+  scan,
+  stops,
+  templateReadsBalanced,
+} from './reader';
 
 /** A block statement ends at `;`, `{`, or `}`; its first top-level `:` splits a declaration. */
 const STATEMENT = stops(':{;}');
@@ -66,16 +72,6 @@ export interface ParseOptions {
   templates?: boolean;
 }
 
-/** Tokenizer state at a slot's position in the template. */
-export interface SlotEntry {
-  /** Open parentheses around the slot, an unquoted `url(` included. */
-  parenDepth: number;
-  /** Char code of the quote the slot sits inside; 0 for none. */
-  quote: number;
-  /** Whether the slot sits inside an unquoted `url(`. */
-  url: boolean;
-}
-
 /** Per-slot knowledge shared between `parseSource` and the parser. */
 export interface SlotTable {
   /**
@@ -83,8 +79,8 @@ export interface SlotTable {
    * resolve; a head holding one is marked `unresolved`. `null` when none is.
    */
   clientRefs: ReadonlyArray<boolean> | null;
-  /** Written by the parser: the entry state of each slot it keeps, `null` for the rest. */
-  entries: Array<SlotEntry | null>;
+  /** Written by the parser: `true` for each slot it keeps, `false` for one removed with a comment or a dropped statement. */
+  kept: boolean[];
   /**
    * Slots whose value ends a declaration missing its `;` when met in the
    * declaration's value; `null` when no slot can.
@@ -94,8 +90,7 @@ export interface SlotTable {
   standalone: boolean[];
 }
 
-/** Entry state of a slot at the top level of a statement. Shared, never mutated. */
-export const TOP_LEVEL: SlotEntry = Object.freeze({ parenDepth: 0, quote: 0, url: false });
+const ALWAYS_READ_FLAG: PropertyDescriptor = { configurable: true, enumerable: false, value: true };
 
 /**
  * Parse CSS text (template text, mixin text, or a static string) into a
@@ -177,15 +172,15 @@ function slotIndex(css: string, start: number, end: number): number {
   return index;
 }
 
-function keepSlot(ctx: ParseContext, index: number, entry: SlotEntry): void {
-  if (ctx.slots !== null) ctx.slots.entries[index] = entry;
+function keepSlot(ctx: ParseContext, index: number): void {
+  if (ctx.slots !== null) ctx.slots.kept[index] = true;
 }
 
 /** Keep a slot whose value splices as statements (a standalone or head slot). */
 function keepSplice(ctx: ParseContext, index: number): void {
   ctx.dyn = true;
   if (ctx.slots !== null) {
-    ctx.slots.entries[index] = TOP_LEVEL;
+    ctx.slots.kept[index] = true;
     ctx.slots.standalone[index] = true;
   }
 }
@@ -511,67 +506,41 @@ function selectorsToTemplate(
  * Convert a slot-bearing CSS field (`color: \0S0\0;`-style) into a
  * structural {@link TemplateValue} splice: chunks between slots + parallel
  * slot indices. Strings without slots return as-is (the fast path; most
- * fields don't carry interpolations). Records each slot's entry state,
- * reading the field from its start: every field starts at the top level of
- * its statement or selector-list part.
+ * fields don't carry interpolations). A field whose template text does not
+ * read balanced with plain text in its slots is marked {@link ALWAYS_READ}.
  *
  * Other `\0`-prefixed sequences (notably the createTheme.native.ts
  * `\0sc:` token namespace) ride through opaquely; they're preserved in
  * chunks and never become slot references.
  */
 function templateOrString(ctx: ParseContext, s: string): string | TemplateValue {
-  if (!ctx.templates || s.indexOf('\0') === -1) return s;
+  if (!ctx.templates) return s;
+  let i = s.indexOf('\0');
+  if (i === -1) return s;
   const len = s.length;
   let chunks: string[] | null = null;
   const slots: number[] = [];
   let last = 0;
-  let paren = 0;
-  let quote = 0;
-  // Parenthesis depth of the unquoted `url(` being read; 0 for none.
-  let url = 0;
-  for (let i = 0; i < len; i++) {
-    const c = s.charCodeAt(i);
-    if (c === NUL) {
-      const end = slotEnd(s, i, len);
-      if (end !== -1) {
-        if (chunks === null) chunks = [];
-        chunks.push(s.substring(last, i));
-        const index = slotIndex(s, i, end);
-        slots.push(index);
-        keepSlot(
-          ctx,
-          index,
-          paren === 0 && quote === 0 ? TOP_LEVEL : { parenDepth: paren, quote, url: url !== 0 }
-        );
-        last = end;
-        i = end - 1;
-        continue;
-      }
+  while (i !== -1) {
+    const end = slotEnd(s, i, len);
+    if (end === -1) {
+      i = s.indexOf('\0', i + 1);
+      continue;
     }
-    if (c === BACKSLASH) {
-      // A backslash before a slot escapes the value's first code point, which
-      // the fill reads; the marker itself is never escaped.
-      if (s.charCodeAt(i + 1) !== NUL) i++;
-    } else if (quote !== 0) {
-      if (c === quote) quote = 0;
-    } else if (url !== 0) {
-      if (c === CLOSE_PAREN) {
-        paren--;
-        url = 0;
-      }
-    } else if (c === DOUBLE_QUOTE || c === SINGLE_QUOTE) {
-      quote = c;
-    } else if (c === OPEN_PAREN) {
-      paren++;
-      if (opensUrl(s, i)) url = paren;
-    } else if (c === CLOSE_PAREN) {
-      if (paren > 0) paren--;
-    }
+    if (chunks === null) chunks = [];
+    chunks.push(s.substring(last, i));
+    const index = slotIndex(s, i, end);
+    slots.push(index);
+    keepSlot(ctx, index);
+    last = end;
+    i = s.indexOf('\0', end);
   }
   if (chunks === null) return s;
   chunks.push(s.substring(last));
   ctx.dyn = true;
-  return { chunks, slots };
+  const field: TemplateValue = { chunks, slots };
+  if (!templateReadsBalanced(chunks)) Object.defineProperty(field, ALWAYS_READ, ALWAYS_READ_FLAG);
+  return field;
 }
 
 /** A CSS custom property starts with `--` (two leading hyphens). */

@@ -5,6 +5,7 @@ import { AT, COLON, DIGIT_0, DIGIT_9, HYPHEN, isWS } from '../utils/charCodes';
 import { fifoSet } from '../utils/fifoMap';
 import { warnOnce } from '../utils/warnOnce';
 import {
+  ALWAYS_READ,
   DeclNode,
   DYN,
   Node,
@@ -21,23 +22,19 @@ import {
   TemplateValue,
 } from './ast';
 import { emitWeb, EmitOptions, nextAmpersand } from './emit-web';
+import { isCustomProperty, isKeyframesName, parse, splitTopLevelCommas, trimRange } from './parser';
 import {
-  isCustomProperty,
-  isKeyframesName,
-  parse,
-  SlotEntry,
-  splitTopLevelCommas,
-  TOP_LEVEL,
-  trimRange,
-} from './parser';
-import { BRACKETS, COMMENTS, isIdentCode, removeComments, scan, stops } from './reader';
-import {
-  checkSlotValue,
-  chunkChangesReading,
-  splitDeclarations,
-  VALUE_FAILED,
-  VALUE_SEMICOLON,
-} from './slotValue';
+  BRACKETS,
+  COMMENTS,
+  FIELD_FAILED,
+  FIELD_SEMICOLON,
+  isIdentCode,
+  readField,
+  removeComments,
+  scan,
+  stops,
+} from './reader';
+import { isPlainValue, splitDeclarations } from './slotValue';
 import {
   evaluateForFastPath,
   FastPathFragment,
@@ -123,7 +120,6 @@ function dynamic(node: Node): boolean {
 
 /** One source's fill inputs, at one nesting position. */
 interface Fill {
-  entries: ReadonlyArray<SlotEntry | null>;
   filled: ReadonlyArray<string>;
   fragments: ReadonlyArray<FastPathFragment | null> | null | undefined;
   /** At the top level of a global style, where a block has no parent to apply to. */
@@ -144,7 +140,7 @@ export function fillSource(
   fragments: ReadonlyArray<FastPathFragment | null> | null | undefined,
   root = false
 ): StaticRoot {
-  return fillNodes(source.ast, { entries: source.slotEntries, filled, fragments, root });
+  return fillNodes(source.ast, { filled, fragments, root });
 }
 
 function nestedFill(fill: Fill): Fill {
@@ -198,9 +194,9 @@ function fillNode(node: Node, fill: Fill): StaticNode | StaticNode[] | undefined
 function fillDecl(node: DeclNode, fill: Fill): StaticDeclNode | StaticDeclNode[] | undefined {
   // Both prop and value can be TemplateValue for templates like
   // `${theme.vars.colors.bg}: #111;` (createTheme.vars overrides).
-  const propRaw = realize(node.prop, fill, '');
+  const propRaw = realize(node.prop, fill);
   let split = realizedSemicolon;
-  const valueRaw = propRaw === null ? null : realize(node.value, fill, '');
+  const valueRaw = propRaw === null ? null : realize(node.value, fill);
   if (propRaw === null || valueRaw === null) {
     if (__DEV__) warnRealizeFailed('declaration `' + fieldText(node.prop) + '`');
     return undefined;
@@ -236,7 +232,7 @@ function realizeList(list: ReadonlyArray<string | TemplateValue>, fill: Fill): s
       out.push(entry);
       continue;
     }
-    const realized = realize(entry, fill, '');
+    const realized = realize(entry, fill);
     if (realized === null || realizedSemicolon) return null;
     const text = removeComments(realized, false);
     if (text === realized && text.indexOf(',') === -1) {
@@ -308,7 +304,7 @@ function fillAtRule(
   if (typeof node.name === 'string') {
     name = node.name;
   } else {
-    const realized = realize(node.name, fill, '');
+    const realized = realize(node.name, fill);
     if (realized === null || !isIdentifier(realized)) {
       if (__DEV__ && !realizedUnresolved) {
         const shown = realized === null ? fieldText(node.name) : realized;
@@ -326,7 +322,7 @@ function fillAtRule(
       return fillKeyframes(name, node.prelude, node.children, fill);
     }
   }
-  const realized = realize(node.prelude, fill, '');
+  const realized = realize(node.prelude, fill);
   if (realized === null || realizedSemicolon) {
     if (__DEV__) warnRealizeFailed('at-rule `@' + name + ' ' + fieldText(node.prelude) + '`');
     return undefined;
@@ -354,7 +350,7 @@ function fillKeyframes(
   children: ReadonlyArray<Node>,
   fill: Fill
 ): StaticKeyframesNode | undefined {
-  let prelude = realize(preludeField, fill, '');
+  let prelude = realize(preludeField, fill);
   if (prelude === null || realizedSemicolon) {
     if (__DEV__) warnRealizeFailed('@keyframes `' + fieldText(preludeField) + '`');
     return undefined;
@@ -465,7 +461,10 @@ interface ResolvedHead {
 function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
   if (head.unresolved === true) return undefined;
   const statements: StaticNode[] = [];
+  // The Head remainder field: the text the values give after their
+  // statements, then the text the template writes after the Head.
   let remainder: string | null = null;
+  let count = 0;
   for (let k = 0; k < head.slots.length; k++) {
     const index = head.slots[k];
     const frag = fill.fragments ? fill.fragments[index] : null;
@@ -477,13 +476,12 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
     const raw = hasFrag ? fragmentText(frag) : fill.filled[index];
     if (remainder !== null) {
       // Once a slot starts the selector, later slots join it as text.
-      const before: string = remainder + head.gaps[k - 1];
       if (textUnresolved) return droppedHead(statements);
-      if (checkSlotValue(raw, TOP_LEVEL, before) !== 0) {
-        if (__DEV__) warnDropped('rule headed by `' + raw + '`');
-        return droppedHead(statements);
-      }
-      remainder = before + raw;
+      remainder += head.gaps[k - 1];
+      valueSpans[2 * count] = remainder.length;
+      remainder += raw;
+      valueSpans[2 * count + 1] = remainder.length;
+      count++;
       continue;
     }
     const text = removeComments(raw, true);
@@ -498,31 +496,67 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
       for (let j = 0; j < spliced.length; j++) statements.push(spliced[j]);
     }
     if (rest !== '') {
-      if (checkSlotValue(rest, TOP_LEVEL, '') !== 0) {
-        if (__DEV__) warnDropped('rule headed by `' + rest + '`');
-        return droppedHead(statements);
-      }
       remainder = rest;
+      valueSpans[0] = 0;
+      valueSpans[1] = rest.length;
+      count = 1;
     }
   }
-  const prefix = remainder === null ? '' : remainder + head.gaps[head.gaps.length - 1];
-  const rest = realize(head.rest, fill, prefix);
-  if (
-    rest === null ||
-    realizedSemicolon ||
-    (typeof head.rest === 'string' && prefix !== '' && chunkChangesReading(prefix, rest, true))
-  ) {
-    if (__DEV__) warnRealizeFailed('rule `' + fieldText(head.rest) + '`');
+  if (remainder === null) {
+    const rest = realize(head.rest, fill);
+    if (rest === null || realizedSemicolon) {
+      if (__DEV__) warnRealizeFailed('rule `' + fieldText(head.rest) + '`');
+      return droppedHead(statements);
+    }
+    return {
+      dropped: false,
+      remainder: null,
+      statements,
+      text: removeComments(trimRange(rest, 0, rest.length), false),
+    };
+  }
+  const prefix = remainder + head.gaps[head.gaps.length - 1];
+  const rest = appendField(prefix, head.rest, fill, count);
+  if (rest === null) return droppedHead(statements);
+  const flags = readField(prefix + rest, valueSpans, fieldSpans);
+  if (flags !== 0) {
+    if (__DEV__) warnDropped('rule `' + prefix + fieldText(head.rest) + '`');
     return droppedHead(statements);
   }
-  // Removal keeps the cleaned remainder a prefix of the cleaned text: no
-  // comment spans the two, since every value ends in the state it started in.
-  return {
-    dropped: false,
-    remainder: remainder === null ? null : removeComments(remainder, false),
-    statements,
-    text: removeComments(prefix + trimRange(rest, 0, rest.length), false),
-  };
+  const text = removeComments(prefix + trimRange(rest, 0, rest.length), false);
+  return { dropped: false, remainder: removeComments(remainder, false), statements, text };
+}
+
+/** Value spans {@link appendField} recorded, the ones before it included. */
+let fieldSpans = 0;
+
+/**
+ * `field` realized as it continues a field whose text so far is `prefix`
+ * with `count` value spans, recording its values' spans after them (see
+ * {@link fieldSpans}). `null` when a value cannot be resolved, which already
+ * warned.
+ */
+function appendField(
+  prefix: string,
+  field: string | TemplateValue,
+  fill: Fill,
+  count: number
+): string | null {
+  fieldSpans = count;
+  if (typeof field === 'string') return field;
+  const { chunks, slots } = field;
+  let out = chunks[0];
+  for (let i = 0; i < slots.length; i++) {
+    const idx = slots[i];
+    if (idx >= fill.filled.length) return null;
+    if (fill.fragments && fill.fragments[idx] === UNRESOLVED) return null;
+    valueSpans[2 * fieldSpans] = prefix.length + out.length;
+    out += fill.filled[idx];
+    valueSpans[2 * fieldSpans + 1] = prefix.length + out.length;
+    fieldSpans++;
+    out += chunks[i + 1];
+  }
+  return out;
 }
 
 /** {@link removeComments}, trimming the text when a comment was removed. */
@@ -556,10 +590,11 @@ function fillHeadRule(node: RuleNode, head: SlotHead, fill: Fill): StaticNode[] 
   const out = resolved.statements;
   if (resolved.dropped) return out.length === 0 ? undefined : out;
   const { remainder, text } = resolved;
-  if (remainder !== null && remainder.charCodeAt(0) === AT) {
+  if (remainder !== null && text.charCodeAt(0) === AT) {
+    // Read from the whole text: a comment the value opens may close after it.
     let end = 1;
-    while (end < remainder.length && isIdentCode(remainder.charCodeAt(end))) end++;
-    const name = remainder.substring(1, end);
+    while (end < text.length && isIdentCode(text.charCodeAt(end))) end++;
+    const name = text.substring(1, end);
     if (!HEAD_AT_RULES.has(name.toLowerCase())) {
       if (__DEV__) {
         warnOnce(
@@ -713,21 +748,27 @@ let realizedSemicolon = false;
 let realizedUnresolved = false;
 
 /**
- * Realize a {@link TemplateValue} or pass through a static string, checking
- * each slot value from its entry state and each template chunk after a
- * value for a changed reading. Returns `null` when a check fails or a value
- * could not be resolved; sets {@link realizedSemicolon} and
- * {@link realizedUnresolved}. `prefix` is realized text written before the
- * field in the same statement.
+ * `[start, end)` pairs of the text the values of the field being realized
+ * wrote, for {@link readField}. Reused across fields; only the pairs a field
+ * records are read.
  */
-function realize(field: string | TemplateValue, fill: Fill, prefix: string): string | null {
+const valueSpans: number[] = [];
+
+/**
+ * Realize a {@link TemplateValue} or pass through a static string. The
+ * realized field is read whole ({@link readField}) unless every value is
+ * plain ({@link isPlainValue}) and the template text reads balanced on its
+ * own. Returns `null` when the reading fails or a value could not be
+ * resolved; sets {@link realizedSemicolon} and {@link realizedUnresolved}.
+ */
+function realize(field: string | TemplateValue, fill: Fill): string | null {
   realizedSemicolon = false;
   realizedUnresolved = false;
   if (typeof field === 'string') return field;
   const { chunks, slots } = field;
   const fragments = fill.fragments;
+  let read = field[ALWAYS_READ] === true;
   let out = chunks[0];
-  if (prefix !== '' && chunkChangesReading(prefix, out, true)) return null;
   for (let i = 0; i < slots.length; i++) {
     const idx = slots[i];
     if (idx >= fill.filled.length) return null;
@@ -736,18 +777,22 @@ function realize(field: string | TemplateValue, fill: Fill, prefix: string): str
       return null;
     }
     const value = fill.filled[idx];
-    const entry = fill.entries[idx] || TOP_LEVEL;
-    const flags = checkSlotValue(value, entry, prefix === '' ? out : prefix + out);
-    if ((flags & VALUE_FAILED) !== 0) return null;
-    if ((flags & VALUE_SEMICOLON) !== 0) realizedSemicolon = true;
+    const after = chunks[i + 1];
+    if (!read && !isPlainValue(value, chunks[i], after)) read = true;
+    valueSpans[2 * i] = out.length;
     out += value;
-    const chunk = chunks[i + 1];
-    if (chunk !== '' && chunkChangesReading(out, chunk, entry.quote === 0 && !entry.url)) {
-      return null;
-    }
-    out += chunk;
+    valueSpans[2 * i + 1] = out.length;
+    out += after;
   }
-  return out;
+  return read ? readRealized(out, slots.length) : out;
+}
+
+/** `text` when it passes {@link readField} with its first `count` value spans; sets {@link realizedSemicolon}. */
+function readRealized(text: string, count: number): string | null {
+  const flags = readField(text, valueSpans, count);
+  if ((flags & FIELD_FAILED) !== 0) return null;
+  realizedSemicolon = (flags & FIELD_SEMICOLON) !== 0;
+  return text;
 }
 
 /** A field as written, each slot shown as `${…}`; for dev warnings. */
@@ -774,7 +819,7 @@ function warnRealizeFailed(construct: string): void {
 function warnDropped(construct: string): void {
   warnOnce(
     'slot-value',
-    `The ${construct} was dropped: an interpolated value in it holds \`{\` or \`}\`, a \`;\` outside a declaration value, ends in a backslash, or leaves a string, comment, parenthesis, bracket, or \`url(\` open. Interpolate plain values, and write rules and blocks in the template or a css\`\` mixin.`,
+    `The ${construct} was dropped: an interpolated value in it holds \`{\` or \`}\` outside a string or \`url(\`, a \`;\` outside a declaration value, or a line break inside a string, ends in a backslash, or leaves a string, comment, parenthesis, bracket, or \`url(\` open. Interpolate plain values, and write rules and blocks in the template or a css\`\` mixin.`,
     construct
   );
 }

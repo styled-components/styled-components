@@ -3,7 +3,7 @@ import { fifoSet } from '../utils/fifoMap';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import { warnOnce } from '../utils/warnOnce';
 import type { Root } from './ast';
-import { parse, SlotEntry, SlotTable } from './parser';
+import { parse, SlotTable } from './parser';
 import { removeComments, scan, stops } from './reader';
 
 /** A statement ends at `;`, `{`, or `}`. */
@@ -42,8 +42,8 @@ export const enum InterpolationKind {
  * `TemplateValue` fields. `kinds`/`staticValues` are parallel to
  * `interpolations` for fast dispatch.
  *
- * `ast`, `slotEntries`, `slotIsStandalone`, and `id` come from the parse,
- * which a shared template reuses across every call of its call site (see
+ * `ast`, `slotIsStandalone`, and `id` come from the parse, which a shared
+ * template reuses across every call of its call site (see
  * {@link attachTemplateInputs}); they are shared and never mutated.
  */
 export interface Source {
@@ -56,8 +56,6 @@ export interface Source {
   id: number;
   interpolations: ReadonlyArray<unknown>;
   kinds: ReadonlyArray<InterpolationKind>;
-  /** Tokenizer state at each slot's position; `null` for a slot the parse removed. */
-  slotEntries: ReadonlyArray<SlotEntry | null>;
   /** `true` for slots whose value splices as statements (standalone and head slots). */
   slotIsStandalone: ReadonlyArray<boolean>;
   staticValues: ReadonlyArray<string>;
@@ -67,8 +65,9 @@ export interface Source {
 /** What a parse yields: everything in a {@link Source} that depends only on the strings and the parse flags. */
 interface TemplateParse {
   ast: Root;
-  entries: ReadonlyArray<SlotEntry | null>;
   id: number;
+  /** `false` for each slot the parse removed. */
+  kept: ReadonlyArray<boolean>;
   standalone: ReadonlyArray<boolean>;
 }
 
@@ -180,9 +179,9 @@ export function parseSource(
     shared && strings.length === n + 1
       ? sharedParse(strings, n, recover, clientRefs)
       : readTemplate(strings, n, recover, clientRefs);
-  const entries = parsed.entries;
+  const kept = parsed.kept;
   for (let i = 0; i < n; i++) {
-    if (entries[i] === null) {
+    if (!kept[i]) {
       // Removed by the parse (inside a comment, or in a dropped statement):
       // never called, compiled, or injected.
       kinds[i] = InterpolationKind.Static;
@@ -196,7 +195,6 @@ export function parseSource(
     id: parsed.id,
     interpolations,
     kinds,
-    slotEntries: entries,
     slotIsStandalone: parsed.standalone,
     staticValues,
     strings,
@@ -213,20 +211,19 @@ function readTemplate(
   if (n === 0) {
     return {
       ast: parse(strings.length > 0 ? strings[0] : ''),
-      entries: EMPTY,
       id: 0,
+      kept: EMPTY,
       standalone: EMPTY,
     };
   }
   let joined = strings[0] || '';
   for (let i = 1; i < strings.length; i++) joined += '\0S' + (i - 1) + '\0' + (strings[i] || '');
 
-  const entries: Array<SlotEntry | null> = [];
-  for (let i = 0; i < n; i++) entries.push(null);
+  const kept = falseFlags(n);
   const standalone = falseFlags(n);
-  const slots: SlotTable = { clientRefs, entries, recover, standalone };
+  const slots: SlotTable = { clientRefs, kept, recover, standalone };
   const ast = parse(joined, { slots, templates: true });
-  return { ast, entries, id: 0, standalone };
+  return { ast, id: 0, kept, standalone };
 }
 
 /** {@link readTemplate} through the per-strings cache, under a fresh positive id on a miss. */

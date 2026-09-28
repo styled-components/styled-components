@@ -2,6 +2,7 @@ import {
   ASTERISK,
   AT,
   BACKSLASH,
+  CLOSE_BRACE,
   CLOSE_BRACKET,
   CLOSE_PAREN,
   COLON,
@@ -19,6 +20,7 @@ import {
   LOWER_R,
   LOWER_U,
   NUL,
+  OPEN_BRACE,
   OPEN_BRACKET,
   OPEN_PAREN,
   SINGLE_QUOTE,
@@ -41,7 +43,7 @@ export function isSpace(c: number): boolean {
 }
 
 /** Newline as CSS preprocessing reads it: LF, CR, or form feed. */
-export function isNewline(c: number): boolean {
+function isNewline(c: number): boolean {
   return c === LF || c === CR || c === FORM_FEED;
 }
 
@@ -92,7 +94,7 @@ function escapedCode(s: string, i: number, end: number): number {
  * Start of the identifier (escapes included) that ends at `end` in `s`,
  * reading back no further than `from`. Equal to `end` when none does.
  */
-export function identifierStart(s: string, end: number, from: number): number {
+function identifierStart(s: string, end: number, from: number): number {
   let k = end;
   while (k > from) {
     const c = s.charCodeAt(k - 1);
@@ -147,7 +149,7 @@ export function isUrlCall(s: string, open: number): boolean {
 }
 
 /** {@link isUrlCall} for the identifier `s[start..open)` found by {@link identifierStart}. */
-export function isUrlIdentifier(s: string, start: number, open: number): boolean {
+function isUrlIdentifier(s: string, start: number, open: number): boolean {
   if (open - start < 3) return false;
   const before = start > 0 ? s.charCodeAt(start - 1) : -1;
   if ((before === HASH || before === AT) && !isEscaped(s, start - 1)) return false;
@@ -177,7 +179,7 @@ export function isUrlIdentifier(s: string, start: number, open: number): boolean
 }
 
 /** Whether the `(` at `open` starts an unquoted `url(`: {@link isUrlCall}, and no quote opens its argument. */
-export function opensUrl(s: string, open: number): boolean {
+function opensUrl(s: string, open: number): boolean {
   if (!isUrlCall(s, open)) return false;
   let j = open + 1;
   while (j < s.length && isSpace(s.charCodeAt(j))) j++;
@@ -361,4 +363,214 @@ export function removeComments(text: string, lineComments: boolean): string {
     start = i;
   }
   return start === 0 ? text : out + text.substring(start);
+}
+
+function isNonPrintable(c: number): boolean {
+  return (c >= 0 && c <= 8) || c === 11 || (c >= 14 && c <= 31) || c === 127;
+}
+
+/** A table marking the ASCII code points in `chars`, and the non-printable ones with `nonPrintable`. */
+export function codeTable(chars: string, nonPrintable: boolean): Uint8Array {
+  const table = new Uint8Array(128);
+  for (let i = 0; i < chars.length; i++) table[chars.charCodeAt(i)] = 1;
+  if (nonPrintable) {
+    for (let c = 0; c < 128; c++) if (isNonPrintable(c)) table[c] = 1;
+  }
+  return table;
+}
+
+/** Index of the first code point at or after `i` that `table` marks; non-ASCII is never marked. */
+export function skipOrdinary(s: string, i: number, end: number, table: Uint8Array): number {
+  while (i < end) {
+    const c = s.charCodeAt(i);
+    if (c < 128 && table[c] === 1) return i;
+    i++;
+  }
+  return end;
+}
+
+/** Code points that can change how a field reads outside strings, comments, and url text. */
+const FIELD_SPECIAL = codeTable('{}()[];"\'\\/', false);
+/** Code points that end an ordinary run inside a string. */
+const STRING_STOP = codeTable('\\"\'\n\r\f', false);
+/** Code points that end an ordinary run inside a url. */
+const URL_STOP = codeTable('\\)"\'( \t\n\r\f', true);
+/** Code points that end an ordinary run inside a bad url's remnants. */
+const REMNANT_STOP = codeTable('\\)', false);
+
+const NO_VALUES: ReadonlyArray<number> = [];
+
+/**
+ * Whether a field's template text, with plain text in place of each slot
+ * between `chunks`, passes {@link readField}.
+ */
+export function templateReadsBalanced(chunks: ReadonlyArray<string>): boolean {
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    if (skipOrdinary(chunk, 0, chunk.length, FIELD_SPECIAL) !== chunk.length) {
+      return readField(chunks.join('x'), NO_VALUES, 0) === 0;
+    }
+  }
+  return true;
+}
+
+/** {@link readField} result bit: the field fails its check. */
+export const FIELD_FAILED = 1;
+/**
+ * {@link readField} result bit: the field holds a `;` outside strings,
+ * comments, url text, parentheses, brackets, and blocks.
+ */
+export const FIELD_SEMICOLON = 2;
+
+/** Whether `pos` falls in one of the first `count` `[start, end)` pairs of `spans`. */
+function inSpans(spans: ReadonlyArray<number>, count: number, pos: number): boolean {
+  for (let k = 0; k < count; k++) {
+    if (pos >= spans[2 * k] && pos < spans[2 * k + 1]) return true;
+  }
+  return false;
+}
+
+/**
+ * Whether `url(` (any case) ends at the `(` at `open`, directly after a code
+ * point at or above U+0080 (or NUL, read as U+FFFD). CSS Syntax 3 revisions
+ * disagree on whether such a code point continues an identifier, so the text
+ * has no single reading.
+ */
+function urlAfterNonAscii(s: string, open: number): boolean {
+  if (open < 4) return false;
+  const c = s.charCodeAt(open - 4);
+  return (
+    (c >= 0x80 || c === NUL) &&
+    (s.charCodeAt(open - 3) | 0x20) === LOWER_U &&
+    (s.charCodeAt(open - 2) | 0x20) === LOWER_R &&
+    (s.charCodeAt(open - 1) | 0x20) === LOWER_L
+  );
+}
+
+/** Index past the string whose quote is at `i`; -1 when it holds a raw newline or does not close. */
+function fieldStringEnd(s: string, i: number, end: number): number {
+  const quote = s.charCodeAt(i);
+  i++;
+  for (;;) {
+    i = skipOrdinary(s, i, end, STRING_STOP);
+    if (i >= end) return -1;
+    const c = s.charCodeAt(i);
+    if (c === quote) return i + 1;
+    if (isNewline(c)) return -1;
+    // A backslash escapes the next code point, a newline included.
+    i += c === BACKSLASH ? 2 : 1;
+  }
+}
+
+/** Index past the unquoted url whose text starts at `i`; -1 when it does not close. */
+function fieldUrlEnd(s: string, i: number, end: number): number {
+  while (i < end && isSpace(s.charCodeAt(i))) i++;
+  let bad = false;
+  for (;;) {
+    i = skipOrdinary(s, i, end, bad ? REMNANT_STOP : URL_STOP);
+    if (i >= end) return -1;
+    const c = s.charCodeAt(i);
+    if (c === CLOSE_PAREN) return i + 1;
+    if (c === BACKSLASH) {
+      if (i + 1 >= end) return -1;
+      if (isNewline(s.charCodeAt(i + 1))) {
+        bad = true;
+        i++;
+      } else {
+        i = escapeEnd(s, i, end);
+      }
+    } else if (isSpace(c)) {
+      while (i < end && isSpace(s.charCodeAt(i))) i++;
+      if (i < end && s.charCodeAt(i) === CLOSE_PAREN) return i + 1;
+      bad = true;
+    } else {
+      // A quote, `(`, or non-printable code point makes a bad url.
+      bad = true;
+      i++;
+    }
+  }
+}
+
+/**
+ * Read a realized field (a declaration value, property name, selector,
+ * at-rule prelude, keyframe stop, or Head remainder) from its start with CSS
+ * Syntax 3 tokenization, and return a bit set of {@link FIELD_FAILED} and
+ * {@link FIELD_SEMICOLON}. The first `count` `[start, end)` pairs of `spans`
+ * are the text the field's values wrote.
+ *
+ * The field fails when it ends inside a string, comment, url, parenthesis,
+ * bracket, or block, or in an escaping backslash; when it closes a
+ * parenthesis, bracket, or block it did not open; when a string holds a raw
+ * newline; when it holds `url(` directly after a code point at or above
+ * U+0080; or when a value wrote a `{` or `}` that does not read as part of a
+ * string or url.
+ */
+export function readField(text: string, spans: ReadonlyArray<number>, count: number): number {
+  const len = text.length;
+  let i = skipOrdinary(text, 0, len, FIELD_SPECIAL);
+  if (i === len) return 0;
+  let flags = 0;
+  let depth = 0;
+  // Two bits per nesting level, innermost highest: 0 parenthesis, 1 bracket, 2 block.
+  let kinds = 0;
+  while (i < len) {
+    const c = text.charCodeAt(i);
+    if (c === BACKSLASH) {
+      if (i + 1 >= len) return FIELD_FAILED;
+      const next = text.charCodeAt(i + 1);
+      if (isNewline(next)) {
+        i++;
+      } else {
+        if ((next === OPEN_BRACE || next === CLOSE_BRACE) && inSpans(spans, count, i + 1)) {
+          return FIELD_FAILED;
+        }
+        i = escapeEnd(text, i, len);
+      }
+    } else if (c === DOUBLE_QUOTE || c === SINGLE_QUOTE) {
+      i = fieldStringEnd(text, i, len);
+      if (i < 0) return FIELD_FAILED;
+    } else if (c === SLASH) {
+      if (text.charCodeAt(i + 1) === ASTERISK) {
+        const close = text.indexOf('*/', i + 2);
+        if (close === -1) return FIELD_FAILED;
+        for (let k = i + 2; k < close; k++) {
+          const d = text.charCodeAt(k);
+          if ((d === OPEN_BRACE || d === CLOSE_BRACE) && inSpans(spans, count, k)) {
+            return FIELD_FAILED;
+          }
+        }
+        i = close + 2;
+      } else {
+        i++;
+      }
+    } else if (c === OPEN_PAREN) {
+      if (urlAfterNonAscii(text, i)) return FIELD_FAILED;
+      if (opensUrl(text, i)) {
+        i = fieldUrlEnd(text, i + 1, len);
+        if (i < 0) return FIELD_FAILED;
+      } else {
+        if (depth === 15) return FIELD_FAILED;
+        depth++;
+        i++;
+      }
+    } else if (c === OPEN_BRACKET || c === OPEN_BRACE) {
+      if (depth === 15) return FIELD_FAILED;
+      if (c === OPEN_BRACE && inSpans(spans, count, i)) return FIELD_FAILED;
+      kinds |= (c === OPEN_BRACKET ? 1 : 2) << (2 * depth);
+      depth++;
+      i++;
+    } else if (c === CLOSE_PAREN || c === CLOSE_BRACKET || c === CLOSE_BRACE) {
+      if (c === CLOSE_BRACE && inSpans(spans, count, i)) return FIELD_FAILED;
+      const kind = c === CLOSE_PAREN ? 0 : c === CLOSE_BRACKET ? 1 : 2;
+      if (depth === 0 || ((kinds >>> (2 * (depth - 1))) & 3) !== kind) return FIELD_FAILED;
+      depth--;
+      kinds &= ~(3 << (2 * depth));
+      i++;
+    } else {
+      if (depth === 0) flags |= FIELD_SEMICOLON;
+      i++;
+    }
+    i = skipOrdinary(text, i, len, FIELD_SPECIAL);
+  }
+  return depth === 0 ? flags : FIELD_FAILED;
 }
