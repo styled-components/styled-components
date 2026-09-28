@@ -143,6 +143,10 @@ export function evaluateForFastPath(
         filled[i] = result;
         continue;
       }
+      if (typeof result === 'number') {
+        filled[i] = String(result);
+        continue;
+      }
       if (resolver === null) {
         resolver = {
           compiler,

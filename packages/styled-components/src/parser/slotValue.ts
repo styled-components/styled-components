@@ -58,8 +58,35 @@ function isNonPrintable(c: number): boolean {
  * value made only of other characters, starting outside any string or
  * `url(`, needs no further reading.
  */
-const SPECIAL = new Uint8Array(128);
-for (const ch of '{}()[];"\'\\/*') SPECIAL[ch.charCodeAt(0)] = 1;
+const SPECIAL = stopTable('{}()[];"\'\\/*', false);
+
+/** Code points that end an ordinary run inside a comment. */
+const STOP_COMMENT = stopTable('{}*', false);
+/** Code points that end an ordinary run inside a string. */
+const STOP_STRING = stopTable('{}\\"\'\n\r\f', false);
+/** Code points that end an ordinary run inside a url. */
+const STOP_URL = stopTable('{}\\)"\'( \t\n\r\f', true);
+/** Code points that end an ordinary run inside a bad url's remnants. */
+const STOP_REMNANT = stopTable('{}\\)', false);
+
+function stopTable(chars: string, nonPrintable: boolean): Uint8Array {
+  const table = new Uint8Array(128);
+  for (let i = 0; i < chars.length; i++) table[chars.charCodeAt(i)] = 1;
+  if (nonPrintable) {
+    for (let c = 0; c < 128; c++) if (isNonPrintable(c)) table[c] = 1;
+  }
+  return table;
+}
+
+/** Index of the first code point at or after `i` that `stops` marks; non-ASCII never stops. */
+function skipOrdinary(value: string, i: number, len: number, stops: Uint8Array): number {
+  while (i < len) {
+    const c = value.charCodeAt(i);
+    if (c < 128 && stops[c] === 1) return i;
+    i++;
+  }
+  return len;
+}
 
 /** Whether the text ends in a backslash that escapes whatever follows it. */
 function endsWithEscape(text: string): boolean {
@@ -182,6 +209,13 @@ export function checkSlotValue(value: string, entry: SlotEntry, before: string):
   }
 
   while (i < len) {
+    // Inside a comment, string, or url, skip the run of code points that
+    // cannot change the state.
+    if (comment) i = skipOrdinary(value, i, len, STOP_COMMENT);
+    else if (quote !== 0) i = skipOrdinary(value, i, len, STOP_STRING);
+    else if (url === 1) i = skipOrdinary(value, i, len, STOP_URL);
+    else if (url === 2) i = skipOrdinary(value, i, len, STOP_REMNANT);
+    if (i >= len) break;
     const c = value.charCodeAt(i);
     if (c === OPEN_BRACE || c === CLOSE_BRACE) return VALUE_FAILED;
     if (comment) {
@@ -302,6 +336,7 @@ export function checkSlotValue(value: string, entry: SlotEntry, before: string):
         identEscaped = false;
       }
       i++;
+      while (i < len && isIdentCode(value.charCodeAt(i))) i++;
       continue;
     }
     identStart = -1;
