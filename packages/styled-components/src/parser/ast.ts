@@ -22,7 +22,7 @@ export interface TemplateValue {
 }
 
 /**
- * Parse-time eager flag set by `markDynamic` in `source.ts`: `true` when
+ * Parse-time eager flag set by the templated parse in `parser.ts`: `true` when
  * the node, or any descendant, depends on a runtime interpolation slot.
  * Falsy means the subtree is structurally fixed across renders, so
  * consumers can return it by reference and skip the per-render fill walk.
