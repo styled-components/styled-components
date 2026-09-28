@@ -42,7 +42,7 @@ import {
   splitTopLevelCommas,
   stripCommaSpaces,
   TOP_LEVEL,
-  trimRealized,
+  trimRange,
 } from './parser';
 import {
   checkSlotValue,
@@ -219,7 +219,7 @@ function fillDecl(node: DeclNode, fill: Fill): StaticDeclNode | StaticDeclNode[]
     return undefined;
   }
   if (realizedSemicolon) split = true;
-  const prop = typeof node.prop !== 'string' ? trimRealized(propRaw, 0, propRaw.length) : propRaw;
+  const prop = typeof node.prop !== 'string' ? trimRange(propRaw, 0, propRaw.length) : propRaw;
   if (split) {
     const decls = splitDeclarations(prop + ':' + valueRaw);
     const kept: StaticDeclNode[] = [];
@@ -286,7 +286,7 @@ function splitList(text: string): string[] {
   const raw = splitTopLevelCommas(text);
   const parts: string[] = [];
   for (let i = 0; i < raw.length; i++) {
-    const part = trimRealized(raw[i], 0, raw[i].length);
+    const part = trimRange(raw[i], 0, raw[i].length);
     if (part !== '') parts.push(part);
   }
   return parts;
@@ -372,7 +372,7 @@ function fillKeyframes(
     return undefined;
   }
   if (typeof preludeField !== 'string') {
-    prelude = trimRealized(prelude, 0, prelude.length);
+    prelude = trimRange(prelude, 0, prelude.length);
     if (!isIdentifier(prelude)) {
       if (__DEV__) {
         warnOnce(
@@ -493,7 +493,7 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
     }
     const text = normalize(raw, false);
     const cut = lastStatementEnd(text);
-    const rest = trimRealized(text, cut + 1, text.length);
+    const rest = trimRange(text, cut + 1, text.length);
     if (textUnresolved && rest !== '') return droppedHead(statements);
     if (cut !== -1) {
       const spliced =
@@ -524,7 +524,7 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
     dropped: false,
     remainder,
     statements,
-    text: prefix + trimRealized(rest, 0, rest.length),
+    text: prefix + trimRange(rest, 0, rest.length),
   };
 }
 
@@ -567,7 +567,7 @@ function fillHeadRule(node: RuleNode, head: SlotHead, fill: Fill): StaticNode[] 
       }
       return out.length === 0 ? undefined : out;
     }
-    const prelude = trimRealized(text, end, text.length);
+    const prelude = trimRange(text, end, text.length);
     out.push({ kind: NodeKind.AtRule, name, prelude, children: fillNodes(node.children, fill) });
     return out;
   }
@@ -762,7 +762,7 @@ function warnDropped(construct: string): void {
  * match the string-input `compiler.compile` path so SSR class hashes stay stable.
  */
 function normalizeSubstituted(value: string): string {
-  const trimmed = trimRealized(value, 0, value.length);
+  const trimmed = trimRange(value, 0, value.length);
   if (trimmed.length === 0) return trimmed;
   if (trimmed.indexOf(',') === -1) return trimmed;
   return stripCommaSpaces(trimmed);

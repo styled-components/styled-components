@@ -730,20 +730,7 @@ export function isCustomProperty(prop: string): boolean {
  * the native transform's tokenizer can parse comma-separated fallback chains.
  */
 function normalizeValue(ctx: ParseContext, start: number, end: number): string {
-  const css = ctx.css;
-  while (start < end) {
-    const c = css.charCodeAt(start);
-    if (isWS(c)) start++;
-    else break;
-  }
-  while (end > start) {
-    const c = css.charCodeAt(end - 1);
-    if (isWS(c)) end--;
-    else break;
-  }
-  if (start >= end) return '';
-
-  const slice = css.substring(start, end);
+  const slice = trimRange(ctx.css, start, end);
   if (ctx.keepCommaSpaces || slice.indexOf(',') === -1) return slice;
 
   return stripCommaSpaces(slice);
@@ -787,38 +774,22 @@ export function stripCommaSpaces(s: string): string {
 }
 
 /**
- * `text[start..end]` without leading and trailing CSS whitespace, keeping a
+ * `css[start..end]` without leading and trailing CSS whitespace, keeping a
  * trailing whitespace code point directly preceded by an escaping backslash:
  * removing it would leave the backslash escaping whatever is written next.
- * For realized text, whose values may end in such a pair.
  */
-export function trimRealized(text: string, start: number, end: number): string {
-  while (start < end && isCSSSpace(text.charCodeAt(start))) start++;
-  while (end > start && isCSSSpace(text.charCodeAt(end - 1))) {
-    if (text.charCodeAt(end - 2) === BACKSLASH && isEscaped(text, end - 1)) break;
+export function trimRange(css: string, start: number, end: number): string {
+  while (start < end && isCSSSpace(css.charCodeAt(start))) start++;
+  while (end > start && isCSSSpace(css.charCodeAt(end - 1))) {
+    if (css.charCodeAt(end - 2) === BACKSLASH && isEscaped(css, end - 1)) break;
     end--;
   }
-  return start === 0 && end === text.length ? text : text.substring(start, end);
+  return start === 0 && end === css.length ? css : css.substring(start, end);
 }
 
 /** CSS whitespace: space, tab, and the newlines LF, CR, and form feed. */
 function isCSSSpace(c: number): boolean {
   return isWS(c) || c === FORM_FEED;
-}
-
-/** `css[start..end]` without leading and trailing whitespace. */
-export function trimRange(css: string, start: number, end: number): string {
-  while (start < end) {
-    const c = css.charCodeAt(start);
-    if (isWS(c)) start++;
-    else break;
-  }
-  while (end > start) {
-    const c = css.charCodeAt(end - 1);
-    if (isWS(c)) end--;
-    else break;
-  }
-  return start < end ? css.substring(start, end) : '';
 }
 
 function isNameStop(code: number): boolean {

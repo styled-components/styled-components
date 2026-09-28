@@ -1,4 +1,4 @@
-import { trimRealized } from '../parser/parser';
+import { trimRange } from '../parser/parser';
 
 /**
  * CSS properties that accept unitless numeric values.
@@ -61,5 +61,5 @@ export default function addUnitIfNeeded(name: string, value: unknown): string {
   }
 
   const text = String(value);
-  return trimRealized(text, 0, text.length);
+  return trimRange(text, 0, text.length);
 }

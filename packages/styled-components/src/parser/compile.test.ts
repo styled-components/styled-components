@@ -1122,6 +1122,28 @@ describe('compileWeb', () => {
       ])('in %s', (_, src, rule) => {
         expect(out(src)).toEqual([rule]);
       });
+
+      it.each([
+        [
+          'a Standalone string',
+          tagged`
+            ${'color: x\\ ; & .y\\  { margin: z\\  }'}
+            padding: 0;`,
+        ],
+        [
+          'a css fragment on its own line',
+          tagged`
+            ${css`color: x\\ ; & .y\\  { margin: z\\  }`}
+            padding: 0;`,
+        ],
+      ])('in the declarations and selectors of %s', (_, src) => {
+        expect(out(src)).toEqual(['.a{color:x\\ ;padding:0;}', '.a .y\\ {margin:z\\ ;}']);
+      });
+
+      it('in authored template text', () => {
+        const src = tagged`color: x\\ ; & .y\\  { margin: z\\  } padding: ${'0'};`;
+        expect(out(src)).toEqual(['.a{color:x\\ ;padding:0;}', '.a .y\\ {margin:z\\ ;}']);
+      });
     });
 
     // CSS Syntax 3 §4.3.5 Consume a string token: "U+005C REVERSE SOLIDUS (\):

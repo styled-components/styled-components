@@ -7,7 +7,7 @@ import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import isPlainObject from '../utils/isPlainObject';
 import { walkObject } from '../utils/objectToCSS';
 import { warnOnce } from '../utils/warnOnce';
-import { trimRealized } from './parser';
+import { trimRange } from './parser';
 import {
   CLIENT_REFERENCE,
   getSource,
@@ -192,7 +192,7 @@ function resolveValue(
         return '';
       }
       const text = fragmentText(frag);
-      return standalone ? text : trimRealized(text, 0, text.length);
+      return standalone ? text : trimRange(text, 0, text.length);
     }
     if (standalone && r.fragments !== undefined) {
       r.fragments[index] = resolveArrayFragment(value, r);
@@ -270,7 +270,7 @@ function fragmentValueText(rules: RuleSet<any>, r: Resolver): string | null {
   if (frag === null) return '';
   if (holdsUnresolved(frag)) return null;
   const text = fragmentText(frag);
-  return trimRealized(text, 0, text.length);
+  return trimRange(text, 0, text.length);
 }
 
 /** Drop a non-styled component's slot, with a dev warning naming it. */

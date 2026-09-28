@@ -25,7 +25,7 @@ import { fifoSet } from '../utils/fifoMap';
 import { isEscaped } from '../utils/normalize';
 import type { StaticDeclNode } from './ast';
 import { NodeKind } from './ast';
-import { isCustomProperty, SlotEntry, stripCommaSpaces, trimRealized } from './parser';
+import { isCustomProperty, SlotEntry, stripCommaSpaces, trimRange } from './parser';
 
 /** {@link checkSlotValue} result: the value passed and holds no top-level `;`. */
 const VALUE_OK = 0;
@@ -459,8 +459,8 @@ export function splitDeclarations(text: string): StaticDeclNode[] {
     const end = scanTopLevel(text, start, len, SEMICOLON);
     const colon = scanTopLevel(text, start, end, COLON);
     if (colon < end) {
-      const prop = trimRealized(text, start, colon);
-      const value = stripCommaSpaces(trimRealized(text, colon + 1, end));
+      const prop = trimRange(text, start, colon);
+      const value = stripCommaSpaces(trimRange(text, colon + 1, end));
       if (prop !== '' && (value !== '' || isCustomProperty(prop))) {
         decls.push({ kind: NodeKind.Decl, prop, value });
       }
