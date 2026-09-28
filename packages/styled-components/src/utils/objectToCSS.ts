@@ -26,13 +26,19 @@ export interface ObjectRender {
   fragmentText: (fragment: unknown) => string | null;
 }
 
+/** {@link isOrdinary} code classes: ordinary, special, `(`, `)`. */
+const SPECIAL = 1;
+const OPEN = 2;
+const CLOSE = 3;
+
 /**
- * Code points that make a value text other than ordinary: anything the slot
- * value check reads, and NUL, which starts a slot marker. Parentheses are
- * ordinary only when balanced.
+ * Code classes of ASCII code points. Special: anything the slot value check
+ * reads, and NUL, which starts a slot marker.
  */
-const SPECIAL = new Uint8Array(128);
-for (const c of '{}[];"\'\\/*\0') SPECIAL[c.charCodeAt(0)] = 1;
+const CODES = new Uint8Array(128);
+for (const c of '{}[];"\'\\/*\0') CODES[c.charCodeAt(0)] = SPECIAL;
+CODES[40] = OPEN;
+CODES[41] = CLOSE;
 
 /**
  * Whether a formatted value reads the same written into the template as
@@ -43,20 +49,26 @@ function isOrdinary(value: string): boolean {
   let depth = 0;
   for (let i = 0; i < value.length; i++) {
     const c = value.charCodeAt(i);
-    if (c >= 128) continue;
-    if (SPECIAL[c] === 1) return false;
-    if (c === 40) depth++;
-    else if (c === 41 && --depth < 0) return false;
+    const code = c < 128 ? CODES[c] : 0;
+    if (code === 0) continue;
+    if (code === SPECIAL) return false;
+    if (code === OPEN) depth++;
+    else if (--depth < 0) return false;
   }
   return depth === 0;
 }
 
-class TemplateWriter implements ObjectTemplate {
-  interpolations: unknown[] = [];
+class TemplateWriter {
+  /** Allocated on the first slot; `null` while the text holds only ordinary values. */
+  interpolations: unknown[] | null = null;
   pending = '';
-  strings: string[] = [];
+  strings: string[] | null = null;
 
   slot(value: unknown): void {
+    if (this.strings === null || this.interpolations === null) {
+      this.strings = [];
+      this.interpolations = [];
+    }
     this.strings.push(this.pending);
     this.pending = '';
     this.interpolations.push(value);
@@ -65,10 +77,13 @@ class TemplateWriter implements ObjectTemplate {
   declaration(key: string, value: unknown): void {
     const formatted = addUnitIfNeeded(key, value);
     if (formatted === '') return;
-    this.pending += hyphenate(key) + ':';
-    if (isOrdinary(formatted)) this.pending += formatted;
-    else this.slot(formatted);
-    this.pending += ';';
+    if (typeof value === 'number' || isOrdinary(formatted)) {
+      this.pending += hyphenate(key) + ':' + formatted + ';';
+    } else {
+      this.pending += hyphenate(key) + ':';
+      this.slot(formatted);
+      this.pending += ';';
+    }
   }
 
   walk(o: Record<string, unknown>, render: ObjectRender | undefined): void {
@@ -89,13 +104,15 @@ class TemplateWriter implements ObjectTemplate {
           this.walk(val as Record<string, unknown>, render);
           this.pending += '}';
         }
-      } else if (render === undefined && (isFunction(val) || isCssProduct(val))) {
-        this.pending += hyphenate(key) + ':';
-        this.slot(val);
-        this.pending += ';';
-      } else if (isCssProduct(val)) {
-        const text = (render as ObjectRender).fragmentText(val);
-        if (text !== null) this.declaration(key, text);
+      } else if (isCssProduct(val) || isFunction(val)) {
+        if (render === undefined) {
+          this.pending += hyphenate(key) + ':';
+          this.slot(val);
+          this.pending += ';';
+        } else {
+          const text = render.fragmentText(val);
+          if (text !== null) this.declaration(key, text);
+        }
       } else {
         this.declaration(key, val);
       }
@@ -113,13 +130,31 @@ class TemplateWriter implements ObjectTemplate {
  * become slots resolved at fill time. With it (an object met at render
  * time), function values are called with the render context and css
  * fragments give their text.
+ *
+ * The template is `strings` and `interpolations` with `pending` as the last
+ * string; both arrays are `null` when every value is ordinary, and `pending`
+ * is then the object's whole text.
  */
-export default function objectToTemplate(
+export function walkObject(
   obj: Record<string, unknown>,
-  render?: ObjectRender
-): ObjectTemplate {
+  render: ObjectRender | undefined
+): WalkedObject {
   const writer = new TemplateWriter();
   writer.walk(obj, render);
-  writer.strings.push(writer.pending);
   return writer;
+}
+
+/** A walked style object; see {@link walkObject}. */
+export interface WalkedObject {
+  interpolations: unknown[] | null;
+  pending: string;
+  strings: string[] | null;
+}
+
+/** {@link walkObject} for a static object, as a template for `parseSource`. */
+export default function objectToTemplate(obj: Record<string, unknown>): ObjectTemplate {
+  const walked = walkObject(obj, undefined);
+  const strings = walked.strings === null ? [] : walked.strings;
+  strings.push(walked.pending);
+  return { interpolations: walked.interpolations === null ? [] : walked.interpolations, strings };
 }
