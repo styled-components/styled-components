@@ -2134,6 +2134,20 @@ describe('compileWeb', () => {
       expect(compileWeb(src, {}, '.a', opts)).toEqual([rule]);
     });
 
+    it.each([
+      [
+        'a url(',
+        tagged`background: ${() => 'url(/*!sc*/\nx/*!sc*/\r\ny/**/\fz)'};`,
+        '.a{background:url(/*!sc*/ x/*!sc*/ \ny/**/ z);}',
+      ],
+      ['a comment run', tagged`color: ${() => 'red /*!sc*/\nx'};`, '.a{color:red /*!sc*/ x;}'],
+    ])(
+      'writes a line break after `*/` in %s a value holds as a space, so no rule holds the rehydration splitter',
+      (_, src, rule) => {
+        expect(compileWeb(src, {}, '.a', opts)).toEqual([rule]);
+      }
+    );
+
     it('reads `true` as empty', () => {
       const src = tagged`color: red; ${() => true} margin: 0${true};`;
       expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: red; margin: 0;'));

@@ -1,6 +1,5 @@
 import { SPLITTER } from '../constants';
 import styledError from '../utils/error';
-import { guardSplitter } from '../utils/joinStrings';
 import { GroupedTag, Tag } from './types';
 
 export const makeGroupedTag = (tag: Tag) => {
@@ -108,7 +107,7 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
     const endIndex = startIndex + length;
 
     for (let i = startIndex; i < endIndex; i++) {
-      css += guardSplitter(this.tag.getRule(i)) + SPLITTER;
+      css += this.tag.getRule(i) + SPLITTER;
     }
 
     return css;

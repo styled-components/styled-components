@@ -160,11 +160,31 @@ export function emitWeb(root: StaticRoot, parentSelector: string, options?: Emit
   // user's CSS in `.name{…}` so the user's decls live inside a single
   // top-level Rule. Detect both and clone-augment in either case.
   const componentId = options && options.componentId;
-  if (componentId) {
-    const augmented = maybeAugmentWithAutoName(root, componentId);
-    if (augmented !== root) return emitNodes(augmented, parentSelector, options);
+  const augmented = componentId ? maybeAugmentWithAutoName(root, componentId) : root;
+  const rules = emitNodes(augmented, parentSelector, options);
+  for (let i = 0; i < rules.length; i++) rules[i] = guardSplitter(rules[i]);
+  return rules;
+}
+
+/**
+ * `rule` with a line break directly after `*\/` written as a space, so no
+ * rule holds the server output's rule splitter (`/*!sc*\/` and a line
+ * break) and no rule's text can read as the rehydration marker after it.
+ */
+function guardSplitter(rule: string): string {
+  let at = rule.indexOf('*/');
+  if (at === -1) return rule;
+  let out = '';
+  let start = 0;
+  while (at !== -1) {
+    const c = rule.charCodeAt(at + 2);
+    if (c === $.LF || c === $.CR || c === $.FORM_FEED) {
+      out += rule.substring(start, at + 2) + ' ';
+      start = at + 3;
+    }
+    at = rule.indexOf('*/', at + 2);
   }
-  return emitNodes(root, parentSelector, options);
+  return start === 0 ? rule : out + rule.substring(start);
 }
 
 function maybeAugmentWithAutoName(root: StaticRoot, componentId: string): StaticRoot {
