@@ -191,15 +191,18 @@ function identifierStart(s: string, end: number): number {
  * `url(` a function; see {@link opensUrl}.
  */
 export function isUrlCall(s: string, open: number): boolean {
-  if ((s.charCodeAt(open - 1) | 0x20) !== LOWER_L) {
-    // Any other last code point spells `l` only as part of an escape, which
-    // takes at most nine code points (backslash, six hex digits, CR LF).
-    let k = open - 1;
-    const stop = open > 9 ? open - 9 : 0;
-    while (k >= stop && s.charCodeAt(k) !== BACKSLASH) k--;
-    if (k < stop) return false;
-  }
-  return isUrlIdentifier(s, identifierStart(s, open), open);
+  return mayEndInL(s, open) && isUrlIdentifier(s, identifierStart(s, open), open);
+}
+
+/** Whether the text before the `(` at `open` can spell `l` last: the letter, or an escape. */
+function mayEndInL(s: string, open: number): boolean {
+  if ((s.charCodeAt(open - 1) | 0x20) === LOWER_L) return true;
+  // Any other last code point spells `l` only as part of an escape, which
+  // takes at most nine code points (backslash, six hex digits, CR LF).
+  let k = open - 1;
+  const stop = open > 9 ? open - 9 : 0;
+  while (k >= stop && s.charCodeAt(k) !== BACKSLASH) k--;
+  return k >= stop;
 }
 
 /** {@link isUrlCall} for the identifier `s[start..open)` found by {@link identifierStart}. */
@@ -568,19 +571,39 @@ function inSpans(spans: ReadonlyArray<number>, count: number, pos: number): bool
 }
 
 /**
- * Whether `url(` (any case) ends at the `(` at `open`, directly after a code
- * point at or above U+0080 (or NUL, read as U+FFFD). CSS Syntax 3 revisions
- * disagree on whether such a code point continues an identifier, so the text
- * has no single reading.
+ * Whether `url(` in any spelling (any case, escapes decoded) ends at the `(`
+ * at `open`, directly after a code point at or above U+0080 (or NUL, read as
+ * U+FFFD) written as itself. CSS Syntax 3 revisions disagree on whether such
+ * a code point continues an identifier, so the text has no single reading.
  */
 function urlAfterNonAscii(s: string, open: number): boolean {
-  if (open < 4) return false;
-  const c = s.charCodeAt(open - 4);
+  if (!mayEndInL(s, open)) return false;
+  // The last four code points of the identifier ending at `open`, decoded:
+  // `before` is the one ahead of the three that must spell `url`.
+  let before = -1;
+  let u = -1;
+  let r = -1;
+  let l = -1;
+  let i = identifierStart(s, open);
+  while (i < open) {
+    const escaped = s.charCodeAt(i) === BACKSLASH;
+    before = u;
+    u = r;
+    r = l;
+    // An escaped code point counts as an identifier code point in every revision.
+    l = escaped ? escapedCode(s, i, open) : s.charCodeAt(i);
+    if (escaped) {
+      i = escapeEnd(s, i, open);
+      if (l >= 0x80 || l === NUL) l = LOWER_A;
+    } else {
+      i++;
+    }
+  }
   return (
-    (c >= 0x80 || c === NUL) &&
-    (s.charCodeAt(open - 3) | 0x20) === LOWER_U &&
-    (s.charCodeAt(open - 2) | 0x20) === LOWER_R &&
-    (s.charCodeAt(open - 1) | 0x20) === LOWER_L
+    (before >= 0x80 || before === NUL) &&
+    (u | 0x20) === LOWER_U &&
+    (r | 0x20) === LOWER_R &&
+    (l | 0x20) === LOWER_L
   );
 }
 
