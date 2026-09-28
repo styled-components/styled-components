@@ -28,12 +28,8 @@ import type {
   WebTarget,
 } from '../types';
 import { NodeKind, type StaticRoot } from '../parser/ast';
-import {
-  evaluateForFastPath,
-  type FastPathFragment,
-  fillSource,
-  hasAnyFragment,
-} from '../parser/compile';
+import { fillSource } from '../parser/compile';
+import { evaluateForFastPath, type FastPathFragment, hasAnyFragment } from '../parser/evaluate';
 import { getSource, Source } from '../parser/source';
 import { themeValue } from '../utils/themePath';
 import { tracePostAttr, type PostAttrsPlan } from '../utils/tracePostAttrs';

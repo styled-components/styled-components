@@ -204,7 +204,7 @@ export interface Compiler {
     filled: ReadonlyArray<string>,
     parentSelector: string,
     componentId: string,
-    fragments?: ReadonlyArray<import('./parser/compile').FastPathFragment | null> | null
+    fragments?: ReadonlyArray<import('./parser/evaluate').FastPathFragment | null> | null
   ) => string[];
 }
 

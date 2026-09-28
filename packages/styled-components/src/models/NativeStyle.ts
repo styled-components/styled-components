@@ -1,12 +1,12 @@
 import type { CompiledKeyframes, KeyframesCompiler } from './Keyframes';
 import type { StaticRoot } from '../parser/ast';
+import { fillSource } from '../parser/compile';
 import {
   buildInterpKey,
   evaluateForFastPath,
   FastPathFragment,
-  fillSource,
   hasAnyFragment,
-} from '../parser/compile';
+} from '../parser/evaluate';
 import { parse } from '../parser/parser';
 import type { Source } from '../parser/source';
 import { normalize } from '../utils/normalize';
