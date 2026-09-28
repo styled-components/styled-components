@@ -29,13 +29,12 @@ import {
   FIELD_FAILED,
   FIELD_SEMICOLON,
   isIdentCode,
-  isSpace,
   readField,
   removeComments,
   scan,
   stops,
 } from './reader';
-import { isPlainValue, splitDeclarations } from './slotValue';
+import { atKeywordPieces, isPlainValue, leadingCode, splitDeclarations } from './slotValue';
 import {
   evaluateForFastPath,
   FastPathFragment,
@@ -205,13 +204,7 @@ function fillDecl(node: DeclNode, fill: Fill): StaticDeclNode | StaticDeclNode[]
   if (realizedSemicolon) split = true;
   const prop = typeof node.prop !== 'string' ? trimRange(propRaw, 0, propRaw.length) : propRaw;
   if (prop.charCodeAt(leadingCode(prop)) === AT) {
-    if (__DEV__) {
-      warnOnce(
-        'property-at',
-        `\`${prop}\` is not a property name, so its declaration was dropped. Interpolate a property name such as \`color\`.`,
-        prop
-      );
-    }
+    if (__DEV__) warnAtProperty(prop);
     return undefined;
   }
   if (split) {
@@ -220,6 +213,10 @@ function fillDecl(node: DeclNode, fill: Fill): StaticDeclNode | StaticDeclNode[]
     for (let i = 0; i < decls.length; i++) {
       const piece = decls[i].prop;
       if (piece.charCodeAt(leadingCode(piece)) !== AT) kept.push(decls[i]);
+    }
+    if (__DEV__) {
+      const dropped = atKeywordPieces(prop + ':' + valueRaw);
+      for (let i = 0; i < dropped.length; i++) warnAtProperty(dropped[i]);
     }
     return kept.length === 0 ? undefined : kept;
   }
@@ -230,16 +227,13 @@ function fillDecl(node: DeclNode, fill: Fill): StaticDeclNode | StaticDeclNode[]
   return { kind: NodeKind.Decl, prop, value };
 }
 
-/** Index of the first code point of `text` outside leading whitespace and comments. */
-function leadingCode(text: string): number {
-  let i = 0;
-  for (;;) {
-    while (i < text.length && isSpace(text.charCodeAt(i))) i++;
-    if (!text.startsWith('/*', i)) return i;
-    const close = text.indexOf('*/', i + 2);
-    if (close === -1) return text.length;
-    i = close + 2;
-  }
+/** Dev warning for a declaration dropped because its name starts with an at-keyword. */
+function warnAtProperty(name: string): void {
+  warnOnce(
+    'property-at',
+    `\`${name}\` is not a property name, so its declaration was dropped. Interpolate a property name such as \`color\`.`,
+    name
+  );
 }
 
 /**
