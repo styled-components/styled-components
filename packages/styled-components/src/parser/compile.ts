@@ -300,6 +300,10 @@ function fillRule(node: RuleNode, fill: Fill): StaticNode | StaticNode[] | undef
     if (__DEV__) warnRealizeFailed('rule `' + listText(node.selectors) + '`');
     return undefined;
   }
+  if (fill.root && selectors !== null && selectors.length === 0) {
+    if (__DEV__) warnGlobalEmptySelector();
+    return undefined;
+  }
   const children = fillNodes(node.children, nestedFill(fill));
   if (selectors === null) {
     // Every selector was already a string, so the node is a `StaticRuleNode`
@@ -422,13 +426,21 @@ function fillFrame(frame: RuleNode, fill: Fill, frames: StaticNode[]): void {
       return;
     }
     stops = splitList(head.text);
-    if (stops.length === 0) return;
   } else {
     stops = realizeList(frame.selectors, fill);
     if (stops === null) {
       if (__DEV__) warnRealizeFailed('@keyframes frame `' + listText(frame.selectors) + '`');
       return;
     }
+  }
+  if (stops.length === 0) {
+    if (__DEV__) {
+      warnOnce(
+        'keyframes-empty-stops',
+        'A @keyframes frame has no stops, since the value giving them gives none, so it was dropped. Give the frame a stop such as `50%`.'
+      );
+    }
+    return;
   }
   frames.push({ kind: NodeKind.Rule, selectors: stops, children: decls });
 }
@@ -629,14 +641,9 @@ function fillHeadRule(node: RuleNode, head: SlotHead, fill: Fill): StaticNode[] 
     );
   }
   const selectors = splitList(text);
-  if (remainder === null && selectors.length === 0) {
+  if (selectors.length === 0) {
     if (fill.root) {
-      if (__DEV__) {
-        warnOnce(
-          'global-empty-head',
-          'A block at the top level of createGlobalStyle has no selector, since the value heading it is empty, so it was dropped. Give the block a selector such as `body`.'
-        );
-      }
+      if (__DEV__) warnGlobalEmptySelector();
       return out.length === 0 ? undefined : out;
     }
     selectors.push('&');
@@ -647,6 +654,14 @@ function fillHeadRule(node: RuleNode, head: SlotHead, fill: Fill): StaticNode[] 
     children: fillNodes(node.children, nestedFill(fill)),
   });
   return out;
+}
+
+/** Dev warning for a block at the top level of a global style whose values give it no selector. */
+function warnGlobalEmptySelector(): void {
+  warnOnce(
+    'global-empty-head',
+    'A block at the top level of createGlobalStyle has no selector, since the value giving it one gives none, so it was dropped. Give the block a selector such as `body`.'
+  );
 }
 
 const STATEMENT_END = stops(';}');

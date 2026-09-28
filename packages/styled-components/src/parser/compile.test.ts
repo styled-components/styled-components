@@ -848,6 +848,25 @@ describe('compileWeb', () => {
       expect(warnings()).toEqual([expect.stringContaining('createGlobalStyle has no selector')]);
     });
 
+    it.each([
+      ['Head', tagged`${() => ','} { color: red; } body { margin: 0; }`],
+      ['Glued value', tagged`${() => ','}{ color: red; } body { margin: 0; }`],
+    ])(
+      'drops a block at the top level of a global style whose %s gives no selector, with a dev warning',
+      (_, src) => {
+        expect(compileWeb(src, {}, '')).toEqual(['body{margin:0;}']);
+        expect(warnings()).toEqual([expect.stringContaining('createGlobalStyle has no selector')]);
+      }
+    );
+
+    it.each([
+      ['Head', tagged`@keyframes k { ${() => ','} { opacity: 0; } to { opacity: 1; } }`],
+      ['Glued value', tagged`@keyframes k { ${() => ','}{ opacity: 0; } to { opacity: 1; } }`],
+    ])('drops a keyframe frame whose stop %s gives no stops, with a dev warning', (_, src) => {
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(['@keyframes k{to{opacity:1;}}']);
+      expect(warnings()).toEqual([expect.stringContaining('no stops')]);
+    });
+
     it('drops a keyframe frame whose stop Head is an at-rule, with a dev warning', () => {
       const src = tagged`@keyframes k { ${() => '@media x'} { opacity: 0; } to { opacity: 1; } }`;
       expect(compileWeb(src, {}, '.a', opts)).toEqual(['@keyframes k{to{opacity:1;}}']);
