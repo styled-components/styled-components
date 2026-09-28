@@ -1,5 +1,6 @@
 import { isCssProduct } from '../parser/source';
 import addUnitIfNeeded from './addUnitIfNeeded';
+import { LOWER_L, LOWER_R, LOWER_U } from './charCodes';
 import hyphenate from './hyphenateStyleName';
 import isFunction from './isFunction';
 import isPlainObject from './isPlainObject';
@@ -41,9 +42,26 @@ CODES[40] = OPEN;
 CODES[41] = CLOSE;
 
 /**
+ * Whether `value` holds `url(` (any case) ending at `open`, with the code
+ * point directly before that `u` at or above U+0080. CSS Syntax 3 revisions
+ * disagree on whether such a code point continues an identifier, so the
+ * text has no single reading and must not bake as literal CSS.
+ */
+function urlPrecededByNonAscii(value: string, open: number): boolean {
+  return (
+    open >= 4 &&
+    (value.charCodeAt(open - 1) | 0x20) === LOWER_L &&
+    (value.charCodeAt(open - 2) | 0x20) === LOWER_R &&
+    (value.charCodeAt(open - 3) | 0x20) === LOWER_U &&
+    value.charCodeAt(open - 4) >= 0x80
+  );
+}
+
+/**
  * Whether a formatted value reads the same written into the template as
- * text, so it needs no value check: no special code point, and balanced
- * parentheses. Any other value becomes a value slot.
+ * text, so it needs no value check: no special code point, balanced
+ * parentheses, and no `url(` directly preceded by a non-ASCII code point
+ * (see {@link urlPrecededByNonAscii}). Any other value becomes a value slot.
  */
 function isOrdinary(value: string): boolean {
   let depth = 0;
@@ -52,8 +70,10 @@ function isOrdinary(value: string): boolean {
     const code = c < 128 ? CODES[c] : 0;
     if (code === 0) continue;
     if (code === SPECIAL) return false;
-    if (code === OPEN) depth++;
-    else if (--depth < 0) return false;
+    if (code === OPEN) {
+      if (urlPrecededByNonAscii(value, i)) return false;
+      depth++;
+    } else if (--depth < 0) return false;
   }
   return depth === 0;
 }

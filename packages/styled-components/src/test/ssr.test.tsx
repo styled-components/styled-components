@@ -1311,11 +1311,28 @@ describe('ssr', () => {
         ['an unbalanced parenthesis', 'calc(1px'],
         ['an unbalanced comment', 'red /* x'],
         ['a trailing backslash', 'red\\'],
+        ['url( directly preceded by a non-ASCII code point', ' url(x)'],
       ])('drops the declaration holding %s', (_, payload) => {
         expect(scoped(payload)).toEqual([
           { prelude: '.b', props: ['background'], rules: [] },
           { prelude: '.b span', props: ['margin'], rules: [] },
         ]);
+      });
+
+      // CSS Syntax 3 revisions disagree on whether a code point at or above
+      // U+0080 continues an identifier, so `url(` directly preceded by one
+      // has no single reading and must drop its declaration with a dev
+      // warning naming the property, the same as any other failed value.
+      it('drops the declaration holding url( directly preceded by a non-ASCII code point, with a dev warning', () => {
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        expect(scoped(' url(x)')).toEqual([
+          { prelude: '.b', props: ['background'], rules: [] },
+          { prelude: '.b span', props: ['margin'], rules: [] },
+        ]);
+        expect(warn.mock.calls.map(call => String(call[0]))).toEqual([
+          expect.stringContaining('`color`'),
+        ]);
+        warn.mockRestore();
       });
 
       it('adds only declarations of the same rule for a value `;`', () => {
@@ -1362,6 +1379,24 @@ describe('ssr', () => {
           ]);
           warn.mockRestore();
         });
+
+        // A style object leaf holding `url(` directly preceded by a
+        // non-ASCII code point must not be baked as literal CSS text (the
+        // same ambiguity `checkSlotValue` fails on): it becomes a value slot
+        // instead, which then fails the check and drops the declaration.
+        it.each([
+          ['an object a function returns', () => fromFunction()],
+          ['a static object', () => fromStatic(' url(x)')()],
+        ])(
+          'drops a declaration whose value holds url( directly preceded by a non-ASCII code point in %s',
+          (_, make) => {
+            const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+            expect(renderRules(make(), ' url(x)')).toEqual([
+              { prelude: '.b', props: ['background'], rules: [] },
+            ]);
+            warn.mockRestore();
+          }
+        );
 
         it.each([
           ['an object a function returns', () => fromFunction()],

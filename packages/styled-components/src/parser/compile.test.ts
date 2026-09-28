@@ -1291,6 +1291,39 @@ describe('compileWeb', () => {
       });
     });
 
+    // CSS Syntax 3 revisions disagree on whether a code point at or above
+    // U+0080 continues an identifier; `isIdentCode` takes the wider reading,
+    // so `url(` directly preceded by such a code point has no single
+    // meaning and must always drop the declaration, in the value alone or
+    // split across the slot boundary.
+    describe('url( directly preceded by a non-ASCII code point', () => {
+      it.each([
+        ['U+00A0 in the value', ' url(a)'],
+        ['U+00E9 in the value', 'éurl(a)'],
+        ['uppercase URL( in the value', ' URL(a)'],
+      ])('drops the declaration for %s', (_, value) => {
+        const src = tagged`background: ${value}; margin: 0;`;
+        expect(out(src)).toEqual(legacy('margin: 0;'));
+        expect(warnings()).toEqual([expect.stringContaining('`background`')]);
+      });
+
+      it('drops the declaration when text before the slot holds the non-ASCII code point', () => {
+        const src = tagged`background:  ${'url(a)'}; margin: 0;`;
+        expect(out(src)).toEqual(legacy('margin: 0;'));
+      });
+
+      it('keeps a non-ASCII code point that is not directly before url(', () => {
+        const value = ' foo url(a)';
+        const src = tagged`background: ${value};`;
+        expect(out(src)).toEqual([`.a{background:${value};}`]);
+      });
+
+      it('keeps an ASCII identifier before url( unaffected (existing behavior)', () => {
+        const src = tagged`background: ${'xurl(a)'};`;
+        expect(out(src)).toEqual(['.a{background:xurl(a);}']);
+      });
+    });
+
     it('reads an asterisk inside a comment as comment text', () => {
       const src = tagged`color: ${'/* a*b */ red'};`;
       expect(out(src)).toEqual(['.a{color:/* a*b */ red;}']);
