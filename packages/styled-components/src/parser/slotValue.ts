@@ -21,6 +21,7 @@ import {
   SLASH,
 } from '../utils/charCodes';
 import { fifoSet } from '../utils/fifoMap';
+import { isEscaped } from '../utils/normalize';
 import type { StaticDeclNode } from './ast';
 import { NodeKind } from './ast';
 import { isCustomProperty, SlotEntry, stripCommaSpaces } from './parser';
@@ -90,15 +91,13 @@ function skipOrdinary(value: string, i: number, len: number, stops: Uint8Array):
 
 /** Whether the text ends in a backslash that escapes whatever follows it. */
 function endsWithEscape(text: string): boolean {
-  let n = 0;
-  for (let i = text.length - 1; i >= 0 && text.charCodeAt(i) === BACKSLASH; i--) n++;
-  return (n & 1) === 1;
+  return isEscaped(text, text.length);
 }
 
 /** Whether the text ends in a `/` that is not itself escaped. */
 function endsWithSlash(text: string): boolean {
   const last = text.length - 1;
-  return last >= 0 && text.charCodeAt(last) === SLASH && !endsWithEscape(text.substring(0, last));
+  return last >= 0 && text.charCodeAt(last) === SLASH && !isEscaped(text, last);
 }
 
 /**
@@ -129,8 +128,8 @@ function isUrlName(ident: string): boolean {
 function trailingIdent(before: string): string | null {
   let k = before.length;
   while (k > 0 && isIdentCode(before.charCodeAt(k - 1))) k--;
-  if (endsWithEscape(before.substring(0, k))) return null;
-  if (k > 0 && endsWithEscape(before.substring(0, k - 1))) return null;
+  if (isEscaped(before, k)) return null;
+  if (k > 0 && isEscaped(before, k - 1)) return null;
   return before.substring(k);
 }
 
@@ -166,15 +165,7 @@ export function checkSlotValue(value: string, entry: SlotEntry, before: string):
   const len = value.length;
   const escaped = before.length > 0 && endsWithEscape(before);
   const plain = entry.quote === 0 && !entry.url;
-  if (plain && !escaped) {
-    let i = 0;
-    while (i < len) {
-      const c = value.charCodeAt(i);
-      if (c < 128 && SPECIAL[c] === 1) break;
-      i++;
-    }
-    if (i === len) return VALUE_OK;
-  }
+  if (plain && !escaped && skipOrdinary(value, 0, len, SPECIAL) === len) return VALUE_OK;
   if (escaped && len === 0) return VALUE_FAILED;
   if (plain && !escaped && value.charCodeAt(0) === ASTERISK && endsWithSlash(before)) {
     return VALUE_FAILED;
