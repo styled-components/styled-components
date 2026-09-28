@@ -361,6 +361,28 @@ describe('memoization correctness', () => {
     unmount();
   });
 
+  it('reuses the class of a css fragment written inside an arrow on every render', () => {
+    const Comp = styled.div<{ $color: string }>`
+      ${p => css`
+        color: ${p.$color};
+      `}
+    `;
+
+    const { container, rerender, unmount } = render(<Comp $color="red" />);
+    const redClass = getDivClass(container);
+    rerender(<Comp $color="blue" />);
+    const blueClass = getDivClass(container);
+    for (let i = 0; i < 3; i++) {
+      rerender(<Comp $color="red" />);
+      expect(getDivClass(container)).toBe(redClass);
+      rerender(<Comp $color="blue" />);
+      expect(getDivClass(container)).toBe(blueClass);
+    }
+
+    expect(Comp.webStyle.interpKeyCache?.size).toBe(2);
+    unmount();
+  });
+
   it('bounds per-instance caches for free-form interpolations', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const Comp = styled.div<{ $value: string }>`
