@@ -1778,6 +1778,19 @@ describe('compileWeb', () => {
       expect(compileWeb(src, {}, '.a', opts)).toEqual(['.a h1,.a body{color:red;}']);
     });
 
+    it.each([
+      ['an empty value after `&`', tagged`& ${''} { color: red; }`, '.a{color:red;}'],
+      ['whitespace a value ends in', tagged`& ${() => 'p '} { color: red; }`, '.a p{color:red;}'],
+      [
+        'an escaped space a value ends in',
+        tagged`& ${() => 'p\\ '} { color: red; }`,
+        '.a p\\ {color:red;}',
+      ],
+      ['an empty part after a comma', tagged`p, ${() => ''}{ color: red; }`, '.a p{color:red;}'],
+    ])('trims the selector text around %s', (_, src, rule) => {
+      expect(compileWeb(src, {}, '.a', opts)).toEqual([rule]);
+    });
+
     /**
      * In a list holding a slot, a part stays as written only when it holds
      * `&` outside parentheses and brackets; every other part is nested under
