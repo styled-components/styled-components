@@ -1571,6 +1571,25 @@ describe('compileWeb', () => {
         expect(out(src)).toEqual([`.a{background:${value};}`]);
       });
 
+      it.each([
+        ['\\75rl(', '\u0080\\75rl(a)'],
+        ['u\\72l(', '\u0080u\\72l(a)'],
+        ['\\75 rl(, an escape ending in a space', '\u0080\\75 rl(a)'],
+        ['\\55\\52\\4c(, in uppercase', 'é\\55\\52\\4c(a)'],
+      ])('drops the declaration for the escaped spelling %s', (_, value) => {
+        const src = tagged`background: ${value}; margin: 0;`;
+        expect(out(src)).toEqual(legacy('margin: 0;'));
+        expect(warnings()).toEqual([expect.stringContaining('`background`')]);
+      });
+
+      it.each([
+        ['an escape of the non-ASCII code point', '\\80\\75rl(a)'],
+        ['an identifier that only ends in url', '\u0080x\\75rl(a)'],
+      ])('keeps %s before an escaped url spelling', (_, value) => {
+        const src = tagged`background: ${value};`;
+        expect(out(src)).toEqual([`.a{background:${value};}`]);
+      });
+
       it('keeps an ASCII identifier before url( unaffected (existing behavior)', () => {
         const src = tagged`background: ${'xurl(a)'};`;
         expect(out(src)).toEqual(['.a{background:xurl(a);}']);

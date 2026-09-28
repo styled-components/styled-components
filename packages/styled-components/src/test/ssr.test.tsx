@@ -1549,6 +1549,54 @@ describe('ssr', () => {
         expect(tags).toContain('{content:"x";quotes:"y�";}');
       });
 
+      /**
+       * CSS Syntax 3 revisions disagree on whether U+0080 continues an
+       * identifier, so an escaped url spelling after it reads either as a
+       * function or as a bad url whose remnants end at the first `)`.
+       */
+      describe('an escaped url spelling after a non-ASCII code point', () => {
+        const payload = '\u0080\\75rl(x"a) } body{display:none} y{" )';
+        const render = (Comp: React.ComponentType<{ $v: string }>) => {
+          const sheet = new ServerStyleSheet();
+          renderToString(sheet.collectStyles(<Comp $v={payload} />));
+          return readRules(sheet.getStyleTags());
+        };
+        const only = [{ prelude: '.b', props: ['margin'], rules: [] }];
+
+        it.each([
+          [
+            'a declaration value',
+            () => styled.div<{ $v: string }>`margin: 0; color: ${p => p.$v};`,
+          ],
+          ['a property name', () => styled.div<{ $v: string }>`margin: 0; ${p => p.$v}: red;`],
+          [
+            'a selector',
+            () => styled.div<{ $v: string }>`margin: 0; &:hover ${p => p.$v} { color: red; }`,
+          ],
+          [
+            'an @media prelude',
+            () => styled.div<{ $v: string }>`margin: 0; @media ${p => p.$v} { color: red; }`,
+          ],
+          [
+            'a keyframe stop',
+            () =>
+              styled.div<{
+                $v: string;
+              }>`margin: 0; @keyframes k { ${p => p.$v}, from { opacity: 0; } }`,
+          ],
+          [
+            'a Head value',
+            () => styled.div<{ $v: string }>`margin: 0; ${p => 'p ' + p.$v} { color: red; }`,
+          ],
+        ])('adds no rule through %s', (_, make) => {
+          const rules = render(make());
+          expect(rules.filter(rule => !rule.prelude.startsWith('@keyframes'))).toEqual(only);
+          expect(rules.every(rule => rule.rules.every(inner => inner.prelude === 'from'))).toBe(
+            true
+          );
+        });
+      });
+
       describe('a value whose comment removal would join tokens', () => {
         const value = 'u/**/rl(x"a) {} body{display:none} y{" )';
         const render = (Comp: React.ComponentType<{ $v: string }>) => {
@@ -1706,6 +1754,8 @@ describe('ssr', () => {
         '"]',
         '[y="z',
         '" ) ',
+        '\u0080\\75rl(',
+        '\u0080u\\72l(',
       ];
       let seed = 20260928;
       const next = (n: number) => {
