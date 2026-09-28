@@ -4,7 +4,7 @@ import generateAlphabeticName from '../generateAlphabeticName';
 import generateDisplayName from '../generateDisplayName';
 import hyphenateStyleName from '../hyphenateStyleName';
 import interleave from '../interleave';
-import { joinStrings } from '../joinStrings';
+import { joinRules, joinStrings, stripSplitter } from '../joinStrings';
 
 describe('hyphenateStyleName', () => {
   it('hyphenates camelCase style names', () => {
@@ -29,6 +29,14 @@ describe('joinStrings', () => {
     expect(joinStrings('a', '')).toBe('a');
     expect(joinStrings(null, 'b')).toBe('b');
     expect(joinStrings('', 'b')).toBe('b');
+  });
+});
+
+describe('joinRules', () => {
+  it('writes a line break after `*/` in a rule as a space, so removing the splitter keeps the rule as written', () => {
+    const css = joinRules(['.a{color:red //*!sc*/\n* b}', '.b{x:y}']);
+    expect(css).toBe('.a{color:red //*!sc*/ * b}/*!sc*/\n.b{x:y}/*!sc*/\n');
+    expect(stripSplitter(css)).toBe('.a{color:red //*!sc*/ * b}.b{x:y}');
   });
 });
 

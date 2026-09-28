@@ -30,7 +30,7 @@ describe('rehydration', () => {
       document.head.innerHTML = `
         <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           .b { color: red; }/*!sc*/
-          ${SC_ATTR}.g1[id="TWO"]{content: "b,"}/*!sc*/
+          ${SC_ATTR}.g1[id="TWO"]{content:"b,"}/*!sc*/
         </style>
       `;
 
@@ -135,9 +135,9 @@ describe('rehydration', () => {
       document.head.innerHTML = `
         <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           .a { color: blue; }/*!sc*/
-          ${SC_ATTR}.g1[id="ONE"]{content: "a,"}/*!sc*/
+          ${SC_ATTR}.g1[id="ONE"]{content:"a,"}/*!sc*/
           .b { color: red; }/*!sc*/
-          ${SC_ATTR}.g2[id="TWO"]{content: "b,"}/*!sc*/
+          ${SC_ATTR}.g2[id="TWO"]{content:"b,"}/*!sc*/
         </style>
       `;
 
@@ -196,7 +196,7 @@ describe('rehydration', () => {
       document.head.innerHTML = `
         <style>
           .b { color: red; }/*!sc*/
-          ${SC_ATTR}.g2[id="TWO"]{content: "b,"}/*!sc*/
+          ${SC_ATTR}.g2[id="TWO"]{content:"b,"}/*!sc*/
         </style>
       `;
 
@@ -226,7 +226,7 @@ describe('rehydration', () => {
       document.head.innerHTML = `
         <style data-precedence="styled-components" data-href="sc-registry-0">
           .b { color: red; }/*!sc*/
-          ${SC_ATTR}.g2[id="TWO"]{content: "b,"}/*!sc*/
+          ${SC_ATTR}.g2[id="TWO"]{content:"b,"}/*!sc*/
         </style>
       `;
 
@@ -267,11 +267,11 @@ describe('rehydration', () => {
       document.head.innerHTML = `
         <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           body { background: papayawhip; }/*!sc*/
-          ${SC_ATTR}.g1[id="sc-global-557410406"]{content: "sc-global-557410406,"}/*!sc*/
+          ${SC_ATTR}.g1[id="sc-global-557410406"]{content:"sc-global-557410406,"}/*!sc*/
         </style>
         <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           .a { color: red; }/*!sc*/
-          ${SC_ATTR}.g2[id="TWO"]{content: "a,"}/*!sc*/
+          ${SC_ATTR}.g2[id="TWO"]{content:"a,"}/*!sc*/
         </style>
       `;
 
@@ -344,13 +344,13 @@ describe('rehydration', () => {
       document.head.innerHTML = `
         <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           html { font-size: 16px; }/*!sc*/
-          ${SC_ATTR}.g1[id="sc-global-a"]{content: "sc-global-a,"}/*!sc*/
+          ${SC_ATTR}.g1[id="sc-global-a"]{content:"sc-global-a,"}/*!sc*/
           body { background: papayawhip; }/*!sc*/
-          ${SC_ATTR}.g2[id="sc-global-b"]{content: "sc-global-b,"}/*!sc*/
+          ${SC_ATTR}.g2[id="sc-global-b"]{content:"sc-global-b,"}/*!sc*/
           .c { color: blue; }/*!sc*/
-          ${SC_ATTR}.g3[id="ONE"]{content: "c,"}/*!sc*/
+          ${SC_ATTR}.g3[id="ONE"]{content:"c,"}/*!sc*/
           .d { color: red; }/*!sc*/
-          ${SC_ATTR}.g4[id="TWO"]{content: "d,"}/*!sc*/
+          ${SC_ATTR}.g4[id="TWO"]{content:"d,"}/*!sc*/
         </style>
       `;
 
@@ -627,7 +627,7 @@ describe('rehydration', () => {
       document.head.innerHTML = `
         <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           @keyframes keyframe_880 {from {opacity: 0;}}/*!sc*/
-          ${SC_ATTR}.g1[id="sc-keyframes-keyframe_880"]{content: "keyframe_880,"}/*!sc*/
+          ${SC_ATTR}.g1[id="sc-keyframes-keyframe_880"]{content:"keyframe_880,"}/*!sc*/
         </style>
       `;
 
