@@ -730,8 +730,22 @@ export function isCustomProperty(prop: string): boolean {
  * the native transform's tokenizer can parse comma-separated fallback chains.
  */
 function normalizeValue(ctx: ParseContext, start: number, end: number): string {
-  const slice = trimRange(ctx.css, start, end);
+  const css = ctx.css;
+  while (start < end) {
+    const c = css.charCodeAt(start);
+    if (isWS(c)) start++;
+    else break;
+  }
+  while (end > start) {
+    const c = css.charCodeAt(end - 1);
+    if (isWS(c)) end--;
+    else break;
+  }
+  if (start >= end) return '';
+
+  const slice = css.substring(start, end);
   if (ctx.keepCommaSpaces || slice.indexOf(',') === -1) return slice;
+
   return stripCommaSpaces(slice);
 }
 
