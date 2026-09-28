@@ -2,7 +2,7 @@
 'styled-components': patch
 ---
 
-A `css\`\`\``fragment placed after a declaration that is missing its trailing`;` is treated as a sibling block:
+A `css` fragment placed after a declaration that is missing its trailing `;` is treated as a sibling block:
 
 ```jsx
 const Box = styled.View`

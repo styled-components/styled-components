@@ -27,7 +27,7 @@ How a `${...}` slot in a styled template (styled components, `css`, `createGloba
   - once a slot contributes a selector or at-rule remainder, every later slot in the Run joins that remainder as text.
   - A Head whose value is a styled component reference is selector text. A Head whose value cannot be resolved (a client reference on the server, a non-styled component) drops the rule with a dev warning rather than widening its selector.
   - Empty following selector text (`${x} { ... }`): the block applies to the parent as `& { ... }` does; at the top level of `createGlobalStyle`, where there is no parent, the block is dropped with a dev warning.
-- Missing-`;` recovery: a css fragment interpolated directly (not returned by a function) whose source holds an unescaped `;`, `{`, or `}` outside strings and parentheses, met Inside a declaration (after the statement's top-level `:`) at parenthesis depth 0 whose previous significant item is not `:`, `,`, `(`, or `/`, ends that declaration and becomes Standalone. A preceding slot counts as a value item (recovery applies). Never inside strings or parentheses.
+- Missing-`;` recovery: a css fragment interpolated directly (not returned by a function) whose source holds an unescaped `;`, `{`, or `}` outside strings and parentheses, met Inside a declaration (after the statement's top-level `:`, in a statement that does not end in `{`) at parenthesis depth 0 whose previous significant item is not `:`, `,`, `(`, or `/`, ends that declaration and becomes Standalone. A preceding slot counts as a value item (recovery applies). Never inside strings or parentheses.
 - Keyframes: in a frame list, Glued and Head apply as in a block (`${() => '0%'} { ... }` is a stop); a Run followed by `;`, `}`, `@`, or the end of the list is Standalone and splices frames. A stop Head whose remainder starts with `@` drops the frame with a dev warning; one that resolves to no stops drops the frame. Inside a frame every Run at a statement start is Standalone and splices declarations. A spliced value of the wrong kind (rules inside a frame, declarations in a frame list) is dropped with a dev warning.
 
 ## Value shapes
@@ -36,25 +36,26 @@ How a `${...}` slot in a styled template (styled components, `css`, `createGloba
 - function (any number of parameters): called with the render context; its result takes the slot's role.
 - array: each element resolved in order and joined (Inside, Glued, Property) or spliced in order (Standalone, keyframe splices).
 - css fragment: spliced (Standalone) or realized as text (every other role).
-- plain object: converted to declarations (Standalone) or to its own `toString` when it defines one.
+- plain object: converted to declarations (Standalone) or to its own `toString` when it defines one. Keys are author CSS (property names and nested selectors); each non-object value is checked as a declaration value (see Value checks), so an object value has exactly the power of `color: ${value}`. This holds for static objects (`styled.div({...})`) and objects returned by functions.
 - keyframes: its generated name, injected when rendered.
-- styled component: its class selector. A non-styled component, or a client reference used where a value is needed, drops that slot with a dev warning.
-- One slot never removes the rest of a component's or global style's CSS: a slot that cannot be resolved drops only its own construct.
+- styled component: its class selector. A non-styled component, or a client reference (in any role other than Standalone), cannot be resolved.
+- A value that cannot be resolved drops its enclosing declaration, rule, at-rule, or frame with a dev warning, as a failed value check does; it is never substituted as empty text (an empty selector part would widen the rule). It never removes the rest of a component's or global style's CSS.
 
 ## Value checks
 
 Every Inside, Glued, Property, and Head-remainder value is checked with CSS Syntax 3 tokenization, starting from the state at its position in the template (inside a string, inside `url(`, parenthesis depth), handling comments, escapes, strings that end at a raw newline, and unquoted `url(` rules:
 
 - It must end in the state it started in (no unclosed string, parenthesis, bracket, comment, or `url(`, no trailing escape).
+- Its text with trailing whitespace removed must not end in an escaping backslash (`x\ ` and `x\` followed by a newline fail): substituted values are trimmed, and the backslash would then escape the character written after it.
 - It must hold no `{` or `}` anywhere, quoted or not, and no raw newline inside a string.
 - Inside a declaration value, a `;` outside strings, parentheses, and brackets splits the realized declaration into several declarations of the same rule; only declarations are kept, and a piece whose name starts with `@` is dropped.
 - In a selector, at-rule prelude, keyframe stop, or Head remainder, a `;` outside strings, parentheses, and brackets fails the check (a `;` ends a nested rule, CSS Syntax 3).
-- A templated at-rule name or `@keyframes` name must realize to an identifier.
+- A templated at-rule name or `@keyframes` name must realize to an identifier: ASCII letters, digits, `_`, `-`, and any character at or above U+0080, not starting with a digit, `-` followed by a digit, or a lone `-`. Escapes are not accepted.
 - A value failing a check drops its enclosing declaration, rule, at-rule, or frame, with a dev warning naming the construct.
-- After substitution, a selector list or keyframe stop list is split on top-level commas again, so every selector a value adds stays scoped to the component.
+- After substitution, a selector list or keyframe stop list is split on top-level commas again. In a selector list that holds a slot, each part is nested under the parent selector unless the part holds `&` outside parentheses and brackets (`&:hover` and `html &` stay as written; `html :not(&)` and `body:has(&) *` are nested). Every selector a value adds therefore matches only the component or elements inside it, or is anchored on the component through a top-level `&`.
 
 ## What a value may do
 
 - Inside, Glued, Property: add declarations to its own rule (through the split above). Never create, close, or escape a rule, never add an unscoped selector.
-- Standalone, and the statements part of a Head: a mixin, parsed as CSS and spliced; may add declarations, nested rules, and at-rules (`@import`, `@font-face`). Mixins are author CSS and must not carry untrusted text; this includes a slot placed at the head of a rule.
+- Standalone, and the statements part of a Head: a mixin, comment-stripped and parsed as CSS and spliced (an at-rule name ends at whitespace, `;`, `{`, `}`, or `(`); may add declarations, nested rules, and at-rules (`@import`, `@font-face`). Mixins are author CSS and must not carry untrusted text; this includes a slot placed at the head of a rule.
 - Nothing a value contains can close the `<style>` element.
