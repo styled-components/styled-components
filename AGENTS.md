@@ -210,5 +210,4 @@ The `packages/native-showcase` app is the visual QA surface for v7 native polyfi
 - Jest + jsdom: jsdom's modern-CSS ceiling and how the web suite reads injected CSS: [docs/jest.md](docs/jest.md)
 - Bundling: per-bundle build-constant substitution, terser DCE traps, dts/TS2742: [docs/bundling.md](docs/bundling.md)
 - Web rendering sequence diagram: [docs/rendering-flow.md](docs/rendering-flow.md) (web flow only)
-- Single-output-path migration plan (historical): [docs/single-output-path.md](docs/single-output-path.md)
 - Animation adapters + spec coverage (Hermes / rn-web / reanimated): [docs/animation-adapters.md](docs/animation-adapters.md)
