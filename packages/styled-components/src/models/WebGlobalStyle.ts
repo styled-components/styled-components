@@ -1,4 +1,4 @@
-import { evaluateForFastPath, FastPathFragment, hasAnyFragment } from '../parser/compile';
+import { evaluateForFastPath, FastPathFragment, hasAnyFragment } from '../parser/evaluate';
 import { getSource, synthesizeSourceForRuleSet } from '../parser/source';
 import StyleSheet from '../sheet';
 import { Compiler, ExecutionContext, RuleSet } from '../types';
