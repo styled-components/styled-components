@@ -368,14 +368,72 @@ function resolveRuleSelectors(selectors: string[], parent: string): string {
   return resolved.join(',');
 }
 
+/**
+ * Index of the first `&` at or after `from` that reads as the nesting
+ * selector: outside strings and not after an escaping backslash. With
+ * `topLevel`, also outside parentheses and brackets. `s.length` for none.
+ */
+export function nextAmpersand(s: string, from: number, topLevel: boolean): number {
+  const len = s.length;
+  let i = from;
+  let paren = 0;
+  let bracket = 0;
+  let quote = 0;
+  while (i < len) {
+    const ch = s.charCodeAt(i);
+    if (ch === $.BACKSLASH) {
+      i += 2;
+      continue;
+    }
+    if (quote !== 0) {
+      if (ch === quote) quote = 0;
+    } else if (ch === $.DOUBLE_QUOTE || ch === $.SINGLE_QUOTE) {
+      quote = ch;
+    } else if (ch === $.AMPERSAND) {
+      if (!topLevel || (paren === 0 && bracket === 0)) return i;
+    } else if (ch === $.OPEN_PAREN) {
+      paren++;
+    } else if (ch === $.CLOSE_PAREN) {
+      if (paren > 0) paren--;
+    } else if (ch === $.OPEN_BRACKET) {
+      bracket++;
+    } else if (ch === $.CLOSE_BRACKET) {
+      if (bracket > 0) bracket--;
+    }
+    i++;
+  }
+  return len;
+}
+
 function resolveSingle(selector: string, parent: string): string {
   let expanded: string;
   if (selector.indexOf('&') === -1) {
     expanded = parent ? parent + ' ' + selector : selector;
-  } else {
+  } else if (
+    selector.indexOf('"') === -1 &&
+    selector.indexOf("'") === -1 &&
+    selector.indexOf('\\') === -1
+  ) {
+    // Without a string or an escape, every `&` is the nesting selector.
     expanded = selector.split('&').join(parent);
+  } else {
+    expanded = replaceAmpersands(selector, parent);
   }
   return stripCombinatorSpaces(expanded);
+}
+
+/** Replace each `&` {@link nextAmpersand} reads; with none, nest under the parent. */
+function replaceAmpersands(selector: string, parent: string): string {
+  let at = nextAmpersand(selector, 0, false);
+  if (at === selector.length) return parent ? parent + ' ' + selector : selector;
+  let out = '';
+  let start = 0;
+  while (at < selector.length) {
+    out += selector.substring(start, at) + parent;
+    start = at + 1;
+    at = nextAmpersand(selector, start, false);
+  }
+  return out + selector.substring(start);
 }
 
 /**

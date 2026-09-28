@@ -1504,7 +1504,7 @@ describe('compileWeb', () => {
         ['inside brackets', '[data-x="&"]'],
         ['inside a string', '"&"'],
         ['escaped', '.x\\&y'],
-      ])('nests a part whose only `&` is %s', (_, part) => {
+      ])('nests a part whose only `&` is %s, and keeps that `&` when writing it', (_, part) => {
         const src = tagged`${'p, ' + part} { color: red; }`;
         expect(fillSource(src, src.staticValues, null)).toEqual([
           {
@@ -1513,6 +1513,17 @@ describe('compileWeb', () => {
             children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
           },
         ]);
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(['.a p,.a ' + part + '{color:red;}']);
+      });
+
+      it.each([
+        ['a string', '[data-x="&"]', '.a [data-x="&"]:hover'],
+        ['a single-quoted string', "[data-x='a&b']", ".a [data-x='a&b']:hover"],
+        ['an escape', '\\& body', '.a \\& body:hover'],
+        ['a string beside a nesting `&`', '&[data-x="&"]', '.a[data-x="&"]:hover'],
+      ])('keeps `&` inside %s in a Glued value', (_, value, selector) => {
+        const src = tagged`${() => value}:hover { color: red; }`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual([selector + '{color:red;}']);
       });
 
       it('nests a part a value comma makes next to authored `:not(&)` text', () => {
