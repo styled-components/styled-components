@@ -486,6 +486,17 @@ describe('keyframes', () => {
       expect(compiled(kf)).toEqual(['@keyframes ' + kf.name + '{from{opacity:0;color:red;}}']);
     });
 
+    it('names itself from the declaration text of each object value', () => {
+      const a = keyframes`from { ${{ opacity: 0 }} } to { opacity: 1; }`;
+      const b = keyframes`from { ${{ opacity: 0.5 }} } to { opacity: 1; }`;
+      const nested = keyframes`from { ${[{ opacity: 0.5 }]} } to { opacity: 1; }`;
+      const again = keyframes`from { ${{ opacity: 0 }} } to { opacity: 1; }`;
+      expect(b.name).not.toBe(a.name);
+      expect(nested.name).toBe(b.name);
+      expect(again.name).toBe(a.name);
+      expect(compiled(b)).toEqual(['@keyframes ' + b.name + '{from{opacity:0.5;}to{opacity:1;}}']);
+    });
+
     it('writes a number as its decimal text', () => {
       const kf = keyframes`from { opacity: ${0}; } to { opacity: ${0.5}; }`;
       expect(compiled(kf)).toEqual([
