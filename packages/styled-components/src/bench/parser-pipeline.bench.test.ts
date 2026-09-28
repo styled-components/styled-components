@@ -6,7 +6,6 @@
 
 import { emitWeb } from '../parser/emit-web';
 import { parse } from '../parser/parser';
-import { normalize } from '../utils/compiler';
 import { bench as _bench } from './bench-utils';
 
 const opts = { runs: 7, precision: 2, nameWidth: 50 };
@@ -196,7 +195,7 @@ animation: slide 0.3s ease-out, fade 0.5s linear, bounce 0.8s cubic-bezier(0.2, 
 `;
 
 function parserFull(css: string): string[] {
-  return emitWeb(parse(normalize(css)), '.a');
+  return emitWeb(parse(css), '.a');
 }
 
 describe('parser pipeline (parse + emit)', () => {

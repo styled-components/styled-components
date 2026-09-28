@@ -34,7 +34,7 @@ import {
 } from './ast';
 import { isKeyframesName } from './atRuleNames';
 import { stampAtClass, stampRuleClass } from './nativePlan';
-import { BRACKETS, isEscaped, isSpace, opensUrl, scan, stops } from './reader';
+import { BRACKETS, isEscaped, isSpace, opensUrl, removeComments, scan, stops } from './reader';
 
 /** A block statement ends at `;`, `{`, or `}`; its first top-level `:` splits a declaration. */
 const STATEMENT = stops(':{;}');
@@ -104,12 +104,8 @@ export interface SlotTable {
 export const TOP_LEVEL: SlotEntry = Object.freeze({ parenDepth: 0, quote: 0, url: false });
 
 /**
- * Parse a preprocessed CSS string into a parser AST.
- *
- * Assumes the input has already passed through `normalize` from
- * src/utils/normalize.ts, which normalizes braces, strips line comments,
- * and handles unbalanced strings. This parser is STRICT; it assumes
- * well-formed input.
+ * Parse CSS text (template text, mixin text, or a static string) into a
+ * parser AST. Comments are removed first, a slot marker inside one with it.
  */
 export function parse(
   css: string,
@@ -119,10 +115,12 @@ export function parse(css: string, options?: ParseOptions): Root<string>;
 export function parse(css: string, options?: ParseOptions): Root<string | TemplateValue> {
   const templates = !!options?.templates;
   const slots = templates && options?.slots !== undefined ? options.slots : null;
+  const text = removeComments(css, true);
   const ctx: ParseContext = {
-    css,
+    css: text,
+    depth: 0,
     dyn: false,
-    len: css.length,
+    len: text.length,
     i: 0,
     keepCommaSpaces: !!options?.keepCommaSpaces,
     recover: slots !== null ? slots.recover : null,
@@ -134,6 +132,8 @@ export function parse(css: string, options?: ParseOptions): Root<string | Templa
 
 interface ParseContext {
   css: string;
+  /** Blocks open around the reading position; a `}` read at 0 is stray. */
+  depth: number;
   /**
    * Whether the node being read so far holds a slot: a {@link TemplateValue}
    * field, a head, or a splice. Saved and cleared around each node that
@@ -331,6 +331,14 @@ function recoversAt(ctx: ParseContext, slot: number, end: number, colon: number)
   return false;
 }
 
+/** {@link parseBlock} for a block whose `{` was just read. */
+function parseNested(ctx: ParseContext): Node[] {
+  ctx.depth++;
+  const out = parseBlock(ctx);
+  ctx.depth--;
+  return out;
+}
+
 /** Single-pass parse of a CSS block body. */
 function parseBlock(ctx: ParseContext): Node[] {
   const css = ctx.css;
@@ -354,12 +362,14 @@ function parseBlock(ctx: ParseContext): Node[] {
 
     if (first === CLOSE_BRACE) {
       ctx.i = i + 1;
+      if (ctx.depth === 0) continue;
       return out;
     }
 
     if (first === AT) {
       ctx.i = i;
-      out.push(parseAtRule(ctx));
+      const node = parseAtRule(ctx);
+      if (node !== null) out.push(node);
       continue;
     }
 
@@ -415,13 +425,13 @@ function parseBlock(ctx: ParseContext): Node[] {
         let node: RuleNode;
         if (run !== null && lead > 0) {
           const head = runHead(ctx, run, lead, selectorText);
-          node = { kind: NodeKind.Rule, selectors: [], children: parseBlock(ctx), head };
+          node = { kind: NodeKind.Rule, selectors: [], children: parseNested(ctx), head };
         } else {
           const selectors =
             selectorText.indexOf(',') === -1
               ? [selectorText]
               : splitTopLevelCommas(selectorText, true);
-          const children = parseBlock(ctx);
+          const children = parseNested(ctx);
           node = {
             kind: NodeKind.Rule,
             selectors: selectorsToTemplate(ctx, selectors),
@@ -439,12 +449,14 @@ function parseBlock(ctx: ParseContext): Node[] {
       }
       // c is SEMICOLON or CLOSE_BRACE
       const declStart = run === null ? start : leadDecl(ctx, out, run);
-      if (colon !== -1) pushDecl(ctx, out, declStart, colon, stop);
+      ctx.i = stop + 1;
       if (c === CLOSE_BRACE) {
-        ctx.i = stop + 1;
+        // At the top level the `}` is stray and drops its statement.
+        if (ctx.depth === 0) break;
+        if (colon !== -1) pushDecl(ctx, out, declStart, colon, stop);
         return out;
       }
-      ctx.i = stop + 1;
+      if (colon !== -1) pushDecl(ctx, out, declStart, colon, stop);
       break;
     }
   }
@@ -646,16 +658,17 @@ function isNameStop(code: number): boolean {
   );
 }
 
-function parseAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode {
+/** The at-rule at `ctx.i`; `null` when its statement ends at a stray `}` and is dropped. */
+function parseAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode | null {
   const outerDyn = ctx.dyn;
   ctx.dyn = false;
   const node = readAtRule(ctx);
-  if (ctx.dyn) markDyn(node);
+  if (node !== null && ctx.dyn) markDyn(node);
   else ctx.dyn = outerDyn;
   return node;
 }
 
-function readAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode {
+function readAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode | null {
   const css = ctx.css;
   const len = ctx.len;
   let j = ctx.i + 1;
@@ -679,12 +692,16 @@ function readAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode {
   const preludeStart = j;
   j = scan(css, j, len, PRELUDE, 0, 0);
 
+  // Past the end, `charCodeAt` is NaN: neither `{`, `;`, nor `}`.
+  const delim = css.charCodeAt(j);
+  if (delim === CLOSE_BRACE && ctx.depth === 0) {
+    ctx.i = j + 1;
+    return null;
+  }
   const prelude = trimRange(css, preludeStart, j);
   const nameField = templateOrString(ctx, name);
   const preludeField = templateOrString(ctx, prelude);
 
-  // Past the end, `charCodeAt` is NaN: neither `{` nor `;`.
-  const delim = css.charCodeAt(j);
   if (delim !== OPEN_BRACE) {
     ctx.i = delim === SEMICOLON ? j + 1 : j;
     const node: AtRuleNode = {
@@ -704,7 +721,7 @@ function readAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode {
     return { kind: NodeKind.Keyframes, name: nameField, prelude: preludeField, frames };
   }
 
-  const children = parseBlock(ctx);
+  const children = parseNested(ctx);
   const node: AtRuleNode = {
     kind: NodeKind.AtRule,
     name: nameField,

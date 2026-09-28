@@ -987,6 +987,18 @@ describe('compileWeb', () => {
       expect(out(src)).toEqual(['.a{a:b;color:red;}']);
     });
 
+    it('drops only the statement holding a stray `}` in a Standalone string', () => {
+      const src = tagged`
+        ${'a: b; } c: d;'}
+        margin: 0;`;
+      expect(out(src)).toEqual(['.a{a:b;c:d;margin:0;}']);
+    });
+
+    it('drops only the statement holding a stray `}` in template text', () => {
+      const src = tagged`color: blue; } color: red; & { a: b; } } padding: ${'1px'};`;
+      expect(out(src)).toEqual(['.a{color:blue;color:red;padding:1px;}', '.a{a:b;}']);
+    });
+
     it('ends an at-rule name at `(` in a Standalone string', () => {
       const src = tagged`
         ${'@media(min-width: 1px) { color: blue; }'}
