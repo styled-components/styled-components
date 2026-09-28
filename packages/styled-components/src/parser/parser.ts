@@ -522,7 +522,12 @@ function parseBlock(ctx: ParseContext): Node[] {
       }
       if (c === NUL) {
         const end = slotEnd(css, stop, len);
-        if (end !== -1 && recoversAt(ctx, stop, end, colon)) {
+        if (
+          end !== -1 &&
+          recoversAt(ctx, stop, end, colon) &&
+          css.charCodeAt(scanQP(css, end, len, OPEN_BRACE, SEMICOLON, CLOSE_BRACE, -1)) !==
+            OPEN_BRACE
+        ) {
           const declStart = run === null ? start : leadDecl(ctx, out, run);
           pushDecl(ctx, out, declStart, colon, stop);
           pushSplice(ctx, out, slotIndex(css, stop, end));
