@@ -1,11 +1,6 @@
 import Keyframes, { KeyframesTemplate } from '../models/Keyframes';
-import {
-  isClientReference,
-  isCssProduct,
-  ruleSetFromInputs,
-  templateInputs,
-} from '../parser/source';
-import { Interpolation, RuleSet, Styles } from '../types';
+import { isClientReference, ruleSetFromInputs, templateInputs } from '../parser/source';
+import { Interpolation, Styles } from '../types';
 import generateComponentId from '../utils/generateComponentId';
 import isKeyframes from '../utils/isKeyframes';
 import isPlainObject from '../utils/isPlainObject';
@@ -102,9 +97,8 @@ function valueAsText(value: unknown, found: FunctionsFound): unknown {
     return String(value);
   }
   if (Array.isArray(value)) {
-    if (!isCssProduct(value)) return functionsAsText(value, found);
-    const inputs = templateInputs(value as RuleSet<object>);
-    if (inputs === undefined) return value;
+    const inputs = templateInputs(value);
+    if (inputs === undefined) return functionsAsText(value, found);
     const mapped = functionsAsText(inputs[1], found);
     return mapped === inputs[1] ? value : ruleSetFromInputs(inputs[0], mapped, inputs[3]);
   }

@@ -112,18 +112,13 @@ export function isClientReference(value: unknown): boolean {
   );
 }
 
-/** How {@link readSource} reads a template. */
-interface ReadOptions {
-  /** Read as a frame list, the block of a `@keyframes` rule. */
-  frames: boolean;
+/** How {@link readSource} reads a template; a set of bits. */
+const enum Read {
   /** Look the parse up by `strings` identity; the caller guarantees the array is never mutated. */
-  shared: boolean;
+  Shared = 1,
+  /** Read as a frame list, the block of a `@keyframes` rule. */
+  Frames = 2,
 }
-
-const OWN_RULES: ReadOptions = { frames: false, shared: false };
-const SHARED_RULES: ReadOptions = { frames: false, shared: true };
-const OWN_FRAMES: ReadOptions = { frames: true, shared: false };
-const SHARED_FRAMES: ReadOptions = { frames: true, shared: true };
 
 /**
  * Classify each value and read the template: join the strings around
@@ -137,7 +132,7 @@ export function parseSource(
   interpolations: ReadonlyArray<unknown>,
   shared: boolean = false
 ): Source {
-  return readSource(strings, interpolations, shared ? SHARED_RULES : OWN_RULES);
+  return readSource(strings, interpolations, shared ? Read.Shared : 0);
 }
 
 /**
@@ -149,13 +144,14 @@ export function parseFrameList(
   interpolations: ReadonlyArray<unknown>,
   shared: boolean
 ): Source {
-  return readSource(strings, interpolations, shared ? SHARED_FRAMES : OWN_FRAMES);
+  return readSource(strings, interpolations, shared ? Read.Shared | Read.Frames : Read.Frames);
 }
 
+/** `read` is a set of {@link Read} bits. */
 function readSource(
   strings: ReadonlyArray<string>,
   interpolations: ReadonlyArray<unknown>,
-  options: ReadOptions
+  read: number
 ): Source {
   const n = interpolations.length;
   const kinds: InterpolationKind[] = n === 0 ? EMPTY : [];
@@ -209,14 +205,15 @@ function readSource(
   }
 
   // A mismatched count cannot come from a tagged template; it gets a parse of its own.
+  const frames = (read & Read.Frames) !== 0;
   const flags: TemplateFlags =
     recover === null && clientRefs === null
-      ? options.frames
+      ? frames
         ? UNFLAGGED_FRAMES
         : UNFLAGGED_RULES
-      : { clientRefs, frames: options.frames, recover };
+      : { clientRefs, frames, recover };
   const parsed =
-    options.shared && strings.length === n + 1
+    (read & Read.Shared) !== 0 && strings.length === n + 1
       ? sharedParse(strings, n, flags)
       : readTemplate(strings, n, flags);
   const kept = parsed.kept;
