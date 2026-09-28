@@ -575,11 +575,11 @@ function looksLikeDeclaration(text: string): boolean {
 }
 
 /**
- * An identifier: ASCII ident characters, not a lone hyphen, and not starting
- * with a digit or a hyphen and digit. Anchored with no nested quantifier, so
- * linear-time.
+ * An identifier: ASCII ident characters or code points at or above U+0080,
+ * not a lone hyphen, and not starting with a digit or a hyphen and digit.
+ * Anchored with no nested quantifier, so linear-time.
  */
-const IDENTIFIER = /^(?!-?\d|-$)[\w-]+$/;
+const IDENTIFIER = /^(?!-?\d|-$)[\w\u0080-￿-]+$/;
 
 function isIdentifier(text: string): boolean {
   return IDENTIFIER.test(text);

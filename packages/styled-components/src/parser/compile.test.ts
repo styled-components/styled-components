@@ -353,6 +353,32 @@ describe('compileWeb', () => {
       expect(compileWeb(src, {}, id, opts)).toEqual(legacy('color: blue;'));
       expect(warnings()).toEqual([expect.stringContaining('`a b`')]);
     });
+
+    // CSS Syntax 3 §4.2 Definitions: "ident code point: An ident-start code
+    // point, a digit, or U+002D HYPHEN-MINUS (-)." "ident-start code point: A
+    // letter, a non-ASCII code point, or U+005F LOW LINE (_)." "non-ASCII code
+    // point: A code point with a value equal to or greater than U+0080 <control>."
+    it.each([['fadé'], ['愛'], ['_x-1'], ['--x'], ['-x']])(
+      'resolves the templated keyframes name `%s`',
+      name => {
+        const src = tagged`@keyframes ${name} { to { opacity: 1; } }`;
+        expect(compileWeb(src, {}, id, opts)).toEqual([`@keyframes ${name}{to{opacity:1;}}`]);
+        expect(warnings()).toEqual([]);
+      }
+    );
+
+    it('resolves a templated at-rule name holding a non-ASCII character', () => {
+      const src = tagged`@${'x-é'} y;`;
+      expect(compileWeb(src, {}, id, opts)).toEqual(['@x-é y;']);
+    });
+
+    it.each([['1a'], ['-1a'], ['-'], ['a\\62'], ['a.b'], ['']])(
+      'drops @keyframes whose templated name `%s` is not an identifier',
+      name => {
+        const src = tagged`color: blue; @keyframes ${name} { to { opacity: 1; } }`;
+        expect(compileWeb(src, {}, id, opts)).toEqual(legacy('color: blue;'));
+      }
+    );
   });
 
   describe('styled-component refs', () => {
