@@ -1312,6 +1312,7 @@ describe('ssr', () => {
         ['an unbalanced parenthesis', 'calc(1px'],
         ['an unbalanced comment', 'red /* x'],
         ['a trailing backslash', 'red\\'],
+        ['a bad url after `<!--`', '<!--url(x"a) } body{background:red} x{" )'],
         ['url( directly preceded by a non-ASCII code point', ' url(x)'],
       ])('drops the declaration holding %s', (_, payload) => {
         expect(scoped(payload)).toEqual([
