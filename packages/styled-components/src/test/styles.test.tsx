@@ -237,8 +237,8 @@ describe('with styles', () => {
 
   it('honors a custom toString on a value-position interpolation in a template literal (#5740)', () => {
     // Same design-token shape, but interpolated directly into a value
-    // slot (the reporter's original repro). Verifies the `resolveInterpolation`
-    // path, separate from the inline-object path covered above.
+    // slot (the reporter's original repro). Verifies the template slot
+    // value path, separate from the inline-object path covered above.
     const ink = {
       default: '#000',
       subtle: '#444',

@@ -1,6 +1,6 @@
 # Plan: collapse to a single CSS output path
 
-> Status: completed. Kept for historical context; `src/parser/compile.ts` is the authoritative reference for the current path.
+> Status: completed. Kept for historical context; [docs/interpolation-slots.md](interpolation-slots.md) is the authoritative reference for slot handling, and `src/parser/evaluate.ts` plus `src/parser/compile.ts` implement the current path.
 
 ## Status quo
 
