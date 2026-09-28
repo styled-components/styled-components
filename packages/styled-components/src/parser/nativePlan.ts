@@ -1,5 +1,4 @@
 import * as $ from '../utils/charCodes';
-import { isEscaped } from '../utils/normalize';
 import {
   AtRuleNode,
   AttrSelector,
@@ -14,13 +13,12 @@ import {
   RuleNode,
 } from './ast';
 import { isKeyframesName } from './atRuleNames';
+import { ANY_DEPTH, BRACKETS, isSpace, scan, stops } from './reader';
 
-/** U+000C FORM FEED; CSS Syntax whitespace, not aliased in charCodes.ts. */
-const FORM_FEED = 0x0c;
-
-function isSelectorWhitespace(c: number): boolean {
-  return c === $.SPACE || c === $.TAB || c === $.LF || c === $.CR || c === FORM_FEED;
-}
+const SELECTOR_SPACE = stops(' \t\n\r\f');
+const PAREN_CLOSE = stops(')');
+const BRACKET_CLOSE = stops(']');
+const SPACE = stops(' ');
 
 export type {
   AttrSelector,
@@ -145,12 +143,11 @@ function collapseSelectorWhitespace(sel: string): string {
   const len = sel.length;
   if (len === 0) return sel;
 
-  let needsWork =
-    isSelectorWhitespace(sel.charCodeAt(0)) || isSelectorWhitespace(sel.charCodeAt(len - 1));
+  let needsWork = isSpace(sel.charCodeAt(0)) || isSpace(sel.charCodeAt(len - 1));
   if (!needsWork) {
     for (let i = 0; i < len; i++) {
       const c = sel.charCodeAt(i);
-      if (c === $.TAB || c === $.LF || c === $.CR || c === FORM_FEED) {
+      if (c === $.TAB || c === $.LF || c === $.CR || c === $.FORM_FEED) {
         needsWork = true;
         break;
       }
@@ -164,36 +161,19 @@ function collapseSelectorWhitespace(sel: string): string {
 
   let start = 0;
   let end = len;
-  while (start < end && isSelectorWhitespace(sel.charCodeAt(start))) start++;
-  while (end > start && isSelectorWhitespace(sel.charCodeAt(end - 1))) end--;
+  while (start < end && isSpace(sel.charCodeAt(start))) start++;
+  while (end > start && isSpace(sel.charCodeAt(end - 1))) end--;
 
   let out = '';
-  let i = start;
   let segStart = start;
-  let quote = 0;
-  while (i < end) {
-    const c = sel.charCodeAt(i);
-    if (quote !== 0) {
-      if (c === quote && !isEscaped(sel, i)) quote = 0;
-      i++;
-      continue;
-    }
-    if ((c === $.SINGLE_QUOTE || c === $.DOUBLE_QUOTE) && !isEscaped(sel, i)) {
-      quote = c;
-      i++;
-      continue;
-    }
-    if (isSelectorWhitespace(c)) {
-      out += sel.substring(segStart, i) + ' ';
-      i++;
-      while (i < end && isSelectorWhitespace(sel.charCodeAt(i))) i++;
-      segStart = i;
-      continue;
-    }
+  for (let i = scan(sel, start, end, SELECTOR_SPACE, ANY_DEPTH, 0); i < end; ) {
+    out += sel.substring(segStart, i) + ' ';
     i++;
+    while (i < end && isSpace(sel.charCodeAt(i))) i++;
+    segStart = i;
+    i = scan(sel, i, end, SELECTOR_SPACE, ANY_DEPTH, 0);
   }
-  out += sel.substring(segStart, end);
-  return out;
+  return out + sel.substring(segStart, end);
 }
 
 /**
@@ -350,26 +330,16 @@ function parseAnPlusB(raw: string): { a: number; b: number } | null {
  * substrings inside `[...]` don't trigger a false split.
  */
 function splitNthInner(inner: string): { formula: string; ofRaw: string } | null {
-  let depth = 0;
-  for (let i = 0; i < inner.length - 3; i++) {
-    const c = inner.charCodeAt(i);
-    if (c === $.OPEN_BRACKET) {
-      depth++;
-      continue;
-    }
-    if (c === $.CLOSE_BRACKET) {
-      depth--;
-      continue;
-    }
-    if (depth !== 0) continue;
+  const end = inner.length - 3;
+  for (let i = scan(inner, 0, end, SPACE, BRACKETS, 0); i < end; ) {
     if (
-      c === 0x20 /* space */ &&
-      (inner.charCodeAt(i + 1) === 0x6f /* o */ || inner.charCodeAt(i + 1) === 0x4f) /* O */ &&
-      (inner.charCodeAt(i + 2) === 0x66 /* f */ || inner.charCodeAt(i + 2) === 0x46) /* F */ &&
-      inner.charCodeAt(i + 3) === 0x20 /* space */
+      (inner.charCodeAt(i + 1) | 0x20) === 0x6f /* o */ &&
+      (inner.charCodeAt(i + 2) | 0x20) === 0x66 /* f */ &&
+      inner.charCodeAt(i + 3) === $.SPACE
     ) {
       return { formula: inner.substring(0, i), ofRaw: inner.substring(i + 4) };
     }
+    i = scan(inner, i + 1, end, SPACE, BRACKETS, 0);
   }
   return null;
 }
@@ -478,17 +448,10 @@ function detectNthChild(selectors: string[]): NativeRuleClass | null {
     : { kind: 'nthChild', spec, pseudo: tailPseudo };
 }
 
+/** Index of the `)` closing the `(` at `openIdx`; -1 for none. */
 function findClosingParen(s: string, openIdx: number): number {
-  let depth = 0;
-  for (let i = openIdx; i < s.length; i++) {
-    const c = s.charCodeAt(i);
-    if (c === $.OPEN_PAREN) depth++;
-    else if (c === $.CLOSE_PAREN) {
-      depth--;
-      if (depth === 0) return i;
-    }
-  }
-  return -1;
+  const close = scan(s, openIdx + 1, s.length, PAREN_CLOSE, 0, 0);
+  return close < s.length ? close : -1;
 }
 
 /**
@@ -740,25 +703,8 @@ function parseAttrChain(sel: string): AttrSelector | null {
  * trip on the embedded `]`.
  */
 function findClosingBracket(sel: string, start: number): number {
-  let i = start + 1;
-  let inSingle = false;
-  let inDouble = false;
-  while (i < sel.length) {
-    const c = sel.charCodeAt(i);
-    if (inSingle) {
-      if (c === $.SINGLE_QUOTE) inSingle = false;
-    } else if (inDouble) {
-      if (c === $.DOUBLE_QUOTE) inDouble = false;
-    } else if (c === $.SINGLE_QUOTE) {
-      inSingle = true;
-    } else if (c === $.DOUBLE_QUOTE) {
-      inDouble = true;
-    } else if (c === $.CLOSE_BRACKET) {
-      return i;
-    }
-    i++;
-  }
-  return -1;
+  const close = scan(sel, start + 1, sel.length, BRACKET_CLOSE, BRACKETS, 0);
+  return close < sel.length ? close : -1;
 }
 
 function parseAttrInner(inner: string): ConditionalAttr | null {

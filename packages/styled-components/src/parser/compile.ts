@@ -1,7 +1,7 @@
 import type { CompiledKeyframes } from '../models/Keyframes';
 import type StyleSheet from '../sheet';
 import type { Compiler } from '../types';
-import { AT, CLOSE_BRACE, COLON, isIdentChar, isWS, SEMICOLON } from '../utils/charCodes';
+import { AT, COLON, DIGIT_0, DIGIT_9, HYPHEN, isWS } from '../utils/charCodes';
 import { fifoSet } from '../utils/fifoMap';
 import { normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
@@ -29,17 +29,16 @@ import { emitWeb, EmitOptions, nextAmpersand } from './emit-web';
 import {
   isCustomProperty,
   parse,
-  scanQPB,
   SlotEntry,
   splitTopLevelCommas,
   stripCommaSpaces,
   TOP_LEVEL,
   trimRange,
 } from './parser';
+import { BRACKETS, COMMENTS, isIdentCode, removeComments, scan, stops } from './reader';
 import {
   checkSlotValue,
   chunkChangesReading,
-  removeComments,
   splitDeclarations,
   VALUE_FAILED,
   VALUE_SEMICOLON,
@@ -246,7 +245,7 @@ function realizeList(list: ReadonlyArray<string | TemplateValue>, fill: Fill): s
     }
     const realized = realize(entry, fill, '');
     if (realized === null || realizedSemicolon) return null;
-    const text = removeComments(realized);
+    const text = removeComments(realized, false);
     if (text === realized && text.indexOf(',') === -1) {
       out.push(text);
     } else {
@@ -488,7 +487,7 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
       remainder = before + raw;
       continue;
     }
-    const text = normalize(raw, false);
+    const text = removeComments(raw, true);
     const cut = lastStatementEnd(text);
     const rest = trimRange(text, cut + 1, text.length);
     if (textUnresolved && rest !== '') return droppedHead(statements);
@@ -521,15 +520,15 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
   // comment spans the two, since every value ends in the state it started in.
   return {
     dropped: false,
-    remainder: remainder === null ? null : removeComments(remainder),
+    remainder: remainder === null ? null : removeComments(remainder, false),
     statements,
-    text: removeComments(prefix + trimRange(rest, 0, rest.length)),
+    text: removeComments(prefix + trimRange(rest, 0, rest.length), false),
   };
 }
 
 /** {@link removeComments}, trimming the text when a comment was removed. */
 function withoutComments(text: string): string {
-  const clean = removeComments(text);
+  const clean = removeComments(text, false);
   return clean === text ? text : trimRange(clean, 0, clean.length);
 }
 
@@ -560,7 +559,7 @@ function fillHeadRule(node: RuleNode, head: SlotHead, fill: Fill): StaticNode[] 
   const { remainder, text } = resolved;
   if (remainder !== null && remainder.charCodeAt(0) === AT) {
     let end = 1;
-    while (end < remainder.length && isIdentChar(remainder.charCodeAt(end))) end++;
+    while (end < remainder.length && isIdentCode(remainder.charCodeAt(end))) end++;
     const name = remainder.substring(1, end);
     if (!HEAD_AT_RULES.has(name.toLowerCase())) {
       if (__DEV__) {
@@ -604,13 +603,15 @@ function fillHeadRule(node: RuleNode, head: SlotHead, fill: Fill): StaticNode[] 
   return out;
 }
 
-/** Index of the last `;` or `}` outside strings, parentheses, and brackets; -1 for none. */
+const STATEMENT_END = stops(';}');
+
+/** Index of the last `;` or `}` outside comments, strings, parentheses, and brackets; -1 for none. */
 function lastStatementEnd(text: string): number {
   let last = -1;
   let i = 0;
   const len = text.length;
   while (i < len) {
-    const end = scanQPB(text, i, len, SEMICOLON, CLOSE_BRACE, -1, -1);
+    const end = scan(text, i, len, STATEMENT_END, COMMENTS | BRACKETS, 0);
     if (end >= len) break;
     last = end;
     i = end + 1;
@@ -626,7 +627,7 @@ function lastStatementEnd(text: string): number {
 function looksLikeDeclaration(text: string): boolean {
   const len = text.length;
   let i = 0;
-  while (i < len && isIdentChar(text.charCodeAt(i))) i++;
+  while (i < len && isIdentCode(text.charCodeAt(i))) i++;
   if (i === 0) return false;
   while (i < len && isWS(text.charCodeAt(i))) i++;
   if (text.charCodeAt(i) !== COLON) return false;
@@ -634,14 +635,16 @@ function looksLikeDeclaration(text: string): boolean {
 }
 
 /**
- * An identifier: ASCII ident characters or code points at or above U+0080,
- * not a lone hyphen, and not starting with a digit or a hyphen and digit.
- * Anchored with no nested quantifier, so linear-time.
+ * An identifier: ident code points only, not a lone hyphen, and not starting
+ * with a digit or a hyphen and digit.
  */
-const IDENTIFIER = /^(?!-?\d|-$)[\w\u0080-￿-]+$/;
-
 function isIdentifier(text: string): boolean {
-  return IDENTIFIER.test(text);
+  const len = text.length;
+  if (len === 0 || (len === 1 && text.charCodeAt(0) === HYPHEN)) return false;
+  const lead = text.charCodeAt(0) === HYPHEN ? text.charCodeAt(1) : text.charCodeAt(0);
+  if (lead >= DIGIT_0 && lead <= DIGIT_9) return false;
+  for (let i = 0; i < len; i++) if (!isIdentCode(text.charCodeAt(i))) return false;
+  return true;
 }
 
 /**

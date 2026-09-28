@@ -1,152 +1,23 @@
+import { isEscaped, removeComments } from '../parser/reader';
 import {
   ASTERISK,
-  BACKSLASH,
   CLOSE_BRACE,
-  CLOSE_PAREN,
-  COLON,
   DOUBLE_QUOTE,
-  isWS,
   LF,
   OPEN_BRACE,
-  OPEN_PAREN,
   SEMICOLON,
   SINGLE_QUOTE,
   SLASH,
 } from './charCodes';
 
 /**
- * Check if a quote at position i is escaped. A quote is escaped when preceded
- * by an ODD number of backslashes (\", \\\", etc.). An even number means the
- * backslashes themselves are escaped and the quote is real (\\", \\\\", etc.).
- */
-export function isEscaped(css: string, i: number): boolean {
-  let backslashes = 0;
-  while (--i >= 0 && css.charCodeAt(i) === BACKSLASH) backslashes++;
-  return (backslashes & 1) === 1;
-}
-
-/**
- * Strip JS-style line comments + CSS block comments and validate brace balance in one pass.
- * `sanitize: false` strips comments only, leaving unbalanced braces for a later pass.
+ * Remove comments (template reading: `/* *\/` and `//` line comments) and
+ * validate brace balance. `sanitize: false` removes comments only, leaving
+ * unbalanced braces for a later pass.
  */
 export function normalize(css: string, sanitize = true): string {
-  const hasLineComments = css.indexOf('//') !== -1;
-  const hasBlockComments = css.indexOf('/*') !== -1;
-  const hasCloseBrace = css.indexOf('}') !== -1;
-
-  if (!hasLineComments && !hasBlockComments && (!hasCloseBrace || !sanitize)) return css;
-
-  if (!hasLineComments && !hasBlockComments) return sanitizeBraces(css);
-
-  const len = css.length;
-  let out = '';
-  let start = 0;
-  let i = 0;
-  let inString = 0;
-  let parenDepth = 0;
-  let braceDepth = 0;
-  let modified = false;
-
-  while (i < len) {
-    const code = css.charCodeAt(i);
-
-    if ((code === DOUBLE_QUOTE || code === SINGLE_QUOTE) && !isEscaped(css, i)) {
-      if (inString === 0) {
-        inString = code;
-      } else if (inString === code) {
-        inString = 0;
-      }
-      i++;
-      continue;
-    }
-
-    if (inString !== 0) {
-      i++;
-      continue;
-    }
-
-    if (code === OPEN_PAREN) {
-      parenDepth++;
-      i++;
-      continue;
-    }
-
-    if (code === CLOSE_PAREN) {
-      if (parenDepth > 0) parenDepth--;
-      i++;
-      continue;
-    }
-
-    // Inside parentheses (any function call), skip comment/brace detection
-    // so that url(https://...), image-set(), url(.../*.png), etc. are preserved
-    if (parenDepth > 0) {
-      i++;
-      continue;
-    }
-
-    if (code === SLASH && i + 1 < len && css.charCodeAt(i + 1) === ASTERISK) {
-      // Emit everything up to the comment, then skip the comment entirely.
-      out += css.substring(start, i);
-      i += 2;
-      while (i + 1 < len && !(css.charCodeAt(i) === ASTERISK && css.charCodeAt(i + 1) === SLASH)) {
-        i++;
-      }
-      i += 2;
-      // When the comment is bordered by whitespace on both sides, collapse the
-      // pair to a single space so selector templates with annotative comments
-      // (`a /* foo */ b`) hash consistently.
-      const prevCh = out.length > 0 ? out.charCodeAt(out.length - 1) : 0;
-      if (isWS(prevCh) && i < len && isWS(css.charCodeAt(i))) {
-        while (i < len && isWS(css.charCodeAt(i))) i++;
-      }
-      start = i;
-      modified = true;
-      continue;
-    }
-
-    if (code === ASTERISK && i + 1 < len && css.charCodeAt(i + 1) === SLASH) {
-      out += css.substring(start, i);
-      i += 2;
-      start = i;
-      modified = true;
-      continue;
-    }
-
-    if (code === SLASH && i + 1 < len && css.charCodeAt(i + 1) === SLASH) {
-      // URL scheme guard: `https://`, `mailto://`, etc. are NOT line comments.
-      // If the char immediately before `//` is `:`, treat the whole sequence
-      // as part of a URL and skip the line-comment strip.
-      if (i > 0 && css.charCodeAt(i - 1) === COLON) {
-        i += 2;
-        continue;
-      }
-      out += css.substring(start, i);
-      while (i < len && css.charCodeAt(i) !== LF) {
-        i++;
-      }
-      start = i;
-      modified = true;
-      continue;
-    }
-
-    if (code === OPEN_BRACE) {
-      braceDepth++;
-    } else if (code === CLOSE_BRACE) {
-      braceDepth--;
-    }
-
-    i++;
-  }
-
-  if (!modified) {
-    if (braceDepth === 0 || !sanitize) return css;
-    return sanitizeBraces(css);
-  }
-
-  if (start < len) out += css.substring(start);
-
-  if (braceDepth === 0 || !sanitize) return out;
-  return sanitizeBraces(out);
+  const text = removeComments(css, true);
+  return sanitize && text.indexOf('}') !== -1 ? sanitizeBraces(text) : text;
 }
 
 function sanitizeBraces(css: string): string {

@@ -902,7 +902,7 @@ describe('parseCSSDeclarations', () => {
       ).toMatchInlineSnapshot(`
         [
           [
-            "visible  color",
+            "visible */ color",
             "red",
           ],
         ]

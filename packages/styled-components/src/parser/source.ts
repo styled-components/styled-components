@@ -1,11 +1,14 @@
 import type { RuleSet } from '../types';
-import { CLOSE_BRACE, OPEN_BRACE, SEMICOLON } from '../utils/charCodes';
 import { fifoSet } from '../utils/fifoMap';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import { normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
 import type { Root } from './ast';
-import { parse, scanQP, SlotEntry, SlotTable } from './parser';
+import { parse, SlotEntry, SlotTable } from './parser';
+import { removeComments, scan, stops } from './reader';
+
+/** A statement ends at `;`, `{`, or `}`. */
+const STATEMENT_END = stops(';{}');
 
 /**
  * Pre-classified slot shape so the fast path skips typeof checks. Order
@@ -450,8 +453,8 @@ function isBlockLikeFragment(rules: RulesWithSlot): boolean {
   // NUL stands in for each of the fragment's own slots: it is not a quote,
   // parenthesis, or comment character, so the scan reads the text around a
   // slot as the parser will.
-  const css = normalize(slot[0].join('\0'), false);
-  const blockLike = scanQP(css, 0, css.length, SEMICOLON, OPEN_BRACE, CLOSE_BRACE, -1) < css.length;
+  const css = removeComments(slot[0].join('\0'), true);
+  const blockLike = scan(css, 0, css.length, STATEMENT_END, 0, 0) < css.length;
   // Non-enumerable so the cached flag stays invisible to `toEqual` /
   // `Object.keys` / JSON walks, matching the documented pattern used by
   // {@link DYN} and the parser's NATIVE_RULE_CLASS / NATIVE_AT_CLASS

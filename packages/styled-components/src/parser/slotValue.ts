@@ -4,13 +4,7 @@ import {
   CLOSE_BRACE,
   CLOSE_BRACKET,
   CLOSE_PAREN,
-  COLON,
-  CR,
   DOUBLE_QUOTE,
-  FORM_FEED,
-  isIdentChar,
-  isWS,
-  LF,
   LOWER_L,
   LOWER_R,
   LOWER_U,
@@ -22,10 +16,21 @@ import {
   SLASH,
 } from '../utils/charCodes';
 import { fifoSet } from '../utils/fifoMap';
-import { isEscaped } from '../utils/normalize';
 import type { StaticDeclNode } from './ast';
 import { NodeKind } from './ast';
 import { isCustomProperty, SlotEntry, stripCommaSpaces, trimRange } from './parser';
+import {
+  BRACKETS,
+  COMMENTS,
+  identifierStart,
+  isEscaped,
+  isIdentCode,
+  isNewline,
+  isSpace,
+  isUrlIdentifier,
+  scan,
+  stops,
+} from './reader';
 
 /** {@link checkSlotValue} result: the value passed and holds no top-level `;`. */
 const VALUE_OK = 0;
@@ -33,21 +38,6 @@ const VALUE_OK = 0;
 export const VALUE_FAILED = 1;
 /** {@link checkSlotValue} result bit: the value holds a `;` at the top level of its statement. */
 export const VALUE_SEMICOLON = 2;
-
-/** Newline as CSS preprocessing reads it: LF, CR, or form feed. */
-function isNewline(c: number): boolean {
-  return c === LF || c === CR || c === FORM_FEED;
-}
-
-/** CSS whitespace, form feed included. */
-function isSpace(c: number): boolean {
-  return isWS(c) || c === FORM_FEED;
-}
-
-/** An ident code point as CSS reads it: ASCII ident characters or any non-ASCII code point. */
-function isIdentCode(c: number): boolean {
-  return isIdentChar(c) || c >= 0x80;
-}
 
 function isNonPrintable(c: number): boolean {
   return (c >= 0 && c <= 8) || c === 11 || (c >= 14 && c <= 31) || c === 127;
@@ -162,21 +152,18 @@ function trailingIdent(before: string): string | null {
   return before.substring(k);
 }
 
-function parenKind(
-  value: string,
-  open: number,
-  identStart: number,
-  identEscaped: boolean,
-  before: string
-): Paren {
-  if (identEscaped) return Paren.Strict;
-  if (identStart > 0)
-    return isUrlName(value.substring(identStart, open)) ? Paren.Url : Paren.Function;
-  if (identStart < 0 && open > 0) return Paren.Function;
-  const lead = value.substring(0, open);
-  const prior = trailingIdent(before);
-  if (prior === null) return Paren.Strict;
-  return isUrlName(prior + lead) ? Paren.Url : Paren.Function;
+/** How the `(` at `open` in `value` reads, with `before` written in front of the value. */
+function parenKind(value: string, open: number, before: string): Paren {
+  let text = value;
+  let at = open;
+  let start = identifierStart(value, open, 0);
+  if (start === 0 && before.length > 0) {
+    text = before + value.substring(0, open);
+    at = text.length;
+    start = identifierStart(text, at, 0);
+  }
+  for (let k = start; k < at; k++) if (text.charCodeAt(k) === BACKSLASH) return Paren.Strict;
+  return isUrlIdentifier(text, start, at) ? Paren.Url : Paren.Function;
 }
 
 /**
@@ -241,8 +228,6 @@ export function checkSlotValue(raw: string, entry: SlotEntry, before: string): n
   let bracket = 0;
   let comment = false;
   let flags = VALUE_OK;
-  let identStart = -1;
-  let identEscaped = false;
   let i = 0;
 
   while (i < len) {
@@ -252,6 +237,7 @@ export function checkSlotValue(raw: string, entry: SlotEntry, before: string): n
     else if (quote !== 0) i = skipOrdinary(value, i, len, STOP_STRING);
     else if (url === 1) i = skipOrdinary(value, i, len, STOP_URL);
     else if (url === 2) i = skipOrdinary(value, i, len, STOP_REMNANT);
+    else i = skipOrdinary(value, i, len, SPECIAL);
     if (i >= len) break;
     const c = value.charCodeAt(i);
     if (c === OPEN_BRACE || c === CLOSE_BRACE) return VALUE_FAILED;
@@ -273,14 +259,9 @@ export function checkSlotValue(raw: string, entry: SlotEntry, before: string): n
           i += 2;
         } else {
           if (url === 1) url = 2;
-          identStart = -1;
           i++;
         }
         continue;
-      }
-      if (quote === 0 && url === 0) {
-        if (identStart < 0) identStart = i;
-        identEscaped = true;
       }
       i += 2;
       continue;
@@ -295,7 +276,6 @@ export function checkSlotValue(raw: string, entry: SlotEntry, before: string): n
       if (c === CLOSE_PAREN) {
         url = 0;
         if (--depth < 0) return VALUE_FAILED;
-        identStart = -1;
       } else if (url === 1) {
         if (isSpace(c)) {
           let j = i + 1;
@@ -313,7 +293,6 @@ export function checkSlotValue(raw: string, entry: SlotEntry, before: string): n
     }
     if (c === SLASH && value.charCodeAt(i + 1) === ASTERISK) {
       comment = true;
-      identStart = -1;
       i += 2;
       continue;
     }
@@ -321,7 +300,7 @@ export function checkSlotValue(raw: string, entry: SlotEntry, before: string): n
       quote = c;
     } else if (c === OPEN_PAREN) {
       if (urlPrecededByNonAscii(value, i, before)) return VALUE_FAILED;
-      const kind = parenKind(value, i, identStart, identEscaped, before);
+      const kind = parenKind(value, i, before);
       if (kind === Paren.Strict) {
         // Both readings agree only when the text up to the first `)` holds
         // nothing a url and a function read differently.
@@ -343,8 +322,6 @@ export function checkSlotValue(raw: string, entry: SlotEntry, before: string): n
         }
         if (j >= len) return VALUE_FAILED;
         i = j + 1;
-        identStart = -1;
-        identEscaped = false;
         continue;
       }
       depth++;
@@ -355,8 +332,6 @@ export function checkSlotValue(raw: string, entry: SlotEntry, before: string): n
         if (next !== DOUBLE_QUOTE && next !== SINGLE_QUOTE) url = 1;
         if (url === 1) {
           i = j;
-          identStart = -1;
-          identEscaped = false;
           continue;
         }
       }
@@ -368,17 +343,7 @@ export function checkSlotValue(raw: string, entry: SlotEntry, before: string): n
       if (--bracket < 0) return VALUE_FAILED;
     } else if (c === SEMICOLON) {
       if (entry.parenDepth + depth === 0 && bracket === 0) flags |= VALUE_SEMICOLON;
-    } else if (isIdentCode(c)) {
-      if (identStart < 0) {
-        identStart = i;
-        identEscaped = false;
-      }
-      i++;
-      while (i < len && isIdentCode(value.charCodeAt(i))) i++;
-      continue;
     }
-    identStart = -1;
-    identEscaped = false;
     i++;
   }
 
@@ -412,125 +377,8 @@ export function chunkChangesReading(before: string, chunk: string, plain: boolea
   return isUrlName(prior + lead) !== isUrlName(lead);
 }
 
-/** Whether the `(` at `open` in `text` starts `url(` whose contents are an unquoted url. */
-function opensUnquotedUrl(text: string, open: number): boolean {
-  if (
-    open < 3 ||
-    !isUrlName(text.substring(open - 3, open)) ||
-    (open > 3 && isIdentCode(text.charCodeAt(open - 4)))
-  ) {
-    return false;
-  }
-  let j = open + 1;
-  while (j < text.length && isSpace(text.charCodeAt(j))) j++;
-  const next = text.charCodeAt(j);
-  return next !== DOUBLE_QUOTE && next !== SINGLE_QUOTE;
-}
-
-/**
- * Remove the comments CSS reads in realized selector, prelude, or stop text:
- * `/* *\/` at any parenthesis depth, outside strings, escapes, and unquoted
- * `url(`. A comment between two whitespace runs leaves the first run, as
- * template text removal does. A `/` left directly before a `*` gets a space
- * after it, so the removal never forms a new comment.
- */
-export function removeComments(text: string): string {
-  if (text.indexOf('/*') === -1) return text;
-  const len = text.length;
-  let out = '';
-  let start = 0;
-  let quote = 0;
-  let url = false;
-  let i = 0;
-  while (i < len) {
-    const c = text.charCodeAt(i);
-    if (c === BACKSLASH) {
-      i += 2;
-      continue;
-    }
-    if (quote !== 0) {
-      if (c === quote) quote = 0;
-    } else if (url) {
-      if (c === CLOSE_PAREN) url = false;
-    } else if (c === SLASH && text.charCodeAt(i + 1) === ASTERISK) {
-      out += text.substring(start, i);
-      const close = text.indexOf('*/', i + 2);
-      i = close === -1 ? len : close + 2;
-      if (out.length > 0 && isSpace(out.charCodeAt(out.length - 1))) {
-        while (i < len && isSpace(text.charCodeAt(i))) i++;
-      } else if (text.charCodeAt(i) === ASTERISK && endsWithSlash(out)) {
-        out += ' ';
-      }
-      start = i;
-      continue;
-    } else if (c === DOUBLE_QUOTE || c === SINGLE_QUOTE) {
-      quote = c;
-    } else if (c === OPEN_PAREN) {
-      url = opensUnquotedUrl(text, i);
-    }
-    i++;
-  }
-  return out + text.substring(start);
-}
-
-/** Top-level declaration stops, read with CSS Syntax 3 tokenization from the top level. */
-function scanTopLevel(text: string, start: number, end: number, stop: number): number {
-  let quote = 0;
-  let url = 0;
-  let depth = 0;
-  let bracket = 0;
-  let i = start;
-  while (i < end) {
-    const c = text.charCodeAt(i);
-    if (c === BACKSLASH) {
-      i += 2;
-      continue;
-    }
-    if (quote !== 0) {
-      if (c === quote) quote = 0;
-      i++;
-      continue;
-    }
-    if (url !== 0) {
-      if (c === CLOSE_PAREN) {
-        url = 0;
-        depth--;
-      }
-      i++;
-      continue;
-    }
-    if (c === SLASH && text.charCodeAt(i + 1) === ASTERISK) {
-      const close = text.indexOf('*/', i + 2);
-      i = close === -1 ? end : close + 2;
-      continue;
-    }
-    if (c === DOUBLE_QUOTE || c === SINGLE_QUOTE) {
-      quote = c;
-    } else if (c === OPEN_PAREN) {
-      depth++;
-      if (
-        i >= 3 &&
-        isUrlName(text.substring(i - 3, i)) &&
-        (i === 3 || !isIdentCode(text.charCodeAt(i - 4)))
-      ) {
-        let j = i + 1;
-        while (j < end && isSpace(text.charCodeAt(j))) j++;
-        const next = text.charCodeAt(j);
-        if (next !== DOUBLE_QUOTE && next !== SINGLE_QUOTE) url = 1;
-      }
-    } else if (c === CLOSE_PAREN) {
-      if (depth > 0) depth--;
-    } else if (c === OPEN_BRACKET) {
-      bracket++;
-    } else if (c === CLOSE_BRACKET) {
-      if (bracket > 0) bracket--;
-    } else if (c === stop && depth === 0 && bracket === 0) {
-      return i;
-    }
-    i++;
-  }
-  return end;
-}
+const DECLARATION_END = stops(';');
+const DECLARATION_COLON = stops(':');
 
 const splitCache = new Map<string, StaticDeclNode[]>();
 const SPLIT_CACHE_LIMIT = 200;
@@ -549,8 +397,8 @@ export function splitDeclarations(text: string): StaticDeclNode[] {
   const len = text.length;
   let start = 0;
   while (start <= len) {
-    const end = scanTopLevel(text, start, len, SEMICOLON);
-    const colon = scanTopLevel(text, start, end, COLON);
+    const end = scan(text, start, len, DECLARATION_END, COMMENTS | BRACKETS, 0);
+    const colon = scan(text, start, end, DECLARATION_COLON, COMMENTS | BRACKETS, 0);
     if (colon < end) {
       const prop = trimRange(text, start, colon);
       const value = stripCommaSpaces(trimRange(text, colon + 1, end));

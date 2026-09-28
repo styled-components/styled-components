@@ -169,6 +169,14 @@ describe('web emitter', () => {
     });
   });
 
+  it('rewrites a self-reference only where an ident code point does not continue it', () => {
+    const out = emitWeb(parse('.aé + & { color: red; }'), '.a', {
+      componentId: 'c',
+      selfRefSelector: '.a',
+    });
+    expect(out).toEqual(['.aé+.c{color:red;}']);
+  });
+
   it('handles nested & + & self-reference (combinator spaces stripped)', () => {
     expect(emit(`& + & { margin-left: 8px; }`)).toMatchInlineSnapshot(`
       [

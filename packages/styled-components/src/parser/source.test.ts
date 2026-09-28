@@ -691,6 +691,16 @@ describe('parseSource', () => {
       expect(src.staticValues).toEqual(['', 'red']);
     });
 
+    it('removes a comment inside parentheses with the slot written in it, never evaluating the slot', () => {
+      const fn = jest.fn(() => 'x');
+      const src = tagged`&:is(/* ${fn} */ body) { color: red; }`;
+      expect(src.ast).toEqual([
+        { kind: NodeKind.Rule, selectors: ['&:is( body)'], children: [redDecl] },
+      ]);
+      expect(src.kinds).toEqual([InterpolationKind.Static]);
+      expect(src.staticValues).toEqual(['']);
+    });
+
     it('makes a slot in a dropped statement Static-empty', () => {
       const fn = jest.fn(() => 'x');
       const src = tagged`${fn}junk; color: red;`;

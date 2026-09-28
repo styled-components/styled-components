@@ -936,18 +936,14 @@ background-color: green;`)
 
     // --- Malformed / tricky combinations ---
 
-    it('strips orphaned */ without opening /* followed by //', () => {
+    it('keeps an orphaned */ followed by //, which CSS does not read as a comment', () => {
       expect(
         runCssCompile(`
         color: red;
         */ // whatever
         font-size: 20px;
       `)
-      ).toMatchInlineSnapshot(`
-        [
-          ".a{color:red;font-size:20px;}",
-        ]
-      `);
+      ).toEqual(['.a{color:red;*/ \n        font-size:20px;}']);
     });
 
     it('handles block comment with // immediately before closing */', () => {
@@ -1247,11 +1243,9 @@ background-color: green;`)
       `);
     });
 
-    // Orphaned */;only stripped when the full tokenizer runs (// present)
-    it('passes orphaned */ through when no // present (fast path)', () => {
-      // Orphan `*/` (without matching `/*`) is a pathological input. The v7
-      // parser preserves whitespace as-is (`*/ background`). This test locks v7
-      // behavior for the fast path when no `//` comment triggers the full tokenizer.
+    // An orphaned `*/` (without a matching `/*`) is not a comment as CSS reads
+    // it, so it stays, with or without a `//` comment elsewhere.
+    it('keeps an orphaned */ when no // is present', () => {
       expect(
         runCssCompile(`
         color: red;
@@ -1265,7 +1259,7 @@ background-color: green;`)
       `);
     });
 
-    it('strips orphaned */ when // is also present (full tokenizer)', () => {
+    it('keeps an orphaned */ when // is also present', () => {
       expect(
         runCssCompile(`
         color: red;
@@ -1274,12 +1268,12 @@ background-color: green;`)
       `)
       ).toMatchInlineSnapshot(`
         [
-          ".a{color:red;background:blue;font-size:16px;}",
+          ".a{color:red;*/ background:blue;font-size:16px;}",
         ]
       `);
     });
 
-    it('strips multiple orphaned */ tokens when // triggers full tokenizer', () => {
+    it('keeps several orphaned */ when // is also present', () => {
       expect(
         runCssCompile(`
         color: red; // start
@@ -1288,7 +1282,7 @@ background-color: green;`)
       `)
       ).toMatchInlineSnapshot(`
         [
-          ".a{color:red;font-size:20px;background:blue;}",
+          ".a{color:red;*/ font-size:20px;*/ background:blue;}",
         ]
       `);
     });
