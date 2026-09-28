@@ -250,7 +250,8 @@ function realizeList(list: ReadonlyArray<string | TemplateValue>, fill: Fill): s
       return null;
     }
     if (text === realized && text.indexOf(',') === -1) {
-      out.push(text);
+      const part = trimRange(text, 0, text.length);
+      if (part !== '') out.push(part);
     } else {
       const parts = splitList(text);
       for (let j = 0; j < parts.length; j++) out.push(parts[j]);
