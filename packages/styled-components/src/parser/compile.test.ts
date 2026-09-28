@@ -1120,6 +1120,44 @@ describe('compileWeb', () => {
       expect(out(src)).toEqual(legacy('margin: 0;'));
     });
 
+    // CSS Syntax 3 §4.3.6 Consume a url token: "U+0022 QUOTATION MARK (")
+    // U+0027 APOSTROPHE (') U+0028 LEFT PARENTHESIS (() non-printable code
+    // point: This is a parse error. Consume the remnants of a bad url". A `(`
+    // inside an unquoted url( ends it at the first `)`, while the same text
+    // after any other function name nests.
+    describe('values whose only structure is parentheses', () => {
+      it.each([
+        ['a color function', 'rgba(0, 0, 0, 0.5)'],
+        ['nested functions', 'calc(1px + (2px * var(--x, 3px)))'],
+        ['a function name holding a digit and hyphens', 'translate3d(1px, -2px, 0)'],
+        ['a function name holding non-ASCII code points', 'é(1)'],
+        ['a function name ending in url', 'myurl(a(b))'],
+      ])('keeps %s', (_, value) => {
+        const src = tagged`background: ${value};`;
+        expect(out(src)).toEqual([`.a{background:${value};}`]);
+      });
+
+      it.each([
+        ['url( with a nested parenthesis', 'url(a(b))'],
+        ['URL( in another case', 'URL(a(b))'],
+        ['a parenthesis it did not open', 'a) (b'],
+        ['an unclosed parenthesis', 'f(a(b)'],
+      ])('drops the declaration for %s', (_, value) => {
+        const src = tagged`background: ${value}; margin: 0;`;
+        expect(out(src)).toEqual(legacy('margin: 0;'));
+      });
+
+      it('drops the declaration when text before the value makes url( with a nested parenthesis', () => {
+        const src = tagged`background: u${'rl(a(b))'}; margin: 0;`;
+        expect(out(src)).toEqual(legacy('margin: 0;'));
+      });
+
+      it('keeps a value whose identifier text before it cannot make url(', () => {
+        const src = tagged`background: x${'(a(b))'};`;
+        expect(out(src)).toEqual(['.a{background:x(a(b));}']);
+      });
+    });
+
     // CSS Syntax 3 §4.3.4 Consume an ident-like token: "If string’s value is
     // an ASCII case-insensitive match for "url", and the next input code point
     // is U+0028 LEFT PARENTHESIS ((), consume it." The identifier is read

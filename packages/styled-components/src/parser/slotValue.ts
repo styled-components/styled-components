@@ -150,6 +150,35 @@ function parenKind(
 }
 
 /**
+ * Whether the special code points of `value`, from `i` on, are only balanced
+ * parentheses, none opening `url(`, so the value reads the same as plain
+ * text. An identifier before a `(` that reaches the value's start could join
+ * an identifier ending `before`, so that shape is left to the full reading.
+ */
+function onlyFunctionParens(value: string, i: number, before: string): boolean {
+  const len = value.length;
+  let depth = 0;
+  while (i < len) {
+    const c = value.charCodeAt(i);
+    if (c === OPEN_PAREN) {
+      let k = i;
+      while (k > 0 && isIdentCode(value.charCodeAt(k - 1))) k--;
+      if (k === 0 && before.length > 0 && isIdentCode(before.charCodeAt(before.length - 1))) {
+        return false;
+      }
+      if (i - k === 3 && isUrlName(value.substring(k, i))) return false;
+      depth++;
+    } else if (c === CLOSE_PAREN) {
+      if (--depth < 0) return false;
+    } else {
+      return false;
+    }
+    i = skipOrdinary(value, i + 1, len, SPECIAL);
+  }
+  return depth === 0;
+}
+
+/**
  * Read a slot value with CSS Syntax 3 tokenization from its entry state and
  * return a bit set of {@link VALUE_FAILED} and {@link VALUE_SEMICOLON}.
  * `before` is the realized text in front of the value in its field, read
@@ -164,8 +193,10 @@ export function checkSlotValue(raw: string, entry: SlotEntry, before: string): n
   const plain = entry.quote === 0 && !entry.url;
   const escaped = endsWithEscape(before);
   if (plain && !escaped) {
-    if (skipOrdinary(raw, 0, raw.length, SPECIAL) === raw.length) return VALUE_OK;
+    const special = skipOrdinary(raw, 0, raw.length, SPECIAL);
+    if (special === raw.length) return VALUE_OK;
     if (raw.charCodeAt(0) === ASTERISK && endsWithSlash(before)) return VALUE_FAILED;
+    if (onlyFunctionParens(raw, special, before)) return VALUE_OK;
   }
   // A backslash written before the slot escapes the value's first code point,
   // so the value is read with that backslash in front of it.
