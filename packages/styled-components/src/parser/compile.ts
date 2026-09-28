@@ -711,8 +711,7 @@ function fillKeyframes(
         }
         continue;
       }
-      const text = head.remainder === null ? head.rest : head.remainder + head.gap + head.rest;
-      stops = splitTopLevelCommas(text, true);
+      stops = splitTopLevelCommas(head.text, true);
       if (stops.length === 0) continue;
     } else {
       stops = realizeList(frame.stops, fill);
@@ -749,14 +748,15 @@ const EMPTY_ROOT: StaticRoot = [];
 interface ResolvedHead {
   /** A value failed its check, or could not be resolved: the rule or frame is dropped. */
   dropped: boolean;
-  /** Whitespace written after the head's last slot. */
-  gap: string;
   /** Selector or at-rule text the slots contribute; `null` when none. */
   remainder: string | null;
-  /** The realized text after the head. */
-  rest: string;
   /** Statements to splice before the rule or frame; kept when the rule is dropped. */
   statements: StaticNode[];
+  /**
+   * The rule's selector (or at-rule) text: the remainder and the whitespace
+   * written after the head's last slot, then the realized text after the head.
+   */
+  text: string;
 }
 
 /**
@@ -767,12 +767,11 @@ interface ResolvedHead {
 function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
   if (head.unresolved === true) return undefined;
   const statements: StaticNode[] = [];
-  const gap = head.gaps[head.gaps.length - 1];
   let remainder: string | null = null;
   for (let k = 0; k < head.slots.length; k++) {
     const index = head.slots[k];
     const frag = fill.fragments ? fill.fragments[index] : null;
-    if (frag === UNRESOLVED) return droppedHead(statements, gap);
+    if (frag === UNRESOLVED) return droppedHead(statements);
     const hasFrag = frag !== null && frag !== undefined;
     const raw = hasFrag ? fragmentText(frag) : fill.filled[index];
     if (remainder !== null) {
@@ -780,7 +779,7 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
       const before: string = remainder + head.gaps[k - 1];
       if (checkSlotValue(raw, TOP_LEVEL, before) !== 0) {
         if (__DEV__) warnDropped('rule headed by `' + raw + '`');
-        return droppedHead(statements, gap);
+        return droppedHead(statements);
       }
       remainder = before + raw;
       continue;
@@ -798,12 +797,12 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
     if (rest !== '') {
       if (checkSlotValue(rest, TOP_LEVEL, '') !== 0) {
         if (__DEV__) warnDropped('rule headed by `' + rest + '`');
-        return droppedHead(statements, gap);
+        return droppedHead(statements);
       }
       remainder = rest;
     }
   }
-  const prefix = remainder === null ? '' : remainder + gap;
+  const prefix = remainder === null ? '' : remainder + head.gaps[head.gaps.length - 1];
   const rest = realize(head.rest, fill, prefix);
   if (
     rest === null ||
@@ -811,13 +810,13 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
     (typeof head.rest === 'string' && prefix !== '' && chunkChangesReading(prefix, rest, true))
   ) {
     if (__DEV__) warnDropped('rule `' + fieldText(head.rest) + '`');
-    return droppedHead(statements, gap);
+    return droppedHead(statements);
   }
-  return { dropped: false, gap, remainder, rest: trimWhitespace(rest), statements };
+  return { dropped: false, remainder, statements, text: prefix + trimWhitespace(rest) };
 }
 
-function droppedHead(statements: StaticNode[], gap: string): ResolvedHead {
-  return { dropped: true, gap, remainder: null, rest: '', statements };
+function droppedHead(statements: StaticNode[]): ResolvedHead {
+  return { dropped: true, remainder: null, statements, text: '' };
 }
 
 /** At-keywords a head may turn its rule into: the conditional group rules. */
@@ -840,29 +839,8 @@ function fillHeadRule(node: RuleNode, head: SlotHead, fill: Fill): StaticNode[] 
   if (resolved === undefined) return undefined;
   const out = resolved.statements;
   if (resolved.dropped) return out.length === 0 ? undefined : out;
-  const remainder = resolved.remainder;
-  if (remainder === null) {
-    const selectors = splitTopLevelCommas(resolved.rest, true);
-    if (selectors.length === 0) {
-      if (fill.root) {
-        if (__DEV__) {
-          warnOnce(
-            'global-empty-head',
-            'A block at the top level of createGlobalStyle has no selector, since the value heading it is empty, so it was dropped. Give the block a selector such as `body`.'
-          );
-        }
-        return out.length === 0 ? undefined : out;
-      }
-      selectors.push('&');
-    }
-    out.push({
-      kind: NodeKind.Rule,
-      selectors,
-      children: fillNodes(node.children, nestedFill(fill)),
-    });
-    return out;
-  }
-  if (remainder.charCodeAt(0) === AT) {
+  const { remainder, text } = resolved;
+  if (remainder !== null && remainder.charCodeAt(0) === AT) {
     let end = 1;
     while (end < remainder.length && isIdentChar(remainder.charCodeAt(end))) end++;
     const name = remainder.substring(1, end);
@@ -876,18 +854,30 @@ function fillHeadRule(node: RuleNode, head: SlotHead, fill: Fill): StaticNode[] 
       }
       return out.length === 0 ? undefined : out;
     }
-    const prelude = trimWhitespace(remainder.substring(end) + resolved.gap + resolved.rest);
+    const prelude = trimWhitespace(text.substring(end));
     out.push({ kind: NodeKind.AtRule, name, prelude, children: fillNodes(node.children, fill) });
     return out;
   }
-  if (__DEV__ && looksLikeDeclaration(remainder)) {
+  if (__DEV__ && remainder !== null && looksLikeDeclaration(remainder)) {
     warnOnce(
       'head-declaration',
       `\`${remainder}\` is written before a nested rule and reads as part of its selector. End a mixin placed before a rule with \`;\`.`,
       remainder
     );
   }
-  const selectors = splitTopLevelCommas(remainder + resolved.gap + resolved.rest, true);
+  const selectors = splitTopLevelCommas(text, true);
+  if (remainder === null && selectors.length === 0) {
+    if (fill.root) {
+      if (__DEV__) {
+        warnOnce(
+          'global-empty-head',
+          'A block at the top level of createGlobalStyle has no selector, since the value heading it is empty, so it was dropped. Give the block a selector such as `body`.'
+        );
+      }
+      return out.length === 0 ? undefined : out;
+    }
+    selectors.push('&');
+  }
   out.push({
     kind: NodeKind.Rule,
     selectors,
