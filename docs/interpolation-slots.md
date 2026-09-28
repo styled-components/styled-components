@@ -6,7 +6,7 @@ How a `${...}` slot in a styled template (styled components, `css`, `createGloba
 
 - Least surprise and the widest composition: a value that is valid CSS in its position works as written, including comments, escapes, and `;`-separated declarations.
 - Dynamic CSS stays fast: the common value pays only for a cheap presence check; exact reading runs when a value holds a character that needs it. Every reading is linear in the length of the text.
-- The text a check reads is the text that is written: no step after a check (comment removal, `&` replacement, trimming) may change how the text tokenizes.
+- The text a check reads is the text that is written: no step after a check (comment removal, `&` replacement, trimming, whitespace removal around selector combinators) may change how the text tokenizes; whitespace that separates two tokens which would otherwise join stays.
 - A value is dropped only when it would otherwise change structure (open, close, or escape a rule, or add a selector not anchored on the component), and every drop has a dev warning naming the construct.
 
 ## Reading the template
@@ -59,8 +59,8 @@ A field is a declaration value, property name, selector, at-rule prelude, keyfra
 - The field must end balanced: no unclosed string, parenthesis, bracket, comment, or `url(`, and no trailing escape. A field nesting parentheses and brackets more than 15 levels deep fails. A value may close and reopen the string or `url(` it sits in when the field still ends balanced.
 - Trimming substituted text (selectors, heads, declaration values, split declarations) never removes a whitespace character directly preceded by an escaping backslash: `x\ ` keeps its escaped space, and `x\` followed by a newline keeps the newline (outside a string that pair is a delimiter, not an escape), so a backslash never reaches the character written after it.
 - A `{` or `}` from a value must read as part of a string or `url(` in the field (an SVG data URI or `content: "{"` works); anywhere else it fails. No string in the field may hold a raw newline.
-- The field must hold no `url(` (any case) directly preceded by a code point at or above U+0080: CSS Syntax 3 revisions disagree on whether such a code point continues an identifier, so the value has no single reading.
-- Inside a declaration value, a `;` outside strings, parentheses, and brackets splits the realized declaration into several declarations of the same rule; only declarations are kept, and a piece whose name starts with `@` is dropped.
+- The field must hold no `url(` in any spelling (any case, escapes decoded, such as `\75rl(`) directly preceded by a code point at or above U+0080: CSS Syntax 3 revisions disagree on whether such a code point continues an identifier, so the value has no single reading.
+- Inside a declaration value, a `;` outside strings, parentheses, and brackets splits the realized declaration into several declarations of the same rule; only declarations are kept, and a piece whose name starts with `@` is dropped with a dev warning.
 - In a selector, at-rule prelude, keyframe stop, or Head remainder, a `;` outside strings, parentheses, and brackets fails the check (a `;` ends a nested rule, CSS Syntax 3).
 - A templated at-rule name or `@keyframes` name must realize to an identifier: ASCII letters, digits, `_`, `-`, and any character at or above U+0080 or NUL (which CSS preprocessing turns into U+FFFD; the same classification applies wherever identifiers are read), not starting with a digit, `-` followed by a digit, or a lone `-`. Escapes are not accepted. At-rule names, `@keyframes` included, match in any ASCII case.
 - A value failing a check drops its enclosing declaration, rule, at-rule, or frame, with a dev warning naming the construct.
