@@ -10,9 +10,11 @@ How a `${...}` slot in a styled template (styled components, `css`, `createGloba
 
 ## Reading the template
 
-- Comments (`/* */` and `//` line comments) are removed first. A slot written inside a comment is removed with it and never evaluated.
+- Comments are removed first. `/* */` comments are read as CSS reads them: at any parenthesis depth, outside strings, escapes, and unquoted `url(` text. `//` line comments are removed outside parentheses, strings, and `url(`. A slot written inside a comment is removed with it and never evaluated. The same comment reader serves template text, mixin text, and realized selector text.
+- A stray `}` at the top level of a block drops the statement that holds it; reading continues with the next statement.
+- A space after a comma is kept as written, on web and native alike.
 - The template is then read once, with each slot as an opaque placeholder, by the same rules as plain CSS. A slot's role comes from its position in that reading.
-- In authored template text, a string stays open across a raw newline (a deviation from CSS Syntax 3's bad-string rule, noted beside its test). Slot values get no such tolerance (see Value checks).
+- In authored template text, a string stays open across a raw newline (a deviation from CSS Syntax 3's bad-string rule, noted beside its test). A field that holds a slot gets no such tolerance (see Value checks).
 
 ## Roles
 
@@ -26,14 +28,14 @@ How a `${...}` slot in a styled template (styled components, `css`, `createGloba
 - `@` ends a Run even with no whitespace before it (`${a}@media ...`): the Run is Standalone.
 - Head: a Run followed, after whitespace, by statement text of a statement that ends in `{`. A Run whose last slot is Glued to that text keeps the Glued slot in the selector and resolves the earlier slots as Head.
 - Head resolution, per slot front to back, from the realized value text (a css fragment realizes to its filled source text):
-  - through the last `;` or `}` outside strings, parentheses, and brackets: statements, spliced before the rule;
+  - through the last `;` or `}` outside comments, strings, parentheses, and brackets: statements, spliced before the rule;
   - the remainder, if not whitespace: prefixes the rule's selector;
   - a remainder starting with `@` turns the statement into a conditional group rule when it names `@media`, `@supports`, `@container`, `@layer`, `@scope`, or `@starting-style` (prelude: the rest of the remainder plus the rule's selector text); any other at-keyword drops the statement with a dev warning;
   - a remainder shaped like `name: value` still prefixes the selector, with a dev warning that a mixin before a rule must end in `;`;
   - once a slot contributes a selector or at-rule remainder, every later slot in the Run joins that remainder as text.
   - A Head whose value is a styled component reference is selector text. A Head whose value cannot be resolved (a client reference on the server, a non-styled component) drops the rule with a dev warning rather than widening its selector.
   - Empty following selector text (`${x} { ... }`): the block applies to the parent as `& { ... }` does; at the top level of `createGlobalStyle`, where there is no parent, the block is dropped with a dev warning.
-- Missing-`;` recovery: a css fragment interpolated directly (not returned by a function) whose source holds an unescaped `;`, `{`, or `}` outside strings and parentheses, met Inside a declaration (after the statement's top-level `:`, in a statement that does not end in `{`) at parenthesis depth 0 whose previous significant item is not `:`, `,`, `(`, or `/`, ends that declaration and becomes Standalone. A preceding slot counts as a value item (recovery applies). Never inside strings or parentheses.
+- Missing-`;` recovery: a css fragment interpolated directly (not returned by a function) whose source holds an unescaped `;`, `{`, or `}` outside strings and parentheses, met Inside a declaration (after the statement's top-level `:`, in a statement that does not end in `{`) at parenthesis depth 0 whose previous significant item is not `:`, `,`, `(`, or `/`, ends that declaration and becomes Standalone. A preceding slot counts as a value item (recovery applies). Never inside strings or parentheses. Only a css fragment recovers: a fragment is a block of declarations, while a string is a value, so a string's `;` splits the declaration it sits in (`border: 1px solid ${'red; color: blue'}` sets both).
 - Keyframes: in a frame list, Glued and Head apply as in a block (`${() => '0%'} { ... }` is a stop); a Run followed by `;`, `}`, `@`, or the end of the list is Standalone and splices frames. A stop Head whose remainder starts with `@` drops the frame with a dev warning; one that resolves to no stops drops the frame. Inside a frame every Run at a statement start is Standalone and splices declarations. A spliced value of the wrong kind (rules inside a frame, declarations in a frame list) is dropped with a dev warning.
 
 ## Value shapes
@@ -44,17 +46,18 @@ How a `${...}` slot in a styled template (styled components, `css`, `createGloba
 - css fragment: spliced (Standalone) or realized as text (every other role).
 - plain object: converted to declarations (Standalone) or to its own `toString` when it defines one. Keys are author CSS (property names and nested selectors); each non-object value is checked as a declaration value (see Value checks), so an object value has exactly the power of `color: ${value}`. This holds for static objects (`styled.div({...})`) and objects returned by functions.
 - keyframes: its generated name, injected when rendered.
+- In a `keyframes` template there is no render context: a function is written as its source text, with a dev warning naming the `keyframes` call.
 - styled component: its class selector. A non-styled component, or a client reference (in any role other than Standalone), cannot be resolved.
 - A value that cannot be resolved drops its enclosing declaration, rule, at-rule, or frame with a dev warning, as a failed value check does; it is never substituted as empty text (an empty selector part would widen the rule). It never removes the rest of a component's or global style's CSS.
 
 ## Value checks
 
-Every Inside, Glued, Property, and Head-remainder value is checked with CSS Syntax 3 tokenization, starting from the state at its position in the template (inside a string, inside `url(`, parenthesis depth), handling comments, escapes, strings that end at a raw newline, and unquoted `url(` rules:
+A field is a declaration value, property name, selector, at-rule prelude, keyframe stop, or Head remainder that holds an Inside, Glued, Property, or Head slot. Each field is read once, from its start, with every value substituted, by CSS Syntax 3 tokenization (comments, escapes, strings that end at a raw newline, unquoted `url(` rules). Text split across a slot boundary (`u${'rl(x)'}`, an escaped name before `(`) therefore reads as the browser reads it. A field whose values hold no character the reading depends on skips the reading.
 
-- It must end in the state it started in (no unclosed string, parenthesis, bracket, comment, or `url(`, no trailing escape).
+- The field must end balanced: no unclosed string, parenthesis, bracket, comment, or `url(`, and no trailing escape. A value may close and reopen the string or `url(` it sits in when the field still ends balanced.
 - Trimming substituted text (selectors, heads, declaration values, split declarations) never removes a whitespace character directly preceded by an escaping backslash: `x\ ` keeps its escaped space, and `x\` followed by a newline keeps the newline (outside a string that pair is a delimiter, not an escape), so a backslash never reaches the character written after it.
-- It must hold no `{` or `}` anywhere, quoted or not, and no raw newline inside a string.
-- It must hold no `url(` (any case) directly preceded by a code point at or above U+0080: CSS Syntax 3 revisions disagree on whether such a code point continues an identifier, so the value has no single reading.
+- A `{` or `}` from a value must read as part of a string or `url(` in the field (an SVG data URI or `content: "{"` works); anywhere else it fails. No string in the field may hold a raw newline.
+- The field must hold no `url(` (any case) directly preceded by a code point at or above U+0080: CSS Syntax 3 revisions disagree on whether such a code point continues an identifier, so the value has no single reading.
 - Inside a declaration value, a `;` outside strings, parentheses, and brackets splits the realized declaration into several declarations of the same rule; only declarations are kept, and a piece whose name starts with `@` is dropped.
 - In a selector, at-rule prelude, keyframe stop, or Head remainder, a `;` outside strings, parentheses, and brackets fails the check (a `;` ends a nested rule, CSS Syntax 3).
 - A templated at-rule name or `@keyframes` name must realize to an identifier: ASCII letters, digits, `_`, `-`, and any character at or above U+0080, not starting with a digit, `-` followed by a digit, or a lone `-`. Escapes are not accepted.
