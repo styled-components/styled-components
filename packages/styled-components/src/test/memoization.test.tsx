@@ -7,6 +7,7 @@
  */
 import { act, fireEvent, render } from '@testing-library/react';
 import React, { useState } from 'react';
+import css from '../constructors/css';
 import { LIMIT as TOO_MANY_CLASSES_LIMIT } from '../utils/createWarnTooManyClasses';
 import { getCSS, resetStyled } from './utils';
 
@@ -334,6 +335,28 @@ describe('memoization correctness', () => {
     const [s3a, s3b] = siblings();
     expect(s3a.className).toBe(redClass);
     expect(s3b.className).toBe(blueClass);
+
+    unmount();
+  });
+
+  it('tells apart two css fragments whose text and values read the same end to end', () => {
+    // `padding: ` + `1` + `px` and `padding: ` + `x1` + `p` share every
+    // character of template text followed by value text.
+    const wide = css`padding: ${'1'}px`;
+    const narrow = css`padding: ${'x1'}p`;
+    const Comp = styled.div<{ $narrow: boolean }>`
+      ${p => (p.$narrow ? narrow : wide)}
+    `;
+
+    const { container, rerender, unmount } = render(<Comp $narrow={false} />);
+    const wideClass = getDivClass(container);
+    rerender(<Comp $narrow />);
+
+    expect(getDivClass(container)).not.toBe(wideClass);
+    expect(getCSS(document)).toMatchInlineSnapshot(`
+      ".b{padding:1px;}
+      .c{padding:x1p;}"
+    `);
 
     unmount();
   });
