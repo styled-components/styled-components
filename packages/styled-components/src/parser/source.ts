@@ -4,7 +4,7 @@ import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import { warnOnce } from '../utils/warnOnce';
 import type { Root } from './ast';
 import { parse, ParseOptions, SlotTable } from './parser';
-import { removeComments, scan, stops } from './reader';
+import { removeComments, replaceNul, scan, stops } from './reader';
 
 /** A statement ends at `;`, `{`, or `}`. */
 const STATEMENT_END = stops(';{}');
@@ -164,7 +164,7 @@ function readSource(
     let kind = InterpolationKind.Static;
     let text = '';
     if (t === 'string') {
-      text = slot as string;
+      text = replaceNul(slot as string);
     } else if (t === 'number') {
       text = String(slot);
     } else if (slot !== null && slot !== undefined && t !== 'boolean') {

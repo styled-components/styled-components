@@ -2064,6 +2064,25 @@ describe('compileWeb', () => {
       expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('.sc-other:hover & { color: red; }'));
     });
 
+    /**
+     * CSS Syntax 3 §3.3 Preprocessing the input stream: "Replace any U+0000
+     * NULL or surrogate code points in input with U+FFFD REPLACEMENT
+     * CHARACTER (�)."
+     */
+    it.each([
+      ['a string', tagged`color: ${'a\0b'}; margin: 0;`, '.a{color:a�b;margin:0;}'],
+      ['a function result', tagged`color: ${() => 'a\0b'}; margin: 0;`, '.a{color:a�b;margin:0;}'],
+      ['a mixin string', tagged`${() => 'color: a\0b;'} margin: 0;`, '.a{color:a�b;margin:0;}'],
+      [
+        'an object a function returns',
+        tagged`${() => ({ color: 'a\0b' })} margin: 0;`,
+        '.a{color:a�b;margin:0;}',
+      ],
+      ['a selector value', tagged`& ${() => '.x\0y'} { margin: 0; }`, '.a .x�y{margin:0;}'],
+    ])('writes a NUL in %s as U+FFFD', (_, src, rule) => {
+      expect(compileWeb(src, {}, '.a', opts)).toEqual([rule]);
+    });
+
     it('reads `true` as empty', () => {
       const src = tagged`color: red; ${() => true} margin: 0${true};`;
       expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: red; margin: 0;'));
@@ -2165,7 +2184,7 @@ describe('compileWeb', () => {
 
       it('reads slot-shaped text in a value as text, not as another slot', () => {
         const rules = css({ width: () => '1px', content: '"\0S0\0"' });
-        expect(compileRules(rules)).toEqual(['.a{width:1px;content:"\0S0\0";}']);
+        expect(compileRules(rules)).toEqual(['.a{width:1px;content:"�S0�";}']);
       });
 
       it('drops only the declaration of a css fragment value holding a non-styled component', () => {

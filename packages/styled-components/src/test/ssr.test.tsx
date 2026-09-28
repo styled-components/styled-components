@@ -1526,6 +1526,26 @@ describe('ssr', () => {
         ]);
       });
 
+      it('writes a NUL in a value as U+FFFD, so values that differ only in where a NUL sits stay distinct', () => {
+        const Comp = styled.div<{ $a: string; $b: string }>`
+          content: "${p => p.$a}";
+          quotes: "${p => p.$b}";
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(
+          sheet.collectStyles(
+            <>
+              <Comp $a={'x\0y'} $b="" />
+              <Comp $a="x" $b={'y\0'} />
+            </>
+          )
+        );
+        const tags = sheet.getStyleTags();
+        expect(tags).not.toContain('\0');
+        expect(tags).toContain('{content:"x�y";quotes:"";}');
+        expect(tags).toContain('{content:"x";quotes:"y�";}');
+      });
+
       describe('a value whose comment removal would join tokens', () => {
         const value = 'u/**/rl(x"a) {} body{display:none} y{" )';
         const render = (Comp: React.ComponentType<{ $v: string }>) => {
