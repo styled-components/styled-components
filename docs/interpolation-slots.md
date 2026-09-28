@@ -2,6 +2,12 @@
 
 How a `${...}` slot in a styled template (styled components, `css`, `createGlobalStyle`, `keyframes`) gets its role, and what its value may do in that role. Tests lock each rule.
 
+## Position
+
+- Least surprise and the widest composition: a value that is valid CSS in its position works as written, including comments, escapes, and `;`-separated declarations.
+- Dynamic CSS stays fast: the common value pays only for a cheap presence check; exact reading runs when a value holds a character that needs it.
+- A value is dropped only when it would otherwise change structure (open, close, or escape a rule, or add a selector not anchored on the component), and every drop has a dev warning naming the construct.
+
 ## Reading the template
 
 - Comments (`/* */` and `//` line comments) are removed first. A slot written inside a comment is removed with it and never evaluated.
@@ -53,7 +59,9 @@ Every Inside, Glued, Property, and Head-remainder value is checked with CSS Synt
 - In a selector, at-rule prelude, keyframe stop, or Head remainder, a `;` outside strings, parentheses, and brackets fails the check (a `;` ends a nested rule, CSS Syntax 3).
 - A templated at-rule name or `@keyframes` name must realize to an identifier: ASCII letters, digits, `_`, `-`, and any character at or above U+0080, not starting with a digit, `-` followed by a digit, or a lone `-`. Escapes are not accepted.
 - A value failing a check drops its enclosing declaration, rule, at-rule, or frame, with a dev warning naming the construct.
+- In a selector, at-rule prelude, keyframe stop, or Head remainder, comments in the realized text are removed as CSS reads them (at any parenthesis depth, outside strings, escapes, and unquoted `url(`) before the text is split or anchored, so a comment never hides or reveals an `&`.
 - After substitution, a selector list or keyframe stop list is split on top-level commas again. In a selector list that holds a slot, each part is nested under the parent selector unless the part holds `&` outside parentheses, brackets, and strings (`&:hover` and `html &` stay as written; `html :not(&)` and `body:has(&) *` are nested). Every selector a value adds therefore matches only the component or elements inside it, or is anchored on the component through a top-level `&`. At the top level of `createGlobalStyle` there is no parent, and parts stay as written.
+- Writing a selector replaces `&` with the parent selector only outside strings and not after an escaping backslash (`[data-x="&"]` and `\&` keep their `&`). The anchoring decision above and this replacement read `&` the same way.
 
 ## What a value may do
 
