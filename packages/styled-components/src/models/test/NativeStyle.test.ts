@@ -1606,7 +1606,22 @@ describe('NativeStyle class;compile() fast-paths', () => {
           ],
         },
       ]);
-      expect(out.animations).toBeDefined();
+      expect(out.animations).toEqual([
+        {
+          composition: 'replace',
+          delayMs: 0,
+          direction: 'normal',
+          durationMs: 1000,
+          fillMode: 'none',
+          iterationCount: 1,
+          name: fade.name,
+          playState: 'running',
+          rangeEnd: 'normal',
+          rangeStart: 'normal',
+          timeline: { kind: 'auto' },
+          timingFunction: { kind: 'linear' },
+        },
+      ]);
     });
 
     it('drops a rule whose selector holds a non-styled component, with one dev warning', () => {

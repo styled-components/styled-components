@@ -217,10 +217,6 @@ function emitNodes(
     const node = nodes[i];
     switch (node.kind) {
       case NodeKind.Decl:
-        // Post-fillAst invariant: `prop` and `value` are strings (any
-        // TemplateValue was realized by `realize` in `fillNode`). The
-        // `string | TemplateValue` AST type covers the parse-time form;
-        // emit-web is only called on filled (or never-templated) ASTs.
         baseDecls.push(formatDecl(node.prop, node.value, declTransform));
         break;
       case NodeKind.Rule: {
@@ -290,7 +286,6 @@ function emitAtRule(
   currentSelector: string,
   options: EmitOptions | undefined
 ): string {
-  // Post-fillAst invariant: prelude / name are strings.
   let prelude = node.prelude ? stripCommaSpaces(node.prelude) : '';
   // `${Component}` interpolation pre-stringifies to a class selector
   // (`.sc-aBcDeF`) for normal selector contexts. In the `@container
@@ -333,7 +328,6 @@ function emitKeyframes(node: StaticKeyframesNode, options: EmitOptions | undefin
     if (frame.children.length === 0) continue;
     frames.push(emitFrame(frame, options));
   }
-  // Post-fillAst invariant: name / prelude are strings.
   const header = '@' + node.name + (node.prelude ? ' ' + node.prelude : '');
   return header + '{' + frames.join('') + '}';
 }

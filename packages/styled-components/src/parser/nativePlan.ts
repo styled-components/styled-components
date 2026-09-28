@@ -43,7 +43,7 @@ export type {
  * - V8 still inline-caches the property as a hidden-class slot read.
  *
  * The classification is computed once per AST and survives across every
- * cache-miss render. Phase A's `fillAst` returns static subtrees by
+ * cache-miss render. `fillSource` returns static subtrees by
  * reference, so static Rule / AtRule nodes carry the same classification
  * through to `astToNativeStyles`. Dynamic-selector nodes (a slot head, or
  * selectors holding interpolation slots) skip classification at parse
@@ -89,7 +89,7 @@ export function stampRuleClass(node: RuleNode): void {
  * its `name` + `prelude` (both strings; callers handle the
  * TemplateValue case before invoking this). Used by {@link stampAtClass}
  * at parser construction time on static-name+prelude at-rules, and by
- * the render-time fallback in `compileNative.ts` (where `fillAst` has
+ * the render-time fallback in `compileNative.ts` (where `fillSource` has
  * already substituted any TemplateValue back to strings).
  */
 export function classifyAtRuleNow(name: string, prelude: string): NativeAtClass {
@@ -122,7 +122,7 @@ export function classifyAtRuleNow(name: string, prelude: string): NativeAtClass 
  * Stamp a freshly-constructed AtRuleNode with parse-time native
  * classification. Skipped when `name` or `prelude` is a TemplateValue
  * (dynamic at parse time); the render path's lazy fallback re-classifies
- * once `fillAst` has substituted them to strings. Most at-rules are
+ * once `fillSource` has substituted them to strings. Most at-rules are
  * fully static so the stamp covers the common case.
  */
 export function stampAtClass(node: AtRuleNode): void {
@@ -285,7 +285,7 @@ function parseSimpleInner(inner: string): NthOfBranch | null {
 /**
  * `&:has(<inner>)`: match when the element has a descendant matching
  * the inner simple selector. v7 scope: a styled-component reference
- * (post-fillAst class selector `.sc-FooId`) or a single attribute
+ * (filled class selector `.sc-FooId`) or a single attribute
  * selector. Compound / complex inner forms fall through.
  */
 function detectHas(selectors: string[]): NativeRuleClass | null {

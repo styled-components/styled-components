@@ -175,11 +175,12 @@ export type NativeAtClass =
  * - `Root<string | TemplateValue>` (default, alias `Root`): the
  *   parse-time AST. `templateOrString` in `parser.ts` produces
  *   {@link TemplateValue} for fields containing interpolations.
- * - `Root<string>` (alias `StaticRoot`): post-`fillAst` ASTs and ASTs
+ * - `Root<string>` (alias `StaticRoot`): ASTs `fillSource` returns and ASTs
  *   from non-templated `parse(rawCss)` calls. Every string field is a
  *   plain string. emit-web and compileNative consume this.
  *
- * `fillAst` is the bridge: input `Root`, output `StaticRoot | null`.
+ * `fillSource` (`compile.ts`) is the bridge: a `Source`'s `Root` in, a
+ * `StaticRoot` out.
  */
 export interface DeclNode<F = string | TemplateValue> {
   kind: NodeKind.Decl;
@@ -282,7 +283,7 @@ export type Node<F = string | TemplateValue> =
 
 export type Root<F = string | TemplateValue> = Node<F>[];
 
-/** Post-fillAst AST: every string field is a plain string. */
+/** A filled AST: every string field is a plain string. */
 export type StaticRoot = Root<string>;
 export type StaticNode = Node<string>;
 export type StaticDeclNode = DeclNode<string>;
