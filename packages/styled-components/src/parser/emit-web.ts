@@ -10,7 +10,7 @@ import {
   StaticRuleNode,
 } from './ast';
 import { isEscaped } from '../utils/normalize';
-import { scanQPB, splitTopLevelCommas, stripCommaSpaces, trimRealized } from './parser';
+import { scanQPB, splitTopLevelCommas, stripCommaSpaces, trimRange } from './parser';
 
 /**
  * At-rule names whose bodies are direct declarations (no nested selector wrap).
@@ -361,7 +361,7 @@ function resolveRuleSelectors(selectors: string[], parent: string): string {
   for (let ci = 0; ci < selectors.length; ci++) {
     const child = selectors[ci];
     for (let pi = 0; pi < parents.length; pi++) {
-      const p = trimRealized(parents[pi], 0, parents[pi].length);
+      const p = trimRange(parents[pi], 0, parents[pi].length);
       resolved.push(resolveSingle(child, p));
     }
   }

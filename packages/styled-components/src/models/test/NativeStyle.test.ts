@@ -1298,7 +1298,7 @@ describe('parseCSSDeclarations', () => {
             "red",
           ],
           [
-            "font-size",
+            "font-size",
             "12px",
           ],
           [
