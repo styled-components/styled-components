@@ -65,6 +65,21 @@ describe('compileWeb', () => {
       ]);
     });
 
+    it('keeps a space after a comma as written, in values, substituted values, and preludes', () => {
+      const src = tagged`
+        transition: opacity 1s, transform 2s;
+        box-shadow: ${'0 0 1px red, 0 0 2px blue'};
+        margin: ${'0; font-family: a, b'};
+        @media (min-width: 1px), print { color: red; }
+        @layer ${'a, b'};
+      `;
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
+        '.a{transition:opacity 1s, transform 2s;box-shadow:0 0 1px red, 0 0 2px blue;margin:0;font-family:a, b;}',
+        '@media (min-width: 1px), print{.a{color:red;}}',
+        '@layer a, b;',
+      ]);
+    });
+
     it('matches the legacy path on keyframes', () => {
       const css = '@keyframes fade { from { opacity: 0; } to { opacity: 1; } }';
       const src = parseSource([css], []);

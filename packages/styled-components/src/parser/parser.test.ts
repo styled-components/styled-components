@@ -36,6 +36,13 @@ describe('parser', () => {
     ]);
   });
 
+  it('keeps a space after a comma in a value as written', () => {
+    expect(parse('transition: opacity 1s, transform 2s; font-family: a,b;')).toEqual([
+      { kind: NodeKind.Decl, prop: 'transition', value: 'opacity 1s, transform 2s' },
+      { kind: NodeKind.Decl, prop: 'font-family', value: 'a,b' },
+    ]);
+  });
+
   it('respects strings in values (content)', () => {
     expect(parse('content: "hello;world"; color: red;')).toEqual([
       { kind: NodeKind.Decl, prop: 'content', value: '"hello;world"' },

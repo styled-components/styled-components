@@ -129,7 +129,7 @@ describe('web emitter', () => {
   it('emits @layer block-less (layer order declaration)', () => {
     expect(emit(`@layer reset, framework, utilities;`)).toMatchInlineSnapshot(`
       [
-        "@layer reset,framework,utilities;",
+        "@layer reset, framework, utilities;",
       ]
     `);
   });

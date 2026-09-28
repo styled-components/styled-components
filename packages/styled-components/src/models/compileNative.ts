@@ -579,7 +579,7 @@ export function toNativeStyles(rawCSS: string, styleSheet: StyleSheet): NativeSt
   // Parse stamps `[NATIVE_RULE_CLASS]` / `[NATIVE_AT_CLASS]` onto Rule
   // and AtRule nodes inline (gated on `__NATIVE__`). The bucket router
   // in `astToNativeStyles` reads those classifications directly.
-  const ast = parse(rawCSS, { keepCommaSpaces: true });
+  const ast = parse(rawCSS);
   const compiled = astToNativeStyles(ast, styleSheet);
 
   fifoSet(compileCache, rawCSS, compiled, CACHE_LIMIT);
@@ -2191,7 +2191,7 @@ export function cssToStyleObject(flatCSS: string, styleSheet: StyleSheet): Dict<
  * comments stripped, malformed blocks skipped, RN_UNSUPPORTED_VALUES warn+drop.
  */
 export function extractBaseDeclPairs(rawCSS: string): Array<[string, string]> {
-  const ast = parse(rawCSS, { keepCommaSpaces: true });
+  const ast = parse(rawCSS);
   const pairs: Array<[string, string]> = [];
   for (let i = 0; i < ast.length; i++) {
     const node = ast[i];

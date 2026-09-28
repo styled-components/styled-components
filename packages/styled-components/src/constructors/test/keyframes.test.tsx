@@ -268,7 +268,8 @@ describe('keyframes', () => {
         animation: none;
       }
       .e {
-        animation: b 1s linear, a 1s linear;
+        animation: b 1s linear,
+          a 1s linear;
       }
       .f {
         animation: a 1s linear;

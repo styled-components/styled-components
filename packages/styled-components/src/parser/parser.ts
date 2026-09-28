@@ -52,14 +52,6 @@ const FRAME_DECL_OR_SLOT = stops(':;}\0');
 const LIST_COMMA = stops(',');
 
 export interface ParseOptions {
-  /**
-   * When `true`, skips comma-space stripping inside declaration values (e.g.
-   * `color 0.2s, blue` stays unchanged). The web path defaults to stripping so
-   * emitted shorthand matches the long-standing minified shape; the native
-   * transform pipeline sets this to `true` so the tokenizer sees font-family
-   * fallback chains intact.
-   */
-  keepCommaSpaces?: boolean;
   /** Per-slot knowledge for a templated parse; ignored unless `templates` is `true`. */
   slots?: SlotTable;
   /**
@@ -122,7 +114,6 @@ export function parse(css: string, options?: ParseOptions): Root<string | Templa
     dyn: false,
     len: text.length,
     i: 0,
-    keepCommaSpaces: !!options?.keepCommaSpaces,
     recover: slots !== null ? slots.recover : null,
     slots,
     templates,
@@ -142,7 +133,6 @@ interface ParseContext {
   dyn: boolean;
   len: number;
   i: number;
-  keepCommaSpaces: boolean;
   /** {@link SlotTable.recover}; `null` keeps the statement scan on the slot-blind path. */
   recover: ReadonlyArray<boolean> | null;
   slots: SlotTable | null;
@@ -482,7 +472,7 @@ function leadDecl(ctx: ParseContext, out: Node[], run: Run): number {
 function pushDecl(ctx: ParseContext, out: Node[], start: number, colon: number, end: number): void {
   const prop = trimRange(ctx.css, start, colon);
   if (!prop) return;
-  const value = normalizeValue(ctx, colon + 1, end);
+  const value = trimRange(ctx.css, colon + 1, end);
   // Empty value is invalid for regular properties (drop), but valid for
   // custom properties; `--my-prop: ;` is a legitimate CSS declaration
   // (CSS Custom Properties L1) used by scroll-driven animations and other
@@ -582,56 +572,6 @@ function templateOrString(ctx: ParseContext, s: string): string | TemplateValue 
 /** A CSS custom property starts with `--` (two leading hyphens). */
 export function isCustomProperty(prop: string): boolean {
   return prop.length > 2 && prop.charCodeAt(0) === HYPHEN && prop.charCodeAt(1) === HYPHEN;
-}
-
-/**
- * Extract, trim, and comma-normalize a declaration value in a single pass.
- * Strips whitespace after top-level commas by default for the web emit path.
- * When the context opts out (native path), the raw value is returned so
- * the native transform's tokenizer can parse comma-separated fallback chains.
- */
-function normalizeValue(ctx: ParseContext, start: number, end: number): string {
-  const slice = trimRange(ctx.css, start, end);
-  if (ctx.keepCommaSpaces || slice.indexOf(',') === -1) return slice;
-
-  return stripCommaSpaces(slice);
-}
-
-/**
- * Strip whitespace after top-level commas (outside parens/brackets/strings).
- * Optimistic: defer the substring + concat work until we actually find
- * whitespace to strip after a top-level comma. Inputs whose commas are
- * already tight (`a,b,c`);common in compact author CSS;pay only the
- * single charCode walk and return unchanged. Exported for the emitter's
- * at-rule prelude handling.
- */
-export function stripCommaSpaces(s: string): string {
-  if (s.indexOf(',') === -1) return s;
-  const len = s.length;
-  let out = '';
-  let segStart = 0;
-  let i = 0;
-  while (i < len) {
-    const comma = scan(s, i, len, LIST_COMMA, BRACKETS, 0);
-    if (comma >= len) break;
-    // Look ahead: only commit a segment if there's whitespace to strip.
-    let j = comma + 1;
-    while (j < len) {
-      const n = s.charCodeAt(j);
-      if (isWS(n)) j++;
-      else break;
-    }
-    if (j > comma + 1) {
-      out += s.substring(segStart, comma + 1);
-      segStart = j;
-    }
-    i = j;
-  }
-
-  // No top-level commas with trailing whitespace → return original string.
-  if (segStart === 0) return s;
-  if (segStart < len) out += s.substring(segStart, len);
-  return out;
 }
 
 /**

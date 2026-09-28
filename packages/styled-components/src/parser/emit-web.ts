@@ -9,7 +9,7 @@ import {
   StaticRoot,
   StaticRuleNode,
 } from './ast';
-import { splitTopLevelCommas, stripCommaSpaces, trimRange } from './parser';
+import { splitTopLevelCommas, trimRange } from './parser';
 import { ANY_DEPTH, BRACKETS, isEscaped, isIdentCode, scan, stops } from './reader';
 
 const COMBINATOR = stops('>+~');
@@ -289,7 +289,7 @@ function emitAtRule(
   currentSelector: string,
   options: EmitOptions | undefined
 ): string {
-  let prelude = node.prelude ? stripCommaSpaces(node.prelude) : '';
+  let prelude = node.prelude;
   // `${Component}` interpolation pre-stringifies to a class selector
   // (`.sc-aBcDeF`) for normal selector contexts. In the `@container
   // <name>` slot a bare ident is required by the CSS parser; strip a
