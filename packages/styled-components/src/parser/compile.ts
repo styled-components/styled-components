@@ -862,7 +862,9 @@ function warnRealizeFailed(construct: string): void {
 
 /** `text` holds an `&` joined to a call ({@link ampersandJoinsCall}); warns in dev. */
 function joinsCall(text: string): boolean {
-  if (text.indexOf('&') === -1 || !ampersandJoinsCall(text)) return false;
+  if (text.indexOf('(') === -1 || text.indexOf('&') === -1 || !ampersandJoinsCall(text)) {
+    return false;
+  }
   if (__DEV__) {
     warnOnce(
       'ampersand-call',
