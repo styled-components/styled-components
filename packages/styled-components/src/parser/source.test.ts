@@ -1,6 +1,6 @@
 import css from '../constructors/css';
 import type { RuleSet } from '../types';
-import { DYN, KeyframeFrame, KeyframesNode, NodeKind, RuleNode, TemplateValue } from './ast';
+import { DYN, KeyframesNode, NodeKind, RuleNode, TemplateValue } from './ast';
 import { evaluateForFastPath, FastPathFragment } from './evaluate';
 import { getSource, InterpolationKind, parseSource, Source } from './source';
 
@@ -494,75 +494,75 @@ describe('parseSource', () => {
     const a = () => '0%';
     const b = () => 'opacity: 1;';
 
+    const opacity0 = { kind: NodeKind.Decl, prop: 'opacity', value: '0' };
+    const keyframesX = (children: unknown[]) => [
+      { kind: NodeKind.Keyframes, name: 'keyframes', prelude: 'x', children },
+    ];
+
     it('reads a Run before a frame block as a stop Head', () => {
       const src = tagged`@keyframes x { ${a} { opacity: 0; } }`;
-      expect(src.ast).toEqual([
-        {
-          kind: NodeKind.Keyframes,
-          name: 'keyframes',
-          prelude: 'x',
-          frames: [
-            {
-              children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '0' }],
-              head: { gaps: [' '], rest: '', slots: [0] },
-              stops: [],
-            },
-          ],
-        },
-      ]);
+      expect(src.ast).toEqual(
+        keyframesX([
+          {
+            kind: NodeKind.Rule,
+            selectors: [],
+            children: [opacity0],
+            head: { gaps: [' '], rest: '', slots: [0] },
+          },
+        ])
+      );
       expect(src.slotIsStandalone).toEqual([true]);
     });
 
     it('keeps a slot glued to a stop Inside the stop', () => {
       const src = tagged`@keyframes x { ${a}{ opacity: 0; } }`;
-      expect(src.ast).toEqual([
-        {
-          kind: NodeKind.Keyframes,
-          name: 'keyframes',
-          prelude: 'x',
-          frames: [
-            {
-              children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '0' }],
-              stops: [tv('\0S0\0')],
-            },
-          ],
-        },
-      ]);
+      expect(src.ast).toEqual(
+        keyframesX([{ kind: NodeKind.Rule, selectors: [tv('\0S0\0')], children: [opacity0] }])
+      );
       expect(src.slotIsStandalone).toEqual([false]);
     });
 
     it('reads a Standalone Run in the frame list as a frame splice', () => {
       const src = tagged`@keyframes x { from { opacity: 0; } ${b} }`;
-      expect(src.ast).toEqual([
-        {
-          kind: NodeKind.Keyframes,
-          name: 'keyframes',
-          prelude: 'x',
-          frames: [
-            { children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '0' }], stops: ['from'] },
-            { kind: NodeKind.Interpolation, index: 0 },
-          ],
-        },
-      ]);
+      expect(src.ast).toEqual(
+        keyframesX([
+          { kind: NodeKind.Rule, selectors: ['from'], children: [opacity0] },
+          { kind: NodeKind.Interpolation, index: 0 },
+        ])
+      );
       expect(src.slotIsStandalone).toEqual([true]);
     });
 
     it('reads a Standalone Run inside a frame as a declaration splice', () => {
       const src = tagged`@keyframes x { to { ${b} color: red; } }`;
-      expect(src.ast).toEqual([
-        {
-          kind: NodeKind.Keyframes,
-          name: 'keyframes',
-          prelude: 'x',
-          frames: [
-            {
-              children: [{ kind: NodeKind.Interpolation, index: 0 }, redDecl],
-              stops: ['to'],
-            },
-          ],
-        },
-      ]);
+      expect(src.ast).toEqual(
+        keyframesX([
+          {
+            kind: NodeKind.Rule,
+            selectors: ['to'],
+            children: [{ kind: NodeKind.Interpolation, index: 0 }, redDecl],
+          },
+        ])
+      );
       expect(src.slotIsStandalone).toEqual([true]);
+    });
+
+    it('reads every slot of a Run inside a frame as Standalone, even before a block', () => {
+      const src = tagged`@keyframes x { to { ${b} ${b} p { color: red; } } }`;
+      expect(src.ast).toEqual(
+        keyframesX([
+          {
+            kind: NodeKind.Rule,
+            selectors: ['to'],
+            children: [
+              { kind: NodeKind.Interpolation, index: 0 },
+              { kind: NodeKind.Interpolation, index: 1 },
+              { kind: NodeKind.Rule, selectors: ['p'], children: [redDecl] },
+            ],
+          },
+        ])
+      );
+      expect(src.slotIsStandalone).toEqual([true, true]);
     });
   });
 
@@ -757,14 +757,16 @@ describe('parseSource', () => {
         true,
         true,
       ]);
-      const firstFrame = (node: object) => (node as KeyframesNode).frames[0] as KeyframeFrame;
+      const firstFrame = (node: object) => (node as KeyframesNode).children[0] as RuleNode;
       expect([
         isDyn(inner),
         isDyn(inner.children[0]),
         isDyn(hover.children[0]),
+        isDyn(firstFrame(src.ast[7])),
         isDyn(firstFrame(src.ast[7]).children[0]),
+        isDyn(firstFrame(src.ast[8])),
         isDyn(firstFrame(src.ast[8]).children[0]),
-      ]).toEqual([true, true, false, false, true]);
+      ]).toEqual([true, true, false, false, false, true, true]);
     });
 
     it('records a quoted url( argument as a string, not an unquoted url', () => {

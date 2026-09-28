@@ -12,7 +12,6 @@ import {
   PseudoState,
   RuleNode,
 } from './ast';
-import { isKeyframesName } from './atRuleNames';
 import { ANY_DEPTH, BRACKETS, isSpace, scan, stops } from './reader';
 
 const SELECTOR_SPACE = stops(' \t\n\r\f');
@@ -108,7 +107,6 @@ export function classifyAtRuleNow(name: string, prelude: string): NativeAtClass 
     }
     return { kind: name, containerName: undefined, condition: prelude };
   }
-  if (isKeyframesName(name)) return { kind: 'keyframes' };
   if (name === 'property') return { kind: 'property' };
   if (name === 'font-face' || name === 'page') {
     return { kind: 'unsupported', warn: 'web-only' };

@@ -7,8 +7,6 @@ import { warnOnce } from '../utils/warnOnce';
 import {
   DeclNode,
   DYN,
-  InterpolationNode,
-  KeyframeFrame,
   Node,
   NodeKind,
   Root,
@@ -16,17 +14,16 @@ import {
   SlotHead,
   StaticAtRuleNode,
   StaticDeclNode,
-  StaticKeyframeFrame,
   StaticKeyframesNode,
   StaticNode,
   StaticRoot,
   StaticRuleNode,
   TemplateValue,
 } from './ast';
-import { isKeyframesName } from './atRuleNames';
 import { emitWeb, EmitOptions, nextAmpersand } from './emit-web';
 import {
   isCustomProperty,
+  isKeyframesName,
   parse,
   SlotEntry,
   splitTopLevelCommas,
@@ -190,7 +187,7 @@ function fillNode(node: Node, fill: Fill): StaticNode | StaticNode[] | undefined
     case NodeKind.AtRule:
       return fillAtRule(node, fill);
     case NodeKind.Keyframes:
-      return fillKeyframes(node.name, node.prelude, node.frames, fill);
+      return fillKeyframes(node.name, node.prelude, node.children, fill);
     case NodeKind.Interpolation: {
       const spliced = spliceNodes(node.index, fill);
       return spliced.length === 0 ? undefined : spliced;
@@ -347,18 +344,18 @@ function fillAtRule(
 }
 
 /**
- * Fill a @keyframes rule. `frames` are the parsed frames, or the rules of
- * a block whose templated at-rule name realized to a keyframes name.
+ * Fill a @keyframes rule. `children` are its frames: the rules of a parsed
+ * @keyframes, or of a block whose templated at-rule name realized to a
+ * keyframes name.
  */
 function fillKeyframes(
-  nameField: string | TemplateValue,
+  name: string,
   preludeField: string | TemplateValue,
-  frames: ReadonlyArray<KeyframeFrame | Node>,
+  children: ReadonlyArray<Node>,
   fill: Fill
 ): StaticKeyframesNode | undefined {
-  const name = typeof nameField === 'string' ? nameField : realize(nameField, fill, '');
-  let prelude = name === null ? null : realize(preludeField, fill, '');
-  if (name === null || prelude === null || realizedSemicolon) {
+  let prelude = realize(preludeField, fill, '');
+  if (prelude === null || realizedSemicolon) {
     if (__DEV__) warnRealizeFailed('@keyframes `' + fieldText(preludeField) + '`');
     return undefined;
   }
@@ -376,48 +373,54 @@ function fillKeyframes(
       return undefined;
     }
   }
-  const out: StaticKeyframeFrame[] = [];
-  const nested = nestedFill(fill);
-  for (let i = 0; i < frames.length; i++) {
-    const frame = frames[i];
-    if ('kind' in frame) {
-      if (frame.kind === NodeKind.Interpolation) {
-        appendFrames(spliceNodes(frame.index, fill), out);
-      } else {
-        const filled = fillNode(frame, nested);
-        if (filled !== undefined) appendFrames(Array.isArray(filled) ? filled : [filled], out);
-      }
-      continue;
+  const frames: StaticNode[] = [];
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    if (child.kind === NodeKind.Interpolation) {
+      appendFrames(spliceNodes(child.index, fill), frames);
+    } else if (child.kind === NodeKind.Rule) {
+      fillFrame(child, fill, frames);
     }
-    const decls = fillFrameDecls(frame.children, fill);
-    let stops: string[] | null;
-    if (frame.head !== undefined) {
-      const head = readHead(frame.head, fill);
-      if (head === undefined) continue;
-      appendFrames(head.statements, out);
-      if (head.dropped) continue;
-      if (head.remainder !== null && head.remainder.charCodeAt(0) === AT) {
-        if (__DEV__) {
-          warnOnce(
-            'head-at-rule',
-            `\`${head.remainder}\` cannot stand before a @keyframes frame, so the frame was dropped. A value before a frame block may only give its stops, like \`50%\`.`,
-            head.remainder
-          );
-        }
-        continue;
-      }
-      stops = splitList(head.text);
-      if (stops.length === 0) continue;
-    } else {
-      stops = realizeList(frame.stops, fill);
-      if (stops === null) {
-        if (__DEV__) warnRealizeFailed('@keyframes frame `' + listText(frame.stops) + '`');
-        continue;
-      }
-    }
-    out.push({ stops, children: decls });
   }
-  return { kind: NodeKind.Keyframes, name, prelude, frames: out };
+  return { kind: NodeKind.Keyframes, name, prelude, children: frames };
+}
+
+/**
+ * Fill one frame into `frames`, with only its declarations, after any
+ * statements a stop Head splices. Stops are not nested under a parent.
+ */
+function fillFrame(frame: RuleNode, fill: Fill, frames: StaticNode[]): void {
+  if (!dynamic(frame)) {
+    frames.push(frame as unknown as StaticRuleNode);
+    return;
+  }
+  const decls = frameDeclarations(frame.children, fill);
+  let stops: string[] | null;
+  if (frame.head !== undefined) {
+    const head = readHead(frame.head, fill);
+    if (head === undefined) return;
+    appendFrames(head.statements, frames);
+    if (head.dropped) return;
+    if (head.remainder !== null && head.remainder.charCodeAt(0) === AT) {
+      if (__DEV__) {
+        warnOnce(
+          'head-at-rule',
+          `\`${head.remainder}\` cannot stand before a @keyframes frame, so the frame was dropped. A value before a frame block may only give its stops, like \`50%\`.`,
+          head.remainder
+        );
+      }
+      return;
+    }
+    stops = splitList(head.text);
+    if (stops.length === 0) return;
+  } else {
+    stops = realizeList(frame.selectors, fill);
+    if (stops === null) {
+      if (__DEV__) warnRealizeFailed('@keyframes frame `' + listText(frame.selectors) + '`');
+      return;
+    }
+  }
+  frames.push({ kind: NodeKind.Rule, selectors: stops, children: decls });
 }
 
 /**
@@ -648,13 +651,13 @@ function isIdentifier(text: string): boolean {
  * selectors are its stops. Anything else does not belong in a frame list
  * and is dropped with a dev warning.
  */
-function appendFrames(nodes: StaticRoot, frames: StaticKeyframeFrame[]): void {
+function appendFrames(nodes: StaticRoot, frames: StaticNode[]): void {
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
     if (node.kind === NodeKind.Rule) {
       const decls: StaticDeclNode[] = [];
       keepDecls(node.children, decls);
-      frames.push({ stops: node.selectors, children: decls });
+      frames.push({ kind: NodeKind.Rule, selectors: node.selectors, children: decls });
     } else if (__DEV__) {
       warnOnce(
         'keyframes-splice',
@@ -679,13 +682,28 @@ function keepDecls(nodes: StaticRoot, out: StaticDeclNode[]): void {
   }
 }
 
-/** A frame's filled declarations; a splice keeps only the declarations it holds. */
-function fillFrameDecls(
-  children: Array<DeclNode | InterpolationNode>,
-  fill: Fill
-): StaticDeclNode[] {
+/**
+ * A frame's filled declarations. A splice keeps only the declarations it
+ * holds, warning for the rest; anything else written in the frame is not a
+ * declaration and is dropped, as it is when written.
+ */
+function frameDeclarations(children: ReadonlyArray<Node>, fill: Fill): StaticDeclNode[] {
   const decls: StaticDeclNode[] = [];
-  keepDecls(fillNodes(children, fill), decls);
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    if (child.kind === NodeKind.Interpolation) {
+      keepDecls(spliceNodes(child.index, fill), decls);
+    } else if (child.kind === NodeKind.Decl) {
+      // A static declaration already has the `StaticDeclNode` shape at runtime.
+      const filled = dynamic(child) ? fillDecl(child, fill) : (child as StaticDeclNode);
+      if (filled === undefined) continue;
+      if (Array.isArray(filled)) {
+        for (let j = 0; j < filled.length; j++) decls.push(filled[j]);
+      } else {
+        decls.push(filled);
+      }
+    }
+  }
   return decls;
 }
 

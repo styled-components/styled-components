@@ -1,10 +1,4 @@
-import {
-  NodeKind,
-  StaticDeclNode,
-  StaticKeyframeFrame,
-  StaticNode,
-  StaticRoot,
-} from '../parser/ast';
+import { NodeKind, StaticNode, StaticRoot } from '../parser/ast';
 import { emitWeb } from '../parser/emit-web';
 import { parse } from '../parser/parser';
 import { compileWebFilled } from '../parser/compile';
@@ -26,18 +20,7 @@ function wrapBody(outer: StaticRoot, body: StaticRoot): StaticRoot {
   } else if (node.kind === NodeKind.AtRule && node.children !== null) {
     wrapped = { kind: NodeKind.AtRule, name: node.name, prelude: node.prelude, children: body };
   } else if (node.kind === NodeKind.Keyframes) {
-    const frames: StaticKeyframeFrame[] = [];
-    for (let i = 0; i < body.length; i++) {
-      const rule = body[i];
-      if (rule.kind !== NodeKind.Rule) continue;
-      const decls: StaticDeclNode[] = [];
-      for (let j = 0; j < rule.children.length; j++) {
-        const child = rule.children[j];
-        if (child.kind === NodeKind.Decl) decls.push(child);
-      }
-      frames.push({ stops: rule.selectors, children: decls });
-    }
-    wrapped = { kind: NodeKind.Keyframes, name: node.name, prelude: node.prelude, frames };
+    wrapped = { kind: NodeKind.Keyframes, name: node.name, prelude: node.prelude, children: body };
   } else {
     return outer;
   }

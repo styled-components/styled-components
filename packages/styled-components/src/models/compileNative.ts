@@ -1537,39 +1537,44 @@ function walkRoot(
     } else if (kind === NodeKind.AtRule) {
       handleAtRule(node, baseDecls, conditional, startingDecls);
     } else if (kind === NodeKind.Keyframes) {
-      keyframes.push({
-        name: node.prelude,
-        frames: node.frames.map(frame => {
-          // Mirror the base/conditional pipeline: decls → transformDecl
-          // → split static base / resolvers in one pass. Lets
-          // `${t.colors.x}` and `env()` inside a keyframe's declarations
-          // resolve at render time when the animation adapter applies
-          // them.
-          const decls = frame.children;
-          // `!important` inside a keyframe body is invalid; processDecls
-          // strips the marker and routes to `important`, which we then
-          // discard so the frame ignores the marker entirely.
-          const { base, resolvers } =
-            decls.length > 0 ? processDecls(decls) : { base: {}, resolvers: [] };
-          const out: {
-            stops: string[];
-            decls: Dict<any>;
-            resolvers?: Array<[string, Resolver]>;
-            easing?: EasingDescriptor;
-          } = { stops: frame.stops, decls: base };
-          if (resolvers.length > 0) out.resolvers = resolvers;
-          if ('animationTimingFunction' in base) {
-            const atf = base.animationTimingFunction;
-            delete base.animationTimingFunction;
-            if (!isEndOnlyKeyframeStops(frame.stops)) {
-              out.easing = Array.isArray(atf) ? atf[0] : atf;
-            }
-          }
-          return out;
-        }),
-      });
+      keyframes.push({ name: node.prelude, frames: compileFrames(node.children) });
     }
   }
+}
+
+/**
+ * The frames of @keyframes: each frame rule's stops and its declarations,
+ * run through the same pipeline as base declarations (transformDecl, then
+ * static base values and render-time resolvers), so `${t.colors.x}` and
+ * `env()` in a frame resolve when the animation adapter applies it.
+ * Anything in a frame that is not a declaration is not written.
+ */
+function compileFrames(children: StaticNode[]): CompiledKeyframes['frames'] {
+  const frames: CompiledKeyframes['frames'] = [];
+  for (let i = 0; i < children.length; i++) {
+    const frame = children[i];
+    if (frame.kind !== NodeKind.Rule) continue;
+    const decls: StaticDeclNode[] = [];
+    for (let j = 0; j < frame.children.length; j++) {
+      const child = frame.children[j];
+      if (child.kind === NodeKind.Decl) decls.push(child);
+    }
+    // `!important` inside a keyframe body is invalid; processDecls strips the
+    // marker and routes it to `important`, which the frame ignores.
+    const { base, resolvers } =
+      decls.length > 0 ? processDecls(decls) : { base: {}, resolvers: [] };
+    const out: CompiledKeyframes['frames'][number] = { stops: frame.selectors, decls: base };
+    if (resolvers.length > 0) out.resolvers = resolvers;
+    if ('animationTimingFunction' in base) {
+      const atf = base.animationTimingFunction;
+      delete base.animationTimingFunction;
+      if (!isEndOnlyKeyframeStops(frame.selectors)) {
+        out.easing = Array.isArray(atf) ? atf[0] : atf;
+      }
+    }
+    frames.push(out);
+  }
+  return frames;
 }
 
 /** Enclosing at-rule gate (`@media` / `@container` / `@supports`) threaded
@@ -2073,11 +2078,6 @@ function handleAtRule(
       if (childCls.kind === 'unsupported') continue;
       applyRuleClass(child, childCls, conditional, outer);
     }
-    return;
-  }
-
-  if (cls.kind === 'keyframes') {
-    // Handled as KeyframesNode, this branch is reachable only for unusual cases.
     return;
   }
 

@@ -164,7 +164,6 @@ export type NativeAtClass =
       condition: string | null;
     }
   | { kind: 'starting-style' }
-  | { kind: 'keyframes' }
   | { kind: 'property' }
   | { kind: 'unsupported'; warn: 'web-only' | 'unknown' };
 
@@ -209,11 +208,10 @@ export interface SlotHead {
 }
 
 /**
- * Parse-time-only field types. The fill turns every head and slot splice
- * into plain nodes, so the static (`F = string`) forms cannot carry them.
+ * Parse-time-only field type. The fill turns every head into plain
+ * selectors, so the static (`F = string`) form cannot carry one.
  */
 type HeadField<F> = [F] extends [string] ? never : SlotHead;
-type SlotSplice<F> = [F] extends [string] ? never : InterpolationNode;
 
 export interface RuleNode<F = string | TemplateValue> {
   kind: NodeKind.Rule;
@@ -246,19 +244,18 @@ export interface AtRuleNode<F = string | TemplateValue> {
   [NATIVE_AT_CLASS]?: NativeAtClass;
 }
 
-export interface KeyframeFrame<F = string | TemplateValue> {
-  stops: F[];
-  /** A slot among the declarations splices declarations. */
-  children: Array<DeclNode<F> | SlotSplice<F>>;
-  head?: HeadField<F>;
-}
-
+/**
+ * `@keyframes`: its children are the frames, rules whose selectors are the
+ * stops. A slot in the frame list splices frames. Only frames, and only the
+ * declarations in them, are written; anything else the block holds is
+ * dropped.
+ */
 export interface KeyframesNode<F = string | TemplateValue> {
   kind: NodeKind.Keyframes;
-  name: F;
+  /** The at-keyword without `@`: `keyframes`, or a vendor-prefixed form. */
+  name: string;
   prelude: F;
-  /** A slot in the frame list splices frames. */
-  frames: Array<KeyframeFrame<F> | SlotSplice<F>>;
+  children: Node<F>[];
   [DYN]?: boolean;
 }
 
@@ -290,4 +287,3 @@ export type StaticDeclNode = DeclNode<string>;
 export type StaticRuleNode = RuleNode<string>;
 export type StaticAtRuleNode = AtRuleNode<string>;
 export type StaticKeyframesNode = KeyframesNode<string>;
-export type StaticKeyframeFrame = KeyframeFrame<string>;

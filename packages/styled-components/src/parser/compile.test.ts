@@ -892,6 +892,16 @@ describe('compileWeb', () => {
       expect(warnings()).toEqual([expect.stringContaining('only declarations belong in a frame')]);
     });
 
+    // CSS Syntax 3 §7.1 (quoted in parser.test.ts): only <keyframe-rule>s
+    // belong in @keyframes, and a keyframe rule's block is a declaration list.
+    it.each([
+      ['static', tagged`@keyframes k { a: b; from { @x: 1; p { c: d } opacity: 0; } }`],
+      ['templated', tagged`@keyframes k { a: b; from { @x: 1; p { c: d } opacity: ${'0'}; } }`],
+    ])('writes only the frames and their declarations in %s keyframes', (_, src) => {
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(['@keyframes k{from{opacity:0;}}']);
+      expect(warnings()).toEqual([]);
+    });
+
     it('drops @keyframes whose templated name fails its check, with a dev warning', () => {
       const src = tagged`color: blue; @keyframes ${'a{'} { to { opacity: 1; } }`;
       expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue;'));
@@ -1746,9 +1756,10 @@ describe('compileWeb', () => {
           kind: NodeKind.Keyframes,
           name: 'keyframes',
           prelude: 'k',
-          frames: [
+          children: [
             {
-              stops: ['from', '50%', '60%'],
+              kind: NodeKind.Rule,
+              selectors: ['from', '50%', '60%'],
               children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '0' }],
             },
           ],
