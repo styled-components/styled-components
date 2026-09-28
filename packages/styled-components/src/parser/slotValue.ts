@@ -161,15 +161,17 @@ function parenKind(
  * different state than it started (string, comment, parenthesis, bracket,
  * `url(`).
  */
-export function checkSlotValue(value: string, entry: SlotEntry, before: string): number {
-  const len = value.length;
-  const escaped = before.length > 0 && endsWithEscape(before);
+export function checkSlotValue(raw: string, entry: SlotEntry, before: string): number {
   const plain = entry.quote === 0 && !entry.url;
-  if (plain && !escaped && skipOrdinary(value, 0, len, SPECIAL) === len) return VALUE_OK;
-  if (escaped && len === 0) return VALUE_FAILED;
-  if (plain && !escaped && value.charCodeAt(0) === ASTERISK && endsWithSlash(before)) {
-    return VALUE_FAILED;
+  const escaped = endsWithEscape(before);
+  if (plain && !escaped) {
+    if (skipOrdinary(raw, 0, raw.length, SPECIAL) === raw.length) return VALUE_OK;
+    if (raw.charCodeAt(0) === ASTERISK && endsWithSlash(before)) return VALUE_FAILED;
   }
+  // A backslash written before the slot escapes the value's first code point,
+  // so the value is read with that backslash in front of it.
+  const value = escaped ? '\\' + raw : raw;
+  const len = value.length;
 
   let quote = entry.quote;
   /** 0 outside `url(`, 1 reading a url, 2 reading a bad url's remnants. */
@@ -181,23 +183,6 @@ export function checkSlotValue(value: string, entry: SlotEntry, before: string):
   let identStart = -1;
   let identEscaped = false;
   let i = 0;
-
-  if (escaped) {
-    // A backslash written before the slot escapes the value's first code point.
-    const first = value.charCodeAt(0);
-    if (first === OPEN_BRACE || first === CLOSE_BRACE) return VALUE_FAILED;
-    if (!isNewline(first)) {
-      i = 1;
-      if (quote === 0 && url === 0) {
-        identStart = 0;
-        identEscaped = true;
-      }
-    } else if (quote !== 0) {
-      i = 1;
-    } else if (url === 1) {
-      url = 2;
-    }
-  }
 
   while (i < len) {
     // Inside a comment, string, or url, skip the run of code points that
