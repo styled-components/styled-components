@@ -1749,6 +1749,67 @@ describe('compileWeb', () => {
         const src = tagged`html :not(&) { color: red; }`;
         expect(compileWeb(src, {}, '.a', opts)).toEqual(['html :not(.a){color:red;}']);
       });
+
+      it.each([
+        ['an Inside value', tagged`& ${() => '&-active'} { color: red; }`, '.a .a-active'],
+        ['a Glued value', tagged`${() => '&-active'}:hover { color: red; }`, '.a-active:hover'],
+        ['a Head value', tagged`${() => '&-active'} { color: red; }`, '.a-active'],
+      ])('joins `&` to identifier text after it in %s, anchored', (_, src, selector) => {
+        expect(compileWeb(src, {}, '.a', opts)).toEqual([selector + '{color:red;}']);
+      });
+    });
+
+    /**
+     * Written, `&` joins the parent's last identifier to identifier text after
+     * it, so `&url(` would turn a `(` the check read as a parenthesis or `url(`
+     * into a different function or `url(` token. A field holding a slot fails
+     * on it.
+     */
+    describe('an `&` followed by identifier text that ends in `(`', () => {
+      let warn: jest.SpyInstance;
+
+      beforeEach(() => {
+        resetWarnOnce();
+        warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      });
+
+      afterEach(() => {
+        warn.mockRestore();
+      });
+
+      const payload = '&url(("x) " ) ) {} body { display: none; x: "';
+      it.each([
+        ['an Inside value', tagged`color: blue; &:hover ${() => payload} { color: red; }`],
+        [
+          'an attribute string value',
+          tagged`color: blue; &[data-state="${() => '"]&url(("x) " ) ) {} body { display: none } " [y="z'}"] { color: red; }`,
+        ],
+        [
+          'an escaped name',
+          tagged`color: blue; & ${() => '&\\75rl(("x) " ) ) {} body { display: none; x: "'} { color: red; }`,
+        ],
+        ['a hyphenated name', tagged`color: blue; & ${() => '&-x(a)'} { color: red; }`],
+        [
+          'a hex escape the space after it ends',
+          tagged`color: blue; & ${() => '&\\41 (a)'} { color: red; }`,
+        ],
+        ['no name', tagged`color: blue; & ${() => '&(a)'} { color: red; }`],
+        ['a Head value', tagged`color: blue; ${() => payload} { color: red; }`],
+        [
+          'a nested at-rule',
+          tagged`color: blue; @media (min-width: 1px) { &:hover ${() => payload} { color: red; } }`,
+        ],
+      ])('drops the rule for %s, with a dev warning', (_, src) => {
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue;'));
+        expect(warn.mock.calls.map(call => String(call[0]))).toEqual([
+          expect.stringContaining('`&`'),
+        ]);
+      });
+
+      it('keeps a `(` the `&` is not joined to', () => {
+        const src = tagged`& ${() => '& :is(p)'} { color: red; }`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(['.a .a :is(p){color:red;}']);
+      });
     });
 
     /**
