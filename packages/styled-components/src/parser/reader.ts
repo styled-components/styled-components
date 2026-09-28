@@ -98,41 +98,60 @@ function escapedCode(s: string, i: number, end: number): number {
 }
 
 /**
- * Start of the identifier (escapes included) that ends at `end` in `s`,
- * reading back no further than `from`. Equal to `end` when none does.
+ * Number of backslashes in the run that ends at `i` (0 when `s[i]` is not
+ * one), reading back no further than `low`.
  */
-function identifierStart(s: string, end: number, from: number): number {
+function backslashRun(s: string, low: number, i: number): number {
+  let k = i;
+  while (k >= low && s.charCodeAt(k) === BACKSLASH) k--;
+  return i - k;
+}
+
+/**
+ * Start of the identifier (escapes included) that ends at `end` in `s`;
+ * equal to `end` when none does. A backslash run is counted once: its pairs
+ * are escaped backslashes, and an odd one out escapes the code point after
+ * the run.
+ */
+function identifierStart(s: string, end: number): number {
   let k = end;
-  while (k > from) {
+  while (k > 0) {
     const c = s.charCodeAt(k - 1);
     if (isIdentCode(c)) {
       k--;
-    } else if (c === BACKSLASH) {
-      // The backslash starts an escape the identifier holds, unless escaped
-      // itself (then the pair is an escaped backslash, read below).
-      if (isEscaped(s, k - 1)) {
-        k -= 2;
-      } else if (k < end) {
-        k--;
-      } else {
-        break;
-      }
-    } else if (k - 1 > from && isEscaped(s, k - 1) && !isNewline(c)) {
-      k -= 2;
+      continue;
+    }
+    if (c === BACKSLASH) {
+      const run = backslashRun(s, 0, k - 1);
+      // An odd run directly before `end` escapes the code point at `end`.
+      if ((run & 1) === 1 && k === end) break;
+      k -= run;
+      continue;
+    }
+    const run = backslashRun(s, 0, k - 2);
+    if ((run & 1) === 1 && !isNewline(c)) {
+      k -= 1 + run;
     } else if (isSpace(c)) {
       // Whitespace ending a hex escape belongs to it.
-      let w = k - 1;
-      if (c === LF && w > from && s.charCodeAt(w - 1) === CR) w--;
-      let d = w;
-      while (d > from && w - d < 6 && isHex(s.charCodeAt(d - 1))) d--;
-      if (d < w && d - 1 >= from && s.charCodeAt(d - 1) === BACKSLASH && !isEscaped(s, d - 1)) {
-        k = d - 1;
-      } else {
-        break;
-      }
+      const w = c === LF && k > 1 && s.charCodeAt(k - 2) === CR ? k - 2 : k - 1;
+      const escape = hexEscapeStart(s, 0, w);
+      if (escape === -1) break;
+      k = escape;
     } else {
       break;
     }
+  }
+  // `<!--` reads as one token, so the hyphens it ends with start no identifier.
+  if (
+    k >= 2 &&
+    k + 1 < end &&
+    s.charCodeAt(k) === HYPHEN &&
+    s.charCodeAt(k + 1) === HYPHEN &&
+    s.charCodeAt(k - 1) === EXCLAMATION &&
+    s.charCodeAt(k - 2) === LT &&
+    (backslashRun(s, 0, k - 3) & 1) === 0
+  ) {
+    k += 2;
   }
   return k;
 }
@@ -152,7 +171,7 @@ export function isUrlCall(s: string, open: number): boolean {
     while (k >= stop && s.charCodeAt(k) !== BACKSLASH) k--;
     if (k < stop) return false;
   }
-  return isUrlIdentifier(s, identifierStart(s, open, 0), open);
+  return isUrlIdentifier(s, identifierStart(s, open), open);
 }
 
 /** {@link isUrlCall} for the identifier `s[start..open)` found by {@link identifierStart}. */
@@ -321,13 +340,14 @@ const SOLIDUS_STOP = stops('/');
 
 /**
  * Index of the backslash of the hex escape whose digits end at `end` in `s`
- * (one to six hex digits after an unescaped backslash); -1 when none does.
+ * (one to six hex digits after an unescaped backslash), reading back no
+ * further than `low`; -1 when none does.
  */
-function hexEscapeStart(s: string, end: number): number {
+function hexEscapeStart(s: string, low: number, end: number): number {
   let d = end;
-  while (d > 0 && end - d < 6 && isHex(s.charCodeAt(d - 1))) d--;
-  if (d === end || d === 0 || s.charCodeAt(d - 1) !== BACKSLASH) return -1;
-  return isEscaped(s, d - 1) ? -1 : d - 1;
+  while (d > low && end - d < 6 && isHex(s.charCodeAt(d - 1))) d--;
+  if (d === end || d === low || s.charCodeAt(d - 1) !== BACKSLASH) return -1;
+  return (backslashRun(s, low, d - 1) & 1) === 1 ? d - 1 : -1;
 }
 
 /** {@link tailKind}: the text is empty. */
@@ -340,21 +360,19 @@ const TAIL_IDENT = -2;
 const TAIL_HEX = -3;
 
 /**
- * How `s` ends, for {@link commentJoins}: {@link TAIL_NONE},
+ * How the non-empty text `s[low..end)` ends, for {@link commentJoins}:
  * {@link TAIL_SPACE}, {@link TAIL_IDENT}, {@link TAIL_HEX}, or else its last
  * code point, a delimiter.
  */
-function tailKind(s: string): number {
-  const end = s.length;
-  if (end === 0) return TAIL_NONE;
+function tailKind(s: string, low: number, end: number): number {
   const c = s.charCodeAt(end - 1);
-  if (isHex(c) && hexEscapeStart(s, end) !== -1) return TAIL_HEX;
-  if (isIdentCode(c) || isEscaped(s, end - 1)) return TAIL_IDENT;
+  if (isHex(c) && hexEscapeStart(s, low, end) !== -1) return TAIL_HEX;
+  if (isIdentCode(c) || (backslashRun(s, low, end - 2) & 1) === 1) return TAIL_IDENT;
   if (!isSpace(c)) return c;
   // Whitespace ending a hex escape belongs to it; a CR ending one would
   // take an LF after it too, as one newline.
-  const w = c === LF && end > 1 && s.charCodeAt(end - 2) === CR ? end - 2 : end - 1;
-  if (hexEscapeStart(s, w) === -1) return TAIL_SPACE;
+  const w = c === LF && end - 2 >= low && s.charCodeAt(end - 2) === CR ? end - 2 : end - 1;
+  if (hexEscapeStart(s, low, w) === -1) return TAIL_SPACE;
   return c === CR ? TAIL_HEX : TAIL_IDENT;
 }
 
@@ -418,9 +436,11 @@ export function removeComments(text: string, lineComments: boolean): string {
   let start = 0;
   let i = 0;
   let depth = 0;
-  // `tailKind(out)`, read once per length of `out`.
+  // How `out` ends, read from `text` so `out` is never flattened. Reading
+  // back stops at the start of the text last copied: when that text starts
+  // with a backslash or hex digit, the code point before it in `out` is
+  // neither (removal there would have joined, keeping `/**/`).
   let tail = TAIL_NONE;
-  let tailAt = 0;
   for (;;) {
     i = scan(text, i, len, SOLIDUS_STOP, ANY_DEPTH, depth);
     if (i >= len) break;
@@ -432,7 +452,10 @@ export function removeComments(text: string, lineComments: boolean): string {
       i++;
       continue;
     }
-    out += text.substring(start, i);
+    if (i > start) {
+      out += text.substring(start, i);
+      tail = tailKind(text, start, i);
+    }
     if (line) {
       const eol = text.indexOf('\n', i + 2);
       i = eol === -1 ? len : eol;
@@ -440,14 +463,11 @@ export function removeComments(text: string, lineComments: boolean): string {
       const close = text.indexOf('*/', i + 2);
       i = close === -1 ? len : close + 2;
     }
-    if (out.length !== tailAt) {
-      tailAt = out.length;
-      tail = tailKind(out);
-    }
     if (tail === TAIL_SPACE && !line) {
       while (i < len && isSpace(text.charCodeAt(i))) i++;
     } else if (commentJoins(tail, i < len ? text.charCodeAt(i) : -1)) {
       out += '/**/';
+      tail = SLASH;
     }
     start = i;
   }

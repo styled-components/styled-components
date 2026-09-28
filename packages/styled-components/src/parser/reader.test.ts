@@ -62,6 +62,44 @@ describe('reader', () => {
       const text = '\\41  url(';
       expect(isUrlCall(text, text.length - 1)).toBe(true);
     });
+
+    it.each([
+      ['an escaped backslash before an escape', '\\\\\\75rl(', false],
+      ['an escaped `(` inside the identifier', 'u\\(rl(', false],
+    ])('reads backslash runs by their parity: %s', (_, text, expected) => {
+      expect(isUrlCall(text, text.length - 1)).toBe(expected);
+    });
+
+    /**
+     * CSS Syntax 3 §4.3.1 Consume a token, "U+003C LESS-THAN SIGN (<): If the
+     * next 3 input code points are U+0021 EXCLAMATION MARK U+002D
+     * HYPHEN-MINUS U+002D HYPHEN-MINUS (!--), consume them and return a
+     * <CDO-token>." The hyphens after `<!` belong to that token, not to the
+     * identifier after it.
+     */
+    it.each([
+      ['<!--url(', true],
+      ['a<!--url(', true],
+      ['<!--\\75rl(', true],
+      ['<!---url(', false],
+      ['\\<!--url(', false],
+      ['!--url(', false],
+    ])('reads `%s` as url( %s after the text `<!--` makes one token of', (text, expected) => {
+      expect(isUrlCall(text, text.length - 1)).toBe(expected);
+    });
+
+    /** Every reading is linear in the length of the text: a backslash run is read once. */
+    describe('reads a backslash run once', () => {
+      const n = 200_000;
+      it.each([
+        ['a run of escaped backslashes before `l(`', '\\'.repeat(n) + 'l('],
+        ['a run ending in an escaped `(` before `l(`', '\\'.repeat(n + 1) + '(l('],
+      ])('%s', (_, text) => {
+        const start = performance.now();
+        expect(isUrlCall(text, text.length - 1)).toBe(false);
+        expect(performance.now() - start).toBeLessThan(200);
+      });
+    });
   });
 
   describe('scan', () => {
