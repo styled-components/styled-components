@@ -1,5 +1,5 @@
 import css from '../constructors/css';
-import { DYN, NodeKind, RuleNode, TemplateValue } from './ast';
+import { DYN, KeyframeFrame, KeyframesNode, NodeKind, RuleNode, TemplateValue } from './ast';
 import { InterpolationKind, parseSource } from './source';
 
 // Helper to make tagged-template test inputs feel natural.
@@ -722,11 +722,14 @@ describe('parseSource', () => {
         true,
         true,
       ]);
-      expect([isDyn(inner), isDyn(inner.children[0]), isDyn(hover.children[0])]).toEqual([
-        true,
-        true,
-        false,
-      ]);
+      const firstFrame = (node: object) => (node as KeyframesNode).frames[0] as KeyframeFrame;
+      expect([
+        isDyn(inner),
+        isDyn(inner.children[0]),
+        isDyn(hover.children[0]),
+        isDyn(firstFrame(src.ast[7]).children[0]),
+        isDyn(firstFrame(src.ast[8]).children[0]),
+      ]).toEqual([true, true, false, false, true]);
     });
 
     it('records a quoted url( argument as a string, not an unquoted url', () => {

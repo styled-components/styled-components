@@ -39,6 +39,7 @@ import {
   splitTopLevelCommas,
   stripCommaSpaces,
   TOP_LEVEL,
+  trimRange,
 } from './parser';
 import {
   checkSlotValue,
@@ -66,23 +67,17 @@ export interface FastPathFragment {
   fragments: (FastPathFragment | null)[] | null;
 }
 
-const EMPTY_SOURCE: Source = {
-  ast: [],
-  strings: [''],
-  interpolations: [],
-  kinds: [],
-  staticValues: [],
-  slotIsStandalone: [],
-  slotEntries: [],
-};
-
 /**
  * Side-table entry for a slot whose value cannot be resolved (a non-styled
  * component, or a client reference). It contributes no text, and a rule it
  * heads is dropped rather than widened to the selector around it. Compared
  * by identity.
  */
-const UNRESOLVED: FastPathFragment = { source: EMPTY_SOURCE, filled: [], fragments: null };
+const UNRESOLVED: FastPathFragment = {
+  source: parseSource([''], []),
+  filled: [],
+  fragments: null,
+};
 
 /**
  * True when any slot in a fast-path fragments buffer resolved to a fragment.
@@ -981,30 +976,13 @@ function keepDecls(nodes: StaticRoot, out: StaticDeclNode[]): void {
   }
 }
 
+/** A frame's filled declarations; a splice keeps only the declarations it holds. */
 function fillFrameDecls(
-  children: ReadonlyArray<DeclNode | InterpolationNode>,
+  children: Array<DeclNode | InterpolationNode>,
   fill: Fill
 ): StaticDeclNode[] {
   const decls: StaticDeclNode[] = [];
-  for (let j = 0; j < children.length; j++) {
-    const child = children[j];
-    if (child.kind === NodeKind.Interpolation) {
-      keepDecls(spliceNodes(child.index, fill), decls);
-      continue;
-    }
-    // Frame declarations carry no `[DYN]` flag; read their fields.
-    if (typeof child.prop === 'string' && typeof child.value === 'string') {
-      decls.push(child as StaticDeclNode);
-      continue;
-    }
-    const filled = fillDecl(child, fill);
-    if (filled === undefined) continue;
-    if (Array.isArray(filled)) {
-      for (let k = 0; k < filled.length; k++) decls.push(filled[k]);
-    } else {
-      decls.push(filled);
-    }
-  }
+  keepDecls(fillNodes(children, fill), decls);
   return decls;
 }
 
@@ -1064,20 +1042,7 @@ function warnDropped(construct: string): void {
 }
 
 function trimWhitespace(s: string): string {
-  let start = 0;
-  let end = s.length;
-  while (start < end) {
-    const c = s.charCodeAt(start);
-    if (isWS(c)) start++;
-    else break;
-  }
-  while (end > start) {
-    const c = s.charCodeAt(end - 1);
-    if (isWS(c)) end--;
-    else break;
-  }
-  if (start === 0 && end === s.length) return s;
-  return s.substring(start, end);
+  return trimRange(s, 0, s.length);
 }
 
 /**

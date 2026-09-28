@@ -780,7 +780,8 @@ export function stripCommaSpaces(s: string): string {
   return out;
 }
 
-function trimRange(css: string, start: number, end: number): string {
+/** `css[start..end]` without leading and trailing whitespace. */
+export function trimRange(css: string, start: number, end: number): string {
   while (start < end) {
     const c = css.charCodeAt(start);
     if (isWS(c)) start++;
