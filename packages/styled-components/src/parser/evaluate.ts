@@ -5,7 +5,7 @@ import { fifoSet } from '../utils/fifoMap';
 import getComponentName from '../utils/getComponentName';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import isPlainObject from '../utils/isPlainObject';
-import objectToTemplate from '../utils/objectToCSS';
+import { walkObject } from '../utils/objectToCSS';
 import { warnOnce } from '../utils/warnOnce';
 import { trimRealized } from './parser';
 import {
@@ -219,16 +219,17 @@ function resolveValue(
   }
   if (isPlainObject(value)) {
     if (Object.prototype.hasOwnProperty.call(value, 'toString')) return String(value);
-    const template = objectToTemplate(value as Record<string, unknown>, {
+    const walked = walkObject(value as Record<string, unknown>, {
       context: r.context,
       fragmentText: frag => fragmentValueText(frag as RuleSet<any>, r),
     });
-    const strings = template.strings;
-    const n = template.interpolations.length;
+    const interpolations = walked.interpolations;
     // Only ordinary values: the text parses as a mixin, as template text does.
-    if (n === 0) return strings[0];
+    if (interpolations === null || walked.strings === null) return walked.pending;
+    const strings = walked.strings;
+    strings.push(walked.pending);
     const values: string[] = [];
-    for (let i = 0; i < n; i++) values.push(String(template.interpolations[i]));
+    for (let i = 0; i < interpolations.length; i++) values.push(String(interpolations[i]));
     if (standalone && r.fragments !== undefined) {
       r.fragments[index] = {
         source: objectSource(strings, values),
