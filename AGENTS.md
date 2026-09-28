@@ -202,7 +202,7 @@ The `packages/native-showcase` app is the visual QA surface for v7 native polyfi
 
 ## Topical references
 
-- Interpolation slot roles and what each slot's value may do (the parser's contract; update it before changing slot behavior): [docs/interpolation-slots.md](docs/interpolation-slots.md)
+- Interpolation slot roles and what each slot's value may do (the parser's contract; update it before changing slot behavior). Its Position section (least surprise, widest composition, fast dynamic CSS) decides open questions about value handling: [docs/interpolation-slots.md](docs/interpolation-slots.md)
 - TypeScript type-instantiation budget, measured type constraints, and type-surface testing: [docs/typescript-performance.md](docs/typescript-performance.md)
 - React 19 behaviors that hit the render hot path and SSR/RSC output: [docs/react.md](docs/react.md)
 - React Native substrate: CSS capability by RN version, Yoga divergences, the in-house declaration transform: [docs/react-native.md](docs/react-native.md)
