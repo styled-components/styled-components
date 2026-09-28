@@ -1,6 +1,5 @@
 import type { CompiledKeyframes, KeyframesCompiler } from './Keyframes';
-import type { StaticRoot } from '../parser/ast';
-import { NodeKind } from '../parser/ast';
+import { NodeKind, type StaticRoot } from '../parser/ast';
 import { fillSource } from '../parser/compile';
 import { emitKeyframes } from '../parser/emit-web';
 import {
