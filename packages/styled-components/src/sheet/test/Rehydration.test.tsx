@@ -4,6 +4,8 @@ import { render } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { ServerStyleSheet, StyleSheetManager } from '../../base';
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../../constants';
+import { compileWeb } from '../../parser/compile';
+import { parseSource } from '../../parser/source';
 import { resetStyled } from '../../test/utils';
 import { resetWarnOnce } from '../../utils/warnOnce';
 import * as GroupIDAllocator from '../GroupIDAllocator';
@@ -45,16 +47,17 @@ describe('outputSheet', () => {
     `);
   });
 
-  it('writes a line break after `*/` inside a rule as a space, so no rule holds the splitter', () => {
+  it('writes a compiled rule whose value holds the splitter with no splitter inside it', () => {
     const output = asServer(() => {
       const sheet = new StyleSheet({ isServer: true });
       GroupIDAllocator.setGroupForId('idA', 11);
-      sheet.insertRules('idA', 'nameA', ['.a{background:url(/*!sc*/\nx/*!sc*/\r\ny/**/\fz)}']);
+      const src = parseSource(['background: ', ';'], [() => 'url(/*!sc*/\nx/*!sc*/\r\ny/**/\fz)']);
+      sheet.insertRules('idA', 'nameA', compileWeb(src, {}, '.a'));
       return outputSheet(sheet);
     });
 
     expect(output).toBe(
-      '.a{background:url(/*!sc*/ x/*!sc*/ \ny/**/ z)}/*!sc*/\n' +
+      '.a{background:url(/*!sc*/ x/*!sc*/ \ny/**/ z);}/*!sc*/\n' +
         'data-styled.g11[id="idA"]{content:"nameA,"}/*!sc*/\n'
     );
   });
