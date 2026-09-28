@@ -1210,6 +1210,87 @@ describe('compileWeb', () => {
       expect(compileWeb(src, {}, '.a', opts)).toEqual(['.a h1,.a body{color:red;}']);
     });
 
+    /**
+     * In a list holding a slot, a part stays as written only when it holds
+     * `&` outside parentheses and brackets; every other part is nested under
+     * the parent, so `&` inside `:not()` or `:has()` cannot unscope it.
+     */
+    describe('anchoring each part on the parent', () => {
+      it.each([
+        ['`&:hover`', tagged`& > ${'p, &:hover'} { color: red; }`, '.a>p,.a:hover'],
+        ['`html &`', tagged`& ${'p, html &'} { color: red; }`, '.a p,html .a'],
+        ['`html :not(&)`', tagged`& ${'x, html :not(&)'} { color: red; }`, '.a x,.a html :not(.a)'],
+        [
+          '`body:has(&) *`',
+          tagged`&:hover ${'x, body:has(&) *'} { color: red; }`,
+          '.a:hover x,.a body:has(.a) *',
+        ],
+        ['`:is(&) x`', tagged`& ${'p, :is(&) x'} { color: red; }`, '.a p,.a :is(.a) x'],
+      ])('in an Inside value: %s', (_, src, selector) => {
+        expect(compileWeb(src, {}, '.a', opts)).toEqual([selector + '{color:red;}']);
+      });
+
+      it.each([
+        ['inside brackets', '[data-x="&"]'],
+        ['inside a string', '"&"'],
+        ['escaped', '.x\\&y'],
+      ])('nests a part whose only `&` is %s', (_, part) => {
+        const src = tagged`${'p, ' + part} { color: red; }`;
+        expect(fillSource(src, src.staticValues, null)).toEqual([
+          {
+            kind: NodeKind.Rule,
+            selectors: ['p', '& ' + part],
+            children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+          },
+        ]);
+      });
+
+      it('nests a part a value comma makes next to authored `:not(&)` text', () => {
+        const src = tagged`&:hover, ${'x, html'} :not(&) { color: red; }`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual([
+          '.a:hover,.a x,.a html :not(.a){color:red;}',
+        ]);
+      });
+
+      it('nests an authored part without a top-level `&` in a list holding a slot', () => {
+        const src = tagged`html :not(&), & ${'p'} { color: red; }`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(['.a html :not(.a),.a p{color:red;}']);
+      });
+
+      it.each([
+        [
+          '`html :not(&)`',
+          tagged`${() => 'x, html :not(&)'} { color: red; }`,
+          '.a x,.a html :not(.a)',
+        ],
+        ['`:is(&) x`', tagged`${() => ':is(&) x'} { color: red; }`, '.a :is(.a) x'],
+        ['`html &`', tagged`${() => 'html &, x'} { color: red; }`, 'html .a,.a x'],
+        [
+          'authored `:not(&)` after a value comma',
+          tagged`${() => 'x, html'} :not(&) { color: red; }`,
+          '.a x,.a html :not(.a)',
+        ],
+      ])('in a Head value: %s', (_, src, selector) => {
+        expect(compileWeb(src, {}, '.a', opts)).toEqual([selector + '{color:red;}']);
+      });
+
+      it('leaves a list at the top level of a global style as written, with no parent to nest under', () => {
+        const src = tagged`${'p, :not(&)'} { color: red; }`;
+        expect(fillSource(src, src.staticValues, null, true)).toEqual([
+          {
+            kind: NodeKind.Rule,
+            selectors: ['p', ':not(&)'],
+            children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+          },
+        ]);
+      });
+
+      it('leaves a list without a slot as written', () => {
+        const src = tagged`html :not(&) { color: red; }`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(['html :not(.a){color:red;}']);
+      });
+    });
+
     it('splits a stop list an Inside value adds into stops', () => {
       const src = tagged`@keyframes k { from, ${'50%, 60%'} { opacity: 0; } }`;
       const filled = fillSource(src, src.staticValues, null);
