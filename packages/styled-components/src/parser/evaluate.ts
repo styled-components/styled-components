@@ -238,9 +238,7 @@ function resolveValue(
       };
       return '';
     }
-    let text = strings[0];
-    for (let i = 0; i < values.length; i++) text += values[i] + strings[i + 1];
-    return text;
+    return buildHashCSS(strings, values);
   }
   return String(value);
 }
