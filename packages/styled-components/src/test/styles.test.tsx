@@ -2,14 +2,21 @@ import { render } from '@testing-library/react';
 import React from 'react';
 import { ThemeProvider } from '../base';
 import css from '../constructors/css';
+import keyframes from '../constructors/keyframes';
 import { mainSheet } from '../models/StyleSheetManager';
 import * as nonce from '../utils/nonce';
-import { getRenderedCSS, resetStyled } from './utils';
+import { getCSS, getRenderedCSS, resetStyled } from './utils';
 
 jest.mock('../utils/nonce');
 jest.spyOn(nonce, 'default').mockImplementation(() => 'foo');
 
 let styled: ReturnType<typeof resetStyled>;
+
+/** Injected rule bodies in order, without their class selectors. */
+const ruleBodies = () =>
+  getCSS(document)
+    .split('\n')
+    .map(rule => rule.slice(rule.indexOf('{')));
 
 describe('with styles', () => {
   /**
@@ -230,8 +237,8 @@ describe('with styles', () => {
 
   it('honors a custom toString on a value-position interpolation in a template literal (#5740)', () => {
     // Same design-token shape, but interpolated directly into a value
-    // slot (the reporter's original repro). Verifies the `resolveInterpolation`
-    // path, separate from the inline-object path covered above.
+    // slot (the reporter's original repro). Verifies the template slot
+    // value path, separate from the inline-object path covered above.
     const ink = {
       default: '#000',
       subtle: '#444',
@@ -599,6 +606,7 @@ describe('with styles', () => {
   it('should preserve styles after a malformed declaration with unbalanced brace', () => {
     // Ensures unbalanced braces in interpolated values don't break subsequent styles
     // In v6, a syntax error like an extra `}` in a value would cause all subsequent styles to be ignored
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const Comp = styled.div`
       width: 100px;
       height: 100px;
@@ -607,6 +615,10 @@ describe('with styles', () => {
       background-color: green;
     `;
     render(<Comp />);
+    expect(warn.mock.calls.map(call => String(call[0]))).toEqual([
+      expect.stringContaining('The declaration `line-height` was dropped'),
+    ]);
+    warn.mockRestore();
 
     // The malformed line-height should be dropped, but background-color should still apply
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -1141,6 +1153,689 @@ describe('with styles', () => {
           to {
             opacity: 1;
           }
+        }"
+      `);
+    });
+  });
+
+  /**
+   * CSS Syntax 3 §9 (https://drafts.csswg.org/css-syntax-3/#serialization):
+   * "The tokenizer described in this specification does not produce tokens
+   * for comments, or otherwise preserve them in any way. Implementations may
+   * preserve the contents of comments and their location in the token
+   * stream. If they do, this preserved information must have no effect on
+   * the parsing step."
+   */
+  describe('comments next to interpolations', () => {
+    it('nests a component selector when a comment precedes `{`', () => {
+      const Child = styled.span``;
+      const Comp = styled.div`
+        ${Child} /* note */ {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(`.a .${Child.styledComponentId} {\n  color: red;\n}`);
+    });
+
+    it('keeps a declaration whose property name is interpolated before a comment', () => {
+      const Comp = styled.div`
+        ${'color'} /* note */: red;
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+        }"
+      `);
+    });
+
+    it('applies a mixin that follows a comment', () => {
+      const mixin = css`
+        margin: 0;
+      `;
+      const Comp = styled.div`
+        color: red;
+        /* note */ ${mixin}
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+          margin: 0;
+        }"
+      `);
+    });
+
+    it('closes a declaration missing its `;` before a block fragment that follows a comment', () => {
+      const frag = css`
+        margin: 0;
+      `;
+      // biome-ignore format: the missing `;` is what this asserts on
+      const Comp = styled.div`
+        color: red /* note */ ${frag}
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+          margin: 0;
+        }"
+      `);
+    });
+
+    it('never calls a function written inside a comment', () => {
+      const commentedOut = jest.fn(() => 'color: blue;');
+      const Comp = styled.div`
+        /* ${commentedOut} */
+        color: red;
+      `;
+      render(<Comp />);
+      expect(commentedOut).not.toHaveBeenCalled();
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+        }"
+      `);
+    });
+
+    it('never injects keyframes written inside a comment', () => {
+      const fade = keyframes`from { opacity: 0; } to { opacity: 1; }`;
+      const Comp = styled.div`
+        // animation: ${fade} 1s;
+        color: red;
+      `;
+      render(<Comp />);
+      expect(getCSS(document)).not.toContain('@keyframes');
+    });
+
+    it('recovers from a stray `}` the same way with or without a comment', () => {
+      const frag = css`margin: 0;`;
+      // biome-ignore format: the stray brace is what this asserts on
+      const Plain = styled.div`
+        color: blue; } color: red ${frag} padding: 1px;
+      `;
+      // biome-ignore format: the stray brace is what this asserts on
+      const Commented = styled.div`
+        color: blue; /* note */ } color: red ${frag} padding: 1px;
+      `;
+      render(
+        <>
+          <Plain />
+          <Commented />
+        </>
+      );
+      const [plainBody, commentedBody] = ruleBodies();
+      expect(commentedBody).toEqual(plainBody);
+    });
+
+    it('keeps a value fragment in its declaration when a comment in it holds a `;`', () => {
+      const frag = css`red /* fallback; see docs */`;
+      const Comp = styled.div`
+        border: 1px solid ${frag};
+        color: blue;
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          border: 1px solid red;
+          color: blue;
+        }"
+      `);
+    });
+  });
+
+  describe('component selectors followed by more selector text', () => {
+    it('keeps the component in a descendant selector ending in a type selector', () => {
+      const Child = styled.span``;
+      const Comp = styled.div`
+        color: green;
+        ${Child} h2 {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(
+        `.a {\n  color: green;\n}\n.a .${Child.styledComponentId} h2 {\n  color: red;\n}`
+      );
+    });
+
+    it('keeps the component in a selector list', () => {
+      const Child = styled.span``;
+      const Comp = styled.div`
+        ${Child}, h2 {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(`.a .${Child.styledComponentId}, .a h2 {\n  color: red;\n}`);
+    });
+
+    it('keeps both components in a descendant selector of two components', () => {
+      const Outer = styled.span``;
+      const Inner = styled.em``;
+      const Comp = styled.div`
+        ${Outer} ${Inner} {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(
+        `.a .${Outer.styledComponentId} .${Inner.styledComponentId} {\n  color: red;\n}`
+      );
+    });
+
+    it('keeps a component returned by a function in a descendant selector', () => {
+      const Child = styled.span``;
+      const Comp = styled.div`
+        color: green;
+        ${() => Child} h2 {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(
+        `.a {\n  color: green;\n}\n.a .${Child.styledComponentId} h2 {\n  color: red;\n}`
+      );
+    });
+
+    it('keeps a component returned by a function in a selector list', () => {
+      const Child = styled.span``;
+      const Comp = styled.div`
+        ${() => Child}, h2 {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(`.a .${Child.styledComponentId}, .a h2 {\n  color: red;\n}`);
+    });
+
+    it('applies a declaration mixin that directly precedes a nested rule', () => {
+      const Comp = styled.div`
+        ${() => 'color: red;'}
+        h2 {
+          color: blue;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+        }
+        .a h2 {
+          color: blue;
+        }"
+      `);
+    });
+
+    it('keeps a nested rule intact when the mixin before it renders nothing', () => {
+      const Comp = styled.div<{ $on?: boolean }>`
+        ${p => p.$on && 'color: red;'}
+        h2 {
+          color: blue;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a h2 {
+          color: blue;
+        }"
+      `);
+    });
+
+    it('keeps an at-rule intact when the mixin before it renders nothing', () => {
+      const Comp = styled.div<{ $on?: boolean }>`
+        ${p => p.$on && 'color: red;'}
+        @media (min-width: 1px) {
+          color: blue;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        "@media (min-width:1px) {
+          .a {
+            color: blue;
+          }
+        }"
+      `);
+    });
+  });
+
+  /**
+   * CSS Syntax 3 §4.3.5 (https://drafts.csswg.org/css-syntax-3/#consume-string-token):
+   * "Repeatedly consume the next input code point from the stream: ending
+   * code point: Return the <string-token>."
+   */
+  describe('interpolations inside quoted strings', () => {
+    it('never leaks a slot placeholder when a fragment is written inside a string', () => {
+      const frag = css`
+        margin: 0;
+      `;
+      const Comp = styled.div`
+        content: "a ${frag}";
+      `;
+      render(<Comp />);
+      expect(getCSS(document)).not.toContain('\0');
+    });
+
+    it('keeps a fragment holding a quoted data URL in its declaration', () => {
+      const icon = css`url("data:image/svg+xml;utf8,<svg/>")`;
+      const Static = styled.div`
+        background: no-repeat url("data:image/svg+xml;utf8,<svg/>");
+        color: red;
+      `;
+      const Interpolated = styled.div`
+        background: no-repeat ${icon};
+        color: red;
+      `;
+      render(
+        <>
+          <Static />
+          <Interpolated />
+        </>
+      );
+      const [staticBody, interpolatedBody] = ruleBodies();
+      expect(interpolatedBody).toEqual(staticBody);
+    });
+
+    it('keeps a fragment holding an unquoted data URL in its declaration', () => {
+      const icon = css`url(data:image/png;base64,AAAA)`;
+      const Static = styled.div`
+        background: no-repeat url(data:image/png;base64,AAAA);
+        color: red;
+      `;
+      const Interpolated = styled.div`
+        background: no-repeat ${icon};
+        color: red;
+      `;
+      render(
+        <>
+          <Static />
+          <Interpolated />
+        </>
+      );
+      const [staticBody, interpolatedBody] = ruleBodies();
+      expect(interpolatedBody).toEqual(staticBody);
+    });
+
+    it('substitutes a slot that follows a `;` inside a string', () => {
+      const Comp = styled.div`
+        content: "a;${'x'}";
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          content: "a;x";
+        }"
+      `);
+    });
+
+    it('substitutes a slot that follows a `{` inside a string', () => {
+      const Static = styled.div`
+        content: '{x}';
+      `;
+      const Interpolated = styled.div`
+        content: '{${'x'}}';
+      `;
+      render(
+        <>
+          <Static />
+          <Interpolated />
+        </>
+      );
+      const [staticBody, interpolatedBody] = ruleBodies();
+      expect(interpolatedBody).toEqual(staticBody);
+    });
+
+    it('substitutes every slot in a string that spans several slots', () => {
+      const Comp = styled.div`
+        content: "${'a'};${'b'}";
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          content: "a;b";
+        }"
+      `);
+    });
+
+    it('keeps a string open past an escaped quote', () => {
+      const Comp = styled.div`
+        content: "a\\";${'b'}";
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          content: "a\\";b";
+        }"
+      `);
+    });
+
+    it('applies a mixin that follows a declaration whose string holds a `;`', () => {
+      const mixin = css`
+        margin: 0;
+      `;
+      const Comp = styled.div`
+        content: "a;b";
+        ${mixin}
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          content: "a;b";
+          margin: 0;
+        }"
+      `);
+    });
+  });
+
+  describe('slots before a nested rule', () => {
+    const red = css`
+      color: red;
+    `;
+    const margin = () => 'margin: 0;';
+
+    it('applies a mixin ending in `;` before a type selector rule', () => {
+      const Comp = styled.div`
+        ${red}
+        h2 {
+          color: blue;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+        }
+        .a h2 {
+          color: blue;
+        }"
+      `);
+    });
+
+    it('applies stacked mixins ending in `;` before a type selector rule', () => {
+      const Comp = styled.ul`
+        ${red}
+        ${margin}
+        li {
+          color: blue;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+          margin: 0;
+        }
+        .a li {
+          color: blue;
+        }"
+      `);
+    });
+
+    it('applies two mixins before an at-rule', () => {
+      const Comp = styled.div`
+        ${red}
+        ${margin}
+        @media (min-width: 1px) {
+          color: blue;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+          margin: 0;
+        }
+        @media (min-width:1px) {
+          .a {
+            color: blue;
+          }
+        }"
+      `);
+    });
+
+    it('applies a mixin inside a nested block before a type selector rule', () => {
+      const Comp = styled.div`
+        &:hover {
+          ${red}
+          span {
+            color: blue;
+          }
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a:hover {
+          color: red;
+        }
+        .a:hover span {
+          color: blue;
+        }"
+      `);
+    });
+
+    it('applies an attribute-selector rule after a mixin', () => {
+      const Comp = styled.div`
+        ${red}
+        &[data-active="true"] {
+          color: blue;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+        }
+        .a[data-active="true"] {
+          color: blue;
+        }"
+      `);
+    });
+
+    it('keeps a mixin before a component selector rule', () => {
+      const Child = styled.span``;
+      const Comp = styled.div`
+        ${red}
+        ${Child} & {
+          color: blue;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(
+        `.a {\n  color: red;\n}\n.${Child.styledComponentId} .a {\n  color: blue;\n}`
+      );
+    });
+
+    it('renders only the declaration after a stray component reference on its own line', () => {
+      const Child = styled.span``;
+      const Comp = styled.div`
+        ${Child}
+        color: red;
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+        }"
+      `);
+    });
+
+    it('turns a static media helper string into a media rule', () => {
+      const md = '@media (min-width: 900px)';
+      const Comp = styled.div`
+        color: blue;
+        ${md} {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: blue;
+        }
+        @media (min-width:900px) {
+          .a {
+            color: red;
+          }
+        }"
+      `);
+    });
+
+    it('turns a theme media helper into a media rule', () => {
+      const theme = { up: (size: string) => `@media (min-width: ${size === 'md' ? 900 : 0}px)` };
+      const Comp = styled.div`
+        color: blue;
+        ${(p: { theme: typeof theme }) => p.theme.up('md')} {
+          color: red;
+        }
+      `;
+      render(
+        <ThemeProvider theme={theme}>
+          <Comp />
+        </ThemeProvider>
+      );
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: blue;
+        }
+        @media (min-width:900px) {
+          .a {
+            color: red;
+          }
+        }"
+      `);
+    });
+
+    it('reads a function stop and splices a frame-list mixin in inline @keyframes', () => {
+      const toFrame = css`
+        to {
+          opacity: 1;
+        }
+      `;
+      const Comp = styled.div`
+        @keyframes fade {
+          ${() => 'from'} {
+            opacity: 0;
+          }
+          ${toFrame}
+        }
+        animation: fade 1s;
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          animation: fade 1s;
+        }
+        @keyframes fade {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }"
+      `);
+    });
+
+    it('never leaks slot bytes for a block fragment inside parentheses', () => {
+      const block = css`
+        margin: 0;
+      `;
+      const Media = styled.div`
+        @media (min-width: 1px ${block}) {
+          color: red;
+        }
+      `;
+      const Url = styled.div`
+        background: url(a ${block});
+        color: red;
+      `;
+      // Read the rule text handed to the sheet: the browser's CSSOM rejects a
+      // rule holding NUL bytes, so the injected sheet alone would hide a leak.
+      const insert = jest.spyOn(mainSheet, 'insertRules');
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      render(
+        <>
+          <Media />
+          <Url />
+        </>
+      );
+      const inserted = insert.mock.calls.map(call => call[2].join('\n')).join('\n');
+      insert.mockRestore();
+      expect(inserted).toContain('color:red;');
+      expect(inserted).not.toContain('\0');
+      // `url(a ` is already a bad url, which reads on to the `)` the template
+      // writes, so the field ends balanced.
+      expect(inserted).toContain('background:url(a margin: 0;);');
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
+  });
+
+  describe('one slot never removes the rest of the styles', () => {
+    it('renders the rest when a value holds a brace', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const Comp = styled.div<{ $c: string }>`
+        color: ${p => p.$c};
+        margin: 0;
+      `;
+      render(<Comp $c="red } body { background: red" />);
+      expect(warn).toHaveBeenCalledTimes(1);
+      warn.mockRestore();
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          margin: 0;
+        }"
+      `);
+    });
+
+    it('renders the rest when a non-styled component heads a rule', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const Plain = () => <span />;
+      const Comp = styled.div`
+        ${Plain} & {
+          color: red;
+        }
+        margin: 0;
+      `;
+      render(<Comp />);
+      warn.mockRestore();
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          margin: 0;
+        }"
+      `);
+    });
+
+    it('calls a two-parameter function interpolation', () => {
+      const Comp = styled.div<{ $c: string }>`
+        color: ${(p: { $c: string }, _unused?: unknown) => p.$c};
+      `;
+      render(<Comp $c="red" />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+        }"
+      `);
+    });
+
+    it('splices an array of css fragments a function returns', () => {
+      const Comp = styled.div`
+        ${() => [
+          css`
+            color: red;
+          `,
+          css`
+            margin: 0;
+          `,
+        ]}
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: red;
+          margin: 0;
         }"
       `);
     });

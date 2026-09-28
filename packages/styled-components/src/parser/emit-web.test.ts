@@ -1,12 +1,99 @@
+import { tokenize, TokenType } from '@csstools/css-tokenizer';
+import { NodeKind } from './ast';
 import { emitWeb } from './emit-web';
 import { parse } from './parser';
-import { normalize } from '../utils/compiler';
 
 function emit(css: string, selector = '.a'): string[] {
-  return emitWeb(parse(normalize(css)), selector);
+  return emitWeb(parse(css), selector);
+}
+
+/** The selector of a rule written for `selector`, nested under `.a`. */
+function written(selector: string): string {
+  const rules = emitWeb(
+    [
+      {
+        kind: NodeKind.Rule,
+        selectors: [selector],
+        children: [{ kind: NodeKind.Decl, prop: 'a', value: 'b' }],
+      },
+    ],
+    '.a'
+  );
+  return rules[0].slice(0, rules[0].lastIndexOf('{a:b;}'));
+}
+
+/** CSS Syntax 3 tokens of `text` other than whitespace, as type and value. */
+function nonSpaceTokens(text: string): string[] {
+  const out: string[] = [];
+  for (const token of tokenize({ css: text })) {
+    if (token[0] !== TokenType.Whitespace && token[0] !== TokenType.EOF) {
+      out.push(token[0] + ' ' + JSON.stringify(token[4] ?? token[1]));
+    }
+  }
+  return out;
 }
 
 describe('web emitter', () => {
+  /**
+   * Whitespace around a combinator is dropped only where the tokens on
+   * either side stay apart; CSS Syntax 3 §9 serialization separates the
+   * pairs that would join.
+   */
+  describe('whitespace around selector combinators', () => {
+    it.each([
+      ['a > b', '.a a>b'],
+      ['h1 + p', '.a h1+p'],
+      ['a ~ b', '.a a~b'],
+      ['a + 2', '.a a+ 2'],
+      ['a + .5', '.a a+ .5'],
+      ['-- > b', '.a -- >b'],
+      ['1e + 2', '.a 1e + 2'],
+      ['a + .b', '.a a+.b'],
+    ])('writes `%s` as `%s`', (selector, expected) => {
+      expect(written(selector)).toBe(expected);
+    });
+
+    it('leaves every other token as CSS reads it, across seeded random selectors', () => {
+      const pieces = [
+        'a',
+        'e',
+        '1',
+        '5',
+        '-',
+        '--',
+        '.',
+        '+',
+        '>',
+        '~',
+        ' ',
+        '  ',
+        '\\41 ',
+        '#',
+        '!',
+        '<',
+        '%',
+        '(',
+        ')',
+      ];
+      let seed = 7;
+      const next = (n: number) => {
+        seed = (Math.imul(seed, 1103515245) + 12345) | 0;
+        return ((seed >>> 8) & 0xffffff) % n;
+      };
+      const failures: string[] = [];
+      for (let k = 0; k < 3000; k++) {
+        let selector = '';
+        const count = 2 + next(8);
+        for (let p = 0; p < count; p++) selector += pieces[next(pieces.length)];
+        const expected = nonSpaceTokens('.a ' + selector);
+        if (JSON.stringify(nonSpaceTokens(written(selector))) !== JSON.stringify(expected)) {
+          failures.push(JSON.stringify(selector));
+        }
+      }
+      expect(failures).toEqual([]);
+    });
+  });
+
   it('emits simple declarations', () => {
     expect(emit(`color: red; background: blue;`)).toMatchInlineSnapshot(`
       [
@@ -130,7 +217,7 @@ describe('web emitter', () => {
   it('emits @layer block-less (layer order declaration)', () => {
     expect(emit(`@layer reset, framework, utilities;`)).toMatchInlineSnapshot(`
       [
-        "@layer reset,framework,utilities;",
+        "@layer reset, framework, utilities;",
       ]
     `);
   });
@@ -141,6 +228,40 @@ describe('web emitter', () => {
         "@layer utilities{.a{color:red;}}",
       ]
     `);
+  });
+
+  describe('writes only the `&` that reads as the nesting selector', () => {
+    it.each([
+      ['inside a string', `[data-x="&"] { color: red; }`, '.a [data-x="&"]{color:red;}'],
+      [
+        'inside a string beside a nesting `&`',
+        `&[data-x='a&b'] { color: red; }`,
+        ".a[data-x='a&b']{color:red;}",
+      ],
+      ['after an escaping backslash', `&.x\\&y { color: red; }`, '.a.x\\&y{color:red;}'],
+      ['after an escaped backslash', `.x\\\\& { color: red; }`, '.x\\\\.a{color:red;}'],
+      [
+        'inside a string holding an escaped quote',
+        `&[data-x="\\"&"] { color: red; }`,
+        '.a[data-x="\\"&"]{color:red;}',
+      ],
+    ])('%s', (_, css, rule) => {
+      expect(emit(css)).toEqual([rule]);
+    });
+
+    it('writes every nesting `&` across a comma-separated parent', () => {
+      expect(emit(`&[data-x="&"] + & { color: red; }`, '.a, .b')).toEqual([
+        '.a[data-x="&"]+.a,.b[data-x="&"]+.b{color:red;}',
+      ]);
+    });
+  });
+
+  it('rewrites a self-reference only where an ident code point does not continue it', () => {
+    const out = emitWeb(parse('.aé + & { color: red; }'), '.a', {
+      componentId: 'c',
+      selfRefSelector: '.a',
+    });
+    expect(out).toEqual(['.aé+.c{color:red;}']);
   });
 
   it('handles nested & + & self-reference (combinator spaces stripped)', () => {

@@ -4,6 +4,7 @@
 
 import { resetStyled } from './utils';
 
+import { tokenize, TokenType } from '@csstools/css-tokenizer';
 import React from 'react';
 import { renderToPipeableStream, renderToString } from 'react-dom/server';
 // `renderToNodeStream` was removed in React 19. SC still supports its SSR
@@ -20,6 +21,9 @@ import keyframes from '../constructors/keyframes';
 import ServerStyleSheet from '../models/ServerStyleSheet';
 import { StyleSheetManager, mainCompiler } from '../models/StyleSheetManager';
 import WebGlobalStyle from '../models/WebGlobalStyle';
+import { SPLITTER } from '../constants';
+import { compileWeb } from '../parser/compile';
+import { parseSource } from '../parser/source';
 import StyleSheet from '../sheet';
 
 jest.mock('../utils/nonce', () => {
@@ -1282,6 +1286,577 @@ describe('ssr', () => {
       expect(tags).not.toMatch(/<script/);
     });
 
+    /**
+     * Every payload renders beside a static declaration and a static nested
+     * rule, and the SSR text is read back by a CSS Syntax 3 reader: the rule
+     * list must hold exactly the authored rules, every selector scoped.
+     */
+    describe('interpolated values cannot escape their construct', () => {
+      const scoped = (payload: string) => {
+        const Comp = styled.div<{ $v: string }>`
+          color: ${p => p.$v};
+          background: blue;
+          & span {
+            margin: 0;
+          }
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(sheet.collectStyles(<Comp $v={payload} />));
+        return readRules(sheet.getStyleTags());
+      };
+
+      it.each([
+        ['a closing brace', '} body{background:red} a{b:c'],
+        ['an opening brace', '{ x'],
+        ['a raw newline inside a string', '"\n} body{background:red} a{b:"'],
+        ['a quote inside a comment', '/* " */ } body{background:red} /* " */'],
+        ['a bad url', 'url(a"b) } body{background:red} x"'],
+        ['an unbalanced quote', '"abc'],
+        ['an unbalanced parenthesis', 'calc(1px'],
+        ['an unbalanced comment', 'red /* x'],
+        ['a trailing backslash', 'red\\'],
+        ['a bad url after `<!--`', '<!--url(x"a) } body{background:red} x{" )'],
+        ['url( directly preceded by a non-ASCII code point', ' url(x)'],
+      ])('drops the declaration holding %s', (_, payload) => {
+        expect(scoped(payload)).toEqual([
+          { prelude: '.b', props: ['background'], rules: [] },
+          { prelude: '.b span', props: ['margin'], rules: [] },
+        ]);
+      });
+
+      // CSS Syntax 3 revisions disagree on whether a code point at or above
+      // U+0080 continues an identifier, so `url(` directly preceded by one
+      // has no single reading and must drop its declaration with a dev
+      // warning naming the property, the same as any other failed value.
+      it('drops the declaration holding url( directly preceded by a non-ASCII code point, with a dev warning', () => {
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        expect(scoped(' url(x)')).toEqual([
+          { prelude: '.b', props: ['background'], rules: [] },
+          { prelude: '.b span', props: ['margin'], rules: [] },
+        ]);
+        expect(warn.mock.calls.map(call => String(call[0]))).toEqual([
+          expect.stringContaining('`color`'),
+        ]);
+        warn.mockRestore();
+      });
+
+      it('adds only declarations of the same rule for a value `;`', () => {
+        expect(scoped('red; position: fixed')).toEqual([
+          { prelude: '.b', props: ['color', 'position', 'background'], rules: [] },
+          { prelude: '.b span', props: ['margin'], rules: [] },
+        ]);
+      });
+
+      it('adds no @import through a value', () => {
+        expect(scoped('red; @import url(https://evil.example/x.css)')).toEqual([
+          { prelude: '.b', props: ['color', 'background'], rules: [] },
+          { prelude: '.b span', props: ['margin'], rules: [] },
+        ]);
+      });
+
+      describe('style object values', () => {
+        const fontFace = 'red; @font-face { font-family: x; src: url(//evil.example/f) }';
+        const renderRules = (Comp: React.ComponentType<{ $v: string }>, payload: string) => {
+          const sheet = new ServerStyleSheet();
+          renderToString(sheet.collectStyles(<Comp $v={payload} />));
+          return readRules(sheet.getStyleTags());
+        };
+        const fromFunction = () =>
+          styled.div<{ $v: string }>(p => ({
+            color: p.$v,
+            background: 'blue',
+            '& span': { margin: p.$v },
+          }));
+        const fromStatic = (payload: string) => () =>
+          styled.div<{ $v: string }>({
+            color: payload,
+            background: 'blue',
+            '& span': { margin: payload },
+          });
+
+        it.each([
+          ['an object a function returns', () => fromFunction()],
+          ['a static object', () => fromStatic(fontFace)()],
+        ])('adds no rule through a value in %s', (_, make) => {
+          const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+          expect(renderRules(make(), fontFace)).toEqual([
+            { prelude: '.b', props: ['background'], rules: [] },
+          ]);
+          warn.mockRestore();
+        });
+
+        // A style object leaf holding `url(` directly preceded by a
+        // non-ASCII code point must not be baked as literal CSS text (the
+        // same ambiguity `checkSlotValue` fails on): it becomes a value slot
+        // instead, which then fails the check and drops the declaration.
+        it.each([
+          ['an object a function returns', () => fromFunction()],
+          ['a static object', () => fromStatic(' url(x)')()],
+        ])(
+          'drops a declaration whose value holds url( directly preceded by a non-ASCII code point in %s',
+          (_, make) => {
+            const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+            expect(renderRules(make(), ' url(x)')).toEqual([
+              { prelude: '.b', props: ['background'], rules: [] },
+            ]);
+            warn.mockRestore();
+          }
+        );
+
+        it.each([
+          ['an object a function returns', () => fromFunction()],
+          ['a static object', () => fromStatic('red; position: fixed')()],
+        ])('adds only declarations of the same rule for a value `;` in %s', (_, make) => {
+          expect(renderRules(make(), 'red; position: fixed')).toEqual([
+            { prelude: '.b', props: ['color', 'position', 'background'], rules: [] },
+            { prelude: '.b span', props: ['margin', 'position'], rules: [] },
+          ]);
+        });
+      });
+
+      it('adds no frame or rule through a value in a keyframes template', () => {
+        const fade = keyframes`
+          from { opacity: ${'0; } } body { color: red } @keyframes x { from { a: b'}; color: blue; }
+          to { opacity: 1; }
+        `;
+        const Comp = styled.div`
+          animation: ${fade} 1s;
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(sheet.collectStyles(<Comp />));
+        expect(readRules(sheet.getStyleTags())).toEqual([
+          {
+            prelude: '@keyframes a',
+            props: [],
+            rules: [
+              { prelude: 'from', props: ['color'], rules: [] },
+              { prelude: 'to', props: ['opacity'], rules: [] },
+            ],
+          },
+          { prelude: '.c', props: ['animation'], rules: [] },
+        ]);
+      });
+
+      it('scopes every selector a comma list in a selector slot adds', () => {
+        const Comp = styled.div<{ $sel: string }>`
+          & ${p => p.$sel} {
+            color: red;
+          }
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(sheet.collectStyles(<Comp $sel="a, body" />));
+        expect(readRules(sheet.getStyleTags())).toEqual([
+          { prelude: '.b a,.b body', props: ['color'], rules: [] },
+        ]);
+      });
+
+      it.each([
+        ['a comment hiding `&`', '/*&*/body', '.b body:hover'],
+        ['a comment hiding `&` inside parentheses', ':is(/*)&(*/ body)', '.b :is( body):hover'],
+      ])('scopes a selector slot whose value holds %s', (_, payload, prelude) => {
+        const Comp = styled.div<{ $sel: string }>`
+          ${p => p.$sel}:hover {
+            color: red;
+          }
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(sheet.collectStyles(<Comp $sel={payload} />));
+        expect(readRules(sheet.getStyleTags())).toEqual([{ prelude, props: ['color'], rules: [] }]);
+      });
+
+      it.each([
+        ['a `;`', 'h1; body'],
+        ['a brace', 'h1 {} body'],
+      ])('drops the rule whose selector slot holds %s', (_, payload) => {
+        const Comp = styled.div<{ $sel: string }>`
+          @media (min-width: 1px) {
+            & ${p => p.$sel} {
+              color: red;
+            }
+          }
+          color: blue;
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(sheet.collectStyles(<Comp $sel={payload} />));
+        expect(readRules(sheet.getStyleTags())).toEqual([
+          { prelude: '.b', props: ['color'], rules: [] },
+        ]);
+      });
+
+      it('drops the declaration whose property slot holds a brace', () => {
+        const Comp = styled.div<{ $p: string }>`
+          ${p => p.$p}: red;
+          background: blue;
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(sheet.collectStyles(<Comp $p="x} body{color" />));
+        expect(readRules(sheet.getStyleTags())).toEqual([
+          { prelude: '.b', props: ['background'], rules: [] },
+        ]);
+      });
+
+      it.each([
+        ['a `;`', 'screen; body'],
+        ['a brace', 'screen{} body'],
+      ])('drops the at-rule whose prelude slot holds %s', (_, payload) => {
+        const Comp = styled.div<{ $q: string }>`
+          @media ${p => p.$q} {
+            color: red;
+          }
+          background: blue;
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(sheet.collectStyles(<Comp $q={payload} />));
+        expect(readRules(sheet.getStyleTags())).toEqual([
+          { prelude: '.b', props: ['background'], rules: [] },
+        ]);
+      });
+
+      it.each([
+        ['an attribute string', '"]&url(("x) " ) ) {} body { display: none } " [y="z'],
+        ['an escaped name', '"]&\\75rl(("x) " ) ) {} body { display: none } " [y="z'],
+      ])('drops the rule whose selector value joins `&` to a call through %s', (_, payload) => {
+        const Comp = styled.div<{ $state: string }>`
+          color: blue;
+          &[data-state="${p => p.$state}"] {
+            color: red;
+          }
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(sheet.collectStyles(<Comp $state={payload} />));
+        expect(readRules(sheet.getStyleTags())).toEqual([
+          { prelude: '.b', props: ['color'], rules: [] },
+        ]);
+      });
+
+      it('writes a NUL in a value as U+FFFD, so values that differ only in where a NUL sits stay distinct', () => {
+        const Comp = styled.div<{ $a: string; $b: string }>`
+          content: "${p => p.$a}";
+          quotes: "${p => p.$b}";
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(
+          sheet.collectStyles(
+            <>
+              <Comp $a={'x\0y'} $b="" />
+              <Comp $a="x" $b={'y\0'} />
+            </>
+          )
+        );
+        const tags = sheet.getStyleTags();
+        expect(tags).not.toContain('\0');
+        expect(tags).toContain('{content:"x�y";quotes:"";}');
+        expect(tags).toContain('{content:"x";quotes:"y�";}');
+      });
+
+      /**
+       * CSS Syntax 3 revisions disagree on whether U+0080 continues an
+       * identifier, so an escaped url spelling after it reads either as a
+       * function or as a bad url whose remnants end at the first `)`.
+       */
+      describe('an escaped url spelling after a non-ASCII code point', () => {
+        const payload = '\u0080\\75rl(x"a) } body{display:none} y{" )';
+        const render = (Comp: React.ComponentType<{ $v: string }>) => {
+          const sheet = new ServerStyleSheet();
+          renderToString(sheet.collectStyles(<Comp $v={payload} />));
+          return readRules(sheet.getStyleTags());
+        };
+        const only = [{ prelude: '.b', props: ['margin'], rules: [] }];
+
+        it.each([
+          [
+            'a declaration value',
+            () => styled.div<{ $v: string }>`margin: 0; color: ${p => p.$v};`,
+          ],
+          ['a property name', () => styled.div<{ $v: string }>`margin: 0; ${p => p.$v}: red;`],
+          [
+            'a selector',
+            () => styled.div<{ $v: string }>`margin: 0; &:hover ${p => p.$v} { color: red; }`,
+          ],
+          [
+            'an @media prelude',
+            () => styled.div<{ $v: string }>`margin: 0; @media ${p => p.$v} { color: red; }`,
+          ],
+          [
+            'a keyframe stop',
+            () =>
+              styled.div<{
+                $v: string;
+              }>`margin: 0; @keyframes k { ${p => p.$v}, from { opacity: 0; } }`,
+          ],
+          [
+            'a Head value',
+            () => styled.div<{ $v: string }>`margin: 0; ${p => 'p ' + p.$v} { color: red; }`,
+          ],
+        ])('adds no rule through %s', (_, make) => {
+          const rules = render(make());
+          expect(rules.filter(rule => !rule.prelude.startsWith('@keyframes'))).toEqual(only);
+          expect(rules.every(rule => rule.rules.every(inner => inner.prelude === 'from'))).toBe(
+            true
+          );
+        });
+      });
+
+      describe('a value whose comment removal would join tokens', () => {
+        const value = 'u/**/rl(x"a) {} body{display:none} y{" )';
+        const render = (Comp: React.ComponentType<{ $v: string }>) => {
+          const sheet = new ServerStyleSheet();
+          renderToString(sheet.collectStyles(<Comp $v={value} />));
+          return readRules(sheet.getStyleTags());
+        };
+
+        it('adds no rule through a selector value', () => {
+          const Comp = styled.div<{ $v: string }>`
+            color: blue;
+            &:hover ${p => p.$v} {
+              color: red;
+            }
+          `;
+          expect(render(Comp)).toEqual([
+            { prelude: '.b', props: ['color'], rules: [] },
+            {
+              prelude: '.b:hover u/**/rl(x"a) {} body{display:none} y{" )',
+              props: ['color'],
+              rules: [],
+            },
+          ]);
+        });
+
+        it('adds no rule through an @media prelude value', () => {
+          const Comp = styled.div<{ $v: string }>`
+            color: blue;
+            @media ${p => p.$v} {
+              color: red;
+            }
+          `;
+          expect(render(Comp)).toEqual([
+            { prelude: '.b', props: ['color'], rules: [] },
+            {
+              prelude: '@media u/**/rl(x"a) {} body{display:none} y{" )',
+              props: [],
+              rules: [{ prelude: '.b', props: ['color'], rules: [] }],
+            },
+          ]);
+        });
+
+        it('adds no rule through a keyframe stop value', () => {
+          const Comp = styled.div<{ $v: string }>`
+            color: blue;
+            @keyframes spin {
+              ${p => p.$v}, from {
+                opacity: 0;
+              }
+            }
+          `;
+          expect(render(Comp)).toEqual([
+            { prelude: '.b', props: ['color'], rules: [] },
+            {
+              prelude: '@keyframes spin',
+              props: [],
+              rules: [
+                {
+                  prelude: 'u/**/rl(x"a) {} body{display:none} y{" ),from',
+                  props: ['opacity'],
+                  rules: [],
+                },
+              ],
+            },
+          ]);
+        });
+      });
+
+      it('keeps every selector a global value adds under its authored selector', () => {
+        const Global = createGlobalStyle<{ $sel: string; $v: string }>`
+          .root {
+            & ${p => p.$sel} {
+              color: ${p => p.$v};
+            }
+          }
+          body {
+            margin: 0;
+          }
+        `;
+        const render = (sel: string, v: string) => {
+          const sheet = new ServerStyleSheet();
+          renderToString(sheet.collectStyles(<Global $sel={sel} $v={v} />));
+          return readRules(sheet.getStyleTags());
+        };
+        expect(render('a, body', 'red')).toEqual([
+          { prelude: '.root a,.root body', props: ['color'], rules: [] },
+          { prelude: 'body', props: ['margin'], rules: [] },
+        ]);
+        expect(render('a', 'red } html { background: red')).toEqual([
+          { prelude: 'body', props: ['margin'], rules: [] },
+        ]);
+      });
+    });
+
+    /**
+     * Seeded fuzz: hostile values in each field kind, compiled and written as
+     * server output, then read back by the CSS Syntax 3 reader. A value may
+     * only add text inside its own construct, and the output must split into
+     * exactly the rules written and their marker.
+     */
+    describe('fuzzed values', () => {
+      const pieces = [
+        '{',
+        '}',
+        '(',
+        ')',
+        '[',
+        ']',
+        ';',
+        ':',
+        ',',
+        '"',
+        "'",
+        '\\',
+        '/',
+        '*',
+        ' ',
+        '\n',
+        '\r',
+        '\f',
+        '/*',
+        '*/',
+        '/**/',
+        'u/**/rl(',
+        'url(',
+        'URL(',
+        'u\\72l(',
+        '\\75rl(',
+        '&',
+        '&url(',
+        '&-a',
+        '&\\75rl(',
+        '&\\41 (',
+        '@',
+        '@a',
+        '<!--',
+        '-->',
+        '-',
+        'a',
+        '0',
+        'x',
+        'é',
+        '\u0080',
+        '\0',
+        '\\\n',
+        '\\41 ',
+        '#',
+        '%',
+        '.',
+        '/*!sc*/\n',
+        '/*!sc*/\r',
+        'data-styled.g1[id="e"]{content:"f,"}',
+        'x"a) } body{b:c} y{" )',
+        'x"a) {} body{b:c} y{" )',
+        '"]',
+        '[y="z',
+        '" ) ',
+        '\u0080\\75rl(',
+        '\u0080u\\72l(',
+      ];
+      let seed = 20260928;
+      const next = (n: number) => {
+        seed = (seed + 0x6d2b79f5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) % n;
+      };
+      const value = () => {
+        let text = '';
+        const count = 1 + next(8);
+        for (let k = 0; k < count; k++) text += pieces[next(pieces.length)];
+        return text;
+      };
+
+      /**
+       * Whether every part of a selector list (split on top-level commas, read
+       * by CSS Syntax 3 tokenization) holds the component class `.X` outside
+       * parentheses and brackets; `&-a` writes the class joined as `.X-a`.
+       */
+      const everyPartAnchored = (prelude: string) => {
+        let depth = 0;
+        let anchoredPart = false;
+        let dot = false;
+        for (const token of tokenize({ css: prelude })) {
+          const type = token[0];
+          if (type === TokenType.EOF) break;
+          if (depth === 0 && type === TokenType.Comma) {
+            if (!anchoredPart) return false;
+            anchoredPart = false;
+          }
+          if (depth === 0 && dot && type === TokenType.Ident && token[1].startsWith('X')) {
+            anchoredPart = true;
+          }
+          dot = depth === 0 && type === TokenType.Delim && token[1] === '.';
+          if (
+            type === TokenType.Function ||
+            type === TokenType.OpenParen ||
+            type === TokenType.OpenSquare
+          )
+            depth++;
+          if (type === TokenType.CloseParen || type === TokenType.CloseSquare) depth--;
+        }
+        return anchoredPart;
+      };
+      const flat = (rule: ReadRule) => rule.rules.length === 0;
+      const onlyComponent = (rules: ReadRule[]) =>
+        rules.every(rule => rule.prelude === '.X' && flat(rule));
+      const anchored = (rules: ReadRule[]) =>
+        rules.every(rule => flat(rule) && everyPartAnchored(rule.prelude));
+
+      const contexts: Array<[string, ReadonlyArray<string>, (rules: ReadRule[]) => boolean]> = [
+        ['declaration', ['color: ', '; margin: 0;'], onlyComponent],
+        ['string', ['content: "', '"; margin: 0;'], onlyComponent],
+        ['url', ['background: url(', '); margin: 0;'], onlyComponent],
+        ['property', ['', ': red; margin: 0;'], onlyComponent],
+        ['selector', ['margin: 0; &:hover ', ' { color: red; }'], anchored],
+        ['attribute string', ['margin: 0; &[data-x="', '"] { color: red; }'], anchored],
+        [
+          '@media prelude',
+          ['margin: 0; @media ', ' { color: red; }'],
+          rules =>
+            rules.every(rule =>
+              rule.prelude === '.X'
+                ? flat(rule)
+                : rule.prelude.startsWith('@media') && onlyComponent(rule.rules)
+            ),
+        ],
+        [
+          'keyframe stop',
+          ['margin: 0; @keyframes k { ', ', from { opacity: 0; } }'],
+          rules =>
+            rules.every(rule =>
+              rule.prelude === '.X'
+                ? flat(rule)
+                : rule.prelude === '@keyframes k' && rule.rules.every(flat)
+            ),
+        ],
+      ];
+
+      it('keeps every value inside its construct and the splitter out of rule text', () => {
+        const violations: string[] = [];
+        for (let k = 0; k < 2500; k++) {
+          const v = value();
+          for (const [name, strings, holds] of contexts) {
+            const rules = compileWeb(parseSource(strings, [() => v]), {}, '.X');
+            const sheet = new StyleSheet({ isServer: true });
+            sheet.insertRules('sc-fuzz', 'X', rules);
+            const text = sheet.toString();
+            const split = text.split(SPLITTER);
+            const markers = split.filter(part => part.startsWith('data-styled.'));
+            const read = readCss(text).filter(rule => !rule.prelude.startsWith('data-styled.'));
+            if (split.length !== rules.length + 2 || markers.length !== 1 || !holds(read)) {
+              violations.push(name + ' ' + JSON.stringify(v) + ' => ' + JSON.stringify(text));
+            }
+          }
+        }
+        expect(violations).toEqual([]);
+      });
+    });
+
     it('passes a benign nonce through unchanged', () => {
       const sheet = new ServerStyleSheet({ nonce: 'abcDEF123/+=' });
       const Comp = styled.div`
@@ -1321,3 +1896,175 @@ describe('ssr', () => {
     `);
   });
 });
+
+interface ReadRule {
+  /** Declaration names, in order. */
+  props: string[];
+  /** Selector text, or `@name prelude` for an at-rule. */
+  prelude: string;
+  /** Rules nested in a conditional group rule or a nested block. */
+  rules: ReadRule[];
+}
+
+type CssToken = {
+  kind: '{' | '}' | '(' | ')' | '[' | ']' | ';' | 'at' | 'ws' | 'text';
+  text: string;
+};
+
+const CONDITIONAL_GROUP_RULES = new Set([
+  '@container',
+  '@layer',
+  '@media',
+  '@scope',
+  '@starting-style',
+  '@supports',
+]);
+
+/**
+ * Read SSR style tags the way a browser does, as a check independent of the
+ * library's own parser: `@csstools/css-tokenizer` tokenizes per CSS Syntax 3
+ * §4.3, and the rule list is read per §5.5 (a `;` ends a qualified rule
+ * inside a block). The library's `data-styled` marker rules are left out.
+ */
+function readRules(tags: string): ReadRule[] {
+  const text = tags.slice(tags.indexOf('>') + 1, tags.lastIndexOf('</style>'));
+  return readCss(text).filter(rule => !rule.prelude.startsWith('data-styled.'));
+}
+
+/** {@link readRules} for CSS text. */
+function readCss(text: string): ReadRule[] {
+  return readRuleList(tokenizeCss(text), { i: 0 }, false);
+}
+
+const BLOCK_TOKENS: Partial<Record<TokenType, CssToken['kind']>> = {
+  [TokenType.CloseCurly]: '}',
+  [TokenType.CloseParen]: ')',
+  [TokenType.CloseSquare]: ']',
+  [TokenType.Function]: '(',
+  [TokenType.OpenCurly]: '{',
+  [TokenType.OpenParen]: '(',
+  [TokenType.OpenSquare]: '[',
+  [TokenType.Semicolon]: ';',
+};
+
+/**
+ * CSS Syntax 3 tokens as the rule reader takes them: each whitespace run one
+ * space, and each comment an empty `/**\/` read like whitespace, so text
+ * joined from tokens keeps the tokens on either side of it apart.
+ */
+function tokenizeCss(s: string): CssToken[] {
+  const out: CssToken[] = [];
+  for (const token of tokenize({ css: s })) {
+    const type = token[0];
+    if (type === TokenType.EOF) continue;
+    if (type === TokenType.Comment) {
+      out.push({ kind: 'ws', text: '/**/' });
+    } else if (type === TokenType.Whitespace) {
+      out.push({ kind: 'ws', text: ' ' });
+    } else if (type === TokenType.AtKeyword) {
+      out.push({ kind: 'at', text: token[1] });
+    } else {
+      out.push({ kind: BLOCK_TOKENS[type] ?? 'text', text: token[1] });
+    }
+  }
+  return out;
+}
+
+/** Read one component value's text starting at `pos`; `()`, `[]`, and `{}` groups read whole. */
+function readComponentValue(tokens: CssToken[], pos: { i: number }): string {
+  const open = tokens[pos.i];
+  pos.i++;
+  const close = open.kind === '(' ? ')' : open.kind === '[' ? ']' : open.kind === '{' ? '}' : null;
+  if (close === null) return open.text;
+  let text = open.text;
+  while (pos.i < tokens.length && tokens[pos.i].kind !== close) {
+    text += readComponentValue(tokens, pos);
+  }
+  if (pos.i < tokens.length) text += tokens[pos.i++].text;
+  return text;
+}
+
+/** Read up to a top-level token of one of `stops`; returns the text and the stop reached. */
+function readUntil(
+  tokens: CssToken[],
+  pos: { i: number },
+  stops: ReadonlyArray<CssToken['kind']>
+): [string, CssToken['kind'] | 'eof'] {
+  let text = '';
+  while (pos.i < tokens.length) {
+    const kind = tokens[pos.i].kind;
+    if (stops.includes(kind)) return [text.trim(), kind];
+    text += readComponentValue(tokens, pos);
+  }
+  return [text.trim(), 'eof'];
+}
+
+function readRuleList(tokens: CssToken[], pos: { i: number }, nested: boolean): ReadRule[] {
+  const rules: ReadRule[] = [];
+  while (pos.i < tokens.length) {
+    const token = tokens[pos.i];
+    if (token.kind === 'ws' || (nested && token.kind === ';')) {
+      pos.i++;
+      continue;
+    }
+    if (nested && token.kind === '}') {
+      pos.i++;
+      return rules;
+    }
+    if (token.kind === 'at') {
+      pos.i++;
+      const [prelude, stop] = readUntil(tokens, pos, nested ? [';', '{', '}'] : [';', '{']);
+      const name = prelude ? token.text + ' ' + prelude : token.text;
+      if (stop === '{') {
+        pos.i++;
+        if (CONDITIONAL_GROUP_RULES.has(token.text)) {
+          rules.push({ prelude: name, props: [], rules: readRuleList(tokens, pos, true) });
+        } else {
+          rules.push({ prelude: name, ...readBlock(tokens, pos) });
+        }
+      } else {
+        if (stop === ';') pos.i++;
+        rules.push({ prelude: name, props: [], rules: [] });
+      }
+      continue;
+    }
+    const [prelude, stop] = readUntil(tokens, pos, nested ? ['{', ';', '}'] : ['{']);
+    if (stop === ';') {
+      pos.i++;
+      continue;
+    }
+    if (stop !== '{') continue;
+    pos.i++;
+    rules.push({ prelude, ...readBlock(tokens, pos) });
+  }
+  return rules;
+}
+
+/** Read a style block after its `{`: declaration names, and any nested rule. */
+function readBlock(tokens: CssToken[], pos: { i: number }): Omit<ReadRule, 'prelude'> {
+  const props: string[] = [];
+  const rules: ReadRule[] = [];
+  while (pos.i < tokens.length) {
+    const token = tokens[pos.i];
+    if (token.kind === 'ws' || token.kind === ';') {
+      pos.i++;
+      continue;
+    }
+    if (token.kind === '}') {
+      pos.i++;
+      break;
+    }
+    const at = token.kind === 'at';
+    const [text, stop] = readUntil(tokens, pos, [';', '{', '}']);
+    if (stop === '{') {
+      pos.i++;
+      rules.push({ prelude: text, ...readBlock(tokens, pos) });
+    } else if (at) {
+      // §5.5.5: an at-keyword in a block starts an at-rule, not a declaration.
+      rules.push({ prelude: text, props: [], rules: [] });
+    } else if (text.indexOf(':') !== -1) {
+      props.push(text.slice(0, text.indexOf(':')).trim());
+    }
+  }
+  return { props, rules };
+}

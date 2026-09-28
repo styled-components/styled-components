@@ -1,15 +1,21 @@
 import * as $ from '../utils/charCodes';
-import { isWS } from '../utils/charCodes';
+import { isWS, lowerAscii } from '../utils/charCodes';
+import { NodeKind, StaticAtRuleNode, StaticKeyframesNode, StaticNode, StaticRoot } from './ast';
+import { splitTopLevelCommas, trimRange } from './parser';
 import {
-  NodeKind,
-  StaticAtRuleNode,
-  StaticKeyframeFrame,
-  StaticKeyframesNode,
-  StaticNode,
-  StaticRoot,
-  StaticRuleNode,
-} from './ast';
-import { scanQPB, splitTopLevelCommas, stripCommaSpaces } from './parser';
+  ANY_DEPTH,
+  BRACKETS,
+  identifierEnd,
+  isEscaped,
+  isIdentCode,
+  scan,
+  stops,
+  tailKind,
+  tokensJoin,
+} from './reader';
+
+const COMBINATOR = stops('>+~');
+const AMPERSAND = stops('&');
 
 /**
  * At-rule names whose bodies are direct declarations (no nested selector wrap).
@@ -55,14 +61,30 @@ function stripCombinatorSpaces(sel: string): string {
   let segStart = 0;
   let i = 0;
   while (i < len) {
-    const stop = scanQPB(sel, i, len, $.GT, $.PLUS, $.TILDE, -1);
+    const stop = scan(sel, i, len, COMBINATOR, BRACKETS, 0);
     if (stop >= len) break;
-    // Find left boundary of emitted segment (trim trailing whitespace).
+    // Find left boundary of emitted segment (trim trailing whitespace, except
+    // whitespace an escaping backslash precedes).
     let left = stop;
     while (left > segStart) {
       const p = sel.charCodeAt(left - 1);
-      if (isWS(p)) left--;
-      else break;
+      if (isWS(p) && !(sel.charCodeAt(left - 2) === $.BACKSLASH && isEscaped(sel, left - 1))) {
+        left--;
+      } else break;
+    }
+    const combinator = sel.charCodeAt(stop);
+    // Whitespace stays where the tokens on either side would join (`-- >`, `+ 2`).
+    if (
+      left < stop &&
+      left > segStart &&
+      tokensJoin(
+        tailKind(sel, segStart, left),
+        sel.charCodeAt(left - 1),
+        combinator,
+        sel.charCodeAt(stop + 1)
+      )
+    ) {
+      left = stop;
     }
     out += sel.substring(segStart, left);
     out += sel[stop];
@@ -72,6 +94,12 @@ function stripCombinatorSpaces(sel: string): string {
       const n = sel.charCodeAt(j);
       if (isWS(n)) j++;
       else break;
+    }
+    if (
+      j > stop + 1 &&
+      tokensJoin(combinator, combinator, j < len ? sel.charCodeAt(j) : -1, sel.charCodeAt(j + 1))
+    ) {
+      j = stop + 1;
     }
     segStart = j;
     i = j;
@@ -162,11 +190,31 @@ export function emitWeb(root: StaticRoot, parentSelector: string, options?: Emit
   // user's CSS in `.name{…}` so the user's decls live inside a single
   // top-level Rule. Detect both and clone-augment in either case.
   const componentId = options && options.componentId;
-  if (componentId) {
-    const augmented = maybeAugmentWithAutoName(root, componentId);
-    if (augmented !== root) return emitNodes(augmented, parentSelector, options);
+  const augmented = componentId ? maybeAugmentWithAutoName(root, componentId) : root;
+  const rules = emitNodes(augmented, parentSelector, options);
+  for (let i = 0; i < rules.length; i++) rules[i] = guardSplitter(rules[i]);
+  return rules;
+}
+
+/**
+ * `rule` with a line break directly after `*\/` written as a space, so no
+ * rule holds the server output's rule splitter (`/*!sc*\/` and a line
+ * break) and no rule's text can read as the rehydration marker after it.
+ */
+function guardSplitter(rule: string): string {
+  let at = rule.indexOf('*/');
+  if (at === -1) return rule;
+  let out = '';
+  let start = 0;
+  while (at !== -1) {
+    const c = rule.charCodeAt(at + 2);
+    if (c === $.LF || c === $.CR || c === $.FORM_FEED) {
+      out += rule.substring(start, at + 2) + ' ';
+      start = at + 3;
+    }
+    at = rule.indexOf('*/', at + 2);
   }
-  return emitNodes(root, parentSelector, options);
+  return start === 0 ? rule : out + rule.substring(start);
 }
 
 function maybeAugmentWithAutoName(root: StaticRoot, componentId: string): StaticRoot {
@@ -214,10 +262,6 @@ function emitNodes(
     const node = nodes[i];
     switch (node.kind) {
       case NodeKind.Decl:
-        // Post-fillAst invariant: `prop` and `value` are strings (any
-        // TemplateValue was realized by `realize` in `fillNode`). The
-        // `string | TemplateValue` AST type covers the parse-time form;
-        // emit-web is only called on filled (or never-templated) ASTs.
         baseDecls.push(formatDecl(node.prop, node.value, declTransform));
         break;
       case NodeKind.Rule: {
@@ -234,7 +278,9 @@ function emitNodes(
         break;
       }
       case NodeKind.AtRule:
-        if (!DROPPED_AT_RULES.has(node.name)) {
+        // A `@` with no name is a delimiter, not an at-rule; emitted, it
+        // would join the next rule's prelude and invalidate it.
+        if (node.name !== '' && !DROPPED_AT_RULES.has(lowerAscii(node.name))) {
           const emitted = emitAtRule(node, currentSelector, options);
           if (emitted) other.push(emitted);
         }
@@ -285,14 +331,14 @@ function emitAtRule(
   currentSelector: string,
   options: EmitOptions | undefined
 ): string {
-  // Post-fillAst invariant: prelude / name are strings.
-  let prelude = node.prelude ? stripCommaSpaces(node.prelude) : '';
+  let prelude = node.prelude;
+  const name = lowerAscii(node.name);
   // `${Component}` interpolation pre-stringifies to a class selector
   // (`.sc-aBcDeF`) for normal selector contexts. In the `@container
   // <name>` slot a bare ident is required by the CSS parser; strip a
   // leading dot from the prelude so cross-component container queries
   // emit valid CSS the browser can match.
-  if (node.name === 'container' && prelude.length > 0 && prelude.charCodeAt(0) === 0x2e) {
+  if (name === 'container' && prelude.length > 0 && prelude.charCodeAt(0) === 0x2e) {
     prelude = prelude.substring(1);
   }
   const header = '@' + node.name + (prelude ? ' ' + prelude : '');
@@ -300,7 +346,7 @@ function emitAtRule(
     return header + ';';
   }
 
-  if (DECL_BODY_AT_RULES.has(node.name)) {
+  if (DECL_BODY_AT_RULES.has(name)) {
     // Body is bare declarations; emit inline, no selector wrap.
     const declTransform = options && options.decl;
     const decls: string[] = [];
@@ -320,29 +366,25 @@ function emitAtRule(
   return header + '{' + childStrings.join('') + '}';
 }
 
-function emitKeyframes(node: StaticKeyframesNode, options: EmitOptions | undefined): string {
-  const frames: string[] = [];
-  for (let i = 0; i < node.frames.length; i++) {
-    const frame = node.frames[i];
-    // Empty frames (`from { }`) are omitted (no declarations to emit).
-    if (frame.children.length === 0) continue;
-    frames.push(emitFrame(frame, options));
-  }
-  // Post-fillAst invariant: name / prelude are strings.
-  const header = '@' + node.name + (node.prelude ? ' ' + node.prelude : '');
-  return header + '{' + frames.join('') + '}';
-}
-
-function emitFrame(frame: StaticKeyframeFrame, options: EmitOptions | undefined): string {
+/**
+ * Write @keyframes: each frame rule as its stops and declarations, not
+ * nested under any parent. A frame without declarations, and anything that
+ * is not a frame or a declaration in one, is omitted.
+ */
+export function emitKeyframes(node: StaticKeyframesNode, options?: EmitOptions): string {
   const declTransform = options && options.decl;
-  const stops = frame.stops.join(',');
-  const decls: string[] = [];
-  for (let i = 0; i < frame.children.length; i++) {
-    const d = frame.children[i];
-    decls.push(formatDecl(d.prop, d.value, declTransform));
+  let frames = '';
+  for (let i = 0; i < node.children.length; i++) {
+    const frame = node.children[i];
+    if (frame.kind !== NodeKind.Rule) continue;
+    let decls = '';
+    for (let j = 0; j < frame.children.length; j++) {
+      const d = frame.children[j];
+      if (d.kind === NodeKind.Decl) decls += formatDecl(d.prop, d.value, declTransform) + ';';
+    }
+    if (decls !== '') frames += frame.selectors.join(',') + '{' + decls + '}';
   }
-  // emitKeyframes skips empty frames, so decls.length is always > 0 here.
-  return stops + '{' + decls.join(';') + ';}';
+  return '@' + node.name + (node.prelude ? ' ' + node.prelude : '') + '{' + frames + '}';
 }
 
 /**
@@ -362,11 +404,37 @@ function resolveRuleSelectors(selectors: string[], parent: string): string {
   for (let ci = 0; ci < selectors.length; ci++) {
     const child = selectors[ci];
     for (let pi = 0; pi < parents.length; pi++) {
-      const p = parents[pi].trim();
+      const p = trimRange(parents[pi], 0, parents[pi].length);
       resolved.push(resolveSingle(child, p));
     }
   }
   return resolved.join(',');
+}
+
+/**
+ * Index of the first `&` at or after `from` that reads as the nesting
+ * selector: outside strings and not after an escaping backslash. With
+ * `topLevel`, also outside parentheses and brackets. `s.length` for none.
+ */
+export function nextAmpersand(s: string, from: number, topLevel: boolean): number {
+  return scan(s, from, s.length, AMPERSAND, topLevel ? BRACKETS : BRACKETS | ANY_DEPTH, 0);
+}
+
+/**
+ * Whether an `&` {@link nextAmpersand} reads in `s` is followed by
+ * identifier text (escapes included, possibly none) that ends in `(`:
+ * written, `&` joins the parent's last identifier to that text, making a
+ * different function or `url(` token.
+ */
+export function ampersandJoinsCall(s: string): boolean {
+  const len = s.length;
+  let at = nextAmpersand(s, 0, false);
+  while (at < len) {
+    const j = identifierEnd(s, at + 1);
+    if (s.charCodeAt(j) === $.OPEN_PAREN) return true;
+    at = nextAmpersand(s, j, false);
+  }
+  return false;
 }
 
 function resolveSingle(selector: string, parent: string): string {
@@ -374,9 +442,23 @@ function resolveSingle(selector: string, parent: string): string {
   if (selector.indexOf('&') === -1) {
     expanded = parent ? parent + ' ' + selector : selector;
   } else {
-    expanded = selector.split('&').join(parent);
+    expanded = replaceAmpersands(selector, parent);
   }
   return stripCombinatorSpaces(expanded);
+}
+
+/** Replace each `&` {@link nextAmpersand} reads; with none, nest under the parent. */
+function replaceAmpersands(selector: string, parent: string): string {
+  let at = nextAmpersand(selector, 0, false);
+  if (at === selector.length) return parent ? parent + ' ' + selector : selector;
+  let out = '';
+  let start = 0;
+  while (at < selector.length) {
+    out += selector.substring(start, at) + parent;
+    start = at + 1;
+    at = nextAmpersand(selector, start, false);
+  }
+  return out + selector.substring(start);
 }
 
 /**
@@ -424,7 +506,7 @@ function applySelfReferenceRewrite(
     }
     const after = idx + selLen;
     const afterCh = after < len ? compiledSelector.charCodeAt(after) : 0;
-    const isBoundary = after >= len || !$.isIdentChar(afterCh);
+    const isBoundary = after >= len || !isIdentCode(afterCh);
     out += compiledSelector.substring(i, idx);
     if (isBoundary) {
       out += replacement;

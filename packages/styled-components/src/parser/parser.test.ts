@@ -36,6 +36,13 @@ describe('parser', () => {
     ]);
   });
 
+  it('keeps a space after a comma in a value as written', () => {
+    expect(parse('transition: opacity 1s, transform 2s; font-family: a,b;')).toEqual([
+      { kind: NodeKind.Decl, prop: 'transition', value: 'opacity 1s, transform 2s' },
+      { kind: NodeKind.Decl, prop: 'font-family', value: 'a,b' },
+    ]);
+  });
+
   it('respects strings in values (content)', () => {
     expect(parse('content: "hello;world"; color: red;')).toEqual([
       { kind: NodeKind.Decl, prop: 'content', value: '"hello;world"' },
@@ -137,6 +144,45 @@ describe('parser', () => {
     ]);
   });
 
+  // CSS Syntax 3 §4.3.1 Consume a token: "U+0040 COMMERCIAL AT (@): If the
+  // next 3 input code points would start an ident sequence, consume an ident
+  // sequence, create an <at-keyword-token> with its value set to the returned
+  // value, and return it." The name ends at the first code point that is not
+  // an ident code point; the parser stops it at whitespace, `;`, `{`, `}`, or `(`.
+  describe('at-rule name end', () => {
+    it('ends the name at `(`', () => {
+      expect(parse('@media(min-width: 1px) { color: red; }')).toEqual([
+        {
+          kind: NodeKind.AtRule,
+          name: 'media',
+          prelude: '(min-width: 1px)',
+          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+        },
+      ]);
+    });
+
+    it('ends the name at `}`, which at the top level drops the at-rule as a stray `}`', () => {
+      expect(parse('@x} y; color: red;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+      ]);
+    });
+
+    it('ends the name at `}`, which closes an enclosing block', () => {
+      expect(parse('& { @x} color: red;')).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: ['&'],
+          children: [{ kind: NodeKind.AtRule, name: 'x', prelude: '', children: null }],
+        },
+        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+      ]);
+    });
+
+    it('drops a `@` before a stray `}` at the top level', () => {
+      expect(parse('@}')).toEqual([]);
+    });
+  });
+
   it('parses @container', () => {
     expect(parse('@container card (min-width: 400px) { padding: 16px; }')).toEqual([
       {
@@ -198,17 +244,20 @@ describe('parser', () => {
         kind: NodeKind.Keyframes,
         name: 'keyframes',
         prelude: 'spin',
-        frames: [
+        children: [
           {
-            stops: ['from'],
+            kind: NodeKind.Rule,
+            selectors: ['from'],
             children: [{ kind: NodeKind.Decl, prop: 'transform', value: 'rotate(0deg)' }],
           },
           {
-            stops: ['50%'],
+            kind: NodeKind.Rule,
+            selectors: ['50%'],
             children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '0.5' }],
           },
           {
-            stops: ['to'],
+            kind: NodeKind.Rule,
+            selectors: ['to'],
             children: [{ kind: NodeKind.Decl, prop: 'transform', value: 'rotate(360deg)' }],
           },
         ],
@@ -229,18 +278,115 @@ describe('parser', () => {
         kind: NodeKind.Keyframes,
         name: 'keyframes',
         prelude: 'pulse',
-        frames: [
+        children: [
           {
-            stops: ['0%', '100%'],
+            kind: NodeKind.Rule,
+            selectors: ['0%', '100%'],
             children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '1' }],
           },
           {
-            stops: ['50%'],
+            kind: NodeKind.Rule,
+            selectors: ['50%'],
             children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '0.5' }],
           },
         ],
       },
     ]);
+  });
+
+  // CSS Syntax 3 §7.1 Defining Block Contents: "The grammar for @keyframes can
+  // be written as: <@keyframes> = @keyframes { <qualified-rule-list> }
+  // <keyframe-rule> = <keyframe-selector> { <declaration-list> } and then
+  // accompanying prose defines that only <keyframe-rule>s are allowed in
+  // @keyframes". The parser reads a frame body as any block; what a frame
+  // cannot hold is dropped when the keyframes are written.
+  it('reads a keyframe frame body as a block, rules and at-rules included', () => {
+    expect(parse('@keyframes k { from { @x: 1; a { b: c } d: e } }')).toEqual([
+      {
+        kind: NodeKind.Keyframes,
+        name: 'keyframes',
+        prelude: 'k',
+        children: [
+          {
+            kind: NodeKind.Rule,
+            selectors: ['from'],
+            children: [
+              { kind: NodeKind.AtRule, name: 'x:', prelude: '1', children: null },
+              {
+                kind: NodeKind.Rule,
+                selectors: ['a'],
+                children: [{ kind: NodeKind.Decl, prop: 'b', value: 'c' }],
+              },
+              { kind: NodeKind.Decl, prop: 'd', value: 'e' },
+            ],
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('ends @keyframes at its own brace when a frame-list statement has no block', () => {
+    expect(parse('@keyframes k { junk } color: red;')).toEqual([
+      { kind: NodeKind.Keyframes, name: 'keyframes', prelude: 'k', children: [] },
+      { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+    ]);
+  });
+
+  it('ends @keyframes at its own brace after a slot followed by blockless text', () => {
+    expect(parse('@keyframes k { \0S0\0junk } color: red;', { templates: true })).toEqual([
+      { kind: NodeKind.Keyframes, name: 'keyframes', prelude: 'k', children: [] },
+      { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+    ]);
+  });
+
+  /**
+   * CSS Syntax 3 §4.3.4 Consume an ident-like token: "If string’s value is an
+   * ASCII case-insensitive match for "url", and the next input code point is
+   * U+0028 LEFT PARENTHESIS ((), consume it. ... Otherwise, consume a url
+   * token, and return it." §4.3.6 Consume a url token: "U+0022 QUOTATION MARK
+   * (") U+0027 APOSTROPHE (') U+0028 LEFT PARENTHESIS (() non-printable code
+   * point: This is a parse error. Consume the remnants of a bad url, create a
+   * <bad-url-token>, and return it."
+   */
+  describe('the text of an unquoted url(', () => {
+    it('reads a quote inside it as url text, not a string', () => {
+      expect(parse('background: url(a"b); color: red;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'background', value: 'url(a"b)' },
+        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+      ]);
+    });
+
+    // §4.3.7 Consume an escaped code point: "hex digit: Consume as many hex
+    // digits as possible, but no more than 5. Note that this means 1-6 hex
+    // digits have been consumed in total. If the next input code point is
+    // whitespace, consume it as well."
+    it('reads url( spelled with an escape as url(', () => {
+      expect(parse('background: \\75rl(a"b); color: red;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'background', value: '\\75rl(a"b)' },
+        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+      ]);
+    });
+
+    it('reads a hex escape and the whitespace after it as one identifier with the text after', () => {
+      expect(parse('a: \\41 url(x"y); b: c; d: "e";')).toEqual([
+        { kind: NodeKind.Decl, prop: 'a', value: '\\41 url(x"y); b: c; d: "e";' },
+      ]);
+    });
+
+    // §4.3.1 Consume a token: "U+0023 NUMBER SIGN (#): If the next input code
+    // point is an ident code point or the next two input code points are a
+    // valid escape, then: Create a <hash-token>." "U+0040 COMMERCIAL AT (@):
+    // If the next 3 input code points would start an ident sequence, consume
+    // an ident sequence, create an <at-keyword-token>".
+    it.each([['#'], ['@']])('reads `%surl(` as a name and a parenthesis, not url(', lead => {
+      expect(parse(`a: ${lead}url(x"y); b: c; d: "e";`)).toEqual([
+        { kind: NodeKind.Decl, prop: 'a', value: `${lead}url(x"y); b: c; d: "e";` },
+      ]);
+    });
+
+    it('keeps a comma inside it within one list entry', () => {
+      expect(splitSelectors('url(a"b), c')).toEqual(['url(a"b)', 'c']);
+    });
   });
 
   it('splits comma-separated selectors', () => {
@@ -262,6 +408,41 @@ describe('parser', () => {
   it('handles empty input', () => {
     expect(parse('')).toEqual([]);
     expect(parse('   \n\t  ')).toEqual([]);
+  });
+
+  describe('a stray `}` at the top level', () => {
+    it('drops the statement holding it and reads the next statement', () => {
+      expect(parse('a: b; c: d } e: f; }; g: h')).toEqual([
+        { kind: NodeKind.Decl, prop: 'a', value: 'b' },
+        { kind: NodeKind.Decl, prop: 'e', value: 'f' },
+        { kind: NodeKind.Decl, prop: 'g', value: 'h' },
+      ]);
+    });
+
+    it('drops the statement after a rule it follows', () => {
+      expect(parse('& { a: b; } } c: d;')).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: ['&'],
+          children: [{ kind: NodeKind.Decl, prop: 'a', value: 'b' }],
+        },
+        { kind: NodeKind.Decl, prop: 'c', value: 'd' },
+      ]);
+    });
+
+    it('keeps the slots a Run splices before it', () => {
+      expect(parse('\0S0\0 } color: red;', { templates: true })).toEqual([
+        { kind: NodeKind.Interpolation, index: 0 },
+        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+      ]);
+    });
+
+    it('reads a `}` inside a string as string text', () => {
+      expect(parse('a: "}"; b: c')).toEqual([
+        { kind: NodeKind.Decl, prop: 'a', value: '"}"' },
+        { kind: NodeKind.Decl, prop: 'b', value: 'c' },
+      ]);
+    });
   });
 
   it('handles trailing semicolons', () => {
@@ -291,23 +472,21 @@ describe('parser', () => {
   });
 
   describe('interpolation sentinels', () => {
-    // `\0J<index>\0` = standalone block-level interpolation (emit Interpolation node).
-    // `\0I<index>\0` = embedded interpolation (stays opaque inside value/selector strings).
-    // Both kinds are emitted by `parseSource` based on surrounding template-literal
-    // context. Sentinel detection is gated on `options.templates` so untrusted
-    // CSS routed through the static-input parse path (e.g. via the
-    // `buildHashCSS` fallback after a fast-path bail) cannot fabricate
-    // sentinel-looking content into structural Interpolation / TemplateValue
-    // nodes.
+    // `\0S<index>\0` marks a slot. `parseSource` joins the template around
+    // these and the parser assigns each slot its role from where it sits.
+    // Slot detection is gated on `options.templates` so untrusted CSS routed
+    // through the static-input parse path (e.g. via the `buildHashCSS`
+    // fallback after a fast-path bail) cannot fabricate slot-looking content
+    // into structural Interpolation / TemplateValue nodes.
 
-    it('emits Interpolation node for a standalone sentinel (templates: true)', () => {
-      expect(parse('\0J0\0', { templates: true })).toEqual([
+    it('emits an Interpolation node for a slot alone in the block (templates: true)', () => {
+      expect(parse('\0S0\0', { templates: true })).toEqual([
         { kind: NodeKind.Interpolation, index: 0 },
       ]);
     });
 
-    it('emits Interpolation between decls (templates: true)', () => {
-      expect(parse('color: red; \0J0\0 margin: 0;', { templates: true })).toEqual([
+    it('emits an Interpolation node between decls (templates: true)', () => {
+      expect(parse('color: red; \0S0\0 margin: 0;', { templates: true })).toEqual([
         { kind: NodeKind.Decl, prop: 'color', value: 'red' },
         { kind: NodeKind.Interpolation, index: 0 },
         { kind: NodeKind.Decl, prop: 'margin', value: '0' },
@@ -315,15 +494,15 @@ describe('parser', () => {
     });
 
     it('handles multi-digit indices (templates: true)', () => {
-      expect(parse('\0J0\0\0J12\0\0J345\0', { templates: true })).toEqual([
+      expect(parse('\0S0\0\0S12\0\0S345\0', { templates: true })).toEqual([
         { kind: NodeKind.Interpolation, index: 0 },
         { kind: NodeKind.Interpolation, index: 12 },
         { kind: NodeKind.Interpolation, index: 345 },
       ]);
     });
 
-    it('lifts embedded sentinels in declaration values to TemplateValue', () => {
-      expect(parse('color: \0I0\0;', { templates: true })).toEqual([
+    it('lifts slots in declaration values to TemplateValue', () => {
+      expect(parse('color: \0S0\0;', { templates: true })).toEqual([
         {
           kind: NodeKind.Decl,
           prop: 'color',
@@ -332,69 +511,91 @@ describe('parser', () => {
       ]);
     });
 
-    it('lifts embedded sentinels in selectors to TemplateValue', () => {
-      // `${OtherComponent} & { ... }` becomes `\0I0\0 & { ... }`. The
-      // selector with the embedded sentinel converts to a TemplateValue
-      // (chunks + slot indices) so the fill path can splice without
-      // re-scanning the string at render time.
-      expect(parse('\0I0\0 & { color: red; }', { templates: true })).toEqual([
+    it('lifts a slot glued to selector text to a TemplateValue selector', () => {
+      expect(parse('\0S0\0& { color: red; }', { templates: true })).toEqual([
         {
           kind: NodeKind.Rule,
-          selectors: [{ chunks: ['', ' &'], slots: [0] }],
+          selectors: [{ chunks: ['', '&'], slots: [0] }],
           children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
         },
       ]);
     });
 
+    it('reads a slot followed by whitespace and selector text as a rule Head', () => {
+      expect(parse('\0S0\0 & { color: red; }', { templates: true })).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: [],
+          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+          head: { gaps: [' '], rest: '&', slots: [0] },
+        },
+      ]);
+    });
+
+    it('lifts a slot written after a backslash to a TemplateValue', () => {
+      expect(parse('content: "\\\0S0\0";', { templates: true })).toEqual([
+        {
+          kind: NodeKind.Decl,
+          prop: 'content',
+          value: { chunks: ['"\\', '"'], slots: [0] },
+        },
+      ]);
+    });
+
     it('keeps existing `\0sc:...` theme sentinels as opaque value content', () => {
-      // Native theme sentinels start with `\0s` (lowercase), distinct from `\0I`/`\0J`.
+      // Native theme sentinels start with `\0s` (lowercase), distinct from `\0S`.
       expect(parse('color: \0sc:fg:#000\0;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: '\0sc:fg:#000\0' },
+      ]);
+      expect(parse('color: \0sc:fg:#000\0;', { templates: true })).toEqual([
         { kind: NodeKind.Decl, prop: 'color', value: '\0sc:fg:#000\0' },
       ]);
     });
 
-    it('falls through on malformed sentinels (no digits)', () => {
-      // `\0J\0` with no digits between the markers should not be recognized.
-      // Malformed input is treated as a stray decl and silently dropped.
-      expect(parse('\0J\0', { templates: true })).toEqual([]);
+    it('falls through on malformed slots (no digits)', () => {
+      // `\0S\0` with no digits between the markers is not a slot. Malformed
+      // input is treated as a stray decl and silently dropped.
+      expect(parse('\0S\0', { templates: true })).toEqual([]);
     });
 
-    it('does not emit Interpolation node for embedded `\0I` sentinels', () => {
-      // Even if an `\0I0\0` lands in block position, the parser treats it as
-      // opaque text. A bug in parseSource would surface as malformed CSS,
-      // not as a misclassified node.
-      expect(parse('\0I0\0', { templates: true })).toEqual([]);
-    });
-
-    // The static-input gate. Untrusted CSS routed through `parse()` without
-    // `{ templates: true }` (e.g. the `buildHashCSS` → `toNativeStyles`
-    // fallback) must NEVER fabricate sentinel structure. These guard the
-    // attack surface where a user-supplied interpolation value contains
-    // sentinel-shaped bytes plus structural CSS chars (`;`/`{`/`}`);the
-    // primary fast-path bails on the structural chars, and the fallback
-    // re-parse must treat the sentinel bytes as opaque content.
-
-    it('default mode: standalone-sentinel bytes do NOT emit Interpolation node', () => {
-      // Without `{ templates: true }`, `\0J0\0` is opaque CSS content.
-      // The decl-scanning loop falls through and the malformed bytes drop.
-      expect(parse('\0J0\0')).toEqual([]);
-    });
-
-    it('default mode: embedded sentinel bytes stay as plain string content', () => {
-      // The whole construct is treated as a normal decl: prop=color,
-      // value=`\0I0\0`. No TemplateValue, no Interpolation node, no crash.
-      expect(parse('color: \0I0\0;')).toEqual([
+    it('treats other NUL-led letters as opaque text', () => {
+      expect(parse('\0J0\0', { templates: true })).toEqual([]);
+      expect(parse('color: \0I0\0;', { templates: true })).toEqual([
         { kind: NodeKind.Decl, prop: 'color', value: '\0I0\0' },
       ]);
     });
 
-    it('default mode: sentinel-shaped user value in a value position is opaque', () => {
-      // What `buildHashCSS` would produce when a user-supplied filled[] slot
-      // contains the encoded sentinel pattern. The parser must not lift
-      // anything into TemplateValue here;that's how the value would crash
-      // downstream string-only consumers.
-      expect(parse('color: red\0J0\0blue;')).toEqual([
-        { kind: NodeKind.Decl, prop: 'color', value: 'red\0J0\0blue' },
+    // The static-input gate. Untrusted CSS routed through `parse()` without
+    // `{ templates: true }` (e.g. the `buildHashCSS` → `toNativeStyles`
+    // fallback) must NEVER fabricate slot structure. These guard the attack
+    // surface where a user-supplied interpolation value contains slot-shaped
+    // bytes plus structural CSS chars (`;`/`{`/`}`); the primary fast path
+    // bails on the structural chars, and the fallback re-parse must treat the
+    // slot bytes as opaque content.
+
+    it('default mode: slot bytes at a statement start do NOT emit an Interpolation node', () => {
+      expect(parse('\0S0\0')).toEqual([]);
+    });
+
+    it('default mode: slot bytes in a value stay as plain string content', () => {
+      expect(parse('color: \0S0\0;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: '\0S0\0' },
+      ]);
+    });
+
+    it('default mode: slot bytes before a rule do not form a Head', () => {
+      expect(parse('\0S0\0 h2 { color: red; }')).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: ['\0S0\0 h2'],
+          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+        },
+      ]);
+    });
+
+    it('default mode: slot-shaped user value in a value position is opaque', () => {
+      expect(parse('color: red\0S0\0blue;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: 'red\0S0\0blue' },
       ]);
     });
   });

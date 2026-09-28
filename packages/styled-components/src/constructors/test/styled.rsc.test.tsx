@@ -163,7 +163,7 @@ describe('styled RSC mode', () => {
 
       // Every level in the chain must contribute its CSS rules
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.dTCrO){font-family:system-ui,sans-serif;line-height:1.5;}:where(.isoHEi){font-weight:700;font-size:24px;}.iaATuJ{color:#1a1a2e;margin-bottom:16px;}"`
+        `":where(.dTCrO){font-family:system-ui, sans-serif;line-height:1.5;}:where(.isoHEi){font-weight:700;font-size:24px;}.iaATuJ{color:#1a1a2e;margin-bottom:16px;}"`
       );
     });
 

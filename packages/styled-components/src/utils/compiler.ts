@@ -1,3 +1,4 @@
+import { NodeKind, StaticNode, StaticRoot } from '../parser/ast';
 import { emitWeb } from '../parser/emit-web';
 import { parse } from '../parser/parser';
 import { compileWebFilled } from '../parser/compile';
@@ -5,9 +6,26 @@ import type { Compiler } from '../types';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
 import { SEED, phash } from './hash';
-import { normalize } from './normalize';
 
-export { normalize } from './normalize';
+/**
+ * `body` as the block of the rule or at-rule `outer` holds; a stray `}` in the
+ * body was already dropped by reading it on its own.
+ */
+function wrapBody(outer: StaticRoot, body: StaticRoot): StaticRoot {
+  const node = outer.length === 1 ? outer[0] : undefined;
+  if (node === undefined) return outer;
+  let wrapped: StaticNode;
+  if (node.kind === NodeKind.Rule) {
+    wrapped = { kind: NodeKind.Rule, selectors: node.selectors, children: body };
+  } else if (node.kind === NodeKind.AtRule && node.children !== null) {
+    wrapped = { kind: NodeKind.AtRule, name: node.name, prelude: node.prelude, children: body };
+  } else if (node.kind === NodeKind.Keyframes) {
+    wrapped = { kind: NodeKind.Keyframes, name: node.name, prelude: node.prelude, children: body };
+  } else {
+    return outer;
+  }
+  return [wrapped];
+}
 
 /** One rewritten declaration pair. */
 export type DeclResult = { prop: string; value: string };
@@ -110,10 +128,9 @@ export default function createCompiler({
 
   // Byte-identical to the v7 web emit path for hash + SSR rehydration stability.
   const compileString = (css: string, selector = '', prefix = '', componentId = '&'): string[] => {
-    const flatCSS = normalize(css);
+    const body = parse(css);
     const wrapSelector = prefix || selector ? (prefix ? prefix + ' ' : '') + selector : '';
-    const wrappedCSS = wrapSelector ? wrapSelector + '{' + flatCSS + '}' : flatCSS;
-    const ast = parse(wrappedCSS);
+    const ast = wrapSelector ? wrapBody(parse(wrapSelector + '{}'), body) : body;
     if (ast.length === 0) return [];
     return emitWeb(ast, '', {
       selfRefSelector: selector,

@@ -2,7 +2,7 @@ import { act, render } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import React from 'react';
 import WebGlobalStyle from '../../models/WebGlobalStyle';
-import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager';
+import { mainCompiler, mainSheet, StyleSheetManager } from '../../models/StyleSheetManager';
 import ThemeProvider from '../../models/ThemeProvider';
 import StyleSheet from '../../sheet';
 import { getRenderedCSS, resetStyled } from '../../test/utils';
@@ -33,6 +33,51 @@ describe(`createGlobalStyle`, () => {
         color: orange;
       }"
     `);
+  });
+
+  it(`renders every block beside a font-face whose url value holds a \`;\``, () => {
+    const Component = createGlobalStyle`
+      @font-face {
+        font-family: Inter;
+        src: url(${'data:font/woff2;base64,AAAA'});
+      }
+      body {
+        margin: 0;
+      }
+    `;
+    const insert = jest.spyOn(mainSheet, 'insertRules');
+    render(<Component />);
+    const inserted = insert.mock.calls.flatMap(call => call[2]);
+    insert.mockRestore();
+    expect(inserted).toEqual([
+      '@font-face{font-family:Inter;src:url(data:font/woff2;base64,AAAA);}',
+      'body{margin:0;}',
+    ]);
+  });
+
+  it(`drops a top-level block whose heading value is empty, with a dev warning`, () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const Component = createGlobalStyle`
+      ${() => ''} {
+        color: red;
+        h1 {
+          color: blue;
+        }
+      }
+      body {
+        margin: 0;
+      }
+    `;
+    render(<Component />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        margin: 0;
+      }"
+    `);
+    expect(warn.mock.calls.map(call => String(call[0]))).toEqual([
+      expect.stringContaining('createGlobalStyle'),
+    ]);
+    warn.mockRestore();
   });
 
   it(`supports objects with a function`, () => {
@@ -698,6 +743,19 @@ describe(`createGlobalStyle`, () => {
     expect(warn.mock.calls[0][0]).toMatchInlineSnapshot(
       `"[sc] please do not use @import CSS syntax in createGlobalStyle at this time, as the CSSOM APIs we use in production do not handle it well. Instead, we recommend using a library such as react-helmet to inject a typical <link> meta tag to the stylesheet, or simply embedding it manually in your index.html <head> section for a simpler app."`
     );
+  });
+
+  it('warns when @import is written in another ASCII case', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Component = createGlobalStyle`
+      @IMPORT url("something.css");
+    `;
+    render(<Component />);
+
+    expect(warn.mock.calls.map(call => String(call[0]))).toEqual([
+      expect.stringContaining('please do not use @import'),
+    ]);
   });
 
   it('works with keyframes', () => {

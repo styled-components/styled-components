@@ -38,7 +38,7 @@ export default function createGlobalStyle<Props extends object>(
   const globalStyle = new WebGlobalStyle<Props>(rules, styledComponentId);
 
   const hasImport =
-    __DEV__ && rules.some(rule => typeof rule === 'string' && rule.indexOf('@import') !== -1);
+    __DEV__ && rules.some(rule => typeof rule === 'string' && /@import/i.test(rule));
 
   if (__DEV__) {
     checkDynamicCreation(styledComponentId);

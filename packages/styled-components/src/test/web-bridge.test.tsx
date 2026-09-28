@@ -11,7 +11,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 
-import styled, { ThemeProvider as BridgeThemeProvider } from '../native/web-bridge';
+import styled, { keyframes, ThemeProvider as BridgeThemeProvider } from '../native/web-bridge';
 import createTheme from '../constructors/createTheme';
 import ThemeProvider from '../models/ThemeProvider';
 
@@ -183,6 +183,18 @@ describe('rn-web bridge: CSS surface delegated to the browser', () => {
     const css = readAllCss();
     expect(css).toContain('--brand');
     expect(css).toMatch(/var\(--brand\)/);
+  });
+
+  it('applies the bridge rewrites to the frames of an interpolated keyframes value', () => {
+    const slide = keyframes`
+      from { margin-left: var(--start, 4)px; }
+      to { margin-left: 0; }
+    `;
+    const Box = styled.View`
+      animation: ${slide} 1s;
+    `;
+    render(<Box testID="keyframes-probe" />);
+    expect(readAllCss()).toContain('margin-left: calc(var(--start, 4) * 1px)');
   });
 });
 

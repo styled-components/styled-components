@@ -7,6 +7,7 @@
  */
 import { act, fireEvent, render } from '@testing-library/react';
 import React, { useState } from 'react';
+import css from '../constructors/css';
 import { LIMIT as TOO_MANY_CLASSES_LIMIT } from '../utils/createWarnTooManyClasses';
 import { getCSS, resetStyled } from './utils';
 
@@ -335,6 +336,50 @@ describe('memoization correctness', () => {
     expect(s3a.className).toBe(redClass);
     expect(s3b.className).toBe(blueClass);
 
+    unmount();
+  });
+
+  it('tells apart two css fragments whose text and values read the same end to end', () => {
+    // `padding: ` + `1` + `px` and `padding: ` + `x1` + `p` share every
+    // character of template text followed by value text.
+    const wide = css`padding: ${'1'}px`;
+    const narrow = css`padding: ${'x1'}p`;
+    const Comp = styled.div<{ $narrow: boolean }>`
+      ${p => (p.$narrow ? narrow : wide)}
+    `;
+
+    const { container, rerender, unmount } = render(<Comp $narrow={false} />);
+    const wideClass = getDivClass(container);
+    rerender(<Comp $narrow />);
+
+    expect(getDivClass(container)).not.toBe(wideClass);
+    expect(getCSS(document)).toMatchInlineSnapshot(`
+      ".b{padding:1px;}
+      .c{padding:x1p;}"
+    `);
+
+    unmount();
+  });
+
+  it('reuses the class of a css fragment written inside an arrow on every render', () => {
+    const Comp = styled.div<{ $color: string }>`
+      ${p => css`
+        color: ${p.$color};
+      `}
+    `;
+
+    const { container, rerender, unmount } = render(<Comp $color="red" />);
+    const redClass = getDivClass(container);
+    rerender(<Comp $color="blue" />);
+    const blueClass = getDivClass(container);
+    for (let i = 0; i < 3; i++) {
+      rerender(<Comp $color="red" />);
+      expect(getDivClass(container)).toBe(redClass);
+      rerender(<Comp $color="blue" />);
+      expect(getDivClass(container)).toBe(blueClass);
+    }
+
+    expect(Comp.webStyle.interpKeyCache?.size).toBe(2);
     unmount();
   });
 

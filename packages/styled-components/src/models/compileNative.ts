@@ -44,7 +44,6 @@ import type {
 import { AUTO_TIMELINE } from '../native/animation/types';
 import { parse } from '../parser/parser';
 import { Dict, StyleSheet } from '../types';
-import { normalize } from '../utils/normalize';
 import { fifoSet } from '../utils/fifoMap';
 import { isWS, UPPER_TO_LOWER } from '../utils/charCodes';
 
@@ -571,20 +570,16 @@ export function resetNativeStyleCache(): void {
  * declaration through the per-pair transform layer (camelCase, numeric
  * coercion, color-math polyfills, shorthand expansion).
  *
- * Cache key is the RAW input string; preprocessing is the second-most
- * expensive step (after parse), so caching against raw input lets warm
- * cache hits skip both preprocess and parse. The same raw input always
- * produces the same preprocessed output, so this is collision-safe.
+ * Cache key is the raw input string, so a warm cache hit skips the parse.
  */
 export function toNativeStyles(rawCSS: string, styleSheet: StyleSheet): NativeStyles {
   const cached = compileCache.get(rawCSS);
   if (cached !== undefined) return cached;
 
-  const preprocessed = normalize(rawCSS);
   // Parse stamps `[NATIVE_RULE_CLASS]` / `[NATIVE_AT_CLASS]` onto Rule
   // and AtRule nodes inline (gated on `__NATIVE__`). The bucket router
   // in `astToNativeStyles` reads those classifications directly.
-  const ast = parse(preprocessed, { keepCommaSpaces: true });
+  const ast = parse(rawCSS);
   const compiled = astToNativeStyles(ast, styleSheet);
 
   fifoSet(compileCache, rawCSS, compiled, CACHE_LIMIT);
@@ -1196,7 +1191,7 @@ function hasOwnKeys(o: object): boolean {
  *   in `staticDeclCache` (WeakMap keyed on the AST node), populated lazily
  *   on first touch. Subsequent renders splat the cached object directly,
  *   skipping the camelize / shorthand / polyfill work.
- * - Dynamic Decls (substituted values change per render after `fillAst`):
+ * - Dynamic Decls (substituted values change per render after `fillSource`):
  *   route through the string-keyed `pairCache` (whole-Map flush at
  *   `PAIR_CACHE_LIMIT`, working set bounded to dynamic decls only).
  *
@@ -1542,39 +1537,44 @@ function walkRoot(
     } else if (kind === NodeKind.AtRule) {
       handleAtRule(node, baseDecls, conditional, startingDecls);
     } else if (kind === NodeKind.Keyframes) {
-      keyframes.push({
-        name: node.prelude,
-        frames: node.frames.map(frame => {
-          // Mirror the base/conditional pipeline: decls → transformDecl
-          // → split static base / resolvers in one pass. Lets
-          // `${t.colors.x}` and `env()` inside a keyframe's declarations
-          // resolve at render time when the animation adapter applies
-          // them.
-          const decls = frame.children;
-          // `!important` inside a keyframe body is invalid; processDecls
-          // strips the marker and routes to `important`, which we then
-          // discard so the frame ignores the marker entirely.
-          const { base, resolvers } =
-            decls.length > 0 ? processDecls(decls) : { base: {}, resolvers: [] };
-          const out: {
-            stops: string[];
-            decls: Dict<any>;
-            resolvers?: Array<[string, Resolver]>;
-            easing?: EasingDescriptor;
-          } = { stops: frame.stops, decls: base };
-          if (resolvers.length > 0) out.resolvers = resolvers;
-          if ('animationTimingFunction' in base) {
-            const atf = base.animationTimingFunction;
-            delete base.animationTimingFunction;
-            if (!isEndOnlyKeyframeStops(frame.stops)) {
-              out.easing = Array.isArray(atf) ? atf[0] : atf;
-            }
-          }
-          return out;
-        }),
-      });
+      keyframes.push({ name: node.prelude, frames: compileFrames(node.children) });
     }
   }
+}
+
+/**
+ * The frames of @keyframes: each frame rule's stops and its declarations,
+ * run through the same pipeline as base declarations (transformDecl, then
+ * static base values and render-time resolvers), so `${t.colors.x}` and
+ * `env()` in a frame resolve when the animation adapter applies it.
+ * Anything in a frame that is not a declaration is not written.
+ */
+function compileFrames(children: StaticNode[]): CompiledKeyframes['frames'] {
+  const frames: CompiledKeyframes['frames'] = [];
+  for (let i = 0; i < children.length; i++) {
+    const frame = children[i];
+    if (frame.kind !== NodeKind.Rule) continue;
+    const decls: StaticDeclNode[] = [];
+    for (let j = 0; j < frame.children.length; j++) {
+      const child = frame.children[j];
+      if (child.kind === NodeKind.Decl) decls.push(child);
+    }
+    // `!important` inside a keyframe body is invalid; processDecls strips the
+    // marker and routes it to `important`, which the frame ignores.
+    const { base, resolvers } =
+      decls.length > 0 ? processDecls(decls) : { base: {}, resolvers: [] };
+    const out: CompiledKeyframes['frames'][number] = { stops: frame.selectors, decls: base };
+    if (resolvers.length > 0) out.resolvers = resolvers;
+    if ('animationTimingFunction' in base) {
+      const atf = base.animationTimingFunction;
+      delete base.animationTimingFunction;
+      if (!isEndOnlyKeyframeStops(frame.selectors)) {
+        out.easing = Array.isArray(atf) ? atf[0] : atf;
+      }
+    }
+    frames.push(out);
+  }
+  return frames;
 }
 
 /** Enclosing at-rule gate (`@media` / `@container` / `@supports`) threaded
@@ -1870,8 +1870,8 @@ function pushBucket(
 
 /**
  * Read parse-time classification when present; otherwise re-classify
- * on the filled selectors (fallback path for selectors that carried
- * `\0I` sentinels at parse time).
+ * on the filled selectors (fallback path for rules whose selectors held
+ * interpolation slots, or were built from a slot head, at parse time).
  */
 function readRuleClass(node: StaticRuleNode): NativeRuleClass {
   const stamped = node[NATIVE_RULE_CLASS];
@@ -2081,11 +2081,6 @@ function handleAtRule(
     return;
   }
 
-  if (cls.kind === 'keyframes') {
-    // Handled as KeyframesNode, this branch is reachable only for unusual cases.
-    return;
-  }
-
   if (cls.kind !== 'unsupported') return;
   const warnKind = cls.warn;
   if (__DEV__) {
@@ -2196,8 +2191,7 @@ export function cssToStyleObject(flatCSS: string, styleSheet: StyleSheet): Dict<
  * comments stripped, malformed blocks skipped, RN_UNSUPPORTED_VALUES warn+drop.
  */
 export function extractBaseDeclPairs(rawCSS: string): Array<[string, string]> {
-  const preprocessed = normalize(rawCSS);
-  const ast = parse(preprocessed, { keepCommaSpaces: true });
+  const ast = parse(rawCSS);
   const pairs: Array<[string, string]> = [];
   for (let i = 0; i < ast.length; i++) {
     const node = ast[i];

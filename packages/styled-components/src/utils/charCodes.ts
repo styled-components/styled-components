@@ -7,8 +7,10 @@
 export const NUL = 0;
 export const TAB = 9; // \t
 export const LF = 10; // \n
+export const FORM_FEED = 12; // \f
 export const CR = 13; // \r
 export const SPACE = 32; // ' '
+export const EXCLAMATION = 33; // !
 export const DOUBLE_QUOTE = 34; // "
 export const HASH = 35; // #
 export const DOLLAR = 36; // $
@@ -34,7 +36,6 @@ export const AT = 64; // @
 export const UPPER_A = 65; // A
 export const UPPER_E = 69; // E
 export const UPPER_I = 73; // I
-export const UPPER_J = 74; // J
 export const UPPER_S = 83; // S
 export const UPPER_Z = 90; // Z
 export const OPEN_BRACKET = 91; // [
@@ -45,7 +46,10 @@ export const UNDERSCORE = 95; // _
 export const LOWER_A = 97; // a
 export const LOWER_E = 101; // e
 export const LOWER_I = 105; // i
+export const LOWER_L = 108; // l
+export const LOWER_R = 114; // r
 export const LOWER_S = 115; // s
+export const LOWER_U = 117; // u
 export const LOWER_Z = 122; // z
 export const OPEN_BRACE = 123; // {
 export const PIPE = 124; // |
@@ -61,6 +65,22 @@ export const UPPER_TO_LOWER = 32;
  */
 export function isWS(c: number): boolean {
   return c === SPACE || c === TAB || c === LF || c === CR;
+}
+
+/**
+ * `s` with its ASCII letters lowercased and every other code point as
+ * written, for names CSS reads in any ASCII case (at-rule names).
+ */
+export function lowerAscii(s: string): string {
+  let i = 0;
+  while (i < s.length && !(s.charCodeAt(i) >= UPPER_A && s.charCodeAt(i) <= UPPER_Z)) i++;
+  if (i === s.length) return s;
+  let out = s.substring(0, i);
+  for (; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    out += c >= UPPER_A && c <= UPPER_Z ? String.fromCharCode(c + UPPER_TO_LOWER) : s[i];
+  }
+  return out;
 }
 
 /**

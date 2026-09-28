@@ -314,6 +314,9 @@ importers:
       '@babel/preset-typescript':
         specifier: ^7.24.1
         version: 7.28.5(@babel/core@7.29.0)
+      '@csstools/css-tokenizer':
+        specifier: ^3.0.4
+        version: 3.0.4
       '@react-native/babel-preset':
         specifier: ~0.85.2
         version: 0.85.2(@babel/core@7.29.0)

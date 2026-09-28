@@ -1,3 +1,4 @@
+import { readsAsTemplateValue } from '../parser/slotValue';
 import { isCssProduct } from '../parser/source';
 import addUnitIfNeeded from './addUnitIfNeeded';
 import hyphenate from './hyphenateStyleName';
@@ -15,102 +16,114 @@ const hasOwn = Object.prototype.hasOwnProperty;
  * `strings.length === interpolations.length + 1` always holds.
  */
 export interface ObjectTemplate {
-  strings: string[];
   interpolations: unknown[];
+  strings: string[];
 }
 
-/**
- * Walk a style object and produce a synthetic template literal. Function
- * values and `css\`...\`` fragments are extracted as interpolation slots
- * at value position; primitives format inline. Nested plain-object values
- * become nested rules whose key is the raw selector text (so `&:hover`,
- * `@media (...)`, etc. round-trip unchanged).
- */
-export default function objectToTemplate(obj: Record<string, unknown>): ObjectTemplate {
-  const strings: string[] = [];
-  const interpolations: unknown[] = [];
-  let pending = '';
+/** How a style object met at render time resolves its function and css fragment values. */
+export interface ObjectRender {
+  context: unknown;
+  /** A css fragment value's text, or `null` to drop its declaration. */
+  fragmentText: (fragment: unknown) => string | null;
+}
 
-  function pushSlot(slot: unknown): void {
-    strings.push(pending);
-    pending = '';
-    interpolations.push(slot);
+class TemplateWriter {
+  /** Allocated on the first slot; `null` while the text holds only ordinary values. */
+  interpolations: unknown[] | null = null;
+  pending = '';
+  strings: string[] | null = null;
+
+  slot(value: unknown): void {
+    if (this.strings === null || this.interpolations === null) {
+      this.strings = [];
+      this.interpolations = [];
+    }
+    this.strings.push(this.pending);
+    this.pending = '';
+    this.interpolations.push(value);
   }
 
-  function walk(o: Record<string, unknown>): void {
+  declaration(key: string, value: unknown): void {
+    const formatted = addUnitIfNeeded(key, value);
+    if (formatted === '') return;
+    if (typeof value === 'number' || readsAsTemplateValue(formatted)) {
+      this.pending += hyphenate(key) + ':' + formatted + ';';
+    } else {
+      this.pending += hyphenate(key) + ':';
+      this.slot(formatted);
+      this.pending += ';';
+    }
+  }
+
+  walk(o: Record<string, unknown>, render: ObjectRender | undefined): void {
     for (const key in o) {
       if (!hasOwn.call(o, key)) continue;
-      const val = o[key];
+      let val: unknown = o[key];
+      if (render !== undefined) {
+        while (isFunction(val)) val = (val as (ctx: unknown) => unknown)(render.context);
+      }
       if (val === undefined || val === null || val === false || val === '') continue;
       if (isPlainObject(val)) {
         // Own `toString` means the author wants a stringified value at
         // this slot, not a nested selector block.
         if (hasOwn.call(val, 'toString')) {
-          const formatted = addUnitIfNeeded(key, val);
-          if (formatted === '') continue;
-          pending += hyphenate(key) + ':' + formatted + ';';
+          this.declaration(key, val);
         } else {
-          pending += key + '{';
-          walk(val as Record<string, unknown>);
-          pending += '}';
+          this.pending += key + '{';
+          this.walk(val as Record<string, unknown>, render);
+          this.pending += '}';
         }
-      } else if (isFunction(val) || isCssProduct(val)) {
-        pending += hyphenate(key) + ':';
-        pushSlot(val);
-        pending += ';';
+      } else if (isCssProduct(val) || isFunction(val)) {
+        if (render === undefined) {
+          this.pending += hyphenate(key) + ':';
+          this.slot(val);
+          this.pending += ';';
+        } else {
+          const text = render.fragmentText(val);
+          if (text !== null) this.declaration(key, text);
+        }
       } else {
-        const formatted = addUnitIfNeeded(key, val);
-        if (formatted === '') continue;
-        pending += hyphenate(key) + ':' + formatted + ';';
+        this.declaration(key, val);
       }
     }
   }
-
-  walk(obj);
-  strings.push(pending);
-  return { strings, interpolations };
 }
 
 /**
- * Render-time stringifier for plain objects produced by function
- * interpolations (`css(p => ({color: p.fg}))`, `${p => ({...})}`). Resolves
- * nested function values against the supplied fill context (mirroring
- * legacy `flatten`'s recursive call behavior) and emits a flat CSS text
- * string. Returns `null` when an unsupported shape (e.g. an unresolved
- * `css\`...\`` fragment inside an object value, deeply nested arrays) is
- * encountered so the caller can fall through to a legacy path.
+ * Walk a style object into a synthetic template literal. Keys are written
+ * as template text (property names, and nested selectors or at-rules whose
+ * block holds the nested object); a value with anything other than ordinary
+ * text becomes a value slot, checked like `color: ${value}`.
+ *
+ * Without `render` (a static object), function values and css fragments
+ * become slots resolved at fill time. With it (an object met at render
+ * time), function values are called with the render context and css
+ * fragments give their text.
+ *
+ * The template is `strings` and `interpolations` with `pending` as the last
+ * string; both arrays are `null` when every value is ordinary, and `pending`
+ * is then the object's whole text.
  */
-export function objectToCSS(obj: Record<string, unknown>, fillContext?: unknown): string | null {
-  let css = '';
-  for (const key in obj) {
-    if (!hasOwn.call(obj, key)) continue;
-    let val: unknown = obj[key];
-    // Resolve function values recursively (with a shallow recursion limit
-    // implicit in the call chain) so `{ color: p => p.fg }` works the same
-    // as `{ color: 'tomato' }` once the prop reaches us.
-    while (isFunction(val) && fillContext !== undefined) {
-      val = (val as (ctx: unknown) => unknown)(fillContext);
-    }
-    if (val === undefined || val === null || val === false || val === '') continue;
-    if (isPlainObject(val)) {
-      if (hasOwn.call(val, 'toString')) {
-        const formatted = addUnitIfNeeded(key, val);
-        if (formatted === '') continue;
-        css += hyphenate(key) + ':' + formatted + ';';
-        continue;
-      }
-      const inner = objectToCSS(val as Record<string, unknown>, fillContext);
-      if (inner === null) return null;
-      css += key + '{' + inner + '}';
-    } else if (isCssProduct(val)) {
-      // Tagged css`` fragment inside an object value; needs Source-aware
-      // splicing the caller can do with the slot variant.
-      return null;
-    } else {
-      const formatted = addUnitIfNeeded(key, val);
-      if (formatted === '') continue;
-      css += hyphenate(key) + ':' + formatted + ';';
-    }
-  }
-  return css;
+export function walkObject(
+  obj: Record<string, unknown>,
+  render: ObjectRender | undefined
+): WalkedObject {
+  const writer = new TemplateWriter();
+  writer.walk(obj, render);
+  return writer;
+}
+
+/** A walked style object; see {@link walkObject}. */
+export interface WalkedObject {
+  interpolations: unknown[] | null;
+  pending: string;
+  strings: string[] | null;
+}
+
+/** {@link walkObject} for a static object, as a template for `parseSource`. */
+export default function objectToTemplate(obj: Record<string, unknown>): ObjectTemplate {
+  const walked = walkObject(obj, undefined);
+  const strings = walked.strings === null ? [] : walked.strings;
+  strings.push(walked.pending);
+  return { interpolations: walked.interpolations === null ? [] : walked.interpolations, strings };
 }

@@ -1,8 +1,11 @@
 import React from 'react';
 
 import { render } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import { ServerStyleSheet, StyleSheetManager } from '../../base';
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../../constants';
+import { compileWeb } from '../../parser/compile';
+import { parseSource } from '../../parser/source';
 import { resetStyled } from '../../test/utils';
 import { resetWarnOnce } from '../../utils/warnOnce';
 import * as GroupIDAllocator from '../GroupIDAllocator';
@@ -42,6 +45,95 @@ describe('outputSheet', () => {
         "",
       ]
     `);
+  });
+
+  it('writes a compiled rule whose value holds the splitter with no splitter inside it', () => {
+    const output = asServer(() => {
+      const sheet = new StyleSheet({ isServer: true });
+      GroupIDAllocator.setGroupForId('idA', 11);
+      const src = parseSource(['background: ', ';'], [() => 'url(/*!sc*/\nx/*!sc*/\r\ny/**/\fz)']);
+      sheet.insertRules('idA', 'nameA', compileWeb(src, {}, '.a'));
+      return outputSheet(sheet);
+    });
+
+    expect(output).toBe(
+      '.a{background:url(/*!sc*/ x/*!sc*/ \ny/**/ z);}/*!sc*/\n' +
+        'data-styled.g11[id="idA"]{content:"nameA,"}/*!sc*/\n'
+    );
+  });
+});
+
+/** Run `fn` as the server build does, where a server sheet keeps rule text as written. */
+function asServer<T>(fn: () => T): T {
+  const scope = globalThis as { __SERVER__?: boolean };
+  const was = scope.__SERVER__;
+  scope.__SERVER__ = true;
+  try {
+    return fn();
+  } finally {
+    scope.__SERVER__ = was;
+  }
+}
+
+/**
+ * A value that holds the splitter or a marker-shaped text passes its value
+ * check (it reads as url text or a comment), so the server output and the
+ * rehydration reader must keep it inside its rule.
+ */
+describe('server output then rehydration', () => {
+  it.each([
+    ['the splitter inside url(', 'url(/*!sc*/\nbody{display:none}/*!sc*/\n)'],
+    [
+      'a marker inside url(',
+      'url(x /*!sc*/\ndata-styled.g1[id="sc-evil"]{content:"forged,"}/*!sc*/\n)',
+    ],
+    [
+      'a marker-shaped comment run',
+      'red /*!sc*/\ndata-styled.g1[id="sc-evil"] "forged," /*!sc*/\n',
+    ],
+    ['the splitter after a carriage return', 'url(/*!sc*/\rbody{display:none}/*!sc*/\r)'],
+  ])('adopts only the rules and names the server wrote, for a value holding %s', (_, value) => {
+    const Comp = styled.div<{ $v: string }>`
+      background: ${p => p.$v};
+      color: blue;
+    `;
+    const tags = asServer(() => {
+      const server = new ServerStyleSheet();
+      renderToString(server.collectStyles(<Comp $v={value} />));
+      const html = server.getStyleTags();
+      server.seal();
+      return html;
+    });
+    document.head.innerHTML = tags;
+    GroupIDAllocator.resetGroupIds();
+
+    const sheet = new StyleSheet();
+    rehydrateSheet(sheet);
+
+    expect(GroupIDAllocator.idForGroup(1)).toBe(Comp.styledComponentId);
+    expect(sheet.hasNameForId('sc-evil', 'forged')).toBe(false);
+    expect(sheet.getTag().tag.length).toBe(1);
+    expect(sheet.getTag().tag.getRule(0)).toMatch(/^\.[\w-]+ \{/);
+  });
+
+  it('reads a marker only in the shape the server writes', () => {
+    document.head.innerHTML = `
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="${SC_VERSION}">
+        .a {}/*!sc*/
+        ${SC_ATTR}.g5[id="evil"] "forged," /*!sc*/
+        ${SC_ATTR}.g6[id="evil2"]{content:"x,"} .b{}/*!sc*/
+        ${SC_ATTR}.g11[id="idA"]{content:"nameA,"}/*!sc*/
+      </style>
+    `;
+    const sheet = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheet);
+
+    expect(GroupIDAllocator.idForGroup(5)).toBe(undefined);
+    expect(GroupIDAllocator.idForGroup(6)).toBe(undefined);
+    expect(sheet.hasNameForId('evil', 'forged')).toBe(false);
+    expect(sheet.hasNameForId('evil2', 'x')).toBe(false);
+    expect(GroupIDAllocator.idForGroup(11)).toBe('idA');
+    expect(sheet.hasNameForId('idA', 'nameA')).toBe(true);
   });
 });
 

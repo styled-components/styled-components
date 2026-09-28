@@ -60,7 +60,9 @@
         // Bun CPU-profiling harnesses, run directly (see AGENTS.md "Profiling").
         "src/parser/profile-harness.ts",
         "src/native/profile*.ts",
-        "src/native/bunProfileGlobals.ts"
+        "src/native/bunProfileGlobals.ts",
+        // Size attribution script, run directly (see AGENTS.md "Key Commands").
+        "scripts/moduleSizes.mjs"
       ],
       "ignoreDependencies": [
         // String-referenced from the shared root babel-preset.cjs; knip

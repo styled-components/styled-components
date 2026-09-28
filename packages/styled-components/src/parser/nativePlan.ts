@@ -12,7 +12,12 @@ import {
   PseudoState,
   RuleNode,
 } from './ast';
-import { isKeyframesName } from './atRuleNames';
+import { ANY_DEPTH, BRACKETS, isSpace, scan, stops } from './reader';
+
+const SELECTOR_SPACE = stops(' \t\n\r\f');
+const PAREN_CLOSE = stops(')');
+const BRACKET_CLOSE = stops(']');
+const SPACE = stops(' ');
 
 export type {
   AttrSelector,
@@ -35,12 +40,12 @@ export type {
  * - V8 still inline-caches the property as a hidden-class slot read.
  *
  * The classification is computed once per AST and survives across every
- * cache-miss render. Phase A's `fillAst` returns static subtrees by
+ * cache-miss render. `fillSource` returns static subtrees by
  * reference, so static Rule / AtRule nodes carry the same classification
- * through to `astToNativeStyles`. Dynamic-selector nodes (those whose
- * selectors carry `\0I` interpolation sentinels) skip classification at
- * parse time; the render path falls through to the legacy inline classifier
- * once values are filled in (rare in practice).
+ * through to `astToNativeStyles`. Dynamic-selector nodes (a slot head, or
+ * selectors holding interpolation slots) skip classification at parse
+ * time; the render path falls through to the legacy inline classifier once
+ * values are filled in (rare in practice).
  */
 
 const KNOWN_PSEUDOS: Record<string, PseudoState> = {
@@ -57,12 +62,14 @@ const KNOWN_PSEUDOS: Record<string, PseudoState> = {
  * builds skip these calls entirely via the `__NATIVE__` build constant
  * (rollup tree-shakes the import after dead-code elimination).
  *
- * Selectors carrying interpolations (TemplateValue) skip classification;
- * the render path retries via {@link classifyRuleNow} on the filled
- * (now-string) selectors. This is the rare path; `&:hover` /
- * `&[aria-pressed]` style selectors don't typically interpolate.
+ * Rules with a slot head, and selectors carrying interpolations
+ * (TemplateValue), skip classification; the render path retries via
+ * {@link classifyRuleNow} on the filled (now-string) selectors. This is the
+ * rare path; `&:hover` / `&[aria-pressed]` style selectors don't typically
+ * interpolate.
  */
 export function stampRuleClass(node: RuleNode): void {
+  if (node.head !== undefined) return;
   const selectors = node.selectors;
   for (let i = 0; i < selectors.length; i++) {
     if (typeof selectors[i] !== 'string') return;
@@ -79,10 +86,11 @@ export function stampRuleClass(node: RuleNode): void {
  * its `name` + `prelude` (both strings; callers handle the
  * TemplateValue case before invoking this). Used by {@link stampAtClass}
  * at parser construction time on static-name+prelude at-rules, and by
- * the render-time fallback in `compileNative.ts` (where `fillAst` has
+ * the render-time fallback in `compileNative.ts` (where `fillSource` has
  * already substituted any TemplateValue back to strings).
  */
-export function classifyAtRuleNow(name: string, prelude: string): NativeAtClass {
+export function classifyAtRuleNow(written: string, prelude: string): NativeAtClass {
+  const name = $.lowerAscii(written);
   if (name === 'starting-style') return { kind: 'starting-style' };
   if (name === 'media' || name === 'container' || name === 'supports') {
     if (name === 'container') {
@@ -100,7 +108,6 @@ export function classifyAtRuleNow(name: string, prelude: string): NativeAtClass 
     }
     return { kind: name, containerName: undefined, condition: prelude };
   }
-  if (isKeyframesName(name)) return { kind: 'keyframes' };
   if (name === 'property') return { kind: 'property' };
   if (name === 'font-face' || name === 'page') {
     return { kind: 'unsupported', warn: 'web-only' };
@@ -112,7 +119,7 @@ export function classifyAtRuleNow(name: string, prelude: string): NativeAtClass 
  * Stamp a freshly-constructed AtRuleNode with parse-time native
  * classification. Skipped when `name` or `prelude` is a TemplateValue
  * (dynamic at parse time); the render path's lazy fallback re-classifies
- * once `fillAst` has substituted them to strings. Most at-rules are
+ * once `fillSource` has substituted them to strings. Most at-rules are
  * fully static so the stamp covers the common case.
  */
 export function stampAtClass(node: AtRuleNode): void {
@@ -125,11 +132,72 @@ export function stampAtClass(node: AtRuleNode): void {
 }
 
 /**
+ * Collapse each run of whitespace outside a quoted string to one space and
+ * trim the ends, so the detectors below, which expect single spaces, also
+ * match selectors written across lines (`${Foo}\n  &`). Quoted attribute
+ * values are left intact. Selectors with nothing to collapse are returned
+ * as-is without allocating.
+ */
+function collapseSelectorWhitespace(sel: string): string {
+  const len = sel.length;
+  if (len === 0) return sel;
+
+  let needsWork = isSpace(sel.charCodeAt(0)) || isSpace(sel.charCodeAt(len - 1));
+  if (!needsWork) {
+    for (let i = 0; i < len; i++) {
+      const c = sel.charCodeAt(i);
+      if (c === $.TAB || c === $.LF || c === $.CR || c === $.FORM_FEED) {
+        needsWork = true;
+        break;
+      }
+      if (c === $.SPACE && sel.charCodeAt(i + 1) === $.SPACE) {
+        needsWork = true;
+        break;
+      }
+    }
+  }
+  if (!needsWork) return sel;
+
+  let start = 0;
+  let end = len;
+  while (start < end && isSpace(sel.charCodeAt(start))) start++;
+  while (end > start && isSpace(sel.charCodeAt(end - 1))) end--;
+
+  let out = '';
+  let segStart = start;
+  for (let i = scan(sel, start, end, SELECTOR_SPACE, ANY_DEPTH, 0); i < end; ) {
+    out += sel.substring(segStart, i) + ' ';
+    i++;
+    while (i < end && isSpace(sel.charCodeAt(i))) i++;
+    segStart = i;
+    i = scan(sel, i, end, SELECTOR_SPACE, ANY_DEPTH, 0);
+  }
+  return out + sel.substring(segStart, end);
+}
+
+/**
+ * Normalize every selector's whitespace before classification. Returns
+ * the original array unallocated when no selector needed a change (the
+ * dominant case: single-line authored selectors already carry a single
+ * ASCII space).
+ */
+function normalizeSelectors(selectors: string[]): string[] {
+  let out: string[] | null = null;
+  for (let i = 0; i < selectors.length; i++) {
+    const normalized = collapseSelectorWhitespace(selectors[i]);
+    if (out === null && normalized !== selectors[i]) out = selectors.slice(0, i);
+    if (out !== null) out.push(normalized);
+  }
+  return out === null ? selectors : out;
+}
+
+/**
  * Render-time fallback when parse-time classification was skipped because
  * the selectors contained interpolation sentinels. Operates on the
  * (filled) selectors string array; never mutates the node.
  */
-export function classifyRuleNow(selectors: string[]): NativeRuleClass {
+export function classifyRuleNow(rawSelectors: string[]): NativeRuleClass {
+  const selectors = normalizeSelectors(rawSelectors);
   const direct = detectPseudo(selectors);
   if (direct !== null) return { kind: 'pseudo', pseudo: direct };
   const fanOut = detectIsWhereStates(selectors) || detectMultiPseudo(selectors);
@@ -196,7 +264,7 @@ function parseSimpleInner(inner: string): NthOfBranch | null {
 /**
  * `&:has(<inner>)`: match when the element has a descendant matching
  * the inner simple selector. v7 scope: a styled-component reference
- * (post-fillAst class selector `.sc-FooId`) or a single attribute
+ * (filled class selector `.sc-FooId`) or a single attribute
  * selector. Compound / complex inner forms fall through.
  */
 function detectHas(selectors: string[]): NativeRuleClass | null {
@@ -261,26 +329,16 @@ function parseAnPlusB(raw: string): { a: number; b: number } | null {
  * substrings inside `[...]` don't trigger a false split.
  */
 function splitNthInner(inner: string): { formula: string; ofRaw: string } | null {
-  let depth = 0;
-  for (let i = 0; i < inner.length - 3; i++) {
-    const c = inner.charCodeAt(i);
-    if (c === $.OPEN_BRACKET) {
-      depth++;
-      continue;
-    }
-    if (c === $.CLOSE_BRACKET) {
-      depth--;
-      continue;
-    }
-    if (depth !== 0) continue;
+  const end = inner.length - 3;
+  for (let i = scan(inner, 0, end, SPACE, BRACKETS, 0); i < end; ) {
     if (
-      c === 0x20 /* space */ &&
-      (inner.charCodeAt(i + 1) === 0x6f /* o */ || inner.charCodeAt(i + 1) === 0x4f) /* O */ &&
-      (inner.charCodeAt(i + 2) === 0x66 /* f */ || inner.charCodeAt(i + 2) === 0x46) /* F */ &&
-      inner.charCodeAt(i + 3) === 0x20 /* space */
+      (inner.charCodeAt(i + 1) | 0x20) === 0x6f /* o */ &&
+      (inner.charCodeAt(i + 2) | 0x20) === 0x66 /* f */ &&
+      inner.charCodeAt(i + 3) === $.SPACE
     ) {
       return { formula: inner.substring(0, i), ofRaw: inner.substring(i + 4) };
     }
+    i = scan(inner, i + 1, end, SPACE, BRACKETS, 0);
   }
   return null;
 }
@@ -389,17 +447,10 @@ function detectNthChild(selectors: string[]): NativeRuleClass | null {
     : { kind: 'nthChild', spec, pseudo: tailPseudo };
 }
 
+/** Index of the `)` closing the `(` at `openIdx`; -1 for none. */
 function findClosingParen(s: string, openIdx: number): number {
-  let depth = 0;
-  for (let i = openIdx; i < s.length; i++) {
-    const c = s.charCodeAt(i);
-    if (c === $.OPEN_PAREN) depth++;
-    else if (c === $.CLOSE_PAREN) {
-      depth--;
-      if (depth === 0) return i;
-    }
-  }
-  return -1;
+  const close = scan(s, openIdx + 1, s.length, PAREN_CLOSE, 0, 0);
+  return close < s.length ? close : -1;
 }
 
 /**
@@ -651,25 +702,8 @@ function parseAttrChain(sel: string): AttrSelector | null {
  * trip on the embedded `]`.
  */
 function findClosingBracket(sel: string, start: number): number {
-  let i = start + 1;
-  let inSingle = false;
-  let inDouble = false;
-  while (i < sel.length) {
-    const c = sel.charCodeAt(i);
-    if (inSingle) {
-      if (c === $.SINGLE_QUOTE) inSingle = false;
-    } else if (inDouble) {
-      if (c === $.DOUBLE_QUOTE) inDouble = false;
-    } else if (c === $.SINGLE_QUOTE) {
-      inSingle = true;
-    } else if (c === $.DOUBLE_QUOTE) {
-      inDouble = true;
-    } else if (c === $.CLOSE_BRACKET) {
-      return i;
-    }
-    i++;
-  }
-  return -1;
+  const close = scan(sel, start + 1, sel.length, BRACKET_CLOSE, BRACKETS, 0);
+  return close < sel.length ? close : -1;
 }
 
 function parseAttrInner(inner: string): ConditionalAttr | null {

@@ -78,6 +78,7 @@
     "@babel/preset-env": "^7.24.5",
     "@babel/preset-react": "^7.24.1",
     "@babel/preset-typescript": "^7.24.1",
+    "@csstools/css-tokenizer": "^3.0.4",
     "@react-native/babel-preset": "~0.85.2",
     "@react-native/jest-preset": "~0.85.2",
     "@rollup/plugin-terser": "^0.4.4",
