@@ -338,6 +338,33 @@ function runDeclStart(css: string, run: Run): number {
   return run.next === run.lastEnd || css.charCodeAt(run.next) === COLON ? run.lastStart : run.next;
 }
 
+/**
+ * Read the Run at statement start `i`, or `null` when none starts there. A
+ * Run followed by the end of the list, `;`, `}`, or `@` is Standalone: its
+ * slots splice into `out`, `ctx.i` moves past it (and a `;` right after it),
+ * and the result is `false`. Gated on `ctx.templates`: untrusted CSS input
+ * (rawCSS and the re-parse of filled values) must not fabricate slots.
+ */
+function statementRun<T>(
+  ctx: ParseContext,
+  out: Array<T | InterpolationNode>,
+  i: number
+): Run | null | false {
+  const css = ctx.css;
+  const len = ctx.len;
+  if (!ctx.templates || css.charCodeAt(i) !== NUL) return null;
+  const end = slotEnd(css, i, len);
+  if (end === -1) return null;
+  const run = readRun(css, i, end, len);
+  const next = run.next < len ? css.charCodeAt(run.next) : -1;
+  if (next === -1 || next === SEMICOLON || next === CLOSE_BRACE || next === AT) {
+    pushRunSlots(ctx, out, run, run.slots.length);
+    ctx.i = next === SEMICOLON ? run.next + 1 : run.next;
+    return false;
+  }
+  return run;
+}
+
 /** Push the first `count` slots of `run` as standalone splices. */
 function pushRunSlots<T>(
   ctx: ParseContext,
@@ -424,11 +451,18 @@ function scanQPOrNul(
   return end;
 }
 
-/** Single-pass parse of a CSS block body. */
-function parseBlock(ctx: ParseContext): Node[] {
+/**
+ * Single-pass parse of a CSS block body. A keyframe frame's body (`frame`)
+ * holds only declarations and splices: `{` does not stop the statement scan
+ * and `@` does not start an at-rule, so either reads as declaration text.
+ */
+function parseBlock(ctx: ParseContext, frame: true): Array<DeclNode | InterpolationNode>;
+function parseBlock(ctx: ParseContext, frame?: false): Node[];
+function parseBlock(ctx: ParseContext, frame = false): Node[] {
   const css = ctx.css;
   const len = ctx.len;
   const out: Node[] = [];
+  const openBrace = frame ? -1 : OPEN_BRACE;
 
   while (ctx.i < len) {
     // Skip leading whitespace and stray semicolons
@@ -450,34 +484,19 @@ function parseBlock(ctx: ParseContext): Node[] {
       return out;
     }
 
-    if (first === AT) {
+    if (first === AT && !frame) {
       ctx.i = i;
       out.push(parseAtRule(ctx));
       continue;
     }
 
-    // A Run of slots at a statement start is classified as a whole by what
-    // follows it: the end of the statement list, `;`, `}`, or `@` makes every
-    // slot a standalone splice; otherwise the statement scan below decides
-    // between a rule head (the statement ends in `{`) and standalone slots
-    // before a declaration. Gated on `ctx.templates`: untrusted CSS input
-    // (rawCSS + filled-value re-parse) must not fabricate slots.
-    let run: Run | null = null;
-    let start = i;
-    if (ctx.templates && first === NUL) {
-      const end = slotEnd(css, i, len);
-      if (end !== -1) {
-        run = readRun(css, i, end, len);
-        const next = run.next < len ? css.charCodeAt(run.next) : -1;
-        if (next === -1 || next === SEMICOLON || next === CLOSE_BRACE || next === AT) {
-          pushRunSlots(ctx, out, run, run.slots.length);
-          ctx.i = run.next;
-          continue;
-        }
-        start = run.next === run.lastEnd ? run.lastStart : run.next;
-        i = start;
-      }
-    }
+    // A Run that is not Standalone is classified by the statement scan below:
+    // a rule head when the statement ends in `{`, otherwise standalone slots
+    // before a declaration.
+    const run = statementRun(ctx, out, i);
+    if (run === false) continue;
+    if (run !== null) i = run.next === run.lastEnd ? run.lastStart : run.next;
+    const start = i;
 
     let colon = -1;
     // `while (true)` (not `while (i < len)`) so that a COLON found at the
@@ -485,8 +504,8 @@ function parseBlock(ctx: ParseContext): Node[] {
     while (true) {
       const stop =
         ctx.recover === null
-          ? scanQP(css, i, len, COLON, OPEN_BRACE, SEMICOLON, CLOSE_BRACE)
-          : scanQPOrNul(css, i, len, COLON, OPEN_BRACE, SEMICOLON, CLOSE_BRACE);
+          ? scanQP(css, i, len, COLON, openBrace, SEMICOLON, CLOSE_BRACE)
+          : scanQPOrNul(css, i, len, COLON, openBrace, SEMICOLON, CLOSE_BRACE);
       if (stop >= len) {
         // EOF reached. Treat as terminal declaration if we saw a colon.
         const declStart = run === null ? start : leadDecl(ctx, out, run);
@@ -870,21 +889,9 @@ function parseKeyframesBody(ctx: ParseContext): Array<KeyframeFrame | Interpolat
 
     // In the frame list a Run heads a frame when the text after it reaches
     // `{` (its slots resolve to stops); anything else makes it a frame splice.
-    let start = ctx.i;
-    let run: Run | null = null;
-    if (ctx.templates && c === NUL) {
-      const end = slotEnd(css, start, len);
-      if (end !== -1) {
-        run = readRun(css, start, end, len);
-        const next = run.next < len ? css.charCodeAt(run.next) : -1;
-        if (next === -1 || next === SEMICOLON || next === CLOSE_BRACE || next === AT) {
-          pushRunSlots(ctx, frames, run, run.slots.length);
-          ctx.i = next === SEMICOLON ? run.next + 1 : run.next;
-          continue;
-        }
-        start = run.next === run.lastEnd ? run.lastStart : run.next;
-      }
-    }
+    const run = statementRun(ctx, frames, ctx.i);
+    if (run === false) continue;
+    const start = run === null ? ctx.i : run.next === run.lastEnd ? run.lastStart : run.next;
     const lead =
       run === null ? 0 : run.next === run.lastEnd ? run.slots.length - 1 : run.slots.length;
 
@@ -903,103 +910,17 @@ function parseKeyframesBody(ctx: ParseContext): Array<KeyframeFrame | Interpolat
 
     if (run !== null && lead > 0) {
       const head = runHead(ctx, run, lead, stopsText);
-      frames.push({ stops: [], children: parseFrameDecls(ctx), head });
+      frames.push({ stops: [], children: parseBlock(ctx, true), head });
       continue;
     }
 
     const stopsRaw =
       stopsText.indexOf(',') === -1 ? [stopsText] : splitTopLevelCommas(stopsText, true);
-    const children = parseFrameDecls(ctx);
+    const children = parseBlock(ctx, true);
     frames.push({ stops: selectorsToTemplate(ctx, stopsRaw), children });
   }
 
   return frames;
-}
-
-function parseFrameDecls(ctx: ParseContext): Array<DeclNode | InterpolationNode> {
-  const css = ctx.css;
-  const len = ctx.len;
-  const decls: Array<DeclNode | InterpolationNode> = [];
-
-  while (ctx.i < len) {
-    let i = ctx.i;
-    while (i < len) {
-      const c = css.charCodeAt(i);
-      if (isWS(c) || c === SEMICOLON) i++;
-      else break;
-    }
-    if (i >= len) {
-      ctx.i = i;
-      break;
-    }
-
-    if (css.charCodeAt(i) === CLOSE_BRACE) {
-      ctx.i = i + 1;
-      return decls;
-    }
-
-    // Inside a frame every Run splices declarations, except a last slot
-    // that names the property of the declaration after it.
-    let start = i;
-    if (ctx.templates && css.charCodeAt(i) === NUL) {
-      const end = slotEnd(css, i, len);
-      if (end !== -1) {
-        const run = readRun(css, i, end, len);
-        const next = run.next < len ? css.charCodeAt(run.next) : -1;
-        if (next === -1 || next === SEMICOLON || next === CLOSE_BRACE || next === AT) {
-          pushRunSlots(ctx, decls, run, run.slots.length);
-          ctx.i = run.next;
-          continue;
-        }
-        start = leadDecl(ctx, decls, run);
-        i = start;
-      }
-    }
-
-    let colon = -1;
-    // `while (true)` (not `while (i < len)`) so that a COLON found at the
-    // very last position can still reach the EOF branch on the next scan.
-    while (true) {
-      const stop =
-        ctx.recover === null
-          ? scanQP(css, i, len, COLON, SEMICOLON, CLOSE_BRACE, -1)
-          : scanQPOrNul(css, i, len, COLON, SEMICOLON, CLOSE_BRACE, -1);
-      if (stop >= len) {
-        if (colon !== -1) pushDecl(ctx, decls, start, colon, stop);
-        ctx.i = stop;
-        return decls;
-      }
-      const c = css.charCodeAt(stop);
-      if (c === COLON) {
-        if (colon === -1) colon = stop;
-        i = stop + 1;
-        continue;
-      }
-      if (c === NUL) {
-        const end = slotEnd(css, stop, len);
-        if (end !== -1 && recoversAt(ctx, stop, end, colon)) {
-          pushDecl(ctx, decls, start, colon, stop);
-          const index = slotIndex(css, stop, end);
-          decls.push({ kind: NodeKind.Interpolation, index });
-          keepSplice(ctx, index);
-          ctx.i = end;
-          break;
-        }
-        i = end === -1 ? stop + 1 : end;
-        continue;
-      }
-      // c is SEMICOLON or CLOSE_BRACE
-      if (colon !== -1) pushDecl(ctx, decls, start, colon, stop);
-      if (c === CLOSE_BRACE) {
-        ctx.i = stop + 1;
-        return decls;
-      }
-      ctx.i = stop + 1;
-      break;
-    }
-  }
-
-  return decls;
 }
 
 /**

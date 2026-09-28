@@ -243,6 +243,25 @@ describe('parser', () => {
     ]);
   });
 
+  it('reads a keyframe frame body as declarations only, with no nested rules or at-rules', () => {
+    expect(parse('@keyframes k { from { @x: 1; a { b: c } } }')).toEqual([
+      {
+        kind: NodeKind.Keyframes,
+        name: 'keyframes',
+        prelude: 'k',
+        frames: [
+          {
+            stops: ['from'],
+            children: [
+              { kind: NodeKind.Decl, prop: '@x', value: '1' },
+              { kind: NodeKind.Decl, prop: 'a { b', value: 'c' },
+            ],
+          },
+        ],
+      },
+    ]);
+  });
+
   it('ends @keyframes at its own brace when a frame-list statement has no block', () => {
     expect(parse('@keyframes k { junk } color: red;')).toEqual([
       { kind: NodeKind.Keyframes, name: 'keyframes', prelude: 'k', frames: [] },
