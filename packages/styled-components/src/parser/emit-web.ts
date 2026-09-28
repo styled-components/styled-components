@@ -409,13 +409,6 @@ function resolveSingle(selector: string, parent: string): string {
   let expanded: string;
   if (selector.indexOf('&') === -1) {
     expanded = parent ? parent + ' ' + selector : selector;
-  } else if (
-    selector.indexOf('"') === -1 &&
-    selector.indexOf("'") === -1 &&
-    selector.indexOf('\\') === -1
-  ) {
-    // Without a string or an escape, every `&` is the nesting selector.
-    expanded = selector.split('&').join(parent);
   } else {
     expanded = replaceAmpersands(selector, parent);
   }
