@@ -4,6 +4,7 @@ import rscPlugin from '../../plugins/rsc';
 import Keyframes from '../../models/Keyframes';
 import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager';
 import { getRenderedCSS, resetStyled } from '../../test/utils';
+import { resetWarnOnce } from '../../utils/warnOnce';
 import css from '../css';
 import keyframes from '../keyframes';
 
@@ -278,6 +279,28 @@ describe('keyframes', () => {
         animation: b 1s linear;
       }"
     `);
+  });
+
+  it('writes a function interpolation as its source text, with a dev warning naming the keyframes', () => {
+    resetWarnOnce();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const opacity = () => 0;
+    const fade = keyframes`from { opacity: ${opacity}; }`;
+    expect(fade.rules).toBe(`from { opacity: ${String(opacity)}; }`);
+    expect(warn.mock.calls.map(call => String(call[0]))).toEqual([
+      expect.stringContaining('`keyframes` `' + fade.name + '`'),
+    ]);
+    warn.mockRestore();
+  });
+
+  it('writes a styled component interpolated into keyframes as its class selector, without a warning', () => {
+    resetWarnOnce();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const Box = styled.div``;
+    const fade = keyframes`from { opacity: 0; } /* ${Box} */`;
+    expect(fade.rules).toBe(`from { opacity: 0; } /* ${String(Box)} */`);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it('should throw an error when interpolated in a vanilla string', () => {
