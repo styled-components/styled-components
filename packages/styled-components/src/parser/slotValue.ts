@@ -1,4 +1,4 @@
-import { BACKSLASH, OPEN_PAREN } from '../utils/charCodes';
+import { AT, BACKSLASH, OPEN_PAREN } from '../utils/charCodes';
 import { fifoSet } from '../utils/fifoMap';
 import type { StaticDeclNode } from './ast';
 import { NodeKind } from './ast';
@@ -9,6 +9,7 @@ import {
   COMMENTS,
   isEscaped,
   isIdentCode,
+  isSpace,
   readField,
   scan,
   skipOrdinary,
@@ -100,4 +101,33 @@ export function splitDeclarations(text: string): StaticDeclNode[] {
   }
   fifoSet(splitCache, text, decls, SPLIT_CACHE_LIMIT);
   return decls;
+}
+
+/** Index of the first code point of `text` outside leading whitespace and comments. */
+export function leadingCode(text: string): number {
+  let i = 0;
+  for (;;) {
+    while (i < text.length && isSpace(text.charCodeAt(i))) i++;
+    if (!text.startsWith('/*', i)) return i;
+    const close = text.indexOf('*/', i + 2);
+    if (close === -1) return text.length;
+    i = close + 2;
+  }
+}
+
+/**
+ * The pieces a realized declaration splits into at top-level `;`, as
+ * {@link splitDeclarations} splits it, whose text starts with an at-keyword.
+ */
+export function atKeywordPieces(text: string): string[] {
+  const pieces: string[] = [];
+  const len = text.length;
+  let start = 0;
+  while (start <= len) {
+    const end = scan(text, start, len, DECLARATION_END, COMMENTS | BRACKETS, 0);
+    const piece = trimRange(text, start, end);
+    if (piece.charCodeAt(leadingCode(piece)) === AT) pieces.push(piece);
+    start = end + 1;
+  }
+  return pieces;
 }

@@ -1248,9 +1248,13 @@ describe('compileWeb', () => {
       }
     );
 
-    it('drops a piece a value `;` splits off whose name is an at-keyword after a comment', () => {
-      const src = tagged`color: ${() => 'red; /**/@a: b'}; margin: 0;`;
+    it.each([
+      ['an at-keyword', 'red; @import url(//evil.example/x.css)'],
+      ['an at-keyword after a comment', 'red; /**/@a: b'],
+    ])('drops a piece a value `;` splits off whose name is %s, with a dev warning', (_, value) => {
+      const src = tagged`color: ${() => value}; margin: 0;`;
       expect(out(src)).toEqual(['.a{color:red;margin:0;}']);
+      expect(warnings()).toEqual([expect.stringContaining('is not a property name')]);
     });
 
     it('keeps a property value that realizes to an escaped `@`', () => {
