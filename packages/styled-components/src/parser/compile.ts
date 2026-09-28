@@ -203,6 +203,16 @@ function fillDecl(node: DeclNode, fill: Fill): StaticDeclNode | StaticDeclNode[]
   }
   if (realizedSemicolon) split = true;
   const prop = typeof node.prop !== 'string' ? trimRange(propRaw, 0, propRaw.length) : propRaw;
+  if (prop.charCodeAt(0) === AT) {
+    if (__DEV__) {
+      warnOnce(
+        'property-at',
+        `\`${prop}\` is not a property name, so its declaration was dropped. Interpolate a property name such as \`color\`.`,
+        prop
+      );
+    }
+    return undefined;
+  }
   if (split) {
     const decls = splitDeclarations(prop + ':' + valueRaw);
     const kept: StaticDeclNode[] = [];
