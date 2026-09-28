@@ -5,6 +5,7 @@ import generateComponentId from '../utils/generateComponentId';
 import isKeyframes from '../utils/isKeyframes';
 import isPlainObject from '../utils/isPlainObject';
 import isStyledComponent from '../utils/isStyledComponent';
+import { walkObject } from '../utils/objectToCSS';
 import { warnOnce } from '../utils/warnOnce';
 import css from './css';
 
@@ -58,9 +59,31 @@ function joinText(parts: ReadonlyArray<unknown>, separator: string): string {
     if (part === null || part === undefined || isClientReference(part)) continue;
     if (Array.isArray(part)) text += joinText(part, ',');
     else if (isKeyframes(part)) text += part.name;
+    else if (isDeclarationObject(part)) text += objectText(part);
     else text += String(part);
   }
   return text;
+}
+
+/** A plain object written as declarations: no `toString` of its own, and not a React element or component. */
+function isDeclarationObject(value: unknown): value is Record<string, unknown> {
+  return (
+    isPlainObject(value) &&
+    !Object.prototype.hasOwnProperty.call(value, 'toString') &&
+    (value as { $$typeof?: unknown }).$$typeof === undefined
+  );
+}
+
+/** A style object's declaration text, as an object value is written into its template. */
+function objectText(object: Record<string, unknown>): string {
+  const walked = walkObject(object, undefined);
+  let text = '';
+  if (walked.strings !== null && walked.interpolations !== null) {
+    for (let i = 0; i < walked.strings.length; i++) {
+      text += walked.strings[i] + joinText([walked.interpolations[i]], '');
+    }
+  }
+  return text + walked.pending;
 }
 
 interface FunctionsFound {
