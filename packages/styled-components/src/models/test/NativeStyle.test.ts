@@ -1631,6 +1631,27 @@ describe('NativeStyle class;compile() fast-paths', () => {
       warn.mockRestore();
     });
 
+    it('checks each value of a style object a function returns', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const inline = new NativeStyle(css((p: { $v: string }) => ({ opacity: p.$v, marginTop: 4 })));
+      const withValue = (v: string): ExecutionContext & { $v: string } => ({
+        ...renderContext,
+        $v: v,
+      });
+      expect(inline.compile(withValue('0.5 } x { color: red'))).toEqual(
+        new NativeStyle(css`
+          margin-top: 4px;
+        `).compile(renderContext)
+      );
+      expect(inline.compile(withValue('0.5; margin-bottom: 2px')).base).toEqual({
+        opacity: 0.5,
+        marginBottom: 2,
+        marginTop: 4,
+      });
+      expect(warn).toHaveBeenCalledTimes(1);
+      warn.mockRestore();
+    });
+
     it('renders the rest when a value holds a brace', () => {
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
       const inline = new NativeStyle(css`

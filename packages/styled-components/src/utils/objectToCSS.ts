@@ -15,104 +15,111 @@ const hasOwn = Object.prototype.hasOwnProperty;
  * `strings.length === interpolations.length + 1` always holds.
  */
 export interface ObjectTemplate {
-  strings: string[];
   interpolations: unknown[];
+  strings: string[];
+}
+
+/** How a style object met at render time resolves its function and css fragment values. */
+export interface ObjectRender {
+  context: unknown;
+  /** A css fragment value's text, or `null` to drop its declaration. */
+  fragmentText: (fragment: unknown) => string | null;
 }
 
 /**
- * Walk a style object and produce a synthetic template literal. Function
- * values and `css\`...\`` fragments are extracted as interpolation slots
- * at value position; primitives format inline. Nested plain-object values
- * become nested rules whose key is the raw selector text (so `&:hover`,
- * `@media (...)`, etc. round-trip unchanged).
+ * Code points that make a value text other than ordinary: anything the slot
+ * value check reads, and NUL, which starts a slot marker. Parentheses are
+ * ordinary only when balanced.
  */
-export default function objectToTemplate(obj: Record<string, unknown>): ObjectTemplate {
-  const strings: string[] = [];
-  const interpolations: unknown[] = [];
-  let pending = '';
+const SPECIAL = new Uint8Array(128);
+for (const c of '{}[];"\'\\/*\0') SPECIAL[c.charCodeAt(0)] = 1;
 
-  function pushSlot(slot: unknown): void {
-    strings.push(pending);
-    pending = '';
-    interpolations.push(slot);
+/**
+ * Whether a formatted value reads the same written into the template as
+ * text, so it needs no value check: no special code point, and balanced
+ * parentheses. Any other value becomes a value slot.
+ */
+function isOrdinary(value: string): boolean {
+  let depth = 0;
+  for (let i = 0; i < value.length; i++) {
+    const c = value.charCodeAt(i);
+    if (c >= 128) continue;
+    if (SPECIAL[c] === 1) return false;
+    if (c === 40) depth++;
+    else if (c === 41 && --depth < 0) return false;
+  }
+  return depth === 0;
+}
+
+class TemplateWriter implements ObjectTemplate {
+  interpolations: unknown[] = [];
+  pending = '';
+  strings: string[] = [];
+
+  slot(value: unknown): void {
+    this.strings.push(this.pending);
+    this.pending = '';
+    this.interpolations.push(value);
   }
 
-  function walk(o: Record<string, unknown>): void {
+  declaration(key: string, value: unknown): void {
+    const formatted = addUnitIfNeeded(key, value);
+    if (formatted === '') return;
+    this.pending += hyphenate(key) + ':';
+    if (isOrdinary(formatted)) this.pending += formatted;
+    else this.slot(formatted);
+    this.pending += ';';
+  }
+
+  walk(o: Record<string, unknown>, render: ObjectRender | undefined): void {
     for (const key in o) {
       if (!hasOwn.call(o, key)) continue;
-      const val = o[key];
+      let val: unknown = o[key];
+      if (render !== undefined) {
+        while (isFunction(val)) val = (val as (ctx: unknown) => unknown)(render.context);
+      }
       if (val === undefined || val === null || val === false || val === '') continue;
       if (isPlainObject(val)) {
         // Own `toString` means the author wants a stringified value at
         // this slot, not a nested selector block.
         if (hasOwn.call(val, 'toString')) {
-          const formatted = addUnitIfNeeded(key, val);
-          if (formatted === '') continue;
-          pending += hyphenate(key) + ':' + formatted + ';';
+          this.declaration(key, val);
         } else {
-          pending += key + '{';
-          walk(val as Record<string, unknown>);
-          pending += '}';
+          this.pending += key + '{';
+          this.walk(val as Record<string, unknown>, render);
+          this.pending += '}';
         }
-      } else if (isFunction(val) || isCssProduct(val)) {
-        pending += hyphenate(key) + ':';
-        pushSlot(val);
-        pending += ';';
+      } else if (render === undefined && (isFunction(val) || isCssProduct(val))) {
+        this.pending += hyphenate(key) + ':';
+        this.slot(val);
+        this.pending += ';';
+      } else if (isCssProduct(val)) {
+        const text = (render as ObjectRender).fragmentText(val);
+        if (text !== null) this.declaration(key, text);
       } else {
-        const formatted = addUnitIfNeeded(key, val);
-        if (formatted === '') continue;
-        pending += hyphenate(key) + ':' + formatted + ';';
+        this.declaration(key, val);
       }
     }
   }
-
-  walk(obj);
-  strings.push(pending);
-  return { strings, interpolations };
 }
 
 /**
- * Render-time stringifier for plain objects produced by function
- * interpolations (`css(p => ({color: p.fg}))`, `${p => ({...})}`). Resolves
- * nested function values against the supplied fill context (mirroring
- * legacy `flatten`'s recursive call behavior) and emits a flat CSS text
- * string. A `css\`...\`` fragment value becomes the text `fragmentText`
- * gives it, or is left out without one.
+ * Walk a style object into a synthetic template literal. Keys are written
+ * as template text (property names, and nested selectors or at-rules whose
+ * block holds the nested object); a value with anything other than ordinary
+ * text becomes a value slot, checked like `color: ${value}`.
+ *
+ * Without `render` (a static object), function values and css fragments
+ * become slots resolved at fill time. With it (an object met at render
+ * time), function values are called with the render context and css
+ * fragments give their text.
  */
-export function objectToCSS(
+export default function objectToTemplate(
   obj: Record<string, unknown>,
-  fillContext?: unknown,
-  fragmentText?: (fragment: unknown) => string
-): string {
-  let css = '';
-  for (const key in obj) {
-    if (!hasOwn.call(obj, key)) continue;
-    let val: unknown = obj[key];
-    // Resolve function values recursively (with a shallow recursion limit
-    // implicit in the call chain) so `{ color: p => p.fg }` works the same
-    // as `{ color: 'tomato' }` once the prop reaches us.
-    while (isFunction(val) && fillContext !== undefined) {
-      val = (val as (ctx: unknown) => unknown)(fillContext);
-    }
-    if (val === undefined || val === null || val === false || val === '') continue;
-    if (isPlainObject(val)) {
-      if (hasOwn.call(val, 'toString')) {
-        const formatted = addUnitIfNeeded(key, val);
-        if (formatted === '') continue;
-        css += hyphenate(key) + ':' + formatted + ';';
-        continue;
-      }
-      css +=
-        key + '{' + objectToCSS(val as Record<string, unknown>, fillContext, fragmentText) + '}';
-    } else if (isCssProduct(val)) {
-      if (fragmentText === undefined) continue;
-      const text = fragmentText(val);
-      if (text !== '') css += hyphenate(key) + ':' + text + ';';
-    } else {
-      const formatted = addUnitIfNeeded(key, val);
-      if (formatted === '') continue;
-      css += hyphenate(key) + ':' + formatted + ';';
-    }
-  }
-  return css;
+  render?: ObjectRender
+): ObjectTemplate {
+  const writer = new TemplateWriter();
+  writer.walk(obj, render);
+  writer.strings.push(writer.pending);
+  return writer;
 }

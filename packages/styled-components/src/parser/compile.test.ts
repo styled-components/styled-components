@@ -6,7 +6,7 @@ import createCompiler from '../utils/compiler';
 import { resetWarnOnce } from '../utils/warnOnce';
 import { NodeKind } from './ast';
 import { compileWeb, fillSource } from './compile';
-import { parseSource } from './source';
+import { getSource, parseSource } from './source';
 
 const compiler = createCompiler();
 
@@ -97,9 +97,8 @@ describe('compileWeb', () => {
 
     it('calls a custom toString() on a plain-object interpolation (#5740)', () => {
       // Design-token shape: an object whose own-property `toString` returns
-      // the canonical resolved value while siblings are alternates. Before
-      // this fix the object reached `objectToCSS`, which iterated every
-      // key as a CSS declaration and produced broken output.
+      // the canonical resolved value while siblings are alternates. The
+      // value is its `toString`, not declarations built from its keys.
       const token = {
         default: '#000000',
         subtle: '#aaaaaa',
@@ -1359,6 +1358,96 @@ describe('compileWeb', () => {
     it('stringifies a css fragment inside a plain object value', () => {
       const src = tagged`${() => ({ color: css`red` })}`;
       expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: red;'));
+    });
+
+    /**
+     * Keys of a plain object are author CSS; each non-object value is checked
+     * as a declaration value, so it has exactly the power of `color: ${value}`.
+     */
+    describe('plain object values', () => {
+      const fontFace = 'red; @font-face { font-family: x; src: url(//evil.example/f) }';
+      const compileRules = (rules: ReturnType<typeof css>, context: object = {}) => {
+        const source = getSource(rules);
+        if (source === undefined) throw new Error('no source');
+        return compileWeb(source, context, '.a', opts);
+      };
+      const shapes: Array<[string, (v: unknown) => ReturnType<typeof css>, object]> = [
+        ['a static object', v => css({ color: v, padding: 0 } as object), {}],
+        [
+          'an object a function returns',
+          () => css((p: { $v: unknown }) => ({ color: p.$v, padding: 0 })),
+          {},
+        ],
+        [
+          'an object a template slot returns',
+          () => css`
+            ${(p: { $v: unknown }) => ({ color: p.$v, padding: 0 })}
+          `,
+          {},
+        ],
+      ];
+      const run = (make: (v: unknown) => ReturnType<typeof css>, v: unknown) =>
+        compileRules(make(v), { $v: v });
+
+      it.each(shapes)('drops a value holding braces in %s, with a dev warning', (_, make) => {
+        expect(run(make, fontFace)).toEqual(['.a{padding:0;}']);
+        expect(warnings()).toEqual([expect.stringContaining('declaration `color`')]);
+      });
+
+      it.each(shapes)('splits a value at its `;` into declarations in %s', (_, make) => {
+        expect(run(make, 'red; position: fixed')).toEqual([
+          '.a{color:red;position:fixed;padding:0;}',
+        ]);
+      });
+
+      it.each(shapes)('drops an at-rule piece after a value `;` in %s', (_, make) => {
+        expect(run(make, 'red; @import url(//evil.example/x.css)')).toEqual([
+          '.a{color:red;padding:0;}',
+        ]);
+      });
+
+      it.each(shapes)('drops a value leaving a parenthesis open in %s', (_, make) => {
+        expect(run(make, 'calc(1px')).toEqual(['.a{padding:0;}']);
+      });
+
+      it.each(shapes)('drops a value closing a parenthesis it did not open in %s', (_, make) => {
+        expect(run(make, '1px) , x')).toEqual(['.a{padding:0;}']);
+      });
+
+      it.each(shapes)('checks a value with its own toString in %s', (_, make) => {
+        const token = { toString: () => 'red; @import url(//evil.example/x.css)' };
+        expect(run(make, token)).toEqual(['.a{color:red;padding:0;}']);
+      });
+
+      it.each(shapes)('keeps an ordinary value with parentheses in %s', (_, make) => {
+        expect(run(make, 'rgba(0, 0, 0, 0.5)')).toEqual([
+          '.a{color:rgba(0, 0, 0, 0.5);padding:0;}',
+        ]);
+      });
+
+      it('checks a value in a nested selector object', () => {
+        const rules = css({ '&:hover': { color: 'red } body { background: red', margin: 0 } });
+        expect(compileRules(rules)).toEqual(['.a:hover{margin:0;}']);
+      });
+
+      it('checks a value in a nested selector object a function returns', () => {
+        const rules = css((p: { $v: string }) => ({ '&:hover': { color: p.$v, margin: 0 } }));
+        expect(compileRules(rules, { $v: fontFace })).toEqual(['.a:hover{margin:0;}']);
+      });
+
+      it('reads slot-shaped text in a value as text, not as another slot', () => {
+        const rules = css({ width: () => '1px', content: '"\0S0\0"' });
+        expect(compileRules(rules)).toEqual(['.a{width:1px;content:"\0S0\0";}']);
+      });
+
+      it('drops only the declaration of a css fragment value holding a non-styled component', () => {
+        function Plain() {
+          return React.createElement('div');
+        }
+        const rules = css(() => ({ color: css`${Plain}`, padding: 0 }));
+        expect(compileRules(rules)).toEqual(['.a{padding:0;}']);
+        expect(warnings()).toEqual([expect.stringContaining('Plain is not a styled component')]);
+      });
     });
 
     it('drops the rule a non-styled component heads, with a dev warning', () => {

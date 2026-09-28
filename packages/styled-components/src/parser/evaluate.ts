@@ -1,10 +1,11 @@
 import type KeyframesClass from '../models/Keyframes';
 import type { CompiledKeyframes, KeyframesCompiler } from '../models/Keyframes';
 import type { RuleSet } from '../types';
+import { fifoSet } from '../utils/fifoMap';
 import getComponentName from '../utils/getComponentName';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import isPlainObject from '../utils/isPlainObject';
-import { objectToCSS } from '../utils/objectToCSS';
+import objectToTemplate from '../utils/objectToCSS';
 import { warnOnce } from '../utils/warnOnce';
 import { trimRange } from './parser';
 import {
@@ -218,11 +219,57 @@ function resolveValue(
   }
   if (isPlainObject(value)) {
     if (Object.prototype.hasOwnProperty.call(value, 'toString')) return String(value);
-    return objectToCSS(value as Record<string, unknown>, r.context, frag =>
-      resolveValue(frag, r, index, false, owner)
-    );
+    const template = objectToTemplate(value as Record<string, unknown>, {
+      context: r.context,
+      fragmentText: frag => fragmentValueText(frag as RuleSet<any>, r),
+    });
+    const strings = template.strings;
+    const n = template.interpolations.length;
+    // Only ordinary values: the text parses as a mixin, as template text does.
+    if (n === 0) return strings[0];
+    const values: string[] = [];
+    for (let i = 0; i < n; i++) values.push(String(template.interpolations[i]));
+    if (standalone && r.fragments !== undefined) {
+      r.fragments[index] = {
+        source: objectSource(strings, values),
+        filled: values,
+        fragments: null,
+      };
+      return '';
+    }
+    let text = strings[0];
+    for (let i = 0; i < values.length; i++) text += values[i] + strings[i + 1];
+    return text;
   }
   return String(value);
+}
+
+/**
+ * Parsed sources of style objects met at render time, keyed by their
+ * template text: an object's values are slots or ordinary text, so objects
+ * of one shape share a source.
+ */
+const objectSources = new Map<string, Source>();
+const OBJECT_SOURCE_LIMIT = 200;
+
+function objectSource(strings: string[], values: string[]): Source {
+  let key = strings[0];
+  for (let i = 1; i < strings.length; i++) key += '\0' + strings[i];
+  let source = objectSources.get(key);
+  if (source === undefined) {
+    source = parseSource(strings, values);
+    fifoSet(objectSources, key, source, OBJECT_SOURCE_LIMIT);
+  }
+  return source;
+}
+
+/** A css fragment value's trimmed text in a style object; `null` when it holds a value that cannot be resolved. */
+function fragmentValueText(rules: RuleSet<any>, r: Resolver): string | null {
+  const frag = resolveFragment(rules, r);
+  if (frag === null) return '';
+  if (holdsUnresolved(frag)) return null;
+  const text = fragmentText(frag);
+  return trimRange(text, 0, text.length);
 }
 
 /** Drop a non-styled component's slot, with a dev warning naming it. */
