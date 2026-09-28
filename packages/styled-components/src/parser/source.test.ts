@@ -597,6 +597,29 @@ describe('parseSource', () => {
       ]);
     });
 
+    it('does not apply in a statement that ends in `{`', () => {
+      const src = tagged`&:hover ${block} { color: blue; }`;
+      expect(src.ast).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: [tv('&:hover \0S0\0')],
+          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'blue' }],
+        },
+      ]);
+      expect(src.slotIsStandalone).toEqual([false]);
+    });
+
+    it('does not apply when the text after the fragment runs on to a `{`', () => {
+      const src = tagged`color: red ${block} &:hover { color: blue; }`;
+      expect(src.ast).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: [tv('color: red \0S0\0 &:hover')],
+          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'blue' }],
+        },
+      ]);
+    });
+
     it('does not apply right after `:`', () => {
       expect(tagged`color: ${block};`.ast).toEqual([
         { kind: NodeKind.Decl, prop: 'color', value: tv('\0S0\0') },

@@ -553,6 +553,19 @@ describe('compileWeb', () => {
       );
     });
 
+    it('reads a block fragment after a selector colon as selector text and drops the rule', () => {
+      resetWarnOnce();
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const src = tagged`color: green; &:hover ${css`color: red;`} { color: blue; }`;
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual(
+        legacy('color: green;')
+      );
+      expect(warn.mock.calls.map(call => String(call[0]))).toEqual([
+        expect.stringContaining('rule `&:hover ${…}`'),
+      ]);
+      warn.mockRestore();
+    });
+
     it('promotes both fragments when two block-style fragments are adjacent', () => {
       // Author wrote `${first}${second}` with no separator. Both source
       // strings carry top-level `;` so both must be standalone siblings;
