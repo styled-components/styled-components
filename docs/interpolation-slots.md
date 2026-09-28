@@ -46,7 +46,7 @@ How a `${...}` slot in a styled template (styled components, `css`, `createGloba
 - array: each element resolved in order and joined (Inside, Glued, Property) or spliced in order (Standalone, keyframe splices).
 - css fragment: spliced (Standalone) or realized as text (every other role).
 - plain object: converted to declarations (Standalone) or to its own `toString` when it defines one. Keys are author CSS (property names and nested selectors); each non-object value is checked as a declaration value (see Value checks), so an object value has exactly the power of `color: ${value}`. A value that reads balanced and holds none of `[`, `]`, `{`, `}`, `/`, or NUL may be written into the template as text, which reads the same. This holds for static objects (`styled.div({...})`) and objects returned by functions.
-- keyframes: its generated name, injected when rendered.
+- keyframes: its generated name, injected when rendered. A keyframes named inside a `keyframes` template is named by the same compiler and injected with the keyframes that holds it.
 - In a `keyframes` template there is no render context: a function is written as its source text, with a dev warning naming the `keyframes` call.
 - styled component: its class selector. A non-styled component, or a client reference (in any role other than Standalone), cannot be resolved.
 - A value that cannot be resolved drops its enclosing declaration, rule, at-rule, or frame with a dev warning, as a failed value check does; it is never substituted as empty text (an empty selector part would widen the rule). It never removes the rest of a component's or global style's CSS.
