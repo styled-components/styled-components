@@ -221,6 +221,16 @@ function resolveValue(
   }
   if (isPlainObject(value)) {
     if (Object.prototype.hasOwnProperty.call(value, 'toString')) return replaceNul(String(value));
+    if (!standalone) {
+      unresolved(r, index);
+      if (__DEV__) {
+        warnOnce(
+          'object-value',
+          'a style object was interpolated where a value is needed (in a declaration, selector, or at-rule), so that part of the styles was dropped. Interpolate the object on its own line to add its declarations, or interpolate a string.'
+        );
+      }
+      return '';
+    }
     const walked = walkObject(value as Record<string, unknown>, {
       context: r.context,
       fragmentText: frag => fragmentValueText(frag as RuleSet<any>, r),
