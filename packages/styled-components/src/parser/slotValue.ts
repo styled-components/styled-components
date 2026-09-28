@@ -7,6 +7,7 @@ import {
   COLON,
   CR,
   DOUBLE_QUOTE,
+  FORM_FEED,
   isIdentChar,
   isWS,
   LF,
@@ -24,7 +25,7 @@ import { fifoSet } from '../utils/fifoMap';
 import { isEscaped } from '../utils/normalize';
 import type { StaticDeclNode } from './ast';
 import { NodeKind } from './ast';
-import { isCustomProperty, SlotEntry, stripCommaSpaces } from './parser';
+import { isCustomProperty, SlotEntry, stripCommaSpaces, trimRealized } from './parser';
 
 /** {@link checkSlotValue} result: the value passed and holds no top-level `;`. */
 const VALUE_OK = 0;
@@ -32,8 +33,6 @@ const VALUE_OK = 0;
 export const VALUE_FAILED = 1;
 /** {@link checkSlotValue} result bit: the value holds a `;` at the top level of its statement. */
 export const VALUE_SEMICOLON = 2;
-
-const FORM_FEED = 12;
 
 /** Newline as CSS preprocessing reads it: LF, CR, or form feed. */
 function isNewline(c: number): boolean {
@@ -157,9 +156,9 @@ function parenKind(
  * only at its end (an escape, a `/`, or an identifier that joins the value).
  *
  * The value fails when it holds `{` or `}` anywhere, a raw newline inside a
- * string, a trailing escape (also before trailing whitespace), a `)` or `]`
- * it did not open, or ends in a different state than it started (string,
- * comment, parenthesis, bracket, `url(`).
+ * string, a trailing escape, a `)` or `]` it did not open, or ends in a
+ * different state than it started (string, comment, parenthesis, bracket,
+ * `url(`).
  */
 export function checkSlotValue(raw: string, entry: SlotEntry, before: string): number {
   const plain = entry.quote === 0 && !entry.url;
@@ -172,9 +171,6 @@ export function checkSlotValue(raw: string, entry: SlotEntry, before: string): n
   // so the value is read with that backslash in front of it.
   const value = escaped ? '\\' + raw : raw;
   const len = value.length;
-  let end = len;
-  while (end > 0 && isSpace(value.charCodeAt(end - 1))) end--;
-  if (end < len && isEscaped(value, end)) return VALUE_FAILED;
 
   let quote = entry.quote;
   /** 0 outside `url(`, 1 reading a url, 2 reading a bad url's remnants. */
@@ -412,12 +408,6 @@ function scanTopLevel(text: string, start: number, end: number, stop: number): n
   return end;
 }
 
-function trimmed(text: string, start: number, end: number): string {
-  while (start < end && isSpace(text.charCodeAt(start))) start++;
-  while (end > start && isSpace(text.charCodeAt(end - 1))) end--;
-  return text.substring(start, end);
-}
-
 const splitCache = new Map<string, StaticDeclNode[]>();
 const SPLIT_CACHE_LIMIT = 200;
 
@@ -438,8 +428,8 @@ export function splitDeclarations(text: string): StaticDeclNode[] {
     const end = scanTopLevel(text, start, len, SEMICOLON);
     const colon = scanTopLevel(text, start, end, COLON);
     if (colon < end) {
-      const prop = trimmed(text, start, colon);
-      const value = stripCommaSpaces(trimmed(text, colon + 1, end));
+      const prop = trimRealized(text, start, colon);
+      const value = stripCommaSpaces(trimRealized(text, colon + 1, end));
       if (prop !== '' && (value !== '' || isCustomProperty(prop))) {
         decls.push({ kind: NodeKind.Decl, prop, value });
       }

@@ -7,6 +7,7 @@
 export const NUL = 0;
 export const TAB = 9; // \t
 export const LF = 10; // \n
+export const FORM_FEED = 12; // \f
 export const CR = 13; // \r
 export const SPACE = 32; // ' '
 export const DOUBLE_QUOTE = 34; // "
