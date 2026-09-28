@@ -1,7 +1,6 @@
 import { SC_ATTR } from '../constants';
 import { splitTopLevelCommas } from '../parser/parser';
-import * as $ from '../utils/charCodes';
-import { isEscaped } from '../utils/normalize';
+import { BRACKETS, scan, stops } from '../parser/reader';
 
 // RSC selector rewrites: child-index pseudos use Selectors L4 `of S` syntax,
 // `+` combinators expand with style-tag-tolerant alternates. Both adapt for
@@ -31,22 +30,17 @@ function rewriteChildPseudos(selector: string): string {
   );
 }
 
+const PLUS = stops('+');
+
 function expandAdjacentSibling(selector: string, out: string[]): void {
   if (selector.indexOf('+') === -1) return;
-  let parenDepth = 0;
-  let bracketDepth = 0;
-  for (let i = 0; i < selector.length; i++) {
-    const ch = selector.charCodeAt(i);
-    if (ch === $.OPEN_PAREN) parenDepth++;
-    else if (ch === $.CLOSE_PAREN) parenDepth--;
-    else if (ch === $.OPEN_BRACKET) bracketDepth++;
-    else if (ch === $.CLOSE_BRACKET) bracketDepth--;
-    else if (ch === $.PLUS && parenDepth === 0 && bracketDepth === 0 && !isEscaped(selector, i)) {
-      const before = selector.substring(0, i);
-      const after = selector.substring(i + 1);
-      out.push(before + '+' + STYLE_TAG + '+' + after);
-      out.push(before + '+' + STYLE_TAG + '+' + STYLE_TAG + '+' + after);
-    }
+  const len = selector.length;
+  for (let i = scan(selector, 0, len, PLUS, BRACKETS, 0); i < len; ) {
+    const before = selector.substring(0, i);
+    const after = selector.substring(i + 1);
+    out.push(before + '+' + STYLE_TAG + '+' + after);
+    out.push(before + '+' + STYLE_TAG + '+' + STYLE_TAG + '+' + after);
+    i = scan(selector, i + 1, len, PLUS, BRACKETS, 0);
   }
 }
 

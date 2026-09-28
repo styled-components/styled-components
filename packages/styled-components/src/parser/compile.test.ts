@@ -56,6 +56,15 @@ describe('compileWeb', () => {
       );
     });
 
+    // CSS Syntax 3 §4.3.2 Consume comments (quoted above the rule-head cases):
+    // a comment is read at any parenthesis depth, but not inside a url.
+    it('removes a comment inside a function’s parentheses and keeps `/*` inside url(', () => {
+      const src = parseSource(['width: calc(1px /* c */ + 2px); background: url(a/*b*/c);'], []);
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
+        '.a{width:calc(1px + 2px);background:url(a/*b*/c);}',
+      ]);
+    });
+
     it('matches the legacy path on keyframes', () => {
       const css = '@keyframes fade { from { opacity: 0; } to { opacity: 1; } }';
       const src = parseSource([css], []);
@@ -754,6 +763,34 @@ describe('compileWeb', () => {
       expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('a: b; h1 { color: red; }'));
     });
 
+    // CSS Syntax 3 §4.3.2 Consume comments: "If the next two input code point
+    // are U+002F SOLIDUS (/) followed by a U+002A ASTERISK (*), consume them
+    // and all following code points up to and including the first U+002A
+    // ASTERISK (*) followed by a U+002F SOLIDUS (/), or up to an EOF code
+    // point."
+    it('reads a parenthesis inside a comment as comment text when cutting a Head value', () => {
+      const src = tagged`${() => ':is(/*)&*/) body'} h2 { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(['.a :is() body h2{color:red;}']);
+      expect(warnings()).toEqual([]);
+    });
+
+    // CSS Syntax 3 §4.2 Definitions: "ident code point: An ident-start code
+    // point, a digit, or U+002D HYPHEN-MINUS (-)." (non-ASCII ident code points
+    // included, read as the wider set as everywhere else).
+    it('reads a non-ASCII code point as part of the at-keyword a Head value starts with', () => {
+      const src = tagged`color: blue; ${() => '@mediaé (min-width: 1px)'} { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(['.a{color:blue;}']);
+      expect(warnings()).toEqual([expect.stringContaining('`@mediaé`')]);
+    });
+
+    it('reads a non-ASCII code point as part of a declaration name before a nested rule', () => {
+      const src = tagged`${() => 'fé: 1'} h2 { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(['.a fé: 1 h2{color:red;}']);
+      expect(warnings()).toEqual([
+        expect.stringContaining('`fé: 1` is written before a nested rule'),
+      ]);
+    });
+
     it('resolves stacked Head slots front to back', () => {
       const src = tagged`${() => 'color: blue;'} ${() => '.x'} ${() => '.y'} h2 { color: red; }`;
       expect(compileWeb(src, {}, '.a', opts)).toEqual(
@@ -1324,6 +1361,33 @@ describe('compileWeb', () => {
       });
     });
 
+    /**
+     * CSS Syntax 3 §4.3.1 Consume a token: "U+0023 NUMBER SIGN (#): If the
+     * next input code point is an ident code point or the next two input code
+     * points are a valid escape, then: Create a <hash-token>." "U+0040
+     * COMMERCIAL AT (@): If the next 3 input code points would start an ident
+     * sequence, consume an ident sequence, create an <at-keyword-token>".
+     * §3.3 Preprocessing the input stream: "Replace any U+0000 NULL or
+     * surrogate code points in input with U+FFFD REPLACEMENT CHARACTER (�)."
+     * §4.3.7 Consume an escaped code point: "hex digit: Consume as many hex
+     * digits as possible, but no more than 5. ... If the next input code
+     * point is whitespace, consume it as well."
+     *
+     * In each value the browser reads the `(` as a function or block, so the
+     * quote opens a string the value leaves unclosed.
+     */
+    describe('the identifier before `(`', () => {
+      it.each([
+        ['a hash name', '#url(a"b)'],
+        ['an at-keyword name', '@url(a"b)'],
+        ['a NUL, read as U+FFFD', '\0url(a"b)'],
+        ['a hex escape and its whitespace', '\\41 url(a"b)'],
+      ])('drops the declaration when %s makes `url(` a function', (_, value) => {
+        const src = tagged`background: ${value}; margin: 0;`;
+        expect(out(src)).toEqual(legacy('margin: 0;'));
+      });
+    });
+
     it('reads an asterisk inside a comment as comment text', () => {
       const src = tagged`color: ${'/* a*b */ red'};`;
       expect(out(src)).toEqual(['.a{color:/* a*b */ red;}']);
@@ -1623,7 +1687,7 @@ describe('compileWeb', () => {
       });
 
       it.each([
-        ['url(', tagged`${() => 'url(a/*&*/b)'}:hover { color: red; }`, '.a url(a/*.a*/b):hover'],
+        ['url(', tagged`${() => 'url(a/*&*/b)'}:hover { color: red; }`, '.a url(a/*&*/b):hover'],
         [
           'a string',
           tagged`${() => '[data-x="/*&*/"]'}:hover { color: red; }`,

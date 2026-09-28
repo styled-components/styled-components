@@ -2,23 +2,16 @@ import {
   AT,
   BACKSLASH,
   CLOSE_BRACE,
-  CLOSE_BRACKET,
   CLOSE_PAREN,
   COLON,
   COMMA,
   DIGIT_0,
   DIGIT_9,
   DOUBLE_QUOTE,
-  FORM_FEED,
   HYPHEN,
-  isIdentChar,
   isWS,
-  LOWER_L,
-  LOWER_R,
-  LOWER_U,
   NUL,
   OPEN_BRACE,
-  OPEN_BRACKET,
   OPEN_PAREN,
   SEMICOLON,
   SINGLE_QUOTE,
@@ -39,109 +32,24 @@ import {
   SlotHead,
   TemplateValue,
 } from './ast';
-import { isEscaped } from '../utils/normalize';
 import { isKeyframesName } from './atRuleNames';
 import { stampAtClass, stampRuleClass } from './nativePlan';
+import { BRACKETS, isEscaped, isSpace, opensUrl, scan, stops } from './reader';
 
-/**
- * Scan `s[start..end]` tracking quote / paren nesting (and CSS `\X`
- * escape: backslash + next byte are consumed atomically). Return the
- * first index whose top-level byte equals `a`, `b`, `c`, or `d`, or
- * `end` if none match. Pass `-1` for unused stop slots.
- *
- * The state is local; callers that resume scanning past a known top-
- * level boundary (`;` `{` `}` `:` `,`) restart with a fresh state
- * without losing correctness, because those bytes always sit at top
- * level by definition.
- *
- * Shared by `parseBlock`, `parseAtRule`, `parseKeyframesBody`, and
- * `parseFrameDecls` so the common quote/paren/escape state machine
- * ships once instead of four times.
- */
-export function scanQP(
-  s: string,
-  start: number,
-  end: number,
-  a: number,
-  b: number,
-  c: number,
-  d: number
-): number {
-  let i = start;
-  let paren = 0;
-  let quote = 0;
-  while (i < end) {
-    const ch = s.charCodeAt(i);
-    if (quote !== 0) {
-      if (ch === BACKSLASH) {
-        i += 2;
-        continue;
-      }
-      if (ch === quote) quote = 0;
-    } else if (ch === BACKSLASH) {
-      i += 2;
-      continue;
-    } else if (ch === DOUBLE_QUOTE || ch === SINGLE_QUOTE) {
-      quote = ch;
-    } else if (ch === OPEN_PAREN) {
-      paren++;
-    } else if (ch === CLOSE_PAREN) {
-      if (paren > 0) paren--;
-    } else if (paren === 0 && (ch === a || ch === b || ch === c || ch === d)) {
-      return i;
-    }
-    i++;
-  }
-  return end;
-}
-
-/**
- * Bracket-aware variant of {@link scanQP}. Shared by `splitTopLevelCommas`,
- * `stripCommaSpaces` (selector-side comma normalization), and emit-web's
- * `stripCombinatorSpaces` so `[attr=",b"]` stays opaque to the outer
- * scan.
- */
-export function scanQPB(
-  s: string,
-  start: number,
-  end: number,
-  a: number,
-  b: number,
-  c: number,
-  d: number
-): number {
-  let i = start;
-  let paren = 0;
-  let bracket = 0;
-  let quote = 0;
-  while (i < end) {
-    const ch = s.charCodeAt(i);
-    if (quote !== 0) {
-      if (ch === BACKSLASH) {
-        i += 2;
-        continue;
-      }
-      if (ch === quote) quote = 0;
-    } else if (ch === BACKSLASH) {
-      i += 2;
-      continue;
-    } else if (ch === DOUBLE_QUOTE || ch === SINGLE_QUOTE) {
-      quote = ch;
-    } else if (ch === OPEN_PAREN) {
-      paren++;
-    } else if (ch === CLOSE_PAREN) {
-      if (paren > 0) paren--;
-    } else if (ch === OPEN_BRACKET) {
-      bracket++;
-    } else if (ch === CLOSE_BRACKET) {
-      if (bracket > 0) bracket--;
-    } else if (paren === 0 && bracket === 0 && (ch === a || ch === b || ch === c || ch === d)) {
-      return i;
-    }
-    i++;
-  }
-  return end;
-}
+/** A block statement ends at `;`, `{`, or `}`; its first top-level `:` splits a declaration. */
+const STATEMENT = stops(':{;}');
+/** {@link STATEMENT}, also stopping at a slot marker, for missing-`;` recovery. */
+const STATEMENT_OR_SLOT = stops(':{;}\0');
+/** An at-rule prelude, and the text after a recovering slot, end at `{`, `;`, or `}`. */
+const PRELUDE = stops('{;}');
+/** A keyframe frame list statement ends at `{` or `}`. */
+const FRAME_HEAD = stops('{}');
+/** A keyframe frame declaration ends at `;` or `}`; its first top-level `:` splits it. */
+const FRAME_DECL = stops(':;}');
+/** {@link FRAME_DECL}, also stopping at a slot marker, for missing-`;` recovery. */
+const FRAME_DECL_OR_SLOT = stops(':;}\0');
+/** Entries of a selector, stop, or value list are separated by top-level commas. */
+const LIST_COMMA = stops(',');
 
 export interface ParseOptions {
   /**
@@ -423,44 +331,6 @@ function recoversAt(ctx: ParseContext, slot: number, end: number, colon: number)
   return false;
 }
 
-/** {@link scanQP} that also stops at a NUL at the top level, for slot recovery. */
-function scanQPOrNul(
-  s: string,
-  start: number,
-  end: number,
-  a: number,
-  b: number,
-  c: number,
-  d: number
-): number {
-  let i = start;
-  let paren = 0;
-  let quote = 0;
-  while (i < end) {
-    const ch = s.charCodeAt(i);
-    if (quote !== 0) {
-      if (ch === BACKSLASH) {
-        i += 2;
-        continue;
-      }
-      if (ch === quote) quote = 0;
-    } else if (ch === BACKSLASH) {
-      i += 2;
-      continue;
-    } else if (ch === DOUBLE_QUOTE || ch === SINGLE_QUOTE) {
-      quote = ch;
-    } else if (ch === OPEN_PAREN) {
-      paren++;
-    } else if (ch === CLOSE_PAREN) {
-      if (paren > 0) paren--;
-    } else if (paren === 0 && (ch === a || ch === b || ch === c || ch === d || ch === NUL)) {
-      return i;
-    }
-    i++;
-  }
-  return end;
-}
-
 /** Single-pass parse of a CSS block body. */
 function parseBlock(ctx: ParseContext): Node[] {
   const css = ctx.css;
@@ -505,10 +375,7 @@ function parseBlock(ctx: ParseContext): Node[] {
     // `while (true)` (not `while (i < len)`) so that a COLON found at the
     // very last position can still reach the EOF branch on the next scan.
     while (true) {
-      const stop =
-        ctx.recover === null
-          ? scanQP(css, i, len, COLON, OPEN_BRACE, SEMICOLON, CLOSE_BRACE)
-          : scanQPOrNul(css, i, len, COLON, OPEN_BRACE, SEMICOLON, CLOSE_BRACE);
+      const stop = scan(css, i, len, ctx.recover === null ? STATEMENT : STATEMENT_OR_SLOT, 0, 0);
       if (stop >= len) {
         // EOF reached. Treat as terminal declaration if we saw a colon.
         const declStart = run === null ? start : leadDecl(ctx, out, run);
@@ -527,8 +394,7 @@ function parseBlock(ctx: ParseContext): Node[] {
         if (
           end !== -1 &&
           recoversAt(ctx, stop, end, colon) &&
-          css.charCodeAt(scanQP(css, end, len, OPEN_BRACE, SEMICOLON, CLOSE_BRACE, -1)) !==
-            OPEN_BRACE
+          css.charCodeAt(scan(css, end, len, PRELUDE, 0, 0)) !== OPEN_BRACE
         ) {
           const declStart = run === null ? start : leadDecl(ctx, out, run);
           pushDecl(ctx, out, declStart, colon, stop);
@@ -690,7 +556,7 @@ function templateOrString(ctx: ParseContext, s: string): string | TemplateValue 
       quote = c;
     } else if (c === OPEN_PAREN) {
       paren++;
-      if (opensUnquotedUrl(s, i)) url = paren;
+      if (opensUrl(s, i)) url = paren;
     } else if (c === CLOSE_PAREN) {
       if (paren > 0) paren--;
     }
@@ -699,23 +565,6 @@ function templateOrString(ctx: ParseContext, s: string): string | TemplateValue 
   chunks.push(s.substring(last));
   ctx.dyn = true;
   return { chunks, slots };
-}
-
-/**
- * Whether the `(` at `i` opens an unquoted `url(`: the name before it is
- * `url` (any case) and its first non-whitespace argument character is not a
- * quote.
- */
-function opensUnquotedUrl(s: string, i: number): boolean {
-  if (i < 3) return false;
-  if ((s.charCodeAt(i - 1) | 0x20) !== LOWER_L) return false;
-  if ((s.charCodeAt(i - 2) | 0x20) !== LOWER_R) return false;
-  if ((s.charCodeAt(i - 3) | 0x20) !== LOWER_U) return false;
-  if (i > 3 && isIdentChar(s.charCodeAt(i - 4))) return false;
-  let j = i + 1;
-  while (j < s.length && isWS(s.charCodeAt(j))) j++;
-  const next = s.charCodeAt(j);
-  return next !== DOUBLE_QUOTE && next !== SINGLE_QUOTE;
 }
 
 /** A CSS custom property starts with `--` (two leading hyphens). */
@@ -751,7 +600,7 @@ export function stripCommaSpaces(s: string): string {
   let segStart = 0;
   let i = 0;
   while (i < len) {
-    const comma = scanQPB(s, i, len, COMMA, -1, -1, -1);
+    const comma = scan(s, i, len, LIST_COMMA, BRACKETS, 0);
     if (comma >= len) break;
     // Look ahead: only commit a segment if there's whitespace to strip.
     let j = comma + 1;
@@ -779,17 +628,12 @@ export function stripCommaSpaces(s: string): string {
  * removing it would leave the backslash escaping whatever is written next.
  */
 export function trimRange(css: string, start: number, end: number): string {
-  while (start < end && isCSSSpace(css.charCodeAt(start))) start++;
-  while (end > start && isCSSSpace(css.charCodeAt(end - 1))) {
+  while (start < end && isSpace(css.charCodeAt(start))) start++;
+  while (end > start && isSpace(css.charCodeAt(end - 1))) {
     if (css.charCodeAt(end - 2) === BACKSLASH && isEscaped(css, end - 1)) break;
     end--;
   }
   return start === 0 && end === css.length ? css : css.substring(start, end);
-}
-
-/** CSS whitespace: space, tab, and the newlines LF, CR, and form feed. */
-function isCSSSpace(c: number): boolean {
-  return isWS(c) || c === FORM_FEED;
 }
 
 function isNameStop(code: number): boolean {
@@ -833,7 +677,7 @@ function readAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode {
 
   // Scan prelude until `{`, `;`, `}`, or EOF
   const preludeStart = j;
-  j = scanQP(css, j, len, OPEN_BRACE, SEMICOLON, CLOSE_BRACE, -1);
+  j = scan(css, j, len, PRELUDE, 0, 0);
 
   const prelude = trimRange(css, preludeStart, j);
   const nameField = templateOrString(ctx, name);
@@ -900,7 +744,7 @@ function parseKeyframesBody(ctx: ParseContext): Array<KeyframeFrame | Interpolat
       run === null ? 0 : run.next === run.lastEnd ? run.slots.length - 1 : run.slots.length;
 
     // Scan for `{`
-    const j = scanQP(css, start, len, OPEN_BRACE, CLOSE_BRACE, -1, -1);
+    const j = scan(css, start, len, FRAME_HEAD, 0, 0);
 
     if (j >= len || css.charCodeAt(j) !== OPEN_BRACE) {
       if (run !== null) pushRunSlots(ctx, frames, run, lead);
@@ -966,10 +810,7 @@ function parseFrameDecls(ctx: ParseContext): Array<DeclNode | InterpolationNode>
     // `while (true)` (not `while (i < len)`) so that a COLON found at the
     // very last position can still reach the EOF branch on the next scan.
     while (true) {
-      const stop =
-        ctx.recover === null
-          ? scanQP(css, i, len, COLON, SEMICOLON, CLOSE_BRACE, -1)
-          : scanQPOrNul(css, i, len, COLON, SEMICOLON, CLOSE_BRACE, -1);
+      const stop = scan(css, i, len, ctx.recover === null ? FRAME_DECL : FRAME_DECL_OR_SLOT, 0, 0);
       if (stop >= len) {
         if (colon !== -1) pushDecl(ctx, decls, start, colon, stop);
         ctx.i = stop;
@@ -1028,7 +869,7 @@ export function splitTopLevelCommas(raw: string, trim = false): string[] {
   let start = 0;
   let i = 0;
   while (i < len) {
-    const comma = scanQPB(raw, i, len, COMMA, -1, -1, -1);
+    const comma = scan(raw, i, len, LIST_COMMA, BRACKETS, 0);
     if (comma >= len) break;
     if (trim) {
       const part = trimRange(raw, start, comma);

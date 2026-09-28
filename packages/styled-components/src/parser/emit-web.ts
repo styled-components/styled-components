@@ -9,8 +9,11 @@ import {
   StaticRoot,
   StaticRuleNode,
 } from './ast';
-import { isEscaped } from '../utils/normalize';
-import { scanQPB, splitTopLevelCommas, stripCommaSpaces, trimRange } from './parser';
+import { splitTopLevelCommas, stripCommaSpaces, trimRange } from './parser';
+import { ANY_DEPTH, BRACKETS, isEscaped, isIdentCode, scan, stops } from './reader';
+
+const COMBINATOR = stops('>+~');
+const AMPERSAND = stops('&');
 
 /**
  * At-rule names whose bodies are direct declarations (no nested selector wrap).
@@ -56,7 +59,7 @@ function stripCombinatorSpaces(sel: string): string {
   let segStart = 0;
   let i = 0;
   while (i < len) {
-    const stop = scanQPB(sel, i, len, $.GT, $.PLUS, $.TILDE, -1);
+    const stop = scan(sel, i, len, COMBINATOR, BRACKETS, 0);
     if (stop >= len) break;
     // Find left boundary of emitted segment (trim trailing whitespace, except
     // whitespace an escaping backslash precedes).
@@ -374,35 +377,7 @@ function resolveRuleSelectors(selectors: string[], parent: string): string {
  * `topLevel`, also outside parentheses and brackets. `s.length` for none.
  */
 export function nextAmpersand(s: string, from: number, topLevel: boolean): number {
-  const len = s.length;
-  let i = from;
-  let paren = 0;
-  let bracket = 0;
-  let quote = 0;
-  while (i < len) {
-    const ch = s.charCodeAt(i);
-    if (ch === $.BACKSLASH) {
-      i += 2;
-      continue;
-    }
-    if (quote !== 0) {
-      if (ch === quote) quote = 0;
-    } else if (ch === $.DOUBLE_QUOTE || ch === $.SINGLE_QUOTE) {
-      quote = ch;
-    } else if (ch === $.AMPERSAND) {
-      if (!topLevel || (paren === 0 && bracket === 0)) return i;
-    } else if (ch === $.OPEN_PAREN) {
-      paren++;
-    } else if (ch === $.CLOSE_PAREN) {
-      if (paren > 0) paren--;
-    } else if (ch === $.OPEN_BRACKET) {
-      bracket++;
-    } else if (ch === $.CLOSE_BRACKET) {
-      if (bracket > 0) bracket--;
-    }
-    i++;
-  }
-  return len;
+  return scan(s, from, s.length, AMPERSAND, topLevel ? BRACKETS : BRACKETS | ANY_DEPTH, 0);
 }
 
 function resolveSingle(selector: string, parent: string): string {
@@ -474,7 +449,7 @@ function applySelfReferenceRewrite(
     }
     const after = idx + selLen;
     const afterCh = after < len ? compiledSelector.charCodeAt(after) : 0;
-    const isBoundary = after >= len || !$.isIdentChar(afterCh);
+    const isBoundary = after >= len || !isIdentCode(afterCh);
     out += compiledSelector.substring(i, idx);
     if (isBoundary) {
       out += replacement;

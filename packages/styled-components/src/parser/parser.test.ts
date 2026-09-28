@@ -306,6 +306,56 @@ describe('parser', () => {
     ]);
   });
 
+  /**
+   * CSS Syntax 3 §4.3.4 Consume an ident-like token: "If string’s value is an
+   * ASCII case-insensitive match for "url", and the next input code point is
+   * U+0028 LEFT PARENTHESIS ((), consume it. ... Otherwise, consume a url
+   * token, and return it." §4.3.6 Consume a url token: "U+0022 QUOTATION MARK
+   * (") U+0027 APOSTROPHE (') U+0028 LEFT PARENTHESIS (() non-printable code
+   * point: This is a parse error. Consume the remnants of a bad url, create a
+   * <bad-url-token>, and return it."
+   */
+  describe('the text of an unquoted url(', () => {
+    it('reads a quote inside it as url text, not a string', () => {
+      expect(parse('background: url(a"b); color: red;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'background', value: 'url(a"b)' },
+        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+      ]);
+    });
+
+    // §4.3.7 Consume an escaped code point: "hex digit: Consume as many hex
+    // digits as possible, but no more than 5. Note that this means 1-6 hex
+    // digits have been consumed in total. If the next input code point is
+    // whitespace, consume it as well."
+    it('reads url( spelled with an escape as url(', () => {
+      expect(parse('background: \\75rl(a"b); color: red;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'background', value: '\\75rl(a"b)' },
+        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+      ]);
+    });
+
+    it('reads a hex escape and the whitespace after it as one identifier with the text after', () => {
+      expect(parse('a: \\41 url(x"y); b: c; d: "e";')).toEqual([
+        { kind: NodeKind.Decl, prop: 'a', value: '\\41 url(x"y); b: c; d: "e";' },
+      ]);
+    });
+
+    // §4.3.1 Consume a token: "U+0023 NUMBER SIGN (#): If the next input code
+    // point is an ident code point or the next two input code points are a
+    // valid escape, then: Create a <hash-token>." "U+0040 COMMERCIAL AT (@):
+    // If the next 3 input code points would start an ident sequence, consume
+    // an ident sequence, create an <at-keyword-token>".
+    it.each([['#'], ['@']])('reads `%surl(` as a name and a parenthesis, not url(', lead => {
+      expect(parse(`a: ${lead}url(x"y); b: c; d: "e";`)).toEqual([
+        { kind: NodeKind.Decl, prop: 'a', value: `${lead}url(x"y); b: c; d: "e";` },
+      ]);
+    });
+
+    it('keeps a comma inside it within one list entry', () => {
+      expect(splitSelectors('url(a"b), c')).toEqual(['url(a"b)', 'c']);
+    });
+  });
+
   it('splits comma-separated selectors', () => {
     expect(splitSelectors('.a, .b, .c')).toEqual(['.a', '.b', '.c']);
   });
