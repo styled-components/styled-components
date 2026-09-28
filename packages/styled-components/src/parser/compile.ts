@@ -51,7 +51,13 @@ import {
   VALUE_FAILED,
   VALUE_SEMICOLON,
 } from './slotValue';
-import { evaluateForFastPath, FastPathFragment, fragmentText, UNRESOLVED } from './evaluate';
+import {
+  evaluateForFastPath,
+  FastPathFragment,
+  fragmentText,
+  holdsUnresolved,
+  UNRESOLVED,
+} from './evaluate';
 import type { Source } from './source';
 
 /**
@@ -209,7 +215,7 @@ function fillDecl(node: DeclNode, fill: Fill): StaticDeclNode | StaticDeclNode[]
   let split = realizedSemicolon;
   const valueRaw = propRaw === null ? null : realize(node.value, fill, '');
   if (propRaw === null || valueRaw === null) {
-    if (__DEV__) warnDropped('declaration `' + fieldText(node.prop) + '`');
+    if (__DEV__) warnRealizeFailed('declaration `' + fieldText(node.prop) + '`');
     return undefined;
   }
   if (realizedSemicolon) split = true;
@@ -300,7 +306,7 @@ function fillRule(node: RuleNode, fill: Fill): StaticNode | StaticNode[] | undef
   }
   const selectors = selectorsChanged ? realizeList(node.selectors, fill) : null;
   if (selectorsChanged && selectors === null) {
-    if (__DEV__) warnDropped('rule `' + listText(node.selectors) + '`');
+    if (__DEV__) warnRealizeFailed('rule `' + listText(node.selectors) + '`');
     return undefined;
   }
   const children = fillNodes(node.children, nestedFill(fill));
@@ -323,7 +329,7 @@ function fillAtRule(
   } else {
     const realized = realize(node.name, fill, '');
     if (realized === null || !isIdentifier(realized)) {
-      if (__DEV__) {
+      if (__DEV__ && !realizedUnresolved) {
         const shown = realized === null ? fieldText(node.name) : realized;
         warnOnce(
           'at-rule-name',
@@ -341,7 +347,7 @@ function fillAtRule(
   }
   const prelude = realize(node.prelude, fill, '');
   if (prelude === null || realizedSemicolon) {
-    if (__DEV__) warnDropped('at-rule `@' + name + ' ' + fieldText(node.prelude) + '`');
+    if (__DEV__) warnRealizeFailed('at-rule `@' + name + ' ' + fieldText(node.prelude) + '`');
     return undefined;
   }
   const children = node.children === null ? null : fillNodes(node.children, fill);
@@ -366,9 +372,9 @@ function fillKeyframes(
   fill: Fill
 ): StaticKeyframesNode | undefined {
   const name = typeof nameField === 'string' ? nameField : realize(nameField, fill, '');
-  let prelude = realize(preludeField, fill, '');
+  let prelude = name === null ? null : realize(preludeField, fill, '');
   if (name === null || prelude === null || realizedSemicolon) {
-    if (__DEV__) warnDropped('@keyframes `' + fieldText(preludeField) + '`');
+    if (__DEV__) warnRealizeFailed('@keyframes `' + fieldText(preludeField) + '`');
     return undefined;
   }
   if (typeof preludeField !== 'string') {
@@ -423,7 +429,7 @@ function fillKeyframes(
     } else {
       stops = realizeList(frame.stops, fill);
       if (stops === null) {
-        if (__DEV__) warnDropped('@keyframes frame `' + listText(frame.stops) + '`');
+        if (__DEV__) warnRealizeFailed('@keyframes frame `' + listText(frame.stops) + '`');
         continue;
       }
     }
@@ -480,10 +486,14 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
     const frag = fill.fragments ? fill.fragments[index] : null;
     if (frag === UNRESOLVED) return droppedHead(statements);
     const hasFrag = frag !== null && frag !== undefined;
+    // Read as text, a fragment's unresolved value would vanish from the
+    // selector, so the rule drops; spliced as statements, it drops itself.
+    const textUnresolved = hasFrag && holdsUnresolved(frag);
     const raw = hasFrag ? fragmentText(frag) : fill.filled[index];
     if (remainder !== null) {
       // Once a slot starts the selector, later slots join it as text.
       const before: string = remainder + head.gaps[k - 1];
+      if (textUnresolved) return droppedHead(statements);
       if (checkSlotValue(raw, TOP_LEVEL, before) !== 0) {
         if (__DEV__) warnDropped('rule headed by `' + raw + '`');
         return droppedHead(statements);
@@ -494,6 +504,7 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
     const text = normalize(raw, false);
     const cut = lastStatementEnd(text);
     const rest = trimWhitespace(text.substring(cut + 1));
+    if (textUnresolved && rest !== '') return droppedHead(statements);
     if (cut !== -1) {
       const spliced =
         hasFrag && rest === ''
@@ -516,7 +527,7 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
     realizedSemicolon ||
     (typeof head.rest === 'string' && prefix !== '' && chunkChangesReading(prefix, rest, true))
   ) {
-    if (__DEV__) warnDropped('rule `' + fieldText(head.rest) + '`');
+    if (__DEV__) warnRealizeFailed('rule `' + fieldText(head.rest) + '`');
     return droppedHead(statements);
   }
   return { dropped: false, remainder, statements, text: prefix + trimWhitespace(rest) };
@@ -685,23 +696,32 @@ function fillFrameDecls(
 
 /** Set by {@link realize}: a value held a `;` at the top level of its statement. */
 let realizedSemicolon = false;
+/** Set by {@link realize}: it failed on a value that could not be resolved, which already warned. */
+let realizedUnresolved = false;
 
 /**
  * Realize a {@link TemplateValue} or pass through a static string, checking
  * each slot value from its entry state and each template chunk after a
- * value for a changed reading. Returns `null` when a check fails; sets
- * {@link realizedSemicolon}. `prefix` is realized text written before the
+ * value for a changed reading. Returns `null` when a check fails or a value
+ * could not be resolved; sets {@link realizedSemicolon} and
+ * {@link realizedUnresolved}. `prefix` is realized text written before the
  * field in the same statement.
  */
 function realize(field: string | TemplateValue, fill: Fill, prefix: string): string | null {
   realizedSemicolon = false;
+  realizedUnresolved = false;
   if (typeof field === 'string') return field;
   const { chunks, slots } = field;
+  const fragments = fill.fragments;
   let out = chunks[0];
   if (prefix !== '' && chunkChangesReading(prefix, out, true)) return null;
   for (let i = 0; i < slots.length; i++) {
     const idx = slots[i];
     if (idx >= fill.filled.length) return null;
+    if (fragments && fragments[idx] === UNRESOLVED) {
+      realizedUnresolved = true;
+      return null;
+    }
     const value = fill.filled[idx];
     const entry = fill.entries[idx] || TOP_LEVEL;
     const flags = checkSlotValue(value, entry, prefix === '' ? out : prefix + out);
@@ -727,6 +747,14 @@ function listText(list: ReadonlyArray<string | TemplateValue>): string {
   let text = '';
   for (let i = 0; i < list.length; i++) text += (i > 0 ? ', ' : '') + fieldText(list[i]);
   return text;
+}
+
+/**
+ * {@link warnDropped} after {@link realize} failed, unless it failed on a
+ * value that could not be resolved, whose resolution already warned.
+ */
+function warnRealizeFailed(construct: string): void {
+  if (!realizedUnresolved) warnDropped(construct);
 }
 
 /** Dev warning for a construct dropped because a value in it failed its check. */

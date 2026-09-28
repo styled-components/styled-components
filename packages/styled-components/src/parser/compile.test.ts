@@ -1370,13 +1370,129 @@ describe('compileWeb', () => {
       expect(warnings()).toEqual([expect.stringContaining('Plain is not a styled component')]);
     });
 
-    it('drops only the value slot of a non-styled component', () => {
+    it('drops the declaration a non-styled component value sits in, with one dev warning', () => {
       const Forwarded = { $$typeof: Symbol.for('react.forward_ref'), displayName: 'Forwarded' };
       const src = tagged`color: blue; content: "${() => Forwarded}"; margin: 0;`;
-      expect(compileWeb(src, {}, '.a', opts)).toEqual(
-        legacy('color: blue; content: ""; margin: 0;')
-      );
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue; margin: 0;'));
       expect(warnings()).toEqual([expect.stringContaining('Forwarded is not a styled component')]);
+    });
+
+    /**
+     * A value that cannot be resolved drops its enclosing declaration, rule,
+     * at-rule, or frame with one dev warning, like a failed value check. It
+     * is never substituted as empty text, which would widen a selector.
+     */
+    describe('values that cannot be resolved', () => {
+      function Plain() {
+        return React.createElement('div');
+      }
+      class Klass extends React.Component {
+        render() {
+          return null;
+        }
+      }
+      /** A client reference as React's server build makes it: any other property read throws. */
+      const clientRef = new Proxy(function Child() {}, {
+        get(target, name) {
+          if (name === '$$typeof') return Symbol.for('react.client.reference');
+          if (name === '$$id') return 'app/child.tsx#Child';
+          if (name === 'name') return target.name;
+          throw new Error('Cannot access Child.' + String(name) + ' on the server.');
+        },
+      });
+      const plainWarning = [expect.stringContaining('Plain is not a styled component')];
+
+      it.each([
+        ['Glued before a selector', tagged`color: blue; ${Plain}:hover & { color: red; }`],
+        ['Inside a selector', tagged`color: blue; &:hover ${Plain} { color: red; }`],
+        ['Inside `:has()`', tagged`color: blue; &:has(${Plain}) { color: red; }`],
+        [
+          'returned by a function Inside a selector',
+          tagged`color: blue; & ${() => Plain} { color: red; }`,
+        ],
+        ['in an array Inside a selector', tagged`color: blue; & ${[Plain, ' p']} { color: red; }`],
+        ['Inside an at-rule prelude', tagged`color: blue; @media ${Plain} { color: red; }`],
+      ])('drops the rule for a non-styled component %s', (_, src) => {
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue;'));
+        expect(warnings()).toEqual(plainWarning);
+      });
+
+      it('drops the declaration for a non-styled component in a property name', () => {
+        const src = tagged`${Plain}: red; margin: 0;`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('margin: 0;'));
+        expect(warnings()).toEqual(plainWarning);
+      });
+
+      it('drops the rule for a class component Inside a selector', () => {
+        const src = tagged`color: blue; & ${Klass} { color: red; }`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue;'));
+        expect(warnings()).toEqual([expect.stringContaining('Klass is not a styled component')]);
+      });
+
+      it('drops the frame for a non-styled component in a keyframe stop', () => {
+        const src = tagged`@keyframes k { from, ${Plain} { opacity: 0; } to { opacity: 1; } }`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(['@keyframes k{to{opacity:1;}}']);
+        expect(warnings()).toEqual(plainWarning);
+      });
+
+      it('drops the rule for a css fragment realized as selector text holding one', () => {
+        const src = tagged`color: blue; & ${css`${Plain}:hover`} { color: red; }`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue;'));
+        expect(warnings()).toEqual(plainWarning);
+      });
+
+      it('drops the rule for a css fragment Head whose selector text holds one', () => {
+        const src = tagged`color: blue; ${css`${Plain}:hover`} & { color: red; }`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue;'));
+        expect(warnings()).toEqual(plainWarning);
+      });
+
+      it('drops the rule for a later css fragment Head slot holding one', () => {
+        const src = tagged`color: blue; ${() => '.x'} ${css`${Plain}`} h2 { color: red; }`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue;'));
+        expect(warnings()).toEqual(plainWarning);
+      });
+
+      it('keeps the statements of a css fragment Head whose mixin holds one', () => {
+        const src = tagged`${css`color: blue; ${Plain};`} h2 { color: red; }`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue; h2 { color: red; }'));
+        expect(warnings()).toEqual(plainWarning);
+      });
+
+      it.each([
+        [
+          'Glued before a selector',
+          () => tagged`color: blue; ${clientRef}:hover & { color: red; }`,
+        ],
+        ['Inside a selector', () => tagged`color: blue; & ${clientRef} { color: red; }`],
+        [
+          'returned by a function Inside a selector',
+          () => tagged`color: blue; & ${() => clientRef} { color: red; }`,
+        ],
+      ])('drops the rule for a client reference %s, with one dev warning', (_, make) => {
+        expect(compileWeb(make(), {}, '.a', opts)).toEqual(legacy('color: blue;'));
+        expect(warnings()).toEqual([expect.stringContaining('client component')]);
+      });
+
+      it('drops the declaration for a client reference in a value, with one dev warning', () => {
+        const src = tagged`color: ${clientRef}; margin: 0;`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('margin: 0;'));
+        expect(warnings()).toEqual([expect.stringContaining('client component')]);
+      });
+
+      it('splices nothing for a client reference on its own line, with one dev warning', () => {
+        const src = tagged`
+          ${clientRef}
+          color: blue;`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue;'));
+        expect(warnings()).toEqual([expect.stringContaining('client component')]);
+      });
+
+      it('drops the rule a client reference proxy heads, with one dev warning', () => {
+        const src = tagged`color: blue; ${clientRef} h2 { color: red; }`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue;'));
+        expect(warnings()).toEqual([expect.stringContaining('client component (Child)')]);
+      });
     });
   });
 

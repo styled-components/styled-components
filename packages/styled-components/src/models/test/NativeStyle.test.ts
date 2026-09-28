@@ -1,3 +1,4 @@
+import React from 'react';
 import css from '../../constructors/css';
 import keyframes from '../../constructors/keyframes';
 import type { ExecutionContext } from '../../types';
@@ -1606,6 +1607,28 @@ describe('NativeStyle class;compile() fast-paths', () => {
         },
       ]);
       expect(out.animations).toBeDefined();
+    });
+
+    it('drops a rule whose selector holds a non-styled component, with one dev warning', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      function Plain() {
+        return React.createElement('div');
+      }
+      const inline = new NativeStyle(css`
+        color: blue;
+        &:hover ${Plain} {
+          color: red;
+        }
+      `);
+      expect(inline.compile(renderContext)).toEqual(
+        new NativeStyle(css`
+          color: blue;
+        `).compile(renderContext)
+      );
+      expect(warn.mock.calls.map(call => String(call[0]))).toEqual([
+        expect.stringContaining('Plain is not a styled component'),
+      ]);
+      warn.mockRestore();
     });
 
     it('renders the rest when a value holds a brace', () => {
