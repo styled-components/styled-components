@@ -972,20 +972,52 @@ describe('compileWeb', () => {
   });
 
   describe('block-level string interpolations', () => {
-    it('splits an object value in a declaration into declarations at its `;`', () => {
-      // The object converts to `raw:red;`; its `;` splits the realized
-      // `color:raw:red;` into one declaration, `color` with `raw:red`.
-      const src = tagged`color: ${{ raw: 'red' } as unknown};`;
-      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
-        '.a{color:raw:red;}',
-      ]);
-    });
+    /**
+     * An object without its own `toString` is declarations, which only a
+     * Standalone slot can splice; in any other role it cannot be resolved.
+     */
+    describe('an object value outside a Standalone slot', () => {
+      const opts = { selfRefSelector: '.a', componentId: 'a' };
+      let warn: jest.SpyInstance;
 
-    it('realizes an object value holding a non-ordinary value as its text in a declaration', () => {
-      const src = tagged`content: ${{ raw: '"x"' } as unknown};`;
-      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
-        '.a{content:raw:"x";}',
-      ]);
+      beforeEach(() => {
+        resetWarnOnce();
+        warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      });
+
+      afterEach(() => {
+        warn.mockRestore();
+      });
+
+      it.each([
+        ['a declaration', tagged`color: ${{ raw: 'red' } as unknown}; margin: 0;`],
+        [
+          'a declaration, holding a non-ordinary value',
+          tagged`content: ${{ raw: '"x"' } as unknown}; margin: 0;`,
+        ],
+        ['a declaration, from a function', tagged`color: ${() => ({ raw: 'red' })}; margin: 0;`],
+        ['a declaration, in an array', tagged`color: ${[{ raw: 'red' }] as unknown}; margin: 0;`],
+        ['a property name', tagged`${() => ({ raw: 'red' })}: red; margin: 0;`],
+        ['a selector', tagged`margin: 0; & ${() => ({ raw: 'red' })} { color: red; }`],
+        ['an at-rule prelude', tagged`margin: 0; @media ${() => ({ raw: 'red' })} { color: red; }`],
+      ])('drops %s holding it, with a dev warning', (_, src) => {
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('margin: 0;'));
+        expect(warn.mock.calls.map(call => String(call[0]))).toEqual([
+          expect.stringContaining('style object'),
+        ]);
+      });
+
+      it('writes an object with its own toString as that text', () => {
+        const src = tagged`color: ${() => ({ toString: () => 'red' })}; margin: 0;`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: red; margin: 0;'));
+        expect(warn).not.toHaveBeenCalled();
+      });
+
+      it('splices an object in a Standalone slot as declarations', () => {
+        const src = tagged`${() => ({ color: 'red' })} margin: 0;`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: red; margin: 0;'));
+        expect(warn).not.toHaveBeenCalled();
+      });
     });
 
     it('realizes a css fragment holding another css fragment as its text in a declaration', () => {
