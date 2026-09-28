@@ -795,7 +795,13 @@ export function trimRange(css: string, start: number, end: number): string {
 }
 
 function isNameStop(code: number): boolean {
-  return isWS(code) || code === OPEN_BRACE || code === SEMICOLON;
+  return (
+    isWS(code) ||
+    code === OPEN_BRACE ||
+    code === SEMICOLON ||
+    code === CLOSE_BRACE ||
+    code === OPEN_PAREN
+  );
 }
 
 function parseAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode {
@@ -812,7 +818,7 @@ function readAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode {
   const len = ctx.len;
   let j = ctx.i + 1;
 
-  // Read the at-rule name up to whitespace, `{`, or `;`.
+  // Read the at-rule name up to whitespace, `{`, `;`, `}`, or `(`.
   while (j < len) {
     const c = css.charCodeAt(j);
     if (isNameStop(c)) break;

@@ -234,7 +234,9 @@ function emitNodes(
         break;
       }
       case NodeKind.AtRule:
-        if (!DROPPED_AT_RULES.has(node.name)) {
+        // A `@` with no name is a delimiter, not an at-rule; emitted, it
+        // would join the next rule's prelude and invalidate it.
+        if (node.name !== '' && !DROPPED_AT_RULES.has(node.name)) {
           const emitted = emitAtRule(node, currentSelector, options);
           if (emitted) other.push(emitted);
         }

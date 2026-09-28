@@ -753,7 +753,8 @@ function normalizeSubstituted(value: string): string {
  *
  * The fragment string `s` is a runtime-resolved value (a standalone or head
  * slot's text), parsed without `templates`, so any slot-shaped bytes in it
- * stay opaque and the parser produces a fully-static AST.
+ * stay opaque and the parser produces a fully-static AST. It is normalized
+ * the same way as template text.
  */
 const stringFragmentCache = new Map<string, StaticRoot>();
 const STRING_FRAGMENT_CACHE_LIMIT = 200;
@@ -761,7 +762,7 @@ const STRING_FRAGMENT_CACHE_LIMIT = 200;
 function parseStringFragment(s: string): StaticRoot {
   const cached = stringFragmentCache.get(s);
   if (cached !== undefined) return cached;
-  const parsed = parse(s);
+  const parsed = parse(normalize(s));
   fifoSet(stringFragmentCache, s, parsed, STRING_FRAGMENT_CACHE_LIMIT);
   return parsed;
 }
