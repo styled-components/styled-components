@@ -71,19 +71,14 @@ interface TemplateParse {
 }
 
 /**
- * Parses of one shared strings array. The slot flags that shape a parse
- * (missing-`;` recovery, client references) come from the values, so each
- * flag combination met at the call site has its own parse; nearly every call
- * site has none.
+ * Parses of each shared strings array, keyed by {@link flagKey}. The slot
+ * flags that shape a parse (missing-`;` recovery, client references) come
+ * from the values, so each flag combination met at the call site has its own
+ * parse; nearly every call site only has the unflagged one, keyed `''`.
  */
-interface SharedParses {
-  plain: TemplateParse | null;
-  flagged: Map<string, TemplateParse> | null;
-}
-
-const sharedParses = new WeakMap<ReadonlyArray<string>, SharedParses>();
+const sharedParses = new WeakMap<ReadonlyArray<string>, Map<string, TemplateParse>>();
 /** Flag combinations kept per call site; a bound for values that vary without end. */
-const FLAGGED_LIMIT = 16;
+const FLAG_COMBINATION_LIMIT = 16;
 let lastParseId = 0;
 
 export const CLIENT_REFERENCE = Symbol.for('react.client.reference');
@@ -128,17 +123,8 @@ export function parseSource(
   shared: boolean = false
 ): Source {
   const n = interpolations.length;
-  // A mismatched count cannot come from a tagged template; parse it alone.
-  const reuse = shared && strings.length === n + 1;
-  if (n === 0) {
-    const parsed = reuse
-      ? sharedParse(strings, 0, null, null)
-      : readTemplate(strings, 0, null, null);
-    return makeSource(parsed, strings, interpolations, EMPTY, EMPTY);
-  }
-
-  const kinds: InterpolationKind[] = [];
-  const staticValues: string[] = [];
+  const kinds: InterpolationKind[] = n === 0 ? EMPTY : [];
+  const staticValues: string[] = n === 0 ? EMPTY : [];
   let recover: boolean[] | null = null;
   let clientRefs: boolean[] | null = null;
   for (let i = 0; i < n; i++) {
@@ -187,9 +173,11 @@ export function parseSource(
     staticValues.push(text);
   }
 
-  const parsed = reuse
-    ? sharedParse(strings, n, recover, clientRefs)
-    : readTemplate(strings, n, recover, clientRefs);
+  // A mismatched count cannot come from a tagged template; it gets a parse of its own.
+  const parsed =
+    shared && strings.length === n + 1
+      ? sharedParse(strings, n, recover, clientRefs)
+      : readTemplate(strings, n, recover, clientRefs);
   const entries = parsed.entries;
   for (let i = 0; i < n; i++) {
     if (entries[i] === null) {
@@ -201,23 +189,12 @@ export function parseSource(
       warnClientReference(interpolations[i]);
     }
   }
-  return makeSource(parsed, strings, interpolations, kinds, staticValues);
-}
-
-/** The one place a Source is built, so every Source has one shape. */
-function makeSource(
-  parsed: TemplateParse,
-  strings: ReadonlyArray<string>,
-  interpolations: ReadonlyArray<unknown>,
-  kinds: ReadonlyArray<InterpolationKind>,
-  staticValues: ReadonlyArray<string>
-): Source {
   return {
     ast: parsed.ast,
     id: parsed.id,
     interpolations,
     kinds,
-    slotEntries: parsed.entries,
+    slotEntries: entries,
     slotIsStandalone: parsed.standalone,
     staticValues,
     strings,
@@ -259,25 +236,16 @@ function sharedParse(
 ): TemplateParse {
   let parses = sharedParses.get(strings);
   if (parses === undefined) {
-    parses = { flagged: null, plain: null };
+    parses = new Map();
     sharedParses.set(strings, parses);
   }
-  if (recover === null && clientRefs === null) {
-    if (parses.plain === null) parses.plain = identify(readTemplate(strings, n, null, null));
-    return parses.plain;
-  }
-  const key = flagKey(n, recover, clientRefs);
-  if (parses.flagged === null) parses.flagged = new Map();
-  let parsed = parses.flagged.get(key);
+  const key = recover === null && clientRefs === null ? '' : flagKey(n, recover, clientRefs);
+  let parsed = parses.get(key);
   if (parsed === undefined) {
-    parsed = identify(readTemplate(strings, n, recover, clientRefs));
-    fifoSet(parses.flagged, key, parsed, FLAGGED_LIMIT);
+    parsed = readTemplate(strings, n, recover, clientRefs);
+    parsed.id = ++lastParseId;
+    fifoSet(parses, key, parsed, FLAG_COMBINATION_LIMIT);
   }
-  return parsed;
-}
-
-function identify(parsed: TemplateParse): TemplateParse {
-  parsed.id = ++lastParseId;
   return parsed;
 }
 
@@ -366,12 +334,7 @@ export function attachSourceInputs<T extends RuleSet<any>>(
   strings: ReadonlyArray<string>,
   interpolations: ReadonlyArray<unknown>
 ): T {
-  (rules as unknown as { [SOURCE_SLOT]: SourceSlot })[SOURCE_SLOT] = [
-    strings,
-    interpolations,
-    null,
-    false,
-  ];
+  (rules as unknown as RulesWithSlot)[SOURCE_SLOT] = [strings, interpolations, null, false];
   return rules;
 }
 
@@ -386,12 +349,7 @@ export function attachTemplateInputs<T extends RuleSet<any>>(
   strings: ReadonlyArray<string>,
   interpolations: ReadonlyArray<unknown>
 ): T {
-  (rules as unknown as { [SOURCE_SLOT]: SourceSlot })[SOURCE_SLOT] = [
-    strings,
-    interpolations,
-    null,
-    true,
-  ];
+  (rules as unknown as RulesWithSlot)[SOURCE_SLOT] = [strings, interpolations, null, true];
   return rules;
 }
 
