@@ -10,6 +10,7 @@ import { warnOnce } from '../utils/warnOnce';
 import { trimRange } from './parser';
 import {
   CLIENT_REFERENCE,
+  emptyTemplate,
   getSource,
   InterpolationKind,
   isCssProduct,
@@ -331,15 +332,15 @@ function evaluateFragment(childSource: Source, r: Resolver): FastPathFragment {
 /**
  * Sources for plain arrays met at a standalone slot: each element is a slot
  * of its own, so the elements splice in order and each resolves by its shape.
+ * Arrays of one length share a parse, so a fresh array each render is not
+ * parsed again.
  */
 const arraySources = new WeakMap<ReadonlyArray<unknown>, Source>();
 
 function resolveArrayFragment(arr: ReadonlyArray<unknown>, r: Resolver): FastPathFragment {
   let source = arraySources.get(arr);
   if (source === undefined) {
-    const strings: string[] = [''];
-    for (let i = 0; i < arr.length; i++) strings.push('');
-    source = parseSource(strings, arr);
+    source = parseSource(emptyTemplate(arr.length), arr, true);
     arraySources.set(arr, source);
   }
   return evaluateFragment(source, r);
@@ -377,7 +378,9 @@ export function fragmentText(frag: FastPathFragment): string {
 /**
  * Build a per-instance cache key from resolved interpolation values. NUL
  * separates fields so primitives can't collide across positions; fragment
- * slots contribute their child strings + filled tuple recursively.
+ * slots contribute their parse (its shared {@link Source.id}, or its strings
+ * when the parse is its own), a NUL ending that part, and their filled tuple
+ * recursively.
  *
  * Single-slot fast path returns `filled[0]` directly (when no prefix). The
  * caller's Map is per-instance and per-source-shape so a single-slot key
@@ -400,9 +403,13 @@ export function buildInterpKey(
   for (let i = 0; i < filled.length; i++) {
     const frag = fragments ? fragments[i] : null;
     if (frag !== null && frag !== undefined) {
-      key += '\0F';
-      for (let j = 0; j < frag.source.strings.length; j++) {
-        key += '\0' + frag.source.strings[j];
+      const source = frag.source;
+      if (source.id !== 0) {
+        key += '\0F' + source.id + '\0';
+      } else {
+        key += '\0F';
+        for (let j = 0; j < source.strings.length; j++) key += '\0' + source.strings[j];
+        key += '\0';
       }
       key += buildInterpKey(frag.filled, frag.fragments);
     } else {

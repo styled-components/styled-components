@@ -1,6 +1,8 @@
 import css from '../constructors/css';
+import type { RuleSet } from '../types';
 import { DYN, KeyframeFrame, KeyframesNode, NodeKind, RuleNode, TemplateValue } from './ast';
-import { InterpolationKind, parseSource } from './source';
+import { evaluateForFastPath, FastPathFragment } from './evaluate';
+import { getSource, InterpolationKind, parseSource, Source } from './source';
 
 // Helper to make tagged-template test inputs feel natural.
 const tagged = (strings: ReadonlyArray<string>, ...interps: unknown[]) =>
@@ -972,5 +974,109 @@ describe('parseSource', () => {
         },
       ]);
     });
+  });
+});
+
+describe('shared template parses', () => {
+  const sourceOf = (rules: RuleSet<object>): Source => {
+    const source = getSource(rules);
+    if (source === undefined) throw new Error('css fragment without a source');
+    return source;
+  };
+
+  it('parses a css call site once and keeps each call’s own values', () => {
+    const make = (value: string) => css`color: ${value};`;
+    const a = sourceOf(make('red'));
+    const b = sourceOf(make('blue'));
+
+    expect(b.ast).toBe(a.ast);
+    expect(b.slotEntries).toBe(a.slotEntries);
+    expect(b.slotIsStandalone).toBe(a.slotIsStandalone);
+    expect(b.id).toBe(a.id);
+    expect(a.id).toBeGreaterThan(0);
+    expect(a.staticValues).toEqual(['red']);
+    expect(b.staticValues).toEqual(['blue']);
+    expect(b.interpolations).toEqual(['blue']);
+  });
+
+  it('parses a css call site without slots once', () => {
+    const make = () => css`color: red;`;
+    expect(sourceOf(make()).ast).toBe(sourceOf(make()).ast);
+  });
+
+  it('gives different call sites with the same text their own parse and id', () => {
+    const a = sourceOf(css`color: red;`);
+    const b = sourceOf(css`color: red;`);
+    expect(b.ast).toEqual(a.ast);
+    expect(b.ast).not.toBe(a.ast);
+    expect(b.id).not.toBe(a.id);
+  });
+
+  it('never shares a parse between calls where a block fragment ends a declaration and calls where it cannot', () => {
+    const block = css`
+      margin: 0;
+    `;
+    const make = (value: unknown) => css`color: red ${value}`;
+    const recovered = [redDecl, { kind: NodeKind.Interpolation, index: 0 }];
+    const inline = [{ kind: NodeKind.Decl, prop: 'color', value: tv('red \0S0\0') }];
+
+    const text = sourceOf(make('blue'));
+    const fragment = sourceOf(make(block));
+    expect(text.ast).toEqual(inline);
+    expect(fragment.ast).toEqual(recovered);
+    expect(fragment.slotIsStandalone).toEqual([true]);
+    expect(text.slotIsStandalone).toEqual([false]);
+    expect(fragment.id).not.toBe(text.id);
+
+    expect(sourceOf(make('green')).ast).toBe(text.ast);
+    expect(sourceOf(make(block)).ast).toBe(fragment.ast);
+    expect(sourceOf(make(() => block)).ast).toBe(text.ast);
+  });
+
+  it('never shares a parse between calls where a Head holds a client reference and calls where it does not', () => {
+    const clientRef = { $$typeof: Symbol.for('react.client.reference'), $$id: 'x#Child' };
+    const styledRef = { styledComponentId: 'sc-child' };
+    const make = (value: unknown) => css`${value} h2 { color: red; }`;
+    const headOf = (source: Source) => (source.ast[0] as RuleNode).head;
+
+    const resolved = sourceOf(make(styledRef));
+    const client = sourceOf(make(clientRef));
+    expect(headOf(resolved)?.unresolved).toBeUndefined();
+    expect(headOf(client)?.unresolved).toBe(true);
+    expect(client.kinds).toEqual([InterpolationKind.Unresolved]);
+    expect(resolved.staticValues).toEqual(['.sc-child']);
+
+    expect(sourceOf(make(styledRef)).ast).toBe(resolved.ast);
+    expect(sourceOf(make(clientRef)).ast).toBe(client.ast);
+  });
+
+  it('keeps a slot inside a comment Static-empty on every call', () => {
+    const make = (fn: () => string) => css`/* ${fn} */ color: ${'red'};`;
+    const first = jest.fn(() => 'color: blue;');
+    const second = jest.fn(() => 'color: blue;');
+    sourceOf(make(first));
+    const src = sourceOf(make(second));
+    expect(src.kinds).toEqual([InterpolationKind.Static, InterpolationKind.Static]);
+    expect(src.staticValues).toEqual(['', 'red']);
+  });
+
+  it('parses the css function form once per slot count', () => {
+    const make = () => css(() => 'color: red;');
+    expect(sourceOf(make()).ast).toBe(sourceOf(make()).ast);
+  });
+
+  it('parses a fresh array met at a standalone slot once per length', () => {
+    const src = tagged`${() => ['color: red;', 'margin: 0;']}`;
+    const spliced = () => {
+      const fragments: (FastPathFragment | null)[] = [];
+      evaluateForFastPath(src, {}, undefined, undefined, fragments);
+      const frag = fragments[0];
+      if (frag === null || frag === undefined) throw new Error('array not spliced');
+      return frag;
+    };
+    const a = spliced();
+    const b = spliced();
+    expect(b.source.ast).toBe(a.source.ast);
+    expect(b.filled).toEqual(['color: red;', 'margin: 0;']);
   });
 });

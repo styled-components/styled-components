@@ -1,4 +1,9 @@
-import { attachSourceInputs, isCssProduct } from '../parser/source';
+import {
+  attachSourceInputs,
+  attachTemplateInputs,
+  emptyTemplate,
+  isCssProduct,
+} from '../parser/source';
 import { BaseObject, Interpolation, RuleSet, StyleFunction, Styles } from '../types';
 import interleave from '../utils/interleave';
 import isFunction from '../utils/isFunction';
@@ -48,11 +53,11 @@ export function cssWithInterpolations<Props extends object = BaseObject>(
   if (isFunction(styles)) {
     // Treat function input as a block-level interpolation.
     const slots = [styles as StyleFunction<Props>, ...interpolations];
-    const synthesizedStrings: string[] = new Array(slots.length + 1).fill('');
+    const synthesizedStrings = emptyTemplate(slots.length);
     const rules = flattenStructure<Interpolation<NoInfer<Props>>>(
       interleave<Props>(synthesizedStrings, slots) as ReadonlyArray<unknown>
     );
-    attachSourceInputs(rules, synthesizedStrings, slots);
+    attachTemplateInputs(rules, synthesizedStrings, slots);
     return rules as RuleSet<NoInfer<Props>>;
   }
 
@@ -68,14 +73,14 @@ export function cssWithInterpolations<Props extends object = BaseObject>(
     const rules: Interpolation<NoInfer<Props>>[] = [
       styleStringArray[0] as Interpolation<NoInfer<Props>>,
     ];
-    attachSourceInputs(rules, styleStringArray, interpolations);
+    attachTemplateInputs(rules, styleStringArray, interpolations);
     return rules as RuleSet<NoInfer<Props>>;
   }
 
   const rules = flattenStructure<Interpolation<NoInfer<Props>>>(
     interleave<Props>(styleStringArray, interpolations) as ReadonlyArray<unknown>
   );
-  attachSourceInputs(rules, styleStringArray, interpolations);
+  attachTemplateInputs(rules, styleStringArray, interpolations);
   return rules as RuleSet<NoInfer<Props>>;
 }
 

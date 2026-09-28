@@ -1,10 +1,11 @@
 import type { RuleSet } from '../types';
 import { CLOSE_BRACE, OPEN_BRACE, SEMICOLON } from '../utils/charCodes';
+import { fifoSet } from '../utils/fifoMap';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import { normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
 import type { Root } from './ast';
-import { parse, ParseOptions, scanQP, SlotEntry, SlotTable } from './parser';
+import { parse, scanQP, SlotEntry, SlotTable } from './parser';
 
 /**
  * Pre-classified slot shape so the fast path skips typeof checks. Order
@@ -38,18 +39,52 @@ export const enum InterpolationKind {
  * on their rule or frame, and slots inside a value/selector string become
  * `TemplateValue` fields. `kinds`/`staticValues` are parallel to
  * `interpolations` for fast dispatch.
+ *
+ * `ast`, `slotEntries`, `slotIsStandalone`, and `id` come from the parse,
+ * which a shared template reuses across every call of its call site (see
+ * {@link attachTemplateInputs}); they are shared and never mutated.
  */
 export interface Source {
   ast: Root;
-  strings: ReadonlyArray<string>;
+  /**
+   * Names the parse: positive and equal for every Source sharing one parse,
+   * so it identifies the template text and slot roles; `0` for a parse owned
+   * by this Source alone.
+   */
+  id: number;
   interpolations: ReadonlyArray<unknown>;
   kinds: ReadonlyArray<InterpolationKind>;
-  staticValues: ReadonlyArray<string>;
-  /** `true` for slots whose value splices as statements (standalone and head slots). */
-  slotIsStandalone: ReadonlyArray<boolean>;
   /** Tokenizer state at each slot's position; `null` for a slot the parse removed. */
   slotEntries: ReadonlyArray<SlotEntry | null>;
+  /** `true` for slots whose value splices as statements (standalone and head slots). */
+  slotIsStandalone: ReadonlyArray<boolean>;
+  staticValues: ReadonlyArray<string>;
+  strings: ReadonlyArray<string>;
 }
+
+/** What a parse yields: everything in a {@link Source} that depends only on the strings and the parse flags. */
+interface TemplateParse {
+  ast: Root;
+  entries: ReadonlyArray<SlotEntry | null>;
+  id: number;
+  standalone: ReadonlyArray<boolean>;
+}
+
+/**
+ * Parses of one shared strings array. The slot flags that shape a parse
+ * (missing-`;` recovery, client references) come from the values, so each
+ * flag combination met at the call site has its own parse; nearly every call
+ * site has none.
+ */
+interface SharedParses {
+  plain: TemplateParse | null;
+  flagged: Map<string, TemplateParse> | null;
+}
+
+const sharedParses = new WeakMap<ReadonlyArray<string>, SharedParses>();
+/** Flag combinations kept per call site; a bound for values that vary without end. */
+const FLAGGED_LIMIT = 16;
+let lastParseId = 0;
 
 export const CLIENT_REFERENCE = Symbol.for('react.client.reference');
 
@@ -81,26 +116,25 @@ function isClientReference(value: unknown): boolean {
 }
 
 /**
- * Join the template strings around `\0S<n>\0` slot markers, normalize once
- * (removing comments, and any slot written inside one), and parse. The
- * parser assigns every slot its role in that one reading.
+ * Classify each value and read the template: join the strings around
+ * `\0S<n>\0` slot markers, normalize once (removing comments, and any slot
+ * written inside one), and parse. The parser assigns every slot its role in
+ * that one reading. With `shared`, the parse is looked up by `strings`
+ * identity and reused; the caller guarantees the array is never mutated.
  */
 export function parseSource(
   strings: ReadonlyArray<string>,
   interpolations: ReadonlyArray<unknown>,
-  options?: ParseOptions
+  shared: boolean = false
 ): Source {
   const n = interpolations.length;
+  // A mismatched count cannot come from a tagged template; parse it alone.
+  const reuse = shared && strings.length === n + 1;
   if (n === 0) {
-    return {
-      ast: parse(normalize(strings.length > 0 ? strings[0] : ''), options),
-      strings,
-      interpolations,
-      kinds: EMPTY,
-      staticValues: EMPTY,
-      slotIsStandalone: EMPTY,
-      slotEntries: EMPTY,
-    };
+    const parsed = reuse
+      ? sharedParse(strings, 0, null, null)
+      : readTemplate(strings, 0, null, null);
+    return makeSource(parsed, strings, interpolations, EMPTY, EMPTY);
   }
 
   const kinds: InterpolationKind[] = [];
@@ -153,15 +187,10 @@ export function parseSource(
     staticValues.push(text);
   }
 
-  let joined = strings[0] || '';
-  for (let i = 1; i < strings.length; i++) joined += '\0S' + (i - 1) + '\0' + (strings[i] || '');
-
-  const entries: Array<SlotEntry | null> = [];
-  for (let i = 0; i < n; i++) entries.push(null);
-  const standalone = falseFlags(n);
-  const slots: SlotTable = { clientRefs, entries, recover, standalone };
-  const ast = parse(normalize(joined), { ...options, slots, templates: true });
-
+  const parsed = reuse
+    ? sharedParse(strings, n, recover, clientRefs)
+    : readTemplate(strings, n, recover, clientRefs);
+  const entries = parsed.entries;
   for (let i = 0; i < n; i++) {
     if (entries[i] === null) {
       // Removed by the parse (inside a comment, or in a dropped statement):
@@ -172,18 +201,121 @@ export function parseSource(
       warnClientReference(interpolations[i]);
     }
   }
+  return makeSource(parsed, strings, interpolations, kinds, staticValues);
+}
+
+/** The one place a Source is built, so every Source has one shape. */
+function makeSource(
+  parsed: TemplateParse,
+  strings: ReadonlyArray<string>,
+  interpolations: ReadonlyArray<unknown>,
+  kinds: ReadonlyArray<InterpolationKind>,
+  staticValues: ReadonlyArray<string>
+): Source {
   return {
-    ast,
-    strings,
+    ast: parsed.ast,
+    id: parsed.id,
     interpolations,
     kinds,
+    slotEntries: parsed.entries,
+    slotIsStandalone: parsed.standalone,
     staticValues,
-    slotIsStandalone: standalone,
-    slotEntries: entries,
+    strings,
   };
 }
 
+/** Parse `strings` with `n` slots; `id` is `0`, the parse belongs to one Source. */
+function readTemplate(
+  strings: ReadonlyArray<string>,
+  n: number,
+  recover: ReadonlyArray<boolean> | null,
+  clientRefs: ReadonlyArray<boolean> | null
+): TemplateParse {
+  if (n === 0) {
+    return {
+      ast: parse(normalize(strings.length > 0 ? strings[0] : '')),
+      entries: EMPTY,
+      id: 0,
+      standalone: EMPTY,
+    };
+  }
+  let joined = strings[0] || '';
+  for (let i = 1; i < strings.length; i++) joined += '\0S' + (i - 1) + '\0' + (strings[i] || '');
+
+  const entries: Array<SlotEntry | null> = [];
+  for (let i = 0; i < n; i++) entries.push(null);
+  const standalone = falseFlags(n);
+  const slots: SlotTable = { clientRefs, entries, recover, standalone };
+  const ast = parse(normalize(joined), { slots, templates: true });
+  return { ast, entries, id: 0, standalone };
+}
+
+/** {@link readTemplate} through the per-strings cache, under a fresh positive id on a miss. */
+function sharedParse(
+  strings: ReadonlyArray<string>,
+  n: number,
+  recover: ReadonlyArray<boolean> | null,
+  clientRefs: ReadonlyArray<boolean> | null
+): TemplateParse {
+  let parses = sharedParses.get(strings);
+  if (parses === undefined) {
+    parses = { flagged: null, plain: null };
+    sharedParses.set(strings, parses);
+  }
+  if (recover === null && clientRefs === null) {
+    if (parses.plain === null) parses.plain = identify(readTemplate(strings, n, null, null));
+    return parses.plain;
+  }
+  const key = flagKey(n, recover, clientRefs);
+  if (parses.flagged === null) parses.flagged = new Map();
+  let parsed = parses.flagged.get(key);
+  if (parsed === undefined) {
+    parsed = identify(readTemplate(strings, n, recover, clientRefs));
+    fifoSet(parses.flagged, key, parsed, FLAGGED_LIMIT);
+  }
+  return parsed;
+}
+
+function identify(parsed: TemplateParse): TemplateParse {
+  parsed.id = ++lastParseId;
+  return parsed;
+}
+
+/** The slots flagged for recovery (`r`) or as client references (`c`), in order. */
+function flagKey(
+  n: number,
+  recover: ReadonlyArray<boolean> | null,
+  clientRefs: ReadonlyArray<boolean> | null
+): string {
+  let key = '';
+  for (let i = 0; i < n; i++) {
+    if (recover !== null && recover[i]) key += 'r' + i;
+    else if (clientRefs !== null && clientRefs[i]) key += 'c' + i;
+  }
+  return key;
+}
+
 const EMPTY: never[] = [];
+
+/** Interned all-empty strings arrays by slot count, shared so their parses are too. */
+const emptyTemplates = new Map<number, ReadonlyArray<string>>();
+const EMPTY_TEMPLATE_LIMIT = 32;
+
+/**
+ * An immutable strings array of `n + 1` empty strings: the template of `n`
+ * slots with no text between them. Reused per `n`, so a parse of it can be
+ * shared through {@link parseSource}.
+ */
+export function emptyTemplate(n: number): ReadonlyArray<string> {
+  let strings = emptyTemplates.get(n);
+  if (strings === undefined) {
+    const fresh: string[] = [];
+    for (let i = 0; i <= n; i++) fresh.push('');
+    strings = Object.freeze(fresh);
+    fifoSet(emptyTemplates, n, strings, EMPTY_TEMPLATE_LIMIT);
+  }
+  return strings;
+}
 
 /** A packed array of `n` `false` values. */
 function falseFlags(n: number): boolean[] {
@@ -199,13 +331,16 @@ function falseFlags(n: number): boolean[] {
  * skips the per-call weak-entry allocation, which dominates the previous
  * WeakMap path (~40x cheaper in microbench, same GC story because freeing
  * the rules array drops the symbol slot with it). Slot shape `[strings,
- * interpolations, source]` is monomorphic in both pre- and post-parse
+ * interpolations, source, shared]` is monomorphic in both pre- and post-parse
  * states; the parsed `Source` holds the same input arrays by reference.
+ * `shared` marks strings whose parse is reused by identity (see
+ * {@link attachTemplateInputs}).
  */
 type SourceSlot = [
   strings: ReadonlyArray<string>,
   interpolations: ReadonlyArray<unknown>,
   source: Source | null,
+  shared: boolean,
 ];
 
 /** Module-private symbol; users cannot reach it without
@@ -224,7 +359,7 @@ type RulesWithSlot = ReadonlyArray<unknown> & {
 
 /**
  * Record a `RuleSet`'s template inputs. The `Source` is lazily produced on
- * first `getSource(rules)` call. Used by the `css\`...\`` constructor.
+ * first `getSource(rules)` call, from a parse of its own.
  */
 export function attachSourceInputs<T extends RuleSet<any>>(
   rules: T,
@@ -235,6 +370,27 @@ export function attachSourceInputs<T extends RuleSet<any>>(
     strings,
     interpolations,
     null,
+    false,
+  ];
+  return rules;
+}
+
+/**
+ * {@link attachSourceInputs} for a tagged template's `strings`, or one from
+ * {@link emptyTemplate}: an array that is never mutated and is the same on
+ * every evaluation of its call site, so every `RuleSet` built from it shares
+ * one parse.
+ */
+export function attachTemplateInputs<T extends RuleSet<any>>(
+  rules: T,
+  strings: ReadonlyArray<string>,
+  interpolations: ReadonlyArray<unknown>
+): T {
+  (rules as unknown as { [SOURCE_SLOT]: SourceSlot })[SOURCE_SLOT] = [
+    strings,
+    interpolations,
+    null,
+    true,
   ];
   return rules;
 }
@@ -247,7 +403,7 @@ export function getSource(rules: RuleSet<any>): Source | undefined {
   const slot = (rules as unknown as RulesWithSlot)[SOURCE_SLOT];
   if (slot === undefined) return undefined;
   if (slot[2] !== null) return slot[2];
-  const source = parseSource(slot[0], slot[1]);
+  const source = parseSource(slot[0], slot[1], slot[3]);
   slot[2] = source;
   return source;
 }
