@@ -1047,11 +1047,13 @@ describe('parseCSSDeclarations', () => {
       `);
     });
 
+    // CSS reads `col/* x */or` as two identifiers, so the empty comment that
+    // keeps them apart stays and the name is not `color`.
     it('comment between property name chars', () => {
       expect(parseCSSDeclarations('col/* x */or: red;')).toMatchInlineSnapshot(`
         [
           [
-            "color",
+            "col/**/or",
             "red",
           ],
         ]

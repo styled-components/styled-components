@@ -4,6 +4,7 @@
 
 import { resetStyled } from './utils';
 
+import { tokenize, TokenType } from '@csstools/css-tokenizer';
 import React from 'react';
 import { renderToPipeableStream, renderToString } from 'react-dom/server';
 // `renderToNodeStream` was removed in React 19. SC still supports its SSR
@@ -1507,6 +1508,74 @@ describe('ssr', () => {
         ]);
       });
 
+      describe('a value whose comment removal would join tokens', () => {
+        const value = 'u/**/rl(x"a) {} body{display:none} y{" )';
+        const render = (Comp: React.ComponentType<{ $v: string }>) => {
+          const sheet = new ServerStyleSheet();
+          renderToString(sheet.collectStyles(<Comp $v={value} />));
+          return readRules(sheet.getStyleTags());
+        };
+
+        it('adds no rule through a selector value', () => {
+          const Comp = styled.div<{ $v: string }>`
+            color: blue;
+            &:hover ${p => p.$v} {
+              color: red;
+            }
+          `;
+          expect(render(Comp)).toEqual([
+            { prelude: '.b', props: ['color'], rules: [] },
+            {
+              prelude: '.b:hover url(x"a) {} body{display:none} y{" )',
+              props: ['color'],
+              rules: [],
+            },
+          ]);
+        });
+
+        it('adds no rule through an @media prelude value', () => {
+          const Comp = styled.div<{ $v: string }>`
+            color: blue;
+            @media ${p => p.$v} {
+              color: red;
+            }
+          `;
+          expect(render(Comp)).toEqual([
+            { prelude: '.b', props: ['color'], rules: [] },
+            {
+              prelude: '@media url(x"a) {} body{display:none} y{" )',
+              props: [],
+              rules: [{ prelude: '.b', props: ['color'], rules: [] }],
+            },
+          ]);
+        });
+
+        it('adds no rule through a keyframe stop value', () => {
+          const Comp = styled.div<{ $v: string }>`
+            color: blue;
+            @keyframes spin {
+              ${p => p.$v}, from {
+                opacity: 0;
+              }
+            }
+          `;
+          expect(render(Comp)).toEqual([
+            { prelude: '.b', props: ['color'], rules: [] },
+            {
+              prelude: '@keyframes spin',
+              props: [],
+              rules: [
+                {
+                  prelude: 'url(x"a) {} body{display:none} y{" ),from',
+                  props: ['opacity'],
+                  rules: [],
+                },
+              ],
+            },
+          ]);
+        });
+      });
+
       it('keeps every selector a global value adds under its authored selector', () => {
         const Global = createGlobalStyle<{ $sel: string; $v: string }>`
           .root {
@@ -1598,89 +1667,44 @@ const CONDITIONAL_GROUP_RULES = new Set([
 
 /**
  * Read SSR style tags the way a browser does, as a check independent of the
- * library's own parser. Tokenizes per CSS Syntax 3 §4.3 (comments, strings
- * that end at a raw newline, escapes, unquoted `url(` with bad-url remnants)
- * and reads the rule list per §5.5 (a `;` ends a qualified rule inside a
- * block). The library's `data-styled` marker rules are left out.
+ * library's own parser: `@csstools/css-tokenizer` tokenizes per CSS Syntax 3
+ * §4.3, and the rule list is read per §5.5 (a `;` ends a qualified rule
+ * inside a block). The library's `data-styled` marker rules are left out.
  */
 function readRules(tags: string): ReadRule[] {
   const text = tags.slice(tags.indexOf('>') + 1, tags.lastIndexOf('</style>'));
-  const tokens = tokenizeCss(text);
-  const rules = readRuleList(tokens, { i: 0 }, false);
-  return rules.filter(rule => !rule.prelude.startsWith('data-styled.'));
+  return readCss(text).filter(rule => !rule.prelude.startsWith('data-styled.'));
 }
 
+/** {@link readRules} for CSS text. */
+function readCss(text: string): ReadRule[] {
+  return readRuleList(tokenizeCss(text), { i: 0 }, false);
+}
+
+const BLOCK_TOKENS: Partial<Record<TokenType, CssToken['kind']>> = {
+  [TokenType.CloseCurly]: '}',
+  [TokenType.CloseParen]: ')',
+  [TokenType.CloseSquare]: ']',
+  [TokenType.Function]: '(',
+  [TokenType.OpenCurly]: '{',
+  [TokenType.OpenParen]: '(',
+  [TokenType.OpenSquare]: '[',
+  [TokenType.Semicolon]: ';',
+};
+
+/** CSS Syntax 3 tokens as the rule reader takes them: comments dropped, each whitespace run one space. */
 function tokenizeCss(s: string): CssToken[] {
-  const isNewline = (c: string | undefined) => c === '\n' || c === '\r' || c === '\f';
-  const isSpace = (c: string | undefined) => c === ' ' || c === '\t' || isNewline(c);
-  const isIdent = (c: string | undefined) => c !== undefined && /[A-Za-z0-9_\-\u0080-￿]/.test(c);
   const out: CssToken[] = [];
-  const n = s.length;
-  let i = 0;
-  while (i < n) {
-    const c = s[i];
-    if (c === '/' && s[i + 1] === '*') {
-      const end = s.indexOf('*/', i + 2);
-      i = end === -1 ? n : end + 2;
-      continue;
-    }
-    if (isSpace(c)) {
-      while (i < n && isSpace(s[i])) i++;
+  for (const token of tokenize({ css: s })) {
+    const type = token[0];
+    if (type === TokenType.Comment || type === TokenType.EOF) continue;
+    if (type === TokenType.Whitespace) {
       out.push({ kind: 'ws', text: ' ' });
-      continue;
+    } else if (type === TokenType.AtKeyword) {
+      out.push({ kind: 'at', text: token[1] });
+    } else {
+      out.push({ kind: BLOCK_TOKENS[type] ?? 'text', text: token[1] });
     }
-    if (c === '"' || c === "'") {
-      let j = i + 1;
-      while (j < n && s[j] !== c && !isNewline(s[j])) j += s[j] === '\\' ? 2 : 1;
-      const end = j < n && s[j] === c ? j + 1 : Math.min(j, n);
-      out.push({ kind: 'text', text: s.slice(i, end) });
-      i = end;
-      continue;
-    }
-    if (c === '\\' && i + 1 < n && !isNewline(s[i + 1])) {
-      out.push({ kind: 'text', text: s.slice(i, i + 2) });
-      i += 2;
-      continue;
-    }
-    if (c === '@' && isIdent(s[i + 1])) {
-      let j = i + 1;
-      while (j < n && isIdent(s[j])) j++;
-      out.push({ kind: 'at', text: s.slice(i, j) });
-      i = j;
-      continue;
-    }
-    if (c === '(' && /(^|[^A-Za-z0-9_\-\\])url$/i.test(s.slice(Math.max(0, i - 4), i))) {
-      let j = i + 1;
-      while (j < n && isSpace(s[j])) j++;
-      if (s[j] !== '"' && s[j] !== "'") {
-        // §4.3.6 Consume a url token, with §4.3.15 bad-url remnants.
-        let bad = false;
-        while (j < n && s[j] !== ')') {
-          const d = s[j];
-          if (d === '\\' && j + 1 < n && !isNewline(s[j + 1])) {
-            j += 2;
-            continue;
-          }
-          if (!bad && isSpace(d)) {
-            while (j < n && isSpace(s[j])) j++;
-            if (j < n && s[j] !== ')') bad = true;
-            continue;
-          }
-          if (d === '"' || d === "'" || d === '(' || d === '\\') bad = true;
-          j++;
-        }
-        out.push({ kind: 'text', text: s.slice(i, Math.min(j + 1, n)) });
-        i = j + 1;
-        continue;
-      }
-    }
-    if ('{}()[];'.includes(c)) {
-      out.push({ kind: c as CssToken['kind'], text: c });
-      i++;
-      continue;
-    }
-    out.push({ kind: 'text', text: c });
-    i++;
   }
   return out;
 }

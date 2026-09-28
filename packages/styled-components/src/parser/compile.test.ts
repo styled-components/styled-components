@@ -1774,12 +1774,46 @@ describe('compileWeb', () => {
           '.a :is( body) h2',
         ],
         [
-          'whose removal would leave `/` before `*`',
+          'whose removal would leave `/` before `*`, keeping an empty comment',
           tagged`${() => '//**/*&*/ body'}:hover { color: red; }`,
-          '/ *.a*/ body:hover',
+          '//**/*.a*/ body:hover',
         ],
       ])('is removed %s', (_, src, selector) => {
         expect(compileWeb(src, {}, '.a', opts)).toEqual([selector + '{color:red;}']);
+      });
+
+      /**
+       * The field is read with its comments, so removing one must not join the
+       * code points on either side into one token: `u/**\/rl(` stays a
+       * function, not a url whose bad-url remnants would end at the first `)`
+       * and leave the rest of the value outside the selector.
+       */
+      describe('keeps an empty comment where removal would join tokens', () => {
+        const value = 'u/**/rl(x"a) {} body{display:none} y{" )';
+        it.each([
+          [
+            'an Inside selector value',
+            tagged`&:hover ${() => value} { color: red; }`,
+            '.a:hover ' + value + '{color:red;}',
+          ],
+          [
+            'an at-rule prelude value',
+            tagged`@media ${() => value} { color: red; }`,
+            '@media ' + value + '{.a{color:red;}}',
+          ],
+          [
+            'a keyframe stop value',
+            tagged`@keyframes k { ${() => value}, from { opacity: 0; } }`,
+            '@keyframes k{' + value + ',from{opacity:0;}}',
+          ],
+          [
+            'a Head value',
+            tagged`${() => 'p ' + value} { color: red; }`,
+            '.a p ' + value + '{color:red;}',
+          ],
+        ])('in %s', (_, src, rule) => {
+          expect(compileWeb(src, {}, '.a', opts)).toEqual([rule]);
+        });
       });
 
       it.each([
