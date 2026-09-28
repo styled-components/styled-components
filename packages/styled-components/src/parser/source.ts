@@ -107,52 +107,46 @@ export function parseSource(
   for (let i = 0; i < n; i++) {
     const slot = interpolations[i];
     const t = typeof slot;
+    let kind = InterpolationKind.Static;
+    let text = '';
     if (t === 'string') {
-      kinds.push(InterpolationKind.Static);
-      staticValues.push(slot as string);
+      text = slot as string;
     } else if (t === 'number') {
-      kinds.push(InterpolationKind.Static);
-      staticValues.push(String(slot));
-    } else if (slot === null || slot === undefined || typeof slot === 'boolean') {
-      kinds.push(InterpolationKind.Static);
-      staticValues.push('');
-    } else if (
-      (t === 'function' || t === 'object') &&
-      (slot as { styledComponentId?: string }).styledComponentId !== undefined
-    ) {
-      // Styled-component ref: pre-stringify the class selector and dispatch as Static.
-      kinds.push(InterpolationKind.Static);
-      staticValues.push('.' + (slot as { styledComponentId: string }).styledComponentId);
-    } else if (t === 'object' && KEYFRAMES_SYMBOL in (slot as object)) {
-      // Keyframes ref: hash + sheet registration deferred to fill time.
-      kinds.push(InterpolationKind.Keyframes);
-      staticValues.push('');
-    } else if (isCssProduct(slot)) {
-      // `css\`...\`` fragment ref; the child's Source is lazy-parsed at fill time.
-      kinds.push(InterpolationKind.Fragment);
-      staticValues.push('');
-      if (isBlockLikeFragment(slot as RulesWithSlot)) {
-        if (recover === null) recover = falseFlags(n);
-        recover[i] = true;
+      text = String(slot);
+    } else if (slot !== null && slot !== undefined && t !== 'boolean') {
+      if (
+        (t === 'function' || t === 'object') &&
+        (slot as { styledComponentId?: string }).styledComponentId !== undefined
+      ) {
+        // Styled-component ref: pre-stringify the class selector and dispatch as Static.
+        text = '.' + (slot as { styledComponentId: string }).styledComponentId;
+      } else if (t === 'object' && KEYFRAMES_SYMBOL in (slot as object)) {
+        // Keyframes ref: hash + sheet registration deferred to fill time.
+        kind = InterpolationKind.Keyframes;
+      } else if (isCssProduct(slot)) {
+        // `css\`...\`` fragment ref; the child's Source is lazy-parsed at fill time.
+        kind = InterpolationKind.Fragment;
+        if (isBlockLikeFragment(slot as RulesWithSlot)) {
+          if (recover === null) recover = falseFlags(n);
+          recover[i] = true;
+        }
+      } else if (isClientReference(slot)) {
+        // Client reference proxies throw when invoked from a server component.
+        // Classify as Static-empty so the rest of the template renders.
+        if (clientRefs === null) clientRefs = falseFlags(n);
+        clientRefs[i] = true;
+      } else if (
+        t === 'function' &&
+        (slot as Function).length <= 1 &&
+        !(slot as { prototype?: { isReactComponent?: unknown } }).prototype?.isReactComponent
+      ) {
+        kind = InterpolationKind.StatelessFn;
+      } else {
+        kind = InterpolationKind.General;
       }
-    } else if (isClientReference(slot)) {
-      // Client reference proxies throw when invoked from a server component.
-      // Classify as Static-empty so the rest of the template renders.
-      if (clientRefs === null) clientRefs = falseFlags(n);
-      clientRefs[i] = true;
-      kinds.push(InterpolationKind.Static);
-      staticValues.push('');
-    } else if (
-      t === 'function' &&
-      (slot as Function).length <= 1 &&
-      !(slot as { prototype?: { isReactComponent?: unknown } }).prototype?.isReactComponent
-    ) {
-      kinds.push(InterpolationKind.StatelessFn);
-      staticValues.push('');
-    } else {
-      kinds.push(InterpolationKind.General);
-      staticValues.push('');
     }
+    kinds.push(kind);
+    staticValues.push(text);
   }
 
   let joined = strings[0] || '';
