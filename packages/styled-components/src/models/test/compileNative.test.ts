@@ -148,6 +148,15 @@ describe('toNativeStyles', () => {
       ]);
     });
 
+    // CSS 2 §4.1.3: "All CSS syntax is case-insensitive within the ASCII
+    // range (i.e., [a-z] and [A-Z] are equivalent)"
+    it('reads the at-rule name in any ASCII case', () => {
+      const r = compile('color: red; @MEDIA (min-width: 400px) { color: blue; }');
+      expect(r.conditional).toEqual([
+        { type: 'media', condition: '(min-width: 400px)', styles: { color: 'blue' } },
+      ]);
+    });
+
     it('does not emit a media bucket when body has no declarations', () => {
       const r = compile('color: red; @media (min-width: 400px) { }');
       expect(r.conditional).toEqual([]);

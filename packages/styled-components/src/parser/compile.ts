@@ -1,7 +1,7 @@
 import type { CompiledKeyframes } from '../models/Keyframes';
 import type StyleSheet from '../sheet';
 import type { Compiler } from '../types';
-import { AT, COLON, DIGIT_0, DIGIT_9, HYPHEN, isWS } from '../utils/charCodes';
+import { AT, COLON, DIGIT_0, DIGIT_9, HYPHEN, isWS, lowerAscii } from '../utils/charCodes';
 import { fifoSet } from '../utils/fifoMap';
 import { warnOnce } from '../utils/warnOnce';
 import {
@@ -619,7 +619,7 @@ function fillHeadRule(node: RuleNode, head: SlotHead, fill: Fill): StaticNode[] 
     let end = 1;
     while (end < text.length && isIdentCode(text.charCodeAt(end))) end++;
     const name = text.substring(1, end);
-    if (!HEAD_AT_RULES.has(name.toLowerCase())) {
+    if (!HEAD_AT_RULES.has(lowerAscii(name))) {
       if (__DEV__) {
         warnOnce(
           'head-at-rule',

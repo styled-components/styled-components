@@ -8,6 +8,7 @@ import {
   DIGIT_9,
   HYPHEN,
   isWS,
+  lowerAscii,
   NUL,
   OPEN_BRACE,
   OPEN_PAREN,
@@ -568,9 +569,10 @@ export function isCustomProperty(prop: string): boolean {
   return prop.length > 2 && prop.charCodeAt(0) === HYPHEN && prop.charCodeAt(1) === HYPHEN;
 }
 
-/** `keyframes`, or a vendor-prefixed form such as `-webkit-keyframes`. */
+/** `keyframes`, or a vendor-prefixed form such as `-webkit-keyframes`, in any ASCII case. */
 export function isKeyframesName(name: string): boolean {
-  return name === 'keyframes' || /^-[a-z]+-keyframes$/.test(name);
+  const lower = lowerAscii(name);
+  return lower === 'keyframes' || /^-[a-z]+-keyframes$/.test(lower);
 }
 
 /**
