@@ -1,9 +1,8 @@
 import { emitWeb } from './emit-web';
 import { parse } from './parser';
-import { normalize } from '../utils/compiler';
 
 function emit(css: string, selector = '.a'): string[] {
-  return emitWeb(parse(normalize(css)), selector);
+  return emitWeb(parse(css), selector);
 }
 
 describe('web emitter', () => {

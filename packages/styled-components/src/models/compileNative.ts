@@ -44,7 +44,6 @@ import type {
 import { AUTO_TIMELINE } from '../native/animation/types';
 import { parse } from '../parser/parser';
 import { Dict, StyleSheet } from '../types';
-import { normalize } from '../utils/normalize';
 import { fifoSet } from '../utils/fifoMap';
 import { isWS, UPPER_TO_LOWER } from '../utils/charCodes';
 
@@ -571,20 +570,16 @@ export function resetNativeStyleCache(): void {
  * declaration through the per-pair transform layer (camelCase, numeric
  * coercion, color-math polyfills, shorthand expansion).
  *
- * Cache key is the RAW input string; preprocessing is the second-most
- * expensive step (after parse), so caching against raw input lets warm
- * cache hits skip both preprocess and parse. The same raw input always
- * produces the same preprocessed output, so this is collision-safe.
+ * Cache key is the raw input string, so a warm cache hit skips the parse.
  */
 export function toNativeStyles(rawCSS: string, styleSheet: StyleSheet): NativeStyles {
   const cached = compileCache.get(rawCSS);
   if (cached !== undefined) return cached;
 
-  const preprocessed = normalize(rawCSS);
   // Parse stamps `[NATIVE_RULE_CLASS]` / `[NATIVE_AT_CLASS]` onto Rule
   // and AtRule nodes inline (gated on `__NATIVE__`). The bucket router
   // in `astToNativeStyles` reads those classifications directly.
-  const ast = parse(preprocessed, { keepCommaSpaces: true });
+  const ast = parse(rawCSS, { keepCommaSpaces: true });
   const compiled = astToNativeStyles(ast, styleSheet);
 
   fifoSet(compileCache, rawCSS, compiled, CACHE_LIMIT);
@@ -2196,8 +2191,7 @@ export function cssToStyleObject(flatCSS: string, styleSheet: StyleSheet): Dict<
  * comments stripped, malformed blocks skipped, RN_UNSUPPORTED_VALUES warn+drop.
  */
 export function extractBaseDeclPairs(rawCSS: string): Array<[string, string]> {
-  const preprocessed = normalize(rawCSS);
-  const ast = parse(preprocessed, { keepCommaSpaces: true });
+  const ast = parse(rawCSS, { keepCommaSpaces: true });
   const pairs: Array<[string, string]> = [];
   for (let i = 0; i < ast.length; i++) {
     const node = ast[i];

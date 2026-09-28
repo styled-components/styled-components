@@ -1,6 +1,7 @@
 import { emitWeb } from '../../parser/emit-web';
 import { parse } from '../../parser/parser';
-import createCompiler, { ICreateCompiler, normalize } from '../compiler';
+import { removeComments } from '../../parser/reader';
+import createCompiler, { ICreateCompiler } from '../compiler';
 import rtl from '../../plugins/rtl';
 import rscPlugin from '../../plugins/rsc';
 
@@ -57,9 +58,13 @@ describe('compiler', () => {
     `);
   });
 
+  /**
+   * A stray `}` at the top level drops the statement holding it, and the
+   * next statement starts right after it. A quote there opens a string that,
+   * in authored text, stays open across newlines.
+   */
   describe('malformed CSS handling', () => {
-    it('preserves styles after declaration with unbalanced closing brace', () => {
-      // Simulates: line-height: ${() => "14px}"}
+    it('drops the declaration a stray `}` ends, and the string its quote opens', () => {
       expect(
         runCssCompile(`
         width: 100px;
@@ -69,12 +74,12 @@ describe('compiler', () => {
       `)
       ).toMatchInlineSnapshot(`
         [
-          ".a{width:100px;height:100px;background-color:green;}",
+          ".a{width:100px;height:100px;}",
         ]
       `);
     });
 
-    it('handles multiple malformed declarations', () => {
+    it('reads on after a string two stray `}` quotes close', () => {
       expect(
         runCssCompile(`
         width: 100px;
@@ -85,12 +90,12 @@ describe('compiler', () => {
       `)
       ).toMatchInlineSnapshot(`
         [
-          ".a{width:100px;height:50px;background-color:green;}",
+          ".a{width:100px;background-color:green;}",
         ]
       `);
     });
 
-    it('handles malformed declaration followed by @media query', () => {
+    it('drops what an unclosed string after a stray `}` holds, rules included', () => {
       expect(
         runCssCompile(`
         width: 100px;
@@ -102,8 +107,7 @@ describe('compiler', () => {
       `)
       ).toMatchInlineSnapshot(`
         [
-          ".a{width:100px;background-color:green;}",
-          "@media (min-width: 500px){.a{color:blue;}}",
+          ".a{width:100px;}",
         ]
       `);
     });
@@ -150,18 +154,16 @@ describe('compiler', () => {
       `);
     });
 
-    it('drops remaining content when unterminated string causes brace imbalance', () => {
+    // CSS Syntax 3 §4.3.5 Consume a string token: "EOF: This is a parse
+    // error. Return the <string-token>." A `}` inside the string is text.
+    it('keeps a declaration whose string the end of the text closes', () => {
       expect(
         runCssCompile(`
         width: 100px;
         content: "unterminated }
         background: red;
       `)
-      ).toMatchInlineSnapshot(`
-        [
-          ".a{width:100px;}",
-        ]
-      `);
+      ).toEqual(['.a{width:100px;content:"unterminated }\n        background: red;;}']);
     });
 
     it('handles valid CSS unchanged (fast path)', () => {
@@ -1144,43 +1146,39 @@ background-color: green;`)
     });
   });
 
-  describe('normalize block-comment whitespace', () => {
+  describe('comment removal whitespace', () => {
     it('a /* foo */ b collapses surrounding whitespace to a single space', () => {
-      expect(normalize('a /* foo */ b { color: red; }')).toEqual('a b { color: red; }');
+      expect(removeComments('a /* foo */ b { color: red; }', true)).toEqual('a b { color: red; }');
     });
 
     it('a/* foo */b strips just the comment when no surrounding whitespace', () => {
-      expect(normalize('a/* foo */b { color: red; }')).toEqual('ab { color: red; }');
+      expect(removeComments('a/* foo */b { color: red; }', true)).toEqual('ab { color: red; }');
     });
 
     it('comment between two declarations leaves only a single space', () => {
-      expect(normalize('color: red; /* note */ background: blue;')).toEqual(
+      expect(removeComments('color: red; /* note */ background: blue;', true)).toEqual(
         'color: red; background: blue;'
       );
     });
 
     it('comment at start of value strips without leaving double space', () => {
-      expect(normalize('color: /* note */ red;')).toEqual('color: red;');
+      expect(removeComments('color: /* note */ red;', true)).toEqual('color: red;');
     });
   });
 
-  describe('normalize without brace sanitizing', () => {
+  describe('comment removal leaves braces to the parser', () => {
     it('strips comments and keeps a stray `}` and what follows it', () => {
-      expect(normalize('a: b; /* c */ } d: e;', false)).toEqual('a: b; } d: e;');
-    });
-
-    it('keeps a stray `}` in comment-free input', () => {
-      expect(normalize('a: b; } d: e;', false)).toEqual('a: b; } d: e;');
+      expect(removeComments('a: b; /* c */ } d: e;', true)).toEqual('a: b; } d: e;');
     });
 
     it('returns comment-bearing input with a stray `}` unchanged when nothing is stripped', () => {
-      expect(normalize('background: url(//x/*.png); } d: e;', false)).toEqual(
+      expect(removeComments('background: url(//x/*.png); } d: e;', true)).toEqual(
         'background: url(//x/*.png); } d: e;'
       );
     });
   });
 
-  describe('normalize unified-path edge cases', () => {
+  describe('comment removal and stray braces together', () => {
     // Path 3j: comment stripping + brace imbalance fire together
     it('handles comment stripping that reveals brace imbalance', () => {
       expect(
@@ -1470,12 +1468,24 @@ background-color: green;`)
     });
   });
 
+  describe('the block compile places the input in', () => {
+    it('keeps a stray `}` in keyframes text from closing the @keyframes block', () => {
+      const compiler = createCompiler();
+      expect(
+        compiler.compile('from { opacity: 0; } } to { opacity: 1; }', 'k', '@keyframes')
+      ).toEqual(['@keyframes k{from{opacity:0;}to{opacity:1;}}']);
+    });
+
+    it('keeps a stray `}` in the input from closing the rule it is placed in', () => {
+      expect(runCssCompile('color: red; } margin: 0;')).toEqual(['.a{color:red;margin:0;}']);
+    });
+  });
+
   describe('flat decl-only inputs', () => {
     it('compiles flat declarations against the AST emitter', () => {
       const css = `color: red;\nbackground: blue;`;
       const fromInstance = runCssCompile(css);
-      const flatCSS = normalize(css);
-      const viaFull = emitWeb(parse('.a{' + flatCSS + '}'), '', {
+      const viaFull = emitWeb(parse('.a{' + css + '}'), '', {
         selfRefSelector: '.a',
         componentId: 'a',
       });

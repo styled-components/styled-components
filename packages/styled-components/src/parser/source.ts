@@ -1,7 +1,6 @@
 import type { RuleSet } from '../types';
 import { fifoSet } from '../utils/fifoMap';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
-import { normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
 import type { Root } from './ast';
 import { parse, SlotEntry, SlotTable } from './parser';
@@ -115,9 +114,9 @@ function isClientReference(value: unknown): boolean {
 
 /**
  * Classify each value and read the template: join the strings around
- * `\0S<n>\0` slot markers, normalize once (removing comments, and any slot
- * written inside one), and parse. The parser assigns every slot its role in
- * that one reading. With `shared`, the parse is looked up by `strings`
+ * `\0S<n>\0` slot markers and parse (which removes comments, and any slot
+ * written inside one). The parser assigns every slot its role in that one
+ * reading. With `shared`, the parse is looked up by `strings`
  * identity and reused; the caller guarantees the array is never mutated.
  */
 export function parseSource(
@@ -213,7 +212,7 @@ function readTemplate(
 ): TemplateParse {
   if (n === 0) {
     return {
-      ast: parse(normalize(strings.length > 0 ? strings[0] : '')),
+      ast: parse(strings.length > 0 ? strings[0] : ''),
       entries: EMPTY,
       id: 0,
       standalone: EMPTY,
@@ -226,7 +225,7 @@ function readTemplate(
   for (let i = 0; i < n; i++) entries.push(null);
   const standalone = falseFlags(n);
   const slots: SlotTable = { clientRefs, entries, recover, standalone };
-  const ast = parse(normalize(joined), { slots, templates: true });
+  const ast = parse(joined, { slots, templates: true });
   return { ast, entries, id: 0, standalone };
 }
 

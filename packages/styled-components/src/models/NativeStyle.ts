@@ -9,7 +9,6 @@ import {
 } from '../parser/evaluate';
 import { parse } from '../parser/parser';
 import type { Source } from '../parser/source';
-import { normalize } from '../utils/normalize';
 import { getSource, synthesizeSourceForRuleSet } from '../parser/source';
 import {
   ExecutionContext,
@@ -66,7 +65,7 @@ function fillNativeSource(
     const rule = keyframes[i].rules[0];
     let nodes = keyframesRuleCache.get(rule);
     if (nodes === undefined) {
-      nodes = parse(normalize(rule));
+      nodes = parse(rule);
       fifoSet(keyframesRuleCache, rule, nodes, TOO_MANY_CLASSES_LIMIT);
     }
     for (let j = 0; j < nodes.length; j++) out.push(nodes[j]);

@@ -154,16 +154,25 @@ describe('parser', () => {
       ]);
     });
 
-    it('ends the name at `}`, which then closes the block', () => {
+    it('ends the name at `}`, which at the top level drops the at-rule as a stray `}`', () => {
       expect(parse('@x} y; color: red;')).toEqual([
-        { kind: NodeKind.AtRule, name: 'x', prelude: '', children: null },
+        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
       ]);
     });
 
-    it('reads a `@` before `}` as an at-rule with an empty name', () => {
-      expect(parse('@}')).toEqual([
-        { kind: NodeKind.AtRule, name: '', prelude: '', children: null },
+    it('ends the name at `}`, which closes an enclosing block', () => {
+      expect(parse('& { @x} color: red;')).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: ['&'],
+          children: [{ kind: NodeKind.AtRule, name: 'x', prelude: '', children: null }],
+        },
+        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
       ]);
+    });
+
+    it('drops a `@` before a stray `}` at the top level', () => {
+      expect(parse('@}')).toEqual([]);
     });
   });
 
@@ -375,6 +384,41 @@ describe('parser', () => {
   it('handles empty input', () => {
     expect(parse('')).toEqual([]);
     expect(parse('   \n\t  ')).toEqual([]);
+  });
+
+  describe('a stray `}` at the top level', () => {
+    it('drops the statement holding it and reads the next statement', () => {
+      expect(parse('a: b; c: d } e: f; }; g: h')).toEqual([
+        { kind: NodeKind.Decl, prop: 'a', value: 'b' },
+        { kind: NodeKind.Decl, prop: 'e', value: 'f' },
+        { kind: NodeKind.Decl, prop: 'g', value: 'h' },
+      ]);
+    });
+
+    it('drops the statement after a rule it follows', () => {
+      expect(parse('& { a: b; } } c: d;')).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: ['&'],
+          children: [{ kind: NodeKind.Decl, prop: 'a', value: 'b' }],
+        },
+        { kind: NodeKind.Decl, prop: 'c', value: 'd' },
+      ]);
+    });
+
+    it('keeps the slots a Run splices before it', () => {
+      expect(parse('\0S0\0 } color: red;', { templates: true })).toEqual([
+        { kind: NodeKind.Interpolation, index: 0 },
+        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+      ]);
+    });
+
+    it('reads a `}` inside a string as string text', () => {
+      expect(parse('a: "}"; b: c')).toEqual([
+        { kind: NodeKind.Decl, prop: 'a', value: '"}"' },
+        { kind: NodeKind.Decl, prop: 'b', value: 'c' },
+      ]);
+    });
   });
 
   it('handles trailing semicolons', () => {

@@ -18,7 +18,6 @@
 import corpus from '../corpus.json';
 import { parse } from '../../parser';
 import { emitWeb } from '../../emit-web';
-import { normalize } from '../../../utils/compiler';
 
 interface Assertion {
   source: string;
@@ -42,7 +41,7 @@ function normalizeWhitespace(s: unknown): string {
 }
 
 function emit(css: string): string {
-  const ast = parse(normalize(css));
+  const ast = parse(css);
   return emitWeb(ast, '.t').join('');
 }
 

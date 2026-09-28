@@ -12,7 +12,6 @@
 
 import { emitWeb } from './emit-web';
 import { parse } from './parser';
-import { normalize } from '../utils/normalize';
 
 // Reuse the CSS_LARGE and CSS_HUGE shapes from the bench. Inlined here so the
 // harness can run standalone without the jest bench infra.
@@ -104,12 +103,12 @@ const CSS_HUGE = (() => {
 function run(css: string, iterations: number): void {
   // Warmup
   for (let i = 0; i < Math.min(iterations / 10, 200); i++) {
-    emitWeb(parse(normalize(css)), '.a');
+    emitWeb(parse(css), '.a');
   }
   // Measured
   const start = performance.now();
   for (let i = 0; i < iterations; i++) {
-    emitWeb(parse(normalize(css)), '.a');
+    emitWeb(parse(css), '.a');
   }
   const elapsed = performance.now() - start;
   const ops = (iterations / elapsed) * 1000;

@@ -171,8 +171,8 @@ export interface Compiler {
    * String-input emit path, for callers holding a finished CSS string and a
    * parent selector (keyframes registration).
    *
-   * Wraps the input in `prefix + selector { css }`, runs `normalize +
-   * parser + emit-web` with the active plugin set + namespace, and returns
+   * Parses the input as a block of its own, places it in `prefix + selector
+   * { ... }`, emits it with the active plugin set + namespace, and returns
    * the resulting rule strings ready for `insertRules`. Output is
    * deterministic for a given input so class hashes and SSR rehydration
    * stay stable across renders.
@@ -189,8 +189,8 @@ export interface Compiler {
   ) => string[];
   /**
    * Source-input emit path. Walks the construction-time AST + filled
-   * interpolation values, skipping the per-render `normalize + parse`
-   * work `compile` performs against a freshly joined CSS string. A slot
+   * interpolation values, skipping the per-render parse `compile`
+   * performs against a freshly joined CSS string. A slot
    * value that cannot be used drops only its own construct.
    *
    * `fragments` is the parallel side table populated by
