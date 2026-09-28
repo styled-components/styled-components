@@ -169,7 +169,7 @@ export interface Compiler {
   hash: string;
   /**
    * String-input emit path, for callers holding a finished CSS string and a
-   * parent selector (keyframes registration).
+   * parent selector.
    *
    * Parses the input as a block of its own, places it in `prefix + selector
    * { ... }`, emits it with the active plugin set + namespace, and returns
@@ -177,9 +177,8 @@ export interface Compiler {
    * deterministic for a given input so class hashes and SSR rehydration
    * stay stable across renders.
    *
-   * `prefix` carries at-rule wrapping (e.g. `'@keyframes'` for keyframe
-   * registration). When both `selector` and `prefix` are empty the input
-   * is parsed unwrapped.
+   * `prefix` carries at-rule wrapping (e.g. `'@keyframes'`). When both
+   * `selector` and `prefix` are empty the input is parsed unwrapped.
    */
   compile: (
     css: string,

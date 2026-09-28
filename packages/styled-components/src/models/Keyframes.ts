@@ -1,4 +1,8 @@
 import { KEYFRAMES_ID_PREFIX } from '../constants';
+import { evaluateForFastPath, FastPathFragment, hasAnyFragment } from '../parser/evaluate';
+import { keyframesRule } from '../parser/parser';
+import { parseFrameList, Source } from '../parser/source';
+import { EMPTY_ARRAY } from '../utils/empties';
 import StyleSheet from '../sheet';
 import { groupForId } from '../sheet/GroupIDAllocator';
 import { Compiler, Keyframes as KeyframesType } from '../types';
@@ -16,12 +20,22 @@ import { mainCompiler } from './StyleSheetManager';
  */
 export interface CompiledKeyframes {
   id: string;
+  /** Keyframes values the frames name, each to be injected with this one. */
+  keyframes?: CompiledKeyframes[] | undefined;
   name: string;
   rules: string[];
 }
 
 /** The part of a compiler that names and serializes keyframes. */
-export type KeyframesCompiler = Pick<Compiler, 'compile' | 'hash'>;
+export type KeyframesCompiler = Pick<Compiler, 'emit' | 'hash'>;
+
+/** The template a `keyframes` value reads its frames from. */
+export interface KeyframesTemplate {
+  interpolations: ReadonlyArray<unknown>;
+  /** Whether `strings` is never mutated, so its parse is shared (a tagged template's strings). */
+  shared: boolean;
+  strings: ReadonlyArray<string>;
+}
 
 export default class Keyframes implements KeyframesType {
   readonly [KEYFRAMES_SYMBOL] = true as const;
@@ -32,11 +46,16 @@ export default class Keyframes implements KeyframesType {
 
   /** Each compiler's {@link compile} result. */
   private readonly compiled = new WeakMap<KeyframesCompiler, CompiledKeyframes>();
+  /** The frame list, parsed on the first {@link compile}. */
+  private source: Source | null = null;
+  private readonly template: KeyframesTemplate;
 
-  constructor(name: string, rules: string) {
+  /** `template` defaults to `rules` as a template of its own, holding no slot. */
+  constructor(name: string, rules: string, template?: KeyframesTemplate) {
     this.name = name;
     this.id = KEYFRAMES_ID_PREFIX + name;
     this.rules = rules;
+    this.template = template ?? { interpolations: EMPTY_ARRAY, shared: false, strings: [rules] };
 
     // Eagerly register the group so keyframes defined before components
     // get a lower group ID and appear before them in the stylesheet.
@@ -58,11 +77,44 @@ export default class Keyframes implements KeyframesType {
   compile(compiler: KeyframesCompiler = mainCompiler): CompiledKeyframes {
     let compiled = this.compiled.get(compiler);
     if (compiled === undefined) {
-      const name = this.getName(compiler);
-      compiled = { id: this.id, name, rules: compiler.compile(this.rules, name, '@keyframes') };
+      compiled = this.compileWith(compiler);
       this.compiled.set(compiler, compiled);
     }
     return compiled;
+  }
+
+  /**
+   * Fill the frame list and emit it as `@keyframes <name>`. There is no
+   * render context: the template's functions were written as their source
+   * text before it was read.
+   */
+  private compileWith(compiler: KeyframesCompiler): CompiledKeyframes {
+    const name = this.getName(compiler);
+    let source = this.source;
+    if (source === null) {
+      const template = this.template;
+      source = parseFrameList(template.strings, template.interpolations, template.shared);
+      this.source = source;
+    }
+    const n = source.interpolations.length;
+    const rule: Source = { ...source, ast: [keyframesRule(name, source.ast, n > 0)] };
+    if (n === 0) {
+      return { id: this.id, name, rules: compiler.emit(rule, EMPTY_ARRAY, '', '', null) };
+    }
+    const fragments: (FastPathFragment | null)[] = [];
+    const keyframes: CompiledKeyframes[] = [];
+    const filled = evaluateForFastPath(
+      source,
+      undefined,
+      undefined,
+      compiler,
+      fragments,
+      keyframes
+    );
+    const rules = compiler.emit(rule, filled, '', '', hasAnyFragment(fragments) ? fragments : null);
+    return keyframes.length > 0
+      ? { id: this.id, keyframes, name, rules }
+      : { id: this.id, name, rules };
   }
 
   getName(compiler: Pick<Compiler, 'hash'> = mainCompiler): string {

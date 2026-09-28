@@ -290,11 +290,16 @@ function unresolved(r: Resolver, index: number): void {
   if (r.fragments !== undefined) r.fragments[index] = UNRESOLVED;
 }
 
-/** A keyframes value's generated name; compiled for injection when the caller collects keyframes. */
+/**
+ * A keyframes value's generated name; compiled for injection when the caller
+ * collects keyframes, together with the keyframes its frames name.
+ */
 function keyframesName(kf: KeyframesClass, r: Resolver): string {
   if (r.compiler === undefined) return kf.getName();
   if (r.keyframes === undefined) return kf.getName(r.compiler);
   const compiled = kf.compile(r.compiler);
+  const named = compiled.keyframes;
+  if (named !== undefined) for (let i = 0; i < named.length; i++) r.keyframes.push(named[i]);
   r.keyframes.push(compiled);
   return compiled.name;
 }

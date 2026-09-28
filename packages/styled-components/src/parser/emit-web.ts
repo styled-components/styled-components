@@ -320,7 +320,7 @@ function emitAtRule(
  * nested under any parent. A frame without declarations, and anything that
  * is not a frame or a declaration in one, is omitted.
  */
-function emitKeyframes(node: StaticKeyframesNode, options: EmitOptions | undefined): string {
+export function emitKeyframes(node: StaticKeyframesNode, options?: EmitOptions): string {
   const declTransform = options && options.decl;
   let frames = '';
   for (let i = 0; i < node.children.length; i++) {

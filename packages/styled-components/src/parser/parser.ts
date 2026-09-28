@@ -60,6 +60,11 @@ const enum Block {
 }
 
 export interface ParseOptions {
+  /**
+   * When `true`, the input is a frame list, read as the block of a
+   * `@keyframes` rule is (a `keyframes` template); see {@link keyframesRule}.
+   */
+  frames?: boolean;
   /** Per-slot knowledge for a templated parse; ignored unless `templates` is `true`. */
   slots?: SlotTable;
   /**
@@ -106,7 +111,7 @@ export function parse(css: string, options?: ParseOptions): Root<string | Templa
   const slots = templates && options?.slots !== undefined ? options.slots : null;
   const text = removeComments(css, true);
   const ctx: ParseContext = {
-    block: Block.Rules,
+    block: options?.frames ? Block.Frames : Block.Rules,
     css: text,
     depth: 0,
     dyn: false,
@@ -117,6 +122,21 @@ export function parse(css: string, options?: ParseOptions): Root<string | Templa
     templates,
   };
   return parseBlock(ctx);
+}
+
+/**
+ * A `@keyframes prelude` rule whose block is `frames`, a frame list parsed
+ * with `frames: true`; `dynamic` when the list holds a slot.
+ */
+export function keyframesRule(prelude: string, frames: Root, dynamic: boolean): KeyframesNode {
+  const node: KeyframesNode = {
+    kind: NodeKind.Keyframes,
+    name: 'keyframes',
+    prelude,
+    children: frames,
+  };
+  if (dynamic) markDyn(node);
+  return node;
 }
 
 interface ParseContext {
