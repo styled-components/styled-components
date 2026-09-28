@@ -2,7 +2,17 @@ import * as $ from '../utils/charCodes';
 import { isWS, lowerAscii } from '../utils/charCodes';
 import { NodeKind, StaticAtRuleNode, StaticKeyframesNode, StaticNode, StaticRoot } from './ast';
 import { splitTopLevelCommas, trimRange } from './parser';
-import { ANY_DEPTH, BRACKETS, identifierEnd, isEscaped, isIdentCode, scan, stops } from './reader';
+import {
+  ANY_DEPTH,
+  BRACKETS,
+  identifierEnd,
+  isEscaped,
+  isIdentCode,
+  scan,
+  stops,
+  tailKind,
+  tokensJoin,
+} from './reader';
 
 const COMBINATOR = stops('>+~');
 const AMPERSAND = stops('&');
@@ -62,6 +72,20 @@ function stripCombinatorSpaces(sel: string): string {
         left--;
       } else break;
     }
+    const combinator = sel.charCodeAt(stop);
+    // Whitespace stays where the tokens on either side would join (`-- >`, `+ 2`).
+    if (
+      left < stop &&
+      left > segStart &&
+      tokensJoin(
+        tailKind(sel, segStart, left),
+        sel.charCodeAt(left - 1),
+        combinator,
+        sel.charCodeAt(stop + 1)
+      )
+    ) {
+      left = stop;
+    }
     out += sel.substring(segStart, left);
     out += sel[stop];
     // Skip whitespace after combinator.
@@ -70,6 +94,12 @@ function stripCombinatorSpaces(sel: string): string {
       const n = sel.charCodeAt(j);
       if (isWS(n)) j++;
       else break;
+    }
+    if (
+      j > stop + 1 &&
+      tokensJoin(combinator, combinator, j < len ? sel.charCodeAt(j) : -1, sel.charCodeAt(j + 1))
+    ) {
+      j = stop + 1;
     }
     segStart = j;
     i = j;

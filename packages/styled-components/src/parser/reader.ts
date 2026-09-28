@@ -20,6 +20,7 @@ import {
   isWS,
   LF,
   LOWER_A,
+  LOWER_E,
   LOWER_L,
   LOWER_R,
   LOWER_U,
@@ -391,11 +392,11 @@ const TAIL_IDENT = -2;
 const TAIL_HEX = -3;
 
 /**
- * How the non-empty text `s[low..end)` ends, for {@link commentJoins}:
+ * How the non-empty text `s[low..end)` ends, for {@link tokensJoin}:
  * {@link TAIL_SPACE}, {@link TAIL_IDENT}, {@link TAIL_HEX}, or else its last
  * code point, a delimiter.
  */
-function tailKind(s: string, low: number, end: number): number {
+export function tailKind(s: string, low: number, end: number): number {
   const c = s.charCodeAt(end - 1);
   if (isHex(c) && hexEscapeStart(s, low, end) !== -1) return TAIL_HEX;
   if (isIdentCode(c) || (backslashRun(s, low, end - 2) & 1) === 1) return TAIL_IDENT;
@@ -412,13 +413,13 @@ function isDigit(c: number): boolean {
 }
 
 /**
- * Whether text ending as `tail` describes ({@link tailKind}) and text
- * starting with the code point `next` (-1 at the end) would read as one
- * token where a comment separated them: the pairs CSS Syntax 3 serialization
- * separates with a comment, read by code point and erring toward keeping the
- * comment.
+ * Whether text ending as `tail` describes ({@link tailKind}), with last code
+ * point `last`, and text starting with the code point `next` (-1 at the end)
+ * would read as one token where a comment or whitespace separated them: the
+ * pairs CSS Syntax 3 serialization separates with a comment, read by code
+ * point and erring toward keeping the separation.
  */
-function commentJoins(tail: number, next: number): boolean {
+export function tokensJoin(tail: number, last: number, next: number, after: number): boolean {
   if (tail === TAIL_SPACE || tail === TAIL_NONE || next === -1) return false;
   if (isSpace(next)) return tail === TAIL_HEX;
   if (tail === TAIL_IDENT || tail === TAIL_HEX) {
@@ -426,10 +427,11 @@ function commentJoins(tail: number, next: number): boolean {
       isIdentCode(next) ||
       next === BACKSLASH ||
       next === OPEN_PAREN ||
-      next === PERCENT ||
-      next === DOT ||
-      next === PLUS ||
-      next === GT
+      // A number takes `%`, a fraction, or an exponent sign; `--` takes `>`.
+      (next === PERCENT && isDigit(last)) ||
+      (next === DOT && isDigit(last) && isDigit(after)) ||
+      (next === PLUS && (last | 0x20) === LOWER_E) ||
+      (next === GT && last === HYPHEN)
     );
   }
   switch (tail) {
@@ -439,7 +441,7 @@ function commentJoins(tail: number, next: number): boolean {
     case DOT:
       return isDigit(next);
     case PLUS:
-      return isDigit(next) || next === DOT;
+      return isDigit(next) || (next === DOT && isDigit(after));
     case SLASH:
       return next === ASTERISK;
     case LT:
@@ -472,6 +474,7 @@ export function removeComments(text: string, lineComments: boolean): string {
   // with a backslash or hex digit, the code point before it in `out` is
   // neither (removal there would have joined, keeping `/**/`).
   let tail = TAIL_NONE;
+  let last = -1;
   for (;;) {
     i = scan(text, i, len, SOLIDUS_STOP, ANY_DEPTH, depth);
     if (i >= len) break;
@@ -486,6 +489,7 @@ export function removeComments(text: string, lineComments: boolean): string {
     if (i > start) {
       out += text.substring(start, i);
       tail = tailKind(text, start, i);
+      last = text.charCodeAt(i - 1);
     }
     if (line) {
       const eol = text.indexOf('\n', i + 2);
@@ -496,9 +500,9 @@ export function removeComments(text: string, lineComments: boolean): string {
     }
     if (tail === TAIL_SPACE && !line) {
       while (i < len && isSpace(text.charCodeAt(i))) i++;
-    } else if (commentJoins(tail, i < len ? text.charCodeAt(i) : -1)) {
+    } else if (tokensJoin(tail, last, i < len ? text.charCodeAt(i) : -1, text.charCodeAt(i + 1))) {
       out += '/**/';
-      tail = SLASH;
+      tail = last = SLASH;
     }
     start = i;
   }
