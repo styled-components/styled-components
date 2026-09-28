@@ -1,6 +1,27 @@
+import { tokenize, TokenType } from '@csstools/css-tokenizer';
 import { ANY_DEPTH, BRACKETS, COMMENTS, isUrlCall, removeComments, scan, stops } from './reader';
 
 const SEMICOLON = stops(';');
+
+/**
+ * The tokens CSS Syntax 3 reads from `text` (type and source text), comments
+ * dropped and each whitespace run read as one space; `null` when a string
+ * ends at a raw newline.
+ */
+function cssTokens(text: string): string[] | null {
+  const out: string[] = [];
+  for (const token of tokenize({ css: text })) {
+    const type = token[0];
+    if (type === TokenType.Comment || type === TokenType.EOF) continue;
+    if (type === TokenType.BadString) return null;
+    if (type === TokenType.Whitespace) {
+      if (out[out.length - 1] !== ' ') out.push(' ');
+      continue;
+    }
+    out.push(type + ' ' + token[1]);
+  }
+  return out;
+}
 
 /** Index of the first `;` {@link scan} reads in `text`, from the start, at the top level. */
 const firstSemicolon = (text: string, mode = 0) => scan(text, 0, text.length, SEMICOLON, mode, 0);
@@ -82,7 +103,7 @@ describe('reader', () => {
 
   describe('removeComments', () => {
     it('removes a comment inside parentheses but not inside url(', () => {
-      expect(removeComments('f(a/*x*/b) url(a/*x*/b)', false)).toBe('f(ab) url(a/*x*/b)');
+      expect(removeComments('f(a /*x*/b) url(a/*x*/b)', false)).toBe('f(a b) url(a/*x*/b)');
     });
 
     it('removes `//` to the end of the line only with lineComments, outside parentheses', () => {
@@ -99,11 +120,134 @@ describe('reader', () => {
     });
 
     it('never joins `/` and `*` into a new comment', () => {
-      expect(removeComments('//**/*&*/ b', false)).toBe('/ *&*/ b');
+      expect(removeComments('//*x*/*&*/ b', false)).toBe('//**/*&*/ b');
     });
 
     it('removes an unclosed comment to the end', () => {
       expect(removeComments('a /* b', false)).toBe('a ');
+    });
+
+    /**
+     * CSS Syntax 3 §9 Serialization: "For any consecutive pair of tokens, if
+     * the first token shows up in the row headings of the following table,
+     * and the second token shows up in the column headings, and there’s a ✗
+     * in the cell denoted by the intersection of the chosen row and column,
+     * the pair of tokens must be serialized with a comment between them. If
+     * the tokenizer preserves comments, and there were comments originally
+     * between the token pair, the preserved comment(s) should be used;
+     * otherwise, an empty comment (/**\/) must be inserted."
+     */
+    describe('keeps an empty comment where removal would join two tokens', () => {
+      it.each([
+        ['an identifier and the rest of url(', 'u/*x*/rl(a)', 'u/**/rl(a)'],
+        ['two identifiers', 'a/*x*/b', 'a/**/b'],
+        ['an identifier and (', 'url/*x*/(a)', 'url/**/(a)'],
+        ['a number and a unit', '1/*x*/px', '1/**/px'],
+        ['a number and %', '1/*x*/%', '1/**/%'],
+        ['a number and a fraction', '1/*x*/.5', '1/**/.5'],
+        ['a unit and an exponent sign', '1e/*x*/+2', '1e/**/+2'],
+        ['# and a name', '#/*x*/a', '#/**/a'],
+        ['@ and a name', '@/*x*/media', '@/**/media'],
+        ['. and a digit', './*x*/5', './**/5'],
+        ['+ and a digit', '+/*x*/5', '+/**/5'],
+        ['- and a digit', '-/*x*/5', '-/**/5'],
+        ['-- and >', '--/*x*/>', '--/**/>'],
+        ['< and !', '</*x*/!--', '</**/!--'],
+        ['/ and *', '//*x*/*', '//**/*'],
+        ['an escape and an identifier', 'a\\{/*x*/b', 'a\\{/**/b'],
+        ['an escaped space and an identifier', 'a\\ /*x*/b', 'a\\ /**/b'],
+        ['a hex escape and a hex digit', '\\4/*x*/1', '\\4/**/1'],
+        ['a hex escape and the space that would end it', '\\41/*x*/ b', '\\41/**/ b'],
+        ['a hex escape’s space and an identifier', '\\41 /*x*/b', '\\41 /**/b'],
+        ['an identifier and an escape', 'a/*x*/\\62', 'a/**/\\62'],
+      ])('%s', (_, text, expected) => {
+        expect(removeComments(text, false)).toBe(expected);
+      });
+
+      it('keeps one empty comment for a run of comments', () => {
+        expect(removeComments('a/*x*//*y*/b', false)).toBe('a/**/b');
+      });
+
+      it('keeps an empty comment where a line comment’s removal would let a hex escape take the newline', () => {
+        expect(removeComments('\\41// x\nb', true)).toBe('\\41/**/\nb');
+      });
+    });
+
+    describe('removes a comment where the tokens on either side stay apart', () => {
+      it.each([
+        ['whitespace before', 'a /*x*/b', 'a b'],
+        ['whitespace after', 'a/*x*/ b', 'a b'],
+        ['a colon', 'color:/*x*/red', 'color:red'],
+        ['a closing parenthesis', 'f(a)/*x*/b', 'f(a)b'],
+        ['a string', '"a"/*x*/b', '"a"b'],
+        ['a comma', 'a,/*x*/b', 'a,b'],
+        ['an identifier and a string', 'a/*x*/"b"', 'a"b"'],
+        ['whitespace after the space that ends a hex escape', '\\62 /*x*/ c', '\\62  c'],
+      ])('%s', (_, text, expected) => {
+        expect(removeComments(text, false)).toBe(expected);
+      });
+    });
+
+    /**
+     * The tokens CSS Syntax 3 reads from the text, comments dropped and each
+     * whitespace run read as one space: removing comments must leave them
+     * unchanged, with `@csstools/css-tokenizer` as the independent reader.
+     */
+    it('leaves every token as CSS reads it, across seeded random text', () => {
+      const alphabet = [
+        'a',
+        'e',
+        'u',
+        'rl(',
+        '1',
+        '5',
+        '-',
+        '+',
+        '.',
+        '#',
+        '@',
+        '%',
+        '<',
+        '!',
+        '>',
+        '/',
+        '*',
+        '/*',
+        '*/',
+        '/*x*/',
+        '\\',
+        '\\41',
+        '\\4',
+        ' ',
+        '\n',
+        '(',
+        ')',
+        '"',
+        ',',
+        ':',
+        'é',
+        '\0',
+      ];
+      let seed = 11;
+      const next = (n: number) => {
+        seed = (Math.imul(seed, 1103515245) + 12345) | 0;
+        return ((seed >>> 8) & 0xffffff) % n;
+      };
+      const failures: string[] = [];
+      let compared = 0;
+      for (let k = 0; k < 4000; k++) {
+        let text = '';
+        const parts = 1 + next(10);
+        for (let p = 0; p < parts; p++) text += alphabet[next(alphabet.length)];
+        const before = cssTokens(text);
+        // A string CSS ends at a raw newline, where template text reads on.
+        if (before === null) continue;
+        compared++;
+        const after = cssTokens(removeComments(text, false));
+        if (JSON.stringify(after) !== JSON.stringify(before)) failures.push(JSON.stringify(text));
+      }
+      expect(failures).toEqual([]);
+      expect(compared).toBeGreaterThan(3000);
     });
   });
 });

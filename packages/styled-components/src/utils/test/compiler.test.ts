@@ -1149,8 +1149,8 @@ background-color: green;`)
       expect(removeComments('a /* foo */ b { color: red; }', true)).toEqual('a b { color: red; }');
     });
 
-    it('a/* foo */b strips just the comment when no surrounding whitespace', () => {
-      expect(removeComments('a/* foo */b { color: red; }', true)).toEqual('ab { color: red; }');
+    it('a/* foo */b keeps an empty comment so the two identifiers stay apart', () => {
+      expect(removeComments('a/* foo */b { color: red; }', true)).toEqual('a/**/b { color: red; }');
     });
 
     it('comment between two declarations leaves only a single space', () => {

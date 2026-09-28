@@ -10,6 +10,7 @@ export const LF = 10; // \n
 export const FORM_FEED = 12; // \f
 export const CR = 13; // \r
 export const SPACE = 32; // ' '
+export const EXCLAMATION = 33; // !
 export const DOUBLE_QUOTE = 34; // "
 export const HASH = 35; // #
 export const DOLLAR = 36; // $

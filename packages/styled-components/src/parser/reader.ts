@@ -9,9 +9,13 @@ import {
   CR,
   DIGIT_0,
   DIGIT_9,
+  DOT,
   DOUBLE_QUOTE,
+  EXCLAMATION,
   FORM_FEED,
+  GT,
   HASH,
+  HYPHEN,
   isIdentChar,
   isWS,
   LF,
@@ -19,10 +23,13 @@ import {
   LOWER_L,
   LOWER_R,
   LOWER_U,
+  LT,
   NUL,
   OPEN_BRACE,
   OPEN_BRACKET,
   OPEN_PAREN,
+  PERCENT,
+  PLUS,
   SINGLE_QUOTE,
   SLASH,
   UPPER_A,
@@ -313,12 +320,96 @@ export function scan(
 const SOLIDUS_STOP = stops('/');
 
 /**
+ * Index of the backslash of the hex escape whose digits end at `end` in `s`
+ * (one to six hex digits after an unescaped backslash); -1 when none does.
+ */
+function hexEscapeStart(s: string, end: number): number {
+  let d = end;
+  while (d > 0 && end - d < 6 && isHex(s.charCodeAt(d - 1))) d--;
+  if (d === end || d === 0 || s.charCodeAt(d - 1) !== BACKSLASH) return -1;
+  return isEscaped(s, d - 1) ? -1 : d - 1;
+}
+
+/** {@link tailKind}: the text is empty. */
+const TAIL_NONE = -4;
+/** {@link tailKind}: the text ends in whitespace CSS reads as whitespace. */
+const TAIL_SPACE = -1;
+/** {@link tailKind}: the text ends in identifier text a following identifier, number, or `(` continues. */
+const TAIL_IDENT = -2;
+/** {@link tailKind}: {@link TAIL_IDENT}, ending in the digits of a hex escape a whitespace code point would end. */
+const TAIL_HEX = -3;
+
+/**
+ * How `s` ends, for {@link commentJoins}: {@link TAIL_NONE},
+ * {@link TAIL_SPACE}, {@link TAIL_IDENT}, {@link TAIL_HEX}, or else its last
+ * code point, a delimiter.
+ */
+function tailKind(s: string): number {
+  const end = s.length;
+  if (end === 0) return TAIL_NONE;
+  const c = s.charCodeAt(end - 1);
+  if (isHex(c) && hexEscapeStart(s, end) !== -1) return TAIL_HEX;
+  if (isIdentCode(c) || isEscaped(s, end - 1)) return TAIL_IDENT;
+  if (!isSpace(c)) return c;
+  // Whitespace ending a hex escape belongs to it; a CR ending one would
+  // take an LF after it too, as one newline.
+  const w = c === LF && end > 1 && s.charCodeAt(end - 2) === CR ? end - 2 : end - 1;
+  if (hexEscapeStart(s, w) === -1) return TAIL_SPACE;
+  return c === CR ? TAIL_HEX : TAIL_IDENT;
+}
+
+function isDigit(c: number): boolean {
+  return c >= DIGIT_0 && c <= DIGIT_9;
+}
+
+/**
+ * Whether text ending as `tail` describes ({@link tailKind}) and text
+ * starting with the code point `next` (-1 at the end) would read as one
+ * token where a comment separated them: the pairs CSS Syntax 3 serialization
+ * separates with a comment, read by code point and erring toward keeping the
+ * comment.
+ */
+function commentJoins(tail: number, next: number): boolean {
+  if (tail === TAIL_SPACE || tail === TAIL_NONE || next === -1) return false;
+  if (isSpace(next)) return tail === TAIL_HEX;
+  if (tail === TAIL_IDENT || tail === TAIL_HEX) {
+    return (
+      isIdentCode(next) ||
+      next === BACKSLASH ||
+      next === OPEN_PAREN ||
+      next === PERCENT ||
+      next === DOT ||
+      next === PLUS ||
+      next === GT
+    );
+  }
+  switch (tail) {
+    case HASH:
+    case AT:
+      return isIdentCode(next) || next === BACKSLASH;
+    case DOT:
+      return isDigit(next);
+    case PLUS:
+      return isDigit(next) || next === DOT;
+    case SLASH:
+      return next === ASTERISK;
+    case LT:
+      return next === EXCLAMATION;
+    case EXCLAMATION:
+      return next === HYPHEN;
+    default:
+      return false;
+  }
+}
+
+/**
  * Remove the comments CSS reads: `/* *\/` at any parenthesis depth, outside
  * strings, escapes, and unquoted `url(`; with `lineComments`, also `//` to
  * the end of its line outside parentheses (not after `:`, so `https://`
- * stays). A comment between two whitespace runs leaves the first run. A `/`
- * left directly before a `*` gets a space after it, so removal never forms a
- * new comment.
+ * stays). A comment between two whitespace runs leaves the first run. Where
+ * removal would join the code points on either side into one token, an
+ * empty `/**\/` stays in the comment's place, so the text reads as the same
+ * tokens.
  */
 export function removeComments(text: string, lineComments: boolean): string {
   if (text.indexOf('/*') === -1 && (!lineComments || text.indexOf('//') === -1)) return text;
@@ -327,38 +418,36 @@ export function removeComments(text: string, lineComments: boolean): string {
   let start = 0;
   let i = 0;
   let depth = 0;
+  // `tailKind(out)`, read once per length of `out`.
+  let tail = TAIL_NONE;
+  let tailAt = 0;
   for (;;) {
     i = scan(text, i, len, SOLIDUS_STOP, ANY_DEPTH, depth);
     if (i >= len) break;
     depth = scanDepth;
     const next = text.charCodeAt(i + 1);
-    if (
-      next === SLASH &&
-      lineComments &&
-      depth === 0 &&
-      !(i > 0 && text.charCodeAt(i - 1) === COLON)
-    ) {
-      out += text.substring(start, i);
-      const eol = text.indexOf('\n', i + 2);
-      i = start = eol === -1 ? len : eol;
-      continue;
-    }
-    if (next !== ASTERISK) {
+    const line =
+      next === SLASH && lineComments && depth === 0 && !(i > 0 && text.charCodeAt(i - 1) === COLON);
+    if (!line && next !== ASTERISK) {
       i++;
       continue;
     }
     out += text.substring(start, i);
-    const close = text.indexOf('*/', i + 2);
-    i = close === -1 ? len : close + 2;
-    if (out.length > 0 && isSpace(out.charCodeAt(out.length - 1))) {
+    if (line) {
+      const eol = text.indexOf('\n', i + 2);
+      i = eol === -1 ? len : eol;
+    } else {
+      const close = text.indexOf('*/', i + 2);
+      i = close === -1 ? len : close + 2;
+    }
+    if (out.length !== tailAt) {
+      tailAt = out.length;
+      tail = tailKind(out);
+    }
+    if (tail === TAIL_SPACE && !line) {
       while (i < len && isSpace(text.charCodeAt(i))) i++;
-    } else if (
-      text.charCodeAt(i) === ASTERISK &&
-      out.length > 0 &&
-      out.charCodeAt(out.length - 1) === SLASH &&
-      !isEscaped(out, out.length - 1)
-    ) {
-      out += ' ';
+    } else if (commentJoins(tail, i < len ? text.charCodeAt(i) : -1)) {
+      out += '/**/';
     }
     start = i;
   }
