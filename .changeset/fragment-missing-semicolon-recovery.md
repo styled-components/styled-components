@@ -11,4 +11,4 @@ const Box = styled.View`
 `;
 ```
 
-The fragment promotes to a sibling, so the declaration above behaves the same as if you had written `margin: 0 10px; color: red;`. Value-position fragments (`border: ${frag};`) interpolate into the value as usual.
+The fragment promotes to a sibling, so the declaration above behaves the same as if you had written `margin: 0 10px; color: red;`. Value-position fragments (`border: ${frag};`) interpolate into the value as usual, and fragments inside parentheses or quotes (`@media (${frag})`, `content: "${frag}"`) are always treated as text.

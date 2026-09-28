@@ -56,7 +56,7 @@ NOTE: This file is the only home for these instructions. CLAUDE.md is a one-line
 
 ## Security posture
 
-- Authored template CSS is developer-authored; the library does not sanitize it on the author's behalf. Interpolated `${...}` values can carry runtime data, so three structural guards stop an untrusted value from escaping its context: interpolation-slot realization in `parser/compile.ts` (a slot cannot introduce new declarations or rules), the SSR style-body escaping in `utils/escapeStyleSink.ts` (a value cannot close the `<style>` tag), and React's own DOM-attribute escaping for everything routed through `createElement`. Preserve all three when touching those paths; each has a regression test.
+- Authored template CSS is developer-authored; the library does not sanitize it on the author's behalf. Interpolated `${...}` values can carry runtime data, so three structural guards stop an untrusted value from escaping its context: slot value checks in `parser/slotValue.ts` (a value in a declaration, selector, property, or prelude cannot open or close a rule; a `;` in a declaration value only adds declarations to the same rule; the rules are in [docs/interpolation-slots.md](docs/interpolation-slots.md), and a slot on its own line is a mixin parsed as full CSS), the SSR style-body escaping in `utils/escapeStyleSink.ts` (a value cannot close the `<style>` tag), and React's own DOM-attribute escaping for everything routed through `createElement`. Preserve all three when touching those paths; each has a regression test.
 - The in-house parser and the native transform regexes run on user-influenced input, so they must stay linear-time. Never write a regex that can backtrack catastrophically: no `\s` inside a quantified class flanked by outer `\s*`, no lazy `[^X]+?` with a trailing `\s*`, no adjacent greedy-then-lazy `[^{}]` runs across a delimiter. Prefer `indexOf` plus anchored single-pass scanning over nested quantifiers, and give any hot-path regex a wall-clock-budget regression test.
 
 ## Agent Rules
@@ -202,6 +202,7 @@ The `packages/native-showcase` app is the visual QA surface for v7 native polyfi
 
 ## Topical references
 
+- Interpolation slot roles and what each slot's value may do (the parser's contract; update it before changing slot behavior): [docs/interpolation-slots.md](docs/interpolation-slots.md)
 - TypeScript type-instantiation budget, measured type constraints, and type-surface testing: [docs/typescript-performance.md](docs/typescript-performance.md)
 - React 19 behaviors that hit the render hot path and SSR/RSC output: [docs/react.md](docs/react.md)
 - React Native substrate: CSS capability by RN version, Yoga divergences, the in-house declaration transform: [docs/react-native.md](docs/react-native.md)
