@@ -839,7 +839,7 @@ describe('compileWeb', () => {
     it('drops the rule when a value in the selector text after the Head fails its check', () => {
       const src = tagged`color: blue; ${() => 'h1'} .x${'}'} { color: red; }`;
       expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue;'));
-      expect(warnings()).toEqual([expect.stringContaining('rule `.x${…}`')]);
+      expect(warnings()).toEqual([expect.stringContaining('rule `h1 .x${…}`')]);
     });
 
     it('drops a block at the top level of a global style whose Head is empty, with a dev warning', () => {
@@ -1069,12 +1069,55 @@ describe('compileWeb', () => {
     it.each([
       ['a closing brace', 'red } body { background: red'],
       ['an opening brace', 'red { x'],
-      ['a closing brace inside a string', '"}"'],
       ['an opening brace inside a comment', '/* { */ red'],
+      ['an escaped brace', 'a\\{'],
+      ['a brace inside parentheses', 'calc(1px } 2px)'],
     ])('drops the declaration for %s, with a dev warning', (_, value) => {
       const src = tagged`color: ${value}; margin: 0;`;
       expect(out(src)).toEqual(legacy('margin: 0;'));
       expect(warnings()).toEqual([expect.stringContaining('`color`')]);
+    });
+
+    /**
+     * A brace a value holds reads as part of a string or `url(` in the field,
+     * so it cannot open or close a block. CSS Syntax 3 §4.3.5 Consume a string
+     * token: "anything else: Append the current input code point to the
+     * <string-token>’s value." §4.3.6 Consume a url token: "anything else:
+     * Append the current input code point to the <url-token>’s value."
+     */
+    describe('a brace inside a string or url(', () => {
+      const svg = 'data:image/svg+xml,<svg><style>a{fill:red}</style></svg>';
+      it.each([
+        ['a string the value holds', tagged`content: ${'"{"'}; margin: 0;`, 'content:"{"'],
+        ['a string the template opens', tagged`content: "${'}'}"; margin: 0;`, 'content:"}"'],
+        ['an unquoted url(', tagged`background: url(${svg}); margin: 0;`, `background:url(${svg})`],
+        [
+          'a quoted url(',
+          tagged`background: url("${svg}"); margin: 0;`,
+          `background:url("${svg}")`,
+        ],
+        ['a bad url', tagged`background: ${'url(a"{b)'}; margin: 0;`, 'background:url(a"{b)'],
+      ])('keeps the declaration for %s', (_, src, decl) => {
+        expect(out(src)).toEqual([`.a{${decl};margin:0;}`]);
+        expect(warnings()).toEqual([]);
+      });
+    });
+
+    /**
+     * CSS Syntax 3 §4.3.5 Consume a string token: "newline: This is a parse
+     * error. Reconsume the current input code point, create a
+     * <bad-string-token>, and return it." A field holding a slot is read with
+     * that rule even where the template wrote the string.
+     */
+    it('drops the declaration when a string the template writes holds a raw newline', () => {
+      const src = tagged`content: "a
+        b ${'x'}"; margin: 0;`;
+      expect(out(src)).toEqual(legacy('margin: 0;'));
+    });
+
+    it('drops the declaration when the template leaves the field unbalanced', () => {
+      const src = tagged`margin: 0; width: calc(${'1px'}`;
+      expect(out(src)).toEqual(legacy('margin: 0;'));
     });
 
     it.each([
@@ -1238,8 +1281,13 @@ describe('compileWeb', () => {
         expect(out(src)).toEqual(['.a{color:a\\\nb;}']);
       });
 
-      it('turns an unquoted url( into a bad url, which the value cannot leave open', () => {
+      it('turns an unquoted url( into a bad url that ends at the `)` after it', () => {
         const src = tagged`background: url(${'a\\\nb'}); margin: 0;`;
+        expect(out(src)).toEqual(['.a{background:url(a\\\nb);margin:0;}']);
+      });
+
+      it('drops the declaration when the bad url it makes does not close', () => {
+        const src = tagged`background: ${'url(a\\\nb'}; margin: 0;`;
         expect(out(src)).toEqual(legacy('margin: 0;'));
       });
     });
@@ -1340,26 +1388,32 @@ describe('compileWeb', () => {
     // CSS Syntax 3 §4.3.4 Consume an ident-like token: "Consume an ident
     // sequence, and let string be the result. If string’s value is an ASCII
     // case-insensitive match for "url", and the next input code point is
-    // U+0028 LEFT PARENTHESIS ((), consume it." An escaped identifier may
-    // spell `url`, so its `(` is read both ways and must mean the same.
+    // U+0028 LEFT PARENTHESIS ((), consume it." The ident sequence's value is
+    // read with its escapes decoded, so `\75rl(` opens a url.
     describe('a `(` after an escaped identifier', () => {
-      it('keeps text both readings agree on', () => {
+      it('keeps a url( spelled with an escape', () => {
         const src = tagged`background: ${'\\75rl(a)'};`;
         expect(out(src)).toEqual(['.a{background:\\75rl(a);}']);
       });
 
-      it('keeps text both readings agree on when the escape is written before the value', () => {
+      it('keeps a url( whose escape is written before the value', () => {
         const src = tagged`background: \\75${'rl(a)'};`;
         expect(out(src)).toEqual(['.a{background:\\75rl(a);}']);
       });
 
       it.each([
-        ['a quote', '\\75rl(a"b)'],
+        ['a quote, as a bad url', '\\75rl(a"b)'],
+        ['a backslash escape', '\\75rl(a\\62)'],
+        ['text that would open a comment elsewhere', '\\75rl(a/**/b)'],
+      ])('keeps the url text holding %s', (_, value) => {
+        const src = tagged`background: ${value};`;
+        expect(out(src)).toEqual([`.a{background:${value};}`]);
+      });
+
+      it.each([
         ['a nested parenthesis', '\\75rl(a(b))'],
-        ['a backslash', '\\75rl(a\\62)'],
-        ['a comment', '\\75rl(a/**/b)'],
         ['no closing parenthesis', '\\75rl(a'],
-      ])('drops the declaration for %s the readings disagree on', (_, value) => {
+      ])('drops the declaration for a url holding %s', (_, value) => {
         const src = tagged`background: ${value}; margin: 0;`;
         expect(out(src)).toEqual(legacy('margin: 0;'));
       });
@@ -1462,9 +1516,9 @@ describe('compileWeb', () => {
       expect(out(src)).toEqual(legacy('margin: 0;'));
     });
 
-    it('drops the declaration when an identifier value turns the following `(` into url(', () => {
-      const src = tagged`background: ${'ur'}l(a); margin: 0;`;
-      expect(out(src)).toEqual(legacy('margin: 0;'));
+    it('reads url( an identifier value spells with the text after it', () => {
+      const src = tagged`background: ${'ur'}l(a"b); margin: 0;`;
+      expect(out(src)).toEqual(['.a{background:url(a"b);margin:0;}']);
     });
 
     it('keeps a data URI with `;` in an unquoted url( as one declaration', () => {
@@ -1482,8 +1536,13 @@ describe('compileWeb', () => {
       expect(out(src)).toEqual(['.a{content:"a;b";}']);
     });
 
-    it('drops a value closing the url( it sits in', () => {
+    it('splits after a value closes the url( it sits in, when the field ends balanced', () => {
       const src = tagged`background: url(${'a) ; x: y ; z: url(b'}); margin: 0;`;
+      expect(out(src)).toEqual(['.a{background:url(a);x:y;z:url(b);margin:0;}']);
+    });
+
+    it('drops a value closing the url( it sits in when the field ends unbalanced', () => {
+      const src = tagged`background: url(${'a) ; x: y ; z: f((b'}); margin: 0;`;
       expect(out(src)).toEqual(legacy('margin: 0;'));
     });
 
@@ -1863,6 +1922,11 @@ describe('compileWeb', () => {
         expect(run(make, 'red; @import url(//evil.example/x.css)')).toEqual([
           '.a{color:red;padding:0;}',
         ]);
+      });
+
+      it.each(shapes)('keeps a brace inside a string in %s', (_, make) => {
+        expect(run(make, '"{"')).toEqual(['.a{color:"{";padding:0;}']);
+        expect(warnings()).toEqual([]);
       });
 
       it.each(shapes)('drops a value leaving a parenthesis open in %s', (_, make) => {

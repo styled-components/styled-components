@@ -1765,10 +1765,10 @@ describe('with styles', () => {
       insert.mockRestore();
       expect(inserted).toContain('color:red;');
       expect(inserted).not.toContain('\0');
-      // `url(a ` is already a bad url, so the fragment leaves it unclosed.
-      expect(warn.mock.calls.map(call => String(call[0]))).toEqual([
-        expect.stringContaining('The declaration `background` was dropped'),
-      ]);
+      // `url(a ` is already a bad url, which reads on to the `)` the template
+      // writes, so the field ends balanced.
+      expect(inserted).toContain('background:url(a margin: 0;);');
+      expect(warn).not.toHaveBeenCalled();
       warn.mockRestore();
     });
   });

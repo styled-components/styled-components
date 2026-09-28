@@ -709,25 +709,6 @@ describe('parseSource', () => {
       expect(src.staticValues).toEqual(['']);
     });
 
-    it('records the entry state of each kept slot', () => {
-      const src = tagged`
-        ${'a'}
-        content: "x ${'b'}";
-        background: url(${'c'}) no-repeat;
-        width: calc((${'d'}));
-        color: ${'e'};
-        /* ${'f'} */
-      `;
-      expect(src.slotEntries).toEqual([
-        { parenDepth: 0, quote: 0, url: false },
-        { parenDepth: 0, quote: 34, url: false },
-        { parenDepth: 1, quote: 0, url: true },
-        { parenDepth: 2, quote: 0, url: false },
-        { parenDepth: 0, quote: 0, url: false },
-        null,
-      ]);
-    });
-
     it('tags exactly the nodes that hold a slot, or have a descendant that does, as dynamic', () => {
       const f = () => 'x';
       const src = tagged`
@@ -767,11 +748,6 @@ describe('parseSource', () => {
         isDyn(firstFrame(src.ast[8])),
         isDyn(firstFrame(src.ast[8]).children[0]),
       ]).toEqual([true, true, false, false, false, true, true]);
-    });
-
-    it('records a quoted url( argument as a string, not an unquoted url', () => {
-      const src = tagged`background: url("${'a'}");`;
-      expect(src.slotEntries).toEqual([{ parenDepth: 1, quote: 34, url: false }]);
     });
   });
 
@@ -1002,7 +978,6 @@ describe('shared template parses', () => {
     const b = sourceOf(make('blue'));
 
     expect(b.ast).toBe(a.ast);
-    expect(b.slotEntries).toBe(a.slotEntries);
     expect(b.slotIsStandalone).toBe(a.slotIsStandalone);
     expect(b.id).toBe(a.id);
     expect(a.id).toBeGreaterThan(0);
