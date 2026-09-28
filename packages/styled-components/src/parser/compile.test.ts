@@ -1611,6 +1611,25 @@ describe('compileWeb', () => {
       const src = tagged`${() => '.x'} ${() => '} body {'} h2 { color: red; } margin: 0;`;
       expect(out(src)).toEqual(legacy('margin: 0;'));
     });
+
+    /** Every reading is linear in the length of the text. */
+    describe('reads long values in linear time', () => {
+      const backslashes = '\\'.repeat(200_000) + 'l(x)';
+      const comments = 'a/**/'.repeat(80_000);
+      it.each([
+        ['a backslash run in a declaration value', tagged`color: ${() => backslashes}; margin: 0;`],
+        [
+          'a backslash run in a selector value',
+          tagged`&:hover ${() => backslashes} { color: red; }`,
+        ],
+        ['comments in a selector value', tagged`&:hover ${() => comments} { color: red; }`],
+        ['comments in a Head value', tagged`${() => comments} h2 { color: red; }`],
+      ])('%s', (_, src) => {
+        const start = performance.now();
+        out(src);
+        expect(performance.now() - start).toBeLessThan(200);
+      });
+    });
   });
 
   /**
