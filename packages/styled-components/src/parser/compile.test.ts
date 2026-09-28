@@ -354,10 +354,12 @@ describe('compileWeb', () => {
       expect(warnings()).toEqual([expect.stringContaining('`a b`')]);
     });
 
-    // CSS Syntax 3 §4.2 Definitions: "ident code point: An ident-start code
-    // point, a digit, or U+002D HYPHEN-MINUS (-)." "ident-start code point: A
-    // letter, a non-ASCII code point, or U+005F LOW LINE (_)." "non-ASCII code
-    // point: A code point with a value equal to or greater than U+0080 <control>."
+    // CSS Syntax 3 §4.2 Definitions: "ident-start code point: A letter, a
+    // non-ASCII ident code point, or U+005F LOW LINE (_)." "ident code point:
+    // An ident-start code point, a digit, or U+002D HYPHEN-MINUS (-)."
+    // Deviation: the draft limits "non-ASCII ident code point" to listed
+    // ranges ("changed to be consistent with HTML's valid custom element
+    // names"); a templated name accepts every code point at or above U+0080.
     it.each([['fadé'], ['愛'], ['_x-1'], ['--x'], ['-x']])(
       'resolves the templated keyframes name `%s`',
       name => {
@@ -812,6 +814,64 @@ describe('compileWeb', () => {
       expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual(
         legacy('color: red; background: blue; margin: 0;', 'a')
       );
+    });
+  });
+
+  /**
+   * A Standalone value, and the statements part of a Head, is a mixin: its
+   * text is comment-stripped and parsed as CSS, with an at-rule name ending
+   * at whitespace, `;`, `{`, `}`, or `(`.
+   */
+  describe('mixin text', () => {
+    const opts = { selfRefSelector: '.a', componentId: 'a' };
+    const out = (src: ReturnType<typeof tagged>) => compileWeb(src, {}, '.a', opts);
+
+    it('strips comments from a Standalone string before parsing it', () => {
+      const src = tagged`
+        ${'color: red; /* } */ padding: 0;'}
+        margin: 0;`;
+      expect(out(src)).toEqual(['.a{color:red;padding:0;margin:0;}']);
+    });
+
+    it('strips comments from a Standalone string a function returns', () => {
+      const src = tagged`
+        ${() => 'color: red; /* { */ padding: 0;'}
+        margin: 0;`;
+      expect(out(src)).toEqual(['.a{color:red;padding:0;margin:0;}']);
+    });
+
+    it('drops a statement holding a stray `}` from a Standalone string, as in template text', () => {
+      const src = tagged`
+        ${'@x} y'}
+        color: red;`;
+      expect(out(src)).toEqual(['.a{color:red;}']);
+      expect(compileWeb(tagged`@x} y; color: red;`, {}, '.a', opts)).toEqual(['.a{color:red;}']);
+    });
+
+    it('drops a statement holding a stray `}` from a Standalone string a function returns', () => {
+      const src = tagged`
+        ${() => 'a: b; @x} y'}
+        color: red;`;
+      expect(out(src)).toEqual(['.a{a:b;color:red;}']);
+    });
+
+    it('ends an at-rule name at `(` in a Standalone string', () => {
+      const src = tagged`
+        ${'@media(min-width: 1px) { color: blue; }'}
+        color: red;`;
+      expect(out(src)).toEqual(['.a{color:red;}', '@media (min-width: 1px){.a{color:blue;}}']);
+    });
+
+    it('drops an at-rule with an empty name from the statements part of a Head', () => {
+      const src = tagged`${'@};'} & { color: red; }`;
+      expect(out(src)).toEqual(['.a{color:red;}']);
+    });
+
+    it('drops an at-rule with an empty name from a Standalone string', () => {
+      const src = tagged`
+        ${'@(x);'}
+        color: red;`;
+      expect(out(src)).toEqual(['.a{color:red;}']);
     });
   });
 

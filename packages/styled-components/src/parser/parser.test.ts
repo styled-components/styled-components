@@ -137,6 +137,36 @@ describe('parser', () => {
     ]);
   });
 
+  // CSS Syntax 3 §4.3.1 Consume a token: "U+0040 COMMERCIAL AT (@): If the
+  // next 3 input code points would start an ident sequence, consume an ident
+  // sequence, create an <at-keyword-token> with its value set to the returned
+  // value, and return it." The name ends at the first code point that is not
+  // an ident code point; the parser stops it at whitespace, `;`, `{`, `}`, or `(`.
+  describe('at-rule name end', () => {
+    it('ends the name at `(`', () => {
+      expect(parse('@media(min-width: 1px) { color: red; }')).toEqual([
+        {
+          kind: NodeKind.AtRule,
+          name: 'media',
+          prelude: '(min-width: 1px)',
+          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+        },
+      ]);
+    });
+
+    it('ends the name at `}`, which then closes the block', () => {
+      expect(parse('@x} y; color: red;')).toEqual([
+        { kind: NodeKind.AtRule, name: 'x', prelude: '', children: null },
+      ]);
+    });
+
+    it('reads a `@` before `}` as an at-rule with an empty name', () => {
+      expect(parse('@}')).toEqual([
+        { kind: NodeKind.AtRule, name: '', prelude: '', children: null },
+      ]);
+    });
+  });
+
   it('parses @container', () => {
     expect(parse('@container card (min-width: 400px) { padding: 16px; }')).toEqual([
       {
