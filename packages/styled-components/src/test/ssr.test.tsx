@@ -1509,6 +1509,23 @@ describe('ssr', () => {
         ]);
       });
 
+      it.each([
+        ['an attribute string', '"]&url(("x) " ) ) {} body { display: none } " [y="z'],
+        ['an escaped name', '"]&\\75rl(("x) " ) ) {} body { display: none } " [y="z'],
+      ])('drops the rule whose selector value joins `&` to a call through %s', (_, payload) => {
+        const Comp = styled.div<{ $state: string }>`
+          color: blue;
+          &[data-state="${p => p.$state}"] {
+            color: red;
+          }
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(sheet.collectStyles(<Comp $state={payload} />));
+        expect(readRules(sheet.getStyleTags())).toEqual([
+          { prelude: '.b', props: ['color'], rules: [] },
+        ]);
+      });
+
       describe('a value whose comment removal would join tokens', () => {
         const value = 'u/**/rl(x"a) {} body{display:none} y{" )';
         const render = (Comp: React.ComponentType<{ $v: string }>) => {

@@ -86,6 +86,22 @@ function escapeEnd(s: string, i: number, end: number): number {
   return isSpace(c) ? j + 1 : j;
 }
 
+/** Index past the identifier text (escapes included) that starts at `i` in `s`; `i` when none does. */
+export function identifierEnd(s: string, i: number): number {
+  const len = s.length;
+  while (i < len) {
+    const c = s.charCodeAt(i);
+    if (isIdentCode(c)) {
+      i++;
+    } else if (c === BACKSLASH && i + 1 < len && !isNewline(s.charCodeAt(i + 1))) {
+      i = escapeEnd(s, i, len);
+    } else {
+      break;
+    }
+  }
+  return i;
+}
+
 /** The code point an escape starting at the backslash at `i` stands for, lowercased when ASCII. */
 function escapedCode(s: string, i: number, end: number): number {
   let j = i + 1;

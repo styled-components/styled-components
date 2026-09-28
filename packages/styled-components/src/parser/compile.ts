@@ -21,7 +21,7 @@ import {
   StaticRuleNode,
   TemplateValue,
 } from './ast';
-import { emitWeb, EmitOptions, nextAmpersand } from './emit-web';
+import { ampersandJoinsCall, emitWeb, EmitOptions, nextAmpersand } from './emit-web';
 import { isCustomProperty, isKeyframesName, parse, splitTopLevelCommas, trimRange } from './parser';
 import {
   BRACKETS,
@@ -235,6 +235,10 @@ function realizeList(list: ReadonlyArray<string | TemplateValue>, fill: Fill): s
     const realized = realize(entry, fill);
     if (realized === null || realizedSemicolon) return null;
     const text = removeComments(realized, false);
+    if (joinsCall(text)) {
+      realizeWarned = true;
+      return null;
+    }
     if (text === realized && text.indexOf(',') === -1) {
       out.push(text);
     } else {
@@ -306,7 +310,7 @@ function fillAtRule(
   } else {
     const realized = realize(node.name, fill);
     if (realized === null || !isIdentifier(realized)) {
-      if (__DEV__ && !realizedUnresolved) {
+      if (__DEV__ && !realizeWarned) {
         const shown = realized === null ? fieldText(node.name) : realized;
         warnOnce(
           'at-rule-name',
@@ -508,12 +512,9 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
       if (__DEV__) warnRealizeFailed('rule `' + fieldText(head.rest) + '`');
       return droppedHead(statements);
     }
-    return {
-      dropped: false,
-      remainder: null,
-      statements,
-      text: removeComments(trimRange(rest, 0, rest.length), false),
-    };
+    const text = removeComments(trimRange(rest, 0, rest.length), false);
+    if (typeof head.rest !== 'string' && joinsCall(text)) return droppedHead(statements);
+    return { dropped: false, remainder: null, statements, text };
   }
   const prefix = remainder + head.gaps[head.gaps.length - 1];
   const rest = appendField(prefix, head.rest, fill, count);
@@ -524,6 +525,7 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
     return droppedHead(statements);
   }
   const text = removeComments(prefix + trimRange(rest, 0, rest.length), false);
+  if (joinsCall(text)) return droppedHead(statements);
   return { dropped: false, remainder: removeComments(remainder, false), statements, text };
 }
 
@@ -744,8 +746,11 @@ function frameDeclarations(children: ReadonlyArray<Node>, fill: Fill): StaticDec
 
 /** Set by {@link realize}: a value held a `;` at the top level of its statement. */
 let realizedSemicolon = false;
-/** Set by {@link realize}: it failed on a value that could not be resolved, which already warned. */
-let realizedUnresolved = false;
+/**
+ * Set by {@link realize} and {@link realizeList}: the failure already warned
+ * (a value that could not be resolved, or an `&` joined to a call).
+ */
+let realizeWarned = false;
 
 /**
  * `[start, end)` pairs of the text the values of the field being realized
@@ -759,11 +764,11 @@ const valueSpans: number[] = [];
  * realized field is read whole ({@link readField}) unless every value is
  * plain ({@link isPlainValue}) and the template text reads balanced on its
  * own. Returns `null` when the reading fails or a value could not be
- * resolved; sets {@link realizedSemicolon} and {@link realizedUnresolved}.
+ * resolved; sets {@link realizedSemicolon} and {@link realizeWarned}.
  */
 function realize(field: string | TemplateValue, fill: Fill): string | null {
   realizedSemicolon = false;
-  realizedUnresolved = false;
+  realizeWarned = false;
   if (typeof field === 'string') return field;
   const { chunks, slots } = field;
   const fragments = fill.fragments;
@@ -773,7 +778,7 @@ function realize(field: string | TemplateValue, fill: Fill): string | null {
     const idx = slots[i];
     if (idx >= fill.filled.length) return null;
     if (fragments && fragments[idx] === UNRESOLVED) {
-      realizedUnresolved = true;
+      realizeWarned = true;
       return null;
     }
     const value = fill.filled[idx];
@@ -812,7 +817,20 @@ function listText(list: ReadonlyArray<string | TemplateValue>): string {
  * value that could not be resolved, whose resolution already warned.
  */
 function warnRealizeFailed(construct: string): void {
-  if (!realizedUnresolved) warnDropped(construct);
+  if (!realizeWarned) warnDropped(construct);
+}
+
+/** `text` holds an `&` joined to a call ({@link ampersandJoinsCall}); warns in dev. */
+function joinsCall(text: string): boolean {
+  if (text.indexOf('&') === -1 || !ampersandJoinsCall(text)) return false;
+  if (__DEV__) {
+    warnOnce(
+      'ampersand-call',
+      `The rule \`${text}\` was dropped: \`&\` written directly before a name and \`(\` would join the parent selector to that name. Put a space or another selector between \`&\` and the name.`,
+      text
+    );
+  }
+  return true;
 }
 
 /** Dev warning for a construct dropped because a value in it failed its check. */

@@ -2,7 +2,7 @@ import * as $ from '../utils/charCodes';
 import { isWS } from '../utils/charCodes';
 import { NodeKind, StaticAtRuleNode, StaticKeyframesNode, StaticNode, StaticRoot } from './ast';
 import { splitTopLevelCommas, trimRange } from './parser';
-import { ANY_DEPTH, BRACKETS, isEscaped, isIdentCode, scan, stops } from './reader';
+import { ANY_DEPTH, BRACKETS, identifierEnd, isEscaped, isIdentCode, scan, stops } from './reader';
 
 const COMBINATOR = stops('>+~');
 const AMPERSAND = stops('&');
@@ -367,6 +367,23 @@ function resolveRuleSelectors(selectors: string[], parent: string): string {
  */
 export function nextAmpersand(s: string, from: number, topLevel: boolean): number {
   return scan(s, from, s.length, AMPERSAND, topLevel ? BRACKETS : BRACKETS | ANY_DEPTH, 0);
+}
+
+/**
+ * Whether an `&` {@link nextAmpersand} reads in `s` is followed by
+ * identifier text (escapes included, possibly none) that ends in `(`:
+ * written, `&` joins the parent's last identifier to that text, making a
+ * different function or `url(` token.
+ */
+export function ampersandJoinsCall(s: string): boolean {
+  const len = s.length;
+  let at = nextAmpersand(s, 0, false);
+  while (at < len) {
+    const j = identifierEnd(s, at + 1);
+    if (s.charCodeAt(j) === $.OPEN_PAREN) return true;
+    at = nextAmpersand(s, j, false);
+  }
+  return false;
 }
 
 function resolveSingle(selector: string, parent: string): string {
