@@ -1,15 +1,7 @@
 import type { CompiledKeyframes } from '../models/Keyframes';
 import type StyleSheet from '../sheet';
 import type { Compiler } from '../types';
-import {
-  AMPERSAND,
-  AT,
-  CLOSE_BRACE,
-  COLON,
-  isIdentChar,
-  isWS,
-  SEMICOLON,
-} from '../utils/charCodes';
+import { AT, CLOSE_BRACE, COLON, isIdentChar, isWS, SEMICOLON } from '../utils/charCodes';
 import { fifoSet } from '../utils/fifoMap';
 import { normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
@@ -33,7 +25,7 @@ import {
   TemplateValue,
 } from './ast';
 import { isKeyframesName } from './atRuleNames';
-import { emitWeb, EmitOptions } from './emit-web';
+import { emitWeb, EmitOptions, nextAmpersand } from './emit-web';
 import {
   isCustomProperty,
   parse,
@@ -265,7 +257,8 @@ function realizeList(list: ReadonlyArray<string | TemplateValue>, fill: Fill): s
 
 /**
  * Nest each selector in a list holding a slot under the parent, unless it
- * holds `&` outside strings, parentheses, and brackets. The parts are emitted
+ * holds `&` outside strings, parentheses, and brackets, read as the emitter
+ * reads it when writing the selector. The parts are emitted
  * as written otherwise, and `&` only inside `:not()` or `:has()` would leave
  * the selector unscoped. Skipped at the top level of a global style, which
  * has no parent.
@@ -274,7 +267,7 @@ function anchorSelectors(selectors: string[], fill: Fill): string[] {
   if (fill.root) return selectors;
   for (let i = 0; i < selectors.length; i++) {
     const s = selectors[i];
-    if (s.indexOf('&') !== -1 && scanQPB(s, 0, s.length, AMPERSAND, -1, -1, -1) === s.length) {
+    if (s.indexOf('&') !== -1 && nextAmpersand(s, 0, true) === s.length) {
       selectors[i] = '& ' + s;
     }
   }

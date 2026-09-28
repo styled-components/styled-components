@@ -143,6 +143,32 @@ describe('web emitter', () => {
     `);
   });
 
+  describe('writes only the `&` that reads as the nesting selector', () => {
+    it.each([
+      ['inside a string', `[data-x="&"] { color: red; }`, '.a [data-x="&"]{color:red;}'],
+      [
+        'inside a string beside a nesting `&`',
+        `&[data-x='a&b'] { color: red; }`,
+        ".a[data-x='a&b']{color:red;}",
+      ],
+      ['after an escaping backslash', `&.x\\&y { color: red; }`, '.a.x\\&y{color:red;}'],
+      ['after an escaped backslash', `.x\\\\& { color: red; }`, '.x\\\\.a{color:red;}'],
+      [
+        'inside a string holding an escaped quote',
+        `&[data-x="\\"&"] { color: red; }`,
+        '.a[data-x="\\"&"]{color:red;}',
+      ],
+    ])('%s', (_, css, rule) => {
+      expect(emit(css)).toEqual([rule]);
+    });
+
+    it('writes every nesting `&` across a comma-separated parent', () => {
+      expect(emit(`&[data-x="&"] + & { color: red; }`, '.a, .b')).toEqual([
+        '.a[data-x="&"]+.a,.b[data-x="&"]+.b{color:red;}',
+      ]);
+    });
+  });
+
   it('handles nested & + & self-reference (combinator spaces stripped)', () => {
     expect(emit(`& + & { margin-left: 8px; }`)).toMatchInlineSnapshot(`
       [
