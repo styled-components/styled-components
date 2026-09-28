@@ -1133,6 +1133,31 @@ describe('compileWeb', () => {
       expect(out(src)).toEqual(legacy('margin: 0;'));
     });
 
+    /**
+     * CSS Syntax 3 §5.5.5 Consume a block’s contents: "<at-keyword-token>: If
+     * decls is not empty, append it to rules, and set decls to a fresh empty
+     * list of declarations. Consume an at-rule from input, with nested set to
+     * true." A property name starting with `@` would read as an at-rule in
+     * the block.
+     */
+    it.each([
+      ['an at-keyword', '@a'],
+      ['an at-keyword after whitespace', '\f@x'],
+      ['an at-keyword followed by a split', '@a:b; color'],
+    ])(
+      'drops the declaration whose property value realizes to %s, with a dev warning',
+      (_, value) => {
+        const src = tagged`${() => value}: red; margin: 0;`;
+        expect(out(src)).toEqual(legacy('margin: 0;'));
+        expect(warnings()).toEqual([expect.stringContaining('`@')]);
+      }
+    );
+
+    it('keeps a property value that realizes to an escaped `@`', () => {
+      const src = tagged`${() => '\\@a'}: red; margin: 0;`;
+      expect(out(src)).toEqual(['.a{\\@a:red;margin:0;}']);
+    });
+
     // CSS Syntax 3 §4.3.8 Check if two code points are a valid escape: "If the
     // first code point is not U+005C REVERSE SOLIDUS (\), return false.
     // Otherwise, if the second code point is a newline, return false.
