@@ -21,6 +21,9 @@ import keyframes from '../constructors/keyframes';
 import ServerStyleSheet from '../models/ServerStyleSheet';
 import { StyleSheetManager, mainCompiler } from '../models/StyleSheetManager';
 import WebGlobalStyle from '../models/WebGlobalStyle';
+import { SPLITTER } from '../constants';
+import { compileWeb } from '../parser/compile';
+import { parseSource } from '../parser/source';
 import StyleSheet from '../sheet';
 
 jest.mock('../utils/nonce', () => {
@@ -1564,7 +1567,7 @@ describe('ssr', () => {
           expect(render(Comp)).toEqual([
             { prelude: '.b', props: ['color'], rules: [] },
             {
-              prelude: '.b:hover url(x"a) {} body{display:none} y{" )',
+              prelude: '.b:hover u/**/rl(x"a) {} body{display:none} y{" )',
               props: ['color'],
               rules: [],
             },
@@ -1581,7 +1584,7 @@ describe('ssr', () => {
           expect(render(Comp)).toEqual([
             { prelude: '.b', props: ['color'], rules: [] },
             {
-              prelude: '@media url(x"a) {} body{display:none} y{" )',
+              prelude: '@media u/**/rl(x"a) {} body{display:none} y{" )',
               props: [],
               rules: [{ prelude: '.b', props: ['color'], rules: [] }],
             },
@@ -1604,7 +1607,7 @@ describe('ssr', () => {
               props: [],
               rules: [
                 {
-                  prelude: 'url(x"a) {} body{display:none} y{" ),from',
+                  prelude: 'u/**/rl(x"a) {} body{display:none} y{" ),from',
                   props: ['opacity'],
                   rules: [],
                 },
@@ -1637,6 +1640,170 @@ describe('ssr', () => {
         expect(render('a', 'red } html { background: red')).toEqual([
           { prelude: 'body', props: ['margin'], rules: [] },
         ]);
+      });
+    });
+
+    /**
+     * Seeded fuzz: hostile values in each field kind, compiled and written as
+     * server output, then read back by the CSS Syntax 3 reader. A value may
+     * only add text inside its own construct, and the output must split into
+     * exactly the rules written and their marker.
+     */
+    describe('fuzzed values', () => {
+      const pieces = [
+        '{',
+        '}',
+        '(',
+        ')',
+        '[',
+        ']',
+        ';',
+        ':',
+        ',',
+        '"',
+        "'",
+        '\\',
+        '/',
+        '*',
+        ' ',
+        '\n',
+        '\r',
+        '\f',
+        '/*',
+        '*/',
+        '/**/',
+        'u/**/rl(',
+        'url(',
+        'URL(',
+        'u\\72l(',
+        '\\75rl(',
+        '&',
+        '&url(',
+        '&-a',
+        '&\\75rl(',
+        '&\\41 (',
+        '@',
+        '@a',
+        '<!--',
+        '-->',
+        '-',
+        'a',
+        '0',
+        'x',
+        'é',
+        '\u0080',
+        '\0',
+        '\\\n',
+        '\\41 ',
+        '#',
+        '%',
+        '.',
+        '/*!sc*/\n',
+        '/*!sc*/\r',
+        'data-styled.g1[id="e"]{content:"f,"}',
+        'x"a) } body{b:c} y{" )',
+        'x"a) {} body{b:c} y{" )',
+        '"]',
+        '[y="z',
+        '" ) ',
+      ];
+      let seed = 20260928;
+      const next = (n: number) => {
+        seed = (seed + 0x6d2b79f5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) % n;
+      };
+      const value = () => {
+        let text = '';
+        const count = 1 + next(8);
+        for (let k = 0; k < count; k++) text += pieces[next(pieces.length)];
+        return text;
+      };
+
+      /**
+       * Whether every part of a selector list (split on top-level commas, read
+       * by CSS Syntax 3 tokenization) holds the component class `.X` outside
+       * parentheses and brackets; `&-a` writes the class joined as `.X-a`.
+       */
+      const everyPartAnchored = (prelude: string) => {
+        let depth = 0;
+        let anchoredPart = false;
+        let dot = false;
+        for (const token of tokenize({ css: prelude })) {
+          const type = token[0];
+          if (type === TokenType.EOF) break;
+          if (depth === 0 && type === TokenType.Comma) {
+            if (!anchoredPart) return false;
+            anchoredPart = false;
+          }
+          if (depth === 0 && dot && type === TokenType.Ident && token[1].startsWith('X')) {
+            anchoredPart = true;
+          }
+          dot = depth === 0 && type === TokenType.Delim && token[1] === '.';
+          if (
+            type === TokenType.Function ||
+            type === TokenType.OpenParen ||
+            type === TokenType.OpenSquare
+          )
+            depth++;
+          if (type === TokenType.CloseParen || type === TokenType.CloseSquare) depth--;
+        }
+        return anchoredPart;
+      };
+      const flat = (rule: ReadRule) => rule.rules.length === 0;
+      const onlyComponent = (rules: ReadRule[]) =>
+        rules.every(rule => rule.prelude === '.X' && flat(rule));
+      const anchored = (rules: ReadRule[]) =>
+        rules.every(rule => flat(rule) && everyPartAnchored(rule.prelude));
+
+      const contexts: Array<[string, ReadonlyArray<string>, (rules: ReadRule[]) => boolean]> = [
+        ['declaration', ['color: ', '; margin: 0;'], onlyComponent],
+        ['string', ['content: "', '"; margin: 0;'], onlyComponent],
+        ['url', ['background: url(', '); margin: 0;'], onlyComponent],
+        ['property', ['', ': red; margin: 0;'], onlyComponent],
+        ['selector', ['margin: 0; &:hover ', ' { color: red; }'], anchored],
+        ['attribute string', ['margin: 0; &[data-x="', '"] { color: red; }'], anchored],
+        [
+          '@media prelude',
+          ['margin: 0; @media ', ' { color: red; }'],
+          rules =>
+            rules.every(rule =>
+              rule.prelude === '.X'
+                ? flat(rule)
+                : rule.prelude.startsWith('@media') && onlyComponent(rule.rules)
+            ),
+        ],
+        [
+          'keyframe stop',
+          ['margin: 0; @keyframes k { ', ', from { opacity: 0; } }'],
+          rules =>
+            rules.every(rule =>
+              rule.prelude === '.X'
+                ? flat(rule)
+                : rule.prelude === '@keyframes k' && rule.rules.every(flat)
+            ),
+        ],
+      ];
+
+      it('keeps every value inside its construct and the splitter out of rule text', () => {
+        const violations: string[] = [];
+        for (let k = 0; k < 2500; k++) {
+          const v = value();
+          for (const [name, strings, holds] of contexts) {
+            const rules = compileWeb(parseSource(strings, [() => v]), {}, '.X');
+            const sheet = new StyleSheet({ isServer: true });
+            sheet.insertRules('sc-fuzz', 'X', rules);
+            const text = sheet.toString();
+            const split = text.split(SPLITTER);
+            const markers = split.filter(part => part.startsWith('data-styled.'));
+            const read = readCss(text).filter(rule => !rule.prelude.startsWith('data-styled.'));
+            if (split.length !== rules.length + 2 || markers.length !== 1 || !holds(read)) {
+              violations.push(name + ' ' + JSON.stringify(v) + ' => ' + JSON.stringify(text));
+            }
+          }
+        }
+        expect(violations).toEqual([]);
       });
     });
 
@@ -1730,13 +1897,19 @@ const BLOCK_TOKENS: Partial<Record<TokenType, CssToken['kind']>> = {
   [TokenType.Semicolon]: ';',
 };
 
-/** CSS Syntax 3 tokens as the rule reader takes them: comments dropped, each whitespace run one space. */
+/**
+ * CSS Syntax 3 tokens as the rule reader takes them: each whitespace run one
+ * space, and each comment an empty `/**\/` read like whitespace, so text
+ * joined from tokens keeps the tokens on either side of it apart.
+ */
 function tokenizeCss(s: string): CssToken[] {
   const out: CssToken[] = [];
   for (const token of tokenize({ css: s })) {
     const type = token[0];
-    if (type === TokenType.Comment || type === TokenType.EOF) continue;
-    if (type === TokenType.Whitespace) {
+    if (type === TokenType.EOF) continue;
+    if (type === TokenType.Comment) {
+      out.push({ kind: 'ws', text: '/**/' });
+    } else if (type === TokenType.Whitespace) {
       out.push({ kind: 'ws', text: ' ' });
     } else if (type === TokenType.AtKeyword) {
       out.push({ kind: 'at', text: token[1] });
@@ -1831,10 +2004,14 @@ function readBlock(tokens: CssToken[], pos: { i: number }): Omit<ReadRule, 'prel
       pos.i++;
       break;
     }
+    const at = token.kind === 'at';
     const [text, stop] = readUntil(tokens, pos, [';', '{', '}']);
     if (stop === '{') {
       pos.i++;
       rules.push({ prelude: text, ...readBlock(tokens, pos) });
+    } else if (at) {
+      // §5.5.5: an at-keyword in a block starts an at-rule, not a declaration.
+      rules.push({ prelude: text, props: [], rules: [] });
     } else if (text.indexOf(':') !== -1) {
       props.push(text.slice(0, text.indexOf(':')).trim());
     }
