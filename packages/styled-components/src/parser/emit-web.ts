@@ -1,14 +1,6 @@
 import * as $ from '../utils/charCodes';
 import { isWS } from '../utils/charCodes';
-import {
-  NodeKind,
-  StaticAtRuleNode,
-  StaticKeyframeFrame,
-  StaticKeyframesNode,
-  StaticNode,
-  StaticRoot,
-  StaticRuleNode,
-} from './ast';
+import { NodeKind, StaticAtRuleNode, StaticKeyframesNode, StaticNode, StaticRoot } from './ast';
 import { splitTopLevelCommas, trimRange } from './parser';
 import { ANY_DEPTH, BRACKETS, isEscaped, isIdentCode, scan, stops } from './reader';
 
@@ -323,28 +315,25 @@ function emitAtRule(
   return header + '{' + childStrings.join('') + '}';
 }
 
+/**
+ * Write @keyframes: each frame rule as its stops and declarations, not
+ * nested under any parent. A frame without declarations, and anything that
+ * is not a frame or a declaration in one, is omitted.
+ */
 function emitKeyframes(node: StaticKeyframesNode, options: EmitOptions | undefined): string {
-  const frames: string[] = [];
-  for (let i = 0; i < node.frames.length; i++) {
-    const frame = node.frames[i];
-    // Empty frames (`from { }`) are omitted (no declarations to emit).
-    if (frame.children.length === 0) continue;
-    frames.push(emitFrame(frame, options));
-  }
-  const header = '@' + node.name + (node.prelude ? ' ' + node.prelude : '');
-  return header + '{' + frames.join('') + '}';
-}
-
-function emitFrame(frame: StaticKeyframeFrame, options: EmitOptions | undefined): string {
   const declTransform = options && options.decl;
-  const stops = frame.stops.join(',');
-  const decls: string[] = [];
-  for (let i = 0; i < frame.children.length; i++) {
-    const d = frame.children[i];
-    decls.push(formatDecl(d.prop, d.value, declTransform));
+  let frames = '';
+  for (let i = 0; i < node.children.length; i++) {
+    const frame = node.children[i];
+    if (frame.kind !== NodeKind.Rule) continue;
+    let decls = '';
+    for (let j = 0; j < frame.children.length; j++) {
+      const d = frame.children[j];
+      if (d.kind === NodeKind.Decl) decls += formatDecl(d.prop, d.value, declTransform) + ';';
+    }
+    if (decls !== '') frames += frame.selectors.join(',') + '{' + decls + '}';
   }
-  // emitKeyframes skips empty frames, so decls.length is always > 0 here.
-  return stops + '{' + decls.join(';') + ';}';
+  return '@' + node.name + (node.prelude ? ' ' + node.prelude : '') + '{' + frames + '}';
 }
 
 /**

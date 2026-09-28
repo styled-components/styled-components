@@ -23,7 +23,6 @@ import {
   DeclNode,
   DYN,
   InterpolationNode,
-  KeyframeFrame,
   KeyframesNode,
   Node,
   NodeKind,
@@ -32,7 +31,6 @@ import {
   SlotHead,
   TemplateValue,
 } from './ast';
-import { isKeyframesName } from './atRuleNames';
 import { stampAtClass, stampRuleClass } from './nativePlan';
 import { BRACKETS, isEscaped, isSpace, opensUrl, removeComments, scan, stops } from './reader';
 
@@ -42,14 +40,18 @@ const STATEMENT = stops(':{;}');
 const STATEMENT_OR_SLOT = stops(':{;}\0');
 /** An at-rule prelude, and the text after a recovering slot, end at `{`, `;`, or `}`. */
 const PRELUDE = stops('{;}');
-/** A keyframe frame list statement ends at `{` or `}`. */
-const FRAME_HEAD = stops('{}');
-/** A keyframe frame declaration ends at `;` or `}`; its first top-level `:` splits it. */
-const FRAME_DECL = stops(':;}');
-/** {@link FRAME_DECL}, also stopping at a slot marker, for missing-`;` recovery. */
-const FRAME_DECL_OR_SLOT = stops(':;}\0');
 /** Entries of a selector, stop, or value list are separated by top-level commas. */
 const LIST_COMMA = stops(',');
+
+/** What the block being read holds; see {@link ParseContext.block}. */
+const enum Block {
+  /** Declarations, rules, and at-rules. */
+  Rules = 0,
+  /** The frame list of `@keyframes`: its rules are frames, their selectors the stops. */
+  Frames = 1,
+  /** A keyframe frame's body, where every Run at a statement start splices declarations. */
+  Frame = 2,
+}
 
 export interface ParseOptions {
   /** Per-slot knowledge for a templated parse; ignored unless `templates` is `true`. */
@@ -109,6 +111,7 @@ export function parse(css: string, options?: ParseOptions): Root<string | Templa
   const slots = templates && options?.slots !== undefined ? options.slots : null;
   const text = removeComments(css, true);
   const ctx: ParseContext = {
+    block: Block.Rules,
     css: text,
     depth: 0,
     dyn: false,
@@ -122,6 +125,8 @@ export function parse(css: string, options?: ParseOptions): Root<string | Templa
 }
 
 interface ParseContext {
+  /** What the block being read holds. */
+  block: Block;
   css: string;
   /** Blocks open around the reading position; a `}` read at 0 is stray. */
   depth: number;
@@ -245,11 +250,7 @@ function runDeclStart(css: string, run: Run): number {
  * and the result is `false`. Gated on `ctx.templates`: untrusted CSS input
  * (rawCSS and the re-parse of filled values) must not fabricate slots.
  */
-function statementRun<T>(
-  ctx: ParseContext,
-  out: Array<T | InterpolationNode>,
-  i: number
-): Run | null | false {
+function statementRun(ctx: ParseContext, out: Node[], i: number): Run | null | false {
   const css = ctx.css;
   const len = ctx.len;
   if (!ctx.templates || css.charCodeAt(i) !== NUL) return null;
@@ -266,12 +267,7 @@ function statementRun<T>(
 }
 
 /** Push the first `count` slots of `run` as standalone splices. */
-function pushRunSlots<T>(
-  ctx: ParseContext,
-  out: Array<T | InterpolationNode>,
-  run: Run,
-  count: number
-): void {
+function pushRunSlots(ctx: ParseContext, out: Node[], run: Run, count: number): void {
   for (let k = 0; k < count; k++) pushSplice(ctx, out, run.slots[k]);
 }
 
@@ -279,7 +275,7 @@ function pushRunSlots<T>(
  * Push a standalone splice of slot `index`. Tagged dynamic like every other
  * slot-bearing node so the fill's node reads see one shape per kind.
  */
-function pushSplice<T>(ctx: ParseContext, out: Array<T | InterpolationNode>, index: number): void {
+function pushSplice(ctx: ParseContext, out: Node[], index: number): void {
   const node: InterpolationNode = { kind: NodeKind.Interpolation, index };
   markDyn(node);
   out.push(node);
@@ -321,11 +317,14 @@ function recoversAt(ctx: ParseContext, slot: number, end: number, colon: number)
   return false;
 }
 
-/** {@link parseBlock} for a block whose `{` was just read. */
-function parseNested(ctx: ParseContext): Node[] {
+/** {@link parseBlock} for a block holding `block` whose `{` was just read. */
+function parseNested(ctx: ParseContext, block: Block): Node[] {
+  const outer = ctx.block;
+  ctx.block = block;
   ctx.depth++;
   const out = parseBlock(ctx);
   ctx.depth--;
+  ctx.block = outer;
   return out;
 }
 
@@ -407,21 +406,26 @@ function parseBlock(ctx: ParseContext): Node[] {
       }
       if (c === OPEN_BRACE) {
         const selectorText = trimRange(css, start, stop);
-        const lead =
+        let lead =
           run === null ? 0 : run.next === run.lastEnd ? run.slots.length - 1 : run.slots.length;
+        if (run !== null && ctx.block === Block.Frame) {
+          pushRunSlots(ctx, out, run, lead);
+          lead = 0;
+        }
         ctx.i = stop + 1;
         const outerDyn = ctx.dyn;
         ctx.dyn = false;
+        const block = ctx.block === Block.Frames ? Block.Frame : Block.Rules;
         let node: RuleNode;
         if (run !== null && lead > 0) {
           const head = runHead(ctx, run, lead, selectorText);
-          node = { kind: NodeKind.Rule, selectors: [], children: parseNested(ctx), head };
+          node = { kind: NodeKind.Rule, selectors: [], children: parseNested(ctx, block), head };
         } else {
           const selectors =
             selectorText.indexOf(',') === -1
               ? [selectorText]
               : splitTopLevelCommas(selectorText, true);
-          const children = parseNested(ctx);
+          const children = parseNested(ctx, block);
           node = {
             kind: NodeKind.Rule,
             selectors: selectorsToTemplate(ctx, selectors),
@@ -433,7 +437,8 @@ function parseBlock(ctx: ParseContext): Node[] {
         // Native build only: stamp parse-time classification for the
         // bucket router in `compileNative.ts`. Web bundles tree-shake
         // this branch out via `__NATIVE__ === false` literal replace.
-        if (__NATIVE__) stampRuleClass(node);
+        // A frame's selectors are stops, which the router never reads.
+        if (__NATIVE__ && block !== Block.Frame) stampRuleClass(node);
         out.push(node);
         break;
       }
@@ -574,6 +579,11 @@ export function isCustomProperty(prop: string): boolean {
   return prop.length > 2 && prop.charCodeAt(0) === HYPHEN && prop.charCodeAt(1) === HYPHEN;
 }
 
+/** `keyframes`, or a vendor-prefixed form such as `-webkit-keyframes`. */
+export function isKeyframesName(name: string): boolean {
+  return name === 'keyframes' || /^-[a-z]+-keyframes$/.test(name);
+}
+
 /**
  * `css[start..end]` without leading and trailing CSS whitespace, keeping a
  * trailing whitespace code point directly preceded by an escaping backslash:
@@ -657,11 +667,11 @@ function readAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode | null {
   ctx.i = j + 1;
 
   if (isKeyframesName(name)) {
-    const frames = parseKeyframesBody(ctx);
-    return { kind: NodeKind.Keyframes, name: nameField, prelude: preludeField, frames };
+    const children = parseNested(ctx, Block.Frames);
+    return { kind: NodeKind.Keyframes, name, prelude: preludeField, children };
   }
 
-  const children = parseNested(ctx);
+  const children = parseNested(ctx, Block.Rules);
   const node: AtRuleNode = {
     kind: NodeKind.AtRule,
     name: nameField,
@@ -670,138 +680,6 @@ function readAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode | null {
   };
   if (__NATIVE__) stampAtClass(node);
   return node;
-}
-
-function parseKeyframesBody(ctx: ParseContext): Array<KeyframeFrame | InterpolationNode> {
-  const css = ctx.css;
-  const len = ctx.len;
-  const frames: Array<KeyframeFrame | InterpolationNode> = [];
-
-  while (ctx.i < len) {
-    // Skip whitespace
-    while (ctx.i < len) {
-      const c = css.charCodeAt(ctx.i);
-      if (isWS(c)) ctx.i++;
-      else break;
-    }
-    if (ctx.i >= len) break;
-
-    const c = css.charCodeAt(ctx.i);
-    if (c === CLOSE_BRACE) {
-      ctx.i++;
-      return frames;
-    }
-
-    // In the frame list a Run heads a frame when the text after it reaches
-    // `{` (its slots resolve to stops); anything else makes it a frame splice.
-    const run = c === NUL ? statementRun(ctx, frames, ctx.i) : null;
-    if (run === false) continue;
-    const start = run === null ? ctx.i : run.next === run.lastEnd ? run.lastStart : run.next;
-    const lead =
-      run === null ? 0 : run.next === run.lastEnd ? run.slots.length - 1 : run.slots.length;
-
-    // Scan for `{`
-    const j = scan(css, start, len, FRAME_HEAD, 0, 0);
-
-    if (j >= len || css.charCodeAt(j) !== OPEN_BRACE) {
-      if (run !== null) pushRunSlots(ctx, frames, run, lead);
-      // Stop at the `}`: it closes the @keyframes block itself.
-      ctx.i = j;
-      continue;
-    }
-
-    const stopsText = trimRange(css, start, j);
-    ctx.i = j + 1;
-
-    if (run !== null && lead > 0) {
-      const head = runHead(ctx, run, lead, stopsText);
-      frames.push({ stops: [], children: parseFrameDecls(ctx), head });
-      continue;
-    }
-
-    const stopsRaw =
-      stopsText.indexOf(',') === -1 ? [stopsText] : splitTopLevelCommas(stopsText, true);
-    const children = parseFrameDecls(ctx);
-    frames.push({ stops: selectorsToTemplate(ctx, stopsRaw), children });
-  }
-
-  return frames;
-}
-
-/**
- * A keyframe frame's body: declarations and splices only. `{` does not stop
- * the statement scan and `@` does not start an at-rule, so either reads as
- * declaration text.
- */
-function parseFrameDecls(ctx: ParseContext): Array<DeclNode | InterpolationNode> {
-  const css = ctx.css;
-  const len = ctx.len;
-  const decls: Array<DeclNode | InterpolationNode> = [];
-
-  while (ctx.i < len) {
-    let i = ctx.i;
-    while (i < len) {
-      const c = css.charCodeAt(i);
-      if (isWS(c) || c === SEMICOLON) i++;
-      else break;
-    }
-    if (i >= len) {
-      ctx.i = i;
-      break;
-    }
-
-    const first = css.charCodeAt(i);
-    if (first === CLOSE_BRACE) {
-      ctx.i = i + 1;
-      return decls;
-    }
-
-    // Inside a frame every Run splices declarations, except a last slot
-    // that names the property of the declaration after it.
-    const run = first === NUL ? statementRun(ctx, decls, i) : null;
-    if (run === false) continue;
-    const start = run === null ? i : leadDecl(ctx, decls, run);
-    i = start;
-
-    let colon = -1;
-    // `while (true)` (not `while (i < len)`) so that a COLON found at the
-    // very last position can still reach the EOF branch on the next scan.
-    while (true) {
-      const stop = scan(css, i, len, ctx.recover === null ? FRAME_DECL : FRAME_DECL_OR_SLOT, 0, 0);
-      if (stop >= len) {
-        if (colon !== -1) pushDecl(ctx, decls, start, colon, stop);
-        ctx.i = stop;
-        return decls;
-      }
-      const c = css.charCodeAt(stop);
-      if (c === COLON) {
-        if (colon === -1) colon = stop;
-        i = stop + 1;
-        continue;
-      }
-      if (c === NUL) {
-        const end = slotEnd(css, stop, len);
-        if (end !== -1 && recoversAt(ctx, stop, end, colon)) {
-          pushDecl(ctx, decls, start, colon, stop);
-          pushSplice(ctx, decls, slotIndex(css, stop, end));
-          ctx.i = end;
-          break;
-        }
-        i = end === -1 ? stop + 1 : end;
-        continue;
-      }
-      // c is SEMICOLON or CLOSE_BRACE
-      if (colon !== -1) pushDecl(ctx, decls, start, colon, stop);
-      if (c === CLOSE_BRACE) {
-        ctx.i = stop + 1;
-        return decls;
-      }
-      ctx.i = stop + 1;
-      break;
-    }
-  }
-
-  return decls;
 }
 
 /**

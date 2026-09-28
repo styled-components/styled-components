@@ -244,17 +244,20 @@ describe('parser', () => {
         kind: NodeKind.Keyframes,
         name: 'keyframes',
         prelude: 'spin',
-        frames: [
+        children: [
           {
-            stops: ['from'],
+            kind: NodeKind.Rule,
+            selectors: ['from'],
             children: [{ kind: NodeKind.Decl, prop: 'transform', value: 'rotate(0deg)' }],
           },
           {
-            stops: ['50%'],
+            kind: NodeKind.Rule,
+            selectors: ['50%'],
             children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '0.5' }],
           },
           {
-            stops: ['to'],
+            kind: NodeKind.Rule,
+            selectors: ['to'],
             children: [{ kind: NodeKind.Decl, prop: 'transform', value: 'rotate(360deg)' }],
           },
         ],
@@ -275,13 +278,15 @@ describe('parser', () => {
         kind: NodeKind.Keyframes,
         name: 'keyframes',
         prelude: 'pulse',
-        frames: [
+        children: [
           {
-            stops: ['0%', '100%'],
+            kind: NodeKind.Rule,
+            selectors: ['0%', '100%'],
             children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '1' }],
           },
           {
-            stops: ['50%'],
+            kind: NodeKind.Rule,
+            selectors: ['50%'],
             children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '0.5' }],
           },
         ],
@@ -289,18 +294,30 @@ describe('parser', () => {
     ]);
   });
 
-  it('reads a keyframe frame body as declarations only, with no nested rules or at-rules', () => {
-    expect(parse('@keyframes k { from { @x: 1; a { b: c } } }')).toEqual([
+  // CSS Syntax 3 §7.1 Defining Block Contents: "The grammar for @keyframes can
+  // be written as: <@keyframes> = @keyframes { <qualified-rule-list> }
+  // <keyframe-rule> = <keyframe-selector> { <declaration-list> } and then
+  // accompanying prose defines that only <keyframe-rule>s are allowed in
+  // @keyframes". The parser reads a frame body as any block; what a frame
+  // cannot hold is dropped when the keyframes are written.
+  it('reads a keyframe frame body as a block, rules and at-rules included', () => {
+    expect(parse('@keyframes k { from { @x: 1; a { b: c } d: e } }')).toEqual([
       {
         kind: NodeKind.Keyframes,
         name: 'keyframes',
         prelude: 'k',
-        frames: [
+        children: [
           {
-            stops: ['from'],
+            kind: NodeKind.Rule,
+            selectors: ['from'],
             children: [
-              { kind: NodeKind.Decl, prop: '@x', value: '1' },
-              { kind: NodeKind.Decl, prop: 'a { b', value: 'c' },
+              { kind: NodeKind.AtRule, name: 'x:', prelude: '1', children: null },
+              {
+                kind: NodeKind.Rule,
+                selectors: ['a'],
+                children: [{ kind: NodeKind.Decl, prop: 'b', value: 'c' }],
+              },
+              { kind: NodeKind.Decl, prop: 'd', value: 'e' },
             ],
           },
         ],
@@ -310,14 +327,14 @@ describe('parser', () => {
 
   it('ends @keyframes at its own brace when a frame-list statement has no block', () => {
     expect(parse('@keyframes k { junk } color: red;')).toEqual([
-      { kind: NodeKind.Keyframes, name: 'keyframes', prelude: 'k', frames: [] },
+      { kind: NodeKind.Keyframes, name: 'keyframes', prelude: 'k', children: [] },
       { kind: NodeKind.Decl, prop: 'color', value: 'red' },
     ]);
   });
 
   it('ends @keyframes at its own brace after a slot followed by blockless text', () => {
     expect(parse('@keyframes k { \0S0\0junk } color: red;', { templates: true })).toEqual([
-      { kind: NodeKind.Keyframes, name: 'keyframes', prelude: 'k', frames: [] },
+      { kind: NodeKind.Keyframes, name: 'keyframes', prelude: 'k', children: [] },
       { kind: NodeKind.Decl, prop: 'color', value: 'red' },
     ]);
   });
