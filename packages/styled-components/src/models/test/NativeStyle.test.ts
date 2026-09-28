@@ -1624,6 +1624,34 @@ describe('NativeStyle class;compile() fast-paths', () => {
       ]);
     });
 
+    it('reads the values of an interpolated keyframes template by their roles', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const fade = keyframes`
+        from { opacity: ${'0; } } & { color: red } @keyframes x { from { a: b'}; margin-top: 4px; }
+        ${'50%'} { opacity: ${'0.5; margin-top: 2px'}; }
+        to { ${css`
+          opacity: ${1};
+        `} }
+      `;
+      const inline = new NativeStyle(css`
+        color: blue;
+        animation: ${fade} 1s linear;
+      `);
+      const out = inline.compile(renderContext);
+      expect(out.base).toEqual({ color: 'blue' });
+      expect(out.keyframes).toEqual([
+        {
+          name: fade.name,
+          frames: [
+            { stops: ['from'], decls: { marginTop: 4 } },
+            { stops: ['50%'], decls: { opacity: 0.5, marginTop: 2 } },
+            { stops: ['to'], decls: { opacity: 1 } },
+          ],
+        },
+      ]);
+      warn.mockRestore();
+    });
+
     it('compiles an interpolated keyframes value once across renders', () => {
       const fade = keyframes`
         from { opacity: 0; }

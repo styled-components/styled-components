@@ -1409,6 +1409,29 @@ describe('ssr', () => {
         });
       });
 
+      it('adds no frame or rule through a value in a keyframes template', () => {
+        const fade = keyframes`
+          from { opacity: ${'0; } } body { color: red } @keyframes x { from { a: b'}; color: blue; }
+          to { opacity: 1; }
+        `;
+        const Comp = styled.div`
+          animation: ${fade} 1s;
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(sheet.collectStyles(<Comp />));
+        expect(readRules(sheet.getStyleTags())).toEqual([
+          {
+            prelude: '@keyframes a',
+            props: [],
+            rules: [
+              { prelude: 'from', props: ['color'], rules: [] },
+              { prelude: 'to', props: ['opacity'], rules: [] },
+            ],
+          },
+          { prelude: '.c', props: ['animation'], rules: [] },
+        ]);
+      });
+
       it('scopes every selector a comma list in a selector slot adds', () => {
         const Comp = styled.div<{ $sel: string }>`
           & ${p => p.$sel} {

@@ -3,7 +3,7 @@ import { fifoSet } from '../utils/fifoMap';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import { warnOnce } from '../utils/warnOnce';
 import type { Root } from './ast';
-import { parse, SlotTable } from './parser';
+import { parse, ParseOptions, SlotTable } from './parser';
 import { removeComments, scan, stops } from './reader';
 
 /** A statement ends at `;`, `{`, or `}`. */
@@ -72,7 +72,8 @@ interface TemplateParse {
 }
 
 /**
- * Parses of each shared strings array, keyed by {@link flagKey}. The slot
+ * Parses of each shared strings array, keyed by {@link flagKey}, prefixed
+ * with `f` for a frame list. The slot
  * flags that shape a parse (missing-`;` recovery, client references) come
  * from the values, so each flag combination met at the call site has its own
  * parse; nearly every call site only has the unflagged one, keyed `''`.
@@ -103,13 +104,26 @@ function warnClientReference(ref: unknown): void {
 }
 
 /** Whether `value` is a React client reference proxy. */
-function isClientReference(value: unknown): boolean {
+export function isClientReference(value: unknown): boolean {
   const t = typeof value;
   return (
     (t === 'function' || (t === 'object' && value !== null)) &&
     (value as { $$typeof?: symbol }).$$typeof === CLIENT_REFERENCE
   );
 }
+
+/** How {@link readSource} reads a template. */
+interface ReadOptions {
+  /** Read as a frame list, the block of a `@keyframes` rule. */
+  frames: boolean;
+  /** Look the parse up by `strings` identity; the caller guarantees the array is never mutated. */
+  shared: boolean;
+}
+
+const OWN_RULES: ReadOptions = { frames: false, shared: false };
+const SHARED_RULES: ReadOptions = { frames: false, shared: true };
+const OWN_FRAMES: ReadOptions = { frames: true, shared: false };
+const SHARED_FRAMES: ReadOptions = { frames: true, shared: true };
 
 /**
  * Classify each value and read the template: join the strings around
@@ -122,6 +136,26 @@ export function parseSource(
   strings: ReadonlyArray<string>,
   interpolations: ReadonlyArray<unknown>,
   shared: boolean = false
+): Source {
+  return readSource(strings, interpolations, shared ? SHARED_RULES : OWN_RULES);
+}
+
+/**
+ * {@link parseSource} for a `keyframes` template: the template is a frame
+ * list, read with the roles of the block of a `@keyframes` rule.
+ */
+export function parseFrameList(
+  strings: ReadonlyArray<string>,
+  interpolations: ReadonlyArray<unknown>,
+  shared: boolean
+): Source {
+  return readSource(strings, interpolations, shared ? SHARED_FRAMES : OWN_FRAMES);
+}
+
+function readSource(
+  strings: ReadonlyArray<string>,
+  interpolations: ReadonlyArray<unknown>,
+  options: ReadOptions
 ): Source {
   const n = interpolations.length;
   const kinds: InterpolationKind[] = n === 0 ? EMPTY : [];
@@ -175,10 +209,16 @@ export function parseSource(
   }
 
   // A mismatched count cannot come from a tagged template; it gets a parse of its own.
+  const flags: TemplateFlags =
+    recover === null && clientRefs === null
+      ? options.frames
+        ? UNFLAGGED_FRAMES
+        : UNFLAGGED_RULES
+      : { clientRefs, frames: options.frames, recover };
   const parsed =
-    shared && strings.length === n + 1
-      ? sharedParse(strings, n, recover, clientRefs)
-      : readTemplate(strings, n, recover, clientRefs);
+    options.shared && strings.length === n + 1
+      ? sharedParse(strings, n, flags)
+      : readTemplate(strings, n, flags);
   const kept = parsed.kept;
   for (let i = 0; i < n; i++) {
     if (!kept[i]) {
@@ -201,16 +241,25 @@ export function parseSource(
   };
 }
 
+/** What shapes a parse besides the strings: the slot flags from the values, and the block read. */
+interface TemplateFlags {
+  clientRefs: ReadonlyArray<boolean> | null;
+  frames: boolean;
+  recover: ReadonlyArray<boolean> | null;
+}
+
+const UNFLAGGED_RULES: TemplateFlags = { clientRefs: null, frames: false, recover: null };
+const UNFLAGGED_FRAMES: TemplateFlags = { clientRefs: null, frames: true, recover: null };
+
 /** Parse `strings` with `n` slots; `id` is `0`, the parse belongs to one Source. */
 function readTemplate(
   strings: ReadonlyArray<string>,
   n: number,
-  recover: ReadonlyArray<boolean> | null,
-  clientRefs: ReadonlyArray<boolean> | null
+  flags: TemplateFlags
 ): TemplateParse {
   if (n === 0) {
     return {
-      ast: parse(strings.length > 0 ? strings[0] : ''),
+      ast: parse(strings.length > 0 ? strings[0] : '', flags.frames ? FRAMES : undefined),
       id: 0,
       kept: EMPTY,
       standalone: EMPTY,
@@ -221,27 +270,36 @@ function readTemplate(
 
   const kept = falseFlags(n);
   const standalone = falseFlags(n);
-  const slots: SlotTable = { clientRefs, kept, recover, standalone };
-  const ast = parse(joined, { slots, templates: true });
+  const slots: SlotTable = {
+    clientRefs: flags.clientRefs,
+    kept,
+    recover: flags.recover,
+    standalone,
+  };
+  const ast = parse(joined, { frames: flags.frames, slots, templates: true });
   return { ast, id: 0, kept, standalone };
 }
+
+const FRAMES: ParseOptions = { frames: true };
 
 /** {@link readTemplate} through the per-strings cache, under a fresh positive id on a miss. */
 function sharedParse(
   strings: ReadonlyArray<string>,
   n: number,
-  recover: ReadonlyArray<boolean> | null,
-  clientRefs: ReadonlyArray<boolean> | null
+  flags: TemplateFlags
 ): TemplateParse {
   let parses = sharedParses.get(strings);
   if (parses === undefined) {
     parses = new Map();
     sharedParses.set(strings, parses);
   }
-  const key = recover === null && clientRefs === null ? '' : flagKey(n, recover, clientRefs);
+  const recover = flags.recover;
+  const clientRefs = flags.clientRefs;
+  let key = recover === null && clientRefs === null ? '' : flagKey(n, recover, clientRefs);
+  if (flags.frames) key = 'f' + key;
   let parsed = parses.get(key);
   if (parsed === undefined) {
-    parsed = readTemplate(strings, n, recover, clientRefs);
+    parsed = readTemplate(strings, n, flags);
     parsed.id = ++lastParseId;
     fifoSet(parses, key, parsed, FLAG_COMBINATION_LIMIT);
   }
@@ -350,6 +408,26 @@ export function attachTemplateInputs<T extends RuleSet<any>>(
 ): T {
   (rules as unknown as RulesWithSlot)[SOURCE_SLOT] = [strings, interpolations, null, true];
   return rules;
+}
+
+/** The template inputs a `RuleSet` was built from; `undefined` for one built outside `css`. */
+export function templateInputs(rules: RuleSet<any>): Readonly<SourceSlot> | undefined {
+  return (rules as unknown as RulesWithSlot)[SOURCE_SLOT];
+}
+
+/**
+ * A `RuleSet` whose template inputs are `strings` and `interpolations`,
+ * sharing the parse of `strings` when `shared` (see {@link attachTemplateInputs}).
+ */
+export function ruleSetFromInputs(
+  strings: ReadonlyArray<string>,
+  interpolations: ReadonlyArray<unknown>,
+  shared: boolean
+): RuleSet<object> {
+  const rules: RuleSet<object> = [];
+  return shared
+    ? attachTemplateInputs(rules, strings, interpolations)
+    : attachSourceInputs(rules, strings, interpolations);
 }
 
 export function isCssProduct(arr: unknown): boolean {

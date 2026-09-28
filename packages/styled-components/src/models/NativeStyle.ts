@@ -1,6 +1,8 @@
 import type { CompiledKeyframes, KeyframesCompiler } from './Keyframes';
 import type { StaticRoot } from '../parser/ast';
+import { NodeKind } from '../parser/ast';
 import { fillSource } from '../parser/compile';
+import { emitKeyframes } from '../parser/emit-web';
 import {
   buildInterpKey,
   evaluateForFastPath,
@@ -43,7 +45,10 @@ export const resetStyleCache = resetNativeStyleCache;
  */
 const NATIVE_KEYFRAMES_COMPILER: KeyframesCompiler = {
   hash: '',
-  compile: (css, name, prefix) => [prefix + ' ' + name + '{' + css + '}'],
+  emit: (source, filled, _parentSelector, _componentId, fragments) => {
+    const node = fillSource(source, filled, fragments)[0];
+    return node !== undefined && node.kind === NodeKind.Keyframes ? [emitKeyframes(node)] : [];
+  },
 };
 
 const keyframesRuleCache = new Map<string, StaticRoot>();

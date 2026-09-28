@@ -1,12 +1,13 @@
+import { compileWebFilled } from '../../parser/compile';
 import Keyframes, { KeyframesCompiler } from '../Keyframes';
 import { mainCompiler } from '../StyleSheetManager';
 
 function countingCompiler(hash: string): KeyframesCompiler & { calls: number } {
-  const compiler = {
+  const compiler: KeyframesCompiler & { calls: number } = {
     calls: 0,
-    compile: (css: string, name: string, prefix: string) => {
+    emit: (source, filled, parentSelector, _componentId, fragments) => {
       compiler.calls++;
-      return [prefix + ' ' + name + '{' + css + '}'];
+      return compileWebFilled(source, filled, parentSelector, undefined, fragments);
     },
     hash,
   };
@@ -30,7 +31,7 @@ describe('Keyframes', () => {
       expect(first).toEqual({
         id: 'sc-keyframes-fade',
         name: 'fade',
-        rules: ['@keyframes fade{from{opacity:0}}'],
+        rules: ['@keyframes fade{from{opacity:0;}}'],
       });
       expect(keyframes.compile(compiler)).toBe(first);
       expect(keyframes.compile(compiler)).toBe(first);
