@@ -1624,6 +1624,25 @@ describe('NativeStyle class;compile() fast-paths', () => {
       ]);
     });
 
+    it('compiles an interpolated keyframes value once across renders', () => {
+      const fade = keyframes`
+        from { opacity: 0; }
+        to { opacity: 1; }
+      `;
+      const nameSpy = jest.spyOn(fade, 'getName');
+      const inline = new NativeStyle(css<{ $ms: number }>`
+        animation: ${fade} ${p => p.$ms}ms linear;
+      `);
+      const first = inline.compile({ ...renderContext, $ms: 100 });
+      const second = inline.compile({ ...renderContext, $ms: 200 });
+      inline.compile({ ...renderContext, $ms: 300 });
+
+      expect(nameSpy).toHaveBeenCalledTimes(1);
+      expect(second.keyframes).toEqual(first.keyframes);
+      expect(second.animations?.[0].durationMs).toBe(200);
+      nameSpy.mockRestore();
+    });
+
     it('drops a rule whose selector holds a non-styled component, with one dev warning', () => {
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
       function Plain() {

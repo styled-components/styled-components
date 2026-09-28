@@ -30,6 +30,12 @@ export default class Keyframes implements KeyframesType {
   name: string;
   rules: string;
 
+  /** First compiler seen by {@link compile} and its result; nearly every app uses one. */
+  private compiledBy: KeyframesCompiler | null = null;
+  private compiled: CompiledKeyframes | null = null;
+  /** Results for any further compilers, allocated when a second one appears. */
+  private compiledByOthers: WeakMap<KeyframesCompiler, CompiledKeyframes> | null = null;
+
   constructor(name: string, rules: string) {
     this.name = name;
     this.id = KEYFRAMES_ID_PREFIX + name;
@@ -49,9 +55,27 @@ export default class Keyframes implements KeyframesType {
   /**
    * Pure: produce the compiled CSS without touching any sheet. Callers carry
    * the result through their own generate→inject pipeline so the parser stays
-   * side-effect-free.
+   * side-effect-free. Memoized per compiler, so the result is shared and must
+   * not be mutated.
    */
   compile(compiler: KeyframesCompiler = mainCompiler): CompiledKeyframes {
+    if (compiler === this.compiledBy && this.compiled !== null) return this.compiled;
+    if (this.compiledBy === null) {
+      const compiled = this.compileWith(compiler);
+      this.compiledBy = compiler;
+      this.compiled = compiled;
+      return compiled;
+    }
+    if (this.compiledByOthers === null) this.compiledByOthers = new WeakMap();
+    let compiled = this.compiledByOthers.get(compiler);
+    if (compiled === undefined) {
+      compiled = this.compileWith(compiler);
+      this.compiledByOthers.set(compiler, compiled);
+    }
+    return compiled;
+  }
+
+  private compileWith(compiler: KeyframesCompiler): CompiledKeyframes {
     const name = this.getName(compiler);
     const rules = compiler.compile(this.rules, name, '@keyframes');
     return { id: this.id, name, rules };
