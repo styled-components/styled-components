@@ -34,7 +34,6 @@ import {
   splitTopLevelCommas,
   stripCommaSpaces,
   TOP_LEVEL,
-  trimRange,
 } from './parser';
 import {
   checkSlotValue,
@@ -688,7 +687,20 @@ function warnDropped(construct: string): void {
 }
 
 function trimWhitespace(s: string): string {
-  return trimRange(s, 0, s.length);
+  let start = 0;
+  let end = s.length;
+  while (start < end) {
+    const c = s.charCodeAt(start);
+    if (isWS(c)) start++;
+    else break;
+  }
+  while (end > start) {
+    const c = s.charCodeAt(end - 1);
+    if (isWS(c)) end--;
+    else break;
+  }
+  if (start === 0 && end === s.length) return s;
+  return s.substring(start, end);
 }
 
 /**
@@ -696,7 +708,10 @@ function trimWhitespace(s: string): string {
  * match the string-input `compiler.compile` path so SSR class hashes stay stable.
  */
 function normalizeSubstituted(value: string): string {
-  return stripCommaSpaces(trimWhitespace(value));
+  const trimmed = trimWhitespace(value);
+  if (trimmed.length === 0) return trimmed;
+  if (trimmed.indexOf(',') === -1) return trimmed;
+  return stripCommaSpaces(trimmed);
 }
 
 /**

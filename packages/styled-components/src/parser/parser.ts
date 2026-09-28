@@ -219,7 +219,7 @@ export function parse(css: string, options?: ParseOptions): Root<string | Templa
     slots,
     templates,
   };
-  return parseBlock(ctx);
+  return parseBlock(ctx, false);
 }
 
 interface ParseContext {
@@ -372,10 +372,18 @@ function pushRunSlots<T>(
   run: Run,
   count: number
 ): void {
-  for (let k = 0; k < count; k++) {
-    out.push({ kind: NodeKind.Interpolation, index: run.slots[k] });
-    keepSplice(ctx, run.slots[k]);
-  }
+  for (let k = 0; k < count; k++) pushSplice(ctx, out, run.slots[k]);
+}
+
+/**
+ * Push a standalone splice of slot `index`. Tagged dynamic like every other
+ * slot-bearing node so the fill's node reads see one shape per kind.
+ */
+function pushSplice<T>(ctx: ParseContext, out: Array<T | InterpolationNode>, index: number): void {
+  const node: InterpolationNode = { kind: NodeKind.Interpolation, index };
+  markDyn(node);
+  out.push(node);
+  keepSplice(ctx, index);
 }
 
 /** Head for the first `count` slots of `run`, with `restText` following them. */
@@ -457,8 +465,8 @@ function scanQPOrNul(
  * and `@` does not start an at-rule, so either reads as declaration text.
  */
 function parseBlock(ctx: ParseContext, frame: true): Array<DeclNode | InterpolationNode>;
-function parseBlock(ctx: ParseContext, frame?: false): Node[];
-function parseBlock(ctx: ParseContext, frame = false): Node[] {
+function parseBlock(ctx: ParseContext, frame: false): Node[];
+function parseBlock(ctx: ParseContext, frame: boolean): Node[] {
   const css = ctx.css;
   const len = ctx.len;
   const out: Node[] = [];
@@ -493,7 +501,7 @@ function parseBlock(ctx: ParseContext, frame = false): Node[] {
     // A Run that is not Standalone is classified by the statement scan below:
     // a rule head when the statement ends in `{`, otherwise standalone slots
     // before a declaration.
-    const run = statementRun(ctx, out, i);
+    const run = first === NUL ? statementRun(ctx, out, i) : null;
     if (run === false) continue;
     if (run !== null) i = run.next === run.lastEnd ? run.lastStart : run.next;
     const start = i;
@@ -524,9 +532,7 @@ function parseBlock(ctx: ParseContext, frame = false): Node[] {
         if (end !== -1 && recoversAt(ctx, stop, end, colon)) {
           const declStart = run === null ? start : leadDecl(ctx, out, run);
           pushDecl(ctx, out, declStart, colon, stop);
-          const index = slotIndex(css, stop, end);
-          out.push({ kind: NodeKind.Interpolation, index });
-          keepSplice(ctx, index);
+          pushSplice(ctx, out, slotIndex(css, stop, end));
           ctx.i = end;
           break;
         }
@@ -543,13 +549,13 @@ function parseBlock(ctx: ParseContext, frame = false): Node[] {
         let node: RuleNode;
         if (run !== null && lead > 0) {
           const head = runHead(ctx, run, lead, selectorText);
-          node = { kind: NodeKind.Rule, selectors: [], children: parseBlock(ctx), head };
+          node = { kind: NodeKind.Rule, selectors: [], children: parseBlock(ctx, false), head };
         } else {
           const selectors =
             selectorText.indexOf(',') === -1
               ? [selectorText]
               : splitTopLevelCommas(selectorText, true);
-          const children = parseBlock(ctx);
+          const children = parseBlock(ctx, false);
           node = {
             kind: NodeKind.Rule,
             selectors: selectorsToTemplate(ctx, selectors),
@@ -725,7 +731,8 @@ export function isCustomProperty(prop: string): boolean {
  */
 function normalizeValue(ctx: ParseContext, start: number, end: number): string {
   const slice = trimRange(ctx.css, start, end);
-  return ctx.keepCommaSpaces ? slice : stripCommaSpaces(slice);
+  if (ctx.keepCommaSpaces || slice.indexOf(',') === -1) return slice;
+  return stripCommaSpaces(slice);
 }
 
 /**
@@ -842,7 +849,7 @@ function readAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode {
     return { kind: NodeKind.Keyframes, name: nameField, prelude: preludeField, frames };
   }
 
-  const children = parseBlock(ctx);
+  const children = parseBlock(ctx, false);
   const node: AtRuleNode = {
     kind: NodeKind.AtRule,
     name: nameField,
@@ -875,7 +882,7 @@ function parseKeyframesBody(ctx: ParseContext): Array<KeyframeFrame | Interpolat
 
     // In the frame list a Run heads a frame when the text after it reaches
     // `{` (its slots resolve to stops); anything else makes it a frame splice.
-    const run = statementRun(ctx, frames, ctx.i);
+    const run = c === NUL ? statementRun(ctx, frames, ctx.i) : null;
     if (run === false) continue;
     const start = run === null ? ctx.i : run.next === run.lastEnd ? run.lastStart : run.next;
     const lead =
