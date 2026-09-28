@@ -1050,10 +1050,7 @@ function trimWhitespace(s: string): string {
  * match the string-input `compiler.compile` path so SSR class hashes stay stable.
  */
 function normalizeSubstituted(value: string): string {
-  const trimmed = trimWhitespace(value);
-  if (trimmed.length === 0) return trimmed;
-  if (trimmed.indexOf(',') === -1) return trimmed;
-  return stripCommaSpaces(trimmed);
+  return stripCommaSpaces(trimWhitespace(value));
 }
 
 /**
