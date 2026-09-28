@@ -29,6 +29,7 @@ import {
   FIELD_FAILED,
   FIELD_SEMICOLON,
   isIdentCode,
+  isSpace,
   readField,
   removeComments,
   scan,
@@ -203,7 +204,7 @@ function fillDecl(node: DeclNode, fill: Fill): StaticDeclNode | StaticDeclNode[]
   }
   if (realizedSemicolon) split = true;
   const prop = typeof node.prop !== 'string' ? trimRange(propRaw, 0, propRaw.length) : propRaw;
-  if (prop.charCodeAt(0) === AT) {
+  if (prop.charCodeAt(leadingCode(prop)) === AT) {
     if (__DEV__) {
       warnOnce(
         'property-at',
@@ -217,7 +218,8 @@ function fillDecl(node: DeclNode, fill: Fill): StaticDeclNode | StaticDeclNode[]
     const decls = splitDeclarations(prop + ':' + valueRaw);
     const kept: StaticDeclNode[] = [];
     for (let i = 0; i < decls.length; i++) {
-      if (decls[i].prop.charCodeAt(0) !== AT) kept.push(decls[i]);
+      const piece = decls[i].prop;
+      if (piece.charCodeAt(leadingCode(piece)) !== AT) kept.push(decls[i]);
     }
     return kept.length === 0 ? undefined : kept;
   }
@@ -226,6 +228,18 @@ function fillDecl(node: DeclNode, fill: Fill): StaticDeclNode | StaticDeclNode[]
   const value = typeof node.value !== 'string' ? trimRange(valueRaw, 0, valueRaw.length) : valueRaw;
   if (value === '' && !isCustomProperty(prop)) return undefined;
   return { kind: NodeKind.Decl, prop, value };
+}
+
+/** Index of the first code point of `text` outside leading whitespace and comments. */
+function leadingCode(text: string): number {
+  let i = 0;
+  for (;;) {
+    while (i < text.length && isSpace(text.charCodeAt(i))) i++;
+    if (!text.startsWith('/*', i)) return i;
+    const close = text.indexOf('*/', i + 2);
+    if (close === -1) return text.length;
+    i = close + 2;
+  }
 }
 
 /**

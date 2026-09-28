@@ -1237,15 +1237,21 @@ describe('compileWeb', () => {
     it.each([
       ['an at-keyword', '@a'],
       ['an at-keyword after whitespace', '\f@x'],
+      ['an at-keyword after a comment', '/* c */\n@x'],
       ['an at-keyword followed by a split', '@a:b; color'],
     ])(
       'drops the declaration whose property value realizes to %s, with a dev warning',
       (_, value) => {
         const src = tagged`${() => value}: red; margin: 0;`;
         expect(out(src)).toEqual(legacy('margin: 0;'));
-        expect(warnings()).toEqual([expect.stringContaining('`@')]);
+        expect(warnings()).toEqual([expect.stringContaining('is not a property name')]);
       }
     );
+
+    it('drops a piece a value `;` splits off whose name is an at-keyword after a comment', () => {
+      const src = tagged`color: ${() => 'red; /**/@a: b'}; margin: 0;`;
+      expect(out(src)).toEqual(['.a{color:red;margin:0;}']);
+    });
 
     it('keeps a property value that realizes to an escaped `@`', () => {
       const src = tagged`${() => '\\@a'}: red; margin: 0;`;
