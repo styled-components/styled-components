@@ -387,7 +387,7 @@ background-color: green;`)
       `)
       ).toMatchInlineSnapshot(`
         [
-          ".a{background-image:url(https://example.com/bg.png);cursor:url(https://example.com/cursor.png),auto;list-style-image:url(https://example.com/bullet.png);}",
+          ".a{background-image:url(https://example.com/bg.png);cursor:url(https://example.com/cursor.png), auto;list-style-image:url(https://example.com/bullet.png);}",
         ]
       `);
     });
@@ -416,11 +416,9 @@ background-color: green;`)
                url(https://example.com/fonts/myfont.woff) format('woff');
         }
       `)
-      ).toMatchInlineSnapshot(`
-        [
-          "@font-face{font-family:'MyFont';src:url(https://example.com/fonts/myfont.woff2) format('woff2'),url(https://example.com/fonts/myfont.woff) format('woff');}",
-        ]
-      `);
+      ).toEqual([
+        "@font-face{font-family:'MyFont';src:url(https://example.com/fonts/myfont.woff2) format('woff2'),\n               url(https://example.com/fonts/myfont.woff) format('woff');}",
+      ]);
     });
 
     it('preserves @import with URL', () => {

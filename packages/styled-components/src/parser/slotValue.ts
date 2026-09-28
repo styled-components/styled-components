@@ -18,7 +18,7 @@ import {
 import { fifoSet } from '../utils/fifoMap';
 import type { StaticDeclNode } from './ast';
 import { NodeKind } from './ast';
-import { isCustomProperty, SlotEntry, stripCommaSpaces, trimRange } from './parser';
+import { isCustomProperty, SlotEntry, trimRange } from './parser';
 import {
   BRACKETS,
   COMMENTS,
@@ -401,7 +401,7 @@ export function splitDeclarations(text: string): StaticDeclNode[] {
     const colon = scan(text, start, end, DECLARATION_COLON, COMMENTS | BRACKETS, 0);
     if (colon < end) {
       const prop = trimRange(text, start, colon);
-      const value = stripCommaSpaces(trimRange(text, colon + 1, end));
+      const value = trimRange(text, colon + 1, end);
       if (prop !== '' && (value !== '' || isCustomProperty(prop))) {
         decls.push({ kind: NodeKind.Decl, prop, value });
       }

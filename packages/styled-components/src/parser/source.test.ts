@@ -111,7 +111,7 @@ describe('parseSource', () => {
         {
           kind: NodeKind.Decl,
           prop: 'box-shadow',
-          value: tv('\0S0\0 \0S1\0 \0S2\0 \0S3\0,\0S4\0 \0S5\0 \0S6\0 \0S7\0'),
+          value: tv('\0S0\0 \0S1\0 \0S2\0 \0S3\0, \0S4\0 \0S5\0 \0S6\0 \0S7\0'),
         },
       ]);
     });

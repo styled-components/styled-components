@@ -30,7 +30,6 @@ import {
   parse,
   SlotEntry,
   splitTopLevelCommas,
-  stripCommaSpaces,
   TOP_LEVEL,
   trimRange,
 } from './parser';
@@ -220,10 +219,8 @@ function fillDecl(node: DeclNode, fill: Fill): StaticDeclNode | StaticDeclNode[]
     return kept.length === 0 ? undefined : kept;
   }
   if (prop === '') return undefined;
-  // Re-normalize substituted values to match the parser's normalizeValue;
-  // skip re-normalization on the static-decl warm path. Custom properties
-  // preserve empty values (`--x: ;` is spec-legal).
-  const value = typeof node.value !== 'string' ? normalizeSubstituted(valueRaw) : valueRaw;
+  // Custom properties preserve empty values (`--x: ;` is spec-legal).
+  const value = typeof node.value !== 'string' ? trimRange(valueRaw, 0, valueRaw.length) : valueRaw;
   if (value === '' && !isCustomProperty(prop)) return undefined;
   return { kind: NodeKind.Decl, prop, value };
 }
@@ -762,17 +759,6 @@ function warnDropped(construct: string): void {
     `The ${construct} was dropped: an interpolated value in it holds \`{\` or \`}\`, a \`;\` outside a declaration value, ends in a backslash, or leaves a string, comment, parenthesis, bracket, or \`url(\` open. Interpolate plain values, and write rules and blocks in the template or a css\`\` mixin.`,
     construct
   );
-}
-
-/**
- * Mirror the parser's `normalizeValue` for substituted text. Output bytes
- * match the string-input `compiler.compile` path so SSR class hashes stay stable.
- */
-function normalizeSubstituted(value: string): string {
-  const trimmed = trimRange(value, 0, value.length);
-  if (trimmed.length === 0) return trimmed;
-  if (trimmed.indexOf(',') === -1) return trimmed;
-  return stripCommaSpaces(trimmed);
 }
 
 /**

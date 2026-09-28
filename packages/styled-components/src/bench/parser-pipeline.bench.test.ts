@@ -185,7 +185,7 @@ const CSS_HUGE = (() => {
   return blocks.join('\n');
 })();
 
-// Commas-heavy: transitions + shadows + gradients. Stresses stripCommaSpaces.
+// Commas-heavy: transitions + shadows + gradients.
 const CSS_COMMA_HEAVY = `
 transition: transform 0.2s ease-out, opacity 0.3s linear, background-color 0.15s linear, box-shadow 0.2s ease-in-out, color 0.2s linear;
 box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.06), 0 4px 8px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.10), 0 16px 32px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.1);
