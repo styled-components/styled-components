@@ -2,6 +2,7 @@ import type { CompiledKeyframes } from '../models/Keyframes';
 import type StyleSheet from '../sheet';
 import type { Compiler } from '../types';
 import {
+  AMPERSAND,
   AT,
   BACKSLASH,
   CLOSE_BRACE,
@@ -258,6 +259,24 @@ function realizeList(list: ReadonlyArray<string | TemplateValue>, fill: Fill): s
 }
 
 /**
+ * Nest each selector in a list holding a slot under the parent, unless it
+ * holds `&` outside strings, parentheses, and brackets. The parts are emitted
+ * as written otherwise, and `&` only inside `:not()` or `:has()` would leave
+ * the selector unscoped. Skipped at the top level of a global style, which
+ * has no parent.
+ */
+function anchorSelectors(selectors: string[], fill: Fill): string[] {
+  if (fill.root) return selectors;
+  for (let i = 0; i < selectors.length; i++) {
+    const s = selectors[i];
+    if (s.indexOf('&') !== -1 && scanQPB(s, 0, s.length, AMPERSAND, -1, -1, -1) === s.length) {
+      selectors[i] = '& ' + s;
+    }
+  }
+  return selectors;
+}
+
+/**
  * Split realized selector or stop text on top-level commas, trimming each
  * part. `null` when trimming leaves a part ending in a backslash, which would
  * escape the character written after the part.
@@ -291,7 +310,7 @@ function fillRule(node: RuleNode, fill: Fill): StaticNode | StaticNode[] | undef
     if ((children as unknown) === node.children) return node as unknown as StaticRuleNode;
     return { kind: NodeKind.Rule, selectors: node.selectors as string[], children };
   }
-  return { kind: NodeKind.Rule, selectors, children };
+  return { kind: NodeKind.Rule, selectors: anchorSelectors(selectors, fill), children };
 }
 
 function fillAtRule(
@@ -572,7 +591,7 @@ function fillHeadRule(node: RuleNode, head: SlotHead, fill: Fill): StaticNode[] 
   }
   out.push({
     kind: NodeKind.Rule,
-    selectors,
+    selectors: anchorSelectors(selectors, fill),
     children: fillNodes(node.children, nestedFill(fill)),
   });
   return out;
