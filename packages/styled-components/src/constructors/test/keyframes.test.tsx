@@ -2,7 +2,7 @@ import { render } from '@testing-library/react';
 import React from 'react';
 import rscPlugin from '../../plugins/rsc';
 import Keyframes from '../../models/Keyframes';
-import { StyleSheetManager } from '../../models/StyleSheetManager';
+import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager';
 import { getRenderedCSS, resetStyled } from '../../test/utils';
 import css from '../css';
 import keyframes from '../keyframes';
@@ -374,6 +374,26 @@ describe('keyframes', () => {
       }"
     `);
   });
+  it('compiles a referenced keyframes value once across renders', () => {
+    const fade = keyframes`
+      from { opacity: 0; }
+      to { opacity: 1; }
+    `;
+    const Comp = styled.div<{ $ms: number }>`
+      animation: ${fade} ${p => p.$ms}ms linear;
+    `;
+    const compileSpy = jest.spyOn(mainCompiler, 'compile');
+
+    const { rerender } = render(<Comp $ms={100} />);
+    rerender(<Comp $ms={200} />);
+    rerender(<Comp $ms={300} />);
+
+    const keyframesCompiles = compileSpy.mock.calls.filter(call => call[2] === '@keyframes');
+    expect(keyframesCompiles).toHaveLength(1);
+    expect(getRenderedCSS()).toContain('@keyframes ' + fade.getName());
+    compileSpy.mockRestore();
+  });
+
   it('namespaced StyleSheetManager works with animations', () => {
     const rotate = keyframes`
     0% {
