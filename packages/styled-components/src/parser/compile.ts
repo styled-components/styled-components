@@ -619,7 +619,7 @@ function fillAtRule(
     name = node.name;
   } else {
     const realized = realize(node.name, fill, '');
-    if (realized === null || !isAtRuleName(realized)) {
+    if (realized === null || !isIdentifier(realized)) {
       if (__DEV__) {
         const shown = realized === null ? fieldText(node.name) : realized;
         warnOnce(
@@ -915,19 +915,15 @@ function looksLikeDeclaration(text: string): boolean {
   return i + 1 >= len || isWS(text.charCodeAt(i + 1));
 }
 
-/** An identifier: ASCII ident characters, not starting with a digit or a hyphen and digit. */
-function isIdentifier(text: string): boolean {
-  if (text.length === 0) return false;
-  for (let i = 0; i < text.length; i++) {
-    if (!isIdentChar(text.charCodeAt(i))) return false;
-  }
-  const first = text.charCodeAt(0);
-  const lead = first === 45 /* - */ ? text.charCodeAt(1) : first;
-  return !(lead >= 48 && lead <= 57) && !(first === 45 && text.length === 1);
-}
+/**
+ * An identifier: ASCII ident characters, not a lone hyphen, and not starting
+ * with a digit or a hyphen and digit. Anchored with no nested quantifier, so
+ * linear-time.
+ */
+const IDENTIFIER = /^(?!-?\d|-$)[\w-]+$/;
 
-function isAtRuleName(text: string): boolean {
-  return isIdentifier(text);
+function isIdentifier(text: string): boolean {
+  return IDENTIFIER.test(text);
 }
 
 /**
