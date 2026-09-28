@@ -9,6 +9,7 @@ import {
   DIGIT_0,
   DIGIT_9,
   DOUBLE_QUOTE,
+  FORM_FEED,
   HYPHEN,
   isIdentChar,
   isWS,
@@ -38,6 +39,7 @@ import {
   SlotHead,
   TemplateValue,
 } from './ast';
+import { isEscaped } from '../utils/normalize';
 import { isKeyframesName } from './atRuleNames';
 import { stampAtClass, stampRuleClass } from './nativePlan';
 
@@ -782,6 +784,26 @@ export function stripCommaSpaces(s: string): string {
   if (segStart === 0) return s;
   if (segStart < len) out += s.substring(segStart, len);
   return out;
+}
+
+/**
+ * `text[start..end]` without leading and trailing CSS whitespace, keeping a
+ * trailing whitespace code point directly preceded by an escaping backslash:
+ * removing it would leave the backslash escaping whatever is written next.
+ * For realized text, whose values may end in such a pair.
+ */
+export function trimRealized(text: string, start: number, end: number): string {
+  while (start < end && isCSSSpace(text.charCodeAt(start))) start++;
+  while (end > start && isCSSSpace(text.charCodeAt(end - 1))) {
+    if (text.charCodeAt(end - 2) === BACKSLASH && isEscaped(text, end - 1)) break;
+    end--;
+  }
+  return start === 0 && end === text.length ? text : text.substring(start, end);
+}
+
+/** CSS whitespace: space, tab, and the newlines LF, CR, and form feed. */
+function isCSSSpace(c: number): boolean {
+  return isWS(c) || c === FORM_FEED;
 }
 
 /** `css[start..end]` without leading and trailing whitespace. */

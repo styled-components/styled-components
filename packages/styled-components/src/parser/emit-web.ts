@@ -9,7 +9,8 @@ import {
   StaticRoot,
   StaticRuleNode,
 } from './ast';
-import { scanQPB, splitTopLevelCommas, stripCommaSpaces } from './parser';
+import { isEscaped } from '../utils/normalize';
+import { scanQPB, splitTopLevelCommas, stripCommaSpaces, trimRealized } from './parser';
 
 /**
  * At-rule names whose bodies are direct declarations (no nested selector wrap).
@@ -57,12 +58,14 @@ function stripCombinatorSpaces(sel: string): string {
   while (i < len) {
     const stop = scanQPB(sel, i, len, $.GT, $.PLUS, $.TILDE, -1);
     if (stop >= len) break;
-    // Find left boundary of emitted segment (trim trailing whitespace).
+    // Find left boundary of emitted segment (trim trailing whitespace, except
+    // whitespace an escaping backslash precedes).
     let left = stop;
     while (left > segStart) {
       const p = sel.charCodeAt(left - 1);
-      if (isWS(p)) left--;
-      else break;
+      if (isWS(p) && !(sel.charCodeAt(left - 2) === $.BACKSLASH && isEscaped(sel, left - 1))) {
+        left--;
+      } else break;
     }
     out += sel.substring(segStart, left);
     out += sel[stop];
@@ -364,7 +367,7 @@ function resolveRuleSelectors(selectors: string[], parent: string): string {
   for (let ci = 0; ci < selectors.length; ci++) {
     const child = selectors[ci];
     for (let pi = 0; pi < parents.length; pi++) {
-      const p = parents[pi].trim();
+      const p = trimRealized(parents[pi], 0, parents[pi].length);
       resolved.push(resolveSingle(child, p));
     }
   }

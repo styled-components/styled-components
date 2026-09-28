@@ -936,63 +936,108 @@ describe('compileWeb', () => {
     // CSS Syntax 3 §4.3.8 Check if two code points are a valid escape: "If the
     // first code point is not U+005C REVERSE SOLIDUS (\), return false.
     // Otherwise, if the second code point is a newline, return false.
-    // Otherwise, return true." Substituted text is trimmed, so a backslash
-    // left before trimmed whitespace escapes whatever the template writes next.
-    describe('a value ending in an escaping backslash before whitespace', () => {
+    // Otherwise, return true." Trimming substituted text keeps a whitespace
+    // code point an escaping backslash precedes, so the backslash never
+    // reaches the character the template writes next.
+    describe('trimming keeps whitespace an escaping backslash precedes', () => {
       it.each([
-        ['a space', 'x\\ '],
-        ['a tab', 'x\\\t'],
-        ['a newline', 'x\\\n'],
-        ['a space after an escaped backslash pair', 'x\\\\\\ '],
-      ])('drops the declaration for %s', (_, value) => {
+        ['a space', 'x\\ ', '.a{color:x\\ ;padding:0;}'],
+        ['a tab', 'x\\\t', '.a{color:x\\\t;padding:0;}'],
+        ['a newline', 'x\\\n', '.a{color:x\\\n;padding:0;}'],
+        ['a space after an escaped backslash pair', 'x\\\\\\  ', '.a{color:x\\\\\\ ;padding:0;}'],
+        ['no space after an escaped backslash', 'x\\\\ ', '.a{color:x\\\\;padding:0;}'],
+      ])('in a declaration value ending in %s', (_, value, rule) => {
         const src = tagged`color: ${value}; padding: 0;`;
-        expect(out(src)).toEqual(legacy('padding: 0;'));
-        expect(warnings()).toEqual([expect.stringContaining('`color`')]);
+        expect(out(src)).toEqual([rule]);
+        expect(warnings()).toEqual([]);
       });
 
-      it('keeps a value ending in an escaped backslash before whitespace', () => {
-        const src = tagged`content: ${'x\\\\ '}; padding: 0;`;
-        expect(out(src)).toEqual(['.a{content:x\\\\;padding:0;}']);
+      it('in each declaration a value `;` splits off', () => {
+        const src = tagged`color: ${'x\\ ; margin: y\\ '}; padding: 0;`;
+        expect(out(src)).toEqual(['.a{color:x\\ ;margin:y\\ ;padding:0;}']);
       });
 
-      it('drops the declaration for a property value', () => {
+      it('in a property name', () => {
         const src = tagged`${'x\\ '}: red; padding: 0;`;
-        expect(out(src)).toEqual(legacy('padding: 0;'));
+        expect(out(src)).toEqual(['.a{x\\ :red;padding:0;}']);
+      });
+
+      it('in a css fragment realized as a value', () => {
+        const src = tagged`color: ${css`x\\ `}; padding: 0;`;
+        expect(out(src)).toEqual(['.a{color:x\\ ;padding:0;}']);
       });
 
       it.each([
-        ['an Inside selector value', tagged`color: blue; & ${'x\\ '} { color: red; }`],
-        ['a Glued selector value', tagged`color: blue; ${'x\\ '}:hover { color: red; }`],
-        ['a later Head slot', tagged`color: blue; ${() => 'p'} ${'x\\ '} { color: red; }`],
-        ['an at-rule prelude', tagged`color: blue; @media ${'x\\\n'} { color: red; }`],
-        ['a statement at-rule prelude', tagged`color: blue; @import ${'url(a.css) x\\\n'};`],
-      ])('drops the rule for %s', (_, src) => {
-        expect(out(src)).toEqual(legacy('color: blue;'));
+        ['an Inside selector value', tagged`& ${'x\\ '} { color: red; }`, '.a x\\ {color:red;}'],
+        [
+          'a Glued selector value',
+          tagged`${'x\\ '}:hover { color: red; }`,
+          '.a x\\ :hover{color:red;}',
+        ],
+        [
+          'a later Head slot',
+          tagged`${() => 'p'} ${'x\\ '} { color: red; }`,
+          '.a p x\\ {color:red;}',
+        ],
+        [
+          'an Inside value before a combinator',
+          tagged`& ${'x\\ '}> p { color: red; }`,
+          '.a x\\ >p{color:red;}',
+        ],
+        [
+          'an at-rule prelude',
+          tagged`@media ${'x\\\n'} { color: red; }`,
+          '@media x\\\n{.a{color:red;}}',
+        ],
+        [
+          'an at-rule prelude a Head gives',
+          tagged`${() => '@media x\\ '} { color: red; }`,
+          '@media x\\ {.a{color:red;}}',
+        ],
+        [
+          'a statement at-rule prelude',
+          tagged`@import ${'url(a.css) x\\\n'};`,
+          '@import url(a.css) x\\\n;',
+        ],
+      ])('in %s', (_, src, rule) => {
+        expect(out(src)).toEqual([rule]);
       });
 
       it.each([
-        ['an Inside selector value', tagged`color: blue; & ${'x\\ ,'} { color: red; }`],
+        ['an Inside selector value', tagged`& ${'x\\ ,'} { color: red; }`, '.a x\\ {color:red;}'],
         [
           'an Inside selector value with a tab',
-          tagged`color: blue; & ${'x\\\t, y'} { color: red; }`,
+          tagged`& ${'x\\\t, y'} { color: red; }`,
+          '.a x\\\t,.a y{color:red;}',
         ],
-        ['a Head value', tagged`color: blue; ${() => 'x\\ , y'} { color: red; }`],
-      ])('drops the rule when a comma split leaves a part ending in an escape: %s', (_, src) => {
-        expect(out(src)).toEqual(legacy('color: blue;'));
+        ['a Head value', tagged`${() => 'x\\ , y'} { color: red; }`, '.a x\\ ,.a y{color:red;}'],
+      ])('in each part a comma split makes of %s', (_, src, rule) => {
+        expect(out(src)).toEqual([rule]);
+      });
+
+      it('in a parent selector a nested rule is resolved against', () => {
+        const src = tagged`& ${'x\\ , y'} { & p { color: red; } }`;
+        expect(out(src)).toEqual(['.a x\\  p,.a y p{color:red;}']);
       });
 
       it.each([
-        ['a stop Head', tagged`@keyframes k { ${'\\\t,, '} { opacity: 0; } to { opacity: 1; } }`],
+        [
+          'a stop Head',
+          tagged`@keyframes k { ${'\\\t,, '} { opacity: 0; } }`,
+          '@keyframes k{\\\t{opacity:0;}}',
+        ],
         [
           'an Inside stop',
-          tagged`@keyframes k { from, ${'x\\ '} { opacity: 0; } to { opacity: 1; } }`,
+          tagged`@keyframes k { from, ${'x\\ '} { opacity: 0; } }`,
+          '@keyframes k{from,x\\ {opacity:0;}}',
         ],
         [
           'an Inside stop split by a comma',
-          tagged`@keyframes k { from, ${'x\\ , 50%'} { opacity: 0; } to { opacity: 1; } }`,
+          tagged`@keyframes k { from, ${'x\\ , 50%'} { opacity: 0; } }`,
+          '@keyframes k{from,x\\ ,50%{opacity:0;}}',
         ],
-      ])('drops the frame for %s', (_, src) => {
-        expect(out(src)).toEqual(['@keyframes k{to{opacity:1;}}']);
+      ])('in %s', (_, src, rule) => {
+        expect(out(src)).toEqual([rule]);
       });
     });
 
@@ -1417,6 +1462,10 @@ describe('compileWeb', () => {
       it.each(shapes)('checks a value with its own toString in %s', (_, make) => {
         const token = { toString: () => 'red; @import url(//evil.example/x.css)' };
         expect(run(make, token)).toEqual(['.a{color:red;padding:0;}']);
+      });
+
+      it.each(shapes)('keeps whitespace an escaping backslash precedes in %s', (_, make) => {
+        expect(run(make, 'x\\ ')).toEqual(['.a{color:x\\ ;padding:0;}']);
       });
 
       it.each(shapes)('keeps an ordinary value with parentheses in %s', (_, make) => {

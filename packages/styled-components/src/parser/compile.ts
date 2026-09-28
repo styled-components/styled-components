@@ -4,7 +4,6 @@ import type { Compiler } from '../types';
 import {
   AMPERSAND,
   AT,
-  BACKSLASH,
   CLOSE_BRACE,
   COLON,
   isIdentChar,
@@ -12,7 +11,7 @@ import {
   SEMICOLON,
 } from '../utils/charCodes';
 import { fifoSet } from '../utils/fifoMap';
-import { isEscaped, normalize } from '../utils/normalize';
+import { normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
 import {
   DeclNode,
@@ -43,6 +42,7 @@ import {
   splitTopLevelCommas,
   stripCommaSpaces,
   TOP_LEVEL,
+  trimRealized,
 } from './parser';
 import {
   checkSlotValue,
@@ -219,7 +219,7 @@ function fillDecl(node: DeclNode, fill: Fill): StaticDeclNode | StaticDeclNode[]
     return undefined;
   }
   if (realizedSemicolon) split = true;
-  const prop = typeof node.prop !== 'string' ? trimWhitespace(propRaw) : propRaw;
+  const prop = typeof node.prop !== 'string' ? trimRealized(propRaw, 0, propRaw.length) : propRaw;
   if (split) {
     const decls = splitDeclarations(prop + ':' + valueRaw);
     const kept: StaticDeclNode[] = [];
@@ -257,7 +257,6 @@ function realizeList(list: ReadonlyArray<string | TemplateValue>, fill: Fill): s
       out.push(text);
     } else {
       const parts = splitList(text);
-      if (parts === null) return null;
       for (let j = 0; j < parts.length; j++) out.push(parts[j]);
     }
   }
@@ -282,18 +281,13 @@ function anchorSelectors(selectors: string[], fill: Fill): string[] {
   return selectors;
 }
 
-/**
- * Split realized selector or stop text on top-level commas, trimming each
- * part. `null` when trimming leaves a part ending in a backslash, which would
- * escape the character written after the part.
- */
-function splitList(text: string): string[] | null {
-  const parts = splitTopLevelCommas(text, true);
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    if (part.charCodeAt(part.length - 1) === BACKSLASH && isEscaped(part, part.length)) {
-      return null;
-    }
+/** Split realized selector or stop text on top-level commas, trimming each part and dropping empty parts. */
+function splitList(text: string): string[] {
+  const raw = splitTopLevelCommas(text);
+  const parts: string[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const part = trimRealized(raw[i], 0, raw[i].length);
+    if (part !== '') parts.push(part);
   }
   return parts;
 }
@@ -378,7 +372,7 @@ function fillKeyframes(
     return undefined;
   }
   if (typeof preludeField !== 'string') {
-    prelude = trimWhitespace(prelude);
+    prelude = trimRealized(prelude, 0, prelude.length);
     if (!isIdentifier(prelude)) {
       if (__DEV__) {
         warnOnce(
@@ -421,10 +415,6 @@ function fillKeyframes(
         continue;
       }
       stops = splitList(head.text);
-      if (stops === null) {
-        if (__DEV__) warnDropped('@keyframes frame `' + head.text + '`');
-        continue;
-      }
       if (stops.length === 0) continue;
     } else {
       stops = realizeList(frame.stops, fill);
@@ -503,7 +493,7 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
     }
     const text = normalize(raw, false);
     const cut = lastStatementEnd(text);
-    const rest = trimWhitespace(text.substring(cut + 1));
+    const rest = trimRealized(text, cut + 1, text.length);
     if (textUnresolved && rest !== '') return droppedHead(statements);
     if (cut !== -1) {
       const spliced =
@@ -530,7 +520,12 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
     if (__DEV__) warnRealizeFailed('rule `' + fieldText(head.rest) + '`');
     return droppedHead(statements);
   }
-  return { dropped: false, remainder, statements, text: prefix + trimWhitespace(rest) };
+  return {
+    dropped: false,
+    remainder,
+    statements,
+    text: prefix + trimRealized(rest, 0, rest.length),
+  };
 }
 
 function droppedHead(statements: StaticNode[]): ResolvedHead {
@@ -572,7 +567,7 @@ function fillHeadRule(node: RuleNode, head: SlotHead, fill: Fill): StaticNode[] 
       }
       return out.length === 0 ? undefined : out;
     }
-    const prelude = trimWhitespace(text.substring(end));
+    const prelude = trimRealized(text, end, text.length);
     out.push({ kind: NodeKind.AtRule, name, prelude, children: fillNodes(node.children, fill) });
     return out;
   }
@@ -584,10 +579,6 @@ function fillHeadRule(node: RuleNode, head: SlotHead, fill: Fill): StaticNode[] 
     );
   }
   const selectors = splitList(text);
-  if (selectors === null) {
-    if (__DEV__) warnDropped('rule `' + text + '`');
-    return out.length === 0 ? undefined : out;
-  }
   if (remainder === null && selectors.length === 0) {
     if (fill.root) {
       if (__DEV__) {
@@ -766,29 +757,12 @@ function warnDropped(construct: string): void {
   );
 }
 
-function trimWhitespace(s: string): string {
-  let start = 0;
-  let end = s.length;
-  while (start < end) {
-    const c = s.charCodeAt(start);
-    if (isWS(c)) start++;
-    else break;
-  }
-  while (end > start) {
-    const c = s.charCodeAt(end - 1);
-    if (isWS(c)) end--;
-    else break;
-  }
-  if (start === 0 && end === s.length) return s;
-  return s.substring(start, end);
-}
-
 /**
  * Mirror the parser's `normalizeValue` for substituted text. Output bytes
  * match the string-input `compiler.compile` path so SSR class hashes stay stable.
  */
 function normalizeSubstituted(value: string): string {
-  const trimmed = trimWhitespace(value);
+  const trimmed = trimRealized(value, 0, value.length);
   if (trimmed.length === 0) return trimmed;
   if (trimmed.indexOf(',') === -1) return trimmed;
   return stripCommaSpaces(trimmed);
