@@ -92,7 +92,6 @@ NOTE: This file is the only home for these instructions. CLAUDE.md is a one-line
 - `pnpm --filter styled-components test:native`: Test React Native
 - `pnpm --filter styled-components bench`: `bench:web` then `bench:rsc`
 - `pnpm --filter styled-components bench:web`: Every suite under `src/bench/` matched by `jest.config.bench.js` (`*.bench.test.*`, `web*.test.*`, `preprocess*.test.*`). Each file's header docblock states what it measures, so a new suite joins the run by matching one of those patterns. Do not enumerate the suites here; that list has already drifted twice.
-- `pnpm --filter styled-components bench:web -- templated-render`: Style work of a templated component's warm and cold renders (value slots, `${kf}`, inline arrow `css` fragment, style object, nested `&`); the file header says what each case isolates
 - `pnpm --filter styled-components bench:web:stress`: Stress benchmarks only (`src/bench/web.test.js`); uses `SC_BENCH_ITER_SCALE=0.2` and `SC_BENCH_RUNS=3` for quicker runs
 - `pnpm --filter styled-components bench:rsc`: `src/bench/rsc.test.tsx`, matched by `jest.config.bench-rsc.js` (node environment, `IS_RSC` server path)
 - `pnpm --filter styled-components type-perf`: Consumer type-check budget, measured against the built `dist` (needs `pnpm build` first). `--against <package root>` measures another copy of the package with the same fixture. See [docs/typescript-performance.md](docs/typescript-performance.md)
