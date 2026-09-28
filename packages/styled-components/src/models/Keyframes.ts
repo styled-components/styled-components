@@ -30,10 +30,8 @@ export default class Keyframes implements KeyframesType {
   name: string;
   rules: string;
 
-  /** Each compiler's {@link compile} result; `null` until the first compile. */
-  private compiled: WeakMap<KeyframesCompiler, CompiledKeyframes> | null = null;
-  /** The compiler of the latest {@link compile} call and its result, checked first. */
-  private latest: [KeyframesCompiler, CompiledKeyframes] | null = null;
+  /** Each compiler's {@link compile} result. */
+  private readonly compiled = new WeakMap<KeyframesCompiler, CompiledKeyframes>();
 
   constructor(name: string, rules: string) {
     this.name = name;
@@ -58,16 +56,12 @@ export default class Keyframes implements KeyframesType {
    * not be mutated.
    */
   compile(compiler: KeyframesCompiler = mainCompiler): CompiledKeyframes {
-    const latest = this.latest;
-    if (latest !== null && latest[0] === compiler) return latest[1];
-    if (this.compiled === null) this.compiled = new WeakMap();
     let compiled = this.compiled.get(compiler);
     if (compiled === undefined) {
       const name = this.getName(compiler);
       compiled = { id: this.id, name, rules: compiler.compile(this.rules, name, '@keyframes') };
       this.compiled.set(compiler, compiled);
     }
-    this.latest = [compiler, compiled];
     return compiled;
   }
 
