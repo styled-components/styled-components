@@ -1196,7 +1196,7 @@ function hasOwnKeys(o: object): boolean {
  *   in `staticDeclCache` (WeakMap keyed on the AST node), populated lazily
  *   on first touch. Subsequent renders splat the cached object directly,
  *   skipping the camelize / shorthand / polyfill work.
- * - Dynamic Decls (substituted values change per render after `fillAst`):
+ * - Dynamic Decls (substituted values change per render after `fillSource`):
  *   route through the string-keyed `pairCache` (whole-Map flush at
  *   `PAIR_CACHE_LIMIT`, working set bounded to dynamic decls only).
  *

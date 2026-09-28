@@ -783,6 +783,68 @@ describe('compileWeb', () => {
       const src = tagged`color: blue; ${clientRef} h2 { color: red; }`;
       expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue;'));
     });
+
+    it('drops the rule when a value in the selector text after the Head fails its check', () => {
+      const src = tagged`color: blue; ${() => 'h1'} .x${'}'} { color: red; }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue;'));
+      expect(warnings()).toEqual([expect.stringContaining('rule `.x${…}`')]);
+    });
+
+    it('drops a block at the top level of a global style whose Head is empty, with a dev warning', () => {
+      const src = tagged`${() => ''} { color: red; } body { margin: 0; }`;
+      expect(compileWeb(src, {}, '')).toEqual(['body{margin:0;}']);
+      expect(warnings()).toEqual([expect.stringContaining('createGlobalStyle has no selector')]);
+    });
+
+    it('drops a keyframe frame whose stop Head is an at-rule, with a dev warning', () => {
+      const src = tagged`@keyframes k { ${() => '@media x'} { opacity: 0; } to { opacity: 1; } }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(['@keyframes k{to{opacity:1;}}']);
+      expect(warnings()).toEqual([
+        expect.stringContaining('cannot stand before a @keyframes frame'),
+      ]);
+    });
+  });
+
+  describe('keyframes splices', () => {
+    const opts = { selfRefSelector: '.a', componentId: 'a' };
+    let warn: jest.SpyInstance;
+
+    beforeEach(() => {
+      resetWarnOnce();
+      warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      warn.mockRestore();
+    });
+
+    const warnings = () => warn.mock.calls.map(call => String(call[0]));
+
+    it('splices frames a Standalone value in the frame list gives', () => {
+      const src = tagged`@keyframes k { from { opacity: 0; } ${() => 'to { opacity: 1; }'} }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual([
+        '@keyframes k{from{opacity:0;}to{opacity:1;}}',
+      ]);
+      expect(warnings()).toEqual([]);
+    });
+
+    it('drops a declaration spliced into the frame list, with a dev warning', () => {
+      const src = tagged`@keyframes k { from { opacity: 0; } ${() => 'opacity: 1;'} }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(['@keyframes k{from{opacity:0;}}']);
+      expect(warnings()).toEqual([expect.stringContaining('other than frame blocks')]);
+    });
+
+    it('drops a rule spliced into a frame, with a dev warning', () => {
+      const src = tagged`@keyframes k { from { ${() => 'opacity: 0; & { color: red; }'} } }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(['@keyframes k{from{opacity:0;}}']);
+      expect(warnings()).toEqual([expect.stringContaining('only declarations belong in a frame')]);
+    });
+
+    it('drops @keyframes whose templated name fails its check, with a dev warning', () => {
+      const src = tagged`color: blue; @keyframes ${'a{'} { to { opacity: 1; } }`;
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue;'));
+      expect(warnings()).toEqual([expect.stringContaining('@keyframes `${…}`')]);
+    });
   });
 
   describe('block-level string interpolations', () => {
@@ -792,6 +854,27 @@ describe('compileWeb', () => {
       const src = tagged`color: ${{ raw: 'red' } as unknown};`;
       expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
         '.a{color:raw:red;}',
+      ]);
+    });
+
+    it('realizes an object value holding a non-ordinary value as its text in a declaration', () => {
+      const src = tagged`content: ${{ raw: '"x"' } as unknown};`;
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
+        '.a{content:raw:"x";}',
+      ]);
+    });
+
+    it('realizes a css fragment holding another css fragment as its text in a declaration', () => {
+      const src = tagged`color: ${css`${css`red`}`};`;
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
+        '.a{color:red;}',
+      ]);
+    });
+
+    it('substitutes a number a function returns', () => {
+      const src = tagged`width: ${() => 10}px;`;
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
+        '.a{width:10px;}',
       ]);
     });
 
@@ -1156,6 +1239,56 @@ describe('compileWeb', () => {
         const src = tagged`background: x${'(a(b))'};`;
         expect(out(src)).toEqual(['.a{background:x(a(b));}']);
       });
+    });
+
+    // CSS Syntax 3 §4.3.4 Consume an ident-like token: "Consume an ident
+    // sequence, and let string be the result. If string’s value is an ASCII
+    // case-insensitive match for "url", and the next input code point is
+    // U+0028 LEFT PARENTHESIS ((), consume it." An escaped identifier may
+    // spell `url`, so its `(` is read both ways and must mean the same.
+    describe('a `(` after an escaped identifier', () => {
+      it('keeps text both readings agree on', () => {
+        const src = tagged`background: ${'\\75rl(a)'};`;
+        expect(out(src)).toEqual(['.a{background:\\75rl(a);}']);
+      });
+
+      it('keeps text both readings agree on when the escape is written before the value', () => {
+        const src = tagged`background: \\75${'rl(a)'};`;
+        expect(out(src)).toEqual(['.a{background:\\75rl(a);}']);
+      });
+
+      it.each([
+        ['a quote', '\\75rl(a"b)'],
+        ['a nested parenthesis', '\\75rl(a(b))'],
+        ['a backslash', '\\75rl(a\\62)'],
+        ['a comment', '\\75rl(a/**/b)'],
+        ['no closing parenthesis', '\\75rl(a'],
+      ])('drops the declaration for %s the readings disagree on', (_, value) => {
+        const src = tagged`background: ${value}; margin: 0;`;
+        expect(out(src)).toEqual(legacy('margin: 0;'));
+      });
+    });
+
+    it('reads an asterisk inside a comment as comment text', () => {
+      const src = tagged`color: ${'/* a*b */ red'};`;
+      expect(out(src)).toEqual(['.a{color:/* a*b */ red;}']);
+    });
+
+    // CSS Syntax 3 §4.3.6 Consume a url token: "whitespace: Consume as much
+    // whitespace as possible. If the next input code point is U+0029 RIGHT
+    // PARENTHESIS ()) or EOF, consume it and return the <url-token> ...;
+    // otherwise, consume the remnants of a bad url".
+    it.each([
+      ['whitespace before `)`', 'url(a )'],
+      ['whitespace inside, as a bad url ending at `)`', 'url(a b)'],
+    ])('keeps an unquoted url( with %s', (_, value) => {
+      const src = tagged`background: ${value};`;
+      expect(out(src)).toEqual([`.a{background:${value};}`]);
+    });
+
+    it('splits a declaration only at a `;` outside parentheses and brackets', () => {
+      const src = tagged`grid-area: ${'f(a;b) [c;d]; margin: 0'};`;
+      expect(out(src)).toEqual(['.a{grid-area:f(a;b) [c;d];margin:0;}']);
     });
 
     // CSS Syntax 3 §4.3.4 Consume an ident-like token: "If string’s value is
