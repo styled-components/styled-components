@@ -1,18 +1,10 @@
-import {
-  CLOSE_BRACE,
-  CLOSE_PAREN,
-  DOUBLE_QUOTE,
-  OPEN_BRACE,
-  OPEN_PAREN,
-  SEMICOLON,
-  SINGLE_QUOTE,
-} from '../utils/charCodes';
 import type { RuleSet } from '../types';
+import { CLOSE_BRACE, OPEN_BRACE, SEMICOLON } from '../utils/charCodes';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
-import { isEscaped, normalize } from '../utils/normalize';
+import { normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
 import type { Root } from './ast';
-import { parse, ParseOptions, SlotEntry, SlotTable } from './parser';
+import { parse, ParseOptions, scanQP, SlotEntry, SlotTable } from './parser';
 
 /**
  * Pre-classified slot shape so the fast path skips typeof checks. Order
@@ -334,9 +326,9 @@ export function concatSourceInputs(
 }
 
 /**
- * Whether a `css\`\`` fragment's source holds `;`, `{`, or `}` outside
- * comments, strings, and parentheses, so it cannot be only a value. Such a
- * fragment, interpolated directly, ends a declaration missing its `;`.
+ * Whether a `css\`\`` fragment's source holds an unescaped `;`, `{`, or `}`
+ * outside comments, strings, and parentheses, so it cannot be only a value.
+ * Such a fragment, interpolated directly, ends a declaration missing its `;`.
  */
 function isBlockLikeFragment(rules: RulesWithSlot): boolean {
   const cached = rules[BLOCK_LIKE];
@@ -347,24 +339,7 @@ function isBlockLikeFragment(rules: RulesWithSlot): boolean {
   // parenthesis, or comment character, so the scan reads the text around a
   // slot as the parser will.
   const css = normalize(slot[0].join('\0'), false);
-  let blockLike = false;
-  let quote = 0;
-  let parenDepth = 0;
-  for (let j = 0; j < css.length; j++) {
-    const c = css.charCodeAt(j);
-    if (quote !== 0) {
-      if (c === quote && !isEscaped(css, j)) quote = 0;
-    } else if ((c === DOUBLE_QUOTE || c === SINGLE_QUOTE) && !isEscaped(css, j)) {
-      quote = c;
-    } else if (c === OPEN_PAREN) {
-      parenDepth++;
-    } else if (c === CLOSE_PAREN) {
-      if (parenDepth > 0) parenDepth--;
-    } else if (parenDepth === 0 && (c === SEMICOLON || c === OPEN_BRACE || c === CLOSE_BRACE)) {
-      blockLike = true;
-      break;
-    }
-  }
+  const blockLike = scanQP(css, 0, css.length, SEMICOLON, OPEN_BRACE, CLOSE_BRACE, -1) < css.length;
   // Non-enumerable so the cached flag stays invisible to `toEqual` /
   // `Object.keys` / JSON walks, matching the documented pattern used by
   // {@link DYN} and the parser's NATIVE_RULE_CLASS / NATIVE_AT_CLASS

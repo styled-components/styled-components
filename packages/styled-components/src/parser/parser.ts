@@ -56,7 +56,7 @@ import { stampAtClass, stampRuleClass } from './nativePlan';
  * `parseFrameDecls` so the common quote/paren/escape state machine
  * ships once instead of four times.
  */
-function scanQP(
+export function scanQP(
   s: string,
   start: number,
   end: number,

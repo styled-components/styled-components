@@ -644,6 +644,18 @@ describe('parseSource', () => {
         { kind: NodeKind.Decl, prop: 'color', value: tv('red \0S0\0') },
       ]);
     });
+
+    // CSS Syntax 3 §4.3.1 "Consume a token": "U+005C REVERSE SOLIDUS (\): If
+    // the input stream starts with a valid escape, reconsume the current
+    // input code point, consume an ident-like token, and return it." An
+    // escaped `;` is part of an identifier, not a statement end, just as the
+    // parser reads the fragment's own text.
+    it('does not count an escaped `;` in the fragment as a statement end', () => {
+      const escaped = css`a\\;b`;
+      expect(tagged`color: red ${escaped}`.ast).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: tv('red \0S0\0') },
+      ]);
+    });
   });
 
   describe('slot bookkeeping', () => {
