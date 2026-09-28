@@ -45,13 +45,15 @@ export function isIdentCode(c: number): boolean {
 }
 
 const NUL_ALL = /\0/g;
+/** Read once: a build constant, fixed for the whole bundle. */
+const KEEPS_NUL = __NATIVE__;
 
 /**
  * `value` with each NUL written as U+FFFD, as CSS preprocessing reads it.
  * The native build keeps NUL, which its theme tokens (`\0sc:`) are made of.
  */
 export function replaceNul(value: string): string {
-  return __NATIVE__ || value.indexOf('\0') === -1 ? value : value.replace(NUL_ALL, '�');
+  return KEEPS_NUL || value.indexOf('\0') === -1 ? value : value.replace(NUL_ALL, '�');
 }
 
 /** CSS whitespace, form feed included. */
