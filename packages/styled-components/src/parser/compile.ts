@@ -39,6 +39,7 @@ import {
 import {
   checkSlotValue,
   chunkChangesReading,
+  removeComments,
   splitDeclarations,
   VALUE_FAILED,
   VALUE_SEMICOLON,
@@ -243,9 +244,10 @@ function realizeList(list: ReadonlyArray<string | TemplateValue>, fill: Fill): s
       out.push(entry);
       continue;
     }
-    const text = realize(entry, fill, '');
-    if (text === null || realizedSemicolon) return null;
-    if (text.indexOf(',') === -1) {
+    const realized = realize(entry, fill, '');
+    if (realized === null || realizedSemicolon) return null;
+    const text = removeComments(realized);
+    if (text === realized && text.indexOf(',') === -1) {
       out.push(text);
     } else {
       const parts = splitList(text);
@@ -332,11 +334,12 @@ function fillAtRule(
       return fillKeyframes(name, node.prelude, node.children, fill);
     }
   }
-  const prelude = realize(node.prelude, fill, '');
-  if (prelude === null || realizedSemicolon) {
+  const realized = realize(node.prelude, fill, '');
+  if (realized === null || realizedSemicolon) {
     if (__DEV__) warnRealizeFailed('at-rule `@' + name + ' ' + fieldText(node.prelude) + '`');
     return undefined;
   }
+  const prelude = withoutComments(realized);
   const children = node.children === null ? null : fillNodes(node.children, fill);
   if (
     typeof node.name === 'string' &&
@@ -366,6 +369,7 @@ function fillKeyframes(
   }
   if (typeof preludeField !== 'string') {
     prelude = trimRange(prelude, 0, prelude.length);
+    prelude = withoutComments(prelude);
     if (!isIdentifier(prelude)) {
       if (__DEV__) {
         warnOnce(
@@ -513,12 +517,20 @@ function readHead(head: SlotHead, fill: Fill): ResolvedHead | undefined {
     if (__DEV__) warnRealizeFailed('rule `' + fieldText(head.rest) + '`');
     return droppedHead(statements);
   }
+  // Removal keeps the cleaned remainder a prefix of the cleaned text: no
+  // comment spans the two, since every value ends in the state it started in.
   return {
     dropped: false,
-    remainder,
+    remainder: remainder === null ? null : removeComments(remainder),
     statements,
-    text: prefix + trimRange(rest, 0, rest.length),
+    text: removeComments(prefix + trimRange(rest, 0, rest.length)),
   };
+}
+
+/** {@link removeComments}, trimming the text when a comment was removed. */
+function withoutComments(text: string): string {
+  const clean = removeComments(text);
+  return clean === text ? text : trimRange(clean, 0, clean.length);
 }
 
 function droppedHead(statements: StaticNode[]): ResolvedHead {

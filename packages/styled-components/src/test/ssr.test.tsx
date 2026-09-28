@@ -1423,6 +1423,20 @@ describe('ssr', () => {
       });
 
       it.each([
+        ['a comment hiding `&`', '/*&*/body', '.b body:hover'],
+        ['a comment hiding `&` inside parentheses', ':is(/*)&(*/ body)', '.b :is( body):hover'],
+      ])('scopes a selector slot whose value holds %s', (_, payload, prelude) => {
+        const Comp = styled.div<{ $sel: string }>`
+          ${p => p.$sel}:hover {
+            color: red;
+          }
+        `;
+        const sheet = new ServerStyleSheet();
+        renderToString(sheet.collectStyles(<Comp $sel={payload} />));
+        expect(readRules(sheet.getStyleTags())).toEqual([{ prelude, props: ['color'], rules: [] }]);
+      });
+
+      it.each([
         ['a `;`', 'h1; body'],
         ['a brace', 'h1 {} body'],
       ])('drops the rule whose selector slot holds %s', (_, payload) => {

@@ -1572,6 +1572,81 @@ describe('compileWeb', () => {
       });
     });
 
+    /**
+     * A comment a value writes is removed as CSS reads it before the list is
+     * split or anchored, so it never hides or reveals an `&`.
+     */
+    describe('comments in a value', () => {
+      it.each([
+        [
+          'hiding `&` in a Glued value',
+          tagged`${() => '/*&*/body'}:hover { color: red; }`,
+          '.a body:hover',
+        ],
+        [
+          'hiding `&` in an Inside value',
+          tagged`p, ${() => '/*&*/body'} { color: red; }`,
+          '.a p,.a body',
+        ],
+        [
+          'inside parentheses holding `)`',
+          tagged`${() => ':is(/*)&(*/ body)'}:hover { color: red; }`,
+          '.a :is( body):hover',
+        ],
+        [
+          'after an escaped parenthesis',
+          tagged`${() => ':not([x=\\(])/*&*/ body'}:hover { color: red; }`,
+          '.a :not([x=\\(]) body:hover',
+        ],
+        [
+          'twice inside parentheses',
+          tagged`${() => ':is(/*)*/ /*&*/ body)'}:hover { color: red; }`,
+          '.a :is( body):hover',
+        ],
+        [
+          'in a later slot of a Head run',
+          tagged`${() => 'x'} ${() => '/*&*/body'} h2 { color: red; }`,
+          '.a x body h2',
+        ],
+        [
+          'inside parentheses in a Head value',
+          tagged`${() => ':is(/*)&(*/ body)'} h2 { color: red; }`,
+          '.a :is( body) h2',
+        ],
+        [
+          'whose removal would leave `/` before `*`',
+          tagged`${() => '//**/*&*/ body'}:hover { color: red; }`,
+          '/ *.a*/ body:hover',
+        ],
+      ])('is removed %s', (_, src, selector) => {
+        expect(compileWeb(src, {}, '.a', opts)).toEqual([selector + '{color:red;}']);
+      });
+
+      it.each([
+        ['url(', tagged`${() => 'url(a/*&*/b)'}:hover { color: red; }`, '.a url(a/*.a*/b):hover'],
+        [
+          'a string',
+          tagged`${() => '[data-x="/*&*/"]'}:hover { color: red; }`,
+          '.a [data-x="/*&*/"]:hover',
+        ],
+        ['a `//` line', tagged`${() => '//&\nbody'}:hover { color: red; }`, '//.a\nbody:hover'],
+      ])('keeps `/*` and `//` that CSS does not read as a comment: %s', (_, src, selector) => {
+        expect(compileWeb(src, {}, '.a', opts)).toEqual([selector + '{color:red;}']);
+      });
+
+      it('is removed from an at-rule prelude value', () => {
+        const src = tagged`@media ${() => '/* c */ (min-width: 1px)'} { color: red; }`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual([
+          '@media (min-width: 1px){.a{color:red;}}',
+        ]);
+      });
+
+      it('is removed from a keyframe stop value', () => {
+        const src = tagged`@keyframes k { from, ${() => '/* c */ 50%'} { opacity: 0; } }`;
+        expect(compileWeb(src, {}, '.a', opts)).toEqual(['@keyframes k{from,50%{opacity:0;}}']);
+      });
+    });
+
     it('splits a stop list an Inside value adds into stops', () => {
       const src = tagged`@keyframes k { from, ${'50%, 60%'} { opacity: 0; } }`;
       const filled = fillSource(src, src.staticValues, null);

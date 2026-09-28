@@ -412,6 +412,67 @@ export function chunkChangesReading(before: string, chunk: string, plain: boolea
   return isUrlName(prior + lead) !== isUrlName(lead);
 }
 
+/** Whether the `(` at `open` in `text` starts `url(` whose contents are an unquoted url. */
+function opensUnquotedUrl(text: string, open: number): boolean {
+  if (
+    open < 3 ||
+    !isUrlName(text.substring(open - 3, open)) ||
+    (open > 3 && isIdentCode(text.charCodeAt(open - 4)))
+  ) {
+    return false;
+  }
+  let j = open + 1;
+  while (j < text.length && isSpace(text.charCodeAt(j))) j++;
+  const next = text.charCodeAt(j);
+  return next !== DOUBLE_QUOTE && next !== SINGLE_QUOTE;
+}
+
+/**
+ * Remove the comments CSS reads in realized selector, prelude, or stop text:
+ * `/* *\/` at any parenthesis depth, outside strings, escapes, and unquoted
+ * `url(`. A comment between two whitespace runs leaves the first run, as
+ * template text removal does. A `/` left directly before a `*` gets a space
+ * after it, so the removal never forms a new comment.
+ */
+export function removeComments(text: string): string {
+  if (text.indexOf('/*') === -1) return text;
+  const len = text.length;
+  let out = '';
+  let start = 0;
+  let quote = 0;
+  let url = false;
+  let i = 0;
+  while (i < len) {
+    const c = text.charCodeAt(i);
+    if (c === BACKSLASH) {
+      i += 2;
+      continue;
+    }
+    if (quote !== 0) {
+      if (c === quote) quote = 0;
+    } else if (url) {
+      if (c === CLOSE_PAREN) url = false;
+    } else if (c === SLASH && text.charCodeAt(i + 1) === ASTERISK) {
+      out += text.substring(start, i);
+      const close = text.indexOf('*/', i + 2);
+      i = close === -1 ? len : close + 2;
+      if (out.length > 0 && isSpace(out.charCodeAt(out.length - 1))) {
+        while (i < len && isSpace(text.charCodeAt(i))) i++;
+      } else if (text.charCodeAt(i) === ASTERISK && endsWithSlash(out)) {
+        out += ' ';
+      }
+      start = i;
+      continue;
+    } else if (c === DOUBLE_QUOTE || c === SINGLE_QUOTE) {
+      quote = c;
+    } else if (c === OPEN_PAREN) {
+      url = opensUnquotedUrl(text, i);
+    }
+    i++;
+  }
+  return out + text.substring(start);
+}
+
 /** Top-level declaration stops, read with CSS Syntax 3 tokenization from the top level. */
 function scanTopLevel(text: string, start: number, end: number, stop: number): number {
   let quote = 0;
