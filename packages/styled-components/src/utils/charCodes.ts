@@ -68,6 +68,22 @@ export function isWS(c: number): boolean {
 }
 
 /**
+ * `s` with its ASCII letters lowercased and every other code point as
+ * written, for names CSS reads in any ASCII case (at-rule names).
+ */
+export function lowerAscii(s: string): string {
+  let i = 0;
+  while (i < s.length && !(s.charCodeAt(i) >= UPPER_A && s.charCodeAt(i) <= UPPER_Z)) i++;
+  if (i === s.length) return s;
+  let out = s.substring(0, i);
+  for (; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    out += c >= UPPER_A && c <= UPPER_Z ? String.fromCharCode(c + UPPER_TO_LOWER) : s[i];
+  }
+  return out;
+}
+
+/**
  * Inline-friendly identifier-continuation predicate: matches ASCII
  * letters, digits, `-`, and `_`. Shared by the selector/component-id
  * char-scanning loops in the parser and native selector classifiers.

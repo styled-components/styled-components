@@ -1,5 +1,5 @@
 import * as $ from '../utils/charCodes';
-import { isWS } from '../utils/charCodes';
+import { isWS, lowerAscii } from '../utils/charCodes';
 import { NodeKind, StaticAtRuleNode, StaticKeyframesNode, StaticNode, StaticRoot } from './ast';
 import { splitTopLevelCommas, trimRange } from './parser';
 import { ANY_DEPTH, BRACKETS, identifierEnd, isEscaped, isIdentCode, scan, stops } from './reader';
@@ -230,7 +230,7 @@ function emitNodes(
       case NodeKind.AtRule:
         // A `@` with no name is a delimiter, not an at-rule; emitted, it
         // would join the next rule's prelude and invalidate it.
-        if (node.name !== '' && !DROPPED_AT_RULES.has(node.name)) {
+        if (node.name !== '' && !DROPPED_AT_RULES.has(lowerAscii(node.name))) {
           const emitted = emitAtRule(node, currentSelector, options);
           if (emitted) other.push(emitted);
         }
@@ -282,12 +282,13 @@ function emitAtRule(
   options: EmitOptions | undefined
 ): string {
   let prelude = node.prelude;
+  const name = lowerAscii(node.name);
   // `${Component}` interpolation pre-stringifies to a class selector
   // (`.sc-aBcDeF`) for normal selector contexts. In the `@container
   // <name>` slot a bare ident is required by the CSS parser; strip a
   // leading dot from the prelude so cross-component container queries
   // emit valid CSS the browser can match.
-  if (node.name === 'container' && prelude.length > 0 && prelude.charCodeAt(0) === 0x2e) {
+  if (name === 'container' && prelude.length > 0 && prelude.charCodeAt(0) === 0x2e) {
     prelude = prelude.substring(1);
   }
   const header = '@' + node.name + (prelude ? ' ' + prelude : '');
@@ -295,7 +296,7 @@ function emitAtRule(
     return header + ';';
   }
 
-  if (DECL_BODY_AT_RULES.has(node.name)) {
+  if (DECL_BODY_AT_RULES.has(name)) {
     // Body is bare declarations; emit inline, no selector wrap.
     const declTransform = options && options.decl;
     const decls: string[] = [];

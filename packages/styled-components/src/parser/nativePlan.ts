@@ -89,7 +89,8 @@ export function stampRuleClass(node: RuleNode): void {
  * the render-time fallback in `compileNative.ts` (where `fillSource` has
  * already substituted any TemplateValue back to strings).
  */
-export function classifyAtRuleNow(name: string, prelude: string): NativeAtClass {
+export function classifyAtRuleNow(written: string, prelude: string): NativeAtClass {
+  const name = $.lowerAscii(written);
   if (name === 'starting-style') return { kind: 'starting-style' };
   if (name === 'media' || name === 'container' || name === 'supports') {
     if (name === 'container') {

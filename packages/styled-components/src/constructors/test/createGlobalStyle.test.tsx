@@ -745,6 +745,19 @@ describe(`createGlobalStyle`, () => {
     );
   });
 
+  it('warns when @import is written in another ASCII case', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Component = createGlobalStyle`
+      @IMPORT url("something.css");
+    `;
+    render(<Component />);
+
+    expect(warn.mock.calls.map(call => String(call[0]))).toEqual([
+      expect.stringContaining('please do not use @import'),
+    ]);
+  });
+
   it('works with keyframes', () => {
     const rotate360 = keyframes`
       from {

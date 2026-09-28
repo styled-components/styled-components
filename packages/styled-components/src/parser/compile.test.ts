@@ -328,6 +328,49 @@ describe('compileWeb', () => {
    * A templated at-rule name resolves at fill time: the realized name must be
    * an identifier, and a keyframes name turns the block into a @keyframes rule.
    */
+  /**
+   * CSS 2 §4.1.3: "All CSS syntax is case-insensitive within the ASCII range
+   * (i.e., [a-z] and [A-Z] are equivalent), except for parts that are not
+   * under the control of CSS." An at-rule name is written as authored and
+   * read in any ASCII case.
+   */
+  describe('at-rule names in any ASCII case', () => {
+    const opts = { selfRefSelector: '.a', componentId: 'a' };
+    const Other = Object.assign(function FakeComponent() {}, { styledComponentId: 'sc-other' });
+
+    it.each([
+      [
+        '@KEYFRAMES',
+        tagged`@KEYFRAMES k { from { opacity: 0; } }`,
+        ['@KEYFRAMES k{from{opacity:0;}}'],
+      ],
+      [
+        'a vendor-prefixed @keyframes',
+        tagged`@-WebKit-KeyFrames k { from { opacity: ${'0'}; } }`,
+        ['@-WebKit-KeyFrames k{from{opacity:0;}}'],
+      ],
+      [
+        'a templated @keyframes name',
+        tagged`@${() => 'KEYFRAMES'} k { from { opacity: 0; } }`,
+        ['@KEYFRAMES k{from{opacity:0;}}'],
+      ],
+      ['@FONT-FACE', tagged`@FONT-FACE { font-family: x; }`, ['@FONT-FACE{font-family:x;}']],
+      ['@CHARSET', tagged`@CHARSET "utf-8"; color: red;`, ['.a{color:red;}']],
+      [
+        '@CONTAINER naming a component',
+        tagged`@CONTAINER ${Other} (min-width: 1px) { color: red; }`,
+        ['@CONTAINER sc-other (min-width: 1px){.a{color:red;}}'],
+      ],
+      [
+        '@MEDIA from a Head value',
+        tagged`${() => '@MEDIA screen'} { color: red; }`,
+        ['@MEDIA screen{.a{color:red;}}'],
+      ],
+    ])('reads %s', (_, src, expected) => {
+      expect(compileWeb(src, {}, '.a', opts)).toEqual(expected);
+    });
+  });
+
   describe('templated at-rule and keyframes names', () => {
     const id = '.a';
     const opts = { selfRefSelector: '.a', componentId: 'a' };
