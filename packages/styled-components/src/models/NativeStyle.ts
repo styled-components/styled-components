@@ -24,15 +24,9 @@ import {
   hasResponsiveOutput,
   NativeStyles,
   cssToStyleObject,
-  resetNativeStyleCache,
-  RN_UNSUPPORTED_VALUES,
 } from './compileNative';
 
-export { RN_UNSUPPORTED_VALUES, cssToStyleObject };
-export type { NativeStyles };
-
-/** Clear the cached CSS-to-style-object mappings. Useful in tests or long-running RN apps with highly dynamic styles. */
-export const resetStyleCache = resetNativeStyleCache;
+export { cssToStyleObject };
 
 export default function makeNativeStyleClass<Props extends object>(styleSheet: StyleSheet) {
   const NativeStyle: INativeStyleConstructor<Props> = class NativeStyle

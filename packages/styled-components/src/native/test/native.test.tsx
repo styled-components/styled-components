@@ -3,7 +3,7 @@ import React, { PropsWithChildren } from 'react';
 import { Animated, Image, Switch, Text, TextInput, View, ViewProps } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider, css, toStyleSheet } from '../';
-import { resetStyleCache, RN_UNSUPPORTED_VALUES } from '../../models/NativeStyle';
+import { RN_UNSUPPORTED_VALUES, resetNativeStyleCache } from '../../models/compileNative';
 
 // NOTE: These tests are like the ones for Web but a "light-version" of them
 // This is mostly due to the similar logic
@@ -1386,7 +1386,7 @@ describe('native', () => {
 
   describe('line-clamp polyfill', () => {
     beforeEach(() => {
-      resetStyleCache();
+      resetNativeStyleCache();
     });
 
     it('lifts line-clamp to numberOfLines on a styled Text', () => {
@@ -1516,7 +1516,7 @@ describe('native', () => {
   // Android TextLayoutManager.
   describe('text-align: start / end / match-parent', () => {
     beforeEach(() => {
-      resetStyleCache();
+      resetNativeStyleCache();
     });
 
     it('text-align: start compiles to textAlign: left under direction: ltr', () => {
@@ -1575,7 +1575,7 @@ describe('native', () => {
 
   describe('hyphens lift', () => {
     beforeEach(() => {
-      resetStyleCache();
+      resetNativeStyleCache();
     });
 
     it('lifts hyphens: auto to android_hyphenationFrequency: "normal" on Text', () => {
