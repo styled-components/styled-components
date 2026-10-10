@@ -19,8 +19,9 @@ jest.mock('react', () => {
 // Mock IS_RSC before importing the module
 jest.mock('../../utils/isRsc', () => ({ IS_RSC: true }));
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import ReactDOMServer from 'react-dom/server';
+import { renderStreamed, tick } from '../../test/rscStream';
 import { resetIdentifiers } from '../../models/StyledComponent';
 import {
   mainSheet,
@@ -233,13 +234,14 @@ describe('styled RSC mode', () => {
       );
       const allCSS = extractStyleContents(html);
 
-      // Avatar's base styles and LargeAvatar's own styles
+      // Avatar's own tag, then LargeAvatar's tag carrying the :where()-wrapped
+      // Avatar chain plus its own styles
       expect(allCSS).toMatchInlineSnapshot(
-        `".gA-dcpr{width:48px;height:48px;border-radius:50%;object-fit:cover;}.bmhOVL{width:96px;height:96px;border:3px solid #fff;}"`
+        `".gA-dcpr{width:48px;height:48px;border-radius:50%;object-fit:cover;}:where(.gA-dcpr){width:48px;height:48px;border-radius:50%;object-fit:cover;}.bmhOVL{width:96px;height:96px;border:3px solid #fff;}"`
       );
     });
 
-    it('should not duplicate base CSS when base and extended render on the same page', () => {
+    it('should carry the base CSS in each instance when base and extended render on the same page', () => {
       const Base = styled.div`
         display: flex;
         padding: 16px;
@@ -255,14 +257,13 @@ describe('styled RSC mode', () => {
         </div>
       );
 
-      // Base and Extended produce different CSS strings (Extended has :where()
-      // wrapping on base CSS), so both emit their own <style> tag.
+      // Each instance owns a <style> tag; Extended's tag carries the
+      // :where()-wrapped base CSS in addition to its own.
       expect(countStyleTags(html)).toBe(2);
 
-      // All CSS should be present
       const allCSS = extractStyleContents(html);
       expect(allCSS).toMatchInlineSnapshot(
-        `".lluOde{display:flex;padding:16px;}.inzFhn{color:red;}"`
+        `".lluOde{display:flex;padding:16px;}:where(.lluOde){display:flex;padding:16px;}.inzFhn{color:red;}"`
       );
     });
 
@@ -291,16 +292,15 @@ describe('styled RSC mode', () => {
       );
       const allCSS = extractStyleContents(html);
 
-      // Base styles and each variant's own styles
+      // Each variant's tag carries the base styles and its own styles
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.jZzqsQ){padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;}.dqxjmS{background:#007bff;color:#fff;}.gffCwu{background:#dc3545;color:#fff;}"`
+        `":where(.jZzqsQ){padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;}.dqxjmS{background:#007bff;color:#fff;}:where(.jZzqsQ){padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;}.gffCwu{background:#dc3545;color:#fff;}"`
       );
     });
 
     it('should not lose CSS when a dynamic base renders with different props', () => {
-      // Regression: if href is only componentId (not content-aware), React 19
-      // deduplicates all <style> tags for the same base component, keeping only
-      // the first one. Later prop variants' CSS would be lost.
+      // Each prop variant emits its own tag with its own base variant, so no
+      // variant's CSS depends on another instance's tag surviving.
       const DynamicBase = styled.div<{ $bg: string }>`
         background: ${p => p.$bg};
         padding: 16px;
@@ -317,9 +317,9 @@ describe('styled RSC mode', () => {
       );
       const allCSS = extractStyleContents(html);
 
-      // Both dynamic variants must be present
+      // Both dynamic variants must be present, each with the extension's rule
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.UggJu){background:red;padding:16px;}.gMmhUh{border:1px solid #ccc;}:where(.ezOOCn){background:blue;padding:16px;}"`
+        `":where(.UggJu){background:red;padding:16px;}.gMmhUh{border:1px solid #ccc;}:where(.ezOOCn){background:blue;padding:16px;}.gMmhUh{border:1px solid #ccc;}"`
       );
     });
   });
@@ -508,7 +508,7 @@ describe('styled RSC mode', () => {
 
       assertValidWhereSelectors(allCSS);
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.YKVKw){color:red;}.bYbnUR{font-size:16px;}:where(.jDUPMZ){color:blue;}"`
+        `":where(.YKVKw){color:red;}.bYbnUR{font-size:16px;}:where(.jDUPMZ){color:blue;}.bYbnUR{font-size:16px;}"`
       );
     });
 
@@ -534,7 +534,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.bHuNuc){display:flex;padding:16px;background:white;}.fDRrJU{background:red;}.hpcalM{background:blue;}"`
+        `":where(.bHuNuc){display:flex;padding:16px;background:white;}.fDRrJU{background:red;}:where(.bHuNuc){display:flex;padding:16px;background:white;}.hpcalM{background:blue;}"`
       );
       // Both extension selectors must NOT be wrapped
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*background:red/);
@@ -1255,8 +1255,12 @@ describe('styled RSC mode', () => {
     });
   });
 
-  describe('RSC style tag deduplication', () => {
-    it('should emit only one style tag for multiple instances of the same static component', () => {
+  describe('RSC per-instance style emission', () => {
+    // Each server-rendered instance emits its own inline <style> so a rule is
+    // never left recorded-but-absent when React discards a Suspense fallback
+    // that emitted it (#5808). Byte-identical duplicates compress away under
+    // gzip; they are not merged in the DOM.
+    it('should emit a style tag for each instance of the same static component', () => {
       const Button = styled.button`
         padding: 8px;
         color: blue;
@@ -1272,13 +1276,11 @@ describe('styled RSC mode', () => {
         </div>
       );
 
-      expect(countStyleTags(html)).toBe(1);
-      expect(extractStyleContents(html)).toMatchInlineSnapshot(
-        `".iIYYsP{padding:8px;color:blue;}"`
-      );
+      expect(countStyleTags(html)).toBe(5);
+      expect(extractStyleContents(html)).toBe('.iIYYsP{padding:8px;color:blue;}'.repeat(5));
     });
 
-    it('should emit only one style tag for dynamic components with identical props', () => {
+    it('should emit a style tag per instance for dynamic components with identical props', () => {
       const Box = styled.div<{ $color: string }>`
         color: ${p => p.$color};
       `;
@@ -1291,8 +1293,8 @@ describe('styled RSC mode', () => {
         </div>
       );
 
-      expect(countStyleTags(html)).toBe(1);
-      expect(extractStyleContents(html)).toMatchInlineSnapshot(`".YKVKw{color:red;}"`);
+      expect(countStyleTags(html)).toBe(3);
+      expect(extractStyleContents(html)).toBe('.YKVKw{color:red;}'.repeat(3));
     });
 
     it('should emit separate style tags for dynamic components with different props', () => {
@@ -1315,7 +1317,7 @@ describe('styled RSC mode', () => {
       );
     });
 
-    it('should deduplicate across multiple instances of extended component', () => {
+    it('should emit a tag per instance of an extended component, base chain included each time', () => {
       const Base = styled.div`
         display: flex;
       `;
@@ -1331,13 +1333,14 @@ describe('styled RSC mode', () => {
         </div>
       );
 
-      // All three Extended instances produce the same CSS → one tag
-      expect(countStyleTags(html)).toBe(1);
-      const allCSS = extractStyleContents(html);
-      expect(allCSS).toMatchInlineSnapshot(`":where(.jYQgFj){display:flex;}.inzFhn{color:red;}"`);
+      // Each instance emits its own base(:where()) plus extension pair.
+      expect(countStyleTags(html)).toBe(3);
+      expect(extractStyleContents(html)).toBe(
+        ':where(.jYQgFj){display:flex;}.inzFhn{color:red;}'.repeat(3)
+      );
     });
 
-    it('should not retain rules for prefix-colliding class names in partial dedup', () => {
+    it('should emit only this render’s base variant, never a sibling variant', () => {
       const DynamicBase = styled.div<{ $v: string }>`
         color: ${p => p.$v};
       `;
@@ -1354,7 +1357,9 @@ describe('styled RSC mode', () => {
       );
 
       const styles = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]);
-      expect(styles[styles.length - 1]).toMatchInlineSnapshot(`".gEYtIK{font-weight:bold;}"`);
+      expect(styles[styles.length - 1]).toBe(
+        ':where(.YKVKw){color:red;}.gEYtIK{font-weight:bold;}'
+      );
     });
 
     it('should emit separate tags for base and extended rendered together', () => {
@@ -1375,6 +1380,103 @@ describe('styled RSC mode', () => {
       // Base emits its own CSS, Extended emits base(:where())+extension
       // These are different CSS strings, so both get their own tag
       expect(countStyleTags(html)).toBe(2);
+    });
+
+    it('should emit full rules for two plain instances of one component in one render', () => {
+      const Panel = styled.div`
+        color: crimson;
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <div>
+          <Panel>first</Panel>
+          <Panel>second</Panel>
+        </div>
+      );
+
+      expect(countStyleTags(html)).toBe(2);
+      expect(extractStyleContents(html)).toBe('.iyTfYQ{color:crimson;}'.repeat(2));
+    });
+
+    describe('across a Suspense boundary (#5808)', () => {
+      it('keeps the resolved instance styled after React discards the fallback', async () => {
+        const Panel = styled.div`
+          color: crimson;
+        `;
+        const Resolved = async () => {
+          await tick();
+          return <Panel>loaded</Panel>;
+        };
+
+        const { revealed, streamed } = await renderStreamed(
+          <div>
+            <Suspense fallback={<Panel>skeleton</Panel>}>
+              <Resolved />
+            </Suspense>
+          </div>
+        );
+
+        // The fallback and the resolved content each stream their own full rule.
+        expect(extractStyleContents(streamed)).toBe('.bMsfmI{color:crimson;}'.repeat(2));
+        // The reveal discards the fallback's tag; the resolved tag stays.
+        expect(countStyleTags(revealed)).toBe(1);
+        expect(extractStyleContents(revealed)).toBe('.bMsfmI{color:crimson;}');
+        expect(revealed).toContain('loaded');
+        expect(revealed).not.toContain('skeleton');
+      });
+
+      it('keeps a referenced keyframe with the resolved instance', async () => {
+        const spin = keyframes`
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        `;
+        const Spinner = styled.div`
+          animation: ${spin} 1s linear infinite;
+        `;
+        const Resolved = async () => {
+          await tick();
+          return <Spinner>loaded</Spinner>;
+        };
+
+        const { revealed } = await renderStreamed(
+          <div>
+            <Suspense fallback={<Spinner>skeleton</Spinner>}>
+              <Resolved />
+            </Suspense>
+          </div>
+        );
+
+        expect(countStyleTags(revealed)).toBe(1);
+        expect(extractStyleContents(revealed)).toBe(
+          '@keyframes feWufh{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}' +
+            '.hQnbLm{animation:feWufh 1s linear infinite;}'
+        );
+      });
+
+      it('keeps the full base chain on the resolved instance of an extended component', async () => {
+        const Base = styled.div`
+          display: flex;
+        `;
+        const Extended = styled(Base)`
+          color: red;
+        `;
+        const Resolved = async () => {
+          await tick();
+          return <Extended>loaded</Extended>;
+        };
+
+        const { revealed } = await renderStreamed(
+          <div>
+            <Suspense fallback={<Extended>skeleton</Extended>}>
+              <Resolved />
+            </Suspense>
+          </div>
+        );
+
+        expect(extractStyleContents(revealed)).toBe(
+          ':where(.CHpGf){display:flex;}.itptxn{color:red;}'
+        );
+      });
     });
   });
 
@@ -1397,7 +1499,7 @@ describe('styled RSC mode', () => {
       expect(countStyleTags(html)).toBe(1);
     });
 
-    it('should deduplicate keyframes across multiple components', () => {
+    it('should emit the referenced keyframes alongside each component that uses them', () => {
       const fade = keyframes`
         0% { opacity: 1; }
         100% { opacity: 0; }
@@ -1417,14 +1519,15 @@ describe('styled RSC mode', () => {
         </>
       );
 
-      // @keyframes should appear exactly once despite two components using it
-      expect(extractStyleContents(html)).toMatchInlineSnapshot(
-        `"@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}.eGskDT{animation:gZZrBJ 1s;}.ctTFiD{animation:gZZrBJ 2s;}"`
+      // Each component carries the @keyframes it references in its own tag.
+      expect(extractStyleContents(html)).toBe(
+        '@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}.eGskDT{animation:gZZrBJ 1s;}' +
+          '@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}.ctTFiD{animation:gZZrBJ 2s;}'
       );
       expect(countStyleTags(html)).toBe(2);
     });
 
-    it('should emit keyframes even when component CSS is deduped', () => {
+    it('should emit the keyframes for every instance so none is lost to a discarded fallback', () => {
       const spin = keyframes`
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
@@ -1441,11 +1544,15 @@ describe('styled RSC mode', () => {
         </>
       );
 
-      // Two instances, but only one set of styles (component CSS + keyframe both deduped)
-      expect(extractStyleContents(html)).toMatchInlineSnapshot(
-        `"@keyframes dnfVul{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}.gjRflG{animation:dnfVul 1s linear infinite;}"`
+      // Both instances carry their own keyframe and rule, so a Suspense reveal
+      // that discards one instance never strips the other's animation (#5808).
+      expect(extractStyleContents(html)).toBe(
+        (
+          '@keyframes dnfVul{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}' +
+          '.gjRflG{animation:dnfVul 1s linear infinite;}'
+        ).repeat(2)
       );
-      expect(countStyleTags(html)).toBe(1);
+      expect(countStyleTags(html)).toBe(2);
     });
   });
 
@@ -1554,7 +1661,7 @@ describe('styled RSC mode', () => {
 
       const allCSS = extractStyleContents(html);
       expect(allCSS).toMatchInlineSnapshot(
-        `".hvGsXB:nth-child(1 of :not(style[data-styled])){color:red;}.hvGsXB:nth-last-child(1 of :not(style[data-styled])){color:blue;}.hvGsXB:nth-child(2 of :not(style[data-styled])){color:green;}"`
+        `".hvGsXB:nth-child(1 of :not(style[data-styled])){color:red;}.hvGsXB:nth-last-child(1 of :not(style[data-styled])){color:blue;}.hvGsXB:nth-child(2 of :not(style[data-styled])){color:green;}.hvGsXB:nth-child(1 of :not(style[data-styled])){color:red;}.hvGsXB:nth-last-child(1 of :not(style[data-styled])){color:blue;}.hvGsXB:nth-child(2 of :not(style[data-styled])){color:green;}.hvGsXB:nth-child(1 of :not(style[data-styled])){color:red;}.hvGsXB:nth-last-child(1 of :not(style[data-styled])){color:blue;}.hvGsXB:nth-child(2 of :not(style[data-styled])){color:green;}"`
       );
       expect(allCSS).not.toContain(':first-child');
       expect(allCSS).not.toContain(':last-child');

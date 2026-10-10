@@ -162,11 +162,20 @@ function generateId(
 }
 
 /**
+ * Request-scoped compiled rules keyed `componentId + '\0' + name`. The sheet's
+ * name registry is request-wide, so once one instance registers a name every
+ * later instance's claim fails and its level arrives with empty rules; this
+ * store hands those instances the winner's rules so each can emit its own tag.
+ */
+const getRscCompiledRules = createRSCCache(() => new Map<string, string[]>());
+
+/**
  * RSC counterpart to `webStyle.flush`. Runs `generate()` to produce the
  * inheritance chain's compiled CSS without writing to the tag; registers
  * each new class name so repeat renders of the same component/props skip
  * compilation. Returns both the class name (for the element) and the
- * generated levels (consumed by the inline <style> emission).
+ * generated levels (consumed by the inline <style> emission), each carrying
+ * its rules whether or not this instance won the claim.
  */
 function rscFlush<T extends ExecutionContext>(
   webStyle: WebStyle,
@@ -175,9 +184,17 @@ function rscFlush<T extends ExecutionContext>(
   compiler: Compiler
 ): GeneratedStyle {
   const generated = webStyle.generate(resolvedAttrs, styleSheet, compiler);
+  const compiledRules = getRscCompiledRules ? getRscCompiledRules() : null;
   for (let i = 0; i < generated.levels.length; i++) {
     const level = generated.levels[i];
-    if (level.isNew) styleSheet.registerName(level.componentId, level.name);
+    if (level.isNew) {
+      styleSheet.registerName(level.componentId, level.name);
+      if (compiledRules !== null) {
+        compiledRules.set(level.componentId + '\0' + level.name, level.rules);
+      }
+    } else if (level.rules.length === 0 && compiledRules !== null) {
+      level.rules = compiledRules.get(level.componentId + '\0' + level.name) ?? level.rules;
+    }
   }
   return generated;
 }
@@ -233,9 +250,6 @@ function resolveContext<Props extends BaseObject>(
 }
 
 let seenUnknownProps: Set<string> | undefined;
-
-/** Per-render tracking of emitted class names and keyframe IDs for RSC dedup. */
-const getEmittedNames = createRSCCache(() => new Set<string>());
 
 /**
  * Cache RegExp objects for :where() wrapping to avoid recompilation per
@@ -707,19 +721,21 @@ function useImpl<Props extends BaseObject>(
     );
   }
 
-  // RSC mode: emit this component's CSS (and its inheritance chain + keyframes)
-  // as an inline <style> tag. No `precedence`; server component output isn't
-  // hydrated, so no mismatch. Inline body styles come after the registry's
-  // <head> styles in source order, so extensions naturally win (#5672).
+  // RSC mode: every instance emits its own inline <style> holding exactly the
+  // rules its render needs (its chain's levels and referenced keyframes),
+  // never skipping what an earlier instance already emitted: React discards a
+  // Suspense fallback's DOM on reveal, so a shared ledger would strand the
+  // resolved instance without rules (#5808). No `precedence`; server component
+  // output isn't hydrated, so no mismatch. Inline body styles come after the
+  // registry's <head> styles in source order, so extensions naturally win
+  // (#5672).
   if (IS_RSC && generatedStyle) {
-    const emitted = getEmittedNames ? getEmittedNames() : null;
     const levels = generatedStyle.levels;
     const lastIdx = levels.length - 1;
     let css = '';
 
     for (let i = 0; i < levels.length; i++) {
       const level = levels[i];
-      if (emitted && emitted.has(level.name)) continue;
       if (level.rules.length === 0) continue;
 
       let levelCss = joinRules(level.rules);
@@ -729,19 +745,14 @@ function useImpl<Props extends BaseObject>(
         levelCss = wrapLevelInWhere(levelCss, level.name);
       }
       css += levelCss;
-      if (emitted) emitted.add(level.name);
     }
 
-    // Keyframes carried as pure data on `generatedStyle.keyframes`. Each entry
-    // already holds the compiled `@keyframes` rules; the per-render `emitted`
-    // set dedups by resolved name so duplicate refs across siblings collapse.
+    // Keyframes carried as pure data on `generatedStyle.keyframes`; each entry
+    // already holds the compiled `@keyframes` rules.
     let kfCss = '';
     const kfList = generatedStyle.keyframes;
     for (let i = 0; i < kfList.length; i++) {
-      const compiled = kfList[i];
-      if (emitted && emitted.has(compiled.name)) continue;
-      kfCss += joinRules(compiled.rules);
-      if (emitted) emitted.add(compiled.name);
+      kfCss += joinRules(kfList[i].rules);
     }
 
     const combined = stripSplitter(kfCss + css);
