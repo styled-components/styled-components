@@ -47,6 +47,40 @@ describe('dead-code elimination: browser build', () => {
   });
 });
 
+/**
+ * Next.js applies the `browser` file map to edge bundles, so a server render
+ * on the edge runtime loads the browser build. A React Server Components copy
+ * of React has no `createContext`, which the browser build would otherwise hit
+ * as an anonymous TypeError at module load.
+ */
+describe('browser build on an edge-runtime server', () => {
+  const browserBundles = ['styled-components.browser.cjs.js'];
+
+  afterEach(() => {
+    jest.dontMock('react');
+    jest.resetModules();
+  });
+
+  it.each(browserBundles)(
+    '%s reports the edge-runtime fix when React has no createContext',
+    file => {
+      jest.doMock('react', () => {
+        const { createContext: _createContext, ...serverComponentReact } =
+          jest.requireActual('react');
+        return serverComponentReact;
+      });
+
+      expect(() => require(path.join(distDir, file))).toThrow(
+        "Remove `export const runtime = 'edge'`, or set it to `'nodejs'`"
+      );
+    }
+  );
+
+  it.each(browserBundles)('%s loads when React has createContext', file => {
+    expect(() => require(path.join(distDir, file))).not.toThrow();
+  });
+});
+
 describe('dead-code elimination: server build', () => {
   let serverESM: string;
   let serverCJS: string;
