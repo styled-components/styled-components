@@ -1556,6 +1556,132 @@ describe('styled RSC mode', () => {
     });
   });
 
+  describe('RSC shared style elements', () => {
+    // Every instance still renders its own <style> tag; what is shared is the
+    // element object behind it, so the server-component payload carries each
+    // distinct style once and refers back to it for every repeat.
+    type Rendered = React.ReactElement<{ children: React.ReactElement[] }>;
+
+    /** Run a styled component's render function inside a real render and hand back the element it returned. */
+    const renderInProbe = (
+      Component: unknown,
+      props: object,
+      sink: React.ReactElement[]
+    ): React.ReactElement => {
+      const render = (Component as { type: (props: object) => Rendered }).type;
+      const Probe = () => {
+        const out = render(props);
+        sink.push(out.props.children[0]);
+        return out;
+      };
+      return <Probe />;
+    };
+
+    it('returns the same element object for identical CSS from one component', () => {
+      const Box = styled.div<{ $color: string }>`
+        color: ${p => p.$color};
+      `;
+      const seen: React.ReactElement[] = [];
+
+      ReactDOMServer.renderToString(
+        <>
+          {renderInProbe(Box, { $color: 'red' }, seen)}
+          {renderInProbe(Box, { $color: 'red' }, seen)}
+          {renderInProbe(Box, { $color: 'red' }, seen)}
+        </>
+      );
+
+      expect(seen).toHaveLength(3);
+      expect(seen[1]).toBe(seen[0]);
+      expect(seen[2]).toBe(seen[0]);
+    });
+
+    it('keeps one fixed React key per component', () => {
+      const Box = styled.div<{ $color: string }>`
+        color: ${p => p.$color};
+      `;
+      const seen: React.ReactElement[] = [];
+
+      ReactDOMServer.renderToString(
+        <>
+          {renderInProbe(Box, { $color: 'red' }, seen)}
+          {renderInProbe(Box, { $color: 'blue' }, seen)}
+        </>
+      );
+
+      expect(seen[0].key).toBe(`sc-${Box.styledComponentId}`);
+      expect(seen[1].key).toBe(seen[0].key);
+    });
+
+    it('returns distinct elements for different CSS from one component', () => {
+      const Box = styled.div<{ $color: string }>`
+        color: ${p => p.$color};
+      `;
+      const seen: React.ReactElement[] = [];
+
+      ReactDOMServer.renderToString(
+        <>
+          {renderInProbe(Box, { $color: 'red' }, seen)}
+          {renderInProbe(Box, { $color: 'blue' }, seen)}
+        </>
+      );
+
+      expect(seen[1]).not.toBe(seen[0]);
+    });
+
+    it('never shares an element between two components with identical rules', () => {
+      const First = styled.div`
+        color: red;
+      `;
+      const Second = styled.div`
+        color: red;
+      `;
+      const seen: React.ReactElement[] = [];
+
+      ReactDOMServer.renderToString(
+        <>
+          {renderInProbe(First, {}, seen)}
+          {renderInProbe(Second, {}, seen)}
+        </>
+      );
+
+      expect(seen[1]).not.toBe(seen[0]);
+    });
+
+    it('never shares an element across StyleSheetManager settings that change the CSS', () => {
+      const Box = styled.div`
+        color: red;
+      `;
+      const seen: React.ReactElement[] = [];
+
+      const html = ReactDOMServer.renderToString(
+        <>
+          <StyleSheetManager namespace="first">{renderInProbe(Box, {}, seen)}</StyleSheetManager>
+          <StyleSheetManager namespace="second">{renderInProbe(Box, {}, seen)}</StyleSheetManager>
+        </>
+      );
+
+      expect(seen[1]).not.toBe(seen[0]);
+      expect(extractStyleContents(html)).toContain('first');
+      expect(extractStyleContents(html)).toContain('second');
+    });
+
+    it('still renders one tag per instance when the element is shared', () => {
+      const Box = styled.div`
+        color: red;
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <>
+          <Box />
+          <Box />
+        </>
+      );
+
+      expect(countStyleTags(html)).toBe(2);
+    });
+  });
+
   describe('StyleSheetManager in RSC', () => {
     it('useStyleSheetContext returns a valid default context', () => {
       let ctx: ReturnType<typeof useStyleSheetContext> | undefined;

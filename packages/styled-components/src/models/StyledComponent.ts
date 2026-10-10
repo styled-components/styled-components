@@ -47,7 +47,7 @@ import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
 import { joinRules, joinStrings, stripSplitter } from '../utils/joinStrings';
-import { createRSCCache } from '../utils/rscCache';
+import { createRSCCache, getRscStyleElements } from '../utils/rscCache';
 import { setToString } from '../utils/setToString';
 import shallowEqual from '../utils/shallowEqual';
 import { warnOnce } from '../utils/warnOnce';
@@ -167,7 +167,7 @@ function generateId(
  * later instance's claim fails and its level arrives with empty rules; this
  * store hands those instances the winner's rules so each can emit its own tag.
  */
-const getRscCompiledRules = createRSCCache(() => new Map<string, string[]>());
+const getRscCompiledRules = IS_RSC ? createRSCCache(() => new Map<string, string[]>()) : null;
 
 /**
  * RSC counterpart to `webStyle.flush`. Runs `generate()` to produce the
@@ -757,11 +757,22 @@ function useImpl<Props extends BaseObject>(
 
     const combined = stripSplitter(kfCss + css);
     if (combined) {
-      const styleElement = React.createElement('style', {
-        [SC_ATTR]: '',
-        key: 'sc-' + webStyle.componentId,
-        children: combined,
-      });
+      // Repeats of one component's identical CSS share one element object, so
+      // the server-component payload writes the style once and refers back to
+      // it. The key carries the component ID, so two components with the same
+      // rules, or one component under different StyleSheetManager settings
+      // (different CSS), never share.
+      const sharedElements = getRscStyleElements ? getRscStyleElements() : null;
+      const sharedKey = webStyle.componentId + '\n' + combined;
+      let styleElement = sharedElements ? sharedElements.get(sharedKey) : undefined;
+      if (styleElement === undefined) {
+        styleElement = React.createElement('style', {
+          [SC_ATTR]: '',
+          key: 'sc-' + webStyle.componentId,
+          children: combined,
+        });
+        if (sharedElements) sharedElements.set(sharedKey, styleElement);
+      }
       return React.createElement(React.Fragment, null, styleElement, element);
     }
   }

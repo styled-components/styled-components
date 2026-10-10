@@ -9,6 +9,7 @@ import { Compiler, ExecutionContext, ExecutionProps, Interpolation, Styles } fro
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
 import { joinRules, stripSplitter } from '../utils/joinStrings';
+import { getRscStyleElements } from '../utils/rscCache';
 import { warnOnce } from '../utils/warnOnce';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import css from './css';
@@ -132,11 +133,24 @@ export default function createGlobalStyle<Props extends object>(
       if (css) {
         globalStyle.instanceRules.delete(instance);
 
-        return React.createElement('style', {
-          key: styledComponentId + '-' + instance,
-          'data-styled-global': styledComponentId,
-          children: stripSplitter(css),
-        });
+        // Repeats of identical CSS share one element object so the
+        // server-component payload writes the style once and refers back to
+        // it; the key carries the global's ID, so two globals with the same
+        // rules, or one under different StyleSheetManager settings
+        // (different CSS), never share.
+        const sharedElements = getRscStyleElements ? getRscStyleElements() : null;
+        const sharedKey = styledComponentId + '\n' + css;
+        let styleElement = sharedElements ? sharedElements.get(sharedKey) : undefined;
+        if (styleElement === undefined) {
+          styleElement = React.createElement('style', {
+            key: styledComponentId,
+            'data-styled-global': styledComponentId,
+            children: stripSplitter(css),
+          });
+          if (sharedElements) sharedElements.set(sharedKey, styleElement);
+        }
+
+        return styleElement;
       }
     }
 

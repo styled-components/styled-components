@@ -21,6 +21,7 @@ jest.mock('../../utils/isRsc', () => ({ IS_RSC: true }));
 
 import React, { Suspense } from 'react';
 import ReactDOMServer from 'react-dom/server';
+import { StyleSheetManager } from '../../models/StyleSheetManager';
 import { renderStreamed, tick } from '../../test/rscStream';
 import createGlobalStyle from '../createGlobalStyle';
 
@@ -194,6 +195,119 @@ describe('createGlobalStyle RSC mode', () => {
       const afterNavigation = revealed.replace(/<main>[\s\S]*<\/main>/, '<main></main>');
       expect(countStyleTags(afterNavigation)).toBe(1);
       expect(afterNavigation).toContain('body{background:papayawhip;}');
+    });
+  });
+
+  describe('shared style elements', () => {
+    // Every instance still renders its own tag; the element object behind it
+    // is shared so the server-component payload carries each distinct global
+    // once and refers back to it for the repeats.
+    const renderInProbe = (
+      Component: unknown,
+      props: object,
+      sink: React.ReactElement[]
+    ): React.ReactElement => {
+      const render = (Component as { type: (props: object) => React.ReactElement }).type;
+      const Probe = () => {
+        const out = render(props);
+        sink.push(out);
+        return out;
+      };
+      return <Probe />;
+    };
+
+    it('returns the same element object for identical static CSS', () => {
+      const GlobalStyle = createGlobalStyle`
+        body { margin: 0; }
+      `;
+      const seen: React.ReactElement[] = [];
+
+      const html = ReactDOMServer.renderToString(
+        <>
+          {renderInProbe(GlobalStyle, {}, seen)}
+          {renderInProbe(GlobalStyle, {}, seen)}
+        </>
+      );
+
+      expect(seen).toHaveLength(2);
+      expect(seen[1]).toBe(seen[0]);
+      expect(countStyleTags(html)).toBe(2);
+    });
+
+    it('returns the same element object for identical dynamic CSS and a distinct one for different CSS', () => {
+      const GlobalStyle = createGlobalStyle<{ $bg: string }>`
+        body { background: ${props => props.$bg}; }
+      `;
+      const seen: React.ReactElement[] = [];
+
+      ReactDOMServer.renderToString(
+        <>
+          {renderInProbe(GlobalStyle, { $bg: 'red' }, seen)}
+          {renderInProbe(GlobalStyle, { $bg: 'red' }, seen)}
+          {renderInProbe(GlobalStyle, { $bg: 'blue' }, seen)}
+        </>
+      );
+
+      expect(seen[1]).toBe(seen[0]);
+      expect(seen[2]).not.toBe(seen[0]);
+    });
+
+    it('keeps one fixed React key per global style', () => {
+      const GlobalStyle = createGlobalStyle<{ $bg: string }>`
+        body { background: ${props => props.$bg}; }
+      `;
+      const seen: React.ReactElement[] = [];
+
+      ReactDOMServer.renderToString(
+        <>
+          {renderInProbe(GlobalStyle, { $bg: 'red' }, seen)}
+          {renderInProbe(GlobalStyle, { $bg: 'blue' }, seen)}
+        </>
+      );
+
+      expect(seen[0].key).toBe(GlobalStyle.styledComponentId);
+      expect(seen[1].key).toBe(seen[0].key);
+    });
+
+    it('never shares an element between two global styles that emit identical CSS', () => {
+      // Different source text gives each its own ID; both compile to the same
+      // `body{margin:0;}`.
+      const First = createGlobalStyle`
+        body { margin: 0; }
+      `;
+      const Second = createGlobalStyle`body{margin:0;}`;
+      const seen: React.ReactElement[] = [];
+
+      ReactDOMServer.renderToString(
+        <>
+          {renderInProbe(First, {}, seen)}
+          {renderInProbe(Second, {}, seen)}
+        </>
+      );
+
+      expect(seen[1]).not.toBe(seen[0]);
+    });
+
+    it('never shares an element across StyleSheetManager settings that change the CSS', () => {
+      const GlobalStyle = createGlobalStyle`
+        body { margin: 0; }
+      `;
+      const seen: React.ReactElement[] = [];
+
+      const html = ReactDOMServer.renderToString(
+        <>
+          <StyleSheetManager namespace="first">
+            {renderInProbe(GlobalStyle, {}, seen)}
+          </StyleSheetManager>
+          <StyleSheetManager namespace="second">
+            {renderInProbe(GlobalStyle, {}, seen)}
+          </StyleSheetManager>
+        </>
+      );
+
+      expect(seen[1]).not.toBe(seen[0]);
+      expect(html).toContain('first body{margin:0;}');
+      expect(html).toContain('second body{margin:0;}');
     });
   });
 
