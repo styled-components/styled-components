@@ -22,6 +22,7 @@ jest.mock('../../utils/isRsc', () => ({ IS_RSC: true }));
 import React, { Suspense } from 'react';
 import ReactDOMServer from 'react-dom/server';
 import { RSC_REDUNDANT_EMIT_WARN_THRESHOLD } from '../../constants';
+import { LIMIT as TOO_MANY_CLASSES_LIMIT } from '../../utils/createWarnTooManyClasses';
 import * as rscCache from '../../utils/rscCache';
 import { renderStreamed, tick } from '../../test/rscStream';
 import { resetIdentifiers } from '../../models/StyledComponent';
@@ -1398,6 +1399,80 @@ describe('styled RSC mode', () => {
 
       expect(countStyleTags(html)).toBe(2);
       expect(extractStyleContents(html)).toBe('.iyTfYQ{color:crimson;}'.repeat(2));
+    });
+
+    describe('across concurrent requests', () => {
+      /** Run one render inside its own request: a separate `React.cache` store over the shared module-level sheet. */
+      const inRequest = (store: Map<Function, any>, render: () => string): string => {
+        mockCacheStore.clear();
+        store.forEach((value, key) => mockCacheStore.set(key, value));
+        const html = render();
+        store.clear();
+        mockCacheStore.forEach((value, key) => store.set(key, value));
+
+        return html;
+      };
+
+      it('emits the full rule when another request registered the name first', async () => {
+        const Box = styled.div`
+          color: red;
+        `;
+        const Other = styled.span`
+          color: blue;
+        `;
+        const requestA = new Map<Function, any>();
+        const requestB = new Map<Function, any>();
+
+        // A starts (and resets the shared sheet), B registers Box, then A reaches Box.
+        inRequest(requestA, () => ReactDOMServer.renderToString(<Other />));
+        const htmlB = inRequest(requestB, () => ReactDOMServer.renderToString(<Box />));
+        await tick();
+        const htmlA = inRequest(requestA, () => ReactDOMServer.renderToString(<Box />));
+
+        expect(extractStyleContents(htmlB)).toBe('.jnDZvI{color:red;}');
+        expect(extractStyleContents(htmlA)).toBe('.jnDZvI{color:red;}');
+      });
+
+      it('holds at most one warning-threshold of class names per component', () => {
+        const Box = styled.div`
+          color: red;
+        `;
+        const limit = TOO_MANY_CLASSES_LIMIT;
+
+        for (let i = 0; i < limit + 5; i++) {
+          rscCache.rememberRscRules(Box.webStyle, 'name' + i, ['.name' + i + '{}']);
+        }
+
+        expect(rscCache.recallRscRules(Box.webStyle, 'name0')).toBeUndefined();
+        expect(rscCache.recallRscRules(Box.webStyle, 'name4')).toBeUndefined();
+        expect(rscCache.recallRscRules(Box.webStyle, 'name5')).toEqual(['.name5{}']);
+        expect(rscCache.recallRscRules(Box.webStyle, 'name' + (limit + 4))).toEqual([
+          '.name' + (limit + 4) + '{}',
+        ]);
+      });
+
+      it('emits the base chain of an extension when another request registered it first', async () => {
+        const Base = styled.div`
+          display: flex;
+        `;
+        const Extended = styled(Base)`
+          color: red;
+        `;
+        const Other = styled.span`
+          color: blue;
+        `;
+        const requestA = new Map<Function, any>();
+        const requestB = new Map<Function, any>();
+
+        inRequest(requestA, () => ReactDOMServer.renderToString(<Other />));
+        inRequest(requestB, () => ReactDOMServer.renderToString(<Extended />));
+        await tick();
+        const htmlA = inRequest(requestA, () => ReactDOMServer.renderToString(<Extended />));
+
+        expect(extractStyleContents(htmlA)).toBe(
+          ':where(.CHpGf){display:flex;}.itptxn{color:red;}'
+        );
+      });
     });
 
     describe('across a Suspense boundary (#5808)', () => {

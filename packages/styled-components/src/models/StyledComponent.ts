@@ -47,7 +47,12 @@ import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
 import { joinRules, joinStrings, stripSplitter } from '../utils/joinStrings';
-import { getRscRequestState, noteRscEmit, type RscRequestState } from '../utils/rscCache';
+import {
+  getRscRequestState,
+  noteRscEmit,
+  recallRscRules,
+  type RscRequestState,
+} from '../utils/rscCache';
 import { setToString } from '../utils/setToString';
 import shallowEqual from '../utils/shallowEqual';
 import { warnOnce } from '../utils/warnOnce';
@@ -167,31 +172,34 @@ function generateId(
  * each new class name so repeat renders of the same component/props skip
  * compilation. Returns both the class name (for the element) and the
  * generated levels (consumed by the inline <style> emission).
- *
- * The sheet's name registry is request-wide, so once one instance registers a
- * name every later instance's claim fails and its level arrives with empty
- * rules; the winner's rules are kept in the request state, where
- * `buildRscStyleCss` reads them back so each instance can emit its own tag.
  */
 function rscFlush<T extends ExecutionContext>(
   webStyle: WebStyle,
   resolvedAttrs: T,
   styleSheet: StyleSheet,
-  compiler: Compiler,
-  requestState: RscRequestState | null
+  compiler: Compiler
 ): GeneratedStyle {
   const generated = webStyle.generate(resolvedAttrs, styleSheet, compiler);
-  const compiledRules = requestState !== null ? requestState.compiledRules : null;
   for (let i = 0; i < generated.levels.length; i++) {
     const level = generated.levels[i];
-    if (level.isNew) {
-      styleSheet.registerName(level.componentId, level.name);
-      if (compiledRules !== null) {
-        compiledRules.set(level.componentId + '\0' + level.name, level.rules);
-      }
-    }
+    if (level.isNew) styleSheet.registerName(level.componentId, level.name);
   }
   return generated;
+}
+
+/**
+ * The rules of one level. The sheet's name registry is shared by every request
+ * and reset as each starts, so a level whose name another instance registered
+ * first arrives empty; its rules come from the process-wide cache of what
+ * `WebStyle.generate` compiled.
+ */
+function rscLevelRules(webStyle: WebStyle, level: GeneratedStyle['levels'][number]): string[] {
+  if (level.rules.length > 0) return level.rules;
+
+  for (let w: WebStyle | null | undefined = webStyle; w; w = w.baseStyle) {
+    if (w.componentId === level.componentId) return recallRscRules(w, level.name) ?? level.rules;
+  }
+  return level.rules;
 }
 
 /**
@@ -199,21 +207,14 @@ function rscFlush<T extends ExecutionContext>(
  * chain with every base level wrapped in :where() for zero specificity, so any
  * extension overrides it without !important.
  */
-function buildRscStyleCss(
-  generatedStyle: GeneratedStyle,
-  compiledRules: RscRequestState['compiledRules'] | null
-): string {
+function buildRscStyleCss(webStyle: WebStyle, generatedStyle: GeneratedStyle): string {
   const levels = generatedStyle.levels;
   const lastIdx = levels.length - 1;
   let css = '';
 
   for (let i = 0; i < levels.length; i++) {
     const level = levels[i];
-    // A level whose name claim another instance won arrives without rules.
-    const rules =
-      level.rules.length === 0 && !level.isNew && compiledRules !== null
-        ? (compiledRules.get(level.componentId + '\0' + level.name) ?? level.rules)
-        : level.rules;
+    const rules = rscLevelRules(webStyle, level);
     if (rules.length === 0) continue;
 
     let levelCss = joinRules(rules);
@@ -684,7 +685,7 @@ function useImpl<Props extends BaseObject>(
     }
     if (IS_RSC) {
       rscState = getRscRequestState ? getRscRequestState() : null;
-      generatedStyle = rscFlush(webStyle, context, ssc.styleSheet, ssc.compiler, rscState);
+      generatedStyle = rscFlush(webStyle, context, ssc.styleSheet, ssc.compiler);
       generatedClassName = generatedStyle.className;
     } else {
       generatedClassName = webStyle.flush(context, ssc.styleSheet, ssc.compiler);
@@ -775,10 +776,7 @@ function useImpl<Props extends BaseObject>(
     let styleElement = sharedElements ? sharedElements.get(sharedKey) : undefined;
 
     if (styleElement === undefined) {
-      const combined = buildRscStyleCss(
-        generatedStyle,
-        rscState !== null ? rscState.compiledRules : null
-      );
+      const combined = buildRscStyleCss(webStyle, generatedStyle);
       if (combined) {
         styleElement = React.createElement('style', {
           [SC_ATTR]: '',

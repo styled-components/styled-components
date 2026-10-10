@@ -13,7 +13,9 @@ import generateName from '../utils/generateAlphabeticName';
 import { LIMIT as TOO_MANY_CLASSES_LIMIT } from '../utils/createWarnTooManyClasses';
 import { fifoSet } from '../utils/fifoMap';
 import { hash, phash } from '../utils/hash';
+import { IS_RSC } from '../utils/isRsc';
 import { joinStrings } from '../utils/joinStrings';
+import { rememberRscRules } from '../utils/rscCache';
 import { warnOnce } from '../utils/warnOnce';
 import { flushKeyframes, type CompiledKeyframes } from './Keyframes';
 
@@ -212,10 +214,17 @@ export default class WebStyle {
     // Permanent registration or a same-turn claim by a sibling both mean the
     // rules already exist, so skip compilation. Followers still receive the
     // winner's bytes so a discarded claimer cannot leave them empty-handed.
-    const claimed = styleSheet.claimNameForId(this.componentId, name);
+    // The server-component path registers each name as soon as `generate`
+    // returns and recalls rules from the process-wide cache, so it needs no
+    // turn-scoped claim.
+    const claimed = IS_RSC
+      ? !styleSheet.hasNameForId(this.componentId, name)
+      : styleSheet.claimNameForId(this.componentId, name);
     let rules: string[];
     if (!claimed) {
-      rules = styleSheet.getProvisionalRules(this.componentId, name) ?? EMPTY_RULES;
+      rules = IS_RSC
+        ? EMPTY_RULES
+        : (styleSheet.getProvisionalRules(this.componentId, name) ?? EMPTY_RULES);
     } else if (source !== null && fastFilled !== null) {
       const fast = compiler.emit(source, fastFilled, '.' + name, this.componentId, fastFragments);
       if (fast !== null) {
@@ -226,10 +235,10 @@ export default class WebStyle {
         if (!css) css = buildHashCSS(source.strings, fastFilled, fastFragments);
         rules = compiler.compile(css, '.' + name, undefined, this.componentId);
       }
-      styleSheet.stashProvisionalRules(this.componentId, name, rules);
+      this.shareRules(styleSheet, name, rules);
     } else {
       rules = compiler.compile(css, '.' + name, undefined, this.componentId);
-      styleSheet.stashProvisionalRules(this.componentId, name, rules);
+      this.shareRules(styleSheet, name, rules);
     }
 
     const levels = baseGenerated ? baseGenerated.levels.slice() : [];
@@ -240,6 +249,12 @@ export default class WebStyle {
       levels,
       keyframes,
     };
+  }
+
+  /** Hand a freshly compiled name's rules to whoever renders it next: later requests on the server, same-turn siblings elsewhere. */
+  private shareRules(styleSheet: StyleSheet, name: string, rules: string[]): void {
+    if (IS_RSC) rememberRscRules(this, name, rules);
+    else styleSheet.stashProvisionalRules(this.componentId, name, rules);
   }
 
   inject(styleSheet: StyleSheet, generated: GeneratedStyle): string {
