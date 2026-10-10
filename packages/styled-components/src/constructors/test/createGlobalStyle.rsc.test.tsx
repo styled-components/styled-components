@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 
-// Mock React.cache (not available in React 18 test env, but needed for RSC dedup)
+// React 19's client `cache` is a pass-through, so tests mock a request-scoped one.
 const mockCacheStore = new Map<Function, any>();
 
 jest.mock('react', () => {

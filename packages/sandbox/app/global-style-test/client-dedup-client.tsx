@@ -1,7 +1,7 @@
 'use client';
 
 import styled, { createGlobalStyle } from 'styled-components';
-import { DedupCountBadge } from '../components/dedup-count-badge';
+import { CountBadge } from '../components/dedup-count-badge';
 
 const NEEDLE = '[data-client-dedup-marker]';
 
@@ -18,7 +18,7 @@ export function ClientDedupSection() {
       <ClientDedupGlobalStyle />
       <ClientDedupGlobalStyle />
       <ClientDedupGlobalStyle />
-      <DedupCountBadge
+      <CountBadge
         ruleNeedle={NEEDLE}
         expected={1}
         unit={

@@ -32,7 +32,7 @@ type Props = {
  * Both strategies take strings so the component stays usable from RSC pages
  * (function props can't cross the server→client boundary).
  */
-export function DedupCountBadge(props: Props) {
+export function CountBadge(props: Props) {
   const [count, setCount] = useState<number | null>(null);
   const { tagId, ruleNeedle } = props;
 

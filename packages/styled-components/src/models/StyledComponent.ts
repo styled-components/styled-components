@@ -187,12 +187,7 @@ function rscFlush<T extends ExecutionContext>(
   return generated;
 }
 
-/**
- * The rules of one level. The sheet's name registry is shared by every request
- * and reset as each starts, so a level whose name another instance registered
- * first arrives empty; its rules come from the process-wide cache of what
- * `WebStyle.generate` compiled.
- */
+/** A level whose name another instance registered first arrives empty; its rules come from the process-wide cache (docs/react.md "RSC style emission and Suspense"). */
 function rscLevelRules(webStyle: WebStyle, level: GeneratedStyle['levels'][number]): string[] {
   if (level.rules.length > 0) return level.rules;
 
@@ -755,22 +750,8 @@ function useImpl<Props extends BaseObject>(
     );
   }
 
-  // RSC mode: every instance emits its own inline <style> holding exactly the
-  // rules its render needs (its chain's levels and referenced keyframes),
-  // never skipping what an earlier instance already emitted: React discards a
-  // Suspense fallback's DOM on reveal, so a shared ledger would strand the
-  // resolved instance without rules (#5808). No `precedence`; server component
-  // output isn't hydrated, so no mismatch. Inline body styles come after the
-  // registry's <head> styles in source order, so extensions naturally win
-  // (#5672).
+  // RSC: one plain tag per instance, shared element objects; see docs/react.md "RSC style emission and Suspense".
   if (IS_RSC && generatedStyle) {
-    // Repeats of one component with the same class string share one element
-    // object, so the server-component payload writes the style once and refers
-    // back to it, and a repeat skips building the CSS at all. The component ID
-    // fixes the leaf and the class string folds in the compiler (so
-    // StyleSheetManager settings that change the CSS change the key). An
-    // extension with no rules of its own reuses its base's class string, so the
-    // ID is what keeps the two apart.
     const sharedElements = rscState !== null ? rscState.styleElements : null;
     const sharedKey = webStyle.componentId + ' ' + generatedClassName;
     let styleElement = sharedElements ? sharedElements.get(sharedKey) : undefined;
@@ -788,7 +769,7 @@ function useImpl<Props extends BaseObject>(
     }
 
     if (styleElement !== undefined) {
-      if (__DEV__ && IS_RSC && rscState !== null) {
+      if (__DEV__ && rscState !== null) {
         const emitted = noteRscEmit(rscState, webStyle.componentId);
         if (emitted === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
           warnOnce(

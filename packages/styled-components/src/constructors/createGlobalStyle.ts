@@ -122,14 +122,7 @@ export default function createGlobalStyle<Props extends object>(
       // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the build-constant-gated region
     }
 
-    // RSC mode: every instance outputs its own style tag, never skipping one
-    // an earlier instance already emitted: React discards a Suspense
-    // fallback's DOM on reveal, and a navigation removes a swapped page's, so
-    // a shared ledger would strand the instance that still needs the rules.
-    // Unlike regular styled components, global styles must NOT use React 19's
-    // `precedence` attribute because it makes style tags persist as permanent
-    // resources even after unmount. Global styles need lifecycle-based cleanup
-    // for conditional rendering (e.g. body lock on modal open/close).
+    // RSC: one plain tag per instance, no `precedence`; see docs/react.md "RSC style emission and Suspense".
     if (IS_RSC) {
       const entry = !IS_BROWSER ? globalStyle.instanceRules.get(instance) : undefined;
       const css = entry ? joinRules(entry.rules) : '';
