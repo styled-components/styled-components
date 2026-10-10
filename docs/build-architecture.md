@@ -20,9 +20,10 @@ automatically. In browser, standalone and native builds rollup replaces the expr
 for dead-code elimination. Because it is module-level rather than per-render, gating a hook behind it
 does not violate the rules of hooks.
 
-`styleSheet.server` is a runtime flag set by `ServerStyleSheet`. It exists because a server bundle
-can load the browser build (Next.js applies the `browser` file map to edge-runtime bundles), which
-makes `__SERVER__` false on the server; this flag is the fallback that still reports the truth there.
+`styleSheet.server` is a runtime flag set by `ServerStyleSheet`. It lets a sheet forced into server
+mode collect styles synchronously in a build where `__SERVER__` is false (#3551). It does not make
+the browser build work on a server: that build's tags are always DOM tags, so a server render there
+fails at the first `<style>` creation (see "Edge runtime").
 
 Combine all three (`__SERVER__ || IS_RSC || ssc.styleSheet.server`) with one deliberate exception:
 `createGlobalStyle`'s server-cache cleanup drops the `IS_RSC` term, because the `IS_RSC` branch above

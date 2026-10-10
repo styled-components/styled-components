@@ -40,7 +40,8 @@ on `ComponentStyle` and `Keyframes` through a `WeakMap`, which is dead-code elim
 build. Every name reaching emission was compiled by `generateAndInjectStyles` before it registered its
 class, so the per-name lookup always hits; there is no tag-group fallback.
 
-There is deliberately no cross-instance or cross-request deduplication. A dedup ledger keyed on
+There is deliberately no cross-instance or cross-request deduplication of tags in the DOM; only the
+element object is shared, in the payload (see "Payload dedup"). A dedup ledger keyed on
 `React.cache` cannot be made safe: `React.cache` is request-wide with no per-Suspense-boundary scope,
 so a rule emitted only inside a Suspense fallback would be recorded once, skipped for the resolved
 child, then removed with the fallback when React reveals the boundary, leaving the resolved element
@@ -48,7 +49,7 @@ with a class but no rule (#5808). Hoisting via `precedence` would dedup and surv
 brings back every failure listed under "Plain inline style tags", and no per-boundary cache scope
 exists to make a ledger safe.
 
-Byte-identical duplicates are the only output dedup ever collapsed, and their cost depends on distance
+In the HTML, the cost of a byte-identical duplicate depends on its distance from the previous copy
 in the compressed stream. Within gzip's 32 KB back-reference window, a repeat costs about a byte each
 (measured: 1000 identical small tags compress to ~0.5% of their raw size). Farther apart than that
 window, gzip can no longer reference the earlier copy, so each repeat costs roughly the gzipped size of
@@ -86,10 +87,12 @@ warning and its bookkeeping.
 Per-instance emission repeats tags in the DOM, not in the server-component payload. Every emission
 site reuses one `<style>` element object per key from a request-scoped `React.cache` Map:
 
-- Styled components key on the generated class string. The class hash covers the component, its CSS
-  text, and the stylis configuration (namespace, plugin names), so the class chain determines the
-  emitted CSS, and a hit skips rebuilding it. Different CSS, different components, and subtrees under
-  different `StyleSheetManager` namespaces or plugins never share.
+- Styled components key on the component ID plus the generated class string. The class hash covers
+  each level's CSS text and the stylis configuration (namespace, plugin names), and the component ID
+  fixes which level is the leaf: an extension that adds no CSS of its own returns exactly its base's
+  class string, yet its CSS differs because every non-leaf level is wrapped in `:where()`. A hit
+  skips rebuilding the CSS. Different CSS, different components, and subtrees under different
+  `StyleSheetManager` namespaces or plugins never share.
 - `createGlobalStyle` keys on its ID plus the exact CSS text, and returns the element wrapped in an
   array: Flight references a repeated element whole only inside an array, while a bare returned
   element repeats its type and key.
