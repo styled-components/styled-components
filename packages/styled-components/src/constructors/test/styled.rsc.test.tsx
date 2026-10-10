@@ -1586,7 +1586,7 @@ describe('styled RSC mode', () => {
 
         expect(flood(warn)).toHaveLength(1);
         expect(flood(warn)[0][0]).toBe(
-          `[sc] Over ${RSC_REDUNDANT_EMIT_WARN_THRESHOLD} instances of the styled component styled.span were rendered on one server-rendered page, so its styles repeat that many times in the HTML. This is fine at normal sizes. To trim a very large list, style the items from one styled parent element (for example a \`& > li\` selector) and render plain children, so the whole list emits a single tag.`
+          `[sc] ${RSC_REDUNDANT_EMIT_WARN_THRESHOLD} instances of the styled component styled.span were rendered on one server-rendered page, so its styles repeat that many times in the HTML. This is fine at normal sizes. To trim a very large list, style the items from one styled parent element (for example a \`& > li\` selector) and render plain children, so the whole list emits a single tag.`
         );
       } finally {
         warn.mockRestore();
@@ -1712,6 +1712,55 @@ describe('styled RSC mode', () => {
         </>
       );
 
+      expect(seen[1]).not.toBe(seen[0]);
+    });
+
+    it('never shares an element between a base and an extension with no rules of its own', () => {
+      // An extension with an empty template returns its base's exact class
+      // string, so only the component ID tells the two apart.
+      const Base = styled.div`
+        display: flex;
+      `;
+      const Ext = styled(Base).attrs({})``;
+
+      const renderFresh = (tree: React.ReactElement) => {
+        mockCacheStore.clear();
+        mainSheet.names = new Map();
+        mainSheet.clearTag();
+        return extractStyleContents(ReactDOMServer.renderToString(tree));
+      };
+      const baseAlone = renderFresh(<Base />);
+      const extAlone = renderFresh(<Ext />);
+
+      expect(baseAlone).toBe('.jYQgFj{display:flex;}');
+      expect(extAlone).not.toBe('');
+      expect(
+        renderFresh(
+          <>
+            <Base />
+            <Ext />
+          </>
+        )
+      ).toBe(baseAlone + extAlone);
+      expect(
+        renderFresh(
+          <>
+            <Ext />
+            <Base />
+          </>
+        )
+      ).toBe(extAlone + baseAlone);
+
+      const seen: React.ReactElement[] = [];
+      mockCacheStore.clear();
+      mainSheet.names = new Map();
+      ReactDOMServer.renderToString(
+        <>
+          {renderInProbe(Base, {}, seen)}
+          {renderInProbe(Ext, {}, seen)}
+        </>
+      );
+      expect(seen).toHaveLength(2);
       expect(seen[1]).not.toBe(seen[0]);
     });
 

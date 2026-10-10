@@ -230,7 +230,7 @@ describe('createGlobalStyle RSC mode', () => {
 
         expect(flood(warn)).toHaveLength(1);
         expect(flood(warn)[0][0]).toBe(
-          `[sc] Over ${RSC_REDUNDANT_EMIT_WARN_THRESHOLD} instances of the global style ${id} were rendered on one server-rendered page, so its styles repeat that many times in the HTML. A global style is normally mounted once, at the root of the app. Move it higher in the tree so it renders only once per page.`
+          `[sc] ${RSC_REDUNDANT_EMIT_WARN_THRESHOLD} instances of the global style ${id} were rendered on one server-rendered page, so its styles repeat that many times in the HTML. A global style is normally mounted once, at the root of the app. Move it higher in the tree so it renders only once per page.`
         );
       } finally {
         warn.mockRestore();

@@ -166,13 +166,12 @@ function generateId(
  * inheritance chain's compiled CSS without writing to the tag; registers
  * each new class name so repeat renders of the same component/props skip
  * compilation. Returns both the class name (for the element) and the
- * generated levels (consumed by the inline <style> emission), each carrying
- * its rules whether or not this instance won the claim.
+ * generated levels (consumed by the inline <style> emission).
  *
  * The sheet's name registry is request-wide, so once one instance registers a
  * name every later instance's claim fails and its level arrives with empty
- * rules; the request state's compiled rules hand those instances the winner's
- * rules so each can emit its own tag.
+ * rules; the winner's rules are kept in the request state, where
+ * `buildRscStyleCss` reads them back so each instance can emit its own tag.
  */
 function rscFlush<T extends ExecutionContext>(
   webStyle: WebStyle,
@@ -190,11 +189,45 @@ function rscFlush<T extends ExecutionContext>(
       if (compiledRules !== null) {
         compiledRules.set(level.componentId + '\0' + level.name, level.rules);
       }
-    } else if (level.rules.length === 0 && compiledRules !== null) {
-      level.rules = compiledRules.get(level.componentId + '\0' + level.name) ?? level.rules;
     }
   }
   return generated;
+}
+
+/**
+ * The CSS one RSC instance emits: referenced keyframes, then each level of its
+ * chain with every base level wrapped in :where() for zero specificity, so any
+ * extension overrides it without !important.
+ */
+function buildRscStyleCss(
+  generatedStyle: GeneratedStyle,
+  compiledRules: RscRequestState['compiledRules'] | null
+): string {
+  const levels = generatedStyle.levels;
+  const lastIdx = levels.length - 1;
+  let css = '';
+
+  for (let i = 0; i < levels.length; i++) {
+    const level = levels[i];
+    // A level whose name claim another instance won arrives without rules.
+    const rules =
+      level.rules.length === 0 && !level.isNew && compiledRules !== null
+        ? (compiledRules.get(level.componentId + '\0' + level.name) ?? level.rules)
+        : level.rules;
+    if (rules.length === 0) continue;
+
+    let levelCss = joinRules(rules);
+    if (i !== lastIdx) levelCss = wrapLevelInWhere(levelCss, level.name);
+    css += levelCss;
+  }
+
+  let kfCss = '';
+  const kfList = generatedStyle.keyframes;
+  for (let i = 0; i < kfList.length; i++) {
+    kfCss += joinRules(kfList[i].rules);
+  }
+
+  return stripSplitter(kfCss + css);
 }
 
 // Cached render inputs + style result: [prevProps, prevTheme, prevStyleSheet, prevCompiler,
@@ -730,53 +763,23 @@ function useImpl<Props extends BaseObject>(
   // registry's <head> styles in source order, so extensions naturally win
   // (#5672).
   if (IS_RSC && generatedStyle) {
-    const levels = generatedStyle.levels;
-    const lastIdx = levels.length - 1;
-    let css = '';
+    // Repeats of one component with the same class string share one element
+    // object, so the server-component payload writes the style once and refers
+    // back to it, and a repeat skips building the CSS at all. The component ID
+    // fixes the leaf and the class string folds in the compiler (so
+    // StyleSheetManager settings that change the CSS change the key). An
+    // extension with no rules of its own reuses its base's class string, so the
+    // ID is what keeps the two apart.
+    const sharedElements = rscState !== null ? rscState.styleElements : null;
+    const sharedKey = webStyle.componentId + ' ' + generatedClassName;
+    let styleElement = sharedElements ? sharedElements.get(sharedKey) : undefined;
 
-    for (let i = 0; i < levels.length; i++) {
-      const level = levels[i];
-      if (level.rules.length === 0) continue;
-
-      let levelCss = joinRules(level.rules);
-      if (i !== lastIdx) {
-        // Base levels in an inheritance chain are wrapped in :where() so their
-        // specificity is zero, letting any extension override without !important.
-        levelCss = wrapLevelInWhere(levelCss, level.name);
-      }
-      css += levelCss;
-    }
-
-    // Keyframes carried as pure data on `generatedStyle.keyframes`; each entry
-    // already holds the compiled `@keyframes` rules.
-    let kfCss = '';
-    const kfList = generatedStyle.keyframes;
-    for (let i = 0; i < kfList.length; i++) {
-      kfCss += joinRules(kfList[i].rules);
-    }
-
-    const combined = stripSplitter(kfCss + css);
-    if (combined) {
-      if (__DEV__ && IS_RSC && rscState !== null) {
-        const emitted = noteRscEmit(rscState, webStyle.componentId);
-        if (emitted === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
-          warnOnce(
-            'rsc-redundant-emit',
-            `Over ${emitted} instances of the styled component ${forwardedComponent.displayName || styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML. This is fine at normal sizes. To trim a very large list, style the items from one styled parent element (for example a \`& > li\` selector) and render plain children, so the whole list emits a single tag.`,
-            webStyle.componentId
-          );
-        }
-      }
-
-      // Repeats of one component's identical CSS share one element object, so
-      // the server-component payload writes the style once and refers back to
-      // it. The key carries the component ID, so two components with the same
-      // rules, or one component under different StyleSheetManager settings
-      // (different CSS), never share.
-      const sharedElements = rscState !== null ? rscState.styleElements : null;
-      const sharedKey = webStyle.componentId + '\n' + combined;
-      let styleElement = sharedElements ? sharedElements.get(sharedKey) : undefined;
-      if (styleElement === undefined) {
+    if (styleElement === undefined) {
+      const combined = buildRscStyleCss(
+        generatedStyle,
+        rscState !== null ? rscState.compiledRules : null
+      );
+      if (combined) {
         styleElement = React.createElement('style', {
           [SC_ATTR]: '',
           key: 'sc-' + webStyle.componentId,
@@ -784,6 +787,20 @@ function useImpl<Props extends BaseObject>(
         });
         if (sharedElements) sharedElements.set(sharedKey, styleElement);
       }
+    }
+
+    if (styleElement !== undefined) {
+      if (__DEV__ && IS_RSC && rscState !== null) {
+        const emitted = noteRscEmit(rscState, webStyle.componentId);
+        if (emitted === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
+          warnOnce(
+            'rsc-redundant-emit',
+            `${emitted} instances of the styled component ${forwardedComponent.displayName || styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML. This is fine at normal sizes. To trim a very large list, style the items from one styled parent element (for example a \`& > li\` selector) and render plain children, so the whole list emits a single tag.`,
+            webStyle.componentId
+          );
+        }
+      }
+
       return React.createElement(React.Fragment, null, styleElement, element);
     }
   }

@@ -144,7 +144,7 @@ export default function createGlobalStyle<Props extends object>(
           if (emitted === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
             warnOnce(
               'rsc-redundant-emit',
-              `Over ${emitted} instances of the global style ${styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML. A global style is normally mounted once, at the root of the app. Move it higher in the tree so it renders only once per page.`,
+              `${emitted} instances of the global style ${styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML. A global style is normally mounted once, at the root of the app. Move it higher in the tree so it renders only once per page.`,
               styledComponentId
             );
           }
