@@ -756,6 +756,10 @@ describe('published package contents', () => {
     expect(packed.filter(file => file.includes('node_modules/'))).toEqual([]);
   });
 
+  it('packs no repo-only test helpers', () => {
+    expect(packed.filter(file => file.startsWith('test-utils/'))).toEqual([]);
+  });
+
   it('still packs the native entry points', () => {
     expect(packed).toEqual(
       expect.arrayContaining([
