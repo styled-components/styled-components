@@ -342,7 +342,10 @@ function useStyledComponentImpl<Props extends BaseObject>(
     // same chain reuses the element and skips rebuilding the CSS. createRSCCache
     // returns null without React.cache (React 18); then each instance emits its own.
     const styleElements = getStyleElements && getStyleElements();
-    let styleElement = styleElements && styleElements.get(generatedClassName);
+    // The component ID joins the key: an extension with no CSS of its own returns
+    // exactly its base's class string, but its CSS wraps the base in :where().
+    const styleKey = componentStyle.componentId + ' ' + generatedClassName;
+    let styleElement = styleElements && styleElements.get(styleKey);
     let combined = '';
 
     if (!styleElement) {
@@ -435,7 +438,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
           key: 'sc-' + componentStyle.componentId,
           children: combined,
         });
-        if (styleElements) styleElements.set(generatedClassName, styleElement);
+        if (styleElements) styleElements.set(styleKey, styleElement);
       }
 
       return React.createElement(React.Fragment, null, styleElement, element);

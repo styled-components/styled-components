@@ -1450,6 +1450,75 @@ describe('styled RSC mode', () => {
       expect(seen[0].key).not.toBe(seen[1].key);
     });
 
+    // An extension with no CSS of its own returns exactly its base's class
+    // string, yet its CSS wraps the base in :where(), so the two must not share
+    // an element.
+    describe.each([
+      ['an empty template', 'attrs'],
+      ['an interpolation that yields nothing', 'interpolation'],
+    ])('extension with %s', (_label, kind) => {
+      const defineBase = () => styled.div`
+        color: red;
+      `;
+      const defineExtension = (Base: ReturnType<typeof defineBase>) =>
+        kind === 'attrs'
+          ? styled(Base).attrs({ title: 'x' })``
+          : // Single-line template: surrounding whitespace would itself be CSS and earn the leaf a class.
+            styled(Base)`
+              ${(p: { $on?: boolean }) => p.$on && 'font-weight: bold;'}
+            `;
+
+      /** CSS of each style tag, in document order */
+      const styleTagContents = (html: string): string[] =>
+        [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]);
+
+      const renderAlone = (element: React.ReactElement): string => {
+        mockCacheStore.clear();
+        return styleTagContents(ReactDOMServer.renderToString(element))[0];
+      };
+
+      it.each(['base first', 'extension first'])(
+        'should emit each component its own CSS when rendered %s',
+        order => {
+          const Base = defineBase();
+          const Ext = defineExtension(Base);
+
+          const baseAlone = renderAlone(<Base />);
+          const extAlone = renderAlone(<Ext />);
+          mockCacheStore.clear();
+
+          expect(baseAlone).not.toContain(':where(');
+          expect(extAlone).toMatch(/^:where\(/);
+
+          const { html, seen } = collectStyleElements(() =>
+            ReactDOMServer.renderToString(
+              <div>
+                {order === 'base first' ? (
+                  <>
+                    <Base />
+                    <Ext />
+                  </>
+                ) : (
+                  <>
+                    <Ext />
+                    <Base />
+                  </>
+                )}
+              </div>
+            )
+          );
+
+          const [firstCSS, secondCSS] = styleTagContents(html);
+          expect(order === 'base first' ? [firstCSS, secondCSS] : [secondCSS, firstCSS]).toEqual([
+            baseAlone,
+            extAlone,
+          ]);
+          expect(seen).toHaveLength(2);
+          expect(seen[1]).not.toBe(seen[0]);
+        }
+      );
+    });
+
     it('should keep the React key fixed per component', () => {
       const Box = styled.div<{ $color: string }>`
         color: ${p => p.$color};
