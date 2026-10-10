@@ -169,18 +169,42 @@ export function renderStreamed(tree: ReactElement): Promise<StreamedRender> {
   });
 }
 
-function reveal(streamed: string): string {
-  /* A completed segment always closes right before its reveal script, so the
-     lookahead keeps a nested `</div>` inside the content from ending it early. */
-  const segmentPattern = /<div hidden id="S:(\d+)">([\s\S]*?)<\/div>(?=<script)/g;
-  const segments = [...streamed.matchAll(segmentPattern)];
-  let html = removeScripts(streamed.replace(segmentPattern, ''));
+const SEGMENT_OPEN = '<div hidden id="S:';
+/* A completed segment always closes right before its reveal script, so this
+   terminator keeps a nested `</div>` inside the content from ending it early. */
+const SEGMENT_CLOSE = '</div><script';
+const BOUNDARY_END = '<!--/$-->';
 
-  for (const [, id, content] of segments) {
-    html = html.replace(
-      new RegExp('<template id="B:' + id + '"></template>[\\s\\S]*?<!--/\\$-->'),
-      () => content
+function reveal(streamed: string): string {
+  const segments = new Map<string, string>();
+  let shell = '';
+  let from = 0;
+
+  for (;;) {
+    const start = streamed.indexOf(SEGMENT_OPEN, from);
+    if (start === -1) {
+      shell += streamed.slice(from);
+      break;
+    }
+
+    const idEnd = streamed.indexOf('">', start);
+    const close = streamed.indexOf(SEGMENT_CLOSE, idEnd);
+    segments.set(
+      streamed.slice(start + SEGMENT_OPEN.length, idEnd),
+      streamed.slice(idEnd + 2, close)
     );
+    shell += streamed.slice(from, start);
+    from = close + '</div>'.length;
+  }
+
+  let html = removeScripts(shell);
+
+  for (const [id, content] of segments) {
+    const start = html.indexOf('<template id="B:' + id + '"></template>');
+    const end = start === -1 ? -1 : html.indexOf(BOUNDARY_END, start);
+    if (end === -1) continue;
+
+    html = html.slice(0, start) + content + html.slice(end + BOUNDARY_END.length);
   }
 
   return html;
