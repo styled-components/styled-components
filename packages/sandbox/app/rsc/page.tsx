@@ -17,12 +17,13 @@ import {
 import theme from '../lib/theme';
 
 // Declared early so test9Checks can reference its runtime styledComponentId.
-const DedupGlobalStyle = createGlobalStyle`
-  [data-testid="dedup-marker"] {
+const REPEATED_GLOBAL_INSTANCES = 3;
+const RepeatedGlobalStyle = createGlobalStyle`
+  [data-testid="per-instance-marker"] {
     border-style: dashed !important;
   }
 `;
-const dedupId = DedupGlobalStyle.styledComponentId;
+const repeatedId = RepeatedGlobalStyle.styledComponentId;
 
 const test1Checks: TestCheck[] = [
   {
@@ -187,17 +188,17 @@ const test8Checks: TestCheck[] = [
 
 const test9Checks: TestCheck[] = [
   {
-    ref: 'dedup-marker',
+    ref: 'per-instance-marker',
     type: 'style',
     prop: 'border-style',
     expected: 'dashed',
-    label: 'Dedup marker has dashed border',
+    label: 'Marker has dashed border from a repeated global style',
   },
   {
-    ref: 'style[data-styled-global="' + dedupId + '"]',
+    ref: 'style[data-styled-global="' + repeatedId + '"]',
     type: 'count',
-    expected: '1',
-    label: 'Exactly one <style data-styled-global> tag emitted',
+    expected: String(REPEATED_GLOBAL_INSTANCES),
+    label: 'One <style data-styled-global> tag per instance',
   },
 ];
 
@@ -264,7 +265,7 @@ const rscSuites = [
   { name: '6. as prop', checks: test6Checks },
   { name: '7. CSS vars', checks: test7Checks },
   { name: '8. Child-index selectors', checks: test8Checks },
-  { name: '9. GlobalStyle dedup', checks: test9Checks },
+  { name: '9. GlobalStyle per-instance emission', checks: test9Checks },
   { name: '10. Modern CSS', checks: test10Checks },
   { name: '11. shouldForwardProp', checks: test11Checks },
 ];
@@ -551,41 +552,45 @@ export default function RSCTestPage() {
         </Demo>
       </Section>
 
-      {/* 9. GlobalStyle dedup in RSC */}
+      {/* 9. GlobalStyle per-instance emission in RSC */}
       <Section>
         <SectionTitle>
-          9. GlobalStyle dedup in RSC <TestStatus checks={test9Checks} />
+          9. GlobalStyle per-instance emission in RSC <TestStatus checks={test9Checks} />
         </SectionTitle>
         <SectionDesc>
-          Three <Code>&lt;DedupGlobalStyle /&gt;</Code> instances render below; identical CSS
-          deduplicates via <Code>React.cache</Code> so only one{' '}
-          <Code>&lt;style data-styled-global&gt;</Code> tag should land in the document. The badge
-          below shows the live count.
+          Three <Code>&lt;RepeatedGlobalStyle /&gt;</Code> instances render below, and each puts its
+          own <Code>&lt;style data-styled-global&gt;</Code> tag in the page. The same global style
+          often renders twice at once: in a loading fallback and again in the content that replaces
+          it, or in a layout and the page below it. React throws away the fallback, or the old page
+          on a navigation, together with its tag, so a single shared tag could vanish and take the
+          page&apos;s global styles with it. The badge below shows the live count.
         </SectionDesc>
         <HintText>
-          Visual: green badge = 1 of 1 (deduped). Red badge = duplicates leaked. The dashed border
-          on the marker confirms the global style applied at all.
+          Visual: green badge = {REPEATED_GLOBAL_INSTANCES} of {REPEATED_GLOBAL_INSTANCES} (one tag
+          per instance). Red badge = a tag went missing. The dashed border on the marker confirms
+          the global style applied at all. See <Code>app/suspense-5808</Code> for the loading
+          fallback case.
         </HintText>
-        <DedupGlobalStyle />
-        <DedupGlobalStyle />
-        <DedupGlobalStyle />
+        <RepeatedGlobalStyle />
+        <RepeatedGlobalStyle />
+        <RepeatedGlobalStyle />
         <Demo>
-          <DedupStack>
+          <PerInstanceStack>
             <DedupCountBadge
-              tagId={dedupId}
-              expected={1}
+              tagId={repeatedId}
+              expected={REPEATED_GLOBAL_INSTANCES}
               unit={
                 <>
                   <Code>&lt;style data-styled-global&gt;</Code> tag
                 </>
               }
-              title={'data-styled-global="' + dedupId + '"'}
+              title={'data-styled-global="' + repeatedId + '"'}
             />
-            <DedupMarker data-testid="dedup-marker">
-              Dashed border ⇒ <Code>DedupGlobalStyle</Code> applied. Badge above ⇒ exactly one tag
-              emitted.
-            </DedupMarker>
-          </DedupStack>
+            <PerInstanceMarker data-testid="per-instance-marker">
+              Dashed border ⇒ <Code>RepeatedGlobalStyle</Code> applied. Badge above ⇒ one tag per
+              instance.
+            </PerInstanceMarker>
+          </PerInstanceStack>
         </Demo>
       </Section>
 
@@ -990,15 +995,15 @@ const NthChildItem = styled(NthBaseItem)`
 `;
 
 // ---------------------------------------------------------------------------
-// 9. GlobalStyle dedup
-const DedupStack = styled.div`
+// 9. GlobalStyle per-instance emission
+const PerInstanceStack = styled.div`
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
 `;
 
-const DedupMarker = styled.div`
+const PerInstanceMarker = styled.div`
   padding: 16px;
   border: 2px solid ${theme.colors.border};
   border-radius: 8px;

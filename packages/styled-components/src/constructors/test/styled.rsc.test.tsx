@@ -21,6 +21,8 @@ jest.mock('../../utils/isRsc', () => ({ IS_RSC: true }));
 
 import React, { Suspense } from 'react';
 import ReactDOMServer from 'react-dom/server';
+import { RSC_REDUNDANT_EMIT_WARN_THRESHOLD } from '../../constants';
+import * as rscCache from '../../utils/rscCache';
 import { renderStreamed, tick } from '../../test/rscStream';
 import { resetIdentifiers } from '../../models/StyledComponent';
 import {
@@ -1553,6 +1555,71 @@ describe('styled RSC mode', () => {
         ).repeat(2)
       );
       expect(countStyleTags(html)).toBe(2);
+    });
+  });
+
+  describe('redundant-emit warning', () => {
+    const renderMany = (count: number) => {
+      const Cell = styled.span`
+        color: red;
+      `;
+
+      ReactDOMServer.renderToString(
+        <div>
+          {Array.from({ length: count }, (_, i) => (
+            <Cell key={i} />
+          ))}
+        </div>
+      );
+    };
+
+    const flood = (warn: jest.SpyInstance) =>
+      warn.mock.calls.filter(
+        ([msg]) => typeof msg === 'string' && msg.includes('instances of the styled component')
+      );
+
+    it('warns once when one component reaches the instance threshold in development', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      try {
+        renderMany(RSC_REDUNDANT_EMIT_WARN_THRESHOLD + 5);
+
+        expect(flood(warn)).toHaveLength(1);
+        expect(flood(warn)[0][0]).toBe(
+          `[sc] Over ${RSC_REDUNDANT_EMIT_WARN_THRESHOLD} instances of the styled component styled.span were rendered on one server-rendered page, so its styles repeat that many times in the HTML. This is fine at normal sizes. To trim a very large list, style the items from one styled parent element (for example a \`& > li\` selector) and render plain children, so the whole list emits a single tag.`
+        );
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it('stays quiet below the threshold', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      try {
+        renderMany(RSC_REDUNDANT_EMIT_WARN_THRESHOLD - 1);
+
+        expect(flood(warn)).toHaveLength(0);
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it('does no counting in production', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const count = jest.spyOn(rscCache, 'noteRscEmit');
+      (global as { __DEV__: boolean }).__DEV__ = false;
+
+      try {
+        renderMany(RSC_REDUNDANT_EMIT_WARN_THRESHOLD + 5);
+
+        expect(count).not.toHaveBeenCalled();
+        expect(flood(warn)).toHaveLength(0);
+      } finally {
+        (global as { __DEV__: boolean }).__DEV__ = true;
+        count.mockRestore();
+        warn.mockRestore();
+      }
     });
   });
 

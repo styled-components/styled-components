@@ -11,6 +11,7 @@ const sections = [
     title: 'Tests',
     items: [
       { href: '/rsc', label: 'RSC' },
+      { href: '/suspense-5808', label: 'Suspense Styles (#5808)' },
       { href: '/client-example', label: 'Client Components' },
       { href: '/global-style-test', label: 'Global Styles' },
       { href: '/container-queries', label: 'Container Queries' },

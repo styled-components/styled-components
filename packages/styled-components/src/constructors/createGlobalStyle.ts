@@ -1,5 +1,9 @@
 import React from 'react';
-import { IS_BROWSER, STATIC_EXECUTION_CONTEXT } from '../constants';
+import {
+  IS_BROWSER,
+  RSC_REDUNDANT_EMIT_WARN_THRESHOLD,
+  STATIC_EXECUTION_CONTEXT,
+} from '../constants';
 import { IS_RSC } from '../utils/isRsc';
 import WebGlobalStyle from '../models/WebGlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
@@ -9,7 +13,7 @@ import { Compiler, ExecutionContext, ExecutionProps, Interpolation, Styles } fro
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
 import { joinRules, stripSplitter } from '../utils/joinStrings';
-import { getRscStyleElements } from '../utils/rscCache';
+import { getRscStyleElements, noteRscEmit } from '../utils/rscCache';
 import { warnOnce } from '../utils/warnOnce';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import css from './css';
@@ -133,6 +137,17 @@ export default function createGlobalStyle<Props extends object>(
       if (css) {
         globalStyle.instanceRules.delete(instance);
 
+        if (__DEV__ && IS_RSC) {
+          const emitted = noteRscEmit(styledComponentId);
+          if (emitted === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
+            warnOnce(
+              'rsc-redundant-emit',
+              `Over ${emitted} instances of the global style ${styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML. A global style is normally mounted once, at the root of the app. Move it higher in the tree so it renders only once per page.`,
+              styledComponentId
+            );
+          }
+        }
+
         // Repeats of identical CSS share one element object so the
         // server-component payload writes the style once and refers back to
         // it; the key carries the global's ID, so two globals with the same
@@ -150,7 +165,11 @@ export default function createGlobalStyle<Props extends object>(
           if (sharedElements) sharedElements.set(sharedKey, styleElement);
         }
 
-        return styleElement;
+        // Array-wrapped: React's server-component serializer writes a repeat
+        // of a bare element as a reference to its props only, repeating the
+        // element's type and key, but references a whole element inside an
+        // array.
+        return [styleElement];
       }
     }
 

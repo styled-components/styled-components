@@ -7,7 +7,7 @@ import isPropValid from '../utils/isPropValid';
  *  single object literal keeps every styled component on a single hidden
  *  class. */
 const REACT_MEMO_TYPE = Symbol.for('react.memo');
-import { SC_ATTR, SC_VERSION } from '../constants';
+import { RSC_REDUNDANT_EMIT_WARN_THRESHOLD, SC_ATTR, SC_VERSION } from '../constants';
 import { IS_RSC } from '../utils/isRsc';
 import type StyleSheet from '../sheet';
 import type {
@@ -47,7 +47,7 @@ import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
 import { joinRules, joinStrings, stripSplitter } from '../utils/joinStrings';
-import { createRSCCache, getRscStyleElements } from '../utils/rscCache';
+import { createRSCCache, getRscStyleElements, noteRscEmit } from '../utils/rscCache';
 import { setToString } from '../utils/setToString';
 import shallowEqual from '../utils/shallowEqual';
 import { warnOnce } from '../utils/warnOnce';
@@ -757,6 +757,17 @@ function useImpl<Props extends BaseObject>(
 
     const combined = stripSplitter(kfCss + css);
     if (combined) {
+      if (__DEV__ && IS_RSC) {
+        const emitted = noteRscEmit(webStyle.componentId);
+        if (emitted === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
+          warnOnce(
+            'rsc-redundant-emit',
+            `Over ${emitted} instances of the styled component ${forwardedComponent.displayName || styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML. This is fine at normal sizes. To trim a very large list, style the items from one styled parent element (for example a \`& > li\` selector) and render plain children, so the whole list emits a single tag.`,
+            webStyle.componentId
+          );
+        }
+      }
+
       // Repeats of one component's identical CSS share one element object, so
       // the server-component payload writes the style once and refers back to
       // it. The key carries the component ID, so two components with the same
