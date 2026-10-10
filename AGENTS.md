@@ -11,7 +11,6 @@ NOTE: This file is the only home for these instructions. CLAUDE.md is a one-line
 - At the start of each session, read the most recent llms.txt at https://styled-components.com/llms.txt for the current consumer-facing feature summary
 - Use pnpm package manager and associated commands
 - Formatting is Biome (config in `biome.jsonc`), enforced by a lint-staged pre-commit hook; `pnpm format` runs it repo-wide (fine to do). Match the config rather than hand-formatting. Biome has no Markdown or YAML formatter yet, so those files are left alone; keep them tidy by hand. Suppress a formatting decision with `// biome-ignore format: <reason>` (spaced, not hyphenated, and the hyphenated spelling fails silently), never `// prettier-ignore`, which Biome does not honor. The linter is on with a curated rule set plus two GritQL plugins; see the Critical Constraints below and the comments in `biome.jsonc`.
-- Never run the dev server yourself, ask the user to start it if needed
 - Use conventional commits: `(feat|fix|chore|refactor|test|docs|style|perf|build|ci): [description]`
 - Default to short commit messages: title only, or title plus one tight sentence
 - Ask for consent before every git push; one push's approval never carries to the next. Never `git stash`; use a temp commit. Update the lockfile whenever dependencies change and confirm the new version works.

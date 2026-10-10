@@ -101,7 +101,7 @@ Every server-rendered instance emits its own inline `<style data-styled>` holdin
 - A synchronous fallback never reaches the HTML at all, so the global is missing even with JavaScript disabled.
 - An async layout and its page both render the global: the page wins the ledger, and a client navigation to a sibling page removes the only tag while the layout that needs it never re-renders.
 
-The stylesheet's name registry lives on one sheet shared by every request in the process, reset when a request starts, so a claim fails whenever an earlier instance or a concurrent request registered the name first. Emission therefore reads each name's compiled rules from a process-wide cache keyed by component and name, never from the claim result. Caching across requests is safe because a name's rules are fixed: the name hashes the CSS and the stylis configuration.
+The stylesheet's name registry lives on one sheet shared by every request in the process, reset when a request starts, so a claim fails whenever an earlier instance or a concurrent request registered the name first. Emission therefore reads each name's compiled rules from a process-wide cache keyed by component and name, never from the claim result. Caching across requests is safe because a name's rules are fixed: the name hashes the CSS and the stylis configuration. A later request reuses a cached name's rules without recompiling. The cache per component holds the same number of names as the component's other dynamic-name caches; a name evicted mid-request is recompiled when an instance needs it.
 
 ### Why not `precedence`
 

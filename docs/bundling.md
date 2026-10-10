@@ -92,4 +92,8 @@ Server rendering on an edge runtime is unsupported. Next.js applies the `browser
 - A server component fails `next build`: the browser build calls `React.createContext` at module load, and the `react-server` build of React has none. Error 19 reports this, thrown from a guard in `utils/isRsc.ts` (`!IS_RSC && !React.createContext`).
 - A client component renders unstyled HTML with no error, as it does on any runtime without a style registry, because client styles inject through `useInsertionEffect`, which never runs on the server. With a `ServerStyleSheet` registry (the documented Next.js setup), the first `<style>` creation fails at request time. Error 20 reports this, thrown from a `typeof document` guard at the top of `makeStyleTag` in `src/sheet/dom.ts`.
 
-Both messages tell the reader to use the Node.js runtime. Guard 1 is gated `!__SERVER__ && !__NATIVE__`, so only the bundles where it can fire carry it. Neither guard spells `typeof React.createContext === 'undefined'`, which every non-server bundle replaces with `false`.
+Both messages tell the reader to use the Node.js runtime. Guard 1 is gated `!__SERVER__ && !__NATIVE__`, so only the bundles where it can fire carry it.
+
+## Published files
+
+The package's `files` list includes `native`, and the workspace install puts dependencies in `native/node_modules`, so `files` excludes `!native/node_modules`. CI publishes through `pnpm release` (`changeset publish`, which packs with pnpm and honors `files`). The "published package contents" block in `src/test/treeshake.test.ts` (run by `test:build`) fails if the packed list holds any `node_modules` path or drops a native entry point. It reads `npm pack --dry-run`, whose list matches pnpm's, because the pinned pnpm has no dry-run pack. Neither guard spells `typeof React.createContext === 'undefined'`, which every non-server bundle replaces with `false`.
