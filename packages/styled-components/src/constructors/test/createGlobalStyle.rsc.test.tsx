@@ -338,7 +338,7 @@ describe('createGlobalStyle RSC mode', () => {
         ([msg]) => typeof msg === 'string' && msg.includes('instances of the global style')
       );
       expect(guardrail).toHaveLength(1);
-      expect(guardrail[0][0]).toContain('Over 1000 instances');
+      expect(guardrail[0][0]).toContain('1000 instances of the global style');
       // Remediation is attached and free of internals jargon.
       expect(guardrail[0][0]).toContain('Move it higher in the tree');
       expect(guardrail[0][0]).not.toMatch(/Suspense|inline <style>|React\.cache|instanceRules/);

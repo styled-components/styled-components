@@ -423,7 +423,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
         if (count === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
           const name = forwardedComponent.displayName || styledComponentId;
           console.warn(
-            `Over ${count} instances of the styled component ${name} were rendered on one server-rendered page, so its styles repeat that many times in the HTML.\n` +
+            `${count} instances of the styled component ${name} were rendered on one server-rendered page, so its styles repeat that many times in the HTML.\n` +
               'This is fine at normal sizes. To trim a very large list, style the items from one styled parent element (for example a `& > li` selector) and render plain children, so the whole list emits a single tag.\n' +
               'If items must differ, move the changing values into a style object with the attrs method so every copy is identical and compresses away.\n' +
               'Example:\n' +

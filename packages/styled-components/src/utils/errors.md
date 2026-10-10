@@ -118,8 +118,8 @@ If you need access to the theme in an uncertain composition scenario, `React.use
 
 ## 19
 
-styled-components loaded its browser build in a React Server Components environment. This happens when a route renders on the server with the edge runtime, which loads the browser build. Remove `export const runtime = 'edge'`, or set it to `'nodejs'`, on every route that renders styled-components on the server.
+styled-components loaded its browser build in a React Server Components environment. This usually happens when a route renders on the server with the edge runtime, or when a server bundle resolves the package's browser build. Remove `export const runtime = 'edge'`, or set it to `'nodejs'`, on every route that renders styled-components on the server, and make sure server code resolves the package's server build.
 
 ## 20
 
-styled-components tried to create a `<style>` element on the server, where no `document` exists. This happens when a route renders on the server with the edge runtime, which loads the browser build. Remove `export const runtime = 'edge'`, or set it to `'nodejs'`, on every route that renders styled-components on the server.
+styled-components tried to create a `<style>` element on the server, where no `document` exists. This usually happens when a route renders on the server with the edge runtime, or when a server bundle resolves the package's browser build. Remove `export const runtime = 'edge'`, or set it to `'nodejs'`, on every route that renders styled-components on the server, and make sure server code resolves the package's server build.

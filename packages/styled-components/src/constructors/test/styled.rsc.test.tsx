@@ -1326,7 +1326,7 @@ describe('styled RSC mode', () => {
           ([msg]) => typeof msg === 'string' && msg.includes('instances of the styled component')
         );
         expect(guardrail).toHaveLength(1);
-        expect(guardrail[0][0]).toContain('Over 1000 instances');
+        expect(guardrail[0][0]).toContain('1000 instances of the styled component');
         // Remediation is attached and free of internals jargon.
         expect(guardrail[0][0]).toContain(
           'This is fine at normal sizes. To trim a very large list, style the items from one styled parent element (for example a `& > li` selector) and render plain children, so the whole list emits a single tag.\nIf items must differ, move the changing values into a style object with the attrs method so every copy is identical and compresses away.\nExample:\n'

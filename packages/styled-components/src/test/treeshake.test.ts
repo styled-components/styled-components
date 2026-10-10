@@ -8,6 +8,7 @@
  */
 import fs from 'fs';
 import path from 'path';
+import errorMap from '../utils/errors';
 import { findFreeNodeGlobalRefs, NODE_GLOBAL_NAMES } from './nodeGlobalScan';
 
 const distDir = path.resolve(__dirname, '../../dist');
@@ -116,14 +117,17 @@ describe('edge runtime guard: browser build', () => {
   // which has no createContext. The guard turns that crash into error 19.
   const browserCJSPath = path.join(distDir, 'styled-components.browser.cjs.js');
 
-  const load = (reactModule: () => unknown): any => {
-    let loaded: unknown;
-    jest.isolateModules(() => {
-      jest.doMock('react', reactModule);
-      loaded = require(browserCJSPath);
-    });
-    jest.dontMock('react');
-    return loaded;
+  const load = (reactModule: () => unknown): { default: unknown } => {
+    let loaded: { default: unknown } | undefined;
+    try {
+      jest.isolateModules(() => {
+        jest.doMock('react', reactModule);
+        loaded = require(browserCJSPath);
+      });
+    } finally {
+      jest.dontMock('react');
+    }
+    return loaded as { default: unknown };
   };
 
   it('throws error 19 when React has no createContext', () => {
@@ -132,8 +136,7 @@ describe('edge runtime guard: browser build', () => {
       return rest;
     };
 
-    expect(() => load(withoutCreateContext)).toThrow(/browser build in a React Server Components/);
-    expect(() => load(withoutCreateContext)).toThrow(/Remove `export const runtime = 'edge'`/);
+    expect(() => load(withoutCreateContext)).toThrow(errorMap[19].trim());
   });
 
   it('loads when React has createContext', () => {

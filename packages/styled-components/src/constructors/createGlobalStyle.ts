@@ -101,8 +101,8 @@ export default function createGlobalStyle<Props extends object>(
     // accumulate unboundedly in jsdom test environments (O(n²) regression).
     // On a real server without ServerStyleSheet, VirtualTag is used and styles are
     // discarded anyway, so skipping this path has no functional impact.
-    // An edge-runtime bundle loads the browser build, where __SERVER__ is false;
-    // styleSheet.server covers it (docs/build-architecture.md).
+    // styleSheet.server collects styles synchronously from a sheet forced into
+    // server mode where __SERVER__ is false (#3551, docs/build-architecture.md).
     if (IS_RSC || ssc.styleSheet.server) {
       renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
     }
@@ -177,7 +177,7 @@ export default function createGlobalStyle<Props extends object>(
           counts.set(styledComponentId, count);
           if (count === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
             console.warn(
-              `Over ${count} instances of the global style ${styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML.\n` +
+              `${count} instances of the global style ${styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML.\n` +
                 'A global style is normally mounted once, at the root of the app. Move it higher in the tree so it renders only once per page.'
             );
           }
