@@ -110,6 +110,39 @@ describe('dead-code elimination: browser build', () => {
   });
 });
 
+describe('edge runtime guard: browser build', () => {
+  // Next.js applies the package's browser file map to edge bundles, so a server
+  // component loads the browser build against the react-server build of React,
+  // which has no createContext. The guard turns that crash into error 19.
+  const browserCJSPath = path.join(distDir, 'styled-components.browser.cjs.js');
+
+  const load = (reactModule: () => unknown): any => {
+    let loaded: unknown;
+    jest.isolateModules(() => {
+      jest.doMock('react', reactModule);
+      loaded = require(browserCJSPath);
+    });
+    jest.dontMock('react');
+    return loaded;
+  };
+
+  it('throws error 19 when React has no createContext', () => {
+    const withoutCreateContext = () => {
+      const { createContext, ...rest } = jest.requireActual('react');
+      return rest;
+    };
+
+    expect(() => load(withoutCreateContext)).toThrow(/browser build in a React Server Components/);
+    expect(() => load(withoutCreateContext)).toThrow(/Remove `export const runtime = 'edge'`/);
+  });
+
+  it('loads when React has createContext', () => {
+    const loaded = load(() => jest.requireActual('react'));
+
+    expect(typeof loaded.default).toBe('function');
+  });
+});
+
 describe('dead-code elimination: server build', () => {
   let serverESM: string;
   let serverCJS: string;
