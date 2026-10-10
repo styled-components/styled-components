@@ -201,7 +201,9 @@ export default function createGlobalStyle<Props extends object>(
           if (styleElements) styleElements.set(styleKey, styleElement);
         }
 
-        return styleElement;
+        // Array-wrapped: the payload writer references a repeated element only
+        // inside an array; a bare returned element repeats its type and key.
+        return [styleElement];
       }
     }
 

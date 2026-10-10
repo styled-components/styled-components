@@ -153,10 +153,17 @@ describe('createGlobalStyle RSC mode', () => {
     // The server-component payload writer encodes a repeated element object
     // once, so instances with identical CSS return one element while every
     // instance still renders its own tag (docs/rsc-style-injection.md,
-    // "Payload dedup"). The memo wrapper's inner function is called directly
-    // to read the returned element.
-    const renderOnce = (GlobalStyle: unknown, props: object = {}): React.ReactElement =>
-      (GlobalStyle as { type: (p: object) => React.ReactElement }).type(props);
+    // "Payload dedup"). The element is returned inside an array because the
+    // payload writer references a repeated element only when it sits in an
+    // array; a bare returned element repeats its type and key each time. The
+    // memo wrapper's inner function is called directly to read the returned
+    // element.
+    const renderOnce = (GlobalStyle: unknown, props: object = {}): React.ReactElement => {
+      const returned = (GlobalStyle as { type: (p: object) => React.ReactElement[] }).type(props);
+
+      expect(Array.isArray(returned)).toBe(true);
+      return returned[0];
+    };
 
     it('returns the same element object for two instances with identical CSS', () => {
       const GlobalStyle = createGlobalStyle`
