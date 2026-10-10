@@ -174,7 +174,7 @@ function reveal(streamed: string): string {
      lookahead keeps a nested `</div>` inside the content from ending it early. */
   const segmentPattern = /<div hidden id="S:(\d+)">([\s\S]*?)<\/div>(?=<script)/g;
   const segments = [...streamed.matchAll(segmentPattern)];
-  let html = streamed.replace(segmentPattern, '').replace(/<script[\s\S]*?<\/script>/g, '');
+  let html = removeScripts(streamed.replace(segmentPattern, ''));
 
   for (const [, id, content] of segments) {
     html = html.replace(
@@ -184,4 +184,22 @@ function reveal(streamed: string): string {
   }
 
   return html;
+}
+
+/** Drops every `<script>…</script>` span (React's reveal instructions), any casing. */
+function removeScripts(html: string): string {
+  const lower = html.toLowerCase();
+  let out = '';
+  let from = 0;
+
+  for (;;) {
+    const start = lower.indexOf('<script', from);
+    if (start === -1) return out + html.slice(from);
+
+    out += html.slice(from, start);
+    const end = lower.indexOf('</script>', start);
+    if (end === -1) return out;
+
+    from = end + '</script>'.length;
+  }
 }
