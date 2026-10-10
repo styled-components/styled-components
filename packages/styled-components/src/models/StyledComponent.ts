@@ -206,7 +206,9 @@ function rscLevelRules(
     const recalled = recallRscRules(w, level.name);
     if (recalled !== undefined) return recalled;
 
-    const regenerated = webStyle.generate(context, ssc.styleSheet, ssc.compiler, true).levels;
+    const regenerated = webStyle.generate(context, ssc.styleSheet, ssc.compiler, {
+      recompile: true,
+    }).levels;
     for (let i = 0; i < regenerated.length; i++) {
       if (regenerated[i].componentId === level.componentId && regenerated[i].name === level.name) {
         return regenerated[i].rules;

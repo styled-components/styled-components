@@ -93,17 +93,18 @@ export default class WebStyle {
    * Produce per-level compiled CSS without writing any rules to the tag.
    * Claims each level's name on the sheet for the current turn so a sibling
    * generating the same class skips recompilation; the CSSOM write happens
-   * in {@link inject}. `recompile` (server components only) compiles every
-   * level even when its name is already registered or cached.
+   * in {@link inject}. `options.recompile` (server components only) compiles
+   * every level even when its name is already registered or cached.
    */
   generate(
     executionContext: ExecutionContext,
     styleSheet: StyleSheet,
     compiler: Compiler,
-    recompile: boolean = false
+    options?: { recompile?: boolean }
   ): GeneratedStyle {
+    const recompile = options !== undefined && options.recompile === true;
     const baseGenerated = this.baseStyle
-      ? this.baseStyle.generate(executionContext, styleSheet, compiler, recompile)
+      ? this.baseStyle.generate(executionContext, styleSheet, compiler, options)
       : null;
 
     if (this.resolvedSource === undefined) {
