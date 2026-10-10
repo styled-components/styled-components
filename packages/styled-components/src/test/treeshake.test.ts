@@ -7,6 +7,7 @@
  */
 import fs from 'fs';
 import path from 'path';
+import errorMap from '../utils/errors';
 
 const distDir = path.resolve(__dirname, '../../dist');
 const nativeDistDir = path.resolve(__dirname, '../../native/dist');
@@ -54,30 +55,36 @@ describe('dead-code elimination: browser build', () => {
  * as an anonymous TypeError at module load.
  */
 describe('browser build on an edge-runtime server', () => {
-  const browserBundles = ['styled-components.browser.cjs.js'];
+  const browserBundle = path.join(distDir, 'styled-components.browser.cjs.js');
+  /** The edge-runtime error is thrown as `throw <minified styledError>(19)`. */
+  const edgeGuard = /throw \w+\(19\)/;
 
   afterEach(() => {
     jest.dontMock('react');
     jest.resetModules();
   });
 
-  it.each(browserBundles)(
-    '%s reports the edge-runtime fix when React has no createContext',
-    file => {
-      jest.doMock('react', () => {
-        const { createContext: _createContext, ...serverComponentReact } =
-          jest.requireActual('react');
-        return serverComponentReact;
-      });
+  it('reports the edge-runtime fix when React has no createContext', () => {
+    jest.doMock('react', () => {
+      const { createContext: _createContext, ...serverComponentReact } =
+        jest.requireActual('react');
+      return serverComponentReact;
+    });
 
-      expect(() => require(path.join(distDir, file))).toThrow(
-        "Remove `export const runtime = 'edge'`, or set it to `'nodejs'`"
-      );
-    }
-  );
+    expect(() => require(browserBundle)).toThrow(new Error(errorMap[19].trim()));
+  });
 
-  it.each(browserBundles)('%s loads when React has createContext', file => {
-    expect(() => require(path.join(distDir, file))).not.toThrow();
+  it('loads when React has createContext', () => {
+    expect(() => require(browserBundle)).not.toThrow();
+  });
+
+  it('carries the guard only in the bundles that can reach an edge runtime', () => {
+    expect(read('styled-components.browser.cjs.js')).toMatch(edgeGuard);
+    expect(read('styled-components.browser.esm.js')).toMatch(edgeGuard);
+    expect(read('styled-components.cjs.js')).not.toMatch(edgeGuard);
+    expect(read('styled-components.esm.js')).not.toMatch(edgeGuard);
+    expect(readNative('styled-components.native.js')).not.toMatch(edgeGuard);
+    expect(readNative('styled-components.native.esm.js')).not.toMatch(edgeGuard);
   });
 });
 

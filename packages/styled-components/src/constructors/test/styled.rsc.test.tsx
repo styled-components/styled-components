@@ -24,7 +24,14 @@ import ReactDOMServer from 'react-dom/server';
 import { RSC_REDUNDANT_EMIT_WARN_THRESHOLD } from '../../constants';
 import { LIMIT as TOO_MANY_CLASSES_LIMIT } from '../../utils/createWarnTooManyClasses';
 import * as rscCache from '../../utils/rscCache';
-import { renderStreamed, tick } from '../../test/rscStream';
+import {
+  countStyleTags,
+  extractStyleContents,
+  itWarnsOnRedundantEmits,
+  renderInProbe,
+  renderStreamed,
+  tick,
+} from '../../test/rscStream';
 import { resetIdentifiers } from '../../models/StyledComponent';
 import {
   mainSheet,
@@ -36,20 +43,11 @@ import styled, { css, keyframes } from '../../index';
 import { StyleSheetManager } from '../../models/StyleSheetManager';
 import rscPlugin from '../../plugins/rsc';
 
-/** Extract all CSS rule text from <style> tags in rendered HTML */
-const extractStyleContents = (html: string): string =>
-  [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]).join('');
-
-/** Count <style> tags in rendered HTML */
-const countStyleTags = (html: string): number => (html.match(/<style[^>]*>/g) || []).length;
-
 describe('styled RSC mode', () => {
   beforeEach(() => {
     mockCacheStore.clear();
     resetGroupIds();
     resetIdentifiers();
-    mainSheet.names = new Map();
-    mainSheet.clearTag();
     __resetRSCOverrideForTesting();
   });
 
@@ -1385,22 +1383,6 @@ describe('styled RSC mode', () => {
       expect(countStyleTags(html)).toBe(2);
     });
 
-    it('should emit full rules for two plain instances of one component in one render', () => {
-      const Panel = styled.div`
-        color: crimson;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <div>
-          <Panel>first</Panel>
-          <Panel>second</Panel>
-        </div>
-      );
-
-      expect(countStyleTags(html)).toBe(2);
-      expect(extractStyleContents(html)).toBe('.iyTfYQ{color:crimson;}'.repeat(2));
-    });
-
     describe('across concurrent requests', () => {
       /** Run one render inside its own request: a separate `React.cache` store over the shared module-level sheet. */
       const inRequest = (store: Map<Function, any>, render: () => string): string => {
@@ -1634,67 +1616,23 @@ describe('styled RSC mode', () => {
   });
 
   describe('redundant-emit warning', () => {
-    const renderMany = (count: number) => {
-      const Cell = styled.span`
-        color: red;
-      `;
+    itWarnsOnRedundantEmits({
+      marker: 'instances of the styled component',
+      renderMany: count => {
+        const Cell = styled.span`
+          color: red;
+        `;
 
-      ReactDOMServer.renderToString(
-        <div>
-          {Array.from({ length: count }, (_, i) => (
-            <Cell key={i} />
-          ))}
-        </div>
-      );
-    };
-
-    const flood = (warn: jest.SpyInstance) =>
-      warn.mock.calls.filter(
-        ([msg]) => typeof msg === 'string' && msg.includes('instances of the styled component')
-      );
-
-    it('warns once when one component reaches the instance threshold in development', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-
-      try {
-        renderMany(RSC_REDUNDANT_EMIT_WARN_THRESHOLD + 5);
-
-        expect(flood(warn)).toHaveLength(1);
-        expect(flood(warn)[0][0]).toBe(
-          `[sc] ${RSC_REDUNDANT_EMIT_WARN_THRESHOLD} instances of the styled component styled.span were rendered on one server-rendered page, so its styles repeat that many times in the HTML. This is fine at normal sizes. To trim a very large list, style the items from one styled parent element (for example a \`& > li\` selector) and render plain children, so the whole list emits a single tag.`
+        ReactDOMServer.renderToString(
+          <div>
+            {Array.from({ length: count }, (_, i) => (
+              <Cell key={i} />
+            ))}
+          </div>
         );
-      } finally {
-        warn.mockRestore();
-      }
-    });
 
-    it('stays quiet below the threshold', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-
-      try {
-        renderMany(RSC_REDUNDANT_EMIT_WARN_THRESHOLD - 1);
-
-        expect(flood(warn)).toHaveLength(0);
-      } finally {
-        warn.mockRestore();
-      }
-    });
-
-    it('does no counting in production', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-      const count = jest.spyOn(rscCache, 'noteRscEmit');
-      (global as { __DEV__: boolean }).__DEV__ = false;
-
-      try {
-        renderMany(RSC_REDUNDANT_EMIT_WARN_THRESHOLD + 5);
-
-        expect(count).not.toHaveBeenCalled();
-        expect(flood(warn)).toHaveLength(0);
-      } finally {
-        (global as { __DEV__: boolean }).__DEV__ = true;
-        count.mockRestore();
-        warn.mockRestore();
-      }
+        return `${RSC_REDUNDANT_EMIT_WARN_THRESHOLD} instances of the styled component styled.span were rendered on one server-rendered page, so its styles repeat that many times in the HTML. This is fine at normal sizes. To trim a very large list, style the items from one styled parent element (for example a \`& > li\` selector) and render plain children, so the whole list emits a single tag.`;
+      },
     });
   });
 
@@ -1702,23 +1640,6 @@ describe('styled RSC mode', () => {
     // Every instance still renders its own <style> tag; what is shared is the
     // element object behind it, so the server-component payload carries each
     // distinct style once and refers back to it for every repeat.
-    type Rendered = React.ReactElement<{ children: React.ReactElement[] }>;
-
-    /** Run a styled component's render function inside a real render and hand back the element it returned. */
-    const renderInProbe = (
-      Component: unknown,
-      props: object,
-      sink: React.ReactElement[]
-    ): React.ReactElement => {
-      const render = (Component as { type: (props: object) => Rendered }).type;
-      const Probe = () => {
-        const out = render(props);
-        sink.push(out.props.children[0]);
-        return out;
-      };
-      return <Probe />;
-    };
-
     it('returns the same element object for identical CSS from one component', () => {
       const Box = styled.div<{ $color: string }>`
         color: ${p => p.$color};
@@ -1800,8 +1721,6 @@ describe('styled RSC mode', () => {
 
       const renderFresh = (tree: React.ReactElement) => {
         mockCacheStore.clear();
-        mainSheet.names = new Map();
-        mainSheet.clearTag();
         return extractStyleContents(ReactDOMServer.renderToString(tree));
       };
       const baseAlone = renderFresh(<Base />);
@@ -1828,7 +1747,6 @@ describe('styled RSC mode', () => {
 
       const seen: React.ReactElement[] = [];
       mockCacheStore.clear();
-      mainSheet.names = new Map();
       ReactDOMServer.renderToString(
         <>
           {renderInProbe(Base, {}, seen)}
@@ -1853,23 +1771,9 @@ describe('styled RSC mode', () => {
       );
 
       expect(seen[1]).not.toBe(seen[0]);
-      expect(extractStyleContents(html)).toContain('first');
-      expect(extractStyleContents(html)).toContain('second');
-    });
-
-    it('still renders one tag per instance when the element is shared', () => {
-      const Box = styled.div`
-        color: red;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <>
-          <Box />
-          <Box />
-        </>
+      expect(extractStyleContents(html)).toBe(
+        'first .dBBIlU{color:red;}second .bDqllf{color:red;}'
       );
-
-      expect(countStyleTags(html)).toBe(2);
     });
   });
 

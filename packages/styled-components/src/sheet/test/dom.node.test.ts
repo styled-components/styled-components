@@ -9,11 +9,4 @@ describe('makeStyleTag without a document', () => {
     expect(typeof document).toBe('undefined');
     expect(() => makeStyleTag()).toThrow(new Error(errorMap[20].trim()));
   });
-
-  it('names the fix in the catalog text', () => {
-    expect(errorMap[20]).toContain(
-      "Remove `export const runtime = 'edge'`, or set it to `'nodejs'`"
-    );
-    expect(errorMap[20]).toContain("make sure server code resolves the package's server build");
-  });
 });

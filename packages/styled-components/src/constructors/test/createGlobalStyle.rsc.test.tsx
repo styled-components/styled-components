@@ -23,12 +23,14 @@ import React, { Suspense } from 'react';
 import ReactDOMServer from 'react-dom/server';
 import { RSC_REDUNDANT_EMIT_WARN_THRESHOLD } from '../../constants';
 import { StyleSheetManager } from '../../models/StyleSheetManager';
-import * as rscCache from '../../utils/rscCache';
-import { renderStreamed, tick } from '../../test/rscStream';
+import {
+  countStyleTags,
+  itWarnsOnRedundantEmits,
+  renderGlobalInProbe,
+  renderStreamed,
+  tick,
+} from '../../test/rscStream';
 import createGlobalStyle from '../createGlobalStyle';
-
-/** Count <style> tags in rendered HTML */
-const countStyleTags = (html: string): number => (html.match(/<style[^>]*>/g) || []).length;
 
 describe('createGlobalStyle RSC mode', () => {
   beforeEach(() => {
@@ -201,69 +203,23 @@ describe('createGlobalStyle RSC mode', () => {
   });
 
   describe('redundant-emit warning', () => {
-    const renderMany = (count: number) => {
-      const GlobalStyle = createGlobalStyle`
-        body { margin: 0; }
-      `;
+    itWarnsOnRedundantEmits({
+      marker: 'instances of the global style',
+      renderMany: count => {
+        const GlobalStyle = createGlobalStyle`
+          body { margin: 0; }
+        `;
 
-      ReactDOMServer.renderToString(
-        <div>
-          {Array.from({ length: count }, (_, i) => (
-            <GlobalStyle key={i} />
-          ))}
-        </div>
-      );
-
-      return GlobalStyle.styledComponentId;
-    };
-
-    const flood = (warn: jest.SpyInstance) =>
-      warn.mock.calls.filter(
-        ([msg]) => typeof msg === 'string' && msg.includes('instances of the global style')
-      );
-
-    it('warns once when one global style reaches the instance threshold in development', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-
-      try {
-        const id = renderMany(RSC_REDUNDANT_EMIT_WARN_THRESHOLD + 5);
-
-        expect(flood(warn)).toHaveLength(1);
-        expect(flood(warn)[0][0]).toBe(
-          `[sc] ${RSC_REDUNDANT_EMIT_WARN_THRESHOLD} instances of the global style ${id} were rendered on one server-rendered page, so its styles repeat that many times in the HTML. A global style is normally mounted once, at the root of the app. Move it higher in the tree so it renders only once per page.`
+        ReactDOMServer.renderToString(
+          <div>
+            {Array.from({ length: count }, (_, i) => (
+              <GlobalStyle key={i} />
+            ))}
+          </div>
         );
-      } finally {
-        warn.mockRestore();
-      }
-    });
 
-    it('stays quiet below the threshold', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-
-      try {
-        renderMany(RSC_REDUNDANT_EMIT_WARN_THRESHOLD - 1);
-
-        expect(flood(warn)).toHaveLength(0);
-      } finally {
-        warn.mockRestore();
-      }
-    });
-
-    it('does no counting in production', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-      const count = jest.spyOn(rscCache, 'noteRscEmit');
-      (global as { __DEV__: boolean }).__DEV__ = false;
-
-      try {
-        renderMany(RSC_REDUNDANT_EMIT_WARN_THRESHOLD + 5);
-
-        expect(count).not.toHaveBeenCalled();
-        expect(flood(warn)).toHaveLength(0);
-      } finally {
-        (global as { __DEV__: boolean }).__DEV__ = true;
-        count.mockRestore();
-        warn.mockRestore();
-      }
+        return `${RSC_REDUNDANT_EMIT_WARN_THRESHOLD} instances of the global style ${GlobalStyle.styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML. A global style is normally mounted once, at the root of the app. Move it higher in the tree so it renders only once per page.`;
+      },
     });
   });
 
@@ -271,25 +227,6 @@ describe('createGlobalStyle RSC mode', () => {
     // Every instance still renders its own tag; the element object behind it
     // is shared so the server-component payload carries each distinct global
     // once and refers back to it for the repeats.
-    const renderInProbe = (
-      Component: unknown,
-      props: object,
-      sink: React.ReactElement[]
-    ): React.ReactElement => {
-      // The component returns the shared element array-wrapped: React's
-      // server-component serializer references a whole element inside an array
-      // but only the props of a bare one.
-      const render = (Component as { type: (props: object) => React.ReactElement[] }).type;
-      const Probe = () => {
-        const out = render(props);
-        expect(Array.isArray(out)).toBe(true);
-        expect(out).toHaveLength(1);
-        sink.push(out[0]);
-        return out;
-      };
-      return <Probe />;
-    };
-
     it('returns the same element object for identical static CSS', () => {
       const GlobalStyle = createGlobalStyle`
         body { margin: 0; }
@@ -298,8 +235,8 @@ describe('createGlobalStyle RSC mode', () => {
 
       const html = ReactDOMServer.renderToString(
         <>
-          {renderInProbe(GlobalStyle, {}, seen)}
-          {renderInProbe(GlobalStyle, {}, seen)}
+          {renderGlobalInProbe(GlobalStyle, {}, seen)}
+          {renderGlobalInProbe(GlobalStyle, {}, seen)}
         </>
       );
 
@@ -316,9 +253,9 @@ describe('createGlobalStyle RSC mode', () => {
 
       ReactDOMServer.renderToString(
         <>
-          {renderInProbe(GlobalStyle, { $bg: 'red' }, seen)}
-          {renderInProbe(GlobalStyle, { $bg: 'red' }, seen)}
-          {renderInProbe(GlobalStyle, { $bg: 'blue' }, seen)}
+          {renderGlobalInProbe(GlobalStyle, { $bg: 'red' }, seen)}
+          {renderGlobalInProbe(GlobalStyle, { $bg: 'red' }, seen)}
+          {renderGlobalInProbe(GlobalStyle, { $bg: 'blue' }, seen)}
         </>
       );
 
@@ -334,8 +271,8 @@ describe('createGlobalStyle RSC mode', () => {
 
       ReactDOMServer.renderToString(
         <>
-          {renderInProbe(GlobalStyle, { $bg: 'red' }, seen)}
-          {renderInProbe(GlobalStyle, { $bg: 'blue' }, seen)}
+          {renderGlobalInProbe(GlobalStyle, { $bg: 'red' }, seen)}
+          {renderGlobalInProbe(GlobalStyle, { $bg: 'blue' }, seen)}
         </>
       );
 
@@ -354,8 +291,8 @@ describe('createGlobalStyle RSC mode', () => {
 
       ReactDOMServer.renderToString(
         <>
-          {renderInProbe(First, {}, seen)}
-          {renderInProbe(Second, {}, seen)}
+          {renderGlobalInProbe(First, {}, seen)}
+          {renderGlobalInProbe(Second, {}, seen)}
         </>
       );
 
@@ -371,10 +308,10 @@ describe('createGlobalStyle RSC mode', () => {
       const html = ReactDOMServer.renderToString(
         <>
           <StyleSheetManager namespace="first">
-            {renderInProbe(GlobalStyle, {}, seen)}
+            {renderGlobalInProbe(GlobalStyle, {}, seen)}
           </StyleSheetManager>
           <StyleSheetManager namespace="second">
-            {renderInProbe(GlobalStyle, {}, seen)}
+            {renderGlobalInProbe(GlobalStyle, {}, seen)}
           </StyleSheetManager>
         </>
       );
