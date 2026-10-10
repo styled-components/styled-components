@@ -246,7 +246,10 @@ function buildRscStyleCss(
 
   let kfCss = '';
   const kfList = generatedStyle.keyframes;
-  for (let i = 0; i < kfList.length; i++) {
+  outer: for (let i = 0; i < kfList.length; i++) {
+    for (let j = 0; j < i; j++) {
+      if (kfList[j].name === kfList[i].name) continue outer;
+    }
     kfCss += joinRules(kfList[i].rules);
   }
 

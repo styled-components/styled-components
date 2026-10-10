@@ -1645,6 +1645,24 @@ describe('styled RSC mode', () => {
       expect(countStyleTags(html)).toBe(2);
     });
 
+    it('should emit a keyframe once per tag when a base and its extension both reference it', () => {
+      const fade = keyframes`
+        0% { opacity: 1; }
+        100% { opacity: 0; }
+      `;
+
+      const Base = styled.div`
+        animation: ${fade} 1s;
+      `;
+      const Extended = styled(Base)`
+        animation: ${fade} 2s;
+      `;
+
+      const css = extractStyleContents(ReactDOMServer.renderToString(<Extended />));
+
+      expect(css.split('@keyframes').length - 1).toBe(1);
+    });
+
     it('should emit the keyframes for every instance so none is lost to a discarded fallback', () => {
       const spin = keyframes`
         0% { transform: rotate(0deg); }
