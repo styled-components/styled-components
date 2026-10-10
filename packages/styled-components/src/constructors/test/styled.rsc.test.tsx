@@ -34,6 +34,7 @@ import {
 } from '../../test/rscStream';
 import { resetIdentifiers } from '../../models/StyledComponent';
 import {
+  mainCompiler,
   mainSheet,
   useStyleSheetContext,
   __resetRSCOverrideForTesting,
@@ -1413,6 +1414,27 @@ describe('styled RSC mode', () => {
 
         expect(extractStyleContents(htmlB)).toBe('.jnDZvI{color:red;}');
         expect(extractStyleContents(htmlA)).toBe('.jnDZvI{color:red;}');
+      });
+
+      it('compiles a name once for every request that renders it', async () => {
+        const Box = styled.div`
+          color: red;
+        `;
+        const emit = jest.spyOn(mainCompiler, 'emit');
+        const requestA = new Map<Function, any>();
+        const requestB = new Map<Function, any>();
+
+        try {
+          const htmlA = inRequest(requestA, () => ReactDOMServer.renderToString(<Box />));
+          await tick();
+          const htmlB = inRequest(requestB, () => ReactDOMServer.renderToString(<Box />));
+
+          expect(emit).toHaveBeenCalledTimes(1);
+          expect(extractStyleContents(htmlB)).toBe(extractStyleContents(htmlA));
+          expect(extractStyleContents(htmlB)).not.toBe('');
+        } finally {
+          emit.mockRestore();
+        }
       });
 
       it('holds at most one warning-threshold of class names per component', () => {

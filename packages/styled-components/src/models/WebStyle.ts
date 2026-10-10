@@ -15,7 +15,7 @@ import { fifoSet } from '../utils/fifoMap';
 import { hash, phash } from '../utils/hash';
 import { IS_RSC } from '../utils/isRsc';
 import { joinStrings } from '../utils/joinStrings';
-import { rememberRscRules } from '../utils/rscCache';
+import { recallRscRules, rememberRscRules } from '../utils/rscCache';
 import { warnOnce } from '../utils/warnOnce';
 import { flushKeyframes, type CompiledKeyframes } from './Keyframes';
 
@@ -220,8 +220,12 @@ export default class WebStyle {
     const claimed = IS_RSC
       ? !styleSheet.hasNameForId(this.componentId, name)
       : styleSheet.claimNameForId(this.componentId, name);
+    // A name an earlier request already compiled keeps its rules.
+    const known = IS_RSC && claimed ? recallRscRules(this, name) : undefined;
     let rules: string[];
-    if (!claimed) {
+    if (known !== undefined) {
+      rules = known;
+    } else if (!claimed) {
       rules = IS_RSC
         ? EMPTY_RULES
         : (styleSheet.getProvisionalRules(this.componentId, name) ?? EMPTY_RULES);
