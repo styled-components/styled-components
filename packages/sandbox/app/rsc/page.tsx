@@ -2,7 +2,7 @@ import styled, { createGlobalStyle, css, keyframes } from 'styled-components';
 import { TestStatus, type TestCheck } from '../components/auto-test';
 import { TestSummary } from '../components/test-summary';
 import ClientButton from '../components/client-button';
-import { CountBadge } from '../components/dedup-count-badge';
+import { CountBadge } from '../components/count-badge';
 import {
   Section,
   SectionTitle,

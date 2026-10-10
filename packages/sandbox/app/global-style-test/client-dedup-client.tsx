@@ -1,7 +1,7 @@
 'use client';
 
 import styled, { createGlobalStyle } from 'styled-components';
-import { CountBadge } from '../components/dedup-count-badge';
+import { CountBadge } from '../components/count-badge';
 
 const NEEDLE = '[data-client-dedup-marker]';
 

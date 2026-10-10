@@ -62,9 +62,9 @@ export function CountBadge(props: Props) {
 /**
  * Counts how many CSSOM rules in styled-components-managed sheets contain
  * `needle` in their cssText. The client path injects rules via `insertRule`
- * into a single shared `<style data-styled>` tag (CSSOM), so the dedup
- * invariant is "needle appears once across all sc sheets," not "one tag
- * carries this id."
+ * into a single shared `<style data-styled>` tag (CSSOM), so the count is
+ * how often the needle appears across all sc sheets, not how many tags
+ * carry an id.
  */
 function countSheetRuleOccurrences(needle: string): number {
   let count = 0;
