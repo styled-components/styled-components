@@ -9,9 +9,14 @@ mapped below.
 
 ## Critical Constraints
 
+- We strive for perfection in the lightest and quickest package. A change proves its cost against the
+  prior code before landing: shipped bundle bytes, emitted output bytes (CSS, HTML, server-component
+  payload), and render time, measured before and after; a regression in any needs a stated reason
 - NEVER use `precedence` or `href` on `<style>` elements. React 19 Float merges same-precedence tags,
-  strips custom `data-*` attributes, and hoists to `<head>` where source ordering is unpredictable.
-  See [docs/rsc-style-injection.md](docs/rsc-style-injection.md).
+  strips custom `data-*` attributes, and hoists to `<head>`, where the bucket lands ahead of the client
+  registry and never unmounts. See [docs/rsc-style-injection.md](docs/rsc-style-injection.md).
+- Server rendering requires the Node.js runtime; edge bundles load the browser build. NEVER add an
+  `exports` map to work around it. See [docs/build-architecture.md](docs/build-architecture.md).
 - The native entry must NEVER transitively import DOM code via a value import. Use `import type` and
   branded `Symbol.for()` checks instead of `instanceof`. Verify:
   `grep -c 'document\.' native/dist/styled-components.native.cjs.js` must be 0.

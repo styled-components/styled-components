@@ -5,16 +5,22 @@ How styles reach the page from React Server Components.
 ## Plain inline style tags
 
 RSC components emit plain inline `<style data-styled>` tags, with no `precedence` and no `href`.
-Server component output is not hydrated by React, so an inline tag causes no hydration mismatch. The
-`data-styled` attribute survives because React Float only strips attributes during client hydration,
-which never runs over RSC output.
+React Float only takes over a `<style>` carrying both `precedence` and `href`; a plain one renders as
+an ordinary host element on the server and the client, attributes intact. The client renders the same
+element from the server-component payload, so it hydrates against the server HTML without a mismatch.
 
 Inline body styles land after the registry's `<head>` styles in source order, so a cross-boundary
-extension (an RSC component extending a client component) wins the cascade. This source-order
-placement is load-bearing and is why styles are not hoisted to `<head>` via `precedence`: the server
-never sees a client component's base class, so it cannot make the extension win by specificity, and
-`precedence` buckets order the RSC render ahead of the client registry, which would flip the cascade
-(#5672). The child-index selector plugin below likewise depends on the tag staying an inline sibling.
+extension (an RSC component extending a client component) wins the cascade. This placement is
+load-bearing, and `precedence` breaks it in four ways:
+
+- Bucket order: Float inserts a new precedence bucket after the last `[data-precedence]` node, or at
+  `head.firstChild` when none exists, so the RSC styles land ahead of the client registry and the
+  extension loses to its client base (#5672).
+- Permanence: a precedence style is a resource that never unmounts, so styles outlive the components
+  that rendered them (#5641, #5649, #5670).
+- Attribute loss: when Fizz merges a style into a bucket it keeps only `children`, so `data-styled`
+  is dropped on the server too.
+- Position: the child-index selector plugin below depends on the tag staying an inline sibling.
 
 No cleanup of RSC style tags is needed: they are the sole source of CSS for server-only components.
 
@@ -39,8 +45,8 @@ There is deliberately no cross-instance or cross-request deduplication. A dedup 
 so a rule emitted only inside a Suspense fallback would be recorded once, skipped for the resolved
 child, then removed with the fallback when React reveals the boundary, leaving the resolved element
 with a class but no rule (#5808). Hoisting via `precedence` would dedup and survive the reveal, but it
-breaks #5672 and the child-index plugin (see above), and no per-boundary cache scope exists to make
-either approach safe.
+brings back every failure listed under "Plain inline style tags", and no per-boundary cache scope
+exists to make a ledger safe.
 
 Byte-identical duplicates are the only output dedup ever collapsed, and their cost depends on distance
 in the compressed stream. Within gzip's 32 KB back-reference window, a repeat costs about a byte each
@@ -74,6 +80,35 @@ A development-only warning fires once a single component emits `RSC_REDUNDANT_EM
 (1000) tags in one render, the point at which a very large repeated list should share one className
 instead. The counter is `React.cache`-scoped and gated on `NODE_ENV`, so production drops both the
 warning and its bookkeeping.
+
+## Payload dedup
+
+Per-instance emission repeats tags in the DOM, not in the server-component payload. Every emission
+site (styled components and `createGlobalStyle`) reuses one `<style>` element object per key from a
+request-scoped `React.cache` Map. The key is the component ID plus the exact CSS text, so instances
+with different CSS, different components, and subtrees under different `StyleSheetManager`
+namespaces or plugins never share. The React key stays fixed per component.
+
+Sharing is safe where a ledger is not because it changes only how the payload encodes the element;
+every instance still renders its own tag, so a Suspense reveal that removes the fallback's copy
+leaves the resolved instance's copy in place. HTML and final DOM are byte-identical with and without
+sharing.
+
+The Flight serializer (React's server-component payload writer) dedups repeated objects, and the
+saving depends on the build:
+
+- React 19.x: every repeat after the first becomes a path reference such as `"$0:props:children:0"`,
+  about 15 characters per nesting level.
+- Next.js 14.2 (vendored React 18.3 canary): the second copy is outlined into its own row and later
+  repeats reference it, so two copies remain.
+- Next.js 13.5 (older vendored canary): no object dedup, so the payload is unchanged.
+
+There is no size threshold below which sharing is skipped. Measured on a production Next.js 16 app
+(React 19.2), references ran 22 to 104 characters, always shorter than the smallest style element
+(129 bytes), and sharing everything was smallest or within 3 bytes in 15 of 16 compressed
+measurements.
+
+The Map lives behind `IS_RSC`, so browser builds drop it.
 
 ## Per-render reset
 
