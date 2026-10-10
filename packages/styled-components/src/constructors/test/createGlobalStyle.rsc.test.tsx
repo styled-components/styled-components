@@ -19,9 +19,13 @@ jest.mock('react', () => {
 // Mock IS_RSC before importing the module
 jest.mock('../../utils/isRsc', () => ({ IS_RSC: true }));
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import ReactDOMServer from 'react-dom/server';
+import { renderStreamed, tick } from '../../test/rscStream';
 import createGlobalStyle from '../createGlobalStyle';
+
+/** Count <style> tags in rendered HTML */
+const countStyleTags = (html: string): number => (html.match(/<style[^>]*>/g) || []).length;
 
 describe('createGlobalStyle RSC mode', () => {
   beforeEach(() => {
@@ -65,13 +69,15 @@ describe('createGlobalStyle RSC mode', () => {
     `);
   });
 
-  it('renders multiple instances of the same static global style in one tree', () => {
+  it('renders one tag per instance of the same static global style in one tree', () => {
     const GlobalStyle = createGlobalStyle`
       body { margin: 0; }
     `;
 
-    // Two instances in one render;simulates a non-hydrating RSC page
-    // where the same global style appears in multiple server components
+    // Two instances in one render simulate a non-hydrating RSC page where the
+    // same global style appears in multiple server components. Each carries
+    // its own tag so React discarding one (a Suspense fallback, a layout
+    // swapped on navigation) never strips the other.
     const html = ReactDOMServer.renderToString(
       <>
         <GlobalStyle />
@@ -83,7 +89,112 @@ describe('createGlobalStyle RSC mode', () => {
       <style data-styled-global="sc-global-yXuMc">
         body{margin:0;}
       </style>
+      <style data-styled-global="sc-global-yXuMc">
+        body{margin:0;}
+      </style>
     `);
+  });
+
+  it('renders one tag per instance of a dynamic global style even with identical props', () => {
+    const GlobalStyle = createGlobalStyle<{ $bg: string }>`
+      body { background: ${props => props.$bg}; }
+    `;
+
+    const html = ReactDOMServer.renderToString(
+      <>
+        <GlobalStyle $bg="red" />
+        <GlobalStyle $bg="red" />
+      </>
+    );
+
+    expect(html).toMatchInlineSnapshot(`
+      <style data-styled-global="sc-global-kVtqfD">
+        body{background:red;}
+      </style>
+      <style data-styled-global="sc-global-kVtqfD">
+        body{background:red;}
+      </style>
+    `);
+  });
+
+  describe('across React rendering boundaries (#5808)', () => {
+    it('keeps the global style after React reveals content behind a Suspense boundary', async () => {
+      const GlobalStyle = createGlobalStyle`
+        body { background: papayawhip; }
+      `;
+      const Resolved = async () => {
+        await tick();
+        return <GlobalStyle />;
+      };
+
+      const { revealed, streamed } = await renderStreamed(
+        <div>
+          <Suspense fallback={<GlobalStyle />}>
+            <Resolved />
+          </Suspense>
+        </div>
+      );
+
+      // The fallback and the resolved content each stream their own tag; the
+      // reveal discards the fallback's, leaving the resolved one.
+      expect(countStyleTags(streamed)).toBe(2);
+      expect(countStyleTags(revealed)).toBe(1);
+      expect(revealed).toContain('body{background:papayawhip;}');
+    });
+
+    it('emits the tag for content rendered after a fallback that never reaches the HTML', () => {
+      const GlobalStyle = createGlobalStyle`
+        body { background: papayawhip; }
+      `;
+
+      // A fallback React renders but elides from the HTML (its content did
+      // not suspend) still ran in the same request, so a shared record of
+      // "already emitted" would leave the real content without a tag.
+      ReactDOMServer.renderToString(<GlobalStyle />);
+      const html = ReactDOMServer.renderToString(<GlobalStyle />);
+
+      expect(countStyleTags(html)).toBe(1);
+      expect(html).toContain('body{background:papayawhip;}');
+    });
+
+    it('keeps the layout global style when a page below it renders the same global first', async () => {
+      const GlobalStyle = createGlobalStyle`
+        body { background: papayawhip; }
+      `;
+      const Page = () => (
+        <>
+          <GlobalStyle />
+          <p>page</p>
+        </>
+      );
+      // The layout places its global after its children, so the page renders
+      // (and records) its copy first.
+      const Layout = async ({ children }: { children: React.ReactNode }) => {
+        await tick();
+        return (
+          <>
+            <main>{children}</main>
+            <GlobalStyle />
+          </>
+        );
+      };
+
+      const { revealed } = await renderStreamed(
+        <div>
+          <Suspense fallback={<i>loading</i>}>
+            <Layout>
+              <Page />
+            </Layout>
+          </Suspense>
+        </div>
+      );
+
+      // A client navigation to a sibling page replaces everything inside
+      // <main>; the layout's own tag has to survive that.
+      const afterNavigation = revealed.replace(/<main>[\s\S]*<\/main>/, '<main></main>');
+      expect(countStyleTags(afterNavigation)).toBe(1);
+      expect(afterNavigation).toContain('body{background:papayawhip;}');
+    });
   });
 
   it('renders multiple instances with different dynamic props in one tree', () => {

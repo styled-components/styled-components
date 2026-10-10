@@ -9,15 +9,11 @@ import { Compiler, ExecutionContext, ExecutionProps, Interpolation, Styles } fro
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
 import { joinRules, stripSplitter } from '../utils/joinStrings';
-import { createRSCCache } from '../utils/rscCache';
 import { warnOnce } from '../utils/warnOnce';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import css from './css';
 
 declare const __SERVER__: boolean;
-
-/** Per-render dedup for RSC global style tags (same pattern as StyledComponent). */
-const getEmittedGlobalCSS = createRSCCache(() => new Set<string>());
 
 /**
  * Create a component that injects global CSS when mounted. Supports theming and dynamic props.
@@ -68,9 +64,9 @@ export default function createGlobalStyle<Props extends object>(
 
     // Gate on IS_RSC or `styleSheet.server` rather than `__SERVER__`: the
     // server build elides the injection effect below, so rendering here
-    // without cleanup produced an O(n²) jsdom regression. Turbopack also
-    // picks the browser entry for SSR, where the runtime flag is the only
-    // signal.
+    // without cleanup produced an O(n²) jsdom regression. A server bundle
+    // that loads the browser build (edge runtimes) also has `__SERVER__`
+    // false, where the runtime flags are the only signal.
     if (IS_RSC || ssc.styleSheet.server) {
       renderStyles(instance, props, ssc.styleSheet, theme, ssc.compiler);
     }
@@ -121,7 +117,10 @@ export default function createGlobalStyle<Props extends object>(
       // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the build-constant-gated region
     }
 
-    // RSC mode: output style tag.
+    // RSC mode: every instance outputs its own style tag, never skipping one
+    // an earlier instance already emitted: React discards a Suspense
+    // fallback's DOM on reveal, and a navigation removes a swapped page's, so
+    // a shared ledger would strand the instance that still needs the rules.
     // Unlike regular styled components, global styles must NOT use React 19's
     // `precedence` attribute because it makes style tags persist as permanent
     // resources even after unmount. Global styles need lifecycle-based cleanup
@@ -132,15 +131,6 @@ export default function createGlobalStyle<Props extends object>(
 
       if (css) {
         globalStyle.instanceRules.delete(instance);
-
-        // Dedup: static by componentId + compiler hash, dynamic by CSS string.
-        // Compiler hash ensures different SSM configs emit separate variants.
-        const emitted = getEmittedGlobalCSS ? getEmittedGlobalCSS() : null;
-        if (emitted) {
-          const key = globalStyle.isStatic ? styledComponentId + ssc.compiler.hash : css;
-          if (emitted.has(key)) return null;
-          emitted.add(key);
-        }
 
         return React.createElement('style', {
           key: styledComponentId + '-' + instance,
