@@ -29,6 +29,16 @@ const getGlobalEmitCounts =
     : null;
 
 /**
+ * Request-scoped `<style>` elements by global style ID plus CSS text. Instances
+ * with identical CSS reuse one element object, which the server-component
+ * payload writer encodes once and then references (docs/rsc-style-injection.md,
+ * "Payload dedup"). IS_RSC leads so the browser build drops the expression.
+ */
+const getGlobalStyleElements = IS_RSC
+  ? createRSCCache(() => new Map<string, React.ReactElement>())
+  : null;
+
+/**
  * Create a component that injects global CSS when mounted. Supports theming and dynamic props.
  *
  * ```tsx
@@ -178,11 +188,20 @@ export default function createGlobalStyle<Props extends object>(
           }
         }
 
-        return React.createElement('style', {
-          key: styledComponentId + '-' + instance,
-          'data-styled-global': styledComponentId,
-          children: stripSplitter(css),
-        });
+        // createRSCCache returns null without React.cache (React 18); emit unshared then.
+        const styleElements = getGlobalStyleElements && getGlobalStyleElements();
+        const styleKey = styledComponentId + '\n' + css;
+        let styleElement = styleElements && styleElements.get(styleKey);
+        if (!styleElement) {
+          styleElement = React.createElement('style', {
+            key: styledComponentId,
+            'data-styled-global': styledComponentId,
+            children: stripSplitter(css),
+          });
+          if (styleElements) styleElements.set(styleKey, styleElement);
+        }
+
+        return styleElement;
       }
     }
 

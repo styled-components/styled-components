@@ -149,6 +149,76 @@ describe('createGlobalStyle RSC mode', () => {
     expect(resolved).toBe(fallback);
   });
 
+  describe('shared style element (payload dedup)', () => {
+    // The server-component payload writer encodes a repeated element object
+    // once, so instances with identical CSS return one element while every
+    // instance still renders its own tag (docs/rsc-style-injection.md,
+    // "Payload dedup"). The memo wrapper's inner function is called directly
+    // to read the returned element.
+    const renderOnce = (GlobalStyle: unknown, props: object = {}): React.ReactElement =>
+      (GlobalStyle as { type: (p: object) => React.ReactElement }).type(props);
+
+    it('returns the same element object for two instances with identical CSS', () => {
+      const GlobalStyle = createGlobalStyle`
+        body { margin: 0; }
+      `;
+
+      const first = renderOnce(GlobalStyle);
+      const second = renderOnce(GlobalStyle);
+
+      expect(second).toBe(first);
+    });
+
+    it('returns the same element object for dynamic instances that resolve to identical CSS', () => {
+      const GlobalStyle = createGlobalStyle<{ $bg: string }>`
+        body { background: ${props => props.$bg}; }
+      `;
+
+      expect(renderOnce(GlobalStyle, { $bg: 'red' })).toBe(renderOnce(GlobalStyle, { $bg: 'red' }));
+    });
+
+    it('returns distinct element objects for different CSS', () => {
+      const GlobalStyle = createGlobalStyle<{ $bg: string }>`
+        body { background: ${props => props.$bg}; }
+      `;
+
+      const red = renderOnce(GlobalStyle, { $bg: 'red' });
+      const blue = renderOnce(GlobalStyle, { $bg: 'blue' });
+
+      expect(blue).not.toBe(red);
+      expect(red.props.children).toBe('body{background:red;}');
+      expect(blue.props.children).toBe('body{background:blue;}');
+    });
+
+    it('keeps the React key fixed to the global style id for every instance', () => {
+      const GlobalStyle = createGlobalStyle<{ $bg: string }>`
+        body { background: ${props => props.$bg}; }
+      `;
+
+      const red = renderOnce(GlobalStyle, { $bg: 'red' });
+      const blue = renderOnce(GlobalStyle, { $bg: 'blue' });
+
+      expect(red.key).toMatch(/^sc-global-[\w-]+$/);
+      expect(red.props['data-styled-global']).toBe(red.key);
+      expect(blue.key).toBe(red.key);
+    });
+
+    it('never shares an element between two different global styles', () => {
+      const First = createGlobalStyle`
+        body { margin: 0; }
+      `;
+      const Second = createGlobalStyle`
+        body { margin: 1px; }
+      `;
+
+      const first = renderOnce(First);
+      const second = renderOnce(Second);
+
+      expect(second).not.toBe(first);
+      expect(second.key).not.toBe(first.key);
+    });
+  });
+
   it('renders multiple instances with different dynamic props in one tree', () => {
     const GlobalStyle = createGlobalStyle<{ $bg: string }>`
       body { background: ${props => props.$bg}; }
