@@ -68,9 +68,9 @@ bundles, so the server loads the browser build:
 - A client component crashes at request time on the first DOM access. Error 20 reports this, thrown
   from a `typeof document` guard at the top of `makeStyleTag` in `src/sheet/dom.ts`.
 
-Both messages tell the reader to use the Node.js runtime. The guards cost 63 bytes raw and 23 gzipped
-in the production browser bundle. Neither guard spells `typeof React.createContext === 'undefined'`,
-which rollup replaces with `false` in browser builds.
+Both messages tell the reader to use the Node.js runtime; the message text lives in the development
+error map, so a consumer's production bundle carries only the two guards. Neither guard spells
+`typeof React.createContext === 'undefined'`, which rollup replaces with `false` in browser builds.
 
 ## Type package dependencies
 

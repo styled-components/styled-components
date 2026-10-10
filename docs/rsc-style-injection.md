@@ -84,10 +84,17 @@ warning and its bookkeeping.
 ## Payload dedup
 
 Per-instance emission repeats tags in the DOM, not in the server-component payload. Every emission
-site (styled components and `createGlobalStyle`) reuses one `<style>` element object per key from a
-request-scoped `React.cache` Map. The key is the component ID plus the exact CSS text, so instances
-with different CSS, different components, and subtrees under different `StyleSheetManager`
-namespaces or plugins never share. The React key stays fixed per component.
+site reuses one `<style>` element object per key from a request-scoped `React.cache` Map:
+
+- Styled components key on the generated class string. The class hash covers the component, its CSS
+  text, and the stylis configuration (namespace, plugin names), so the class chain determines the
+  emitted CSS, and a hit skips rebuilding it. Different CSS, different components, and subtrees under
+  different `StyleSheetManager` namespaces or plugins never share.
+- `createGlobalStyle` keys on its ID plus the exact CSS text, and returns the element wrapped in an
+  array: Flight references a repeated element whole only inside an array, while a bare returned
+  element repeats its type and key.
+
+The React key stays fixed per component (`'sc-' + componentId`, or the global's ID).
 
 Sharing is safe where a ledger is not because it changes only how the payload encodes the element;
 every instance still renders its own tag, so a Suspense reveal that removes the fallback's copy

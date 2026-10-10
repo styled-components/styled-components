@@ -26,9 +26,8 @@ export const IS_BROWSER = typeof window !== 'undefined' && typeof document !== '
  */
 export const IS_RSC: boolean = typeof React.createContext === 'undefined';
 
-// Only the browser build keeps this: there IS_RSC is the constant false, so a
-// React without createContext means an edge-runtime bundle loaded the browser
-// build inside a server component (docs/build-architecture.md, "Edge runtime").
+// Can fire only in the browser build, where IS_RSC is the constant false
+// (docs/build-architecture.md, "Edge runtime").
 if (!IS_RSC && !React.createContext) throw styledError(19);
 
 function readSpeedyFlag(name: string): boolean | undefined {
