@@ -82,3 +82,14 @@ This is likely not portable. A type annotation is necessary.
 ```
 
 It fires during declaration emit: the compiler infers a type whose name it can only express through a module path it does not consider portable, and instead of writing that path it errors. Routing the server-to-browser mapping through `exports` conditions put the resolver on a path where the emitted declaration's inferred types resolved through condition-dependent module specifiers, and a consumer compiling with `declaration` on (as composite projects do) hit the non-portable-name case. The flat `browser` map sidesteps the `exports`-condition resolution entirely: bundlers read it for the file swap, and the type resolver keeps following `main` / `module` / `types` to stable specifiers, so the inferred declaration types stay nameable. A maintainer who reintroduces `exports` here will see the same TS2742 surface in a consumer build, not in this repo's own type-check.
+
+No `exports` map can keep every current consumer on the file it resolves today, even with TS2742 solved. Jest under jsdom and Metro (Expo web) send identical conditions (`default`, `require` or `import`, `browser`) yet land on different files (`server.cjs` versus `browser.esm`). The best candidate map tested on the v6 line passed every bundler, Next.js byte-identity, composite TypeScript (5.4 to 7.0), and the 6.3.7 revert cases (#5648, #5659), but moved every Jest-jsdom suite onto the browser build. Jest 29's resolver (`resolve.exports` 2.0.3) also throws when a matched condition has no inner match, where Metro falls back to the next key, so a nested map cannot paper over the difference.
+
+## Edge runtime
+
+Server rendering on an edge runtime is unsupported. Next.js applies the `browser` file map to edge bundles, so the server loads the browser build:
+
+- A server component fails `next build`: the browser build calls `React.createContext` at module load, and the `react-server` build of React has none. Error 19 reports this, thrown from a guard in `utils/isRsc.ts` (`!IS_RSC && !React.createContext`).
+- A client component crashes at request time on the first DOM access. Error 20 reports this, thrown from a `typeof document` guard at the top of `makeStyleTag` in `src/sheet/dom.ts`.
+
+Both messages tell the reader to use the Node.js runtime. Neither guard spells `typeof React.createContext === 'undefined'`, which every non-server bundle replaces with `false`.
