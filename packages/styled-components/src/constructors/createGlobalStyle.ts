@@ -28,12 +28,7 @@ const getGlobalEmitCounts =
     ? createRSCCache(() => new Map<string, number>())
     : null;
 
-/**
- * Request-scoped `<style>` elements by global style ID plus CSS text. Instances
- * with identical CSS reuse one element object, which the server-component
- * payload writer encodes once and then references (docs/rsc-style-injection.md,
- * "Payload dedup"). IS_RSC leads so the browser build drops the expression.
- */
+/** Request-scoped shared `<style>` elements (docs/rsc-style-injection.md, "Payload dedup"). */
 const getGlobalStyleElements = IS_RSC
   ? createRSCCache(() => new Map<string, React.ReactElement>())
   : null;

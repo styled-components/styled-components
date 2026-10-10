@@ -1,6 +1,7 @@
 import isPropValid from '@emotion/is-prop-valid';
 import React, { createElement, PropsWithoutRef, Ref } from 'react';
 import { IS_RSC, RSC_REDUNDANT_EMIT_WARN_THRESHOLD, SC_ATTR, SC_VERSION } from '../constants';
+import type StyleSheet from '../sheet';
 import { getGroupForId } from '../sheet/GroupIDAllocator';
 import type {
   AnyComponent,
@@ -153,13 +154,7 @@ const getEmitCounts =
     ? createRSCCache(() => new Map<string, number>())
     : null;
 
-/**
- * Request-scoped `<style>` elements by generated class string. Instances that
- * resolve to the same classes reuse one element object, which the
- * server-component payload writer encodes once and then references
- * (docs/rsc-style-injection.md, "Payload dedup"). IS_RSC leads so the browser
- * build drops the expression.
- */
+/** Request-scoped shared `<style>` elements (docs/rsc-style-injection.md, "Payload dedup"). */
 const getStyleElements = IS_RSC
   ? createRSCCache(() => new Map<string, React.ReactElement>())
   : null;
@@ -186,6 +181,75 @@ function wrapBaseInWhere(levelCss: string, names: string[]): string {
     levelCss = levelCss.replace(re, ':where(.' + names[i] + ')');
   }
   return levelCss;
+}
+
+/** The CSS one RSC render emits: the leaf's rules, each base level's rules
+ *  wrapped in :where(), and the keyframes they reference. Empty when the
+ *  render has no CSS. */
+function buildRSCStyleCSS(
+  componentStyle: ComponentStyle,
+  generatedClassName: string,
+  styleSheet: StyleSheet
+): string {
+  // generateAndInjectStyles returns this render's whole chain of class names,
+  // base to leaf, so it names exactly the rules this instance needs.
+  const renderNames = generatedClassName.split(' ');
+
+  let css = '';
+  let walk: ComponentStyle | null | undefined = componentStyle;
+  while (walk) {
+    const groupNames = styleSheet.names.get(walk.componentId);
+    if (groupNames) {
+      // This render's names at this level (one per level in the common case).
+      const levelNames: string[] = [];
+      for (let i = 0; i < renderNames.length; i++) {
+        if (groupNames.has(renderNames[i])) levelNames.push(renderNames[i]);
+      }
+
+      if (levelNames.length) {
+        // Every name reaching the sheet in RSC was compiled into the cache by
+        // generateAndInjectStyles before it registered, so the lookup hits.
+        let levelCss = '';
+        for (let i = 0; i < levelNames.length; i++) {
+          levelCss += getCompiledCSSForName(walk, levelNames[i]) || '';
+        }
+
+        if (levelCss) {
+          if (walk !== componentStyle) {
+            levelCss = wrapBaseInWhere(levelCss, levelNames);
+          }
+          css = levelCss + css;
+        }
+      }
+    }
+
+    walk = walk.baseStyle;
+  }
+
+  let kfCss = '';
+  if (css && styleSheet.keyframeIds.size > 0) {
+    const kfTag = styleSheet.getTag();
+    for (const kfId of styleSheet.keyframeIds) {
+      const kfNames = styleSheet.names.get(kfId);
+      if (!kfNames) continue;
+      // Substring match: a name that happens to be a substring of another
+      // token only over-emits one gzip-cheap keyframe block, and a genuinely
+      // referenced name always appears verbatim, so a reference is never missed.
+      let referenced = false;
+      for (const kfName of kfNames) {
+        if (css.indexOf(kfName) !== -1) {
+          referenced = true;
+          break;
+        }
+      }
+      if (referenced) {
+        const kfRules = kfTag.getGroup(getGroupForId(kfId));
+        if (kfRules) kfCss += kfRules;
+      }
+    }
+  }
+
+  return stripSplitter(kfCss + css);
 }
 
 function buildPropsForElement(
@@ -324,93 +388,34 @@ function useStyledComponentImpl<Props extends BaseObject>(
 
   const element = createElement(elementToBeCreated, propsForElement);
 
-  // RSC mode: emit exactly this render's own classes (the leaf plus its
-  // :where()-wrapped base chain) and the keyframes it references as an inline
-  // <style> sibling, once per instance. No request-scoped dedup ledger: a
-  // ledger keyed on React.cache is request-wide and outlives a Suspense
-  // fallback's DOM, so a rule emitted only inside a fallback would be dropped
-  // for the resolved child and then removed with the fallback, leaving it
-  // unstyled (#5808). React exposes no per-boundary scope to key a safe ledger
-  // on. Styles stay inline rather than hoisted via `precedence` so cross-
-  // boundary extensions keep winning by source order (#5672) and the child-
-  // index selector plugin stays correct; see docs/rsc-style-injection.md's
-  // "Per-instance emission" section for the compression cost of
-  // byte-identical duplicates.
+  // RSC mode: every instance emits its own inline <style> holding this render's
+  // classes (the leaf plus its :where()-wrapped base chain) and the keyframes
+  // they reference. Only the element object is shared across instances, through
+  // a request-scoped Map, so the payload writer encodes it once; no tag is
+  // skipped, because a ledger of emitted tags loses rules when a Suspense
+  // fallback is discarded (#5808). docs/rsc-style-injection.md, "Per-instance
+  // emission" and "Payload dedup".
   if (IS_RSC && generatedClassName) {
-    // The chain's class names determine its CSS (the class hash covers the
-    // component, its CSS text and the stylis configuration), so a repeat of the
-    // same chain reuses the element and skips rebuilding the CSS. createRSCCache
-    // returns null without React.cache (React 18); then each instance emits its own.
+    // createRSCCache returns null without React.cache (React 18); then each
+    // instance builds its own element. The component ID joins the key because an
+    // extension with no CSS of its own returns exactly its base's class string.
     const styleElements = getStyleElements && getStyleElements();
-    // The component ID joins the key: an extension with no CSS of its own returns
-    // exactly its base's class string, but its CSS wraps the base in :where().
     const styleKey = componentStyle.componentId + ' ' + generatedClassName;
     let styleElement = styleElements && styleElements.get(styleKey);
-    let combined = '';
 
     if (!styleElement) {
-      // generateAndInjectStyles returns this render's whole chain of class names,
-      // base to leaf, so it names exactly the rules this instance needs.
-      const renderNames = generatedClassName.split(' ');
-
-      let css = '';
-      let walk: ComponentStyle | null | undefined = componentStyle;
-      while (walk) {
-        const groupNames = ssc.styleSheet.names.get(walk.componentId);
-        if (groupNames) {
-          // This render's names at this level (one per level in the common case).
-          const levelNames: string[] = [];
-          for (let i = 0; i < renderNames.length; i++) {
-            if (groupNames.has(renderNames[i])) levelNames.push(renderNames[i]);
-          }
-
-          if (levelNames.length) {
-            // Every name reaching the sheet in RSC was compiled into the cache by
-            // generateAndInjectStyles before it registered, so the lookup hits.
-            let levelCss = '';
-            for (let i = 0; i < levelNames.length; i++) {
-              levelCss += getCompiledCSSForName(walk, levelNames[i]) || '';
-            }
-
-            if (levelCss) {
-              if (walk !== componentStyle) {
-                levelCss = wrapBaseInWhere(levelCss, levelNames);
-              }
-              css = levelCss + css;
-            }
-          }
-        }
-
-        walk = walk.baseStyle;
+      const combined = buildRSCStyleCSS(componentStyle, generatedClassName, ssc.styleSheet);
+      if (combined) {
+        styleElement = React.createElement('style', {
+          [SC_ATTR]: '',
+          key: 'sc-' + componentStyle.componentId,
+          children: combined,
+        });
+        if (styleElements) styleElements.set(styleKey, styleElement);
       }
-
-      let kfCss = '';
-      if (css && ssc.styleSheet.keyframeIds.size > 0) {
-        const kfTag = ssc.styleSheet.getTag();
-        for (const kfId of ssc.styleSheet.keyframeIds) {
-          const kfNames = ssc.styleSheet.names.get(kfId);
-          if (!kfNames) continue;
-          // Substring match: a name that happens to be a substring of another
-          // token only over-emits one gzip-cheap keyframe block, and a genuinely
-          // referenced name always appears verbatim, so a reference is never missed.
-          let referenced = false;
-          for (const kfName of kfNames) {
-            if (css.indexOf(kfName) !== -1) {
-              referenced = true;
-              break;
-            }
-          }
-          if (referenced) {
-            const kfRules = kfTag.getGroup(getGroupForId(kfId));
-            if (kfRules) kfCss += kfRules;
-          }
-        }
-      }
-
-      combined = stripSplitter(kfCss + css);
     }
 
-    if (styleElement || combined) {
+    if (styleElement) {
       if (process.env.NODE_ENV !== 'production' && getEmitCounts) {
         const counts = getEmitCounts();
         const count = (counts.get(componentStyle.componentId) || 0) + 1;
@@ -430,15 +435,6 @@ function useStyledComponentImpl<Props extends BaseObject>(
               '  <Component />'
           );
         }
-      }
-
-      if (!styleElement) {
-        styleElement = React.createElement('style', {
-          [SC_ATTR]: '',
-          key: 'sc-' + componentStyle.componentId,
-          children: combined,
-        });
-        if (styleElements) styleElements.set(styleKey, styleElement);
       }
 
       return React.createElement(React.Fragment, null, styleElement, element);
