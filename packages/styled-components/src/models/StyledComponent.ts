@@ -153,6 +153,17 @@ const getEmitCounts =
     ? createRSCCache(() => new Map<string, number>())
     : null;
 
+/**
+ * Request-scoped `<style>` elements by generated class string. Instances that
+ * resolve to the same classes reuse one element object, which the
+ * server-component payload writer encodes once and then references
+ * (docs/rsc-style-injection.md, "Payload dedup"). IS_RSC leads so the browser
+ * build drops the expression.
+ */
+const getStyleElements = IS_RSC
+  ? createRSCCache(() => new Map<string, React.ReactElement>())
+  : null;
+
 /** Cache RegExp objects for :where() wrapping to avoid recompilation per render */
 const whereRegExpCache = new Map<string, RegExp>();
 function getWhereRegExp(name: string): RegExp {
@@ -326,66 +337,77 @@ function useStyledComponentImpl<Props extends BaseObject>(
   // "Per-instance emission" section for the compression cost of
   // byte-identical duplicates.
   if (IS_RSC && generatedClassName) {
-    // generateAndInjectStyles returns this render's whole chain of class names,
-    // base to leaf, so it names exactly the rules this instance needs.
-    const renderNames = generatedClassName.split(' ');
+    // The chain's class names determine its CSS (the class hash covers the
+    // component, its CSS text and the stylis configuration), so a repeat of the
+    // same chain reuses the element and skips rebuilding the CSS. createRSCCache
+    // returns null without React.cache (React 18); then each instance emits its own.
+    const styleElements = getStyleElements && getStyleElements();
+    let styleElement = styleElements && styleElements.get(generatedClassName);
+    let combined = '';
 
-    let css = '';
-    let walk: ComponentStyle | null | undefined = componentStyle;
-    while (walk) {
-      const groupNames = ssc.styleSheet.names.get(walk.componentId);
-      if (groupNames) {
-        // This render's names at this level (one per level in the common case).
-        const levelNames: string[] = [];
-        for (let i = 0; i < renderNames.length; i++) {
-          if (groupNames.has(renderNames[i])) levelNames.push(renderNames[i]);
-        }
+    if (!styleElement) {
+      // generateAndInjectStyles returns this render's whole chain of class names,
+      // base to leaf, so it names exactly the rules this instance needs.
+      const renderNames = generatedClassName.split(' ');
 
-        if (levelNames.length) {
-          // Every name reaching the sheet in RSC was compiled into the cache by
-          // generateAndInjectStyles before it registered, so the lookup hits.
-          let levelCss = '';
-          for (let i = 0; i < levelNames.length; i++) {
-            levelCss += getCompiledCSSForName(walk, levelNames[i]) || '';
+      let css = '';
+      let walk: ComponentStyle | null | undefined = componentStyle;
+      while (walk) {
+        const groupNames = ssc.styleSheet.names.get(walk.componentId);
+        if (groupNames) {
+          // This render's names at this level (one per level in the common case).
+          const levelNames: string[] = [];
+          for (let i = 0; i < renderNames.length; i++) {
+            if (groupNames.has(renderNames[i])) levelNames.push(renderNames[i]);
           }
 
-          if (levelCss) {
-            if (walk !== componentStyle) {
-              levelCss = wrapBaseInWhere(levelCss, levelNames);
+          if (levelNames.length) {
+            // Every name reaching the sheet in RSC was compiled into the cache by
+            // generateAndInjectStyles before it registered, so the lookup hits.
+            let levelCss = '';
+            for (let i = 0; i < levelNames.length; i++) {
+              levelCss += getCompiledCSSForName(walk, levelNames[i]) || '';
             }
-            css = levelCss + css;
+
+            if (levelCss) {
+              if (walk !== componentStyle) {
+                levelCss = wrapBaseInWhere(levelCss, levelNames);
+              }
+              css = levelCss + css;
+            }
+          }
+        }
+
+        walk = walk.baseStyle;
+      }
+
+      let kfCss = '';
+      if (css && ssc.styleSheet.keyframeIds.size > 0) {
+        const kfTag = ssc.styleSheet.getTag();
+        for (const kfId of ssc.styleSheet.keyframeIds) {
+          const kfNames = ssc.styleSheet.names.get(kfId);
+          if (!kfNames) continue;
+          // Substring match: a name that happens to be a substring of another
+          // token only over-emits one gzip-cheap keyframe block, and a genuinely
+          // referenced name always appears verbatim, so a reference is never missed.
+          let referenced = false;
+          for (const kfName of kfNames) {
+            if (css.indexOf(kfName) !== -1) {
+              referenced = true;
+              break;
+            }
+          }
+          if (referenced) {
+            const kfRules = kfTag.getGroup(getGroupForId(kfId));
+            if (kfRules) kfCss += kfRules;
           }
         }
       }
 
-      walk = walk.baseStyle;
+      combined = stripSplitter(kfCss + css);
     }
 
-    let kfCss = '';
-    if (css && ssc.styleSheet.keyframeIds.size > 0) {
-      const kfTag = ssc.styleSheet.getTag();
-      for (const kfId of ssc.styleSheet.keyframeIds) {
-        const kfNames = ssc.styleSheet.names.get(kfId);
-        if (!kfNames) continue;
-        // Substring match: a name that happens to be a substring of another
-        // token only over-emits one gzip-cheap keyframe block, and a genuinely
-        // referenced name always appears verbatim, so a reference is never missed.
-        let referenced = false;
-        for (const kfName of kfNames) {
-          if (css.indexOf(kfName) !== -1) {
-            referenced = true;
-            break;
-          }
-        }
-        if (referenced) {
-          const kfRules = kfTag.getGroup(getGroupForId(kfId));
-          if (kfRules) kfCss += kfRules;
-        }
-      }
-    }
-
-    const combined = stripSplitter(kfCss + css);
-    if (combined) {
+    if (styleElement || combined) {
       if (process.env.NODE_ENV !== 'production' && getEmitCounts) {
         const counts = getEmitCounts();
         const count = (counts.get(componentStyle.componentId) || 0) + 1;
@@ -394,24 +416,28 @@ function useStyledComponentImpl<Props extends BaseObject>(
           const name = forwardedComponent.displayName || styledComponentId;
           console.warn(
             `Over ${count} instances of the styled component ${name} were rendered on one server-rendered page, so its styles repeat that many times in the HTML.\n` +
-              "This is fine at normal sizes. To trim a very large list, move each item's changing values into a style object with the attrs method so every item shares one class.\n" +
+              'This is fine at normal sizes. To trim a very large list, style the items from one styled parent element (for example a `& > li` selector) and render plain children, so the whole list emits a single tag.\n' +
+              'If items must differ, move the changing values into a style object with the attrs method so every copy is identical and compresses away.\n' +
               'Example:\n' +
               '  const Component = styled.div.attrs(props => ({\n' +
               '    style: {\n' +
               '      background: props.background,\n' +
               '    },\n' +
               '  }))`width: 100%;`\n\n' +
-              '  <Component />\n' +
-              'If every item looks the same, style them from a parent element and render plain children instead.'
+              '  <Component />'
           );
         }
       }
 
-      const styleElement = React.createElement('style', {
-        [SC_ATTR]: '',
-        key: 'sc-' + componentStyle.componentId,
-        children: combined,
-      });
+      if (!styleElement) {
+        styleElement = React.createElement('style', {
+          [SC_ATTR]: '',
+          key: 'sc-' + componentStyle.componentId,
+          children: combined,
+        });
+        if (styleElements) styleElements.set(generatedClassName, styleElement);
+      }
+
       return React.createElement(React.Fragment, null, styleElement, element);
     }
   }
