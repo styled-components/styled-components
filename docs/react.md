@@ -101,7 +101,7 @@ Every server-rendered instance emits its own inline `<style data-styled>` holdin
 - A synchronous fallback never reaches the HTML at all, so the global is missing even with JavaScript disabled.
 - An async layout and its page both render the global: the page wins the ledger, and a client navigation to a sibling page removes the only tag while the layout that needs it never re-renders.
 
-The stylesheet's name registry is request-wide too: once one instance registers a name, a later claim for it fails. Emission therefore reads compiled rules from a request-scoped store keyed by component ID and name, never from the claim result.
+The stylesheet's name registry lives on one sheet shared by every request in the process, reset when a request starts, so a claim fails whenever an earlier instance or a concurrent request registered the name first. Emission therefore reads each name's compiled rules from a process-wide cache keyed by component and name, never from the claim result. Caching across requests is safe because a name's rules are fixed: the name hashes the CSS and the stylis configuration.
 
 ### Why not `precedence`
 
@@ -115,7 +115,7 @@ React Float only takes over a `<style>` carrying both `precedence` and `href`; a
 ### Cost of the repeats
 
 - DOM: Chromium style recalculation measured 1.0 ms versus 1.5 ms at 1000 identical tags, 4.6 ms versus 7.3 ms at 5000; linear.
-- Server render time: every repeat renders and escapes its own `<style>` host element, which the per-request ledger skipped. Repeated-instance render benchmarks run slower than under the ledger; the cost is inherent to one tag per instance, and skipping the CSS build on a shared-element hit does not recover it.
+- Server render time: every repeat renders and escapes its own `<style>` host element, so render time grows with the instance count. The cost is inherent to one tag per instance; skipping the CSS build on a shared-element hit does not recover it.
 - HTML: within gzip's 32 KB window a repeat costs about a byte; farther apart, roughly the gzipped size of the CSS. Brotli's larger window keeps repeats cheap at any distance.
 - Server-component payload: every emission site reuses one `<style>` element object per key from a request-scoped `React.cache` Map, keyed on the component ID plus what fixes its CSS (different CSS, components, or `StyleSheetManager` settings never share; the React key stays fixed per component). Styled components key on the generated class string, whose hash folds in each level's CSS and the stylis configuration, so a hit skips building the CSS; the component ID keeps an extension with no rules of its own from sharing its base's element. `createGlobalStyle` keys on the exact CSS text and returns the element wrapped in an array, because Flight references a repeated element whole only inside an array (a bare returned element repeats its type and key). React 19's Flight serializer writes each repeat as a path reference such as `"$0:props:children:0"`, about 15 characters per nesting level. No size threshold applies: measured on a production Next.js 16 app (React 19.2), references ran 22 to 104 characters, always shorter than the smallest style element (129 bytes), and sharing everything was smallest or within 3 bytes in 15 of 16 compressed measurements. HTML and final DOM are byte-identical with and without sharing, and each instance still renders its own tag, so a reveal never strands an element.
 
