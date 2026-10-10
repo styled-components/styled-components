@@ -40,7 +40,15 @@
     "type": "git",
     "url": "git+https://github.com/styled-components/styled-components.git"
   },
-  "files": ["LICENSE", "README.md", "dist", "native", "plugins", "test-utils"],
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "native",
+    "!native/node_modules",
+    "plugins",
+    "test-utils"
+  ],
   "keywords": ["react", "css", "css-in-js", "styled-components", "styling"],
   "author": "Glen Maddern",
   "license": "MIT",

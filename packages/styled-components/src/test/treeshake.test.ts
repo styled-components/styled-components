@@ -730,3 +730,40 @@ describe('ESM tree-shakeability', () => {
     }
   });
 });
+
+/**
+ * `files` includes `native`, and the workspace install puts the native
+ * package's dependencies in `native/node_modules`, which would otherwise ship
+ * to every consumer. The listing is a dry run, so nothing is written.
+ */
+describe('published package contents', () => {
+  const { execFileSync } = require('child_process');
+  const packageDir = path.resolve(__dirname, '../..');
+  let packed: string[];
+
+  beforeAll(() => {
+    const listing: { files: { path: string }[] }[] = JSON.parse(
+      execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
+        cwd: packageDir,
+        encoding: 'utf8',
+        maxBuffer: 256 * 1024 * 1024,
+      })
+    );
+    packed = listing[0].files.map(file => file.path);
+  });
+
+  it('packs no node_modules path', () => {
+    expect(packed.filter(file => file.includes('node_modules/'))).toEqual([]);
+  });
+
+  it('still packs the native entry points', () => {
+    expect(packed).toEqual(
+      expect.arrayContaining([
+        'native/package.json',
+        'native/dist/styled-components.native.js',
+        'native/reanimated/package.json',
+        'native/web-bridge/package.json',
+      ])
+    );
+  });
+});
