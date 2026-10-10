@@ -1,13 +1,19 @@
 /**
  * @jest-environment node
  */
+import errorMap from '../../utils/errors';
 import { makeStyleTag } from '../dom';
 
 describe('makeStyleTag without a document', () => {
   it('throws the edge-runtime error instead of a ReferenceError', () => {
     expect(typeof document).toBe('undefined');
-    expect(() => makeStyleTag()).toThrowErrorMatchingInlineSnapshot(
-      `"styled-components tried to create a \`<style>\` element on the server, where no \`document\` exists. This happens when a route renders on the server with the edge runtime, which loads the browser build. Remove \`export const runtime = 'edge'\`, or set it to \`'nodejs'\`, on every route that renders styled-components on the server."`
+    expect(() => makeStyleTag()).toThrow(new Error(errorMap[20].trim()));
+  });
+
+  it('names the fix in the catalog text', () => {
+    expect(errorMap[20]).toContain(
+      "Remove `export const runtime = 'edge'`, or set it to `'nodejs'`"
     );
+    expect(errorMap[20]).toContain("make sure server code resolves the package's server build");
   });
 });

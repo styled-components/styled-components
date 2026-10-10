@@ -13,7 +13,7 @@ import { Compiler, ExecutionContext, ExecutionProps, Interpolation, Styles } fro
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
 import { joinRules, stripSplitter } from '../utils/joinStrings';
-import { getRscStyleElements, noteRscEmit } from '../utils/rscCache';
+import { getRscRequestState, noteRscEmit } from '../utils/rscCache';
 import { warnOnce } from '../utils/warnOnce';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import css from './css';
@@ -69,9 +69,9 @@ export default function createGlobalStyle<Props extends object>(
 
     // Gate on IS_RSC or `styleSheet.server` rather than `__SERVER__`: the
     // server build elides the injection effect below, so rendering here
-    // without cleanup produced an O(n²) jsdom regression. A server bundle
-    // that loads the browser build (edge runtimes) also has `__SERVER__`
-    // false, where the runtime flags are the only signal.
+    // without cleanup produced an O(n²) jsdom regression. A sheet forced into
+    // server mode under a build where `__SERVER__` is false needs the runtime
+    // flag too.
     if (IS_RSC || ssc.styleSheet.server) {
       renderStyles(instance, props, ssc.styleSheet, theme, ssc.compiler);
     }
@@ -137,8 +137,10 @@ export default function createGlobalStyle<Props extends object>(
       if (css) {
         globalStyle.instanceRules.delete(instance);
 
-        if (__DEV__ && IS_RSC) {
-          const emitted = noteRscEmit(styledComponentId);
+        const requestState = getRscRequestState ? getRscRequestState() : null;
+
+        if (__DEV__ && requestState !== null) {
+          const emitted = noteRscEmit(requestState, styledComponentId);
           if (emitted === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
             warnOnce(
               'rsc-redundant-emit',
@@ -153,7 +155,7 @@ export default function createGlobalStyle<Props extends object>(
         // it; the key carries the global's ID, so two globals with the same
         // rules, or one under different StyleSheetManager settings
         // (different CSS), never share.
-        const sharedElements = getRscStyleElements ? getRscStyleElements() : null;
+        const sharedElements = requestState !== null ? requestState.styleElements : null;
         const sharedKey = styledComponentId + '\n' + css;
         let styleElement = sharedElements ? sharedElements.get(sharedKey) : undefined;
         if (styleElement === undefined) {

@@ -47,7 +47,7 @@ import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
 import { joinRules, joinStrings, stripSplitter } from '../utils/joinStrings';
-import { createRSCCache, getRscStyleElements, noteRscEmit } from '../utils/rscCache';
+import { getRscRequestState, noteRscEmit, type RscRequestState } from '../utils/rscCache';
 import { setToString } from '../utils/setToString';
 import shallowEqual from '../utils/shallowEqual';
 import { warnOnce } from '../utils/warnOnce';
@@ -162,29 +162,27 @@ function generateId(
 }
 
 /**
- * Request-scoped compiled rules keyed `componentId + '\0' + name`. The sheet's
- * name registry is request-wide, so once one instance registers a name every
- * later instance's claim fails and its level arrives with empty rules; this
- * store hands those instances the winner's rules so each can emit its own tag.
- */
-const getRscCompiledRules = IS_RSC ? createRSCCache(() => new Map<string, string[]>()) : null;
-
-/**
  * RSC counterpart to `webStyle.flush`. Runs `generate()` to produce the
  * inheritance chain's compiled CSS without writing to the tag; registers
  * each new class name so repeat renders of the same component/props skip
  * compilation. Returns both the class name (for the element) and the
  * generated levels (consumed by the inline <style> emission), each carrying
  * its rules whether or not this instance won the claim.
+ *
+ * The sheet's name registry is request-wide, so once one instance registers a
+ * name every later instance's claim fails and its level arrives with empty
+ * rules; the request state's compiled rules hand those instances the winner's
+ * rules so each can emit its own tag.
  */
 function rscFlush<T extends ExecutionContext>(
   webStyle: WebStyle,
   resolvedAttrs: T,
   styleSheet: StyleSheet,
-  compiler: Compiler
+  compiler: Compiler,
+  requestState: RscRequestState | null
 ): GeneratedStyle {
   const generated = webStyle.generate(resolvedAttrs, styleSheet, compiler);
-  const compiledRules = getRscCompiledRules ? getRscCompiledRules() : null;
+  const compiledRules = requestState !== null ? requestState.compiledRules : null;
   for (let i = 0; i < generated.levels.length; i++) {
     const level = generated.levels[i];
     if (level.isNew) {
@@ -567,6 +565,7 @@ function useImpl<Props extends BaseObject>(
   let context: React.HTMLAttributes<Element> & ExecutionContext & Props;
   let generatedClassName: string;
   let generatedStyle: GeneratedStyle | null = null;
+  let rscState: RscRequestState | null = null;
   let popOverrides: Dict<string> | null = null;
   const wantsPostAttrs = forwardedComponent.hasPostAttrs === true;
   /** The CSSOM write to schedule in the insertion effect (buffered path only). */
@@ -651,7 +650,8 @@ function useImpl<Props extends BaseObject>(
       );
     }
     if (IS_RSC) {
-      generatedStyle = rscFlush(webStyle, context, ssc.styleSheet, ssc.compiler);
+      rscState = getRscRequestState ? getRscRequestState() : null;
+      generatedStyle = rscFlush(webStyle, context, ssc.styleSheet, ssc.compiler, rscState);
       generatedClassName = generatedStyle.className;
     } else {
       generatedClassName = webStyle.flush(context, ssc.styleSheet, ssc.compiler);
@@ -757,8 +757,8 @@ function useImpl<Props extends BaseObject>(
 
     const combined = stripSplitter(kfCss + css);
     if (combined) {
-      if (__DEV__ && IS_RSC) {
-        const emitted = noteRscEmit(webStyle.componentId);
+      if (__DEV__ && IS_RSC && rscState !== null) {
+        const emitted = noteRscEmit(rscState, webStyle.componentId);
         if (emitted === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
           warnOnce(
             'rsc-redundant-emit',
@@ -773,7 +773,7 @@ function useImpl<Props extends BaseObject>(
       // it. The key carries the component ID, so two components with the same
       // rules, or one component under different StyleSheetManager settings
       // (different CSS), never share.
-      const sharedElements = getRscStyleElements ? getRscStyleElements() : null;
+      const sharedElements = rscState !== null ? rscState.styleElements : null;
       const sharedKey = webStyle.componentId + '\n' + combined;
       let styleElement = sharedElements ? sharedElements.get(sharedKey) : undefined;
       if (styleElement === undefined) {

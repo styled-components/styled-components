@@ -8,32 +8,39 @@ export function createRSCCache<T>(factory: () => T): (() => T) | null {
   return reactCache ? reactCache(factory) : null;
 }
 
+/** Everything the server-component emission path remembers for one request. */
+export type RscRequestState = {
+  /** Compiled rules keyed `componentId + '\0' + name`, so an instance whose name claim failed can still emit them. */
+  compiledRules: Map<string, string[]>;
+  /** Development only: `<style>` tags emitted per component or global style ID. */
+  emitCounts: Map<string, number>;
+  /**
+   * `<style>` elements keyed by the owning component plus the exact CSS text.
+   * Every instance still renders its own tag; handing each repeat the same
+   * element object lets the server-component payload write the style once and
+   * refer back to it.
+   */
+  styleElements: Map<string, React.ReactElement>;
+};
+
 /**
- * Request-scoped `<style>` elements keyed by the owning component plus the
- * exact CSS text. Every server-rendered instance still renders its own tag;
- * handing each repeat the same element object lets the server-component
- * payload write the style once and refer back to it. Null outside a server
- * bundle so browser and native builds drop it.
+ * One request-scoped record behind a single `React.cache` lookup. Null
+ * outside a server bundle so browser and native builds drop it.
  */
-export const getRscStyleElements: (() => Map<string, React.ReactElement>) | null = IS_RSC
-  ? createRSCCache(() => new Map<string, React.ReactElement>())
+export const getRscRequestState: (() => RscRequestState) | null = IS_RSC
+  ? createRSCCache(
+      (): RscRequestState => ({
+        compiledRules: new Map(),
+        emitCounts: new Map(),
+        styleElements: new Map(),
+      })
+    )
   : null;
 
-/**
- * Development only: per-request count of `<style>` tags emitted per component
- * or global style ID. `IS_RSC` leads the condition so a browser build, where
- * it is the literal `false`, drops the whole expression.
- */
-const getRscEmitCounts: (() => Map<string, number>) | null =
-  IS_RSC && __DEV__ ? createRSCCache(() => new Map<string, number>()) : null;
-
-/** Count one more tag emitted for `id` in this request and return the running total (0 when not counting). */
-export function noteRscEmit(id: string): number {
-  const counts = getRscEmitCounts ? getRscEmitCounts() : null;
-  if (counts === null) return 0;
-
-  const count = (counts.get(id) || 0) + 1;
-  counts.set(id, count);
+/** Count one more tag emitted for `id` in this request and return the running total. */
+export function noteRscEmit(state: RscRequestState, id: string): number {
+  const count = (state.emitCounts.get(id) || 0) + 1;
+  state.emitCounts.set(id, count);
 
   return count;
 }
