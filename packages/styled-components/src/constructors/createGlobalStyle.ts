@@ -106,8 +106,8 @@ export default function createGlobalStyle<Props extends object>(
     // accumulate unboundedly in jsdom test environments (O(n²) regression).
     // On a real server without ServerStyleSheet, VirtualTag is used and styles are
     // discarded anyway, so skipping this path has no functional impact.
-    // Turbopack resolves the browser entry for SSR, so __SERVER__ is false there;
-    // styleSheet.server handles that case at runtime.
+    // An edge-runtime bundle loads the browser build, where __SERVER__ is false;
+    // styleSheet.server covers it (docs/build-architecture.md).
     if (IS_RSC || ssc.styleSheet.server) {
       renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
     }
