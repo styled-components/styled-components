@@ -26,6 +26,7 @@ jest.mock('../../constants', () => ({
 
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
+import type { Middleware } from 'stylis';
 import { mainSheet } from '../../models/StyleSheetManager';
 import { resetGroupIds } from '../../sheet/GroupIDAllocator';
 import { resetIdentifiers } from '../../models/StyledComponent';
@@ -1362,70 +1363,58 @@ describe('styled RSC mode', () => {
     // The Flight serializer writes a repeated element object once and refers to
     // it afterwards, so identical instances share one element while every
     // instance still renders its own tag (see docs/rsc-style-injection.md,
-    // "Payload dedup"). Each style element is created once per key, so the
-    // elements are read from the Fragment that wraps them.
-    const collectStyleElements = (render: () => string) => {
-      const original = React.createElement;
-      const seen: React.ReactElement<{ children: string }>[] = [];
-      const spy = jest.spyOn(React, 'createElement').mockImplementation(((
-        ...args: Parameters<typeof React.createElement>
-      ) => {
-        const child = args[2] as React.ReactElement<{ children: string }> | undefined;
-        if (args[0] === React.Fragment && child && child.type === 'style') seen.push(child);
-        return (original as any)(...args);
-      }) as typeof React.createElement);
+    // "Payload dedup"). Each case calls the component's render function directly,
+    // as a server component runs, and reads the style element and element it
+    // returns; the HTML-level tag count is owned by "RSC per-instance style
+    // emission".
+    type StyledOutput = React.ReactElement<{
+      children: [
+        React.ReactElement<{ children: string }>,
+        React.ReactElement<{ className: string }>,
+      ];
+    }>;
 
-      try {
-        const html = render();
-        return { html, seen };
-      } finally {
-        spy.mockRestore();
-      }
+    const renderStyled = (Component: unknown, props: object = {}) => {
+      const { render } = Component as {
+        render: (props: object, ref: null) => StyledOutput;
+      };
+
+      // The render function calls a development-only React hook, so it runs
+      // inside a throwaway component to have a dispatcher.
+      const outputs: StyledOutput[] = [];
+      const Probe = () => {
+        outputs.push(render(props, null));
+        return null;
+      };
+      ReactDOMServer.renderToStaticMarkup(<Probe />);
+      const [styleElement, element] = outputs[0].props.children;
+
+      return { element, styleElement };
     };
-
-    /** Class attribute of every rendered element that carries one */
-    const classStrings = (html: string): string[] =>
-      [...html.matchAll(/class="([^"]*)"/g)].map(m => m[1]);
 
     it('should return the same element object for identical CSS within one render', () => {
       const Button = styled.button`
         padding: 8px;
       `;
 
-      const { html, seen } = collectStyleElements(() =>
-        ReactDOMServer.renderToString(
-          <div>
-            <Button>A</Button>
-            <Button>B</Button>
-            <Button>C</Button>
-          </div>
-        )
-      );
+      const first = renderStyled(Button).styleElement;
 
-      expect(seen).toHaveLength(3);
-      expect(seen[1]).toBe(seen[0]);
-      expect(seen[2]).toBe(seen[0]);
-      expect(countStyleTags(html)).toBe(3);
+      expect(renderStyled(Button).styleElement).toBe(first);
+      expect(renderStyled(Button).styleElement).toBe(first);
     });
 
-    it('should return distinct element objects for prop-driven CSS differences', () => {
+    it('should return distinct element objects for prop-driven CSS differences, under one fixed key', () => {
       const Box = styled.div<{ $color: string }>`
         color: ${p => p.$color};
       `;
 
-      const { seen } = collectStyleElements(() =>
-        ReactDOMServer.renderToString(
-          <div>
-            <Box $color="red" />
-            <Box $color="blue" />
-            <Box $color="red" />
-          </div>
-        )
-      );
+      const red = renderStyled(Box, { $color: 'red' }).styleElement;
+      const blue = renderStyled(Box, { $color: 'blue' }).styleElement;
 
-      expect(seen).toHaveLength(3);
-      expect(seen[0]).not.toBe(seen[1]);
-      expect(seen[2]).toBe(seen[0]);
+      expect(blue).not.toBe(red);
+      expect(renderStyled(Box, { $color: 'red' }).styleElement).toBe(red);
+      expect(red.key).toMatch(/^sc-/);
+      expect(blue.key).toBe(red.key);
     });
 
     it('should never share an element between two components with identical CSS', () => {
@@ -1436,18 +1425,11 @@ describe('styled RSC mode', () => {
         color: red;
       `;
 
-      const { seen } = collectStyleElements(() =>
-        ReactDOMServer.renderToString(
-          <div>
-            <A />
-            <B />
-          </div>
-        )
-      );
+      const a = renderStyled(A).styleElement;
+      const b = renderStyled(B).styleElement;
 
-      expect(seen).toHaveLength(2);
-      expect(seen[0]).not.toBe(seen[1]);
-      expect(seen[0].key).not.toBe(seen[1].key);
+      expect(b).not.toBe(a);
+      expect(b.key).not.toBe(a.key);
     });
 
     // An extension with no CSS of its own returns exactly its base's class
@@ -1460,21 +1442,19 @@ describe('styled RSC mode', () => {
       const defineBase = () => styled.div`
         color: red;
       `;
-      const defineExtension = (Base: ReturnType<typeof defineBase>) =>
-        kind === 'attrs'
-          ? styled(Base).attrs({ title: 'x' })``
-          : // Single-line template: surrounding whitespace would itself be CSS and earn the leaf a class.
-            styled(Base)`
-              ${(p: { $on?: boolean }) => p.$on && 'font-weight: bold;'}
-            `;
+      const emitsNothing = (p: { $on?: boolean }) => p.$on && 'font-weight: bold;';
+      const defineExtension = (Base: ReturnType<typeof defineBase>) => {
+        if (kind === 'attrs') return styled(Base).attrs({ title: 'x' })``;
 
-      /** CSS of each style tag, in document order */
-      const styleTagContents = (html: string): string[] =>
-        [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]);
+        // Whitespace around the interpolation would itself be CSS and earn the
+        // leaf a class of its own, so the template stays on one line.
+        // prettier-ignore
+        return styled(Base)`${emitsNothing}`;
+      };
 
-      const renderAlone = (element: React.ReactElement): string => {
+      const renderAlone = (Component: unknown) => {
         mockCacheStore.clear();
-        return styleTagContents(ReactDOMServer.renderToString(element))[0];
+        return renderStyled(Component).styleElement.props.children;
       };
 
       it.each(['base first', 'extension first'])(
@@ -1483,134 +1463,84 @@ describe('styled RSC mode', () => {
           const Base = defineBase();
           const Ext = defineExtension(Base);
 
-          const baseAlone = renderAlone(<Base />);
-          const extAlone = renderAlone(<Ext />);
-          mockCacheStore.clear();
+          const baseAlone = renderAlone(Base);
+          const extAlone = renderAlone(Ext);
 
           expect(baseAlone).not.toContain(':where(');
           expect(extAlone).toMatch(/^:where\(/);
 
-          const { html, seen } = collectStyleElements(() =>
-            ReactDOMServer.renderToString(
-              <div>
-                {order === 'base first' ? (
-                  <>
-                    <Base />
-                    <Ext />
-                  </>
-                ) : (
-                  <>
-                    <Ext />
-                    <Base />
-                  </>
-                )}
-              </div>
-            )
-          );
+          mockCacheStore.clear();
+          const [first, second] = order === 'base first' ? [Base, Ext] : [Ext, Base];
+          const firstOutput = renderStyled(first).styleElement;
+          const secondOutput = renderStyled(second).styleElement;
+          const [base, ext] =
+            order === 'base first' ? [firstOutput, secondOutput] : [secondOutput, firstOutput];
 
-          const [firstCSS, secondCSS] = styleTagContents(html);
-          expect(order === 'base first' ? [firstCSS, secondCSS] : [secondCSS, firstCSS]).toEqual([
-            baseAlone,
-            extAlone,
-          ]);
-          expect(seen).toHaveLength(2);
-          expect(seen[1]).not.toBe(seen[0]);
+          expect(base.props.children).toBe(baseAlone);
+          expect(ext.props.children).toBe(extAlone);
+          expect(secondOutput).not.toBe(firstOutput);
         }
       );
     });
 
-    it('should keep the React key fixed per component', () => {
-      const Box = styled.div<{ $color: string }>`
-        color: ${p => p.$color};
-      `;
+    const makePlugin = (replacement: string): Middleware => {
+      const plugin: Middleware = element => {
+        if (element.type === 'decl') element.return = `color:${replacement};`;
+      };
 
-      const { seen } = collectStyleElements(() =>
-        ReactDOMServer.renderToString(
-          <div>
-            <Box $color="red" />
-            <Box $color="blue" />
-          </div>
-        )
-      );
+      return Object.defineProperty(plugin, 'name', { value: 'plugin-' + replacement });
+    };
 
-      expect(seen[0].key).toBe(seen[1].key);
-      expect(seen[0].key).toMatch(/^sc-/);
-    });
+    // The server runs StyleSheetManager as a plain function that sets the
+    // configuration for the components rendered after it.
+    it.each<{
+      label: string;
+      first: React.ComponentProps<typeof StyleSheetManager>;
+      second: React.ComponentProps<typeof StyleSheetManager>;
+      firstCSS: string;
+      secondCSS: string;
+    }>([
+      {
+        label: 'namespaces',
+        first: { namespace: '#a' },
+        second: { namespace: '#b' },
+        firstCSS: '#a',
+        secondCSS: '#b',
+      },
+      {
+        label: 'stylisPlugins',
+        first: { stylisPlugins: [makePlugin('red')] },
+        second: { stylisPlugins: [makePlugin('blue')] },
+        firstCSS: 'color:red',
+        secondCSS: 'color:blue',
+      },
+    ])(
+      'should share an element only within one StyleSheetManager configuration of $label',
+      ({ first, second, firstCSS, secondCSS }) => {
+        const Item = styled.li`
+          color: black;
+        `;
 
-    it('should never share an element across StyleSheetManager namespaces', () => {
-      const Item = styled.li`
-        color: red;
-      `;
+        StyleSheetManager(first);
+        const a = [renderStyled(Item), renderStyled(Item)];
+        StyleSheetManager(second);
+        const b = [renderStyled(Item), renderStyled(Item)];
 
-      const { html, seen } = collectStyleElements(() =>
-        ReactDOMServer.renderToString(
-          <div>
-            <StyleSheetManager namespace="#a">
-              <Item />
-              <Item />
-            </StyleSheetManager>
-            <StyleSheetManager namespace="#b">
-              <Item />
-              <Item />
-            </StyleSheetManager>
-          </div>
-        )
-      );
-
-      expect(seen).toHaveLength(4);
-      expect(seen[1]).toBe(seen[0]);
-      expect(seen[3]).toBe(seen[2]);
-      expect(seen[2]).not.toBe(seen[0]);
-      expect(seen[0].props.children).toContain('#a');
-      expect(seen[2].props.children).toContain('#b');
-      expect(classStrings(html)[2]).not.toBe(classStrings(html)[0]);
-    });
-
-    it('should never share an element across StyleSheetManager stylisPlugins', () => {
-      const makePlugin = (replacement: string) =>
-        Object.defineProperty(
-          (element: any) => {
-            if (element.type === 'decl') element.return = `color:${replacement};`;
-          },
-          'name',
-          { value: 'plugin-' + replacement }
-        );
-
-      const Item = styled.li`
-        color: black;
-      `;
-
-      const { html, seen } = collectStyleElements(() =>
-        ReactDOMServer.renderToString(
-          <div>
-            <StyleSheetManager stylisPlugins={[makePlugin('red')]}>
-              <Item />
-              <Item />
-            </StyleSheetManager>
-            <StyleSheetManager stylisPlugins={[makePlugin('blue')]}>
-              <Item />
-              <Item />
-            </StyleSheetManager>
-          </div>
-        )
-      );
-
-      expect(seen).toHaveLength(4);
-      expect(seen[1]).toBe(seen[0]);
-      expect(seen[2]).not.toBe(seen[0]);
-      expect(seen[0].props.children).toContain('red');
-      expect(seen[2].props.children).toContain('blue');
-      expect(html).toContain('color:red');
-      expect(html).toContain('color:blue');
-      expect(classStrings(html)[2]).not.toBe(classStrings(html)[0]);
-    });
+        expect(a[1].styleElement).toBe(a[0].styleElement);
+        expect(b[1].styleElement).toBe(b[0].styleElement);
+        expect(b[0].styleElement).not.toBe(a[0].styleElement);
+        expect(a[0].styleElement.props.children).toContain(firstCSS);
+        expect(b[0].styleElement.props.children).toContain(secondCSS);
+        expect(b[0].element.props.className).not.toBe(a[0].element.props.className);
+      }
+    );
 
     it('should render a full style for a Suspense fallback instance and the resolved instance', async () => {
       const Panel = styled.div`
         color: crimson;
       `;
 
-      let resolve!: () => void;
+      let resolve = () => {};
       let ready = false;
       const gate = new Promise<void>(r => {
         resolve = () => {

@@ -25,6 +25,7 @@ jest.mock('../../constants', () => ({
 
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
+import type { ExecutionProps } from '../../types';
 import createGlobalStyle from '../createGlobalStyle';
 
 describe('createGlobalStyle RSC mode', () => {
@@ -158,8 +159,14 @@ describe('createGlobalStyle RSC mode', () => {
     // array; a bare returned element repeats its type and key each time. The
     // memo wrapper's inner function is called directly to read the returned
     // element.
-    const renderOnce = (GlobalStyle: unknown, props: object = {}): React.ReactElement => {
-      const returned = (GlobalStyle as { type: (p: object) => React.ReactElement[] }).type(props);
+    const renderOnce = <Props extends object>(
+      GlobalStyle: React.NamedExoticComponent<ExecutionProps & Props>,
+      props: Partial<Props> = {}
+    ): React.ReactElement => {
+      const { type } = GlobalStyle as unknown as {
+        type: (p: Partial<Props>) => React.ReactElement[];
+      };
+      const returned = type(props);
 
       expect(Array.isArray(returned)).toBe(true);
       return returned[0];
@@ -184,7 +191,7 @@ describe('createGlobalStyle RSC mode', () => {
       expect(renderOnce(GlobalStyle, { $bg: 'red' })).toBe(renderOnce(GlobalStyle, { $bg: 'red' }));
     });
 
-    it('returns distinct element objects for different CSS', () => {
+    it('returns distinct element objects for different CSS, under one fixed key', () => {
       const GlobalStyle = createGlobalStyle<{ $bg: string }>`
         body { background: ${props => props.$bg}; }
       `;
@@ -195,16 +202,6 @@ describe('createGlobalStyle RSC mode', () => {
       expect(blue).not.toBe(red);
       expect(red.props.children).toBe('body{background:red;}');
       expect(blue.props.children).toBe('body{background:blue;}');
-    });
-
-    it('keeps the React key fixed to the global style id for every instance', () => {
-      const GlobalStyle = createGlobalStyle<{ $bg: string }>`
-        body { background: ${props => props.$bg}; }
-      `;
-
-      const red = renderOnce(GlobalStyle, { $bg: 'red' });
-      const blue = renderOnce(GlobalStyle, { $bg: 'blue' });
-
       expect(red.key).toMatch(/^sc-global-[\w-]+$/);
       expect(red.props['data-styled-global']).toBe(red.key);
       expect(blue.key).toBe(red.key);
