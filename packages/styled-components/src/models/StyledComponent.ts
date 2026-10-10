@@ -57,7 +57,7 @@ import { setToString } from '../utils/setToString';
 import shallowEqual from '../utils/shallowEqual';
 import { warnOnce } from '../utils/warnOnce';
 import WebStyle, { GeneratedStyle } from './WebStyle';
-import { useStyleSheetContext } from './StyleSheetManager';
+import { type IStyleSheetContext, useStyleSheetContext } from './StyleSheetManager';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
 declare const __SERVER__: boolean;
@@ -187,12 +187,32 @@ function rscFlush<T extends ExecutionContext>(
   return generated;
 }
 
-/** A level whose name another instance registered first arrives empty; its rules come from the process-wide cache (docs/react.md "RSC style emission and Suspense"). */
-function rscLevelRules(webStyle: WebStyle, level: GeneratedStyle['levels'][number]): string[] {
+/**
+ * A level whose name another instance registered first arrives empty; its rules
+ * come from the process-wide cache (docs/react.md "RSC style emission and
+ * Suspense"), or are compiled again when the cache has evicted them.
+ */
+function rscLevelRules(
+  webStyle: WebStyle,
+  level: GeneratedStyle['levels'][number],
+  context: ExecutionContext,
+  ssc: IStyleSheetContext
+): string[] {
   if (level.rules.length > 0) return level.rules;
 
   for (let w: WebStyle | null | undefined = webStyle; w; w = w.baseStyle) {
-    if (w.componentId === level.componentId) return recallRscRules(w, level.name) ?? level.rules;
+    if (w.componentId !== level.componentId) continue;
+
+    const recalled = recallRscRules(w, level.name);
+    if (recalled !== undefined) return recalled;
+
+    const regenerated = webStyle.generate(context, ssc.styleSheet, ssc.compiler, true).levels;
+    for (let i = 0; i < regenerated.length; i++) {
+      if (regenerated[i].componentId === level.componentId && regenerated[i].name === level.name) {
+        return regenerated[i].rules;
+      }
+    }
+    break;
   }
   return level.rules;
 }
@@ -202,14 +222,19 @@ function rscLevelRules(webStyle: WebStyle, level: GeneratedStyle['levels'][numbe
  * chain with every base level wrapped in :where() for zero specificity, so any
  * extension overrides it without !important.
  */
-function buildRscStyleCss(webStyle: WebStyle, generatedStyle: GeneratedStyle): string {
+function buildRscStyleCss(
+  webStyle: WebStyle,
+  generatedStyle: GeneratedStyle,
+  context: ExecutionContext,
+  ssc: IStyleSheetContext
+): string {
   const levels = generatedStyle.levels;
   const lastIdx = levels.length - 1;
   let css = '';
 
   for (let i = 0; i < levels.length; i++) {
     const level = levels[i];
-    const rules = rscLevelRules(webStyle, level);
+    const rules = rscLevelRules(webStyle, level, context, ssc);
     if (rules.length === 0) continue;
 
     let levelCss = joinRules(rules);
@@ -757,7 +782,7 @@ function useImpl<Props extends BaseObject>(
     let styleElement = sharedElements ? sharedElements.get(sharedKey) : undefined;
 
     if (styleElement === undefined) {
-      const combined = buildRscStyleCss(webStyle, generatedStyle);
+      const combined = buildRscStyleCss(webStyle, generatedStyle, context, ssc);
       if (combined) {
         styleElement = React.createElement('style', {
           [SC_ATTR]: '',

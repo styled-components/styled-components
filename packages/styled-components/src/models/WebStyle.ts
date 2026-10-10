@@ -93,15 +93,17 @@ export default class WebStyle {
    * Produce per-level compiled CSS without writing any rules to the tag.
    * Claims each level's name on the sheet for the current turn so a sibling
    * generating the same class skips recompilation; the CSSOM write happens
-   * in {@link inject}.
+   * in {@link inject}. `recompile` (server components only) compiles every
+   * level even when its name is already registered or cached.
    */
   generate(
     executionContext: ExecutionContext,
     styleSheet: StyleSheet,
-    compiler: Compiler
+    compiler: Compiler,
+    recompile: boolean = false
   ): GeneratedStyle {
     const baseGenerated = this.baseStyle
-      ? this.baseStyle.generate(executionContext, styleSheet, compiler)
+      ? this.baseStyle.generate(executionContext, styleSheet, compiler, recompile)
       : null;
 
     if (this.resolvedSource === undefined) {
@@ -221,11 +223,11 @@ export default class WebStyle {
       ? !styleSheet.hasNameForId(this.componentId, name)
       : styleSheet.claimNameForId(this.componentId, name);
     // A name an earlier request already compiled keeps its rules.
-    const known = IS_RSC && claimed ? recallRscRules(this, name) : undefined;
+    const known = IS_RSC && claimed && !recompile ? recallRscRules(this, name) : undefined;
     let rules: string[];
     if (known !== undefined) {
       rules = known;
-    } else if (!claimed) {
+    } else if (!claimed && !recompile) {
       rules = IS_RSC
         ? EMPTY_RULES
         : (styleSheet.getProvisionalRules(this.componentId, name) ?? EMPTY_RULES);

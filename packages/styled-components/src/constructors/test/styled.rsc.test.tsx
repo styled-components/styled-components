@@ -1437,6 +1437,43 @@ describe('styled RSC mode', () => {
         }
       });
 
+      it('emits the full rule for a name another request registered and the cache has since evicted', async () => {
+        const Dynamic = styled.div<{ $level: number }>`
+          z-index: ${p => p.$level};
+        `;
+        const Other = styled.span`
+          color: blue;
+        `;
+        const requestA = new Map<Function, any>();
+        const requestB = new Map<Function, any>();
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+        try {
+          // A starts (and resets the shared sheet). B then renders the name
+          // under test followed by enough other names to evict it.
+          inRequest(requestA, () => ReactDOMServer.renderToString(<Other />));
+          const htmlB = inRequest(requestB, () =>
+            ReactDOMServer.renderToString(
+              <>
+                {Array.from({ length: TOO_MANY_CLASSES_LIMIT + 5 }, (_, i) => (
+                  <Dynamic key={i} $level={i} />
+                ))}
+              </>
+            )
+          );
+          await tick();
+          const htmlA = inRequest(requestA, () =>
+            ReactDOMServer.renderToString(<Dynamic $level={0} />)
+          );
+
+          const expected = extractStyleContents(htmlB).match(/\.\w+\{z-index:0;\}/)?.[0];
+          expect(expected).toBeDefined();
+          expect(extractStyleContents(htmlA)).toBe(expected);
+        } finally {
+          warn.mockRestore();
+        }
+      });
+
       it('holds at most one warning-threshold of class names per component', () => {
         const Box = styled.div`
           color: red;
