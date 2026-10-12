@@ -22,9 +22,7 @@
     },
     "packages/benchmarks": {
       // Headless runners are executed directly.
-      "entry": ["headless/**/*.mjs"],
-      // Referenced only as a webpack/babel alias target for `react-native`.
-      "ignoreDependencies": ["react-native-web"]
+      "entry": ["headless/**/*.mjs"]
     },
     "packages/ios-benchmark": {
       // Bench orchestration scripts are executed directly.
