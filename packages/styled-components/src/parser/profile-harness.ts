@@ -118,16 +118,13 @@ function run(css: string, iterations: number): void {
   }
   const elapsed = performance.now() - start;
   const ops = (iterations / elapsed) * 1000;
-  // eslint-disable-next-line no-console
   console.log(
     `  ${css.length}B × ${iterations}: ${elapsed.toFixed(2)}ms total, ${Math.round(ops).toLocaleString()} ops/s`
   );
 }
 
-// eslint-disable-next-line no-console
 console.log('--- CSS_LARGE profile ---');
 run(CSS_LARGE, 3000);
 
-// eslint-disable-next-line no-console
 console.log('--- CSS_HUGE profile ---');
 run(CSS_HUGE, 800);

@@ -21,7 +21,6 @@ export function bench(
   fn: (i?: number) => void,
   opts: BenchOptions = {}
 ): number {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g: any = globalThis;
   if (typeof g.gc === 'function') g.gc();
   // Warmup mirrors measurement shape so V8 tiers up before sampling.

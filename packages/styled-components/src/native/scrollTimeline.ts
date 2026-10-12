@@ -20,7 +20,6 @@ import { isDebugEnabled } from './animation/debug';
  * whole motion pipeline in Metro / Hermes inspector.
  */
 function dbg(tag: string, ...args: unknown[]): void {
-  // eslint-disable-next-line no-console
   console.log('[sc/anim]', tag, ...args);
 }
 

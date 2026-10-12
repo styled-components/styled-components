@@ -1085,7 +1085,6 @@ describe('native', () => {
     // memoization caches both the published value and the indexed
     // children across renders with stable inputs.
     it('publishes a reference-stable ParentContext value across re-renders', () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { ParentContext } = require('../ParentContext');
       const seen: unknown[] = [];
       function ContextSpy() {
@@ -1117,7 +1116,6 @@ describe('native', () => {
     });
 
     it('per-child Provider values stay reference-stable when children are unchanged', () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { ParentContext } = require('../ParentContext');
       const seenByName: Record<string, unknown[]> = {};
       function ContextSpy({ name }: { name: string }) {

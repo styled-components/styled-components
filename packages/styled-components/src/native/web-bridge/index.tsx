@@ -67,7 +67,6 @@ import type {
   View as RNView,
   VirtualizedList as RNVirtualizedList,
 } from 'react-native';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const reactNativeWeb = require('react-native-web') as Record<string, unknown>;
 
 import styledWeb from '../../constructors/styled';
@@ -82,6 +81,7 @@ import keyframes from '../../constructors/keyframes';
 import createGlobalStyle from '../../constructors/createGlobalStyle';
 import withTheme from '../../hoc/withTheme';
 import isStyledComponent from '../../utils/isStyledComponent';
+import { warnOnce } from '../../utils/warnOnce';
 import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager';
 import ServerStyleSheet from '../../models/ServerStyleSheet';
 import { camelize } from '../transform';
@@ -975,8 +975,10 @@ function BridgeThemeProvider(props: {
  */
 function toStyleSheet(): Record<string, unknown> {
   if (__DEV__) {
-    // eslint-disable-next-line no-console
-    console.warn('`toStyleSheet` is a no-op on the rn-web bridge and returns an empty object.');
+    warnOnce(
+      'web-bridge-to-stylesheet',
+      '`toStyleSheet` is a no-op on the rn-web bridge and returns an empty object. Use the `css` helper to build web styles.'
+    );
   }
   return {};
 }

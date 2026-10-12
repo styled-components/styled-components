@@ -29,7 +29,6 @@ let isWebCached: boolean | null = null;
 export function isWebPlatform(): boolean {
   if (isWebCached !== null) return isWebCached;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const rn: { Platform?: { OS?: string } } = require('react-native');
     isWebCached = rn.Platform?.OS === 'web';
   } catch {
@@ -71,7 +70,6 @@ let cachedRn: RNComponentRefs | undefined = undefined;
 function getRNComponents(): RNComponentRefs {
   if (cachedRn === undefined) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const rn: {
         View?: BlendLayerComponent;
         Image?: React.ComponentType<BlendImageProps>;
