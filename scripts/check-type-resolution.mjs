@@ -46,6 +46,12 @@ const KNOWN_FALSE_POSITIVES = [
       '`next/types/global.d.ts` declares `server-only` as an ambient module; this entry covers a tsconfig that does not load that file.',
     specifier: 'server-only',
   },
+  {
+    importer: 'next',
+    reason:
+      'The repo pins `@types/react` 18 by override, and those types have no `react/compiler-runtime` entry to declare.',
+    specifier: 'react/compiler-runtime',
+  },
 ];
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
@@ -181,7 +187,10 @@ async function traceTsconfig(tsconfig) {
 
   if (!stdout.includes('======== Resolving ')) {
     throw new SensorError(
-      `${tsconfig}: tsc printed no resolution trace. First output lines:\n${stdout.split('\n').slice(0, 5).join('\n')}`
+      `${tsconfig}: tsc printed no resolution trace. First output lines:\n${stdout
+        .split('\n')
+        .slice(0, 5)
+        .join('\n')}`
     );
   }
 
@@ -348,7 +357,7 @@ try {
   await main();
 } catch (error) {
   console.error(
-    `check-type-resolution: ${error instanceof SensorError ? error.message : (error.stack ?? error)}`
+    `check-type-resolution: ${error instanceof SensorError ? error.message : error.stack ?? error}`
   );
   process.exitCode = EXIT_SENSOR_BROKEN;
 }

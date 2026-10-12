@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "build": "pnpm --filter styled-components build",
-    "check:type-resolution": "node scripts/check-type-resolution.mjs packages/styled-components/tsconfig.json packages/styled-components/tsconfig.test-types.json packages/sandbox/tsconfig.json",
+    "check:type-resolution": "node scripts/check-type-resolution.mjs packages/styled-components/tsconfig.json packages/styled-components/tsconfig.test-types.json packages/styled-components/tsconfig.test-template-index.json packages/styled-components/tsconfig.test-intrinsic-index-signature.json packages/sandbox/tsconfig.json",
     "sandbox": "pnpm --filter sandbox dev",
     "release": "pnpm --filter styled-components prepublishOnly && changeset publish",
     "postinstall": "pnpm --filter styled-components generateErrors",
