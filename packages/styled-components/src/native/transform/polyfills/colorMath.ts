@@ -574,15 +574,15 @@ function readHsParts(tok: Token): [number, number, number, number] | null {
     // filled (legacy `hsla(h, s, l, a)` / `hwb(h, w, b, a)`).
     const inAlpha = sawSlash || (h !== null && sb.length === 2);
     if (t.kind === TokenKind.Number) {
-      const v = t.value!;
+      const v = t.value;
       if (inAlpha) alpha = v;
       else if (h === null) h = v;
       else sb.push(v);
     } else if (t.kind === TokenKind.Angle) {
       if (h !== null) return null;
-      h = angleToDeg(t.value!, t.unit);
+      h = angleToDeg(t.value, t.unit);
     } else if (t.kind === TokenKind.Percent) {
-      const v = t.value!;
+      const v = t.value;
       if (inAlpha) alpha = v / 100;
       else if (h === null) return null;
       else sb.push(v);
@@ -1080,11 +1080,11 @@ function readColorFn(
       continue;
     }
     if (t.kind === TokenKind.Number) {
-      if (sawSlash) alpha = t.value!;
-      else vals.push(t.value!);
+      if (sawSlash) alpha = t.value;
+      else vals.push(t.value);
     } else if (t.kind === TokenKind.Percent) {
-      if (sawSlash) alpha = t.value! / 100;
-      else vals.push(t.value! / 100);
+      if (sawSlash) alpha = t.value / 100;
+      else vals.push(t.value / 100);
     } else if (t.kind === TokenKind.Ident && t.name === 'none') {
       if (sawSlash) alpha = NaN;
       else vals.push(NaN);
@@ -1147,11 +1147,11 @@ function readRgbFn(tok: Token): [number, number, number, number] | null {
     }
     const inAlpha = sawSlash || channels.length === 3;
     if (t.kind === TokenKind.Number) {
-      if (inAlpha) alpha = t.value!;
-      else channels.push(t.value! / 255);
+      if (inAlpha) alpha = t.value;
+      else channels.push(t.value / 255);
     } else if (t.kind === TokenKind.Percent) {
-      if (inAlpha) alpha = t.value! / 100;
-      else channels.push(t.value! / 100);
+      if (inAlpha) alpha = t.value / 100;
+      else channels.push(t.value / 100);
     } else if (t.kind === TokenKind.Ident && t.name === 'none') {
       if (inAlpha) alpha = NaN;
       else channels.push(NaN);
@@ -1456,7 +1456,7 @@ function parseColorMix(tok: Token): RGB | null {
     const head = parts[0];
     if (head.length < 2) return null;
     if (head[1].kind !== TokenKind.Ident) return null;
-    const sp = head[1].name!;
+    const sp = head[1].name;
     if (!SUPPORTED_MIX_SPACES.has(sp)) return null;
     space = sp;
     if (head.length === 4) {
@@ -1464,7 +1464,7 @@ function parseColorMix(tok: Token): RGB | null {
       // rectangular spaces accept and silently ignore the method.
       if (head[2].kind !== TokenKind.Ident) return null;
       if (head[3].kind !== TokenKind.Ident || head[3].name !== 'hue') return null;
-      const m = head[2].name!;
+      const m = head[2].name;
       if (m !== 'shorter' && m !== 'longer' && m !== 'increasing' && m !== 'decreasing') {
         return null;
       }
@@ -1531,17 +1531,15 @@ function parseColorMix(tok: Token): RGB | null {
       const rgb = useOklab ? oklabToRgb(t.L, t.a, t.b, t.alpha) : labToRgb(t.L, t.a, t.b, t.alpha);
       return { r: rgb.r, g: rgb.g, b: rgb.b, a: rgb.a * alphaMult };
     }
-    const stack = triples.slice().reverse();
-    while (stack.length >= 2) {
-      const a = stack.pop()!;
-      const b = stack.pop()!;
-      const sum = a.pct + b.pct;
-      const wA = sum === 0 ? 0.5 : a.pct / sum;
+    let acc = triples[0];
+    for (let i = 1; i < triples.length; i++) {
+      const b = triples[i];
+      const sum = acc.pct + b.pct;
+      const wA = sum === 0 ? 0.5 : acc.pct / sum;
       const wB = sum === 0 ? 0.5 : b.pct / sum;
-      const mixed = mixLab(a.triple, b.triple, wA, wB);
-      stack.push({ triple: mixed, pct: sum });
+      acc = { triple: mixLab(acc.triple, b.triple, wA, wB), pct: sum };
     }
-    const t = stack[0].triple;
+    const t = acc.triple;
     const rgb = useOklab ? oklabToRgb(t.L, t.a, t.b, t.alpha) : labToRgb(t.L, t.a, t.b, t.alpha);
     return { r: rgb.r, g: rgb.g, b: rgb.b, a: rgb.a * alphaMult };
   }
@@ -1562,17 +1560,15 @@ function parseColorMix(tok: Token): RGB | null {
       const rgb = lchToRgb(t, useOklch);
       return { r: rgb.r, g: rgb.g, b: rgb.b, a: rgb.a * alphaMult };
     }
-    const stack = triples.slice().reverse();
-    while (stack.length >= 2) {
-      const a = stack.pop()!;
-      const b = stack.pop()!;
-      const sum = a.pct + b.pct;
-      const wA = sum === 0 ? 0.5 : a.pct / sum;
+    let acc = triples[0];
+    for (let i = 1; i < triples.length; i++) {
+      const b = triples[i];
+      const sum = acc.pct + b.pct;
+      const wA = sum === 0 ? 0.5 : acc.pct / sum;
       const wB = sum === 0 ? 0.5 : b.pct / sum;
-      const mixed = mixLch(a.triple, b.triple, wA, wB, hueMethod);
-      stack.push({ triple: mixed, pct: sum });
+      acc = { triple: mixLch(acc.triple, b.triple, wA, wB, hueMethod), pct: sum };
     }
-    const t = stack[0].triple;
+    const t = acc.triple;
     const rgb = lchToRgb(t, useOklch);
     return { r: rgb.r, g: rgb.g, b: rgb.b, a: rgb.a * alphaMult };
   }
@@ -1592,17 +1588,15 @@ function parseColorMix(tok: Token): RGB | null {
       const rgb = space === 'hsl' ? hslToRgb(t.h, t.s, t.l) : hwbToRgb(t.h, t.s, t.l);
       return { r: rgb.r, g: rgb.g, b: rgb.b, a: t.alpha * alphaMult };
     }
-    const stack = triples.slice().reverse();
-    while (stack.length >= 2) {
-      const a = stack.pop()!;
-      const b = stack.pop()!;
-      const sum = a.pct + b.pct;
-      const wA = sum === 0 ? 0.5 : a.pct / sum;
+    let acc = triples[0];
+    for (let i = 1; i < triples.length; i++) {
+      const b = triples[i];
+      const sum = acc.pct + b.pct;
+      const wA = sum === 0 ? 0.5 : acc.pct / sum;
       const wB = sum === 0 ? 0.5 : b.pct / sum;
-      const mixed = mixHs(a.triple, b.triple, wA, wB, hueMethod, space === 'hsl');
-      stack.push({ triple: mixed, pct: sum });
+      acc = { triple: mixHs(acc.triple, b.triple, wA, wB, hueMethod, space === 'hsl'), pct: sum };
     }
-    const t = stack[0].triple;
+    const t = acc.triple;
     const rgb = space === 'hsl' ? hslToRgb(t.h, t.s, t.l) : hwbToRgb(t.h, t.s, t.l);
     return { r: rgb.r, g: rgb.g, b: rgb.b, a: t.alpha * alphaMult };
   }
@@ -1630,17 +1624,15 @@ function parseColorMix(tok: Token): RGB | null {
       if (rgb === null) return null;
       return { r: rgb.r, g: rgb.g, b: rgb.b, a: rgb.a * alphaMult };
     }
-    const stack = triples.slice().reverse();
-    while (stack.length >= 2) {
-      const a = stack.pop()!;
-      const b = stack.pop()!;
-      const sum = a.pct + b.pct;
-      const wA = sum === 0 ? 0.5 : a.pct / sum;
+    let acc = triples[0];
+    for (let i = 1; i < triples.length; i++) {
+      const b = triples[i];
+      const sum = acc.pct + b.pct;
+      const wA = sum === 0 ? 0.5 : acc.pct / sum;
       const wB = sum === 0 ? 0.5 : b.pct / sum;
-      const mixed = mixRgbSpace(a.triple, b.triple, wA, wB);
-      stack.push({ triple: mixed, pct: sum });
+      acc = { triple: mixRgbSpace(acc.triple, b.triple, wA, wB), pct: sum };
     }
-    const t = stack[0].triple;
+    const t = acc.triple;
     const rgb = colorSpaceToRgb(
       space,
       usedValue(t.c1),
@@ -1837,11 +1829,11 @@ function parseColorPct(tokens: Token[]): [RGB | null, number | null] {
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
     if (t.kind === TokenKind.Percent) {
-      pct = t.value!;
+      pct = t.value;
     } else if (t.kind === TokenKind.Hash) {
-      color = parseHex(t.name!);
+      color = parseHex(t.name);
     } else if (t.kind === TokenKind.Ident) {
-      const named = NAMED_TO_RGB[t.name!];
+      const named = NAMED_TO_RGB[t.name];
       if (named !== undefined) color = named;
       else return [null, null];
     } else if (t.kind === TokenKind.Function) {
@@ -1972,9 +1964,9 @@ function parseRelativeFrom(
 
   let rgb: RGB | null = null;
   if (baseTok.kind === TokenKind.Hash) {
-    rgb = parseHex(baseTok.name!);
+    rgb = parseHex(baseTok.name);
   } else if (baseTok.kind === TokenKind.Ident) {
-    const name = baseTok.name!;
+    const name = baseTok.name;
     // `currentColor` origin needs cascade visibility; the static fold has
     // none, so warn and drop. The browser resolves currentColor itself, so
     // rn-web stays silent and lets the authored text through.
@@ -2062,7 +2054,7 @@ function substituteCalcBindings(
   const inner = tokenizeFunctionArgs(fnTok);
   for (let i = 0; i < inner.length; i++) {
     const t = inner[i];
-    if (t.kind === TokenKind.Ident && t.name !== undefined) {
+    if (t.kind === TokenKind.Ident) {
       const bIdx = keywords[t.name];
       if (bIdx !== undefined) {
         const v = bindings[bIdx];
@@ -2117,7 +2109,7 @@ function substituteRelativeBindings(
 ): void {
   for (let i = startIdx; i < args.length; i++) {
     const t = args[i];
-    if (t.kind === TokenKind.Ident && t.name !== undefined && t.name !== 'none') {
+    if (t.kind === TokenKind.Ident && t.name !== 'none') {
       const bIdx = keywords[t.name];
       if (bIdx !== undefined) {
         const v = bindings[bIdx];
@@ -2215,8 +2207,8 @@ function readChannels(
       continue;
     }
     if (t.kind === TokenKind.Number) {
-      if (sawSlash) alpha = t.value!;
-      else vals.push(t.value!);
+      if (sawSlash) alpha = t.value;
+      else vals.push(t.value);
     } else if (t.kind === TokenKind.Angle) {
       // Angle units only make sense for the hue channel of lch / oklch.
       // The scales table marks hue with NaN so any non-hue slot bails.
@@ -2224,15 +2216,15 @@ function readChannels(
       const idx = vals.length;
       const scale = idx < scales.length ? scales[idx] : NaN;
       if (!Number.isNaN(scale)) return null;
-      vals.push(angleToDeg(t.value!, t.unit));
+      vals.push(angleToDeg(t.value, t.unit));
     } else if (t.kind === TokenKind.Percent) {
       if (sawSlash) {
-        alpha = t.value! / 100;
+        alpha = t.value / 100;
       } else {
         const idx = vals.length;
         const scale = idx < scales.length ? scales[idx] : NaN;
         if (Number.isNaN(scale)) return null;
-        vals.push((t.value! / 100) * scale);
+        vals.push((t.value / 100) * scale);
       }
     } else if (t.kind === TokenKind.Function) {
       // Substitute channel keywords inside `calc()` with their bound numeric
@@ -2275,12 +2267,7 @@ function readChannels(
       // the NaN flag to drive carry-forward.
       if (sawSlash) alpha = NaN;
       else vals.push(NaN);
-    } else if (
-      t.kind === TokenKind.Ident &&
-      t.name !== undefined &&
-      keywords !== null &&
-      bindings !== null
-    ) {
+    } else if (t.kind === TokenKind.Ident && keywords !== null && bindings !== null) {
       // Channel keyword bound from the origin color. Keywords are accepted in
       // any slot order so `oklch(from #f00 c l h)` works too.
       const bIdx = keywords[t.name];

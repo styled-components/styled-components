@@ -37,7 +37,7 @@ It is a real runtime expression, evaluated in the consumer's environment, and no
 
 ## The terser module-scope DCE trap
 
-AGENTS.md requires message strings and their argument construction to live inside the innermost-feasible `if (__DEV__) { ... }`, preferring the outermost applicable guard over trusting `warnOnce` to skip work. The mechanism behind that rule: terser eliminates dead branches _inside_ a function body, but it does not eliminate a module-scope `const` whose initializer constructs a value, even when the only consumer is a dev-only guarded function.
+AGENTS.md requires message strings and their argument construction to live inside an `if (__DEV__) { ... }`, preferring the outermost applicable guard over trusting `warnOnce` to skip work. The mechanism behind that rule: terser eliminates dead branches _inside_ a function body, but it does not eliminate a module-scope `const` whose initializer constructs a value, even when the only consumer is a dev-only guarded function.
 
 ```js
 // module scope: survives the production bundle
@@ -49,7 +49,7 @@ export function warnThing(name) {
 }
 ```
 
-Terser strips the function body's dead branch correctly, but `new Set([...])` runs at module init, so terser treats it as a possible side effect and keeps `FIRST_PARTY` and its string literals in the bundle. The symptom is a `treeshake.test.ts` assertion like `expect(bundle).not.toContain('rsc')` failing after a refactor hoisted what looked like a pure constant out of the function.
+Terser strips the function body's dead branch correctly, but `new Set([...])` runs at module init, so terser treats it as a possible side effect and keeps `FIRST_PARTY` and its string literals in the bundle. The symptom is a `treeshake.test.ts` needle assertion failing after a refactor hoists what looked like a pure constant out of the function. The trap applies to bundles that ship `__DEV__` deferred to the consumer's `NODE_ENV` and are minified downstream; the standalone production build substitutes literal `false`, and rollup prunes the dead code itself.
 
 The fix is to remove the top-level reference, moving the literals inside the guarded body so they share the dead branch:
 
@@ -61,7 +61,16 @@ export function warnThing(name) {
 }
 ```
 
-A `/*#__PURE__*/` annotation on the constructor does not help: it marks the call pure but terser still keeps the binding while any reference path exists. Removing the top-level binding is the move. The same shape bites any module-scope literal builder that only a dev path reads: `Map`, `Object.freeze({...})`, a frozen lookup table. `treeshake.test.ts` is the regression gate; without it these ship silently.
+A `/*#__PURE__*/` annotation on the constructor is not a reliable fix: terser 5.46 drops a pure-annotated binding when minifying as an ES module or with `toplevel`, but keeps it in a CommonJS bundle minified without `toplevel`, and the consumer chooses those settings. Removing the top-level binding is the move. The same shape bites any module-scope literal builder that only a dev path reads: `Map`, `Object.freeze({...})`, a frozen lookup table. `treeshake.test.ts` is the regression gate; without it these ship silently.
+
+## Testing tree-shaking
+
+Two traps produce a tree-shaking test that passes while proving nothing:
+
+- Asserting that a plugin's `.name` survives is not evidence its body was eliminated or kept: a minifier can constant-fold a bare `.name` read and inline the string. Exercise a load-bearing hook the plugin exposes (its declaration, rewrite, or transform function).
+- A needle built by concatenation in source (`'-webkit-' + 'backdrop-filter'`) need not appear contiguously after minification. Use needles written as single literals in source: full selector strings and object keys.
+
+A minifier renames locals but never object property names, so a property name ships verbatim at every occurrence. Keep frequently accessed keys on internal-only objects (options bags, descriptors, context objects) short, with full JSDoc on the declaration; keep user-facing API names descriptive. Searching the built bundle for the name shows which case applies.
 
 ## d.ts bundling and TS2742
 
@@ -83,7 +92,7 @@ This is likely not portable. A type annotation is necessary.
 
 It fires during declaration emit: the compiler infers a type whose name it can only express through a module path it does not consider portable, and instead of writing that path it errors. Routing the server-to-browser mapping through `exports` conditions put the resolver on a path where the emitted declaration's inferred types resolved through condition-dependent module specifiers, and a consumer compiling with `declaration` on (as composite projects do) hit the non-portable-name case. The flat `browser` map sidesteps the `exports`-condition resolution entirely: bundlers read it for the file swap, and the type resolver keeps following `main` / `module` / `types` to stable specifiers, so the inferred declaration types stay nameable. A maintainer who reintroduces `exports` here will see the same TS2742 surface in a consumer build, not in this repo's own type-check.
 
-No `exports` map can keep every current consumer on the file it resolves today, even with TS2742 solved. Jest under jsdom and Metro (Expo web) send identical conditions (`default`, `require` or `import`, `browser`) yet land on different files (`server.cjs` versus `browser.esm`). The best candidate map tested on the v6 line passed every bundler, Next.js byte-identity, composite TypeScript (5.4 to 7.0), and the 6.3.7 revert cases (#5648, #5659), but moved every Jest-jsdom suite onto the browser build. Jest 29's resolver (`resolve.exports` 2.0.3) also throws when a matched condition has no inner match, where Metro falls back to the next key, so a nested map cannot paper over the difference.
+No `exports` map can keep every current consumer on the file it resolves today, even with TS2742 solved. Jest under jsdom and Metro (Expo web) send identical conditions (`default`, `require` or `import`, `browser`) yet land on different files (`server.cjs` versus `browser.esm`). A candidate map that passes every bundler, Next.js byte-identity, composite TypeScript (5.4 to 7.0), and the #5648 / #5659 cases still moves every Jest-jsdom suite onto the browser build.
 
 ## Edge runtime
 
@@ -92,8 +101,8 @@ Server rendering on an edge runtime is unsupported. Next.js applies the `browser
 - A server component fails `next build`: the browser build calls `React.createContext` at module load, and the `react-server` build of React has none. Error 19 reports this, thrown from a guard in `utils/isRsc.ts` (`!IS_RSC && !React.createContext`).
 - A client component renders unstyled HTML with no error, as it does on any runtime without a style registry, because client styles inject through `useInsertionEffect`, which never runs on the server. With a `ServerStyleSheet` registry (the documented Next.js setup), the first `<style>` creation fails at request time. Error 20 reports this, thrown from a `typeof document` guard at the top of `makeStyleTag` in `src/sheet/dom.ts`.
 
-Both messages tell the reader to use the Node.js runtime. Guard 1 is gated `!__SERVER__ && !__NATIVE__`, so only the bundles where it can fire carry it.
+Both messages tell the reader to use the Node.js runtime. Guard 1 is gated `!__SERVER__ && !__NATIVE__`, so only the bundles where it can fire carry it. Neither guard spells `typeof React.createContext === 'undefined'`, which every non-server bundle replaces with `false`.
 
 ## Published files
 
-The package's `files` list includes `native`, and the workspace install puts dependencies in `native/node_modules`, so `files` excludes `!native/node_modules`. `test-utils` stays out of `files`: it imports `enzyme` and `../src`, neither of which ships, so only the repo's own Jest configs can load it. CI publishes through `pnpm release` (`changeset publish`, which packs with pnpm and honors `files`). The "published package contents" block in `src/test/treeshake.test.ts` (run by `test:build`) fails if the packed list holds any `node_modules` or `test-utils` path, or drops a native entry point. It reads `npm pack --dry-run`, whose list matches pnpm's, because the pinned pnpm has no dry-run pack. Neither guard spells `typeof React.createContext === 'undefined'`, which every non-server bundle replaces with `false`.
+The package's `files` list includes `native`, and the workspace install puts dependencies in `native/node_modules`, so `files` excludes `!native/node_modules`. `test-utils` stays out of `files`: its Jest setup imports `jest-fail-on-console` and `../src`, neither of which ships, so only the repo's own Jest configs can load it. CI publishes through `pnpm release` (`changeset publish`, which packs with pnpm and honors `files`). The "published package contents" block in `src/test/treeshake.test.ts` (run by `test:build`) fails if the packed list holds any `node_modules` or `test-utils` path, or drops a native entry point. It reads `npm pack --dry-run`, whose list matches pnpm's, because the pinned pnpm has no dry-run pack.

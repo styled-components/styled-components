@@ -50,8 +50,6 @@
     },
     "packages/styled-components": {
       "entry": [
-        // Published subpath (styled-components/test-utils).
-        "test-utils/index.ts",
         // Entries of the type-surface project (tsconfig.test-types.json).
         "src/test/types.tsx",
         "src/test/types.native.tsx",
@@ -70,10 +68,7 @@
         "@babel/preset-typescript",
         "@react-native/babel-preset",
         "babel-jest",
-        "babel-plugin-add-module-exports",
-        // Type-only import in the published test-utils; consumers of
-        // enzymeFind bring their own enzyme.
-        "enzyme"
+        "babel-plugin-add-module-exports"
       ]
     },
     "packages/styled-components/native": {

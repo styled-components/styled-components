@@ -14,8 +14,8 @@ const WHITESPACE_SPLIT_REGEX = /\s+(?![^(]*\))/;
  */
 function parseBoxShadowLayer(
   trimmed: string
-): { layer: Dict<any>; hadSystemColor: boolean } | null {
-  const boxShadow: Dict<any> = {};
+): { layer: Dict<unknown>; hadSystemColor: boolean } | null {
+  const boxShadow: Dict<unknown> = {};
   let offsetX: string | undefined;
   let offsetY: string | undefined;
   let keywordDetectedAfterLength = false;
@@ -76,7 +76,7 @@ function parseBoxShadowLayer(
  * to the object-array form so `color` can be a `PlatformColor`. Dynamic
  * theme sentinels skip rewriting.
  */
-export function maybeExpandBoxShadowSystemColors(rawValue: string): string | Dict<any>[] {
+export function maybeExpandBoxShadowSystemColors(rawValue: string): string | Dict<unknown>[] {
   // The browser parses system keywords inside box-shadow natively; the
   // object-array rewrite is a native-only workaround.
   if (__NATIVE_WEB__) return rawValue;
@@ -87,7 +87,7 @@ export function maybeExpandBoxShadowSystemColors(rawValue: string): string | Dic
   if (layerStrings.length === 0) return rawValue;
 
   let anySystem = false;
-  const layers: Dict<any>[] = [];
+  const layers: Dict<unknown>[] = [];
 
   for (let i = 0; i < layerStrings.length; i++) {
     const parsed = parseBoxShadowLayer(layerStrings[i].trim());

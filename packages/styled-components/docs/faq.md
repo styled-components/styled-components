@@ -99,7 +99,7 @@ export default function Carousel({ slides }) {
 
 **For traditional SSR (Next.js Pages Router, custom SSR):**
 
-Continue using `ServerStyleSheet` as before; no changes needed!
+Use `ServerStyleSheet` to collect styles during server rendering; no registry or other wrapper is needed.
 
 **RSC Best Practices:**
 

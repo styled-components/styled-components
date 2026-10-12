@@ -405,6 +405,24 @@ describe('rn-web bridge: omniplatform export parity', () => {
       bridge.setAnimationDebug(false);
     }).not.toThrow();
   });
+
+  it('toStyleSheet returns an empty object and warns once with the sc prefix and a fix', () => {
+    const { resetWarnOnce } = require('../utils/warnOnce');
+    const bridge = require('../native/web-bridge');
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    resetWarnOnce();
+    try {
+      expect(bridge.toStyleSheet()).toEqual({});
+      expect(bridge.toStyleSheet()).toEqual({});
+      expect(warn.mock.calls).toEqual([
+        [
+          '[sc] `toStyleSheet` is a no-op on the rn-web bridge and returns an empty object. Use the `css` helper to build web styles.',
+        ],
+      ]);
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });
 
 describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
@@ -670,7 +688,6 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
     // import and apply the $$css shim + lifts the same way it would
     // for `styled.TextInput`.
     it('substitutes the bridged shim when wrapping a raw rn-web TextInput', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const rnWeb = require('react-native-web');
       const RawTextInput = rnWeb.TextInput as React.ComponentType<{
         testID?: string;
@@ -1169,7 +1186,6 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
     // produced 1.6s of polynomial backtracking. The indexOf-bounded
     // rewrite keeps each step O(n).
     it('vertical-align rewriter handles long class-prefix input within a wall-clock budget', () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const bridge = require('../native/web-bridge') as {
         __testOnly_verticalAlignCompanions: (s: string) => string[];
       };

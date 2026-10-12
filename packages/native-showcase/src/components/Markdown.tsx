@@ -1,5 +1,5 @@
 import React from 'react';
-import { Linking, Platform, useColorScheme } from 'react-native';
+import { Linking, useColorScheme } from 'react-native';
 import { Markdown as MD, type NativeOptions } from 'markdown-to-jsx/native';
 import styled from 'styled-components/native';
 import { darkTheme, lightTheme, type ShowcaseTheme } from '@/theme/tokens';
@@ -240,4 +240,3 @@ export function InlineMarkdown(props: Omit<MarkdownProps, 'inline'>) {
 }
 
 export type { NativeOptions };
-export const isWeb = Platform.OS === 'web';

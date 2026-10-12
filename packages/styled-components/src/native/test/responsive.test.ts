@@ -1,4 +1,13 @@
-import { matchMedia, MediaQueryEnv, parseMediaQuery, resetResponsiveCache } from '../responsive';
+import React from 'react';
+import { Appearance } from 'react-native';
+import TestRenderer from 'react-test-renderer';
+import {
+  matchMedia,
+  MediaQueryEnv,
+  parseMediaQuery,
+  resetResponsiveCache,
+  useMediaEnv,
+} from '../responsive';
 
 const env = (overrides: Partial<MediaQueryEnv> = {}): MediaQueryEnv => ({
   width: 375,
@@ -353,5 +362,67 @@ describe('matchMedia', () => {
       expect(matchMedia(`(width >= ${sentinel})`, env({ width: 800 }))).toBe(true);
       expect(matchMedia(`(width >= ${sentinel})`, env({ width: 600 }))).toBe(false);
     });
+  });
+});
+
+describe('useMediaEnv colorScheme', () => {
+  beforeEach(() => resetResponsiveCache());
+  afterEach(() => resetResponsiveCache());
+
+  function readColorScheme(): MediaQueryEnv['colorScheme'] {
+    let seen: MediaQueryEnv['colorScheme'] = 'light';
+    function Probe() {
+      seen = useMediaEnv().colorScheme;
+      return null;
+    }
+    TestRenderer.act(() => {
+      TestRenderer.create(React.createElement(Probe));
+    });
+    return seen;
+  }
+
+  // MediaQueryEnv declares `'light' | 'dark' | null | undefined`. React Native
+  // also reports `'unspecified'` when the platform has no preference; that is
+  // "no scheme", which the env models as null.
+  it("reports null when the platform scheme is 'unspecified'", () => {
+    const spy = jest.spyOn(Appearance, 'getColorScheme').mockReturnValue('unspecified');
+    try {
+      expect(readColorScheme()).toBeNull();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("reports null when an appearance change delivers 'unspecified'", () => {
+    const getSpy = jest.spyOn(Appearance, 'getColorScheme').mockReturnValue('light');
+    const addSpy = jest.spyOn(Appearance, 'addChangeListener');
+    try {
+      let seen: MediaQueryEnv['colorScheme'];
+      function Probe() {
+        seen = useMediaEnv().colorScheme;
+        return null;
+      }
+      TestRenderer.act(() => {
+        TestRenderer.create(React.createElement(Probe));
+      });
+      expect(seen).toBe('light');
+      const listener = addSpy.mock.calls[addSpy.mock.calls.length - 1][0];
+      TestRenderer.act(() => {
+        listener({ colorScheme: 'unspecified' });
+      });
+      expect(seen).toBeNull();
+    } finally {
+      getSpy.mockRestore();
+      addSpy.mockRestore();
+    }
+  });
+
+  it('passes light and dark through unchanged', () => {
+    const spy = jest.spyOn(Appearance, 'getColorScheme').mockReturnValue('dark');
+    try {
+      expect(readColorScheme()).toBe('dark');
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

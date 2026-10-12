@@ -10,9 +10,14 @@
  * functions in the AST path on large inputs.
  */
 
+import '../native/bunProfileGlobals';
+
 import { emitWeb } from './emit-web';
 import { parse } from './parser';
 import { normalize } from '../utils/normalize';
+
+// This harness profiles the web parser, so the native-only rule stamping stays off.
+globalThis.__NATIVE__ = false;
 
 // Reuse the CSS_LARGE and CSS_HUGE shapes from the bench. Inlined here so the
 // harness can run standalone without the jest bench infra.
@@ -113,16 +118,13 @@ function run(css: string, iterations: number): void {
   }
   const elapsed = performance.now() - start;
   const ops = (iterations / elapsed) * 1000;
-  // eslint-disable-next-line no-console
   console.log(
     `  ${css.length}B × ${iterations}: ${elapsed.toFixed(2)}ms total, ${Math.round(ops).toLocaleString()} ops/s`
   );
 }
 
-// eslint-disable-next-line no-console
 console.log('--- CSS_LARGE profile ---');
 run(CSS_LARGE, 3000);
 
-// eslint-disable-next-line no-console
 console.log('--- CSS_HUGE profile ---');
 run(CSS_HUGE, 800);

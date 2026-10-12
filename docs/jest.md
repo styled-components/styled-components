@@ -4,21 +4,20 @@ The web suite renders styled-components under jsdom and asserts on the emitted C
 
 ## jsdom modern-CSS support
 
-The web suite runs `testEnvironment: 'jsdom'` (`jest.config.main.js`, `jest.config.bench.js`) via `jest-environment-jsdom` 30, which resolves jsdom 26.1.0 as of this writing.
+The web suite runs `testEnvironment: 'jsdom'` (`jest.config.main.js`, `jest.config.bench.js`) via `jest-environment-jsdom` 30, which resolves jsdom 26.1.0.
 
-jsdom parses inserted rules through a CSSOM implementation that lags the CSS spec, and it drops what it cannot parse without erroring. A styled-component can correctly produce a rule (verifiable via SSR / `VirtualTag`), yet the round-trip through `<style>.sheet.insertRule(rule)` loses it: reading back `style.sheet.cssRules` shows nothing, and a test asserting on the live sheet silently loses coverage.
+jsdom parses inserted rules through a CSSOM implementation that lags the CSS spec, and `insertRule` throws on what it cannot parse; the library's CSSOM tag swallows that error, so the rule disappears without a failure. A styled-component can correctly produce a rule (verifiable via SSR / `VirtualTag`), yet the round-trip through `<style>.sheet.insertRule(rule)` loses it: reading back `style.sheet.cssRules` shows nothing, and a test asserting on the live sheet silently loses coverage.
 
-Which features survive depends on the jsdom version, and the two current lines regress against each other. As of April 2026:
+Which features survive depends on the jsdom version. jsdom 29 and 30 behave alike, and both regress against 26 (checked 2026-10 against 26.1.0, 29.1.1, and 30.1.2 by inserting each rule through `insertRule`):
 
 ### jsdom 26 (rrweb-cssom) drops
 
 - `@layer reset, framework, utilities;` (block-less `@layer` name declarations)
 - `@scope (.card) to (.content) { ... }`
 - Assorted other unprefixed modern at-rules in some configurations
-- Same-name `@-webkit-keyframes` + `@keyframes` pairs: only one survives dedup, depending on insertion order
 - `:nth-child(N of S)` does work in 26 (it parses and matches)
 
-### jsdom 29 (css-tree) fixes, but regresses
+### jsdom 29 and 30 (css-tree) fix, but regress
 
 Fixes: block-less `@layer ...;` and `@scope` both parse and are preserved.
 
@@ -28,13 +27,13 @@ Regresses:
 - `@property --x { ... }` silently dropped
 - `light-dark(white, #111)` normalized to `light-dark(white, rgb(17, 17, 17))` (hex canonicalized to rgb)
 - `cssText` formatting changed: `.a {}` becomes `.a { }` (extra space), invalidating many snapshots
-- Requires Node 20+/22+/24+
+- A higher Node floor: jsdom 29 needs `^20.19.0 || ^22.13.0 || >=24.0.0`, jsdom 30 `^22.22.2 || ^24.15.0 || >=26.0.0`
 
-The css-tree integration is partial and the at-rule support moves fast, so the 26 to 29 bump was a net negative as of April 2026. Revisit when the jsdom 29 regressions land upstream.
+The css-tree integration is partial, so the suite stays on jsdom 26 until these regressions are fixed upstream.
 
 ### Pragma for modern at-rules today
 
-- If a parser-level test already covers the construct (for example `parity.test.ts`), that coverage is the actual contract. Drop the jsdom integration test rather than maintaining a workaround around the CSSOM hop; the integration test was incidentally re-testing jsdom.
+- If a parser-level test already covers the construct (for example `src/parser/emit-web.test.ts`), that coverage is the actual contract. Drop the jsdom integration test rather than maintaining a workaround around the CSSOM hop; such a test re-tests jsdom.
 - When integration coverage genuinely matters (asserting the rule reaches rendered HTML), route through SSR / `ServerStyleSheet` so the path is `VirtualTag` with no jsdom CSSOM hop. `ServerStyleSheet` only uses `VirtualTag` when both `__SERVER__` (build constant) and `isServer: true` hold; in a jsdom env the build is browser, so `__SERVER__` is false and `ServerStyleSheet` still hits `CSSOMTag`. Use `@jest-environment node` for these tests when SSR-via-`VirtualTag` is required.
 
 ## Reading injected CSS in a test

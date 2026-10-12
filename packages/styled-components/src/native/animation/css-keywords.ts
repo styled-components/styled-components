@@ -7,8 +7,6 @@ import type { EasingDescriptor } from './types';
  * `bezier(0.42, 0, 1, 1)`, which is the CSS `ease-in` curve. Adapters
  * MUST go through this table when translating CSS keywords; passing the
  * raw `'ease'` keyword to either engine produces the wrong curve.
- *
- * Source: https://www.w3.org/TR/css-easing-1/#valdef-easing-function-ease
  */
 export const CSS_EASING_KEYWORDS: Record<string, [number, number, number, number]> = {
   ease: [0.25, 0.1, 0.25, 1],

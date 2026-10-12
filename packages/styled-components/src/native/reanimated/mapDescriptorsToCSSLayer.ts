@@ -220,7 +220,7 @@ export function mapDescriptorsToCSSLayer(
         if (__DEV__) {
           warnOnce(
             'native-scroll-timeline-reanimated',
-            `The animation "${animations[i].name}" uses \`animation-timeline\`, which the Reanimated adapter cannot drive (Reanimated's CSS layer is time-based). The animation is skipped; the default Animated adapter supports scroll-driven animations.`,
+            `The animation "${animations[i].name}" uses \`animation-timeline\`, which the Reanimated adapter does not support. The animation is skipped. Use the default Animated adapter for scroll-driven animations.`,
             animations[i].name
           );
         }
@@ -266,8 +266,8 @@ export function mapDescriptorsToCSSLayer(
       out.transitionDuration = t.durationMs;
       out.transitionTimingFunction = toReanimatedTiming(host, t.timingFunction);
       out.transitionDelay = t.delayMs;
-      // Match cssAdapter: omit `transition-behavior` unless a layer needs
-      // allow-discrete (normal is the initial keyword and clutters the CSS layer).
+      // Omit `transition-behavior` unless a layer needs allow-discrete
+      // (normal is the initial keyword and clutters the CSS layer).
       if (t.behavior === 'allow-discrete') {
         out.transitionBehavior = t.behavior;
       }

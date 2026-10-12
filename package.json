@@ -12,7 +12,6 @@
     "format:check": "biome ci",
     "knip": "knip --config knip.jsonc",
     "lint-staged": "lint-staged",
-    "size": "pnpm --filter styled-components size",
     "test": "pnpm --filter styled-components test",
     "test:changeset-changelog": "node --test scripts/release-notes/changelog.test.ts scripts/release-notes/prerelease-aggregation.test.ts scripts/release-notes/build-version-pr-body.test.ts",
     "test:effect-gate": "node --test scripts/effect-gate.test.ts",

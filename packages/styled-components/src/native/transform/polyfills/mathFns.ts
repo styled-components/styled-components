@@ -428,7 +428,7 @@ function evalSequence(tokens: Token[], permitNonFinite: boolean): NumericResult 
 
   // Pass 1: `*` and `/`
   for (let i = 1; i < resolved.length - 1; ) {
-    const opTok = resolved[i] as Token;
+    const opTok = resolved[i];
     if ('kind' in opTok && opTok.kind === TokenKind.Op && (opTok.op === '*' || opTok.op === '/')) {
       const a = toNumeric(resolved[i - 1], permitNonFinite);
       const b = toNumeric(resolved[i + 1], permitNonFinite);
@@ -444,7 +444,7 @@ function evalSequence(tokens: Token[], permitNonFinite: boolean): NumericResult 
   }
   // Pass 2: `+` and `-`
   for (let i = 1; i < resolved.length - 1; ) {
-    const opTok = resolved[i] as Token;
+    const opTok = resolved[i];
     if ('kind' in opTok && opTok.kind === TokenKind.Op && (opTok.op === '+' || opTok.op === '-')) {
       const a = toNumeric(resolved[i - 1], permitNonFinite);
       const b = toNumeric(resolved[i + 1], permitNonFinite);
@@ -470,26 +470,26 @@ function toNumeric(
 ): NumericResult | null {
   if (!t) return null;
   if (!('kind' in t)) return t;
-  if (t.kind === TokenKind.Number) return { value: t.value!, unit: '' };
+  if (t.kind === TokenKind.Number) return { value: t.value, unit: '' };
   if (t.kind === TokenKind.Length) {
-    if (t.unit === 'px' || t.unit === '') return { value: t.value!, unit: t.unit || '' };
+    if (t.unit === 'px' || t.unit === '') return { value: t.value, unit: t.unit || '' };
     if (t.value === 0) return { value: 0, unit: '' };
     return null; // em/rem/vh/etc.; dynamic, caller defers
   }
-  if (t.kind === TokenKind.Percent) return { value: t.value!, unit: '%' };
+  if (t.kind === TokenKind.Percent) return { value: t.value, unit: '%' };
   if (t.kind === TokenKind.Angle) {
     // Normalise to degrees so `calc(20deg * 2)` resolves to a bare-number
     // degree value the lch/oklch hue channel can consume.
     const unit = t.unit || 'deg';
     let deg: number;
-    if (unit === 'deg') deg = t.value!;
-    else if (unit === 'rad') deg = (t.value! * 180) / Math.PI;
-    else if (unit === 'grad') deg = t.value! * 0.9;
-    else if (unit === 'turn') deg = t.value! * 360;
+    if (unit === 'deg') deg = t.value;
+    else if (unit === 'rad') deg = (t.value * 180) / Math.PI;
+    else if (unit === 'grad') deg = t.value * 0.9;
+    else if (unit === 'turn') deg = t.value * 360;
     else return null;
     return { value: deg, unit: 'deg' };
   }
-  if (t.kind === TokenKind.Ident) return identToNumeric(t.name!, t.raw, permitNonFinite);
+  if (t.kind === TokenKind.Ident) return identToNumeric(t.name, t.raw, permitNonFinite);
   return null;
 }
 

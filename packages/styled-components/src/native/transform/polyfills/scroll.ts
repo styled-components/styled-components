@@ -10,12 +10,12 @@ const SNAP_AXIS_KEYWORDS = new Set(['x', 'y', 'block', 'inline', 'both']);
 const SNAP_STRICTNESS_KEYWORDS = new Set(['mandatory', 'proximity']);
 const SNAP_ALIGN_KEYWORDS = new Set(['none', 'start', 'end', 'center']);
 
-function overscrollBehaviorShorthand(tokens: Token[]): Dict<any> | null {
+function overscrollBehaviorShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
-  if (name === undefined || !OVERSCROLL_KEYWORDS.has(name)) return null;
+  if (!OVERSCROLL_KEYWORDS.has(name)) return null;
   if (__NATIVE_WEB__) {
     // Browser ships overscroll-behavior; `auto` is the initial value so
     // emitting nothing defers to the ScrollView defaults.
@@ -28,12 +28,12 @@ function overscrollBehaviorShorthand(tokens: Token[]): Dict<any> | null {
   };
 }
 
-function scrollbarWidthHandler(tokens: Token[]): Dict<any> | null {
+function scrollbarWidthHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
-  if (name === undefined || !SCROLLBAR_WIDTH_KEYWORDS.has(name)) return null;
+  if (!SCROLLBAR_WIDTH_KEYWORDS.has(name)) return null;
   if (__NATIVE_WEB__) {
     // Browser ships scrollbar-width; `auto` is the initial value so
     // emitting nothing defers to the ScrollView defaults.
@@ -65,10 +65,10 @@ function scrollbarWidthHandler(tokens: Token[]): Dict<any> | null {
  * The axis keyword is accepted but does not change the lift: a ScrollView
  * snaps along whichever axis it scrolls.
  */
-function scrollSnapTypeShorthand(tokens: Token[]): Dict<any> | null {
+function scrollSnapTypeShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const first = stream.consume();
-  if (!first || first.kind !== TokenKind.Ident || first.name === undefined) return null;
+  if (!first || first.kind !== TokenKind.Ident) return null;
 
   if (first.name === 'none') {
     if (!stream.eof()) return null;
@@ -83,7 +83,7 @@ function scrollSnapTypeShorthand(tokens: Token[]): Dict<any> | null {
   let raw = axis;
   if (!stream.eof()) {
     const second = stream.consume();
-    if (!second || second.kind !== TokenKind.Ident || second.name === undefined) return null;
+    if (!second || second.kind !== TokenKind.Ident) return null;
     if (!SNAP_STRICTNESS_KEYWORDS.has(second.name)) return null;
     strictness = second.name;
     raw = `${axis} ${strictness}`;
@@ -96,7 +96,7 @@ function scrollSnapTypeShorthand(tokens: Token[]): Dict<any> | null {
     return { scrollSnapType: raw };
   }
 
-  const out: Dict<any> = { decelerationRate: 'fast' };
+  const out: Dict<unknown> = { decelerationRate: 'fast' };
 
   if (strictness === 'mandatory') {
     // pagingEnabled WITHOUT snapToAlignment routes Android onto the
@@ -109,7 +109,7 @@ function scrollSnapTypeShorthand(tokens: Token[]): Dict<any> | null {
         'native-scroll-snap-paging',
         '`scroll-snap-type: ' +
           axis +
-          ' mandatory` defaults to full-scrollport paging on React Native. Declare `scroll-snap-align` on the children that should snap (the scroller measures them and snaps to their real positions), or pass `snapToInterval` / `snapToOffsets` on the styled ScrollView (your props win).',
+          ' mandatory` defaults to full-scrollport paging on React Native. Declare `scroll-snap-align` on the children that should snap, or pass `snapToInterval` / `snapToOffsets` on the styled ScrollView (your props win).',
         axis + ' mandatory'
       );
     }
@@ -137,16 +137,16 @@ function scrollSnapTypeShorthand(tokens: Token[]): Dict<any> | null {
  * which derives `snapToOffsets` from the aligned children. rn-web passes
  * the raw value through to the browser.
  */
-function scrollSnapAlignHandler(tokens: Token[]): Dict<any> | null {
+function scrollSnapAlignHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const first = stream.consume();
-  if (!first || first.kind !== TokenKind.Ident || first.name === undefined) return null;
+  if (!first || first.kind !== TokenKind.Ident) return null;
   if (!SNAP_ALIGN_KEYWORDS.has(first.name)) return null;
 
   let raw = first.name;
   if (!stream.eof()) {
     const second = stream.consume();
-    if (!second || second.kind !== TokenKind.Ident || second.name === undefined) return null;
+    if (!second || second.kind !== TokenKind.Ident) return null;
     if (!SNAP_ALIGN_KEYWORDS.has(second.name)) return null;
     if (!stream.eof()) return null;
     raw = `${first.name} ${second.name}`;
@@ -166,7 +166,7 @@ function scrollSnapAlignHandler(tokens: Token[]): Dict<any> | null {
  * `disableIntervalMomentum` so a fling cannot skip past the target.
  * `normal` is the initial value (no props). rn-web passes through.
  */
-function scrollSnapStopHandler(tokens: Token[]): Dict<any> | null {
+function scrollSnapStopHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;

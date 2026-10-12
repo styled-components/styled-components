@@ -369,4 +369,45 @@ describe('scroll progress timelines (Scroll-driven Animations L1 §2)', () => {
     // value (from frame), proving the scroll branch didn't hijack it.
     expect(opacityOf(tree)).toBeCloseTo(0, 5);
   });
+
+  it('switching animation-timeline from scroll() to auto under the same keyframes name restarts as a time-driven animation', () => {
+    const Child = styled.View.withConfig({ displayName: 'TLChildSwitch' })<{ $timeline: string }>`
+      animation: grow 300ms linear both;
+      animation-timeline: ${p => p.$timeline};
+      @keyframes grow {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+    `;
+    const tree = track(
+      TestRenderer.create(
+        <Scroller>
+          <Child testID="subject" $timeline="scroll()" />
+        </Scroller>
+      )
+    );
+    const sv = tree.root.findByType(ScrollView);
+    // Extent 900 - 500 = 400; offset 200 is progress 0.5 on the scroll timeline.
+    act(() => {
+      sv.props.onScroll(scrollEvent(200));
+    });
+    expect(opacityOf(tree)).toBeCloseTo(0.5, 5);
+
+    // The same animation now runs on time. A fresh timing starts at progress 0,
+    // so the from-frame value (0) shows instead of the scroll position's 0.5.
+    expect(() => {
+      act(() => {
+        tree.update(
+          <Scroller>
+            <Child testID="subject" $timeline="auto" />
+          </Scroller>
+        );
+      });
+    }).not.toThrow();
+    expect(opacityOf(tree)).toBeCloseTo(0, 5);
+  });
 });

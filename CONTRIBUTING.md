@@ -44,7 +44,7 @@ Here is a quick guide to doing code contributions to the library.
 
 2. See [Environment setup](#environment-setup)
 
-3. Update your local copy of the `main` branch with the latest code: `git checkout main && git pull -f upstream/main`
+3. Update your local copy of the `main` branch with the latest code: `git checkout main && git pull --ff-only upstream main`
 
 4. Create a branch with a meaningful name for the issue: `git checkout -b fix-something`
 
@@ -91,13 +91,14 @@ To run the benchmarks run:
 cd packages/benchmarks
 ```
 
-Then build the benchmark page:
+Then build styled-components and the benchmark page:
 
 ```sh
+pnpm --filter styled-components build
 pnpm build
 ```
 
-Then open the page in your browser:
+Then open the page in your browser (`pnpm open` uses the macOS `open` command; on other systems, open `index.html` in a browser):
 
 ```sh
 pnpm open
@@ -105,11 +106,7 @@ pnpm open
 
 On the page which opens, select the benchmark to run and click the "Run" button in your browser.
 
-You may need to re-build styled-components and/or the benchmarks package after making changes if you want to re-run the benchmarks with your changes.
-
-## Credits
-
-These contribution guidelines are based on https://github.com/moya/contributors, big thanks to @alloy, @orta et al. for the inspiration and guidance.
+Re-build styled-components and then the benchmarks package after making changes if you want to re-run the benchmarks with your changes. See [packages/benchmarks/README.md](./packages/benchmarks/README.md) for the headless runs.
 
 ## Financial contributions
 
@@ -117,10 +114,12 @@ Please see the "Sponsor" button at the top of the repository, thank you!
 
 ## Credits
 
+These contribution guidelines are based on https://github.com/moya/contributors, big thanks to @alloy, @orta et al. for the inspiration and guidance.
+
 ### Contributors
 
 Thank you to all the people who have already contributed to styled-components!
-<a href="graphs/contributors"><img src="https://opencollective.com/styled-components/contributors.svg?width=890" /></a>
+<a href="https://github.com/styled-components/styled-components/graphs/contributors"><img src="https://opencollective.com/styled-components/contributors.svg?width=890" /></a>
 
 ### Backers
 

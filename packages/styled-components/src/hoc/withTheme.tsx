@@ -12,6 +12,7 @@ type WithThemeOuterProps<T extends AnyComponent> = Omit<
   keyof ExecutionProps
 > &
   ExecutionProps & {
+    // biome-ignore lint/suspicious/noExplicitAny: public prop type of the wrapped component; the ref targets whichever instance `T` renders, which this signature cannot name, and `Ref<unknown>` changes the emitted .d.ts
     ref?: React.Ref<any> | undefined;
   };
 
@@ -26,7 +27,11 @@ export default function withTheme<T extends AnyComponent>(
 
     if (__DEV__ && themeProp === undefined) {
       const name = getComponentName(Component);
-      warnOnce('withTheme', `no ThemeProvider or theme prop in scope for "${name}"`, name);
+      warnOnce(
+        'withTheme',
+        `no ThemeProvider or theme prop in scope for "${name}". Wrap the tree in a <ThemeProvider theme={...}> or pass a theme prop.`,
+        name
+      );
     }
 
     return React.createElement(Component, {

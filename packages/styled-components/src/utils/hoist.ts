@@ -77,9 +77,11 @@ type ExcludeList = {
 export type NonReactStatics<S extends OmniComponent, C extends ExcludeList = {}> = {
   [key in Exclude<
     keyof S,
+    // biome-ignore lint/suspicious/noExplicitAny: public through `withTheme`'s return type; `MemoExoticComponent<ComponentType<never>>` fails with "Type 'ComponentType<never>' does not satisfy the constraint 'ComponentType<any>'"
     S extends React.MemoExoticComponent<any>
       ? keyof typeof MEMO_STATICS | keyof C
-      : S extends React.ForwardRefExoticComponent<any>
+      : // biome-ignore lint/suspicious/noExplicitAny: same probe as above for forwardRef components; `never` compiles but changes the emitted .d.ts of the public `NonReactStatics`
+        S extends React.ForwardRefExoticComponent<any>
         ? keyof typeof FORWARD_REF_STATICS | keyof C
         : keyof typeof REACT_STATICS | keyof typeof KNOWN_STATICS | keyof C
   >]: S[key];
@@ -122,13 +124,15 @@ export default function hoistNonReactStatics<
         !(targetStatics && key in targetStatics)
       ) {
         // Key came from `getOwnPropertyNames` above, so the descriptor exists.
-        const descriptor = getOwnPropertyDescriptor(sourceComponent, key)!;
+        const descriptor = getOwnPropertyDescriptor(sourceComponent, key);
 
-        try {
-          // Avoid failures from read-only properties
-          defineProperty(targetComponent, key, descriptor);
-        } catch (e) {
-          /* ignore */
+        if (descriptor !== undefined) {
+          try {
+            // Avoid failures from read-only properties
+            defineProperty(targetComponent, key, descriptor);
+          } catch (e) {
+            /* ignore */
+          }
         }
       }
     }

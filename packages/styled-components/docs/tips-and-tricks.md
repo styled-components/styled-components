@@ -180,11 +180,11 @@ Pretty easy, huh?
 
 ### Refs to DOM nodes
 
-styled-components uses React's [`forwardRef`](https://react.dev/reference/react/forwardRef) under the hood. Set refs like you would on any other component and they will automatically resolve to the underlying DOM element or wrapped component class instance.
+Set refs like you would on any other component, with `ref` as a regular prop. They resolve to the underlying DOM element or wrapped component class instance.
 
 ```JSX
 const StyledInput = styled.input`
-  color: paleviolet;
+  color: palevioletred;
 `;
 
 class Form extends Component {

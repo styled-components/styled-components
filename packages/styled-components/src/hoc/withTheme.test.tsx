@@ -24,7 +24,7 @@ describe('withTheme', () => {
     const WrappedComponent = withTheme(Comp);
     render(<WrappedComponent />);
     expect(warn.mock.calls[0][0]).toMatchInlineSnapshot(
-      `"[sc] no ThemeProvider or theme prop in scope for "Comp""`
+      `"[sc] no ThemeProvider or theme prop in scope for "Comp". Wrap the tree in a <ThemeProvider theme={...}> or pass a theme prop."`
     );
   });
 

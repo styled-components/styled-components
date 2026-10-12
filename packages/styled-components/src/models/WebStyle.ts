@@ -63,6 +63,7 @@ export default class WebStyle {
   baseHash: number;
   baseStyle: WebStyle | null | undefined;
   componentId: string;
+  // biome-ignore lint/suspicious/noExplicitAny: public through `IStyledStatics.webStyle`; each component stores rules of its own props shape, and `RuleSet<never>` changes the emitted .d.ts of the exposed property
   rules: RuleSet<any>;
   /** Interp-tuple → class name. Hit skips `buildHashCSS` entirely. */
   interpKeyCache: Map<string, string> | undefined;
@@ -81,6 +82,7 @@ export default class WebStyle {
    */
   private keyframesBuffer: CompiledKeyframes[] | undefined;
 
+  // biome-ignore lint/suspicious/noExplicitAny: same public class as `rules` above; changing the parameter changes the emitted .d.ts
   constructor(rules: RuleSet<any>, componentId: string, baseStyle?: WebStyle | undefined) {
     this.rules = rules;
     this.componentId = componentId;

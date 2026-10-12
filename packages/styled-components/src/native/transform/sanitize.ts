@@ -74,7 +74,7 @@ export function sanitizeValue(value: string): string {
   if (__DEV__) {
     warnOnce(
       'control-char',
-      'style value contained control / bidirectional characters. These were stripped to prevent ordering-spoof injection.'
+      'style value contained control / bidirectional characters. These were stripped to prevent ordering-spoof injection. Remove them from the source text of the style value.'
     );
   }
   let out = '';

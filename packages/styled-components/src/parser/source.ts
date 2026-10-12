@@ -16,7 +16,7 @@ import {
   SLASH,
   TILDE,
 } from '../utils/charCodes';
-import type { RuleSet } from '../types';
+import type { BaseObject, RuleSet } from '../types';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import { normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
@@ -77,7 +77,7 @@ function warnClientReference(ref: unknown): void {
   const label = (id && id.includes('#') ? id.split('#').pop() : id) || r.name || 'unknown';
   warnOnce(
     'rsc-client-ref-selector',
-    `interpolating a client component (${label}) as a selector is not supported in server components. The component selector pattern requires access to the component's internal class name, which is not available across the server/client boundary. Use a plain CSS class selector instead.`,
+    `interpolating a client component (${label}) as a selector is not supported in server components. Use a plain CSS class selector instead.`,
     label
   );
 }
@@ -297,7 +297,7 @@ type RulesWithSlot = ReadonlyArray<unknown> & {
  * Record a `RuleSet`'s template inputs. The `Source` is lazily produced on
  * first `getSource(rules)` call. Used by the `css\`...\`` constructor.
  */
-export function attachSourceInputs<T extends RuleSet<any>>(
+export function attachSourceInputs<T extends RuleSet<never>>(
   rules: T,
   strings: ReadonlyArray<string>,
   interpolations: ReadonlyArray<unknown>
@@ -314,11 +314,15 @@ export function isCssProduct(arr: unknown): boolean {
   return Array.isArray(arr) && (arr as RulesWithSlot)[SOURCE_SLOT] !== undefined;
 }
 
-export function getSource(rules: RuleSet<any>): Source | undefined {
+export function getSource(rules: RuleSet<never>): Source | undefined {
   const slot = (rules as unknown as RulesWithSlot)[SOURCE_SLOT];
   if (slot === undefined) return undefined;
-  if (slot[2] !== null) return slot[2];
-  const source = parseSource(slot[0]!, slot[1]!);
+  const parsed = slot[2];
+  if (parsed !== null) return parsed;
+  const strings = slot[0];
+  const interpolations = slot[1];
+  if (strings === null || interpolations === null) return undefined;
+  const source = parseSource(strings, interpolations);
   slot[0] = null;
   slot[1] = null;
   slot[2] = source;
@@ -331,7 +335,7 @@ export function getSource(rules: RuleSet<any>): Source | undefined {
  * string entries to interpolation slots. Idempotent: returns `false` when
  * a Source is already attached.
  */
-export function synthesizeSourceForRuleSet(rules: RuleSet<any>): boolean {
+export function synthesizeSourceForRuleSet(rules: RuleSet<never>): boolean {
   if ((rules as unknown as RulesWithSlot)[SOURCE_SLOT] !== undefined) return false;
   const strings: string[] = [];
   const interpolations: unknown[] = [];
@@ -360,23 +364,32 @@ export function synthesizeSourceForRuleSet(rules: RuleSet<any>): boolean {
   return true;
 }
 
+function slotInputs(slot: SourceSlot): Pick<Source, 'strings' | 'interpolations'> | undefined {
+  const parsed = slot[2];
+  if (parsed !== null) return parsed;
+  const strings = slot[0];
+  const interpolations = slot[1];
+  return strings !== null && interpolations !== null ? { strings, interpolations } : undefined;
+}
+
 /**
  * Concatenate two RuleSets' Source inputs into one combined template.
  * Used by `styled(Base)\`...\`` extension on native. The seam between the
  * two arrays joins as a single CSS chunk (no slot bridges them).
  */
-export function concatSourceInputs(
-  combinedRules: RuleSet<any>,
-  baseRules: RuleSet<any>,
-  extensionRules: RuleSet<any>
-): RuleSet<any> {
+export function concatSourceInputs<Props extends BaseObject>(
+  combinedRules: RuleSet<Props>,
+  baseRules: RuleSet<never>,
+  extensionRules: RuleSet<never>
+): RuleSet<Props> {
   const baseSlot = (baseRules as unknown as RulesWithSlot)[SOURCE_SLOT];
   const extSlot = (extensionRules as unknown as RulesWithSlot)[SOURCE_SLOT];
   if (baseSlot === undefined || extSlot === undefined) return combinedRules;
-  const baseStrings = baseSlot[2] !== null ? baseSlot[2].strings : baseSlot[0]!;
-  const baseInterpolations = baseSlot[2] !== null ? baseSlot[2].interpolations : baseSlot[1]!;
-  const extStrings = extSlot[2] !== null ? extSlot[2].strings : extSlot[0]!;
-  const extInterpolations = extSlot[2] !== null ? extSlot[2].interpolations : extSlot[1]!;
+  const base = slotInputs(baseSlot);
+  const ext = slotInputs(extSlot);
+  if (base === undefined || ext === undefined) return combinedRules;
+  const { strings: baseStrings, interpolations: baseInterpolations } = base;
+  const { strings: extStrings, interpolations: extInterpolations } = ext;
   // Seam: last string of base + first string of extension joins as one
   // CSS chunk. The slots in between stay positionally addressable because
   // the resulting string array still satisfies

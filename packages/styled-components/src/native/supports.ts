@@ -3,7 +3,7 @@ import { transformDecl } from './transform';
 import { runWithWarningsSuppressed } from './transform/dev';
 
 /**
- * Runtime evaluator for `@supports` preludes (CSS Conditional 3 §6).
+ * Runtime evaluator for `@supports` preludes.
  *
  * On rn-web the browser is the authority: `CSS.supports()` receives the
  * raw prelude. On iOS / Android a declaration leaf answers "does this

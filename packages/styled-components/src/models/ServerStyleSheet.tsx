@@ -34,6 +34,7 @@ export default class ServerStyleSheet {
     return `<style ${htmlAttr}>${escapeCssForStyleTag(css)}</style>`;
   };
 
+  // biome-ignore lint/suspicious/noExplicitAny: public method; `unknown` fails with "Type 'unknown' is not assignable to type 'ReactNode'" where the children reach the manager, and `ReactNode` would reject callers that pass looser values today
   collectStyles(children: any): React.JSX.Element {
     if (this.sealed) {
       throw styledError(2);

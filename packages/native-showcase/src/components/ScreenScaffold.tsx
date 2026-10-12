@@ -5,7 +5,6 @@ import {
   ListRenderItem,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Platform,
   useWindowDimensions,
   ViewToken,
 } from 'react-native';
@@ -385,11 +384,12 @@ export function ScreenScaffold<Item>({
     initialIndex?: number;
   }>({ ready: false });
 
-  // Visual gate for Android: hide the FlatList during the brief
+  // Visual gate on every platform: hide the FlatList during the brief
   // scroll-to-index window so the user doesn't see the in-flight scroll
-  // motion (Android's `animated: false` is not always truly instant
-  // when virtualization is interleaved with `onScrollToIndexFailed`
-  // retry logic). iOS lands genuinely instantly so the gate stays off.
+  // motion (`animated: false` is not always truly instant when
+  // virtualization is interleaved with `onScrollToIndexFailed` retry
+  // logic). The list stays blank for a frame or two until the target row
+  // is viewable.
   const [hidden, setHidden] = React.useState(false);
 
   React.useEffect(() => {
@@ -472,7 +472,7 @@ export function ScreenScaffold<Item>({
           restoreTargetRef.current = null;
           restorationSettledRef.current = true;
           // Reveal the FlatList now that the target is on-screen.
-          // No-op when not hidden (iOS path, or no restoration needed).
+          // No-op when not hidden (no restoration in flight).
           setHiddenRef.current(false);
         }
         return;
@@ -525,7 +525,7 @@ export function ScreenScaffold<Item>({
     }
     restoreFiredRef.current = true;
     restoreTargetRef.current = idx;
-    if (Platform.OS === 'android') setHidden(true);
+    setHidden(true);
     const rafId = requestAnimationFrame(() => {
       listRef.current?.scrollToIndex({ index: idx, animated: false, viewPosition: 0 });
     });

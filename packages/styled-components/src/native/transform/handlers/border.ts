@@ -39,7 +39,7 @@ function warnUnsupportedBorderStyle(name: string): void {
     'native-border-style-unsupported',
     '`border-style: ' +
       name +
-      "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', 'dashed', or 'none'.",
+      "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', 'dashed', or 'none'. Use one of those styles.",
     name
   );
 }
@@ -50,12 +50,12 @@ function warnMultipleBorderStyles(value: string): void {
     'native-border-style-multiple',
     '`border-style: ' +
       value +
-      '` uses per-side styles that React Native cannot express. iOS and Android use the first style.',
+      '` uses per-side styles that React Native cannot express. iOS and Android use the first style. Write a single style to apply it to every side.',
     value
   );
 }
 
-function normalizeNativeBorderStyle(name: string): Dict<any> | null {
+function normalizeNativeBorderStyle(name: string): Dict<unknown> | null {
   if (name === 'hidden') return { borderStyle: 'none', borderWidth: 0 };
   if (RN_BORDER_STYLES.has(name)) return { borderStyle: name };
   if (__DEV__) warnUnsupportedBorderStyle(name);
@@ -72,16 +72,16 @@ function normalizeNativeBorderStyle(name: string): Dict<any> | null {
 type StyleMatcher = (t: Token, stream: TokenStream) => string | null;
 
 function matchBorderStyle(t: Token, stream: TokenStream): string | null {
-  if (t.kind === TokenKind.Ident && CSS_LINE_STYLES.has(t.name!)) {
+  if (t.kind === TokenKind.Ident && CSS_LINE_STYLES.has(t.name)) {
     stream.consume();
-    return t.name!;
+    return t.name;
   }
   return null;
 }
 
 function matchOutlineStyle(t: Token, stream: TokenStream): string | null {
   if (t.kind === TokenKind.Ident) {
-    const name = t.name!;
+    const name = t.name;
     const webOnly = WEB_ONLY_OUTLINE_STYLES.has(name);
     if (webOnly || RN_OUTLINE_STYLES.has(name)) {
       stream.consume();
@@ -90,7 +90,7 @@ function matchOutlineStyle(t: Token, stream: TokenStream): string | null {
           'native-outline-style',
           '`outline-style: ' +
             name +
-            "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', or 'dashed'.",
+            "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', or 'dashed'. Use one of those styles.",
           name
         );
       }
@@ -113,8 +113,7 @@ function consumeWidthStyleColor(
   let style: string | null = null;
   let color: Token | null = null;
 
-  while (!stream.eof()) {
-    const t = stream.peek()!;
+  for (let t = stream.peek(); t !== undefined; t = stream.peek()) {
     if (style === null) {
       const matched = matchStyle(t, stream);
       if (matched !== null) {
@@ -147,7 +146,7 @@ function consumeWidthStyleColor(
  * v7 fix vs. CSSTN: `border: none` now emits `borderStyle: 'none'`
  * (not `'solid'`), matching web.
  */
-export function borderShorthand(tokens: Token[]): Dict<any> | null {
+export function borderShorthand(tokens: Token[]): Dict<unknown> | null {
   if (
     tokens.length === 1 &&
     tokens[0].kind === TokenKind.Ident &&
@@ -165,7 +164,7 @@ export function borderShorthand(tokens: Token[]): Dict<any> | null {
     if (nativeStyle === null) return {};
   }
 
-  const out: Dict<any> = {};
+  const out: Dict<unknown> = {};
   out.borderWidth =
     !__NATIVE_WEB__ && style === 'hidden' ? 0 : width !== null ? tokenToValue(width) : 1;
   out.borderStyle =
@@ -184,7 +183,7 @@ export function borderColorShorthand(tokens: Token[]) {
  * the shorthand; outlineStyle on RN is restricted to solid / dotted / dashed.
  * Web-only styles warn and pass through so rn-web honors them.
  */
-export function outlineShorthand(tokens: Token[]): Dict<any> | null {
+export function outlineShorthand(tokens: Token[]): Dict<unknown> | null {
   if (tokens.length === 1 && tokens[0].kind === TokenKind.Ident && tokens[0].name === 'none') {
     return { outlineWidth: 0, outlineStyle: 'solid', outlineColor: 'transparent' };
   }
@@ -207,7 +206,7 @@ export function outlineShorthand(tokens: Token[]): Dict<any> | null {
   const { width, style, color } = parsed;
 
   if (width === null && style === null && color === null) return null;
-  const out: Dict<any> = {};
+  const out: Dict<unknown> = {};
   if (width !== null) out.outlineWidth = tokenToValue(width);
   if (style !== null) out.outlineStyle = style;
   if (color !== null) out.outlineColor = colorTokenToRnStyleValue(color);
@@ -218,15 +217,15 @@ export function outlineShorthand(tokens: Token[]): Dict<any> | null {
  * `border-style: <style>`; RN only accepts a single style, not per-side.
  * When multiple styles are supplied, we dev-warn and use the first.
  */
-export function borderStyleShorthand(tokens: Token[]): Dict<any> | null {
+export function borderStyleShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const names: string[] = [];
   while (!stream.eof()) {
     const t = stream.consume();
-    if (!t || t.kind !== TokenKind.Ident || !CSS_LINE_STYLES.has(t.name!)) {
+    if (!t || t.kind !== TokenKind.Ident || !CSS_LINE_STYLES.has(t.name)) {
       return null;
     }
-    names.push(t.name!);
+    names.push(t.name);
   }
   if (names.length === 0 || names.length > 4) return null;
   if (__NATIVE_WEB__) return { borderStyle: names.join(' ') };

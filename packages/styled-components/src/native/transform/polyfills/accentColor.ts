@@ -8,7 +8,7 @@ import { getSystemColorPlatformColor } from './systemColors';
 /** `accent-color: auto | <color>`. Lifts trackColor.true on Switch and
  *  keeps `accentColor` in the style bag so attrs callbacks can route the
  *  value onto arbitrary wrapped components via `ast.pop('accentColor')`. */
-function accentColorHandler(tokens: Token[]): Dict<any> | null {
+function accentColorHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const first = stream.peek();
   if (!first) return null;

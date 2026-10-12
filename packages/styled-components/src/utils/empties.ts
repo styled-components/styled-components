@@ -1,4 +1,4 @@
 import type { Dict } from '../types';
 
-export const EMPTY_ARRAY = Object.freeze([]) as Readonly<any[]>;
-export const EMPTY_OBJECT = Object.freeze({}) as Readonly<Dict<any>>;
+export const EMPTY_ARRAY: readonly never[] = Object.freeze([]);
+export const EMPTY_OBJECT: Readonly<Dict<never>> = Object.freeze({});

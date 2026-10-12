@@ -25,6 +25,7 @@ export type FastOmit<T extends BaseObject, U extends string | number | symbol> =
 
 export type Runtime = 'web' | 'native';
 
+// biome-ignore lint/suspicious/noExplicitAny: public default. `unknown` fails with "Type 'unknown' does not satisfy the constraint 'BaseObject'", and `BaseObject` rejects components with required props wherever `AnyComponent` is used as a bound
 export type AnyComponent<P extends BaseObject = any> =
   | ExoticComponentWithDisplayName<P>
   | React.ComponentType<P>;
@@ -46,9 +47,11 @@ export interface StyledOptions<R extends Runtime, Props extends BaseObject> {
   shouldForwardProp?: ShouldForwardProp<R> | undefined;
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: public default. The bag is exported through `IStyledStatics.nativeStyle` and read by consumers as-is (`compiled.specialCases.numberOfLines`), so defaulting to `unknown` narrows every `Dict` that omits its argument and changes the emitted .d.ts
 export type Dict<T = any> = { [key: string]: T };
 
 /** Data-attributes helper for `.attrs<DataAttributes>(...)`. */
+// biome-ignore lint/suspicious/noExplicitAny: public helper for `.attrs<DataAttributes>(...)`; consumers pass `data-*` values of any type, and `unknown` would change the emitted .d.ts and make every read of a `data-*` prop need narrowing
 export type DataAttributes = { [key: `data-${string}`]: any };
 
 export type ExecutionProps = {
@@ -512,9 +515,15 @@ interface CompileOutput {
   hasPseudo: boolean;
   keyframes: Array<{
     name: string;
-    frames: Array<{ stops: string[]; decls: Dict<any>; resolvers?: Array<[string, Resolver]> }>;
+    frames: Array<{
+      stops: string[];
+      // biome-ignore lint/suspicious/noExplicitAny: public contract reachable through `IStyledStatics.nativeStyle`; consumers read declaration values as-is, and `Dict<unknown>` would narrow them and change the emitted .d.ts
+      decls: Dict<any>;
+      resolvers?: Array<[string, Resolver]>;
+    }>;
   }>;
   /** Element-level props lifted from the style object (e.g. `numberOfLines`). */
+  // biome-ignore lint/suspicious/noExplicitAny: public contract reachable through `IStyledStatics.nativeStyle`; consumers read element props such as `numberOfLines` as-is, and `Dict<unknown>` would narrow them and change the emitted .d.ts
   specialCases?: Dict<any>;
   /** Container-query metadata extracted from the source CSS at compile time. */
   containerInfo?: { type: string; explicitName?: string };
@@ -649,6 +658,7 @@ export interface StyledObject<Props extends BaseObject = BaseObject>
     | string
     | number
     | StyleFunction<Props>
+    // biome-ignore lint/suspicious/noExplicitAny: public index signature of `StyledObject`; nested rule sets carry their own props and no single `Props` is correct for them (`RuleSet<Props>` changes the emitted .d.ts and the nested-object inference consumers rely on)
     | RuleSet<any>
     | undefined;
 }
@@ -675,6 +685,7 @@ export interface StyledObject<Props extends BaseObject = BaseObject>
  * {@link DefaultTheme}.
  */
 
+// biome-ignore lint/suspicious/noExplicitAny: public type behind the `css` prop; `Interpolation<never>` makes `props` in a `css` function interpolation `never`, so consumers lose `props.theme` access, and any other argument changes the emitted .d.ts
 export type CSSProp = Interpolation<any>;
 
 /**
@@ -761,7 +772,7 @@ type Merged<A extends BaseObject, B> = FastOmit<A, Exclude<keyof B, 'style'>> & 
  * deeply-discriminated component prop unions (e.g. antd Button; see
  * #5725).
  */
-export type MakeAttrsOptional<P extends BaseObject, K extends keyof any> = [K] extends [never]
+export type MakeAttrsOptional<P extends BaseObject, K extends PropertyKey> = [K] extends [never]
   ? P
   : FastOmit<P, K & keyof P> & { [Key in Extract<keyof P, K>]?: P[Key] };
 

@@ -117,6 +117,7 @@ export interface ConditionalStyle {
   /** For type 'has': inner simple selector that must match at least
    *  one descendant of the element at render time. */
   hasInner?: { kind: 'component'; id: string } | { kind: 'attr'; attr: ConditionalAttr };
+  // biome-ignore lint/suspicious/noExplicitAny: public through the animation adapter contract (`AnimatedStyleInput`); `unknown` changes the emitted .d.ts
   styles: Dict<any>;
   /**
    * Resolvers extracted from the bucket's styles (theme sentinels, viewport
@@ -130,6 +131,7 @@ export interface ConditionalStyle {
    * bucket's normal values) at render time. Only set when the bucket
    * carries at least one `!important` decl.
    */
+  // biome-ignore lint/suspicious/noExplicitAny: public through the animation adapter contract (`AnimatedStyleInput`); `unknown` changes the emitted .d.ts
   important?: Dict<any>;
   /** Render-time resolvers attached to `important` declarations. */
   importantResolvers?: Array<[string, Resolver]>;
@@ -156,6 +158,7 @@ export interface CompiledKeyframes {
   frames: Array<{
     stops: string[];
     /** Static (post-transformDecl) declarations; key is the camelCase RN prop. */
+    // biome-ignore lint/suspicious/noExplicitAny: public through the `Keyframes` class `keyframes` returns; `unknown` changes the emitted .d.ts
     decls: Dict<any>;
     /**
      * Render-time resolvers extracted from this frame's declarations
@@ -171,6 +174,7 @@ export interface CompiledKeyframes {
 
 export interface NativeStyles {
   /** Unconditional declarations applied every render. */
+  // biome-ignore lint/suspicious/noExplicitAny: public through the animation adapter contract (`AnimatedStyleInput`); `unknown` changes the emitted .d.ts
   base: Dict<any>;
   /** Conditional buckets; render-time matches decide which merge onto base. */
   conditional: ConditionalStyle[];
@@ -204,6 +208,7 @@ export interface NativeStyles {
    * The render path spreads these onto the rendered element with user props
    * winning.
    */
+  // biome-ignore lint/suspicious/noExplicitAny: public through the animation adapter contract (`AnimatedStyleInput`); `unknown` changes the emitted .d.ts
   specialCases?: Dict<any>;
   /**
    * `@starting-style { … }` bodies collected for the animation adapter.
@@ -212,6 +217,7 @@ export interface NativeStyles {
    * native: first-render animation source). Captured here; the
    * animation adapter is the consumer.
    */
+  // biome-ignore lint/suspicious/noExplicitAny: public through the animation adapter contract (`AnimatedStyleInput`); `unknown` changes the emitted .d.ts
   startingStyle?: Dict<any>;
   /**
    * Render-time resolvers attached to `startingStyle` declarations. Same
@@ -249,6 +255,7 @@ export interface NativeStyles {
    * `base` into a numeric StyleSheet id, so the rendered style no
    * longer carries the values; this field is the source of truth.
    */
+  // biome-ignore lint/suspicious/noExplicitAny: public through the animation adapter contract (`AnimatedStyleInput`); `unknown` changes the emitted .d.ts
   baseValues?: Dict<any>;
   /**
    * Container-query metadata extracted from the source CSS at compile
@@ -353,6 +360,7 @@ export interface NativeStyles {
    * resolvers for important declarations. Within-component only;
    * cross-component cascade of importance is not modeled.
    */
+  // biome-ignore lint/suspicious/noExplicitAny: public through the animation adapter contract (`AnimatedStyleInput`); `unknown` changes the emitted .d.ts
   important?: Dict<any>;
   importantResolvers?: Array<[string, Resolver]>;
   /**
@@ -622,7 +630,7 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
         raw: {},
         base: {},
         resolvers: [],
-        important: null as Dict<any> | null,
+        important: null as Dict<unknown> | null,
         importantResolvers: null as Array<[string, Resolver]> | null,
         customProperties: null as Map<string, string> | null,
         varDeferred: null as Array<[string, string, boolean]> | null,
@@ -656,7 +664,7 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   // Only stash when an adapter would actually read it (animations /
   // transitions / starting-style present), so the common case stays
   // allocation-free.
-  let baseValues: Dict<any> | undefined;
+  let baseValues: Dict<unknown> | undefined;
   if (animations !== null || transitions !== null || startingDecls.length > 0) {
     baseValues = {};
     for (const k in baseRaw) {
@@ -739,7 +747,7 @@ function computeScrollerFlexPin(out: NativeStyles): boolean {
   // `base` may be a registered StyleSheet id (number) rather than the
   // raw style object; the keys aren't inspectable then, so only the
   // resolver / varDeferred scans below contribute.
-  const base = out.base as Dict<any>;
+  const base = out.base;
   const baseInspectable = typeof base === 'object' && base !== null;
   let dim = baseInspectable && ('width' in base || 'height' in base);
   let flex = baseInspectable && ('flex' in base || 'flexGrow' in base);
@@ -818,8 +826,8 @@ function resolversWriteCascadeKey(rs: ReadonlyArray<[string, unknown]>): boolean
  * none). Called on `processDecls.base` (resolver-stripped) so values are
  * static (only the polyfills that emit primitives can produce these keys).
  */
-function extractSpecialCases(base: Dict<any>): Dict<any> | null {
-  let lifted: Dict<any> | null = null;
+function extractSpecialCases(base: Dict<unknown>): Dict<unknown> | null {
+  let lifted: Dict<unknown> | null = null;
   for (const k in base) {
     if (SPECIAL_CASE_PROPS[k] !== undefined && shouldLiftSpecialCase(k)) {
       if (lifted === null) lifted = {};
@@ -850,7 +858,7 @@ function shouldLiftSpecialCase(key: string): boolean {
  * component's `styledComponentId` happens at render time (the id
  * isn't known here at compile).
  */
-function extractContainerInfo(base: Dict<any>): { type: string; explicitName?: string } | null {
+function extractContainerInfo(base: Dict<unknown>): { type: string; explicitName?: string } | null {
   const type = base.containerType;
   if (typeof type !== 'string' || type === 'normal') return null;
   const explicitName = typeof base.containerName === 'string' ? base.containerName : undefined;
@@ -864,7 +872,7 @@ function extractContainerInfo(base: Dict<any>): { type: string; explicitName?: s
  * implicit target for anchor functions. rn-web leaves both in place
  * for the browser. Mutates `base`.
  */
-function extractAnchorDecls(base: Dict<any>): {
+function extractAnchorDecls(base: Dict<unknown>): {
   anchorName: string | null;
   positionAnchor: string | null;
 } {
@@ -893,7 +901,7 @@ function extractAnchorDecls(base: Dict<any>): {
  * "identical to relative, except..." framing. rn-web leaves the
  * declaration in place for the browser. Mutates `base`.
  */
-function extractSticky(base: Dict<any>): true | null {
+function extractSticky(base: Dict<unknown>): true | null {
   if (base.position !== 'sticky') return null;
   if (__NATIVE_WEB__) return null;
   delete base.position;
@@ -907,7 +915,7 @@ function extractSticky(base: Dict<any>): true | null {
  * container, which derives `snapToOffsets` from its aligned children.
  * Mutates `base` to remove the sentinel keys.
  */
-function extractSnapTarget(base: Dict<any>): { align: string; stop: boolean } | null {
+function extractSnapTarget(base: Dict<unknown>): { align: string; stop: boolean } | null {
   const align = base.__scSnapAlign;
   const stop = base.__scSnapStop;
   if (align === undefined && stop === undefined) return null;
@@ -926,7 +934,7 @@ function extractSnapTarget(base: Dict<any>): { align: string; stop: boolean } | 
  * supported; declarations of multiple names keep the first (dev warn).
  * Mutates `base` to remove the keys.
  */
-function extractScrollTimeline(base: Dict<any>): { name: string; axis: TimelineAxis } | null {
+function extractScrollTimeline(base: Dict<unknown>): { name: string; axis: TimelineAxis } | null {
   const name = base.scrollTimelineName;
   const axis = base.scrollTimelineAxis;
   if (name === undefined && axis === undefined) return null;
@@ -937,7 +945,7 @@ function extractScrollTimeline(base: Dict<any>): { name: string; axis: TimelineA
   if (__DEV__ && Array.isArray(name) && name.length > 1) {
     warnOnce(
       'native-scroll-timeline-multiple',
-      'Multiple `scroll-timeline-name` values were declared on one component. React Native scrollers publish a single timeline; only the first name is used. Split the scrollable areas into separate components to declare more timelines.',
+      'Multiple `scroll-timeline-name` values were declared on one component, and only the first is used. Split the scrollable areas into separate components to declare more timelines.',
       String(firstName)
     );
   }
@@ -962,7 +970,7 @@ function extractScrollTimeline(base: Dict<any>): { name: string; axis: TimelineA
  * Skipped on rn-web (the grid CSS stays in `base` for the browser; the
  * sentinels never form there).
  */
-function extractGrid(base: Dict<any>): {
+function extractGrid(base: Dict<unknown>): {
   gridInfo: { columns: number } | null;
   gridSpan: number | null;
 } {
@@ -998,7 +1006,7 @@ function extractGrid(base: Dict<any>): {
  * Mutates `base` to remove the key so RN's style validator doesn't
  * warn about an unknown property.
  */
-function extractFieldSizing(base: Dict<any>): 'content' | null {
+function extractFieldSizing(base: Dict<unknown>): 'content' | null {
   const fs = base.fieldSizing;
   if (fs === undefined) return null;
   delete base.fieldSizing;
@@ -1043,11 +1051,11 @@ const TRANSITION_RECIPE: ExtractRecipe<TransitionDescriptor> = [
 
 type ExtractRecipe<T> = ReadonlyArray<[string, keyof T, unknown]>;
 
-function extractAnimations(base: Dict<any>): AnimationDescriptor[] | null {
+function extractAnimations(base: Dict<unknown>): AnimationDescriptor[] | null {
   return extractDescriptors(base, ANIMATION_RECIPE);
 }
 
-function extractTransitions(base: Dict<any>): TransitionDescriptor[] | null {
+function extractTransitions(base: Dict<unknown>): TransitionDescriptor[] | null {
   const out = extractDescriptors(base, TRANSITION_RECIPE);
   if (out === null) return null;
   // Normalise transition properties to the runtime key (camelCase +
@@ -1068,8 +1076,8 @@ function extractTransitions(base: Dict<any>): TransitionDescriptor[] | null {
  * `base` is mutated in place (keys are deleted as they're consumed).
  * Returns `null` when no recipe longhand is present.
  */
-function extractDescriptors<T extends Record<string, any>>(
-  base: Dict<any>,
+function extractDescriptors<T extends object>(
+  base: Dict<unknown>,
   recipe: ExtractRecipe<T>
 ): T[] | null {
   let any = false;
@@ -1157,8 +1165,11 @@ function describeCondition(entry: ConditionalStyle): string {
  * dev warning so the bucket's style payload stays correct and the user
  * knows the construct silently no-ops.
  */
-function stripSpecialCasesFromConditional(styles: Dict<any>, entry: ConditionalStyle): Dict<any> {
-  let out: Dict<any> | null = null;
+function stripSpecialCasesFromConditional(
+  styles: Dict<unknown>,
+  entry: ConditionalStyle
+): Dict<unknown> {
+  let out: Dict<unknown> | null = null;
   for (const k in styles) {
     if (SPECIAL_CASE_PROPS[k] !== undefined && shouldLiftSpecialCase(k)) {
       if (__DEV__) {
@@ -1166,7 +1177,7 @@ function stripSpecialCasesFromConditional(styles: Dict<any>, entry: ConditionalS
         const cond = describeCondition(entry);
         warnOnce(
           'native-special-case-cond',
-          `\`${meta.source}\` is not supported inside \`${cond}\` on React Native. \`${meta.source}\` maps to React Native's \`${k}\` prop on <${meta.validOn[0]}>, which can't change per condition. Move \`${meta.source}\` to the top level of your styled component.`,
+          `\`${meta.source}\` is not supported inside \`${cond}\` on React Native. Move \`${meta.source}\` to the top level of your styled component.`,
           k + ':' + cond
         );
       }
@@ -1261,7 +1272,7 @@ function stripImportant(value: string): string {
 function attachBucketExtras(
   entry: ConditionalStyle,
   resolvers: Array<[string, Resolver]>,
-  important: Dict<any> | null,
+  important: Dict<unknown> | null,
   importantResolvers: Array<[string, Resolver]> | null,
   varDeferred: Array<[string, string, boolean]> | null
 ): void {
@@ -1274,24 +1285,24 @@ function attachBucketExtras(
 }
 
 function processDecls(decls: StaticDeclNode[]): {
-  raw: Dict<any>;
-  base: Dict<any>;
+  raw: Dict<unknown>;
+  base: Dict<unknown>;
   resolvers: Array<[string, Resolver]>;
-  important: Dict<any> | null;
+  important: Dict<unknown> | null;
   importantResolvers: Array<[string, Resolver]> | null;
   customProperties: Map<string, string> | null;
   varDeferred: Array<[string, string, boolean]> | null;
 } {
-  const raw: Dict<any> = {};
-  const base: Dict<any> = {};
+  const raw: Dict<unknown> = {};
+  const base: Dict<unknown> = {};
   const resolvers: Array<[string, Resolver]> = [];
-  let important: Dict<any> | null = null;
+  let important: Dict<unknown> | null = null;
   let importantResolvers: Array<[string, Resolver]> | null = null;
   let customProperties: Map<string, string> | null = null;
   let varDeferred: Array<[string, string, boolean]> | null = null;
   for (let i = 0; i < decls.length; i++) {
     const decl = decls[i];
-    let partial: Record<string, any>;
+    let partial: Dict<unknown>;
     const { prop } = decl;
     let { value } = decl;
     if (!__NATIVE_WEB__ && prop.charCodeAt(0) === 0x2d && prop.charCodeAt(1) === 0x2d) {
@@ -1411,9 +1422,9 @@ export function applyVarDeferred(
   customProperties: ReadonlyMap<string, string> | null,
   own?: ReadonlyMap<string, string> | null,
   env?: ResolveEnv
-): { normal: Dict<any> | null; important: Dict<any> | null } {
-  let normal: Dict<any> | null = null;
-  let important: Dict<any> | null = null;
+): { normal: Dict<unknown> | null; important: Dict<unknown> | null } {
+  let normal: Dict<unknown> | null = null;
+  let important: Dict<unknown> | null = null;
   for (let i = 0; i < varDeferred.length; i++) {
     const entry = varDeferred[i];
     const prop = entry[0];
@@ -1436,8 +1447,8 @@ export function applyVarDeferred(
       // viewport units, env()) get the same resolver pass the compiled
       // path applies; here it runs against the live env immediately.
       const r = env !== undefined ? buildResolver(v, k) : null;
-      if (r !== null) {
-        const resolved = r(env!);
+      if (env !== undefined && r !== null) {
+        const resolved = r(env);
         if (resolved !== null) out[k] = resolved;
       } else {
         out[k] = v;
@@ -1454,7 +1465,7 @@ export function applyVarDeferred(
  * also writes `transform:`. The perspective applies to the element's
  * own transform context.
  */
-function foldPerspectiveSentinel(raw: Dict<any>, base: Dict<any>): void {
+function foldPerspectiveSentinel(raw: Dict<unknown>, base: Dict<unknown>): void {
   const persp = base[PERSPECTIVE_SENTINEL_KEY];
   if (persp === undefined) return;
   delete base[PERSPECTIVE_SENTINEL_KEY];
@@ -1493,13 +1504,14 @@ function foldPerspectiveSentinel(raw: Dict<any>, base: Dict<any>): void {
  * `border-radius` resizes the corner area without un-squaring it, so the
  * zero has to be written last rather than in declaration order.
  */
-function foldCornerShapeSquare(raw: Dict<any>, layer: Dict<any>): void {
+function foldCornerShapeSquare(raw: Dict<unknown>, layer: Dict<unknown>): void {
   const mask = layer[CORNER_SQUARE_SENTINEL_KEY];
   if (mask === undefined) return;
   delete layer[CORNER_SQUARE_SENTINEL_KEY];
   delete raw[CORNER_SQUARE_SENTINEL_KEY];
+  const squaredCorners = typeof mask === 'number' ? mask : 0;
   for (let i = 0; i < BORDER_RADIUS_KEYS.length; i++) {
-    if ((mask & (1 << i)) === 0) continue;
+    if ((squaredCorners & (1 << i)) === 0) continue;
     // The per-corner longhand beats the `borderRadius` shorthand in RN's
     // own cascade regardless of key order, so the author's radius stays
     // where it is and only the squared corners flatten.
@@ -1558,7 +1570,7 @@ function walkRoot(
             decls.length > 0 ? processDecls(decls) : { base: {}, resolvers: [] };
           const out: {
             stops: string[];
-            decls: Dict<any>;
+            decls: Dict<unknown>;
             resolvers?: Array<[string, Resolver]>;
             easing?: EasingDescriptor;
           } = { stops: frame.stops, decls: base };
@@ -1710,9 +1722,9 @@ function applyRuleClass(
  */
 function pushNthChildBucket(
   conditional: ConditionalStyle[],
-  base: Dict<any>,
+  base: Dict<unknown>,
   resolvers: Array<[string, Resolver]>,
-  important: Dict<any> | null,
+  important: Dict<unknown> | null,
   importantResolvers: Array<[string, Resolver]> | null,
   varDeferred: Array<[string, string, boolean]> | null,
   outer: OuterGate | undefined,
@@ -1756,9 +1768,9 @@ function nthSpecKey(spec: NthSpec): string {
  *  time looking for a descendant satisfying the inner predicate. */
 function pushHasBucket(
   conditional: ConditionalStyle[],
-  base: Dict<any>,
+  base: Dict<unknown>,
   resolvers: Array<[string, Resolver]>,
-  important: Dict<any> | null,
+  important: Dict<unknown> | null,
   importantResolvers: Array<[string, Resolver]> | null,
   varDeferred: Array<[string, string, boolean]> | null,
   outer: OuterGate | undefined,
@@ -1799,9 +1811,9 @@ function pushHasBucket(
  */
 function pushCombinatorBucket(
   conditional: ConditionalStyle[],
-  base: Dict<any>,
+  base: Dict<unknown>,
   resolvers: Array<[string, Resolver]>,
-  important: Dict<any> | null,
+  important: Dict<unknown> | null,
   importantResolvers: Array<[string, Resolver]> | null,
   varDeferred: Array<[string, string, boolean]> | null,
   outer: OuterGate | undefined,
@@ -1831,9 +1843,9 @@ function pushCombinatorBucket(
  */
 function pushBucket(
   conditional: ConditionalStyle[],
-  base: Dict<any>,
+  base: Dict<unknown>,
   resolvers: Array<[string, Resolver]>,
-  important: Dict<any> | null,
+  important: Dict<unknown> | null,
   importantResolvers: Array<[string, Resolver]> | null,
   varDeferred: Array<[string, string, boolean]> | null,
   outer: OuterGate | undefined,
@@ -1982,7 +1994,7 @@ function validatePropertyInitialValue(syntax: string, value: string): boolean {
     case '<number>':
       return t.kind === TokenKind.Number;
     case '<integer>':
-      return t.kind === TokenKind.Number && Number.isInteger(t.value!);
+      return t.kind === TokenKind.Number && Number.isInteger(t.value);
     case '<percentage>':
       return t.kind === TokenKind.Percent;
     case '<angle>':
@@ -2092,13 +2104,13 @@ function handleAtRule(
     if (warnKind === 'web-only') {
       warnOnce(
         'native-at-rule-web-only',
-        `@${name} is a web-only at-rule and has no React Native equivalent. The rule was ignored.`,
+        `@${name} is a web-only at-rule and has no React Native equivalent. The rule was ignored. Remove it from styles that render on React Native.`,
         name
       );
     } else {
       warnOnce(
         'native-at-rule-unknown',
-        `@${name} is not supported on native. The rule was ignored.`,
+        `@${name} is not supported on native. The rule was ignored. Remove it or check the spelling.`,
         name
       );
     }
@@ -2133,7 +2145,7 @@ function pushDecl(out: StaticDeclNode[], node: StaticDeclNode): void {
     if (__DEV__) {
       warnOnce(
         'native-unsupported-value',
-        `the value "${v}" for "${node.prop}" is not supported in React Native and will be ignored.`,
+        `the value "${v}" for "${node.prop}" is not supported in React Native and will be ignored. Use a supported value or remove the declaration.`,
         node.prop + ':' + v
       );
     }
@@ -2157,7 +2169,7 @@ function pushDecl(out: StaticDeclNode[], node: StaticDeclNode): void {
 // when both static and dynamic shared this Map) to 200 since dynamic
 // values cycle through a much smaller set of distinct prop+value tuples.
 const PAIR_CACHE_LIMIT = 200;
-let pairCache = new Map<string, Map<string, Record<string, any>>>();
+let pairCache = new Map<string, Map<string, Dict<unknown>>>();
 let pairCacheSize = 0;
 
 /**
@@ -2173,7 +2185,7 @@ let pairCacheSize = 0;
  * the AST shape unmutated, which dodges hidden-class transitions and
  * keeps native concerns out of the shared parser data structures.
  */
-const staticDeclCache = new WeakMap<StaticDeclNode, Record<string, any>>();
+const staticDeclCache = new WeakMap<StaticDeclNode, Dict<unknown>>();
 
 /**
  * Public-helper entry point: backs `toStyleSheet(css\`...\`)` from the
@@ -2185,6 +2197,7 @@ const staticDeclCache = new WeakMap<StaticDeclNode, Record<string, any>>();
  * Production styled-component compilation goes through `toNativeStyles` /
  * `astToNativeStyles` directly; this is a thin slice on top.
  */
+// biome-ignore lint/suspicious/noExplicitAny: the return type becomes the public `toStyleSheet` result, which consumers pass to React Native `style` props; `Dict<unknown>` is not assignable to a style type
 export function cssToStyleObject(flatCSS: string, styleSheet: StyleSheet): Dict<any> {
   return toNativeStyles(flatCSS, styleSheet).base;
 }

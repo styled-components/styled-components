@@ -26,7 +26,7 @@ import { TokenStream } from '../tokenStream';
  * traverse the subtree at render time; for now the lift covers the
  * common case.
  */
-function interactivityHandler(tokens: Token[]): Dict<any> | null {
+function interactivityHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
@@ -47,7 +47,7 @@ function interactivityHandler(tokens: Token[]): Dict<any> | null {
     if (platform === 'android') {
       warnOnce(
         'native-interactivity-inert-focusable-leak',
-        '`interactivity: inert` cannot stop focus on every descendant on Android. A focusable child inside the inert subtree may still receive D-pad or keyboard focus; touch and screen-reader blocking still apply to the subtree.',
+        '`interactivity: inert` cannot stop focus on every descendant on Android. A focusable child inside the inert subtree may still receive D-pad or keyboard focus; touch and screen-reader blocking still apply to the subtree. Keep focusable children out of the inert subtree.',
         'inert'
       );
     }

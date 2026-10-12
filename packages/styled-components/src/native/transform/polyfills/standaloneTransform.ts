@@ -24,12 +24,12 @@ function warn3DDrop(code: string, prop: string): void {
     code,
     '`' +
       prop +
-      ': x y z` is only partially supported on React Native. iOS and Android use the X and Y values and ignore Z.',
+      ': x y z` is only partially supported on React Native. iOS and Android use the X and Y values and ignore Z. Write the two-value form to match what renders.',
     prop + '-3d'
   );
 }
 
-function translateShorthand(tokens: Token[], rawValue: string): Dict<any> | null {
+function translateShorthand(tokens: Token[], rawValue: string): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const x = consumeDimensionLike(stream);
   if (x === null) return null;
@@ -58,12 +58,12 @@ function translateShorthand(tokens: Token[], rawValue: string): Dict<any> | null
 
 const ROTATE_AXIS = new Set(['x', 'y', 'z']);
 
-function rotateShorthand(tokens: Token[], rawValue: string): Dict<any> | null {
+function rotateShorthand(tokens: Token[], rawValue: string): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const first = stream.peek();
   if (!first) return null;
 
-  if (first.kind === TokenKind.Ident && first.name !== undefined && ROTATE_AXIS.has(first.name)) {
+  if (first.kind === TokenKind.Ident && ROTATE_AXIS.has(first.name)) {
     const axis = first.name;
     stream.consume();
     const angle = stream.consume();
@@ -81,12 +81,12 @@ function rotateShorthand(tokens: Token[], rawValue: string): Dict<any> | null {
 function consumeNumericFactor(stream: TokenStream): number | null {
   const t = stream.consume();
   if (!t) return null;
-  if (t.kind === TokenKind.Number) return t.value!;
-  if (t.kind === TokenKind.Percent) return t.value! / 100;
+  if (t.kind === TokenKind.Number) return t.value;
+  if (t.kind === TokenKind.Percent) return t.value / 100;
   return null;
 }
 
-function scaleShorthand(tokens: Token[], rawValue: string): Dict<any> | null {
+function scaleShorthand(tokens: Token[], rawValue: string): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const xv = consumeNumericFactor(stream);
   if (xv === null) return null;
@@ -134,7 +134,7 @@ const TRANSFORM_BOX_VALUES = new Set([
   'view-box',
 ]);
 
-function transformBoxHandler(tokens: Token[]): Dict<any> | null {
+function transformBoxHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
@@ -183,7 +183,7 @@ register('transformBox', transformBoxHandler);
  */
 export const PERSPECTIVE_SENTINEL_KEY = '__sc_perspective';
 
-function perspectiveHandler(tokens: Token[], rawValue: string): Dict<any> | null {
+function perspectiveHandler(tokens: Token[], rawValue: string): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || !stream.eof()) return null;
@@ -218,7 +218,7 @@ register('perspective', perspectiveHandler);
  * parent's center. Drops with a one-time dev warn on iOS / Android;
  * passes through on rn-web for the browser to interpret.
  */
-function perspectiveOriginHandler(tokens: Token[]): Dict<any> | null {
+function perspectiveOriginHandler(tokens: Token[]): Dict<unknown> | null {
   if (tokens.length === 0) return null;
   if (__NATIVE_WEB__) {
     let raw = '';
@@ -231,7 +231,7 @@ function perspectiveOriginHandler(tokens: Token[]): Dict<any> | null {
   if (__DEV__) {
     warnOnce(
       'native-perspective-origin-unsupported',
-      "`perspective-origin` is ignored on React Native. The vanishing point stays at the parent's center on iOS and Android."
+      "`perspective-origin` is ignored on React Native. The vanishing point stays at the parent's center on iOS and Android. Remove the declaration."
     );
   }
   return {};
@@ -245,7 +245,7 @@ register('perspectiveOrigin', perspectiveOriginHandler);
  * 3D-bleed memory documents a known compositor side-effect when nested
  * 3D transforms appear without preserve-3d.
  */
-function transformStyleHandler(tokens: Token[]): Dict<any> | null {
+function transformStyleHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
@@ -258,7 +258,7 @@ function transformStyleHandler(tokens: Token[]): Dict<any> | null {
   if (__DEV__ && value === 'preserve-3d') {
     warnOnce(
       'native-transform-style-preserve-3d',
-      "`transform-style: preserve-3d` is ignored on React Native because iOS and Android expose no matching style property; descendants of a 3D-transformed element composite into the parent's 2D plane. Animated 3D transforms (`rotateX` / `rotateY` / `rotateZ`) are already isolated automatically.",
+      "`transform-style: preserve-3d` is ignored on React Native, so descendants of a 3D-transformed element flatten into the parent's 2D plane. Remove the declaration.",
       value
     );
   }

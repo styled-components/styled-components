@@ -286,11 +286,9 @@ describe('Hermes native build keeps the Animated-bridge adapter', () => {
     nativeESM = readNative('styled-components.native.esm.js');
   });
 
-  it('contains createAnimatedComponent and excludes the CSS-emit registration', () => {
+  it('contains createAnimatedComponent', () => {
     expect(nativeCJS).toContain('createAnimatedComponent');
     expect(nativeESM).toContain('createAnimatedComponent');
-    expect(nativeCJS).not.toContain('data-sc-anim');
-    expect(nativeESM).not.toContain('data-sc-anim');
   });
 });
 

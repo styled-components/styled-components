@@ -27,7 +27,7 @@ Style React components with real CSS, scoped automatically and delivered only wh
 - **Works everywhere React runs.** Server components, client components, streaming SSR, and React Native: same API, automatic runtime detection.
 - **Full CSS, no compromises.** Media queries, pseudo-selectors, nesting, keyframes, global styles. If CSS supports it, so does styled-components.
 - **TypeScript-first.** Built-in types ship with the package. Props flow through to your styles with full inference: no `@types` install, no manual generics.
-- **<13kB gzipped.** Small enough to disappear in your bundle. No build plugin required.
+- **Small.** The badge above shows the current minified and gzipped size. No build plugin required.
 
 ## Install
 
@@ -206,7 +206,7 @@ const Card = styled.div`
 ```tsx
 import styled, { createTheme, ThemeProvider } from 'styled-components';
 
-const { theme, GlobalStyle: ThemeVars } = createTheme({
+const theme = createTheme({
   colors: {
     fg: 'palevioletred',
     bg: 'white',
@@ -222,10 +222,11 @@ const Card = styled.div`
   padding: ${theme.space.md};
 `;
 
-// Render <ThemeVars /> at the root to emit the CSS variable declarations
-// Pass the theme to ThemeProvider for stable hashes
-<ThemeProvider theme={theme}>
-  <ThemeVars />
+// theme.GlobalStyle emits the CSS variable declarations (:root { --sc-colors-fg: palevioletred; ... }).
+// It reads its values from the ThemeProvider above it, so give the provider a plain
+// theme object: theme.raw is the original tokens, and a dark variant with the same shape works too.
+<ThemeProvider theme={theme.raw}>
+  <theme.GlobalStyle />
   <Card>Token-driven content</Card>
 </ThemeProvider>;
 ```
@@ -312,7 +313,7 @@ const PasswordInput = styled.input.attrs({
 `;
 ```
 
-The function form receives a second `ast` argument for bridging declarations or theme tokens into props on third-party components. `peek` reads a value; `pop` reads and removes it from the rendered style. Both accept either a CSS property name or a typed dot-separated theme path:
+The function form receives a second `ast` argument for bridging declarations or theme tokens into props on third-party components. `peek` reads a value; `pop` reads and removes it from the rendered style. Both accept either a property name or a typed dot-separated theme path. The name is the CSS property as authored on web (`accent-color`) and the camelCase style key on React Native (`accentColor`); single-word properties like `color` are the same in both:
 
 ```tsx
 import { Path } from 'react-native-svg';
@@ -338,7 +339,7 @@ Both methods take an optional fallback as the second argument, returned when the
 
 ## Community
 
-[Contributing guidelines](./CONTRIBUTING.md) | [Code of Conduct](./CODE_OF_CONDUCT.md) | [awesome-styled-components](https://github.com/styled-components/awesome-styled-components)
+[Contributing guidelines](https://github.com/styled-components/styled-components/blob/main/CONTRIBUTING.md) | [Code of Conduct](https://github.com/styled-components/styled-components/blob/main/CODE_OF_CONDUCT.md) | [awesome-styled-components](https://github.com/styled-components/awesome-styled-components)
 
 ## Contributors
 

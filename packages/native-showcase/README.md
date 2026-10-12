@@ -6,13 +6,12 @@ Cross-platform fidget catalog for styled-components v7. Same source runs on iOS 
 
 ```sh
 pnpm install
-pnpm --filter styled-components build
 pnpm --filter native-showcase web       # browser at localhost:8081
 pnpm --filter native-showcase ios       # iOS simulator (via local dev client)
 pnpm --filter native-showcase android   # Android emulator/device (via local dev client)
 ```
 
-Each native script wraps `expo run:<platform>`, which generates a local native project and builds it. Expo SDK 56 canary doesn't have a matching Expo Go build, so the local dev-client flow is the only path. First run is slow (prebuild + dep install + native build); subsequent runs are incremental.
+Each native script wraps `expo run:<platform>`, which generates a local native project and builds it. The showcase runs through a local dev client (`expo start --dev-client`), not Expo Go. First run is slow (prebuild + dep install + native build); subsequent runs are incremental.
 
 Requirements for iOS:
 
@@ -21,14 +20,14 @@ Requirements for iOS:
 
 Requirements for Android:
 
-- Android Studio (provides JDK 21 at `/Applications/Android Studio.app/Contents/jbr/Contents/Home` on macOS - set as `JAVA_HOME` for the build session)
-- Android SDK platform 36 + build-tools 36 + NDK 27 + CMake 3.22 (auto-installed on first build)
+- Android Studio, whose bundled JDK is at `/Applications/Android Studio.app/Contents/jbr/Contents/Home` on macOS (set as `JAVA_HOME` for the build session). Gradle does not download a JDK (`org.gradle.java.installations.auto-download=false`), so a local JDK is required.
+- The Android SDK platform, build-tools, NDK, and CMake versions that the installed React Native and Expo versions ask for (Gradle installs missing ones on first build)
 - An emulator or attached device. Create a Pixel-class AVD via Android Studio and boot it before running.
-- The wrapper is pinned to Gradle 8.13. Expo SDK 56 canary's templated wrapper (Gradle 9.3.1) is incompatible with the Kotlin Gradle Plugin 2.1.20 that React Native 0.85 ships, so `prebuild` regeneration must be followed by re-pinning the wrapper to 8.13 in `android/gradle/wrapper/gradle-wrapper.properties` until upstream lands the Kotlin 2.2.x bump.
+- The Gradle wrapper is pinned to 9.3.1 in `android/gradle/wrapper/gradle-wrapper.properties`.
 
 If `ios/` or `android/` doesn't exist yet, run `pnpm --filter native-showcase prebuild` once to generate them.
 
-If you are iterating on styled-components source while the showcase is running, run `pnpm --filter styled-components build --watch` in a second terminal - Metro watches the dist output, not the source tree.
+The showcase loads styled-components straight from the library source, so no library build is needed and edits to the library reload through Metro.
 
 ### Android dev-client connection
 
@@ -47,6 +46,7 @@ Each entry sits in one broad CSS category. Add new categories to `FidgetCategory
 
 - Color: oklch / lab / color-mix / light-dark
 - Visual effects: filter / box-shadow / gradient / transform / mix-blend-mode
+- Animation: transition / @keyframes / animation-timeline
 - Layout: grid / aspect-ratio / @container / logical spacing
 - Math & units: vw / cqw / calc / min / max / clamp
 - Typography: font-variant / line-clamp / text-decoration

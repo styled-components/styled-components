@@ -37,6 +37,22 @@ describe('createTheme;native parity', () => {
     expect(view.props.style).toEqual(expect.objectContaining({ backgroundColor: '#abcdef' }));
   });
 
+  it('passes a non-string provider value (a platform color object) through to the style', () => {
+    const theme = createTheme({ colors: { bg: '#ffffff' } });
+    const Box = styled(View)`
+      background-color: ${theme.colors.bg};
+    `;
+    // The shape React Native's PlatformColor() returns on iOS.
+    const platformColor = { semantic: ['systemBackground'] };
+    const tree = TestRenderer.create(
+      <ThemeProvider theme={{ colors: { bg: platformColor } }}>
+        <Box />
+      </ThemeProvider>
+    );
+    const view = tree.root.findByType(View);
+    expect(view.props.style).toEqual(expect.objectContaining({ backgroundColor: platformColor }));
+  });
+
   it('falls back to default when no ThemeProvider is supplied', () => {
     const theme = createTheme({ colors: { bg: '#ffffff' } });
     const Box = styled(View)`

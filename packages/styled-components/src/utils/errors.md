@@ -59,7 +59,7 @@ Cannot find a StyleSheet instance. Usually this happens if there are multiple co
 
 ## 11
 
-_This error was replaced with a dev-time warning, it will be deleted for v4 final._ [createGlobalStyle] received children which will not be rendered. Please use the component without passing children elements.
+_This code is retired and nothing raises it._ `createGlobalStyle` warns in development when it receives children, because it never renders them. Use the component without passing children elements.
 
 ## 12
 

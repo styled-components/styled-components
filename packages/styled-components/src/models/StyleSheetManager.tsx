@@ -43,7 +43,7 @@ function warnUnsupportedPlugins(plugins: SCPlugin[] | undefined): void {
       const name = plugin.name || '(anonymous)';
       warnOnce(
         'legacy-stylis-plugin',
-        `plugin "${name}" is a stylis middleware function; v7 plugins are objects with an \`rw\` and/or \`decl\` hook.`,
+        `plugin "${name}" is a stylis middleware function; v7 plugins are objects with an \`rw\` and/or \`decl\` hook. Rewrite the plugin as such an object.`,
         name
       );
       continue;
@@ -56,7 +56,7 @@ function warnUnsupportedPlugins(plugins: SCPlugin[] | undefined): void {
     if (rw === undefined && decl === undefined) {
       warnOnce(
         'plugin-no-hooks',
-        `plugin "${name}" defines neither \`rw\` nor \`decl\`; it is never invoked.`,
+        `plugin "${name}" defines neither \`rw\` nor \`decl\`; it is never invoked. Add one of those hooks or remove the plugin.`,
         name
       );
     }
@@ -172,10 +172,10 @@ export type IStyleSheetManager = React.PropsWithChildren<{
 
 /** Configure style injection for descendant styled components (target element, plugins, prop forwarding). */
 export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element {
-  if (IS_RSC) {
+  if (IS_RSC && getRscSlot) {
     if (ensureSheetReset) ensureSheetReset();
 
-    const slot = getRscSlot!();
+    const slot = getRscSlot();
 
     const parentResolved = slot.override || defaultContextValue;
 
