@@ -9,6 +9,6 @@ module.exports = {
   testEnvironmentOptions: {
     url: 'http://localhost',
   },
-  testPathIgnorePatterns: ['node_modules', 'dist', '.rollup.cache'],
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/dist/', '/\\.rollup\\.cache/'],
   watchPlugins: ['jest-watch-typeahead/filename', 'jest-watch-typeahead/testname'],
 };
