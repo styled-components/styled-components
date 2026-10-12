@@ -2,15 +2,79 @@ packages:
   - 'packages/*'
   - 'packages/styled-components/native'
 
-# Optional security features (NOT recommended for initial migration):
-# These may break legitimate dependencies and should only be enabled after testing
-#
-# catalog:
-#   # Centrally manage shared dependency versions
-#   react: ^18.0.0
-#   typescript: ^5.4.5
-#
-# enable-pre-post-scripts: false  # Block lifecycle scripts
-minimumReleaseAge: 4320 # Wait 3 days before installing new releases
+allowBuilds:
+  unrs-resolver: false
+autoInstallPeers: true
+minimumReleaseAge: 10080 # Wait 7 days before installing new releases
+# next@16.4.0 is the first release with Turbopack's additional roots, which the sandbox needs under
+# the global store (packages/sandbox/next.config.ts). It is under 7 days old (published 2026-10-06),
+# so it and its own @next/* packages are excluded. Remove these entries on 2026-10-14.
+minimumReleaseAgeExclude:
+  - next@16.4.0
+  - '@next/env@16.4.0'
+  - '@next/swc-darwin-arm64@16.4.0'
+  - '@next/swc-darwin-x64@16.4.0'
+  - '@next/swc-linux-arm64-gnu@16.4.0'
+  - '@next/swc-linux-arm64-musl@16.4.0'
+  - '@next/swc-linux-x64-gnu@16.4.0'
+  - '@next/swc-linux-x64-musl@16.4.0'
+  - '@next/swc-win32-arm64-msvc@16.4.0'
+  - '@next/swc-win32-x64-msvc@16.4.0'
+packageExtensions:
+  # These packages' bundled types import `react` without declaring @types/react. Under the global
+  # store the import resolves to untyped JavaScript: native component types become `never` and
+  # Next's `react/experimental` augmentation (style `precedence`, async components) is dropped.
+  next:
+    peerDependencies:
+      '@types/react': '*'
+      '@types/react-dom': '*'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      '@types/react-dom':
+        optional: true
+  react-native:
+    peerDependencies:
+      '@types/react': '*'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+savePrefix: ''
+strictPeerDependencies: false
 trustPolicy: no-downgrade # Block packages with weaker authentication
+# Each version belongs to an older major line and was published without the provenance (a signed
+# build record) that a later release carries. The lockfile pins the exact version.
+trustPolicyExclude:
+  - rollup@3.30.0 # last 3.x; provenance starts at 4.59.0
+  - semver@5.7.2 # last 5.x; provenance starts at 7.6.0
+  - semver@6.3.1 # last 6.x; provenance starts at 7.6.0
+  - ua-parser-js@1.0.41 # last 1.x; provenance starts at 2.0.5
+  - undici-types@6.21.0 # 6.x release; provenance starts at 7.1.0
+virtualStoreType: global
 
+overrides:
+  '@babel/plugin-transform-modules-systemjs': '>=7.29.4 <8.0.0'
+  '@types/react': 18.3.28
+  baseline-browser-mapping: '>=2.11.0 <3.0.0'
+  brace-expansion: '>=2.1.4'
+  browserslist: '>=4.28.7 <5.0.0'
+  d3-color: '>=3.1.0'
+  fast-uri: '>=3.1.6 <4.0.0'
+  fast-xml-builder: '>=1.1.7 <2.0.0'
+  fast-xml-parser: '>=5.7.0 <6.0.0'
+  joi: '>=17.13.6 <18.0.0'
+  js-cookie: '>=3.0.6 <4.0.0'
+  js-yaml@3: '>=3.15.2 <4.0.0'
+  js-yaml@4: '>=4.3.2 <5.0.0'
+  lodash: '>=4.17.21'
+  minimatch: '>=3.1.3'
+  nanoid: '>=3.3.18 <4.0.0'
+  picomatch: '>=4.0.2'
+  postcss: '>=8.5.23 <9.0.0'
+  postcss-selector-parser: '>=7.1.3 <8.0.0'
+  serialize-javascript: '>=7.0.5'
+  shell-quote: '>=1.9.0 <2.0.0'
+  ws@6: '>=6.2.4 <7.0.0'
+  ws@7: '>=7.5.11 <8.0.0'
+  ws@8: '>=8.21.0 <9.0.0'
+  yaml: '>=2.7.1'
