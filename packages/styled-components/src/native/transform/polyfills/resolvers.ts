@@ -887,9 +887,8 @@ function themeResolver(value: string): Resolver | null {
       }
       v = Reflect.get(v, segments[i]);
     }
-    // A resolver yields a number or string; any other leaf (missing, null,
-    // or a non-scalar) takes the fallback.
-    const out = typeof v === 'number' || typeof v === 'string' ? v : fallback;
+    // Known gap: the public `Resolver` type is narrower than what a ThemeProvider override can supply (a `PlatformColor` object, for example).
+    const out = v === undefined || v === null ? fallback : (v as number | string);
     lastTheme = env.theme;
     lastResult = out;
     return out;
