@@ -15,13 +15,6 @@ const path = require('path');
 const STORE_LINKS_SEGMENT = `${path.sep}links${path.sep}`;
 
 /**
- * Packages the library requires lazily without declaring them, because
- * react-native brings them along. They resolve from react-native's own
- * dependencies.
- */
-const REACT_NATIVE_DEPENDENCIES = new Set(['@react-native/normalize-colors']);
-
-/**
  * The directory holding pnpm's global virtual store slots, found from where an
  * installed package really lives. Empty when dependencies sit inside the
  * workspace (no global store), where the workspace root watch folder already
@@ -56,10 +49,6 @@ function pinSingletonsToApp({ libraryRoot, projectRoot, resolveRequest }) {
   );
   const libraryPrefix = libraryRoot + path.sep;
   const appOrigin = path.join(projectRoot, 'package.json');
-  const reactNativeOrigin = path.join(
-    fs.realpathSync(path.join(projectRoot, 'node_modules', 'react-native')),
-    'package.json'
-  );
 
   return (context, moduleName, platform) => {
     const fromLibrary = context.originModulePath.startsWith(libraryPrefix);
@@ -72,14 +61,6 @@ function pinSingletonsToApp({ libraryRoot, projectRoot, resolveRequest }) {
 
       if (pinned) {
         return resolveRequest({ ...context, originModulePath: appOrigin }, moduleName, platform);
-      }
-
-      if (fromLibrary && REACT_NATIVE_DEPENDENCIES.has(packageName)) {
-        return resolveRequest(
-          { ...context, originModulePath: reactNativeOrigin },
-          moduleName,
-          platform
-        );
       }
     }
 
