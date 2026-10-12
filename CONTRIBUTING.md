@@ -20,7 +20,7 @@ These days, we highly recommend trying an AI coding assistant to get instant fee
 
 ### Environment setup
 
-1. Ensure `pnpm` is installed (https://pnpm.io/installation)
+1. Ensure `pnpm` is installed (https://pnpm.io/installation). The repository pins its pnpm version in `package.json`, and pnpm 11.10 or newer switches to that version automatically, so Corepack isn't needed
 2. [Fork the repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo), then pull it down to your disk: `git clone git@github.com:YOUR_USERNAME/styled-components.git`
 3. Hop into the styled-components folder and run `pnpm install`
 4. Set the base repository as upstream: `git remote add upstream git@github.com:styled-components/styled-components.git` (makes it easier to pull updates to your fork)
@@ -32,7 +32,7 @@ Helpful commands:
 - run unit tests: `pnpm test`
 - check code style `pnpm prettier` (handled automatically if you have a prettier extension installed in your IDE)
 - run build: `pnpm build`
-- run dev sandbox: `pnpm --filter sandbox dev` (or just `pnpm dev` if you're in that folder)
+- run dev sandbox: `pnpm --filter sandbox dev` (or just `pnpm dev` if you're in that folder). The sandbox uses the built library, so run `pnpm build` after changing library source
 
 ### Making changes
 

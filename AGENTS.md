@@ -3,7 +3,9 @@ mapped below.
 
 ## Basics
 
-- Use pnpm package manager and associated commands
+- Use pnpm package manager and associated commands. `packageManager` in `package.json` pins the
+  version; install settings live in `pnpm-workspace.yaml`, never `.npmrc`. Installs link from pnpm's
+  global virtual store, so each git worktree installs in seconds
 - Use conventional commits: `(feat|fix|chore|refactor|test|docs|style|perf|build|ci): [description]`
 
 ## Critical Constraints
