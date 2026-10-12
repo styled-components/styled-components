@@ -74,6 +74,29 @@ The registry collects styles from client components during SSR so pages are full
 
 - React 16.8+ for client components
 - React 19+ for RSC
+- The Node.js runtime for any route that renders styled-components on the server. The edge runtime (`export const runtime = 'edge'`) is not supported; remove that line, or set it to `'nodejs'`
+
+**Why is there a `<style>` tag before every server-rendered element?**
+
+Each server component instance carries its own copy of its styles, so the styles survive React swapping a loading fallback for the finished content. The repeated tags cost little: the browser handles them quickly, compression shrinks identical copies to almost nothing, and the data React sends for server components includes each distinct style once. For a very long list, style the items from one styled parent so the whole list emits a single tag:
+
+```tsx
+const Slides = styled.ul`
+  & > li {
+    scroll-snap-align: center;
+  }
+`;
+
+export default function Carousel({ slides }) {
+  return (
+    <Slides>
+      {slides.map(slide => (
+        <li key={slide.id}>{slide.title}</li>
+      ))}
+    </Slides>
+  );
+}
+```
 
 **For traditional SSR (Next.js Pages Router, custom SSR):**
 

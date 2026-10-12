@@ -8,6 +8,7 @@
  */
 import fs from 'fs';
 import path from 'path';
+import errorMap from '../utils/errors';
 import { findFreeNodeGlobalRefs, NODE_GLOBAL_NAMES } from './nodeGlobalScan';
 
 const distDir = path.resolve(__dirname, '../../dist');
@@ -107,6 +108,41 @@ describe('dead-code elimination: browser build', () => {
     expect(browserESM).not.toContain('CLOSING_TAG');
     expect(browserESM).not.toContain('appendStyleChunks');
     expect(browserESM).not.toContain('Transform');
+  });
+});
+
+describe('edge runtime guard: browser build', () => {
+  // Next.js applies the package's browser file map to edge bundles, so a server
+  // component loads the browser build against the react-server build of React,
+  // which has no createContext. The guard turns that crash into error 19.
+  const browserCJSPath = path.join(distDir, 'styled-components.browser.cjs.js');
+
+  const load = (reactModule: () => unknown): { default: unknown } => {
+    let loaded: { default: unknown } | undefined;
+    try {
+      jest.isolateModules(() => {
+        jest.doMock('react', reactModule);
+        loaded = require(browserCJSPath);
+      });
+    } finally {
+      jest.dontMock('react');
+    }
+    return loaded as { default: unknown };
+  };
+
+  it('throws error 19 when React has no createContext', () => {
+    const withoutCreateContext = () => {
+      const { createContext, ...rest } = jest.requireActual('react');
+      return rest;
+    };
+
+    expect(() => load(withoutCreateContext)).toThrow(errorMap[19].trim());
+  });
+
+  it('loads when React has createContext', () => {
+    const loaded = load(() => jest.requireActual('react'));
+
+    expect(typeof loaded.default).toBe('function');
   });
 });
 

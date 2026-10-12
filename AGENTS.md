@@ -4,14 +4,18 @@ mapped below.
 ## Basics
 
 - Use pnpm package manager and associated commands
-- Never run the dev server yourself, ask the user to start it if needed
 - Use conventional commits: `(feat|fix|chore|refactor|test|docs|style|perf|build|ci): [description]`
 
 ## Critical Constraints
 
+- We strive for perfection in the lightest and quickest package. A change proves its cost against the
+  prior code before landing: shipped bundle bytes, emitted output bytes (CSS, HTML, server-component
+  payload), and render time, measured before and after; a regression in any needs a stated reason
 - NEVER use `precedence` or `href` on `<style>` elements. React 19 Float merges same-precedence tags,
-  strips custom `data-*` attributes, and hoists to `<head>` where source ordering is unpredictable.
-  See [docs/rsc-style-injection.md](docs/rsc-style-injection.md).
+  strips custom `data-*` attributes, and hoists to `<head>`, where the bucket lands ahead of the client
+  registry and never unmounts. See [docs/rsc-style-injection.md](docs/rsc-style-injection.md).
+- Server rendering requires the Node.js runtime; edge bundles load the browser build. NEVER add an
+  `exports` map to work around it. See [docs/build-architecture.md](docs/build-architecture.md).
 - The native entry must NEVER transitively import DOM code via a value import. Use `import type` and
   branded `Symbol.for()` checks instead of `instanceof`. Verify:
   `grep -c 'document\.' native/dist/styled-components.native.cjs.js` must be 0.
@@ -65,7 +69,8 @@ mapped below.
 
 - `pnpm build` -- Build main package
 - `pnpm test` -- Run all tests
-- `pnpm --filter sandbox dev` -- Start Next.js dev server
+- `pnpm --filter sandbox dev` -- Start Next.js dev server. The sandbox loads the built `dist`, not
+  `src`; run `pnpm build` after source changes and before validating in the sandbox
 - `pnpm --filter styled-components test:web` -- Test web build
 - `pnpm --filter styled-components test:native` -- Test React Native
 - `pnpm --filter styled-components test:types` -- Type contract suites (compile-only, no runner)

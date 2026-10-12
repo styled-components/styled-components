@@ -2,6 +2,7 @@ declare let SC_DISABLE_SPEEDY: boolean | null | undefined;
 declare let __VERSION__: string;
 
 import React from 'react';
+import styledError from './utils/error';
 
 export const SC_ATTR: string =
   (typeof process !== 'undefined' &&
@@ -24,6 +25,10 @@ export const IS_BROWSER = typeof window !== 'undefined' && typeof document !== '
  * inlining and terser dead-code elimination for all RSC branches.
  */
 export const IS_RSC: boolean = typeof React.createContext === 'undefined';
+
+// Fires only where the browser build is loaded next to React's server build
+// (docs/build-architecture.md, "Edge runtime").
+if (!IS_RSC && !React.createContext) throw styledError(19);
 
 function readSpeedyFlag(name: string): boolean | undefined {
   if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {

@@ -15,6 +15,8 @@ export const makeStyleTag = (
   target?: InsertionTarget | undefined,
   nonce?: string | undefined
 ): HTMLStyleElement => {
+  if (typeof document === 'undefined') throw styledError(20);
+
   const head = document.head;
   const parent = target || head;
   const style = document.createElement('style');

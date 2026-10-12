@@ -20,9 +20,10 @@ automatically. In browser, standalone and native builds rollup replaces the expr
 for dead-code elimination. Because it is module-level rather than per-render, gating a hook behind it
 does not violate the rules of hooks.
 
-`styleSheet.server` is a runtime flag set by `ServerStyleSheet`. It exists because Turbopack resolves
-the `browser` entry when server-rendering client components, which makes `__SERVER__` false on the
-server; this flag is the fallback that still reports the truth there.
+`styleSheet.server` is a runtime flag set by `ServerStyleSheet`. It lets a sheet forced into server
+mode collect styles synchronously in a build where `__SERVER__` is false (#3551). It does not make
+the browser build work on a server: that build's tags are always DOM tags, so a server render there
+fails at the first `<style>` creation (see "Edge runtime").
 
 Combine all three (`__SERVER__ || IS_RSC || ssc.styleSheet.server`) with one deliberate exception:
 `createGlobalStyle`'s server-cache cleanup drops the `IS_RSC` term, because the `IS_RSC` branch above
@@ -47,8 +48,30 @@ Verify with `grep -c 'document\.' native/dist/styled-components.native.cjs.js`, 
 
 ## Module resolution
 
-The `browser` field in `package.json` maps server bundles to their browser-specific alternatives. It
-is preferred over `exports`, which caused TS2742 in composite TypeScript projects.
+The `browser` field in `package.json` maps server bundles to their browser-specific alternatives.
+There is no `exports` map. The 6.3.7 attempt was reverted for TS2742 in composite TypeScript projects
+(#5648) and two installed copies of the package (#5659), and no map can keep every current consumer
+on the file it resolves today: Jest under jsdom and Metro (Expo web) send identical conditions
+(`default`, `require` or `import`, `browser`) yet land on different files (`server.cjs` versus
+`browser.esm`). The best candidate map passed every bundler, Next.js byte-identity, composite
+TypeScript, and both revert cases, but moved every Jest-jsdom suite onto the browser build. Jest 29's
+resolver (`resolve.exports` 2.0.3) also throws when a matched condition has no inner match, where
+Metro falls back to the next key, so a nested map cannot paper over the difference.
+
+### Edge runtime
+
+Server rendering on an edge runtime is unsupported. Next.js applies the `browser` file map to edge
+bundles, so the server loads the browser build:
+
+- A server component fails `next build`: the browser build calls `React.createContext` at module
+  load, and the `react-server` build of React has none. Error 19 reports this, thrown from a guard in
+  `src/constants.ts` (`!IS_RSC && !React.createContext`).
+- A client component crashes at request time on the first DOM access. Error 20 reports this, thrown
+  from a `typeof document` guard at the top of `makeStyleTag` in `src/sheet/dom.ts`.
+
+Both messages tell the reader to use the Node.js runtime; the message text lives in the development
+error map, so a consumer's production bundle carries only the two guards. Neither guard spells
+`typeof React.createContext === 'undefined'`, which rollup replaces with `false` in browser builds.
 
 ## Type package dependencies
 

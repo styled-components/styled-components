@@ -28,6 +28,11 @@ const getGlobalEmitCounts =
     ? createRSCCache(() => new Map<string, number>())
     : null;
 
+/** Request-scoped shared `<style>` elements (docs/rsc-style-injection.md, "Payload dedup"). */
+const getGlobalStyleElements = IS_RSC
+  ? createRSCCache(() => new Map<string, React.ReactElement>())
+  : null;
+
 /**
  * Create a component that injects global CSS when mounted. Supports theming and dynamic props.
  *
@@ -96,8 +101,8 @@ export default function createGlobalStyle<Props extends object>(
     // accumulate unboundedly in jsdom test environments (O(n²) regression).
     // On a real server without ServerStyleSheet, VirtualTag is used and styles are
     // discarded anyway, so skipping this path has no functional impact.
-    // Turbopack resolves the browser entry for SSR, so __SERVER__ is false there;
-    // styleSheet.server handles that case at runtime.
+    // styleSheet.server collects styles synchronously from a sheet forced into
+    // server mode where __SERVER__ is false (#3551, docs/build-architecture.md).
     if (IS_RSC || ssc.styleSheet.server) {
       renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
     }
@@ -172,17 +177,28 @@ export default function createGlobalStyle<Props extends object>(
           counts.set(styledComponentId, count);
           if (count === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
             console.warn(
-              `Over ${count} instances of the global style ${styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML.\n` +
+              `${count} instances of the global style ${styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML.\n` +
                 'A global style is normally mounted once, at the root of the app. Move it higher in the tree so it renders only once per page.'
             );
           }
         }
 
-        return React.createElement('style', {
-          key: styledComponentId + '-' + instance,
-          'data-styled-global': styledComponentId,
-          children: stripSplitter(css),
-        });
+        // createRSCCache returns null without React.cache (React 18); emit unshared then.
+        const styleElements = getGlobalStyleElements && getGlobalStyleElements();
+        const styleKey = styledComponentId + '\n' + css;
+        let styleElement = styleElements && styleElements.get(styleKey);
+        if (!styleElement) {
+          styleElement = React.createElement('style', {
+            key: styledComponentId,
+            'data-styled-global': styledComponentId,
+            children: stripSplitter(css),
+          });
+          if (styleElements) styleElements.set(styleKey, styleElement);
+        }
+
+        // Array-wrapped: the payload writer references a repeated element only
+        // inside an array; a bare returned element repeats its type and key.
+        return [styleElement];
       }
     }
 
