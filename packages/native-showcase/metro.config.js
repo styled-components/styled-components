@@ -1,6 +1,6 @@
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
-const { pinLibraryToApp, storeWatchFolders } = require('../../scripts/metro-workspace.cjs');
+const { pinSingletonsToApp, storeWatchFolders } = require('../../scripts/metro-workspace.cjs');
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, '../..');
@@ -27,7 +27,7 @@ const config = getDefaultConfig(projectRoot);
 config.watchFolders = [workspaceRoot, ...storeWatchFolders(projectRoot)];
 
 const defaultResolveRequest = config.resolver.resolveRequest;
-const baseResolveRequest = pinLibraryToApp({
+const baseResolveRequest = pinSingletonsToApp({
   libraryRoot: path.resolve(workspaceRoot, 'packages/styled-components'),
   projectRoot,
   resolveRequest: (context, moduleName, platform) =>
