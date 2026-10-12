@@ -8,6 +8,19 @@ allowBuilds:
   unrs-resolver: false
 autoInstallPeers: true
 minimumReleaseAge: 10080 # Wait 7 days before installing new releases
+# Type packages the published .d.ts files import without declaring. Under the
+# global store TypeScript resolves from a package's real path, so an undeclared
+# @types package is lost and the types silently become any.
+packageExtensions:
+  next:
+    peerDependencies:
+      '@types/react': '*'
+      '@types/react-dom': '*'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      '@types/react-dom':
+        optional: true
 overrides:
   '@types/react': '19'
   '@types/react-dom': '19'
