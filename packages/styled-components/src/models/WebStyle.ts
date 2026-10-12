@@ -13,7 +13,9 @@ import generateName from '../utils/generateAlphabeticName';
 import { LIMIT as TOO_MANY_CLASSES_LIMIT } from '../utils/createWarnTooManyClasses';
 import { fifoSet } from '../utils/fifoMap';
 import { hash, phash } from '../utils/hash';
+import { IS_RSC } from '../utils/isRsc';
 import { joinStrings } from '../utils/joinStrings';
+import { recallRscRules, rememberRscRules } from '../utils/rscCache';
 import { warnOnce } from '../utils/warnOnce';
 import { flushKeyframes, type CompiledKeyframes } from './Keyframes';
 
@@ -91,15 +93,18 @@ export default class WebStyle {
    * Produce per-level compiled CSS without writing any rules to the tag.
    * Claims each level's name on the sheet for the current turn so a sibling
    * generating the same class skips recompilation; the CSSOM write happens
-   * in {@link inject}.
+   * in {@link inject}. `options.recompile` (server components only) compiles
+   * every level even when its name is already registered or cached.
    */
   generate(
     executionContext: ExecutionContext,
     styleSheet: StyleSheet,
-    compiler: Compiler
+    compiler: Compiler,
+    options?: { recompile?: boolean }
   ): GeneratedStyle {
+    const recompile = options !== undefined && options.recompile === true;
     const baseGenerated = this.baseStyle
-      ? this.baseStyle.generate(executionContext, styleSheet, compiler)
+      ? this.baseStyle.generate(executionContext, styleSheet, compiler, options)
       : null;
 
     if (this.resolvedSource === undefined) {
@@ -212,10 +217,21 @@ export default class WebStyle {
     // Permanent registration or a same-turn claim by a sibling both mean the
     // rules already exist, so skip compilation. Followers still receive the
     // winner's bytes so a discarded claimer cannot leave them empty-handed.
-    const claimed = styleSheet.claimNameForId(this.componentId, name);
+    // The server-component path registers each name as soon as `generate`
+    // returns and recalls rules from the process-wide cache, so it needs no
+    // turn-scoped claim.
+    const claimed = IS_RSC
+      ? !styleSheet.hasNameForId(this.componentId, name)
+      : styleSheet.claimNameForId(this.componentId, name);
+    // A name an earlier request already compiled keeps its rules.
+    const known = IS_RSC && claimed && !recompile ? recallRscRules(this, name) : undefined;
     let rules: string[];
-    if (!claimed) {
-      rules = styleSheet.getProvisionalRules(this.componentId, name) ?? EMPTY_RULES;
+    if (known !== undefined) {
+      rules = known;
+    } else if (!claimed && !recompile) {
+      rules = IS_RSC
+        ? EMPTY_RULES
+        : (styleSheet.getProvisionalRules(this.componentId, name) ?? EMPTY_RULES);
     } else if (source !== null && fastFilled !== null) {
       const fast = compiler.emit(source, fastFilled, '.' + name, this.componentId, fastFragments);
       if (fast !== null) {
@@ -226,10 +242,10 @@ export default class WebStyle {
         if (!css) css = buildHashCSS(source.strings, fastFilled, fastFragments);
         rules = compiler.compile(css, '.' + name, undefined, this.componentId);
       }
-      styleSheet.stashProvisionalRules(this.componentId, name, rules);
+      this.shareRules(styleSheet, name, rules);
     } else {
       rules = compiler.compile(css, '.' + name, undefined, this.componentId);
-      styleSheet.stashProvisionalRules(this.componentId, name, rules);
+      this.shareRules(styleSheet, name, rules);
     }
 
     const levels = baseGenerated ? baseGenerated.levels.slice() : [];
@@ -240,6 +256,12 @@ export default class WebStyle {
       levels,
       keyframes,
     };
+  }
+
+  /** Hand a freshly compiled name's rules to whoever renders it next: later requests on the server, same-turn siblings elsewhere. */
+  private shareRules(styleSheet: StyleSheet, name: string, rules: string[]): void {
+    if (IS_RSC) rememberRscRules(this, name, rules);
+    else styleSheet.stashProvisionalRules(this.componentId, name, rules);
   }
 
   inject(styleSheet: StyleSheet, generated: GeneratedStyle): string {

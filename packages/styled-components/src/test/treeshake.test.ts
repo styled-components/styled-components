@@ -7,6 +7,7 @@
  */
 import fs from 'fs';
 import path from 'path';
+import errorMap from '../utils/errors';
 
 const distDir = path.resolve(__dirname, '../../dist');
 const nativeDistDir = path.resolve(__dirname, '../../native/dist');
@@ -44,6 +45,46 @@ describe('dead-code elimination: browser build', () => {
     // matching SVG attribute names in the inlined isPropValid regex
     // (`patternTransform`, `gradientTransform`, …).
     expect(browserESM).not.toMatch(/\bnew Transform\b/);
+  });
+});
+
+/**
+ * Next.js applies the `browser` file map to edge bundles, so a server render
+ * on the edge runtime loads the browser build. A React Server Components copy
+ * of React has no `createContext`, which the browser build would otherwise hit
+ * as an anonymous TypeError at module load.
+ */
+describe('browser build on an edge-runtime server', () => {
+  const browserBundle = path.join(distDir, 'styled-components.browser.cjs.js');
+  /** The edge-runtime error is thrown as `throw <minified styledError>(19)`. */
+  const edgeGuard = /throw \w+\(19\)/;
+
+  afterEach(() => {
+    jest.dontMock('react');
+    jest.resetModules();
+  });
+
+  it('reports the edge-runtime fix when React has no createContext', () => {
+    jest.doMock('react', () => {
+      const { createContext: _createContext, ...serverComponentReact } =
+        jest.requireActual('react');
+      return serverComponentReact;
+    });
+
+    expect(() => require(browserBundle)).toThrow(new Error(errorMap[19].trim()));
+  });
+
+  it('loads when React has createContext', () => {
+    expect(() => require(browserBundle)).not.toThrow();
+  });
+
+  it('carries the guard only in the bundles that can reach an edge runtime', () => {
+    expect(read('styled-components.browser.cjs.js')).toMatch(edgeGuard);
+    expect(read('styled-components.browser.esm.js')).toMatch(edgeGuard);
+    expect(read('styled-components.cjs.js')).not.toMatch(edgeGuard);
+    expect(read('styled-components.esm.js')).not.toMatch(edgeGuard);
+    expect(readNative('styled-components.native.js')).not.toMatch(edgeGuard);
+    expect(readNative('styled-components.native.esm.js')).not.toMatch(edgeGuard);
   });
 });
 
@@ -687,5 +728,46 @@ describe('ESM tree-shakeability', () => {
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
+  });
+});
+
+/**
+ * `files` includes `native`, and the workspace install puts the native
+ * package's dependencies in `native/node_modules`, which would otherwise ship
+ * to every consumer. The listing is a dry run, so nothing is written.
+ */
+describe('published package contents', () => {
+  const { execFileSync } = require('child_process');
+  const packageDir = path.resolve(__dirname, '../..');
+  let packed: string[];
+
+  beforeAll(() => {
+    const listing: { files: { path: string }[] }[] = JSON.parse(
+      execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
+        cwd: packageDir,
+        encoding: 'utf8',
+        maxBuffer: 256 * 1024 * 1024,
+      })
+    );
+    packed = listing[0].files.map(file => file.path);
+  });
+
+  it('packs no node_modules path', () => {
+    expect(packed.filter(file => file.includes('node_modules/'))).toEqual([]);
+  });
+
+  it('packs no repo-only test helpers', () => {
+    expect(packed.filter(file => file.startsWith('test-utils/'))).toEqual([]);
+  });
+
+  it('still packs the native entry points', () => {
+    expect(packed).toEqual(
+      expect.arrayContaining([
+        'native/package.json',
+        'native/dist/styled-components.native.js',
+        'native/reanimated/package.json',
+        'native/web-bridge/package.json',
+      ])
+    );
   });
 });
