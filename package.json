@@ -29,7 +29,7 @@
   "engines": {
     "node": ">= 14"
   },
-  "packageManager": "pnpm@10.0.0",
+  "packageManager": "pnpm@12.11.1",
   "devDependencies": {
     "@biomejs/biome": "2.5.7",
     "@changesets/cli": "^2.27.7",
@@ -41,17 +41,5 @@
   },
   "lint-staged": {
     "*": "biome check --write --no-errors-on-unmatched"
-  },
-  "pnpm": {
-    "overrides": {
-      "@types/react": "19",
-      "@types/react-dom": "19",
-      "react": "19.2.3",
-      "react-dom": "19.2.3",
-      "fast-xml-parser": ">=5.7.0",
-      "postcss": ">=8.5.10",
-      "serialize-javascript": ">=7.0.5",
-      "shell-quote": ">=1.8.4"
-    }
   }
 }
