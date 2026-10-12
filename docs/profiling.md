@@ -7,7 +7,7 @@ Bun records a CPU profile and emits a markdown report (`--cpu-prof-md`: hot func
 - Color polyfill only (skips transformDecl orchestration; pre-tokenizes operands so the profile is dominated by polyfill self-time): `bun --cpu-prof --cpu-prof-md --cpu-prof-name=color-polyfill --cpu-prof-dir=./.cpu-profiles src/native/profile-color-polyfill.ts`
 - Animation only (per-segment color + value interpolation build + hot helpers): `bun --cpu-prof --cpu-prof-md --cpu-prof-name=animation --cpu-prof-dir=./.cpu-profiles src/native/profile-animation.ts`
 
-`SC_PROFILE_SMOKE=1` runs every scenario of the native scripts once with no warmup (numbers are meaningless); `pnpm verify` uses it to prove the native pipeline script still executes.
+`SC_PROFILE_SMOKE=1` runs every scenario of the native scripts once with no warmup (numbers are meaningless); `pnpm verify` uses it to prove the native pipeline script still executes, and skips that step with a message when `bun` is not installed.
 
 `--cpu-prof-name` sets the output basename. If you omit `--cpu-prof-dir`, files are written in the current directory (Bun may use a name without a `.md` extension even for markdown content; the file is still markdown).
 

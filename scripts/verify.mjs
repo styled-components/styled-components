@@ -14,12 +14,19 @@ const steps = [
     label: 'native profile harness smoke',
     args: ['--filter', 'styled-components', 'exec', 'bun', 'src/native/profile-pipeline.ts'],
     env: { SC_PROFILE_SMOKE: '1' },
+    requires: 'bun',
   },
   { label: 'test (styled-components)', args: ['run', 'test'] },
 ];
 
 for (const step of steps) {
   console.log(`\n==> ${step.label}\n`);
+  if (step.requires && spawnSync(step.requires, ['--version'], { stdio: 'ignore' }).error) {
+    console.log(
+      `skipped: \`${step.requires}\` is not installed (https://bun.sh). Install it to run this step.`
+    );
+    continue;
+  }
   const result = spawnSync('pnpm', step.args, {
     env: { ...process.env, ...step.env },
     stdio: 'inherit',
