@@ -1,11 +1,5 @@
 import React, { createElement, Ref } from 'react';
-import {
-  getRN,
-  matchMedia,
-  MediaQueryEnv,
-  useContainerContext,
-  useMediaEnv,
-} from '../native/responsive';
+import { getRN, matchMedia, MediaQueryEnv, useMediaEnv } from '../native/responsive';
 import {
   getAnimationAdapter,
   NOOP_ADAPTER,
@@ -16,7 +10,6 @@ import {
   ContainerEntry,
   DEFAULT_CASCADE,
   DEFAULT_NATIVE_STYLE,
-  EMPTY_CONTAINER_CTX,
   NativeCascadeValues,
   NativeStyleContext,
   NativeStyleContextValue,

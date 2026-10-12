@@ -571,7 +571,7 @@ import {
   NativeStyleContext,
 } from './NativeStyleContext';
 
-export function useContainerContext(): ContainerContextValue {
+function useContainerContext(): ContainerContextValue {
   return useContext(NativeStyleContext).container;
 }
 

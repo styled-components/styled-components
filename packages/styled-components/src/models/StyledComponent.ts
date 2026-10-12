@@ -57,7 +57,6 @@ import {
   recallRscRules,
   type RscRequestState,
 } from '../utils/rscCache';
-import { setToString } from '../utils/setToString';
 import shallowEqual from '../utils/shallowEqual';
 import { warnOnce } from '../utils/warnOnce';
 import WebStyle, { GeneratedStyle } from './WebStyle';
