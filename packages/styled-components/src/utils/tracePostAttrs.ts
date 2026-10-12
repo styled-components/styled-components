@@ -83,7 +83,7 @@ function findStaticBaseDecl(ast: Root, prop: string): string | undefined | null 
 type PostAttrCallback = (p: Dict<unknown>, ast: CompiledAst) => unknown;
 
 /** True for an attrs entry that is an arity-2 callback (`(props, ast) => ...`). */
-export function isPostAttr(attr: unknown): attr is PostAttrCallback {
+function isPostAttr(attr: unknown): attr is PostAttrCallback {
   return typeof attr === 'function' && attr.length >= 2;
 }
 
@@ -115,7 +115,7 @@ export function buildPostAttrsPlans<Props extends BaseObject>(
   return plans;
 }
 
-export function tracePostAttr<Props extends BaseObject>(
+function tracePostAttr<Props extends BaseObject>(
   attr: PostAttrCallback,
   rules: RuleSet<Props>
 ): PostAttrsPlan | null {
