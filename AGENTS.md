@@ -73,6 +73,10 @@ mapped below.
 - `pnpm test` -- Run all tests
 - `pnpm --filter sandbox dev` -- Start Next.js dev server. The sandbox loads the built `dist`, not
   `src`; run `pnpm build` after source changes and before validating in the sandbox
+- `pnpm check:type-resolution` -- Traces TypeScript resolution over the library and sandbox tsconfigs
+  and fails when a package in pnpm's global store imports a type package it does not declare (those
+  types would silently become `any`). Fix with an optional peer under `packageExtensions`, or a
+  reasoned entry in the script's `KNOWN_FALSE_POSITIVES`. Exit 2 means the check saw nothing
 - `pnpm --filter styled-components test:web` -- Test web build
 - `pnpm --filter styled-components test:native` -- Test React Native
 - `pnpm --filter styled-components test:types` -- Type contract suites (compile-only, no runner)
