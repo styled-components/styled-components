@@ -5,16 +5,20 @@ Try the [benchmarks app](https://necolas.github.io/react-native-web/benchmarks) 
 To run the benchmarks locally:
 
 ```sh
-yarn benchmarks
-open ./packages/benchmarks/dist/index.html
+pnpm --filter styled-components build
+pnpm --filter @styled-components/benchmarks build
+pnpm --filter @styled-components/benchmarks open
 ```
 
-Develop against these benchmarks:
+The last command opens `packages/benchmarks/index.html` with the macOS `open` command; on other systems, open that file in a browser. The benchmarks load the built styled-components package, so rebuild it after changing library code, then rebuild the benchmarks.
+
+Rebuild the benchmarks on every save while developing against them:
 
 ```sh
-yarn compile --watch
-yarn benchmarks --watch
+pnpm --filter @styled-components/benchmarks build --watch
 ```
+
+Headless runs (no browser window) use `bench:headless`, `bench:headless:creation`, `bench:headless:ssr`, and `bench:headless:rsc`, for example `pnpm --filter @styled-components/benchmarks bench:headless:ssr`.
 
 ## Notes
 
