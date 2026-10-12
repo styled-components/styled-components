@@ -69,7 +69,8 @@ mapped below.
 
 - `pnpm build` -- Build main package
 - `pnpm test` -- Run all tests
-- `pnpm --filter sandbox dev` -- Start Next.js dev server
+- `pnpm --filter sandbox dev` -- Start Next.js dev server. The sandbox loads the built `dist`, not
+  `src`; run `pnpm build` after source changes and before validating in the sandbox
 - `pnpm --filter styled-components test:web` -- Test web build
 - `pnpm --filter styled-components test:native` -- Test React Native
 - `pnpm --filter styled-components test:types` -- Type contract suites (compile-only, no runner)
