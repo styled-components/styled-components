@@ -468,8 +468,7 @@ function detectPseudoSelector(sel: string): PseudoState | null {
  * `.sc-FooId &` / `.sc-FooId > &`. Optional pseudo on `&`
  * (`${Foo} &:hover`) is captured for composite matching.
  *
- * Direct-children limitation (per
- * `~/.claude/plans/v7-three-context-consolidation.md`): the chain
+ * Direct-children limitation: the chain
  * threads through every styled-component intermediary's ParentContext
  * publish, so a non-styled user component between Foo and the
  * matching descendant breaks the match. Both the dynamic and the

@@ -29,8 +29,8 @@ interface SettleState {
  * RN's Android snap engine leaves holes where the scroller rests between
  * snap positions (device-verified on RN 0.85: touch-down cancels an
  * in-flight snap animation and touch-up without a drag never re-snaps).
- * css-scroll-snap-1 §6.1 requires a mandatory snap container to rest on
- * a snap position whenever there is no active scroll operation, so the
+ * A mandatory snap container must rest on a snap position whenever there
+ * is no active scroll operation, so the
  * styled scroller watches its own rest position and issues an animated
  * scrollTo to the nearest snap point when the engine misses. iOS paging
  * is native and never misses; there the check is a no-op.

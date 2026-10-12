@@ -332,7 +332,7 @@ function degreesOf(t: Token): number | null {
 /**
  * Length-token fold shared by `line-height` / `letter-spacing` /
  * `font-size`: px / unitless pass through as-is, other absolute units
- * fold via the shared §5.2 ratio table, and everything else (em / rem /
+ * fold via the shared absolute-unit ratio table, and everything else (em / rem /
  * lh / rlh / viewport / container) defers to `buildResolver` so parser
  * acceptance tracks resolver coverage automatically.
  */
@@ -352,7 +352,7 @@ function foldLengthToken(t: Token): LengthFold {
 
 /**
  * `line-height` handler. Numeric multipliers and px resolve at compile
- * time; absolute lengths fold via §5.2 ratios; everything else delegates
+ * time; absolute lengths fold via the unit ratio table; everything else delegates
  * to buildResolver so coverage tracks the resolver automatically. rn-web
  * defers to the browser.
  */
@@ -392,7 +392,7 @@ export function lineHeightHandler(tokens: Token[]): Dict<any> | null {
 
 /**
  * `letter-spacing` handler. Numeric and px values resolve at compile time;
- * absolute lengths fold via §5.2 ratios; everything else delegates to
+ * absolute lengths fold via the unit ratio table; everything else delegates to
  * buildResolver. rn-web defers to the browser.
  */
 export function letterSpacingHandler(tokens: Token[]): Dict<any> | null {

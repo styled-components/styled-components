@@ -167,8 +167,8 @@ export function placeContentShorthand(tokens: Token[]): Dict<any> | null {
 /**
  * Keyword set for `align-items` / `justify-items` / `align-self` / `justify-self`.
  * Authors writing `start` / `end` / `self-start` / `self-end` get normalized to
- * RN's flex-prefixed enum since Yoga and rn-web both accept only those forms
- * (see `knowledge_rnweb_alignment_enum.md`). `first baseline` / `last baseline`
+ * RN's flex-prefixed enum since Yoga and rn-web both accept only those forms.
+ * `first baseline` / `last baseline`
  * collapse to `baseline` (with a dev warn); `safe` / `unsafe` overflow prefixes
  * are stripped (with a dev warn).
  */

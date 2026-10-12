@@ -24,8 +24,7 @@ import { Token, TokenKind } from './tokens';
  * standard form.
  *
  * Additions to this list should be justified by a concrete RN / rn-web
- * version. The entry in `knowledge_rn_0_80_to_0_85_css.md` (memory) records
- * when each prop shipped on native.
+ * version, noted beside the entry.
  */
 export const PASSTHROUGH_PROPS: ReadonlyMap<string, readonly string[]> = new Map([
   // Transforms; RN parses CSS string form since 0.74

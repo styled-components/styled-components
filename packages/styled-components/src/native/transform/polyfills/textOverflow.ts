@@ -5,7 +5,7 @@ import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
 
 /**
- * `text-overflow` (CSS Overflow 4 §4.1):
+ * `text-overflow`:
  *   text-overflow = [ clip | ellipsis | <string> | fade | <fade()> ]{1,2}
  *
  * With one value it applies to the end edge; with two values the first is

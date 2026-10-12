@@ -2099,9 +2099,9 @@ function useScrollerSnapProps(
 ): Dict<any> {
   let out = withScrollerDefaults(isScroller, compiled.scrollerFlexPin === true, elementProps);
   // A scroller only snaps if it declared `scroll-snap-type` itself.
-  // css-scroll-snap-1 §2: the initial `none` makes the element a
+  // The initial `scroll-snap-type: none` makes the element a
   // non-snapping container, and `scroll-snap-align` on a descendant
-  // "has no effect" there. Both strictnesses lift a prop the polyfill
+  // has no effect there. Both strictnesses lift a prop the polyfill
   // emits only for this property, so their presence is the declaration:
   // `mandatory` gives pagingEnabled, `proximity` gives snapToAlignment.
   // Gating on `isScroller` alone made any styled ScrollView snap as soon
@@ -2186,7 +2186,7 @@ function mergeStyle(style: any, out: Record<string, any>): void {
  *
  * Each `1fr` column's share of the container's content-box is the
  * leftover space (content width minus the gutters between columns)
- * divided by the column count (CSS Grid 2 §7.2.4: each track's share is
+ * divided by the column count (each track's share is
  * `<flex> * leftover / sum-of-flex-factors`, here `1 * leftover / N`). A
  * span of S items is S column widths plus the (S-1) interior gutters it
  * bridges.

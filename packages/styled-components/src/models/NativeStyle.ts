@@ -218,5 +218,5 @@ function joinStringRules(rules: ReadonlyArray<unknown>, separator = ''): string 
 // polyfill module for a one-line regex.
 const ANCHOR_FN_RE = /\banchor(?:-size)?\(/;
 
-/** Syntactic gate for env(safe-area-inset-*) (CSS Environment Variables §2.1). */
+/** Syntactic gate for env(safe-area-inset-*). */
 const SAFE_AREA_ENV_RE = /\benv\(\s*safe-area-inset-(?:top|right|bottom|left)\b/;

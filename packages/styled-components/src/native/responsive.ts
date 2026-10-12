@@ -1,9 +1,9 @@
 import React, { useContext, useMemo } from 'react';
 import { fifoSet } from '../utils/fifoMap';
 
-// Resolved lazily on first call and cached, so the `useEffect` closures
-// don't chase live module getters after Jest's environment teardown. The
-// references are captured once and reused across all subscriptions.
+// Resolved lazily on first call and cached, so the store subscriptions and
+// snapshot readers don't chase live module getters after Jest's environment
+// teardown. The references are captured once and reused across all subscriptions.
 type RNApis = {
   AccessibilityInfo: any;
   Animated: any;

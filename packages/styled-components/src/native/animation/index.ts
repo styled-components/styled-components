@@ -19,8 +19,7 @@
  *   - The element is wrapped via cached `Animated.createAnimatedComponent`
  *     so it can consume the Animated.Value/interpolation refs.
  *
- * Native-driver eligibility tracks the verified RN 0.85 allowlist (see
- * `knowledge_rn_animated_native_driver_allowlist.md` in memory): opacity,
+ * Native-driver eligibility tracks the verified RN 0.85 allowlist: opacity,
  * all transform components, every color prop, all 12 borderRadius corners,
  * shadow/zIndex/filter, and the legacy single-axis transform shortcuts.
  *

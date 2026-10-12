@@ -65,7 +65,7 @@ export type RangeBoundary = 'normal' | RangeOffset;
 export type TimelineAxis = 'block' | 'inline' | 'x' | 'y';
 
 /**
- * Parsed `<single-animation-timeline>` (CSS Animations 2 §4.9).
+ * Parsed `<single-animation-timeline>`.
  * `named` carries the case-sensitive dashed-ident. `view` is parsed at
  * this layer; its engine support ships with view progress timelines.
  */
