@@ -1308,10 +1308,6 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
  * selectors, theme tokens, viewport units), animations, transitions,
  * `@starting-style`, or container publishing.
  *
- * Hooks (5, stable per component lifetime): useContext (theme),
- * useMediaEnv, useContainerContext, useRef (cache),
- * adapter.useAnimatedStyle.
- *
  * Tier'd cache:
  *  - Full hit (props/theme/env/containerCtx all reference-equal): reuse
  *    every cached field including elementProps. The adapter is still
