@@ -1,6 +1,6 @@
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const path = require('path');
-const { pinLibraryToApp, storeWatchFolders } = require('../../scripts/metro-workspace.cjs');
+const { pinSingletonsToApp, storeWatchFolders } = require('../../scripts/metro-workspace.cjs');
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, '../..');
@@ -15,7 +15,7 @@ const config = {
     // third-party code that does not declare the package, so the lookup falls
     // back to the app, which does.
     nodeModulesPaths: [path.resolve(projectRoot, 'node_modules')],
-    resolveRequest: pinLibraryToApp({
+    resolveRequest: pinSingletonsToApp({
       libraryRoot: path.resolve(workspaceRoot, 'packages/styled-components'),
       projectRoot,
       resolveRequest: (context, moduleName, platform) =>
