@@ -10,9 +10,14 @@
  * functions in the AST path on large inputs.
  */
 
+import '../native/bunProfileGlobals';
+
 import { emitWeb } from './emit-web';
 import { parse } from './parser';
 import { normalize } from '../utils/normalize';
+
+// This harness profiles the web parser, so the native-only rule stamping stays off.
+globalThis.__NATIVE__ = false;
 
 // Reuse the CSS_LARGE and CSS_HUGE shapes from the bench. Inlined here so the
 // harness can run standalone without the jest bench infra.
