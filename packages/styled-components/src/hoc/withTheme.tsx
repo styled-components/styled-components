@@ -12,6 +12,7 @@ type WithThemeOuterProps<T extends AnyComponent> = Omit<
   keyof ExecutionProps
 > &
   ExecutionProps & {
+    // biome-ignore lint/suspicious/noExplicitAny: public prop type of the wrapped component; the ref targets whichever instance `T` renders, which this signature cannot name, and `Ref<unknown>` changes the emitted .d.ts
     ref?: React.Ref<any> | undefined;
   };
 

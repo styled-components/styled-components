@@ -19,160 +19,182 @@ export const enum TokenKind {
 }
 
 /**
- * A single token produced by tokenize(). Every kind populates the same
- * 12 properties; fields irrelevant to the kind are `undefined`.
- *
- * The "always present, possibly undefined" shape (rather than `field?:`
- * optional) is deliberate: it forces every token factory to produce the
- * same property-add order, which is what V8 keys hidden classes off of.
- * Per-kind sparse shapes produced 8+ distinct hidden classes and turned
- * the hot `tok.kind` / `tok.value` reads megamorphic.
+ * Fields no token kind uses stay present and `undefined` so every token
+ * carries the same 12 properties. The "always present, possibly undefined"
+ * shape (rather than `field?:` optional) is deliberate: it forces every
+ * token factory to produce the same property-add order, which is what V8
+ * keys hidden classes off of. Per-kind sparse shapes produced 8+ distinct
+ * hidden classes and turned the hot `tok.kind` / `tok.value` reads
+ * megamorphic.
  *
  * Per-token memory cost is ~12 slots (~96 bytes) vs ~32-48 bytes for the
  * narrow shape. For typical 4-token CSS values the extra ~256 bytes per
  * tokenize is well within budget for the IC win.
+ *
+ * {@link Token} is a union keyed on `kind`, so a `kind` check narrows the
+ * fields that kind populates from `T | undefined` to `T`. The union is a
+ * compile-time view only; the runtime shape is identical for every kind.
  */
-export interface Token {
-  kind: TokenKind;
+interface UnusedFields {
+  args: undefined;
+  fallback: undefined;
+  name: undefined;
+  op: undefined;
+  path: undefined;
+  quote: undefined;
+  text: undefined;
+  unit: undefined;
+  value: undefined;
+}
+
+interface TokenBase {
   /** Exact source substring; useful for pass-through emission. */
   raw: string;
-  /** Length / Percent / Angle / Time / Number / Op(arithmetic). Numeric value. */
-  value: number | undefined;
-  /** Length / Angle / Time unit (e.g. "px", "em", "deg", "ms"). `%` for Percent. Empty for Number. */
-  unit: string | undefined;
-  /** Ident / Function name (lowercased). Hash: hex digits without `#`. */
-  name: string | undefined;
-  /** Function: raw arg substring between parens. */
-  args: string | undefined;
   /**
    * Function: lazily tokenized argument tokens. Populated on demand by
    * {@link tokenize} when callers dive into nested content. Top-level
    * tokenization leaves this `null` to avoid wasted work on pass-through values.
    */
   argTokens: Token[] | null;
-  /** String: unescaped content, minus enclosing quotes. */
-  text: string | undefined;
-  /** String: `"` or `'` char code of the original quote. */
-  quote: number | undefined;
-  /** Op: `+` | `-` | `*` | `/`. */
-  op: string | undefined;
-  /** Sentinel (createTheme leaf): dot-path into the theme. */
-  path: string | undefined;
-  /** Sentinel: fallback literal after the final colon. */
-  fallback: string | undefined;
 }
+
+type TokenOf<Kind extends TokenKind, Fields> = TokenBase &
+  Omit<UnusedFields, keyof Fields> &
+  Fields & { kind: Kind };
+
+/** Numeric value plus unit (e.g. "px", "em", "deg", "ms"; `%` for Percent; empty for Number). */
+interface UnitFields {
+  unit: string;
+  value: number;
+}
+
+export type NumberToken = TokenOf<TokenKind.Number, UnitFields>;
+export type LengthToken = TokenOf<TokenKind.Length, UnitFields>;
+export type PercentToken = TokenOf<TokenKind.Percent, UnitFields>;
+export type AngleToken = TokenOf<TokenKind.Angle, UnitFields>;
+export type TimeToken = TokenOf<TokenKind.Time, UnitFields>;
+/** `name` is the lowercased identifier. */
+export type IdentToken = TokenOf<TokenKind.Ident, { name: string }>;
+/** `text` is the unescaped content minus enclosing quotes; `quote` is the original quote's char code. */
+export type StringToken = TokenOf<TokenKind.String, { quote: number; text: string }>;
+/** `name` is the lowercased function name; `args` the raw substring between the parens. */
+export type FunctionToken = TokenOf<TokenKind.Function, { args: string; name: string }>;
+/** `name` holds the hex digits without `#`. */
+export type HashToken = TokenOf<TokenKind.Hash, { name: string }>;
+/** `op` is `+` | `-` | `*` | `/`. */
+export type OpToken = TokenOf<TokenKind.Op, { op: string }>;
+/** createTheme leaf: dot-path into the theme and the fallback literal after the final colon. */
+export type SentinelToken = TokenOf<TokenKind.Sentinel, { fallback: string; path: string }>;
+export type CommaToken = TokenOf<TokenKind.Comma, {}>;
+export type SlashToken = TokenOf<TokenKind.Slash, {}>;
+
+/** A single token produced by tokenize(). */
+export type Token =
+  | NumberToken
+  | LengthToken
+  | PercentToken
+  | AngleToken
+  | TimeToken
+  | IdentToken
+  | StringToken
+  | FunctionToken
+  | HashToken
+  | OpToken
+  | SentinelToken
+  | CommaToken
+  | SlashToken;
 
 /**
- * All token factories funnel through {@link makeToken} to produce objects
- * with the same property-add order; that's what V8 keys hidden classes
- * off of. Per-kind factories would produce 8+ distinct hidden classes
- * and turn the hot `.kind` / `.value` / `.unit` reads in shorthand and
- * polyfill handlers megamorphic.
- *
- * Per-token memory cost is ~12 slots × 8 bytes ≈ 96B (was ~32-48B
- * for narrowly-typed objects). For typical 4-token CSS values the
- * extra ~256B per tokenize is well within budget for the IC win.
+ * Every factory below writes the same 12 properties in the same order
+ * (kind, raw, value, unit, name, args, argTokens, text, quote, op, path,
+ * fallback); that's what V8 keys hidden classes off of. Per-kind property
+ * orders would produce 8+ distinct hidden classes and turn the hot
+ * `.kind` / `.value` / `.unit` reads in shorthand and polyfill handlers
+ * megamorphic.
  */
-function makeToken(
-  kind: TokenKind,
-  raw: string,
-  value: number | undefined,
-  unit: string | undefined,
-  name: string | undefined,
-  args: string | undefined,
-  argTokens: Token[] | null,
-  text: string | undefined,
-  quote: number | undefined,
-  op: string | undefined,
-  path: string | undefined,
-  fallback: string | undefined
-): Token {
-  return { kind, raw, value, unit, name, args, argTokens, text, quote, op, path, fallback };
-}
-
-export function numberToken(raw: string, value: number): Token {
-  return makeToken(
-    TokenKind.Number,
+export function numberToken(raw: string, value: number): NumberToken {
+  return {
+    kind: TokenKind.Number,
     raw,
     value,
-    '',
-    undefined,
-    undefined,
-    null,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined
-  );
+    unit: '',
+    name: undefined,
+    args: undefined,
+    argTokens: null,
+    text: undefined,
+    quote: undefined,
+    op: undefined,
+    path: undefined,
+    fallback: undefined,
+  };
 }
 
-export function lengthToken(raw: string, value: number, unit: string): Token {
-  return makeToken(
-    TokenKind.Length,
+export function lengthToken(raw: string, value: number, unit: string): LengthToken {
+  return {
+    kind: TokenKind.Length,
     raw,
     value,
     unit,
-    undefined,
-    undefined,
-    null,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined
-  );
+    name: undefined,
+    args: undefined,
+    argTokens: null,
+    text: undefined,
+    quote: undefined,
+    op: undefined,
+    path: undefined,
+    fallback: undefined,
+  };
 }
 
-export function percentToken(raw: string, value: number): Token {
-  return makeToken(
-    TokenKind.Percent,
+export function percentToken(raw: string, value: number): PercentToken {
+  return {
+    kind: TokenKind.Percent,
     raw,
     value,
-    '%',
-    undefined,
-    undefined,
-    null,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined
-  );
+    unit: '%',
+    name: undefined,
+    args: undefined,
+    argTokens: null,
+    text: undefined,
+    quote: undefined,
+    op: undefined,
+    path: undefined,
+    fallback: undefined,
+  };
 }
 
-export function angleToken(raw: string, value: number, unit: string): Token {
-  return makeToken(
-    TokenKind.Angle,
-    raw,
-    value,
-    unit,
-    undefined,
-    undefined,
-    null,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined
-  );
-}
-
-export function timeToken(raw: string, value: number, unit: string): Token {
-  return makeToken(
-    TokenKind.Time,
+export function angleToken(raw: string, value: number, unit: string): AngleToken {
+  return {
+    kind: TokenKind.Angle,
     raw,
     value,
     unit,
-    undefined,
-    undefined,
-    null,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined
-  );
+    name: undefined,
+    args: undefined,
+    argTokens: null,
+    text: undefined,
+    quote: undefined,
+    op: undefined,
+    path: undefined,
+    fallback: undefined,
+  };
+}
+
+export function timeToken(raw: string, value: number, unit: string): TimeToken {
+  return {
+    kind: TokenKind.Time,
+    raw,
+    value,
+    unit,
+    name: undefined,
+    args: undefined,
+    argTokens: null,
+    text: undefined,
+    quote: undefined,
+    op: undefined,
+    path: undefined,
+    fallback: undefined,
+  };
 }
 
 /**
@@ -201,133 +223,134 @@ export function toLowerIfMixed(s: string): string {
   return s;
 }
 
-export function identToken(raw: string): Token {
-  return makeToken(
-    TokenKind.Ident,
+export function identToken(raw: string): IdentToken {
+  return {
+    kind: TokenKind.Ident,
     raw,
-    undefined,
-    undefined,
-    toLowerIfMixed(raw),
-    undefined,
-    null,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined
-  );
+    value: undefined,
+    unit: undefined,
+    name: toLowerIfMixed(raw),
+    args: undefined,
+    argTokens: null,
+    text: undefined,
+    quote: undefined,
+    op: undefined,
+    path: undefined,
+    fallback: undefined,
+  };
 }
 
-export function stringToken(raw: string, text: string, quote: number): Token {
-  return makeToken(
-    TokenKind.String,
+export function stringToken(raw: string, text: string, quote: number): StringToken {
+  return {
+    kind: TokenKind.String,
     raw,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    null,
+    value: undefined,
+    unit: undefined,
+    name: undefined,
+    args: undefined,
+    argTokens: null,
     text,
     quote,
-    undefined,
-    undefined,
-    undefined
-  );
+    op: undefined,
+    path: undefined,
+    fallback: undefined,
+  };
 }
 
-export function functionToken(raw: string, name: string, args: string): Token {
-  return makeToken(
-    TokenKind.Function,
+export function functionToken(raw: string, name: string, args: string): FunctionToken {
+  return {
+    kind: TokenKind.Function,
     raw,
-    undefined,
-    undefined,
-    toLowerIfMixed(name),
+    value: undefined,
+    unit: undefined,
+    name: toLowerIfMixed(name),
     args,
-    null,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined
-  );
+    argTokens: null,
+    text: undefined,
+    quote: undefined,
+    op: undefined,
+    path: undefined,
+    fallback: undefined,
+  };
 }
 
-export function hashToken(raw: string, hex: string): Token {
-  return makeToken(
-    TokenKind.Hash,
+export function hashToken(raw: string, hex: string): HashToken {
+  return {
+    kind: TokenKind.Hash,
     raw,
-    undefined,
-    undefined,
-    hex,
-    undefined,
-    null,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined
-  );
+    value: undefined,
+    unit: undefined,
+    name: hex,
+    args: undefined,
+    argTokens: null,
+    text: undefined,
+    quote: undefined,
+    op: undefined,
+    path: undefined,
+    fallback: undefined,
+  };
 }
 
-export function opToken(op: string): Token {
-  return makeToken(
-    TokenKind.Op,
+export function opToken(op: string): OpToken {
+  return {
+    kind: TokenKind.Op,
+    raw: op,
+    value: undefined,
+    unit: undefined,
+    name: undefined,
+    args: undefined,
+    argTokens: null,
+    text: undefined,
+    quote: undefined,
     op,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    null,
-    undefined,
-    undefined,
-    op,
-    undefined,
-    undefined
-  );
+    path: undefined,
+    fallback: undefined,
+  };
 }
 
-export function sentinelToken(raw: string, path: string, fallback: string): Token {
-  return makeToken(
-    TokenKind.Sentinel,
+export function sentinelToken(raw: string, path: string, fallback: string): SentinelToken {
+  return {
+    kind: TokenKind.Sentinel,
     raw,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    null,
-    undefined,
-    undefined,
-    undefined,
+    value: undefined,
+    unit: undefined,
+    name: undefined,
+    args: undefined,
+    argTokens: null,
+    text: undefined,
+    quote: undefined,
+    op: undefined,
     path,
-    fallback
-  );
+    fallback,
+  };
 }
 
-export const COMMA_TOKEN: Token = makeToken(
-  TokenKind.Comma,
-  ',',
-  undefined,
-  undefined,
-  undefined,
-  undefined,
-  null,
-  undefined,
-  undefined,
-  undefined,
-  undefined,
-  undefined
-);
-export const SLASH_TOKEN: Token = makeToken(
-  TokenKind.Slash,
-  '/',
-  undefined,
-  undefined,
-  undefined,
-  undefined,
-  null,
-  undefined,
-  undefined,
-  undefined,
-  undefined,
-  undefined
-);
+export const COMMA_TOKEN: CommaToken = {
+  kind: TokenKind.Comma,
+  raw: ',',
+  value: undefined,
+  unit: undefined,
+  name: undefined,
+  args: undefined,
+  argTokens: null,
+  text: undefined,
+  quote: undefined,
+  op: undefined,
+  path: undefined,
+  fallback: undefined,
+};
+
+export const SLASH_TOKEN: SlashToken = {
+  kind: TokenKind.Slash,
+  raw: '/',
+  value: undefined,
+  unit: undefined,
+  name: undefined,
+  args: undefined,
+  argTokens: null,
+  text: undefined,
+  quote: undefined,
+  op: undefined,
+  path: undefined,
+  fallback: undefined,
+};

@@ -10,7 +10,7 @@ import { TokenStream } from '../tokenStream';
  * currentColor.
  */
 
-function caretColorShorthand(tokens: Token[]): Dict<any> | null {
+function caretColorShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const first = stream.peek();
   if (first === undefined) return null;

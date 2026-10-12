@@ -69,7 +69,7 @@ import type {
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import { themeValue } from '../utils/themePath';
-import { tracePostAttr, type PostAttrsPlan } from '../utils/tracePostAttrs';
+import { isPostAttr, tracePostAttr, type PostAttrsPlan } from '../utils/tracePostAttrs';
 import escape from '../utils/escape';
 import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
@@ -90,13 +90,16 @@ import type { NthOfBranch } from '../parser/ast';
 import { applyVarDeferred, hasResponsiveOutput, SPECIAL_CASE_PROPS } from './compileNative';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
-let _View: any;
-function get3dIsolationView(): any {
-  if (!_View) _View = require('react-native').View;
+let _View: React.ElementType | undefined;
+function get3dIsolationView(): React.ElementType {
+  if (!_View) _View = require('react-native').View as React.ElementType;
   return _View;
 }
 
 const hasOwn = Object.prototype.hasOwnProperty;
+
+const MISSING_STATIC_STYLES =
+  'A styled component took the static render path without compiled styles. This is a styled-components bug: please report it at https://github.com/styled-components/styled-components/issues with the component CSS.';
 
 const HOIST_EXCLUDE = {
   attrs: true,
@@ -159,8 +162,8 @@ function buildPostAttrsPlans<Props extends object>(
   const plans: (PostAttrsPlan | null)[] = [];
   for (let i = 0; i < attrs.length; i++) {
     const a = attrs[i];
-    if (typeof a !== 'function' || (a as Function).length < 2) continue;
-    plans.push(tracePostAttr(a as (p: any, ast: CompiledAst) => any, rules));
+    if (!isPostAttr(a)) continue;
+    plans.push(tracePostAttr(a, rules));
   }
   return plans;
 }
@@ -190,7 +193,7 @@ function applyPostAttrs<Props extends object>(
   props: Props,
   attrs: Attrs<Props>[],
   plans: ReadonlyArray<PostAttrsPlan | null> | undefined,
-  effectiveBase: Dict<any>
+  effectiveBase: Dict<unknown>
 ): void {
   let ast: CompiledAst | null = null;
   let planIdx = 0;
@@ -249,15 +252,15 @@ function applyPostAttrs<Props extends object>(
 }
 
 interface StyledComponentImplProps extends ExecutionProps {
-  style?: any;
+  style?: unknown;
 }
 
-function buildPropsForElement(
-  context: Record<string, any>,
+function buildPropsForElement<Source extends object>(
+  context: Source,
   elementToBeCreated: NativeTarget,
   shouldForwardProp: ((prop: string, el: NativeTarget) => boolean) | undefined
-): Dict<any> {
-  const out: Dict<any> = {};
+): Dict<unknown> {
+  const out: Dict<unknown> = {};
   for (const key in context) {
     if (key[0] === '$' || key === 'as' || key === 'theme' || key === 'ref') continue;
     else if (key === 'forwardedAs') {
@@ -324,15 +327,15 @@ const specialCaseWarned = new WeakSet<object>();
  * attaches the assembled style, lifts compiled special-case keys onto
  * the bag (e.g. `numberOfLines` from `line-clamp`), and forwards the ref.
  */
-function finalizeElementProps(
-  source: Record<string, any>,
+function finalizeElementProps<Source extends object>(
+  source: Source,
   elementToBeCreated: NativeTarget,
   shouldForwardProp: ((prop: string, el: NativeTarget) => boolean) | undefined,
-  style: any,
-  specialCases: Dict<any> | undefined,
-  forwardedRef: Ref<any> | undefined,
-  forwardedComponent: IStyledComponent<'native', any>
-): Dict<any> {
+  style: unknown,
+  specialCases: Dict<unknown> | undefined,
+  forwardedRef: Ref<unknown> | undefined,
+  forwardedComponent: object
+): Dict<unknown> {
   const elementProps = buildPropsForElement(source, elementToBeCreated, shouldForwardProp);
   elementProps.style = style;
   applySpecialCases(elementProps, specialCases, elementToBeCreated, forwardedComponent);
@@ -347,8 +350,8 @@ function finalizeElementProps(
  * element type doesn't read the prop (e.g. `line-clamp` on a `View`).
  */
 function applySpecialCases(
-  elementProps: Dict<any>,
-  specialCases: Dict<any> | undefined,
+  elementProps: Dict<unknown>,
+  specialCases: Dict<unknown> | undefined,
   effectiveTarget: unknown,
   warningKey: object
 ): void {
@@ -383,7 +386,7 @@ function applySpecialCases(
 function buildResolveEnv(
   env: MediaQueryEnv,
   containerCtx: ContainerContextValue,
-  theme: Record<string, any>,
+  theme: ResolveEnv['theme'],
   cascade: NativeCascadeValues,
   parentCtx: ParentContextValue,
   props: Record<string, unknown>,
@@ -432,7 +435,7 @@ function buildResolveEnv(
  */
 function computePublishedCascade(
   inherited: NativeCascadeValues,
-  resolvedStyle: any
+  resolvedStyle: unknown
 ): NativeCascadeValues {
   // Per-call allocation. A module-level scratch tuple measured the same on
   // V8 (escape analysis) and only marginal on Hermes, not worth the
@@ -500,7 +503,7 @@ function mergeCustomPropertiesIntoCascade(
   return next;
 }
 
-function collectCascadeSlots(style: any, slots: [unknown, unknown, unknown]): boolean {
+function collectCascadeSlots(style: unknown, slots: [unknown, unknown, unknown]): boolean {
   if (style === null || style === undefined) return false;
   if (Array.isArray(style)) {
     for (let i = style.length - 1; i >= 0; i--) {
@@ -579,7 +582,7 @@ function pushMatched(out: MatchedLayers, entry: ConditionalStyle, env: ResolveEn
   // varDeferred resolves at match time against the cascade map and may
   // contribute to either the normal or important layer depending on
   // each entry's importance flag.
-  let varOut: { normal: Dict<any> | null; important: Dict<any> | null } | null = null;
+  let varOut: { normal: Dict<unknown> | null; important: Dict<unknown> | null } | null = null;
   if (entry.varDeferred !== undefined) {
     varOut = applyVarDeferred(entry.varDeferred, env.customProperties, null, env);
   }
@@ -599,11 +602,11 @@ function pushMatched(out: MatchedLayers, entry: ConditionalStyle, env: ResolveEn
 function resolveImportantBucket(
   entry: ConditionalStyle,
   env: ResolveEnv,
-  varImportant: Dict<any> | null
+  varImportant: Dict<unknown> | null
 ): object {
   const imp = entry.important ?? EMPTY_OBJECT;
   const resolved = entry.importantResolvers
-    ? applyResolvers(imp as Record<string, any>, entry.importantResolvers, env)
+    ? applyResolvers(imp, entry.importantResolvers, env)
     : imp;
   return varImportant !== null ? { ...resolved, ...varImportant } : resolved;
 }
@@ -728,7 +731,7 @@ function matchesHasInner(
 function nthChildMatches(entry: ConditionalStyle, parentCtx: ParentContextValue): boolean {
   const spec = entry.nthSpec;
   if (spec === undefined) return false;
-  if (spec.of !== undefined) return nthChildOfSelectorMatches(entry, spec, parentCtx);
+  if (spec.of !== undefined) return nthChildOfSelectorMatches(entry, spec, spec.of, parentCtx);
   const idx = spec.ofType ? parentCtx.siblingIndexOfType : parentCtx.siblingIndex;
   if (idx < 0) return false;
   const tot = spec.ofType ? parentCtx.totalSiblingsOfType : parentCtx.totalSiblings;
@@ -752,9 +755,9 @@ function nthChildMatches(entry: ConditionalStyle, parentCtx: ParentContextValue)
 function nthChildOfSelectorMatches(
   entry: ConditionalStyle,
   spec: NthSpec,
+  of: NthOfBranch,
   parentCtx: ParentContextValue
 ): boolean {
-  const of = spec.of!;
   const entries = parentCtx.siblings.entries;
   const selfIdx = parentCtx.siblingIndex;
   if (entries.length === 0 || selfIdx < 0) return false;
@@ -858,7 +861,7 @@ function matchNthOfInner(sibling: SiblingInfo, of: NthOfBranch): boolean {
 function resolveBucket(
   entry: ConditionalStyle,
   env: ResolveEnv,
-  varNormal: Dict<any> | null = null
+  varNormal: Dict<unknown> | null = null
 ): object {
   const resolved = entry.resolvers
     ? applyResolvers(entry.styles, entry.resolvers, env)
@@ -985,7 +988,8 @@ function warnInertPseudoStates(
 ): void {
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
-    const pseudo = entry.type === 'pseudo' ? (entry.condition as PseudoState) : entry.pseudo!;
+    const pseudo = entry.type === 'pseudo' ? (entry.condition as PseudoState) : entry.pseudo;
+    if (pseudo === undefined) continue;
     if (
       entry.type !== 'pseudo' &&
       entry.type !== 'attr' &&
@@ -1017,16 +1021,21 @@ const PSEUDO_TO_STATE_KEY: Record<PseudoState, 'pressed' | 'hovered' | 'focused'
   disabled: 'disabled',
 };
 
-function pseudoActive(
-  pseudo: PseudoState,
-  state: { pressed?: boolean; hovered?: boolean; focused?: boolean; disabled?: boolean }
-): boolean {
+/** The interaction state React Native's `Pressable` hands to a `style` callback. */
+type InteractionState = {
+  pressed?: boolean;
+  hovered?: boolean;
+  focused?: boolean;
+  disabled?: boolean;
+};
+
+function pseudoActive(pseudo: PseudoState, state: InteractionState): boolean {
   return !!state[PSEUDO_TO_STATE_KEY[pseudo]];
 }
 
 function pseudoStylesForState(
   entries: ConditionalStyle[],
-  state: { pressed?: boolean; hovered?: boolean; focused?: boolean; disabled?: boolean },
+  state: InteractionState,
   env: MediaQueryEnv,
   containerCtx: Pick<ContainerContextValue, 'named' | 'nearest'>,
   props: Record<string, unknown>,
@@ -1045,8 +1054,8 @@ function pseudoStylesForState(
       if (entry.negate ? !active : active) pushMatched(out, entry, resolveEnv);
       continue;
     }
-    // Compound: entry.pseudo is guaranteed set here.
-    if (!pseudoActive(entry.pseudo!, state)) continue;
+    // Compound: every non-`pseudo` entry in this slice carries `entry.pseudo`.
+    if (entry.pseudo === undefined || !pseudoActive(entry.pseudo, state)) continue;
     // Attrs AND-gate for compound forms like `&[disabled]:hover`.
     if (entry.attrs) {
       const attrOk = attrMatches(entry, props);
@@ -1082,6 +1091,7 @@ function pseudoStylesForState(
 // `text-align: start | end` / sentinel-base relative colors render
 // with stale `ResolveEnv` values. Slot 14 holds safe-area insets so
 // env(safe-area-inset-*) re-resolves when the SafeAreaProvider updates.
+// Slot 15 holds the merged cascade the render used, so a full hit reuses it.
 type RenderCache = [
   object,
   DefaultTheme | undefined,
@@ -1090,14 +1100,15 @@ type RenderCache = [
   NativeStyles,
   MediaQueryEnv,
   NativeStyleContextValue,
-  any,
+  object,
   NativeTarget,
-  Dict<any>,
+  Dict<unknown>,
   ResolveEnv,
-  Dict<any>,
+  Dict<unknown>,
   ParentContextValue,
   number,
   SafeAreaInsets,
+  NativeCascadeValues,
 ];
 
 /**
@@ -1111,10 +1122,10 @@ type RenderCache = [
  * pays for Array.isArray on both operands when the caller knows one
  * side's shape statically). Keep these specialized.
  */
-export function composeBase(base: object, userStyle: any): any {
+export function composeBase(base: object, userStyle: unknown): object {
   if (userStyle === undefined || userStyle === null) return base;
   if (isFunction(userStyle)) {
-    return (state: any) => {
+    return (state: InteractionState | undefined) => {
       const u = userStyle(state);
       return Array.isArray(u) ? [base].concat(u) : [base, u];
     };
@@ -1142,10 +1153,10 @@ function resolveContainerName(
 }
 
 /** Append an `extra` style object onto a composed style, preserving its function-or-array shape. */
-function appendStyle(composed: any, extra: object): any {
+function appendStyle(composed: unknown, extra: object): object {
   if (composed === undefined || composed === null) return extra;
   if (isFunction(composed)) {
-    return (state: any) => {
+    return (state: InteractionState | undefined) => {
       const u = composed(state);
       return Array.isArray(u) ? [...u, extra] : [u, extra];
     };
@@ -1163,26 +1174,26 @@ function appendStyle(composed: any, extra: object): any {
  * publisher carries the same name through `ContainerContext`).
  */
 function injectAutoContainerName(
-  composed: any,
+  composed: object,
   info: NativeStyles['containerInfo'] | undefined,
   styledComponentId: string
-): any {
+): object {
   if (!info || info.explicitName !== undefined) return composed;
   return appendStyle(composed, { containerName: styledComponentId });
 }
 
 function composeStaticStyle(
   compiled: NativeStyles,
-  userStyle: any,
+  userStyle: unknown,
   styledComponentId: string
-): any {
+): object {
   const composed = composeBase(compiled.base, userStyle);
   return injectAutoContainerName(composed, compiled.containerInfo, styledComponentId);
 }
 
 function createFastElement(
   elementToBeCreated: NativeTarget,
-  elementProps: Dict<any>,
+  elementProps: Dict<unknown>,
   containerName: string | undefined
 ): React.ReactElement {
   if (containerName) {
@@ -1198,7 +1209,7 @@ function createFastElement(
 interface StaticContainerPublisherDispatchProps {
   name: string;
   elementType: NativeTarget;
-  elementProps: Dict<any>;
+  elementProps: Dict<unknown>;
 }
 
 /**
@@ -1231,10 +1242,11 @@ function StaticContainerPublisherDispatch({
 function useStaticImpl<Props extends StyledComponentImplProps>(
   forwardedComponent: IStyledComponent<'native', Props>,
   props: Props,
-  forwardedRef: Ref<any> | undefined
+  forwardedRef: Ref<unknown> | undefined
 ): React.ReactElement {
   const { nativeStyle, target, styledComponentId } = forwardedComponent;
-  const compiled = nativeStyle.staticCompiled!;
+  const compiled = nativeStyle.staticCompiled as NativeStyles | null;
+  if (compiled === null) throw new Error(MISSING_STATIC_STYLES);
   const elementToBeCreated: NativeTarget = (props.as as NativeTarget) || target;
   const containerName = resolveContainerName(compiled.containerInfo, styledComponentId);
   if (IS_RSC) {
@@ -1247,11 +1259,7 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
       forwardedRef,
       forwardedComponent
     );
-    return createFastElement(
-      elementToBeCreated,
-      applyStylePolyfills(elementProps as Record<string, unknown>) as Dict<any>,
-      containerName
-    );
+    return createFastElement(elementToBeCreated, applyStylePolyfills(elementProps), containerName);
   }
   // A static-eligible component can still be a grid item: an empty or
   // purely-static child placed inside a `display: grid` container. The
@@ -1295,7 +1303,11 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
     publishedValue !== null
       ? withIndexedChildren(
           elementProps,
-          indexStyledChildren(publishCacheRef.current, elementProps.children, publishedValue)
+          indexStyledChildren(
+            publishCacheRef.current,
+            elementProps.children as React.ReactNode,
+            publishedValue
+          )
         )
       : elementProps;
   // Static-eligible scroll containers still publish their timeline so
@@ -1316,11 +1328,7 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   );
   // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the IS_RSC-gated static render path
   const inner = wrapScrollTimeline(
-    createFastElement(
-      elementToBeCreated,
-      applyStylePolyfills(effectiveProps as Record<string, unknown>) as Dict<any>,
-      containerName
-    )
+    createFastElement(elementToBeCreated, applyStylePolyfills(effectiveProps), containerName)
   );
   return publishedValue !== null
     ? createElement(ParentContext.Provider, { value: publishedValue }, inner)
@@ -1358,7 +1366,7 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
 function useDynamicImpl<Props extends StyledComponentImplProps>(
   forwardedComponent: IStyledComponent<'native', Props>,
   props: Props,
-  forwardedRef: Ref<any> | undefined
+  forwardedRef: Ref<unknown> | undefined
 ) {
   const { attrs: componentAttrs, nativeStyle, shouldForwardProp, target } = forwardedComponent;
 
@@ -1408,8 +1416,10 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   const publishCacheRef = (
     !IS_RSC ? React.useRef<ParentPublishCache | null>(null) : { current: null }
   ) as { current: ParentPublishCache | null };
-  if (!IS_RSC && publishCacheRef.current === null) {
-    publishCacheRef.current = createParentPublishCache();
+  let publishCache = publishCacheRef.current;
+  if (publishCache === null) {
+    publishCache = createParentPublishCache();
+    publishCacheRef.current = publishCache;
   }
   // Single-slot identity cache for the merged custom-property cascade.
   // The same merged Map drives buildResolveEnv (own var() resolution +
@@ -1424,10 +1434,10 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
 
   let context: ExecutionContext & Props;
   let compiled: NativeStyles;
-  let composedStyle: any;
+  let composedStyle: object;
   let elementToBeCreated: NativeTarget;
   let resolveEnv: ResolveEnv;
-  let effectiveBase: Dict<any>;
+  let effectiveBase: Dict<unknown>;
   let renderCascade: NativeCascadeValues;
   let propsKeyCount = prev !== null ? prev[2] : 0;
 
@@ -1439,30 +1449,30 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // when a re-resolve is genuinely required.
   const fullHit =
     propsMatch &&
-    prev![5] === env &&
-    prev![6] === nativeStyleCtx &&
-    prev![12] === parentCtx &&
-    prev![13] === anchorVersion &&
-    prev![14] === safeAreaInsets;
+    prev[5] === env &&
+    prev[6] === nativeStyleCtx &&
+    prev[12] === parentCtx &&
+    prev[13] === anchorVersion &&
+    prev[14] === safeAreaInsets;
 
   if (fullHit) {
-    context = prev![3] as typeof context;
-    compiled = prev![4];
-    composedStyle = prev![7];
-    elementToBeCreated = prev![8];
-    resolveEnv = prev![10];
-    effectiveBase = prev![11];
+    context = prev[3] as typeof context;
+    compiled = prev[4];
+    composedStyle = prev[7];
+    elementToBeCreated = prev[8];
+    resolveEnv = prev[10];
+    effectiveBase = prev[11];
     // Full-hit implies (nativeStyleCtx, compiled) reference-equal to the
     // previous render, so the prior merge result is still authoritative.
-    renderCascade = mergedCascadeCacheRef.current!.merged;
+    renderCascade = prev[15];
   } else {
     if (propsMatch) {
-      context = prev![3] as typeof context;
-      compiled = prev![4];
-      elementToBeCreated = prev![8];
+      context = prev[3] as typeof context;
+      compiled = prev[4];
+      elementToBeCreated = prev[8];
       // post-attrs effects depend only on props/theme/context+compiled, all
       // stable on a partial hit, so the cached effectiveBase is reusable.
-      effectiveBase = prev![11];
+      effectiveBase = prev[11];
     } else {
       context = resolveContext<Props>(theme, props, componentAttrs);
       compiled = nativeStyle.compile(context) as NativeStyles;
@@ -1510,14 +1520,14 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     resolveEnv = buildResolveEnv(
       env,
       containerCtx,
-      theme as Record<string, any>,
+      theme,
       renderCascade,
       parentCtx,
       props as Record<string, unknown>,
       safeAreaInsets,
       compiled.positionAnchor
     );
-    let varImportant: Dict<any> | undefined;
+    let varImportant: Dict<unknown> | undefined;
     if (compiled.varDeferred !== undefined) {
       const varOut = applyVarDeferred(
         compiled.varDeferred,
@@ -1607,12 +1617,12 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     renderType = getAnimatedComponentCached(renderType) ?? renderType;
   }
 
-  let elementProps: Dict<any>;
+  let elementProps: Dict<unknown>;
   // Adapters with off-React state machinery (allow-discrete 50% flip,
   // for example) signal `invalidateCache` to force an elementProps
   // rebuild when their internal state changed despite stable inputs.
   if (fullHit && !animOut.invalidateCache && !sticky.changed) {
-    elementProps = prev![9];
+    elementProps = prev[9];
   } else {
     elementProps = applyStylePolyfills(
       finalizeElementProps(
@@ -1623,8 +1633,8 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
         compiled.specialCases,
         forwardedRef,
         forwardedComponent
-      ) as Record<string, unknown>
-    ) as Dict<any>;
+      )
+    );
     renderCacheRef.current = [
       props,
       theme,
@@ -1641,6 +1651,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
       parentCtx,
       anchorVersion,
       safeAreaInsets,
+      renderCascade,
     ];
   }
 
@@ -1677,7 +1688,6 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // child sibling position BEFORE layering any cascade / container /
   // isolate-3d Provider wrap, otherwise the per-child Providers would
   // attach to the wrapper rather than the host's user JSX.
-  const publishCache = !IS_RSC ? publishCacheRef.current! : createParentPublishCache();
   const publishedValue = buildPublishedParentValue(
     publishCache,
     parentCtx,
@@ -1688,7 +1698,11 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     publishedValue !== null
       ? withIndexedChildren(
           elementProps,
-          indexStyledChildren(publishCache, elementProps.children, publishedValue)
+          indexStyledChildren(
+            publishCache,
+            elementProps.children as React.ReactNode,
+            publishedValue
+          )
         )
       : elementProps;
 
@@ -2041,7 +2055,10 @@ function indexStyledChildren(
  * latter is a fresh reference. When `indexedChildren === elementProps.children`,
  * the original object is returned so the render-cache identity is preserved.
  */
-function withIndexedChildren(elementProps: Dict<any>, indexedChildren: React.ReactNode): Dict<any> {
+function withIndexedChildren(
+  elementProps: Dict<unknown>,
+  indexedChildren: React.ReactNode
+): Dict<unknown> {
   if (indexedChildren === elementProps.children) return elementProps;
   return { ...elementProps, children: indexedChildren };
 }
@@ -2071,8 +2088,8 @@ const SCROLLER_FLEX_PIN = Object.freeze({ flexGrow: 0 });
 function withScrollerDefaults(
   isScroller: boolean,
   pinGrow: boolean,
-  elementProps: Dict<any>
-): Dict<any> {
+  elementProps: Dict<unknown>
+): Dict<unknown> {
   if (!isScroller) return elementProps;
   const needsNested = elementProps.nestedScrollEnabled === undefined;
   if (!needsNested && !pinGrow) return elementProps;
@@ -2095,8 +2112,8 @@ function useScrollerSnapProps(
   compiled: NativeStyles,
   snapTarget: { align: string; stop: boolean } | undefined,
   timelineEntry: ScrollTimelineEntry | null,
-  elementProps: Dict<any>
-): Dict<any> {
+  elementProps: Dict<unknown>
+): Dict<unknown> {
   let out = withScrollerDefaults(isScroller, compiled.scrollerFlexPin === true, elementProps);
   // A scroller only snaps if it declared `scroll-snap-type` itself.
   // The initial `scroll-snap-type: none` makes the element a
@@ -2124,6 +2141,9 @@ function useScrollerSnapProps(
   // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the snap-props hook sequence
 }
 
+/** The slice of React Native's `onLayout` event these publishers read. */
+type LayoutEvent = { nativeEvent: { layout: { width: number; height: number } } };
+
 interface ContainerPublisherProps {
   name: string;
   /** Inherited NativeStyle from the nearest ancestor publisher; the
@@ -2135,7 +2155,7 @@ interface ContainerPublisherProps {
    *  cascade should flow through. */
   cascadeOverride: NativeCascadeValues | null;
   elementType: NativeTarget;
-  elementProps: Dict<any>;
+  elementProps: Dict<unknown>;
 }
 
 /**
@@ -2150,8 +2170,8 @@ interface ContainerPublisherProps {
  * width into the content-box width that CSS `%` and `cq*` units
  * resolve against.
  */
-function getContentBoxInsets(style: any): { horizontal: number; vertical: number } {
-  const m: Record<string, any> = {};
+function getContentBoxInsets(style: unknown): { horizontal: number; vertical: number } {
+  const m: Dict<unknown> = {};
   mergeStyle(style, m);
   const pa = m.padding;
   const ph = m.paddingHorizontal;
@@ -2171,14 +2191,15 @@ function getContentBoxInsets(style: any): { horizontal: number; vertical: number
   };
 }
 
-function mergeStyle(style: any, out: Record<string, any>): void {
+function mergeStyle(style: unknown, out: Dict<unknown>): void {
   if (style == null) return;
   if (Array.isArray(style)) {
     for (let i = 0; i < style.length; i++) mergeStyle(style[i], out);
     return;
   }
   if (typeof style !== 'object') return;
-  for (const k in style) out[k] = style[k];
+  const source = style as Dict<unknown>;
+  for (const k in source) out[k] = source[k];
 }
 
 /**
@@ -2251,11 +2272,11 @@ function ContainerPublisher({
   // the border-box (includes padding + border). Stash the latest style
   // in a ref so the layout handler can subtract horizontal/vertical
   // insets without re-creating the handler each render.
-  const styleRef = React.useRef<any>(elementProps.style);
+  const styleRef = React.useRef<unknown>(elementProps.style);
   styleRef.current = elementProps.style;
 
   const onLayout = React.useMemo(
-    () => (e: any) => {
+    () => (e: LayoutEvent) => {
       const { width, height } = e.nativeEvent.layout;
       const insets = getContentBoxInsets(styleRef.current);
       // Floor to the device pixel grid Yoga snaps to internally.
@@ -2305,8 +2326,8 @@ function ContainerPublisher({
   const existingOnLayout = elementProps.onLayout;
   const composedOnLayout = React.useMemo(
     () =>
-      existingOnLayout
-        ? (e: any) => {
+      isFunction(existingOnLayout)
+        ? (e: LayoutEvent) => {
             onLayout(e);
             existingOnLayout(e);
           }
@@ -2341,7 +2362,7 @@ interface GridPublisherProps {
    *  key (font-size / line-height / direction); `null` otherwise. */
   cascadeOverride: NativeCascadeValues | null;
   elementType: NativeTarget;
-  elementProps: Dict<any>;
+  elementProps: Dict<unknown>;
 }
 
 /**
@@ -2350,8 +2371,8 @@ interface GridPublisherProps {
  * two-value form is split into `rowGap` / `columnGap` by the gap handler.
  * Longhand `column-gap` / `row-gap` win over the shorthand.
  */
-function readGridGutters(style: any): { columnGap: number; rowGap: number } {
-  const m: Record<string, any> = {};
+function readGridGutters(style: unknown): { columnGap: number; rowGap: number } {
+  const m: Dict<unknown> = {};
   mergeStyle(style, m);
   const gap = numOrZero(m.gap);
   return {
@@ -2383,11 +2404,11 @@ function GridPublisher({
   const [contentBox, setContentBox] = React.useState<{ width: number; height: number }>(EMPTY_BOX);
   const lastRef = React.useRef(EMPTY_BOX);
 
-  const styleRef = React.useRef<any>(elementProps.style);
+  const styleRef = React.useRef<unknown>(elementProps.style);
   styleRef.current = elementProps.style;
 
   const onLayout = React.useMemo(
-    () => (e: any) => {
+    () => (e: LayoutEvent) => {
       const { width, height } = e.nativeEvent.layout;
       const insets = getContentBoxInsets(styleRef.current);
       // Floor to the device pixel grid Yoga snaps to internally so child
@@ -2432,8 +2453,8 @@ function GridPublisher({
   const existingOnLayout = elementProps.onLayout;
   const composedOnLayout = React.useMemo(
     () =>
-      existingOnLayout
-        ? (e: any) => {
+      isFunction(existingOnLayout)
+        ? (e: LayoutEvent) => {
             onLayout(e);
             existingOnLayout(e);
           }
@@ -2458,16 +2479,16 @@ export function assembleFinalStyle(
   compiled: NativeStyles,
   env: MediaQueryEnv,
   containerCtx: ContainerContextValue,
-  theme: Record<string, any>,
-  userStyle: any,
+  theme: ResolveEnv['theme'],
+  userStyle: unknown,
   props: Record<string, unknown>,
-  baseOverride?: Dict<any>,
+  baseOverride?: Dict<unknown>,
   cascade: NativeCascadeValues = DEFAULT_CASCADE,
   parentCtx: ParentContextValue = DEFAULT_PARENT_CONTEXT,
-  varImportant?: Dict<any>,
+  varImportant?: Dict<unknown>,
   inertStateTarget?: string | null,
   insets: SafeAreaInsets = EMPTY_SAFE_AREA_INSETS
-): any {
+): object {
   const nonPseudoEntries = compiled.nonPseudoEntries;
   const pseudoEntries = compiled.pseudoEntries;
   const hasConditional = nonPseudoEntries.length > 0;
@@ -2510,8 +2531,8 @@ export function assembleFinalStyle(
   if (hasPseudoState) {
     const preStateStyles: object[] =
       activeConditional.length > 0 ? [base as object].concat(activeConditional) : [base as object];
-    const stateStyle = (state: any) => {
-      const styles: any[] = preStateStyles.slice();
+    const stateStyle = (state: InteractionState | undefined) => {
+      const styles: unknown[] = preStateStyles.slice();
       const matched = pseudoStylesForState(
         pseudoEntries,
         state || EMPTY_OBJECT,
@@ -2561,8 +2582,8 @@ export function assembleFinalStyle(
   if (isFunction(userStyle)) {
     const preStateStyles: object[] =
       activeConditional.length > 0 ? [base as object].concat(activeConditional) : [base as object];
-    return (state: any) => {
-      const out: any[] = preStateStyles.concat(userStyle(state));
+    return (state: InteractionState | undefined) => {
+      const out: unknown[] = preStateStyles.concat(userStyle(state));
       if (baseImportantLayer !== null) out.push(baseImportantLayer);
       if (activeMatched.important !== null) {
         for (let i = 0; i < activeMatched.important.length; i++) {
@@ -2610,14 +2631,14 @@ export function assembleFinalStyle(
 function buildBaseImportantLayer(
   compiled: NativeStyles,
   resolveEnv: ResolveEnv,
-  varImportant: Dict<any> | undefined
+  varImportant: Dict<unknown> | undefined
 ): object | null {
   const baseImp = compiled.important;
   const impRes = compiled.importantResolvers;
   if (baseImp === undefined && impRes === undefined && varImportant === undefined) {
     return null;
   }
-  const seed = (baseImp as Record<string, any> | undefined) ?? EMPTY_OBJECT;
+  const seed = baseImp ?? EMPTY_OBJECT;
   const resolved = impRes !== undefined ? applyResolvers(seed, impRes, resolveEnv) : seed;
   // Spread when var-deferred important values exist; never mutate
   // compiled.important (shared across renders) or applyResolvers'
@@ -2625,6 +2646,7 @@ function buildBaseImportantLayer(
   return varImportant !== undefined ? { ...resolved, ...varImportant } : resolved;
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: the constructor is called with `RuleSet<OuterProps>` for each component's own props, and any concrete `Props` rejects that: `INativeStyleConstructor<object>` fails with "Type 'StyleFunction<OuterProps>' is not assignable to type 'StyleFunction<object>'. Type 'object' is not assignable to type 'OuterProps'" (function parameters are contravariant), and `<never>` rejects the `INativeStyleConstructor<object>` that native/index.ts passes
 export default (NativeStyle: INativeStyleConstructor<any>) => {
   const createStyledNativeComponent = <
     Target extends NativeTarget,
@@ -2698,7 +2720,7 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
     // a layered fallback for the harder cases (different prop references with
     // same values, env or container-context shifts) that memo doesn't catch.
     const RenderInner: {
-      (props: ExecutionProps & OuterProps & { ref?: React.Ref<any> }): React.JSX.Element;
+      (props: ExecutionProps & OuterProps & { ref?: React.Ref<unknown> }): React.JSX.Element;
       displayName?: string;
     } = props => impl<OuterProps>(WrappedStyledComponent, props, props.ref);
     RenderInner.displayName = displayName;
@@ -2717,13 +2739,13 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
     // production bundle so prod has zero residue.
     let RenderStyledComponent: typeof RenderInner;
     if (__DEV__) {
-      const RenderInjector: typeof RenderInner = props =>
+      const RenderInjector: typeof RenderInner = props => {
         // `$$nativeStyle` is a sentinel transient prop, not part of the public
-        // RenderInner props; cast at the createElement boundary.
-        React.createElement(MemoizedRenderInner, {
-          ...props,
-          $$nativeStyle: WrappedStyledComponent.nativeStyle,
-        } as any);
+        // RenderInner props; binding it to a variable first skips the
+        // excess-property check at the createElement boundary.
+        const injectedProps = { ...props, $$nativeStyle: WrappedStyledComponent.nativeStyle };
+        return React.createElement(MemoizedRenderInner, injectedProps);
+      };
       RenderInjector.displayName = displayName;
       RenderStyledComponent = RenderInjector;
     } else {
@@ -2733,7 +2755,7 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
 
     let WrappedStyledComponent = RenderStyledComponent as unknown as IStyledComponent<
       'native',
-      any
+      OuterProps
     > &
       Statics;
 

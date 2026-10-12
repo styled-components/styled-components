@@ -66,11 +66,11 @@ function getPositionFromCSSValue(position: string): number | string | null {
  */
 function parseColorStopsSystemColors(
   stopParts: string[]
-): { stops: Dict<any>[]; hadSystemColor: boolean } | null {
+): { stops: Dict<unknown>[]; hadSystemColor: boolean } | null {
   const colorStopsString = stopParts.join(',');
   const stops = colorStopsString.split(/,(?![^(]*\))/);
   let hadSystemColor = false;
-  const out: Dict<any>[] = [];
+  const out: Dict<unknown>[] = [];
   let prevStop: RegExpMatchArray | null = null;
 
   for (let i = 0; i < stops.length; i++) {
@@ -153,7 +153,7 @@ function linearGradientInner(trimmedLayer: string): string | null {
 
 function parseLinearGradientLayer(
   trimmedLayer: string
-): { obj: Dict<any>; hadSystemColor: boolean } | null {
+): { obj: Dict<unknown>; hadSystemColor: boolean } | null {
   const inner = linearGradientInner(trimmedLayer.trim());
   if (inner === null) return null;
 
@@ -179,7 +179,7 @@ function parseLinearGradientLayer(
   const parsedStops = parseColorStopsSystemColors(rest);
   if (parsedStops === null) return null;
 
-  const obj: Dict<any> = {
+  const obj: Dict<unknown> = {
     type: 'linear-gradient',
     colorStops: parsedStops.stops,
   };
@@ -193,7 +193,7 @@ function parseLinearGradientLayer(
  * rejects them (`processColor`). Emit structured gradient objects for the array path.
  * **Linear gradients only**; `radial-gradient()` passes through unchanged.
  */
-export function maybeExpandBackgroundImageSystemColors(rawValue: string): string | Dict<any>[] {
+export function maybeExpandBackgroundImageSystemColors(rawValue: string): string | Dict<unknown>[] {
   // The browser parses system keywords inside gradient stops natively; the
   // structured-object rewrite is a native-only workaround.
   if (__NATIVE_WEB__) return rawValue;
@@ -206,7 +206,7 @@ export function maybeExpandBackgroundImageSystemColors(rawValue: string): string
   if (layers.length === 0) return rawValue;
 
   let anySystem = false;
-  const out: Dict<any>[] = [];
+  const out: Dict<unknown>[] = [];
 
   for (let i = 0; i < layers.length; i++) {
     const parsed = parseLinearGradientLayer(layers[i].trim());

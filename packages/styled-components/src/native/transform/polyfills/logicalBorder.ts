@@ -71,26 +71,26 @@ function camelEdge(edge: string): string {
 
 /* ─────────── 12 single-edge longhands ─────────── */
 
-function singleColor(tokens: Token[], rnKey: string): Dict<any> | null {
+function singleColor(tokens: Token[], rnKey: string): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const c = consumeColor(stream);
   if (c === null || !stream.eof()) return null;
   return { [rnKey]: colorTokenToRnStyleValue(c) };
 }
 
-function singleWidth(tokens: Token[], rnKey: string): Dict<any> | null {
+function singleWidth(tokens: Token[], rnKey: string): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const w = consumeDimensionLike(stream);
   if (w === null || !stream.eof()) return null;
   return { [rnKey]: tokenToValue(w) };
 }
 
-function singleStyle(tokens: Token[], edge: string): Dict<any> | null {
+function singleStyle(tokens: Token[], edge: string): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
-  if (name === undefined || !CSS_LINE_STYLES.has(name)) return null;
+  if (!CSS_LINE_STYLES.has(name)) return null;
   if (__NATIVE_WEB__) {
     return { ['border' + camelEdge(edge) + 'Style']: name };
   }
@@ -103,7 +103,7 @@ function singleStyle(tokens: Token[], edge: string): Dict<any> | null {
 
 /* ─────────── 6 axis shorthands ─────────── */
 
-function axisColor(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | null {
+function axisColor(tokens: Token[], axis: 'inline' | 'block'): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const first = consumeColor(stream);
   if (first === null) return null;
@@ -122,7 +122,7 @@ function axisColor(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | null 
   };
 }
 
-function axisWidth(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | null {
+function axisWidth(tokens: Token[], axis: 'inline' | 'block'): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const first = consumeDimensionLike(stream);
   if (first === null) return null;
@@ -141,7 +141,7 @@ function axisWidth(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | null 
   };
 }
 
-function axisStyle(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | null {
+function axisStyle(tokens: Token[], axis: 'inline' | 'block'): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const first = stream.consume();
   if (!first || first.kind !== TokenKind.Ident) return null;
@@ -191,7 +191,7 @@ function parseEdgeAttrs(
   while (!stream.eof()) {
     const t = stream.peek();
     if (!t) break;
-    if (t.kind === TokenKind.Ident && t.name !== undefined && CSS_LINE_STYLES.has(t.name)) {
+    if (t.kind === TokenKind.Ident && CSS_LINE_STYLES.has(t.name)) {
       if (style !== null) return null;
       style = t.name;
       stream.consume();
@@ -222,12 +222,12 @@ function parseEdgeAttrs(
 function compositeEdge(
   tokens: Token[],
   edge: 'inline-start' | 'inline-end' | 'block-start' | 'block-end'
-): Dict<any> | null {
+): Dict<unknown> | null {
   const attrs = parseEdgeAttrs(tokens);
   if (attrs === null) return null;
   const { width, style, color } = attrs;
 
-  const out: Dict<any> = {};
+  const out: Dict<unknown> = {};
   const map = EDGE_MAP[edge];
   if (width !== null) out[map.width] = tokenToValue(width);
   if (color !== null) out[map.color] = colorTokenToRnStyleValue(color);
@@ -243,14 +243,14 @@ function compositeEdge(
 
 /* ─────────── 2 mode-spanning shorthands ─────────── */
 
-function modeSpanning(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | null {
+function modeSpanning(tokens: Token[], axis: 'inline' | 'block'): Dict<unknown> | null {
   const startEdge = axis === 'inline' ? 'inline-start' : 'block-start';
   const endEdge = axis === 'inline' ? 'inline-end' : 'block-end';
   const attrs = parseEdgeAttrs(tokens);
   if (attrs === null) return null;
   const { width, style, color } = attrs;
 
-  const out: Dict<any> = {};
+  const out: Dict<unknown> = {};
   const startMap = EDGE_MAP[startEdge];
   const endMap = EDGE_MAP[endEdge];
   if (width !== null) {
@@ -279,12 +279,11 @@ function modeSpanning(tokens: Token[], axis: 'inline' | 'block'): Dict<any> | nu
 const RN_OUTLINE_STYLES = new Set(['solid', 'dotted', 'dashed']);
 const WEB_ONLY_OUTLINE_STYLES = new Set(['auto', 'double', 'groove', 'ridge', 'inset', 'outset']);
 
-function outlineStyleHandler(tokens: Token[]): Dict<any> | null {
+function outlineStyleHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
-  if (name === undefined) return null;
 
   // `outline-style: hidden` is invalid (the `hidden` keyword only
   // applies to `border-style`, not outline).

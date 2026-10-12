@@ -3,6 +3,7 @@ import { IS_RSC } from '../utils/isRsc';
 import styledError from '../utils/error';
 import isFunction from '../utils/isFunction';
 
+// biome-ignore lint/suspicious/noExplicitAny: public base of `DefaultTheme`, which consumers augment by declaration merging; the value type does not change the resolved shape (`keyof object` is `never`), but any other argument changes the emitted .d.ts
 type DefaultThemeAsObject<T = object> = Record<keyof T, any>;
 
 /**
@@ -58,7 +59,7 @@ export const ThemeConsumer = ThemeContext.Consumer;
  * Class instances, `Date`, `RegExp`, `Map`, `Set`, etc. are taken whole from
  * the inner theme so their prototype methods stay intact.
  */
-function isPlainObject(o: unknown): o is Record<string, any> {
+function isPlainObject(o: unknown): o is Record<string, unknown> {
   if (o === null || typeof o !== 'object') return false;
   const proto = Object.getPrototypeOf(o);
   return proto === null || proto === Object.prototype;

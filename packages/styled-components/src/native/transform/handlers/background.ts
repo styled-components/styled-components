@@ -82,14 +82,13 @@ function isLengthLike(t: Token): boolean {
 
 function isPositionToken(t: Token): boolean {
   if (isLengthLike(t)) return true;
-  if (t.kind === TokenKind.Ident && t.name !== undefined && POSITION_KEYWORDS.has(t.name))
-    return true;
+  if (t.kind === TokenKind.Ident && POSITION_KEYWORDS.has(t.name)) return true;
   return false;
 }
 
 function isSizeToken(t: Token): boolean {
   if (isLengthLike(t)) return true;
-  if (t.kind === TokenKind.Ident && t.name !== undefined && SIZE_KEYWORDS.has(t.name)) return true;
+  if (t.kind === TokenKind.Ident && SIZE_KEYWORDS.has(t.name)) return true;
   return false;
 }
 
@@ -106,9 +105,7 @@ function parseLayer(layerSrc: string, isFinal: boolean): ParsedLayer | null {
   let sawSlash = false;
   let boxSlot = 0;
 
-  while (!stream.eof()) {
-    const t = stream.peek()!;
-
+  for (let t = stream.peek(); t !== undefined; t = stream.peek()) {
     // Slash separator: enters a 1-2 size-token sub-state.
     if (t.kind === TokenKind.Slash) {
       if (positionTokens.length === 0 || sawSlash) return null;
@@ -161,7 +158,6 @@ function parseLayer(layerSrc: string, isFinal: boolean): ParsedLayer | null {
     // explicitly excludes the single-form keywords from the two-token slot.
     if (
       t.kind === TokenKind.Ident &&
-      t.name !== undefined &&
       SINGLE_REPEAT_KEYWORDS.has(t.name) &&
       repeatTokens.length === 0
     ) {
@@ -171,7 +167,6 @@ function parseLayer(layerSrc: string, isFinal: boolean): ParsedLayer | null {
     }
     if (
       t.kind === TokenKind.Ident &&
-      t.name !== undefined &&
       TWO_VALUE_REPEAT_KEYWORDS.has(t.name) &&
       repeatTokens.length < 2 &&
       // Mixed forms are invalid: once a two-value keyword is consumed
@@ -187,7 +182,6 @@ function parseLayer(layerSrc: string, isFinal: boolean): ParsedLayer | null {
     // Attachment.
     if (
       t.kind === TokenKind.Ident &&
-      t.name !== undefined &&
       ATTACHMENT_KEYWORDS.has(t.name) &&
       layer.attachment === null
     ) {
@@ -197,12 +191,7 @@ function parseLayer(layerSrc: string, isFinal: boolean): ParsedLayer | null {
     }
 
     // Box keywords: first → origin, second → clip (or both = same value).
-    if (
-      t.kind === TokenKind.Ident &&
-      t.name !== undefined &&
-      BOX_KEYWORDS.has(t.name) &&
-      boxSlot < 2
-    ) {
+    if (t.kind === TokenKind.Ident && BOX_KEYWORDS.has(t.name) && boxSlot < 2) {
       if (boxSlot === 0) {
         layer.origin = t.raw;
         layer.clip = t.raw;
@@ -241,7 +230,7 @@ function parseLayer(layerSrc: string, isFinal: boolean): ParsedLayer | null {
   return layer;
 }
 
-export function backgroundShorthand(tokens: Token[]): Dict<any> | null {
+export function backgroundShorthand(tokens: Token[]): Dict<unknown> | null {
   // The tokenizer already operates over the whole declaration; to reach
   // layers we round-trip through the original source string the parser
   // tracks on each token. Reconstruct per-layer source via splitTopLevelCommas
@@ -318,7 +307,7 @@ export function backgroundShorthand(tokens: Token[]): Dict<any> | null {
 
   // The shorthand resets every longhand it controls, so `background: url(...)`
   // (image-only) clears any preceding `background-color`.
-  const out: Dict<any> = {};
+  const out: Dict<unknown> = {};
   out.backgroundColor =
     finalLayer.color !== null ? cssColorRawToRnStyleValue(finalLayer.color) : 'transparent';
 
@@ -381,7 +370,7 @@ function everyIdentInSet(tokens: Token[], values: ReadonlySet<string>): boolean 
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
     if (expectIdent) {
-      if (t.kind !== TokenKind.Ident || t.name === undefined || !values.has(t.name)) return false;
+      if (t.kind !== TokenKind.Ident || !values.has(t.name)) return false;
       sawIdent = true;
       expectIdent = false;
       continue;
@@ -403,7 +392,7 @@ function everyIdentIs(tokens: Token[], value: string): boolean {
   return sawIdent;
 }
 
-export function backgroundAttachmentLonghand(tokens: Token[]): Dict<any> | null {
+export function backgroundAttachmentLonghand(tokens: Token[]): Dict<unknown> | null {
   const raw = rawBackgroundLonghand(tokens);
   if (raw === null) return null;
   if (__NATIVE_WEB__) return { backgroundAttachment: raw };
@@ -420,7 +409,7 @@ export function backgroundAttachmentLonghand(tokens: Token[]): Dict<any> | null 
   return {};
 }
 
-export function backgroundOriginLonghand(tokens: Token[]): Dict<any> | null {
+export function backgroundOriginLonghand(tokens: Token[]): Dict<unknown> | null {
   const raw = rawBackgroundLonghand(tokens);
   if (raw === null) return null;
   if (__NATIVE_WEB__) return { backgroundOrigin: raw };
@@ -437,7 +426,7 @@ export function backgroundOriginLonghand(tokens: Token[]): Dict<any> | null {
   return {};
 }
 
-export function backgroundClipLonghand(tokens: Token[]): Dict<any> | null {
+export function backgroundClipLonghand(tokens: Token[]): Dict<unknown> | null {
   const raw = rawBackgroundLonghand(tokens);
   if (raw === null) return null;
   if (__NATIVE_WEB__) return { backgroundClip: raw };

@@ -32,13 +32,13 @@ function warnIosTextWrapBalancePretty(style: string): void {
  * horizontally; we clip instead of ellipsise). Applied silently
  * because the user-observed behavior matches the intent.
  */
-function applyTextWrapNowrap(out: Dict<any>): void {
+function applyTextWrapNowrap(out: Dict<unknown>): void {
   out.numberOfLines = 1;
   out.ellipsizeMode = 'clip';
 }
 
 /** `balance`/`pretty` map to Android's `textBreakStrategy`; `stable` has no native equivalent. */
-function applyTextWrapStyle(out: Dict<any>, style: string | null): void {
+function applyTextWrapStyle(out: Dict<unknown>, style: string | null): void {
   if (style === 'balance') {
     out.textBreakStrategy = 'balanced';
     if (__DEV__) warnIosTextWrapBalancePretty(style);
@@ -55,7 +55,7 @@ function applyTextWrapStyle(out: Dict<any>, style: string | null): void {
   }
 }
 
-function textWrapShorthand(tokens: Token[]): Dict<any> | null {
+function textWrapShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   let mode: string | null = null;
   let style: string | null = null;
@@ -64,7 +64,6 @@ function textWrapShorthand(tokens: Token[]): Dict<any> | null {
     const t = stream.consume();
     if (!t || t.kind !== TokenKind.Ident) return null;
     const name = t.name;
-    if (name === undefined) return null;
     if (MODES.has(name)) {
       if (mode !== null) return null;
       mode = name;
@@ -81,7 +80,7 @@ function textWrapShorthand(tokens: Token[]): Dict<any> | null {
   // Browser ships text-wrap end-to-end; the Text prop lifts and the
   // platform-limitation warns are native-only.
   if (__NATIVE_WEB__) return { textWrap: value };
-  const out: Dict<any> = { textWrap: value };
+  const out: Dict<unknown> = { textWrap: value };
   if (mode === 'nowrap') applyTextWrapNowrap(out);
   applyTextWrapStyle(out, style);
   return out;
@@ -91,14 +90,14 @@ function textWrapShorthand(tokens: Token[]): Dict<any> | null {
  * `text-wrap-mode: wrap | nowrap`. Initial `wrap`, inherited. The
  * `nowrap` value is mirrored to `numberOfLines: 1` for RN's Text lift.
  */
-function textWrapModeLonghand(tokens: Token[]): Dict<any> | null {
+function textWrapModeLonghand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
-  if (name === undefined || !MODES.has(name)) return null;
+  if (!MODES.has(name)) return null;
   if (__NATIVE_WEB__) return { textWrapMode: name };
-  const out: Dict<any> = { textWrapMode: name };
+  const out: Dict<unknown> = { textWrapMode: name };
   // Same nowrap approximation as the shorthand path, applied silently.
   if (name === 'nowrap') applyTextWrapNowrap(out);
   return out;
@@ -110,14 +109,14 @@ function textWrapModeLonghand(tokens: Token[]): Dict<any> | null {
  * iOS has no equivalent (warns once). `stable` has no native equivalent
  * at all (warns once).
  */
-function textWrapStyleLonghand(tokens: Token[]): Dict<any> | null {
+function textWrapStyleLonghand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
-  if (name === undefined || !STYLES.has(name)) return null;
+  if (!STYLES.has(name)) return null;
   if (__NATIVE_WEB__) return { textWrapStyle: name };
-  const out: Dict<any> = { textWrapStyle: name };
+  const out: Dict<unknown> = { textWrapStyle: name };
   applyTextWrapStyle(out, name);
   return out;
 }

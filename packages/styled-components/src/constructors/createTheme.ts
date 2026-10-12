@@ -2,17 +2,18 @@ import { IS_BROWSER } from '../constants';
 import * as $ from '../utils/charCodes';
 import { warnOnce } from '../utils/warnOnce';
 import createGlobalStyle from './createGlobalStyle';
-import { walkTheme } from './createTheme.shared';
+import type { Dict } from '../types';
+import { isThemeBranch, walkTheme } from './createTheme.shared';
 import type { CSSVarTheme, ThemeContract } from './createTheme.types';
 
-function buildVarNames<T extends Record<string, any>>(obj: T, varPrefix: string): CSSVarTheme<T> {
-  const result: Record<string, any> = {};
+function buildVarNames<T extends Dict<unknown>>(obj: T, varPrefix: string): CSSVarTheme<T> {
+  const result: Dict<unknown> = {};
   walkTheme(obj, '-', result, fullPath => '--' + varPrefix + fullPath);
   return result as CSSVarTheme<T>;
 }
 
-function buildVarRefs<T extends Record<string, any>>(obj: T, varPrefix: string): CSSVarTheme<T> {
-  const result: Record<string, any> = {};
+function buildVarRefs<T extends Dict<unknown>>(obj: T, varPrefix: string): CSSVarTheme<T> {
+  const result: Dict<unknown> = {};
   walkTheme(obj, '-', result, (fullPath, val) => {
     if (__DEV__) {
       const str = String(val);
@@ -35,12 +36,12 @@ function buildVarRefs<T extends Record<string, any>>(obj: T, varPrefix: string):
   return result as CSSVarTheme<T>;
 }
 
-function resolveVars<T extends Record<string, any>>(
+function resolveVars<T extends Dict<unknown>>(
   obj: T,
   varPrefix: string,
   styles: CSSStyleDeclaration
 ): T {
-  const result: Record<string, any> = {};
+  const result: Dict<unknown> = {};
   walkTheme(obj, '-', result, (fullPath, val) => {
     const resolved = styles.getPropertyValue('--' + varPrefix + fullPath).trim();
     return resolved || val;
@@ -50,8 +51,8 @@ function resolveVars<T extends Record<string, any>>(
 
 /** Walk `shape` (not `theme`) so only keys in the original contract emit declarations. */
 function emitVarDeclarations(
-  shape: Record<string, any>,
-  theme: Record<string, any>,
+  shape: Dict<unknown>,
+  theme: Dict<unknown>,
   varPrefix: string,
   path?: string
 ): string {
@@ -60,8 +61,8 @@ function emitVarDeclarations(
     const shapeVal = shape[key];
     const themeVal = theme[key];
     const fullPath = path ? path + '-' + key : key;
-    if (typeof shapeVal === 'object' && shapeVal !== null) {
-      if (typeof themeVal === 'object' && themeVal !== null) {
+    if (isThemeBranch(shapeVal)) {
+      if (isThemeBranch(themeVal)) {
         css += emitVarDeclarations(shapeVal, themeVal, varPrefix, fullPath);
       }
     } else if (themeVal !== undefined && typeof themeVal !== 'function') {
@@ -125,6 +126,7 @@ interface CreateThemeOptions {
  * `;
  * ```
  */
+// biome-ignore lint/suspicious/noExplicitAny: public constraint. `Record<string, unknown>` rejects every interface-typed theme: `createTheme<AppTheme>(...)` fails with "Index signature for type 'string' is missing in type 'AppTheme'"
 export default function createTheme<T extends Record<string, any>>(
   defaultTheme: T,
   options?: CreateThemeOptions
@@ -136,7 +138,8 @@ export default function createTheme<T extends Record<string, any>>(
 
   const GlobalStyle = createGlobalStyle`
     ${sel} {
-      ${(p: { theme: Record<string, any> }) => emitVarDeclarations(defaultTheme, p.theme, pfx)}
+      ${(p: { theme: object }) =>
+        isThemeBranch(p.theme) ? emitVarDeclarations(defaultTheme, p.theme, pfx) : ''}
     }
   `;
 

@@ -23,7 +23,7 @@ import { TokenStream } from '../tokenStream';
  * the render path warns once so the missing autosize behavior is visible
  * in dev.
  */
-function fieldSizingHandler(tokens: Token[]): Dict<any> | null {
+function fieldSizingHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;

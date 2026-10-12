@@ -172,10 +172,10 @@ export type IStyleSheetManager = React.PropsWithChildren<{
 
 /** Configure style injection for descendant styled components (target element, plugins, prop forwarding). */
 export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element {
-  if (IS_RSC) {
+  if (IS_RSC && getRscSlot) {
     if (ensureSheetReset) ensureSheetReset();
 
-    const slot = getRscSlot!();
+    const slot = getRscSlot();
 
     const parentResolved = slot.override || defaultContextValue;
 

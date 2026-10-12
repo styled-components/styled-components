@@ -67,10 +67,17 @@ import {
   scrollTimelineKey,
   type ScrollTimelineContextValue,
 } from '../scrollTimeline';
+import type {
+  AnimatedApi,
+  CompositeAnimation,
+  AnimatedInterpolationNode,
+  AnimatedValue,
+  InterpolatableNode,
+} from './animatedTypes';
 import { evaluateCubicBezier, evaluateEasing, evaluateSteps } from './css-keywords';
 import { setDebugEnabled } from './debug';
 
-type AnimatedNS = any;
+type AnimatedNS = AnimatedApi;
 
 /**
  * Debug toggle. Call sites short-circuit on the local read so expensive
@@ -92,18 +99,18 @@ function dbg(tag: string, ...args: unknown[]): void {
   console.log('[sc/anim]', tag, ...args);
 }
 
-function describeTransform(value: any): string {
+function describeTransform(value: unknown): string {
   if (typeof value === 'string') return value;
   if (!Array.isArray(value)) return String(value);
   return (
     '[' +
     value
-      .map(entry => {
+      .map((entry: unknown) => {
         if (!entry || typeof entry !== 'object') return String(entry);
-        for (const k in entry) {
-          const v = entry[k];
+        for (const [k, v] of Object.entries(entry)) {
           // Animated values / interpolations have characteristic methods.
-          const isAnim = v && typeof v === 'object' && typeof v.interpolate === 'function';
+          const isAnim =
+            v && typeof v === 'object' && 'interpolate' in v && typeof v.interpolate === 'function';
           return `${k}:${isAnim ? '<anim>' : JSON.stringify(v)}`;
         }
         return '?';
@@ -126,9 +133,7 @@ function wrapTarget(target: NativeTarget): NativeTarget {
   const cached = animatedComponentCache.get(target);
   if (cached) return cached;
   try {
-    // RN's `Animated.createAnimatedComponent` argument type is narrower than
-    // our broad `AnyComponent`; widen to `any` at the boundary.
-    const wrapped = Animated.createAnimatedComponent(target as any) as NativeTarget;
+    const wrapped: NativeTarget = Animated.createAnimatedComponent(target);
     animatedComponentCache.set(target, wrapped);
     return wrapped;
   } catch {
@@ -137,9 +142,9 @@ function wrapTarget(target: NativeTarget): NativeTarget {
 }
 
 interface PropAnim {
-  prev: any;
-  next: any;
-  progress: any;
+  prev: unknown;
+  next: unknown;
+  progress: AnimatedValue;
   /**
    * Last `Animated.timing` handle started for this prop. `null` once the
    * timing settles (or no timing has run yet for the current `next`
@@ -169,7 +174,7 @@ interface PropAnim {
    */
   discrete?: {
     flipTimeout: ReturnType<typeof setTimeout> | null;
-    shown: any;
+    shown: unknown;
   };
   /**
    * Reversing-shortening-factor for the current transition. Carries
@@ -208,15 +213,15 @@ interface AdapterScratch {
 
 interface NormalizedFrame {
   offset: number;
-  decls: Dict<any>;
+  decls: Dict<unknown>;
   easing?: EasingDescriptor;
 }
 
 interface AnimScratch {
   name: string;
-  progress: any;
+  progress: AnimatedValue;
   handle: AnimationHandle | null;
-  overrides: Record<string, any>;
+  overrides: Dict<unknown>;
   drivenProps: Set<string>;
   transformKinds?: string[];
   fillMode: AnimationDescriptor['fillMode'];
@@ -400,16 +405,13 @@ function easingToInterpolation(
 }
 
 function buildInterpolation(
-  progress: any,
-  prev: any,
-  next: any,
+  progress: InterpolatableNode,
+  prev: unknown,
+  next: unknown,
   easing: EasingDescriptor,
   durationMs: number
-): any {
-  if (
-    (typeof prev === 'number' && typeof next === 'number') ||
-    (typeof prev === 'string' && typeof next === 'string')
-  ) {
+): unknown {
+  if (typeof prev === 'number' && typeof next === 'number') {
     const samples = easingToInterpolation(easing, samplesForDuration(durationMs));
     if (samples.input.length === 2) {
       return progress.interpolate({
@@ -419,19 +421,29 @@ function buildInterpolation(
     }
     // Multi-segment: resample the prev→next path through the easing curve.
     const input = samples.input;
-    const out = new Array(input.length);
+    const out: number[] = new Array(input.length);
     for (let i = 0; i < input.length; i++) {
-      const t = samples.output[i];
-      if (typeof prev === 'number') {
-        out[i] = (prev as number) + ((next as number) - (prev as number)) * t;
-      } else {
-        // For strings, we lean on RN's two-point interpolate cascaded
-        // through samples;the native side only natively interpolates
-        // numeric ranges. A faithful color/string ease therefore needs
-        // the JS driver; we approximate by applying the eased t at each
-        // sample input.
-        out[i] = t === 0 ? prev : t === 1 ? next : next;
-      }
+      out[i] = prev + (next - prev) * samples.output[i];
+    }
+    return progress.interpolate({ inputRange: input, outputRange: out });
+  }
+  if (typeof prev === 'string' && typeof next === 'string') {
+    const samples = easingToInterpolation(easing, samplesForDuration(durationMs));
+    if (samples.input.length === 2) {
+      return progress.interpolate({
+        inputRange: [0, 1],
+        outputRange: [prev, next],
+      });
+    }
+    // For strings, we lean on RN's two-point interpolate cascaded
+    // through samples;the native side only natively interpolates
+    // numeric ranges. A faithful color/string ease therefore needs
+    // the JS driver; we approximate by applying the eased t at each
+    // sample input.
+    const input = samples.input;
+    const out: string[] = new Array(input.length);
+    for (let i = 0; i < input.length; i++) {
+      out[i] = samples.output[i] === 0 ? prev : next;
     }
     return progress.interpolate({ inputRange: input, outputRange: out });
   }
@@ -663,7 +675,7 @@ function transformIdentity(kind: string): number | string {
  * Returns the kinds in source order. Accepts both string and array
  * forms (RN supports either as `transform`).
  */
-function collectTransformKinds(value: any): string[] {
+function collectTransformKinds(value: unknown): string[] {
   const arr =
     typeof value === 'string'
       ? parseTransformString(value)
@@ -690,7 +702,7 @@ function collectTransformKinds(value: any): string[] {
  * order to keep its native graph connected; without that the second
  * render with a different transform shape resets and snaps.
  */
-function unionTransformKinds(existing: string[], value: any): void {
+function unionTransformKinds(existing: string[], value: unknown): void {
   const next = collectTransformKinds(value);
   for (let i = 0; i < next.length; i++) {
     if (existing.indexOf(next[i]) === -1) existing.push(next[i]);
@@ -713,13 +725,13 @@ function unionTransformKinds(existing: string[], value: any): void {
  * would render linear visually.
  */
 function interpolateTransform(
-  progress: any,
-  prev: any,
-  next: any,
+  progress: InterpolatableNode,
+  prev: unknown,
+  next: unknown,
   kinds: ReadonlyArray<string>,
   easing: EasingDescriptor,
   durationMs: number
-): any[] | null {
+): Array<Dict<unknown>> | null {
   const prevArr =
     typeof prev === 'string'
       ? parseTransformString(prev)
@@ -739,11 +751,11 @@ function interpolateTransform(
   const nextByKind = new Map<string, number | string>();
   for (let i = 0; i < nextArr.length; i++) nextByKind.set(nextArr[i].kind, nextArr[i].value);
 
-  const out: any[] = [];
+  const out: Array<Dict<unknown>> = [];
   for (let i = 0; i < kinds.length; i++) {
     const kind = kinds[i];
-    const prevVal = prevByKind.has(kind) ? prevByKind.get(kind)! : transformIdentity(kind);
-    const nextVal = nextByKind.has(kind) ? nextByKind.get(kind)! : transformIdentity(kind);
+    const prevVal = prevByKind.get(kind) ?? transformIdentity(kind);
+    const nextVal = nextByKind.get(kind) ?? transformIdentity(kind);
     out.push({
       [kind]: buildSegmentedInterpolation(
         progress,
@@ -761,14 +773,15 @@ function interpolateTransform(
 }
 
 /** Convert RN's `[{translateX: 10}, {rotate: '5deg'}]` array form into our component shape. */
-function normalizeTransformArray(arr: ReadonlyArray<any>): TransformComponent[] {
+function normalizeTransformArray(arr: ReadonlyArray<unknown>): TransformComponent[] {
   const out: TransformComponent[] = [];
   for (let i = 0; i < arr.length; i++) {
     const entry = arr[i];
     if (!entry || typeof entry !== 'object') continue;
-    for (const k in entry) {
-      out.push({ kind: k, value: entry[k] });
-      break; // RN entries are single-key objects
+    // RN entries are single-key objects
+    for (const [kind, value] of Object.entries(entry)) {
+      if (typeof value === 'number' || typeof value === 'string') out.push({ kind, value });
+      break;
     }
   }
   return out;
@@ -852,14 +865,14 @@ function startTiming(
 function applyTransitions(
   scratch: AdapterScratch,
   transitions: TransitionDescriptor[],
-  resolved: any,
-  baseValues: Record<string, any> | undefined,
+  resolved: unknown,
+  baseValues: Dict<unknown> | undefined,
   shouldReduce: boolean,
   firstMount: boolean,
-  startingStyle: Dict<any> | undefined,
+  startingStyle: Dict<unknown> | undefined,
   requestRerender: () => void,
   onTransitionEnd?: (event: NativeTransitionEvent) => void
-): any {
+): unknown {
   const Animated = getAnimated();
   if (!Animated || !baseValues) return resolved;
 
@@ -909,7 +922,7 @@ function applyTransitions(
   }
   const cycleUseNative = anyStarting && allEligible;
 
-  let overrides: Record<string, any> | null = null;
+  let overrides: Dict<unknown> | null = null;
   for (const k in baseValues) {
     const t = transitionsByProp.get(k) ?? hasAll;
     if (!t) continue;
@@ -935,8 +948,9 @@ function applyTransitions(
           active: null,
         };
         if (isTransform) {
-          state.transformKinds = collectTransformKinds(next);
-          unionTransformKinds(state.transformKinds!, startVal);
+          const kinds = collectTransformKinds(next);
+          unionTransformKinds(kinds, startVal);
+          state.transformKinds = kinds;
         }
         scratch.props.set(k, state);
         const startingInterpolable = isSmoothlyInterpolable(startVal, next, isTransform);
@@ -969,14 +983,15 @@ function applyTransitions(
           progress: new Animated.Value(1),
           active: null,
         };
-        if (isTransform) state.transformKinds = collectTransformKinds(next);
+        const initialKinds = isTransform ? collectTransformKinds(next) : undefined;
+        if (initialKinds !== undefined) state.transformKinds = initialKinds;
         scratch.props.set(k, state);
         if (debugEnabled) {
           dbg(
             'init',
             k,
             `value=${describeTransform(next)}`,
-            isTransform ? `kinds=${state.transformKinds!.join(',')}` : ''
+            initialKinds !== undefined ? `kinds=${initialKinds.join(',')}` : ''
           );
         }
         continue;
@@ -990,15 +1005,16 @@ function applyTransitions(
       // factor 1.
       const wasPrev = state.prev;
       let reverseFactor = 1;
+      const activeEasing = state.activeEasing;
       const isReversal =
-        state.active !== null && state.activeEasing !== undefined && Object.is(next, wasPrev);
+        state.active !== null && activeEasing !== undefined && Object.is(next, wasPrev);
       if (isReversal) {
         const readProgress = (state.progress as { __getValue?: () => number } | null)?.__getValue;
         if (typeof readProgress === 'function') {
           try {
             const linear = readProgress.call(state.progress);
             if (Number.isFinite(linear)) {
-              const eased = evaluateEasing(state.activeEasing!, Math.max(0, Math.min(1, linear)));
+              const eased = evaluateEasing(activeEasing, Math.max(0, Math.min(1, linear)));
               const oldFactor = state.reversingFactor ?? 1;
               const sum = eased * oldFactor + (1 - oldFactor);
               reverseFactor = Math.max(0, Math.min(1, Math.abs(sum)));
@@ -1027,13 +1043,17 @@ function applyTransitions(
       state.prev = newPrev;
       state.next = next;
       if (isTransform) {
-        unionTransformKinds(state.transformKinds!, next);
+        // Created with the state for every transform prop; the fallback
+        // only covers a state that predates its first transform value.
+        const kinds = state.transformKinds ?? [];
+        unionTransformKinds(kinds, next);
+        state.transformKinds = kinds;
         if (debugEnabled) {
           dbg(
             'change',
             k,
             `${describeTransform(wasNext)} → ${describeTransform(next)}`,
-            `kinds=${state.transformKinds!.join(',')}`
+            `kinds=${kinds.join(',')}`
           );
         }
       } else if (debugEnabled) {
@@ -1117,11 +1137,12 @@ function applyTransitions(
       continue;
     }
     if (isTransform) {
+      const emitKinds = state.transformKinds ?? [];
       const animatedTransform = interpolateTransform(
         state.progress,
         state.prev,
         state.next,
-        state.transformKinds!,
+        emitKinds,
         t.timingFunction,
         t.durationMs
       );
@@ -1170,7 +1191,7 @@ function applyTransitions(
  * (their internal payload can't be edited and they're an in-prod
  * concern handled separately).
  */
-function stripOverriddenKeys(style: any, overrides: Record<string, unknown>): any {
+function stripOverriddenKeys(style: unknown, overrides: Dict<unknown>): unknown {
   if (style === null || style === undefined) return style;
   if (typeof style === 'number') return style; // StyleSheet id; opaque
   if (Array.isArray(style)) {
@@ -1181,14 +1202,14 @@ function stripOverriddenKeys(style: any, overrides: Record<string, unknown>): an
   if (typeof style === 'function') {
     // Pseudo-state callbacks: wrap so the override keys are stripped
     // from whatever the callback returns at render time.
-    return (state: any) => stripOverriddenKeys(style(state), overrides);
+    return (state: unknown) => stripOverriddenKeys(style(state), overrides);
   }
   if (typeof style !== 'object') return style;
-  let cloned: Record<string, any> | null = null;
+  let cloned: Dict<unknown> | null = null;
   for (const k in overrides) {
     if (k in style) {
       if (cloned === null) cloned = { ...style };
-      delete (cloned as Record<string, any>)[k];
+      delete cloned[k];
     }
   }
   return cloned ?? style;
@@ -1415,17 +1436,25 @@ function interpolateColorOklab(from: RGBA255, to: RGBA255, t: number): RGBA255 {
   return { r: out.r * 255, g: out.g * 255, b: out.b * 255, a: out.a };
 }
 
+interface FrameValue {
+  offset: number;
+  value: unknown;
+}
+
 function buildSegmentedInterpolation(
-  progress: any,
-  values: Array<{ offset: number; value: any }>,
+  progress: InterpolatableNode,
+  values: FrameValue[],
   easings: Array<EasingDescriptor | undefined>,
   topEasing: EasingDescriptor,
   totalDurationMs: number
-): any {
+): unknown {
   if (values.length < 2) return values.length === 1 ? values[0].value : undefined;
 
   const inputRange: number[] = [];
-  const outputRange: any[] = [];
+  // RN rejects a mixed range, so numeric props fill `numberRange` and every
+  // other shape fills `stringRange`; only the one matching `isNumeric` is read.
+  const numberRange: number[] = [];
+  const stringRange: string[] = [];
   const isNumeric = typeof values[0].value === 'number';
 
   // Detect unit-bearing strings (e.g. '0deg', '180deg') that can be
@@ -1488,10 +1517,18 @@ function buildSegmentedInterpolation(
       const t = samples.input[j];
       const eased = samples.output[j];
       const inp = from.offset + t * segLen;
-      let v: any;
+      const replaceLast = inputRange.length > 0 && inputRange[inputRange.length - 1] === inp;
+      if (!replaceLast) inputRange.push(inp);
       if (isNumeric) {
-        v = (from.value as number) + ((to.value as number) - (from.value as number)) * eased;
-      } else if (sharedUnit) {
+        const fromN = typeof from.value === 'number' ? from.value : NaN;
+        const toN = typeof to.value === 'number' ? to.value : NaN;
+        const v = fromN + (toN - fromN) * eased;
+        if (replaceLast) numberRange[numberRange.length - 1] = v;
+        else numberRange.push(v);
+        continue;
+      }
+      let v: string;
+      if (sharedUnit && typeof from.value === 'string' && typeof to.value === 'string') {
         const fromN = parseFloat(from.value);
         const toN = parseFloat(to.value);
         v = fromN + (toN - fromN) * eased + sharedUnit;
@@ -1504,18 +1541,24 @@ function buildSegmentedInterpolation(
       } else {
         // Genuinely discrete pair (e.g. `display: block` → `none`,
         // mixed shapes): discrete interpolation, 50% swap point.
-        v = eased < 0.5 ? from.value : to.value;
+        v = String(eased < 0.5 ? from.value : to.value);
       }
-      if (inputRange.length > 0 && inputRange[inputRange.length - 1] === inp) {
-        outputRange[outputRange.length - 1] = v;
-      } else {
-        inputRange.push(inp);
-        outputRange.push(v);
-      }
+      if (replaceLast) stringRange[stringRange.length - 1] = v;
+      else stringRange.push(v);
     }
   }
 
   // Ensure endpoints exist
+  if (isNumeric) {
+    padRangeEndpoints(inputRange, numberRange);
+    return progress.interpolate({ inputRange, outputRange: numberRange, extrapolate: 'clamp' });
+  }
+  padRangeEndpoints(inputRange, stringRange);
+  return progress.interpolate({ inputRange, outputRange: stringRange, extrapolate: 'clamp' });
+}
+
+/** Extend an interpolation range to cover 0 and 1, holding the nearest output. */
+function padRangeEndpoints<T>(inputRange: number[], outputRange: T[]): void {
   if (inputRange[0] !== 0) {
     inputRange.unshift(0);
     outputRange.unshift(outputRange[0]);
@@ -1524,8 +1567,6 @@ function buildSegmentedInterpolation(
     inputRange.push(1);
     outputRange.push(outputRange[outputRange.length - 1]);
   }
-
-  return progress.interpolate({ inputRange, outputRange, extrapolate: 'clamp' });
 }
 
 /** Add two parsed sRGB colors as Oklab component sums; alpha summed and clamped. */
@@ -1545,7 +1586,7 @@ function additiveCombineColor(base: RGBA255, frame: RGBA255): string {
  * else oklab color sum when both parse as colors. Falls back to the
  * frame value otherwise (e.g. `currentColor`).
  */
-function additiveCombine(base: any, frame: any): any {
+function additiveCombine(base: unknown, frame: unknown): unknown {
   if (typeof base === 'number' && typeof frame === 'number') return base + frame;
   if (typeof base === 'string' && typeof frame === 'string') {
     const b = parseUnitString(base);
@@ -1568,7 +1609,7 @@ function additiveCombine(base: any, frame: any): any {
  * with the base contributing its identity (an absent transform
  * function contributes its identity).
  */
-function additiveCombineTransform(base: any, frame: any): any {
+function additiveCombineTransform(base: unknown, frame: unknown): unknown {
   const baseComps =
     typeof base === 'string'
       ? parseTransformString(base)
@@ -1585,7 +1626,7 @@ function additiveCombineTransform(base: any, frame: any): any {
   const baseByKind = new Map<string, number | string>();
   for (let i = 0; i < baseComps.length; i++) baseByKind.set(baseComps[i].kind, baseComps[i].value);
   const seen = new Set<string>();
-  const out: Array<Record<string, number | string>> = [];
+  const out: Array<Dict<unknown>> = [];
   for (let i = 0; i < frameComps.length; i++) {
     const c = frameComps[i];
     const bv = baseByKind.get(c.kind);
@@ -1606,19 +1647,23 @@ function additiveCombineTransform(base: any, frame: any): any {
  * the `transform` and scalar branches of `buildKeyframeInterpolations`,
  * which differ only in their `combine` function.
  */
+interface FrameEntry extends FrameValue {
+  easing?: EasingDescriptor;
+}
+
 function collectFrameEntries(
   frames: NormalizedFrame[],
   prop: string,
-  baseVal: any,
+  baseVal: unknown,
   isAdditive: boolean,
-  combine: (base: any, frame: any) => any
-): Array<{ offset: number; value: any; easing?: EasingDescriptor }> {
-  const out: Array<{ offset: number; value: any; easing?: EasingDescriptor }> = [];
+  combine: (base: unknown, frame: unknown) => unknown
+): FrameEntry[] {
+  const out: FrameEntry[] = [];
   for (let i = 0; i < frames.length; i++) {
     if (frames[i].decls[prop] !== undefined) {
       const raw = frames[i].decls[prop];
       const value = isAdditive && baseVal !== undefined ? combine(baseVal, raw) : raw;
-      const entry: { offset: number; value: any; easing?: EasingDescriptor } = {
+      const entry: FrameEntry = {
         offset: frames[i].offset,
         value,
       };
@@ -1637,15 +1682,21 @@ function collectFrameEntries(
   return out;
 }
 
+interface KeyframeInterpolations {
+  drivenProps: Set<string>;
+  overrides: Dict<unknown>;
+  transformKinds?: string[];
+}
+
 function buildKeyframeInterpolations(
-  progress: any,
+  progress: InterpolatableNode,
   frames: NormalizedFrame[],
   topEasing: EasingDescriptor,
-  baseValues: Record<string, any> | undefined,
+  baseValues: Dict<unknown> | undefined,
   useNative: boolean,
   durationMs: number,
   composition: AnimationDescriptor['composition'] = 'replace'
-): { overrides: Record<string, any>; drivenProps: Set<string>; transformKinds?: string[] } {
+): KeyframeInterpolations {
   // `add` and `accumulate` are spec-distinguished only for list-valued
   // properties: addition extends the list (concatenation), accumulation
   // pads to equal length and combines componentwise. For everything the
@@ -1658,7 +1709,7 @@ function buildKeyframeInterpolations(
     for (const k in frames[i].decls) allProps.add(k);
   }
 
-  const overrides: Record<string, any> = {};
+  const overrides: Dict<unknown> = {};
   const drivenProps = new Set<string>();
   let transformKinds: string[] | undefined;
 
@@ -1687,10 +1738,10 @@ function buildKeyframeInterpolations(
       transformKinds = allKinds;
 
       // Build per-kind interpolation
-      const transformArr: any[] = [];
+      const transformArr: Array<Dict<unknown>> = [];
       for (let ki = 0; ki < allKinds.length; ki++) {
         const kind = allKinds[ki];
-        const values: Array<{ offset: number; value: any }> = [];
+        const values: FrameValue[] = [];
         const easings: Array<EasingDescriptor | undefined> = [];
 
         for (let fi = 0; fi < framesByOffset.length; fi++) {
@@ -1727,7 +1778,7 @@ function buildKeyframeInterpolations(
       overrides[prop] = transformArr;
       drivenProps.add(prop);
     } else {
-      const values: Array<{ offset: number; value: any }> = [];
+      const values: FrameValue[] = [];
       const easings: Array<EasingDescriptor | undefined> = [];
 
       // Additive composition adds explicit keyframe values on top of
@@ -1752,11 +1803,7 @@ function buildKeyframeInterpolations(
     }
   }
 
-  const result: {
-    overrides: Record<string, any>;
-    drivenProps: Set<string>;
-    transformKinds?: string[];
-  } = { overrides, drivenProps };
+  const result: KeyframeInterpolations = { overrides, drivenProps };
   if (transformKinds) result.transformKinds = transformKinds;
   return result;
 }
@@ -1850,7 +1897,7 @@ function startKeyframeAnimation(
     }
     delay = 0;
   } else if (canResumeMultiIter || canResumeAlternate) {
-    initialProgress = resumeAt!;
+    initialProgress = resumeAt;
   }
   delete animS.pausedAt;
   delete animS.pausedIterIndex;
@@ -1894,7 +1941,7 @@ function startKeyframeAnimation(
    * the value to the construction-time starting value (0 here). Without
    * the snap, reverse loops animate 0→0 from iteration 2 onward.
    */
-  const loopableIter = (dur: number): any => {
+  const loopableIter = (dur: number): CompositeAnimation => {
     const timing = isReverse ? makeReverse(dur, 0) : makeForward(dur, 0);
     if (!isReverse) return timing;
     return Animated.sequence([snap(1), timing]);
@@ -1910,21 +1957,21 @@ function startKeyframeAnimation(
    * step inside the pair restores progress=1 before the reverse leg
    * runs. Without the snap the leg would animate 0→0.
    */
-  const alternatePair = (dur: number, firstIsReverseSense: boolean): any => {
+  const alternatePair = (dur: number, firstIsReverseSense: boolean): CompositeAnimation => {
     if (!firstIsReverseSense) {
       return Animated.sequence([makeForward(dur, 0), makeReverse(dur, 0)]);
     }
     return Animated.sequence([snap(1), makeReverse(dur, 0), makeForward(dur, 0)]);
   };
 
-  let body: any;
+  let body: CompositeAnimation;
 
   if (canResumeMultiIter) {
     // Multi-iter resume path. Emit one partial timing for the current
     // iteration's remainder, then loop the remaining full iterations.
     // `loopableIter` wraps reverse iterations in a snap-to-1 reset so
     // they survive `Animated.loop`'s between-iteration reset.
-    const ra = resumeAt!;
+    const ra = resumeAt;
     const partialDuration = isReverse
       ? Math.max(0, duration * ra)
       : Math.max(0, duration * (1 - ra));
@@ -1974,7 +2021,7 @@ function startKeyframeAnimation(
     // after the partial. `alternatePair` handles the reset-aware
     // construction so the pair survives `Animated.loop`'s between-
     // iteration reset.
-    const ra = resumeAt!;
+    const ra = resumeAt;
     const partial = currentIterIsReverseSense
       ? makeReverse(duration * ra, 0)
       : makeForward(duration * (1 - ra), 0);
@@ -1984,7 +2031,7 @@ function startKeyframeAnimation(
       body = Animated.sequence([partial, Animated.loop(pair)]);
     } else {
       const remaining = iterCount - pausedIter - 1;
-      const parts: any[] = [partial];
+      const parts: CompositeAnimation[] = [partial];
       let curIsReverse = nextIsReverseSense;
       for (let i = 0; i < remaining; i++) {
         parts.push(curIsReverse ? makeReverse(duration, 0) : makeForward(duration, 0));
@@ -2008,7 +2055,7 @@ function startKeyframeAnimation(
     } else {
       const fullPairs = Math.floor(iterCount / 2);
       const remainder = iterCount - fullPairs * 2;
-      const parts: any[] = [];
+      const parts: CompositeAnimation[] = [];
       let delayConsumed = false;
 
       if (fullPairs > 0) {
@@ -2075,7 +2122,7 @@ function startKeyframeAnimation(
     } else {
       const fullIters = Math.floor(iterCount);
       const remainder = iterCount - fullIters;
-      const parts: any[] = [];
+      const parts: CompositeAnimation[] = [];
       // Apply delay once at the start of the sequence rather than per
       // iteration. The first concrete timing (full iter or remainder)
       // carries the delay; routing through a synthetic 0-duration
@@ -2170,20 +2217,20 @@ function applyAnimations(
   scratch: AdapterScratch,
   animations: AnimationDescriptor[],
   keyframesDefs: CompiledKeyframes[],
-  resolved: any,
-  baseValues: Record<string, any> | undefined,
+  resolved: unknown,
+  baseValues: Dict<unknown> | undefined,
   env: ResolveEnv,
   shouldReduce: boolean,
   scrollTimelines: ScrollTimelineContextValue,
   viewSubject: ViewSubjectLayout | null,
   onAnimationEnd?: (event: NativeAnimationEvent) => void
-): any {
+): unknown {
   const Animated = getAnimated();
   if (!Animated || !baseValues) return resolved;
 
   if (!scratch.anims) scratch.anims = [];
 
-  let mergedOverrides: Record<string, any> | null = null;
+  let mergedOverrides: Dict<unknown> | null = null;
 
   for (let idx = 0; idx < animations.length; idx++) {
     const desc = animations[idx];
@@ -2229,7 +2276,7 @@ function applyAnimations(
         target !== null
           ? buildScrollProgressNode(desc, target.entry, target.axis, viewSubject, canNative)
           : null;
-      if (node === null || frames === null) {
+      if (target === null || node === null || frames === null) {
         // Inactive timeline: the animation applies no effect.
         animS.overrides = {};
         animS.drivenProps.clear();
@@ -2238,12 +2285,11 @@ function applyAnimations(
         animS.finished = false;
         continue;
       }
-      const key = scrollTimelineKey(desc, target!.entry, target!.axis, viewSubject, canNative);
+      const key = scrollTimelineKey(desc, target.entry, target.axis, viewSubject, canNative);
       if (animS.name !== desc.name || animS.timelineKey !== key) {
         scratch.scrollRebuilt = true;
         animS.name = desc.name;
         animS.timelineKey = key;
-        animS.progress = node;
         animS.finished = false;
         delete animS.startedAt;
         delete animS.delayMs;
@@ -2305,12 +2351,16 @@ function applyAnimations(
     }
 
     // Detect name change or first appearance
-    if (animS.name !== desc.name) {
-      // Stop previous animation
+    if (animS.name !== desc.name || animS.timelineKey !== undefined) {
+      // Stop previous animation. A scratch last used by a scroll-driven
+      // animation (`timelineKey` set) restarts here too, so a timeline
+      // change under an unchanged keyframes name rebuilds the overrides
+      // from a timing-driven progress value.
       if (animS.handle) {
         animS.handle.stop();
         scratch.running.delete(animS.handle);
       }
+      delete animS.timelineKey;
       animS.progress.stopAnimation?.();
       animS.progress = new Animated.Value(0);
       animS.name = desc.name;
@@ -2409,11 +2459,12 @@ function applyAnimations(
   }
 
   // Trim excess scratch entries
-  while (scratch.anims.length > animations.length) {
-    const removed = scratch.anims.pop()!;
-    if (removed.handle) {
-      removed.handle.stop();
-      scratch.running.delete(removed.handle);
+  if (scratch.anims.length > animations.length) {
+    for (const removed of scratch.anims.splice(animations.length)) {
+      if (removed.handle) {
+        removed.handle.stop();
+        scratch.running.delete(removed.handle);
+      }
     }
   }
 
@@ -2453,7 +2504,7 @@ const animatedAdapter: AnimationAdapter = {
     // scratchRef.current is component-scoped and never reassigned, so
     // the cleanup runs exactly once on unmount with stable deps.
     // biome-ignore lint/plugin/no-effects: carve-out. Unmount-only teardown of the adapter's Animated scratch (listeners and running animations). An adapter returns a style object rather than props, so there is no element to hang a ref callback on, but growing the contract a ref would not retire this: the scratch is armed during render because the style depends on it, so the arm half cannot be gated on the ref the way anchor-name and scroll-snap-align gate theirs. A composed target that dropped the ref would then leak listeners and running animations past unmount, which is worse than the effect. An effect is the only teardown that runs whatever the target does with `ref`.
-    React.useEffect(() => () => disposeScratch(scratchRef.current!), []);
+    React.useEffect(() => () => disposeScratch(scratch), []);
 
     if (!hasTransition && !hasAnimation && !hasStarting) {
       return passthroughOutput(input);
@@ -2483,7 +2534,7 @@ const animatedAdapter: AnimationAdapter = {
 
     const firstMount = !scratch.mounted;
     if (firstMount) scratch.mounted = true;
-    let resolvedStartingStyle: Dict<any> | undefined;
+    let resolvedStartingStyle: Dict<unknown> | undefined;
     if (firstMount && hasStarting && compiled.startingStyle) {
       resolvedStartingStyle = compiled.startingStyleResolvers
         ? applyResolvers(compiled.startingStyle, compiled.startingStyleResolvers, env)

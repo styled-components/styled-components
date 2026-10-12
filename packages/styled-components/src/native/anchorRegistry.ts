@@ -12,7 +12,7 @@
  */
 
 import React from 'react';
-import { useComposedRef } from './composeRef';
+import { useComposedRef, type ElementProps } from './composeRef';
 import { warnOnce } from './transform/dev';
 
 export interface AnchorRect {
@@ -80,8 +80,8 @@ export function resetAnchorsForTest(): void {
  */
 export function useAnchorNamePublisher(
   name: string | undefined,
-  elementProps: Record<string, any>
-): Record<string, any> {
+  elementProps: ElementProps
+): ElementProps {
   // Keyed on `name`: React runs a ref callback's cleanup when its
   // identity changes, so a rename releases the old name before the next
   // layout publishes under the new one. The unmount-only effect this
@@ -108,7 +108,7 @@ export function useAnchorNamePublisher(
   );
   if (name === undefined) return elementProps;
   const userOnLayout = elementProps.onLayout;
-  const onLayout = (e: any) => {
+  const onLayout = (e: { nativeEvent?: { layout?: AnchorRect } } | null | undefined) => {
     const l = e?.nativeEvent?.layout;
     if (l) {
       if (attached.current) {

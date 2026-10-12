@@ -147,11 +147,11 @@ function isNonNegativeLengthPercentageToken(t: Token): boolean {
 }
 
 function isIdent(t: Token, values: ReadonlySet<string>): boolean {
-  return t.kind === TokenKind.Ident && t.name !== undefined && values.has(t.name);
+  return t.kind === TokenKind.Ident && values.has(t.name);
 }
 
 function positionAxis(t: Token): 'horizontal' | 'vertical' | 'center' | null {
-  if (t.kind !== TokenKind.Ident || t.name === undefined) return null;
+  if (t.kind !== TokenKind.Ident) return null;
   if (HORIZONTAL_POSITION_KEYWORDS.has(t.name)) return 'horizontal';
   if (VERTICAL_POSITION_KEYWORDS.has(t.name)) return 'vertical';
   return t.name === 'center' ? 'center' : null;
@@ -266,14 +266,7 @@ function normalizeBackgroundPositionLayer(layer: string): string {
   if (tokens.length !== 2) return layer;
   const first = tokens[0];
   const second = tokens[1];
-  if (
-    first.kind !== TokenKind.Ident ||
-    second.kind !== TokenKind.Ident ||
-    first.name === undefined ||
-    second.name === undefined
-  ) {
-    return layer;
-  }
+  if (first.kind !== TokenKind.Ident || second.kind !== TokenKind.Ident) return layer;
   if (first.name === 'center') return second.name;
   if (second.name === 'center') return first.name;
   return layer;

@@ -9,7 +9,7 @@ import { TokenStream } from '../tokenStream';
  * `-webkit-legacy` parse-accept but emit nothing. `numberOfLines: 0` is
  * RN's sentinel for unlimited.
  */
-function lineClampShorthand(tokens: Token[]): Dict<any> | null {
+function lineClampShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const first = stream.consume();
   if (!first) return null;
@@ -25,7 +25,7 @@ function lineClampShorthand(tokens: Token[]): Dict<any> | null {
   while (cur !== null) {
     if (cur.kind === TokenKind.Number) {
       if (lines !== null) return null;
-      const n = cur.value!;
+      const n = cur.value;
       if (!Number.isInteger(n) || n < 1) return null;
       lines = n;
     } else if (cur.kind === TokenKind.String) {

@@ -86,6 +86,7 @@ import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager'
 import ServerStyleSheet from '../../models/ServerStyleSheet';
 import { camelize } from '../transform';
 import type { Styled } from '../../constructors/constructWithOptions';
+import type { WebTarget } from '../../types';
 
 type BridgedProps = {
   className?: string;
@@ -184,20 +185,19 @@ function collectDataProps(rest: Record<string, unknown>): {
  * exclusively for className generation, so we must deliver our class
  * through `style` to land on the DOM.
  */
-function bridgePrimitive<P extends BridgedProps>(
-  Component: React.ComponentType<P>,
+function bridgePrimitive(
+  Component: React.ComponentType<BridgedProps>,
   displayName: string
-): React.FunctionComponent<P & React.RefAttributes<unknown>> {
+): React.FunctionComponent<BridgedProps & React.RefAttributes<unknown>> {
   // React 19 ref-as-prop; no `React.forwardRef` wrapper, matching
   // StyledComponent and StyledNativeComponent. The ref arrives in props
   // and is handed straight back to the primitive below.
-  const Bridged = (props: P & React.RefAttributes<unknown>) => {
+  const Bridged = (props: BridgedProps & React.RefAttributes<unknown>) => {
     // `pointerEvents` is destructured off (not deleted) because rn-web
     // deprecates the prop in favor of `style.pointerEvents`. Values
     // `auto | none | box-none | box-only` pass through identically to
     // rn-web's own `pointerEventsStyles` map.
-    const augmented = props as P & { pointerEvents?: unknown; ref?: React.Ref<unknown> };
-    const { className, style, pointerEvents, ref } = augmented;
+    const { className, style, pointerEvents, ref } = props;
     // Build `rest` without object-rest destructuring so the bridge bundle does
     // not import tslib's `__rest` helper; the package declares no tslib dep.
     // The container is prototypeless so a prop literally named `__proto__` is
@@ -205,15 +205,15 @@ function bridgePrimitive<P extends BridgedProps>(
     // the `__proto__` setter and reassigning the prototype; `hasOwnProperty`
     // keeps the copy to own enumerable keys.
     const rest: Record<string, unknown> = Object.create(null);
-    for (const key in augmented) {
+    for (const key in props) {
       if (
         key !== 'className' &&
         key !== 'style' &&
         key !== 'pointerEvents' &&
         key !== 'ref' &&
-        Object.prototype.hasOwnProperty.call(augmented, key)
+        Object.prototype.hasOwnProperty.call(props, key)
       ) {
-        rest[key] = (augmented as Record<string, unknown>)[key];
+        rest[key] = props[key];
       }
     }
     const fixedStyle = rewrite3dMatrices(style);
@@ -232,7 +232,7 @@ function bridgePrimitive<P extends BridgedProps>(
     const base = other !== null ? other : rest;
     const finalProps: Record<string, unknown> = { ...base, ref, style: finalStyle };
     if (dataSet !== undefined) finalProps.dataSet = dataSet;
-    return React.createElement(Component, finalProps as unknown as P);
+    return React.createElement(Component, finalProps);
   };
   Bridged.displayName = displayName;
   return Bridged;
@@ -529,13 +529,16 @@ const allLifts: CssLiftMap = {
  */
 const rawToBridged = new WeakMap<object, React.ComponentType<BridgedProps>>();
 
-function bridgeStyledCall<T>(target: T): unknown {
+function bridgeStyledCall(target: WebTarget): unknown {
   let effectiveTarget = target;
   if (target !== null && (typeof target === 'function' || typeof target === 'object')) {
-    const bridged = rawToBridged.get(target as object);
-    if (bridged !== undefined) effectiveTarget = bridged as unknown as T;
+    const bridged = rawToBridged.get(target);
+    if (bridged !== undefined) effectiveTarget = bridged;
   }
-  const result = (styledWeb as unknown as (t: T) => Factoryish)(effectiveTarget);
+  // `Factoryish` is the loose shape the lift wrapper needs from the web factory; the
+  // factory's own generic template signature does not unify with it (TS2345 on the
+  // `...args: unknown[]` parameter).
+  const result = styledWeb(effectiveTarget) as unknown as Factoryish;
   return wrapBridgeFactory(result, allLifts);
 }
 const bridgedShorthands = new Map<string, Factoryish>();
@@ -569,7 +572,7 @@ styled = new Proxy(bridgeStyledCall, {
   has(target, prop) {
     return prop in target || Reflect.has(styledWeb, prop);
   },
-}) as unknown as typeof styledWeb & BridgedNamespace;
+}) as typeof styledWeb & BridgedNamespace;
 
 type Factoryish = ((
   strings: TemplateStringsArray,
@@ -887,15 +890,15 @@ aliases.forEach(alias => {
       const cached = bridgedCache.get(alias);
       if (cached) return cached;
       const primitive = reactNativeWeb[alias];
-      if (!primitive) {
+      // `rawToBridged` was seeded for every present alias at module load so
+      // `styled(rawPrimitive)` resolves to the same bridged shim
+      // even when the consumer never touches the alias getter first.
+      const bridged = primitive ? rawToBridged.get(primitive as object) : undefined;
+      if (!bridged) {
         throw new Error(
           `${alias} is not available in the currently-installed version of react-native-web`
         );
       }
-      // `rawToBridged` was seeded for every alias at module load so
-      // `styled(rawPrimitive)` resolves to the same bridged shim
-      // even when the consumer never touches the alias getter first.
-      const bridged = rawToBridged.get(primitive as object)!;
       const baseline = baselineCss[alias];
       const base = baseline
         ? styledWeb(bridged)`

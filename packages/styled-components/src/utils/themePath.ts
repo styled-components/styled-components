@@ -105,7 +105,7 @@ export function themeValue<T, P extends ThemePath<T>>(
 export function themeValue(theme: unknown, path: string): unknown;
 export function themeValue(theme: unknown, path: string): unknown {
   if (theme == null) return undefined;
-  let cur: any = theme;
+  let cur: unknown = theme;
   let i = 0;
   let start = 0;
   // Inline split-on-dot walk so we don't allocate a parts array per call.
@@ -113,7 +113,7 @@ export function themeValue(theme: unknown, path: string): unknown {
     if (i === path.length || path.charCodeAt(i) === 46 /* '.' */) {
       const segment = path.slice(start, i);
       if (cur == null || typeof cur !== 'object') return undefined;
-      cur = cur[segment];
+      cur = (cur as Record<string, unknown>)[segment];
       start = i + 1;
     }
     i++;

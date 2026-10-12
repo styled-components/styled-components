@@ -119,11 +119,11 @@ export function cssColorRawToRnStyleValue(raw: string): unknown {
  */
 export function tokenToValue(t: Token): number | string {
   if (t.kind === TokenKind.Length) {
-    if (t.unit === 'px' || t.unit === '') return t.value!;
+    if (t.unit === 'px' || t.unit === '') return t.value;
     if (t.value === 0) return 0;
     return t.raw;
   }
-  if (t.kind === TokenKind.Number) return t.value!;
+  if (t.kind === TokenKind.Number) return t.value;
   if (t.kind === TokenKind.Percent) return t.raw;
   return t.raw;
 }
@@ -137,7 +137,7 @@ export function directional(
   tokens: Token[],
   bareKey: string,
   keys: readonly [string, string, string, string]
-): Dict<any> | null {
+): Dict<unknown> | null {
   const stripped = withoutSlashes(tokens);
   const len = stripped.length;
   if (len < 1 || len > 4) return null;
@@ -169,7 +169,7 @@ export function directionalColor(
   tokens: Token[],
   bareKey: string,
   keys: readonly [string, string, string, string]
-): Dict<any> | null {
+): Dict<unknown> | null {
   const stripped = withoutSlashes(tokens);
   const stream = new TokenStream(stripped);
   const values: Token[] = [];
@@ -185,7 +185,7 @@ export function directionalColor(
   }
 
   const [top, right = top, bottom = top, left = right] = values;
-  const out: Dict<any> = {};
+  const out: Dict<unknown> = {};
   out[keys[0]] = colorTokenToRnStyleValue(top);
   out[keys[1]] = colorTokenToRnStyleValue(right);
   out[keys[2]] = colorTokenToRnStyleValue(bottom);

@@ -59,7 +59,7 @@ function parseOne(stream: TokenStream): ParsedValue | null {
   return null;
 }
 
-function textOverflowShorthand(tokens: Token[]): Dict<any> | null {
+function textOverflowShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const first = parseOne(stream);
   if (first === null) return null;

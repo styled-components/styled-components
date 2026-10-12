@@ -31,7 +31,7 @@ import { NodeKind, type Root, type TemplateValue } from '../parser/ast';
 import { evaluateForFastPath, type FastPathFragment } from '../parser/compile';
 import { getSource, Source } from '../parser/source';
 import { themeValue } from '../utils/themePath';
-import { tracePostAttr, type PostAttrsPlan } from '../utils/tracePostAttrs';
+import { isPostAttr, tracePostAttr, type PostAttrsPlan } from '../utils/tracePostAttrs';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import createWarnTooManyClasses, {
   LIMIT as TOO_MANY_CLASSES_LIMIT,
@@ -544,19 +544,19 @@ function buildPostAttrsPlans<Props extends BaseObject>(
   const plans: (PostAttrsPlan | null)[] = [];
   for (let i = 0; i < attrs.length; i++) {
     const a = attrs[i];
-    if (typeof a !== 'function' || (a as Function).length < 2) continue;
-    plans.push(tracePostAttr(a as (p: any, ast: CompiledAst) => any, rules));
+    if (!isPostAttr(a)) continue;
+    plans.push(tracePostAttr(a, rules));
   }
   return plans;
 }
 
-function buildPropsForElement(
-  context: Record<string, any>,
+function buildPropsForElement<Context extends ExecutionContext>(
+  context: Context,
   elementToBeCreated: WebTarget,
   theme: DefaultTheme | undefined,
   shouldForwardProp: ((prop: string, el: WebTarget) => boolean) | undefined
-): Dict<any> {
-  const out: Dict<any> = {};
+): Dict<unknown> {
+  const out: Dict<unknown> = {};
 
   for (const key in context) {
     if (context[key] === undefined) {
@@ -916,7 +916,7 @@ function createStyledComponent<
     // closure. ${StyledFoo} interpolation calls toString() with the styled
     // component as `this`, so the lookup binds correctly.
     toString: styledToString,
-  } as unknown as IStyledComponent<'web', any> & Statics;
+  } as unknown as IStyledComponent<'web', OuterProps> & Statics;
 
   if (__DEV__) {
     checkDynamicCreation(displayName, styledComponentId);

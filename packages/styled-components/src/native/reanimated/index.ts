@@ -34,10 +34,13 @@ import {
   passthroughOutput,
   setAnimationAdapter,
 } from '../animation/types';
-import { mapDescriptorsToCSSLayer } from './mapDescriptorsToCSSLayer';
+import { mapDescriptorsToCSSLayer, type ReanimatedCSSLayerHost } from './mapDescriptorsToCSSLayer';
 import { mergeReanimatedResolvedStyle } from './mergeReanimatedResolvedStyle';
 
-type Reanimated = any;
+/** The slice of `react-native-reanimated` this adapter reads. */
+type Reanimated = ReanimatedCSSLayerHost & {
+  default: { createAnimatedComponent: (component: NativeTarget) => NativeTarget };
+};
 
 let reanimated: Reanimated;
 try {
@@ -59,9 +62,7 @@ function wrapTarget(target: NativeTarget): NativeTarget {
   // reanimated 4 exposes `Animated.createAnimatedComponent` like core
   // RN, so the wrapping API matches.
   try {
-    // reanimated's argument type is narrower than our broad `AnyComponent`;
-    // widen to `any` at the boundary.
-    const wrapped = reanimated.default.createAnimatedComponent(target as any) as NativeTarget;
+    const wrapped = reanimated.default.createAnimatedComponent(target);
     animatedComponentCache.set(target, wrapped);
     return wrapped;
   } catch {

@@ -3,7 +3,7 @@ import { warnOnce } from '../dev';
 import { isGenericFamily, resolveGenericFamily } from '../polyfills/genericFamily';
 import { buildResolver } from '../polyfills/resolvers';
 import { tokenToValue, withoutSlashes } from '../shorthandHelpers';
-import { Token, TokenKind } from '../tokens';
+import { AngleToken, LengthToken, lengthToken, sentinelToken, Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
 import { ABSOLUTE_LENGTH_PX_PER_UNIT } from '../units';
 
@@ -104,9 +104,9 @@ function rawTokens(tokens: Token[]): string {
 }
 
 /** `font: [<style>] [<weight>] [<variant>] <size>[/<line-height>] <family>`. */
-export function fontShorthand(tokens: Token[]): Dict<any> | null {
+export function fontShorthand(tokens: Token[]): Dict<unknown> | null {
   if (tokens.length === 1 && tokens[0].kind === TokenKind.Ident) {
-    const name = tokens[0].name!;
+    const name = tokens[0].name;
     if (SYSTEM_FONT_KEYWORDS.has(name)) {
       warnFontUnsupported('system', name);
       return {};
@@ -120,24 +120,19 @@ export function fontShorthand(tokens: Token[]): Dict<any> | null {
   const normalized: Token[] = new Array(tokens.length);
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
-    if (t.kind === TokenKind.Ident && t.name !== undefined) {
+    if (t.kind === TokenKind.Ident) {
       if (FONT_WIDTH_KEYWORDS.has(t.name)) {
         warnFontUnsupported('width', rawTokens(tokens));
         return {};
       }
       const sentinel = RELATIVE_SIZE_SENTINELS[t.name];
       if (sentinel !== undefined) {
-        normalized[i] = { kind: TokenKind.Sentinel, raw: sentinel } as Token;
+        normalized[i] = sentinelToken(sentinel, '', '');
         continue;
       }
       const px = ABSOLUTE_SIZE_PX[t.name];
       if (px !== undefined) {
-        normalized[i] = {
-          kind: TokenKind.Length,
-          raw: px + 'px',
-          value: px,
-          unit: 'px',
-        } as Token;
+        normalized[i] = lengthToken(px + 'px', px, 'px');
         continue;
       }
     }
@@ -150,28 +145,29 @@ export function fontShorthand(tokens: Token[]): Dict<any> | null {
   let fontVariant: string[] | undefined;
 
   // Up to 3 leading keywords (style/weight/variant), any order
-  for (let i = 0; i < 3 && !stream.eof(); i++) {
-    const t = stream.peek()!;
+  for (let i = 0; i < 3; i++) {
+    const t = stream.peek();
+    if (t === undefined) break;
     if (t.kind === TokenKind.Ident && t.name === 'normal') {
       stream.consume();
       continue;
     }
-    if (fontStyle === undefined && t.kind === TokenKind.Ident && FONT_STYLES.has(t.name!)) {
-      fontStyle = t.name!;
+    if (fontStyle === undefined && t.kind === TokenKind.Ident && FONT_STYLES.has(t.name)) {
+      fontStyle = t.name;
       stream.consume();
       continue;
     }
     if (
       fontWeight === undefined &&
-      ((t.kind === TokenKind.Ident && FONT_WEIGHTS.has(t.name!)) ||
+      ((t.kind === TokenKind.Ident && FONT_WEIGHTS.has(t.name)) ||
         (t.kind === TokenKind.Number && FONT_WEIGHTS.has(String(t.value))))
     ) {
-      fontWeight = t.kind === TokenKind.Number ? t.value! : t.name!;
+      fontWeight = t.kind === TokenKind.Number ? t.value : t.name;
       stream.consume();
       continue;
     }
-    if (fontVariant === undefined && t.kind === TokenKind.Ident && FONT_VARIANTS.has(t.name!)) {
-      fontVariant = [t.name!];
+    if (fontVariant === undefined && t.kind === TokenKind.Ident && FONT_VARIANTS.has(t.name)) {
+      fontVariant = [t.name];
       stream.consume();
       continue;
     }
@@ -192,14 +188,14 @@ export function fontShorthand(tokens: Token[]): Dict<any> | null {
     sizeTok.kind === TokenKind.Sentinel ? sizeTok.raw : (tokenToValue(sizeTok) as number | string);
 
   let lineHeight: number | string | undefined;
-  if (!stream.eof() && stream.peek()!.kind === TokenKind.Slash) {
+  if (stream.peek()?.kind === TokenKind.Slash) {
     stream.consume();
     const lhTok = stream.consume();
     if (!lhTok) return null;
-    if (lhTok.kind === TokenKind.Number) lineHeight = lhTok.value!;
+    if (lhTok.kind === TokenKind.Number) lineHeight = lhTok.value;
     else if (lhTok.kind === TokenKind.Length || lhTok.kind === TokenKind.Percent) {
       if (!__NATIVE_WEB__ && lhTok.kind === TokenKind.Percent && typeof fontSize === 'number') {
-        lineHeight = (fontSize * lhTok.value!) / 100;
+        lineHeight = (fontSize * lhTok.value) / 100;
       } else {
         lineHeight = tokenToValue(lhTok);
       }
@@ -226,7 +222,7 @@ export function fontShorthand(tokens: Token[]): Dict<any> | null {
       ? resolveGenericFamily(fontFamily.name)
       : fontFamily.name;
 
-  const out: Dict<any> = {
+  const out: Dict<unknown> = {
     fontStyle: fontStyle !== undefined ? fontStyle : 'normal',
     fontWeight: fontWeight !== undefined ? fontWeight : 'normal',
     fontVariant: fontVariant !== undefined ? fontVariant : [],
@@ -243,7 +239,7 @@ export function fontShorthand(tokens: Token[]): Dict<any> | null {
  * warn. Generic keywords (`serif`, `system-ui`, etc.) resolve to a platform
  * face on native; rn-web passes the full list through.
  */
-export function fontFamilyShorthand(tokens: Token[]): Dict<any> | null {
+export function fontFamilyShorthand(tokens: Token[]): Dict<unknown> | null {
   if (__NATIVE_WEB__) return tokens.length === 0 ? null : { fontFamily: rawTokens(tokens) };
 
   const stream = new TokenStream(tokens);
@@ -276,12 +272,11 @@ export function fontFamilyShorthand(tokens: Token[]): Dict<any> | null {
  */
 const OBLIQUE_DIRECTION = new Set(['left', 'right']);
 
-export function fontStyleHandler(tokens: Token[]): Dict<any> | null {
+export function fontStyleHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const first = stream.consume();
   if (!first || first.kind !== TokenKind.Ident) return null;
   const name = first.name;
-  if (name === undefined) return null;
 
   if (name === 'normal' || name === 'italic') {
     if (!stream.eof()) return null;
@@ -313,8 +308,7 @@ export function fontStyleHandler(tokens: Token[]): Dict<any> | null {
 }
 
 /** Convert an Angle token's value into degrees regardless of source unit. */
-function degreesOf(t: Token): number | null {
-  if (t.value === undefined) return null;
+function degreesOf(t: AngleToken): number | null {
   switch (t.unit) {
     case 'deg':
       return t.value;
@@ -341,10 +335,9 @@ type LengthFold =
   | { kind: 'resolver'; raw: string }
   | { kind: 'unsupported' };
 
-function foldLengthToken(t: Token): LengthFold {
-  if (t.value === undefined) return { kind: 'unsupported' };
+function foldLengthToken(t: LengthToken): LengthFold {
   if (t.unit === 'px' || t.unit === '') return { kind: 'value', value: t.value };
-  const absRatio = t.unit !== undefined ? ABSOLUTE_LENGTH_PX_PER_UNIT[t.unit] : undefined;
+  const absRatio = ABSOLUTE_LENGTH_PX_PER_UNIT[t.unit];
   if (absRatio !== undefined) return { kind: 'value', value: t.value * absRatio };
   if (buildResolver(t.raw) !== null) return { kind: 'resolver', raw: t.raw };
   return { kind: 'unsupported' };
@@ -356,7 +349,7 @@ function foldLengthToken(t: Token): LengthFold {
  * to buildResolver so coverage tracks the resolver automatically. rn-web
  * defers to the browser.
  */
-export function lineHeightHandler(tokens: Token[]): Dict<any> | null {
+export function lineHeightHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || !stream.eof()) return null;
@@ -382,7 +375,6 @@ export function lineHeightHandler(tokens: Token[]): Dict<any> | null {
     return {};
   }
   if (t.kind === TokenKind.Percent) {
-    if (t.value === undefined) return null;
     // Percent anchors at the inherited font-size like em.
     return { lineHeight: t.value / 100 + 'em' };
   }
@@ -395,7 +387,7 @@ export function lineHeightHandler(tokens: Token[]): Dict<any> | null {
  * absolute lengths fold via the unit ratio table; everything else delegates to
  * buildResolver. rn-web defers to the browser.
  */
-export function letterSpacingHandler(tokens: Token[]): Dict<any> | null {
+export function letterSpacingHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || !stream.eof()) return null;
@@ -429,7 +421,7 @@ export function letterSpacingHandler(tokens: Token[]): Dict<any> | null {
  * `font:` shorthand emits so the cascade resolver can fold relative-size
  * keywords and percentages at render time.
  */
-export function fontSizeHandler(tokens: Token[]): Dict<any> | null {
+export function fontSizeHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || !stream.eof()) return null;
@@ -438,7 +430,7 @@ export function fontSizeHandler(tokens: Token[]): Dict<any> | null {
     return { fontSize: t.raw };
   }
 
-  if (t.kind === TokenKind.Ident && t.name !== undefined) {
+  if (t.kind === TokenKind.Ident) {
     const name = t.name;
     const sentinel = RELATIVE_SIZE_SENTINELS[name];
     if (sentinel !== undefined) return { fontSize: sentinel };
@@ -452,7 +444,7 @@ export function fontSizeHandler(tokens: Token[]): Dict<any> | null {
   }
 
   if (t.kind === TokenKind.Length) {
-    if (t.value === undefined || t.value < 0) return null;
+    if (t.value < 0) return null;
     const folded = foldLengthToken(t);
     if (folded.kind === 'value') return { fontSize: folded.value };
     if (folded.kind === 'resolver') return { fontSize: folded.raw };
@@ -460,7 +452,7 @@ export function fontSizeHandler(tokens: Token[]): Dict<any> | null {
   }
 
   if (t.kind === TokenKind.Percent) {
-    if (t.value === undefined || t.value < 0) return null;
+    if (t.value < 0) return null;
     return { fontSize: t.value / 100 + 'em' };
   }
 
@@ -468,13 +460,13 @@ export function fontSizeHandler(tokens: Token[]): Dict<any> | null {
 }
 
 /** `font-variant: <ident>+`. RN keeps the array form. */
-export function fontVariantShorthand(tokens: Token[]): Dict<any> | null {
+export function fontVariantShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const out: string[] = [];
   while (!stream.eof()) {
     const t = stream.consume();
     if (!t || (t.kind !== TokenKind.Ident && t.kind !== TokenKind.Comma)) return null;
-    if (t.kind === TokenKind.Ident) out.push(t.name!);
+    if (t.kind === TokenKind.Ident) out.push(t.name);
   }
   if (out.length === 0) return null;
   return { fontVariant: out };
@@ -488,29 +480,28 @@ export function fontVariantShorthand(tokens: Token[]): Dict<any> | null {
  * case is the one documented deviation). A degenerate ratio (a zero
  * component) behaves as `auto` rather than failing the declaration.
  */
-export function aspectRatioShorthand(tokens: Token[]): Dict<any> | null {
+export function aspectRatioShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   let auto = false;
   let sawRatio = false;
   let ratio: number | null = null;
 
-  while (!stream.eof()) {
-    const t = stream.peek()!;
+  for (let t = stream.peek(); t !== undefined; t = stream.peek()) {
     if (!auto && t.kind === TokenKind.Ident && t.name === 'auto') {
       auto = true;
       stream.consume();
       continue;
     }
     if (!sawRatio && t.kind === TokenKind.Number) {
-      const numerator = t.value!;
+      const numerator = t.value;
       stream.consume();
       sawRatio = true;
       let divisor = 1;
-      if (!stream.eof() && stream.peek()!.kind === TokenKind.Slash) {
+      if (stream.peek()?.kind === TokenKind.Slash) {
         stream.consume();
         const d = stream.consume();
         if (!d || d.kind !== TokenKind.Number) return null;
-        divisor = d.value!;
+        divisor = d.value;
       }
       if (numerator < 0 || divisor < 0) return null;
       // Degenerate (zero component): leave `ratio` null so the
@@ -541,17 +532,12 @@ function readFontFamily(stream: TokenStream): FontFamilyName | null {
   // family out of generic resolution regardless of the spelling inside.
   const t = stream.consume();
   if (!t) return null;
-  if (t.kind === TokenKind.String) return { name: t.text!, quoted: true };
+  if (t.kind === TokenKind.String) return { name: t.text, quoted: true };
   if (t.kind === TokenKind.Ident) {
     const parts = [t.raw];
-    while (!stream.eof()) {
-      const next = stream.peek()!;
-      if (next.kind === TokenKind.Ident) {
-        parts.push(next.raw);
-        stream.consume();
-        continue;
-      }
-      break;
+    for (let next = stream.peek(); next?.kind === TokenKind.Ident; next = stream.peek()) {
+      parts.push(next.raw);
+      stream.consume();
     }
     return { name: parts.join(' '), quoted: false };
   }

@@ -43,9 +43,27 @@ export function __resetPlatformCacheForTesting(): void {
   isWebCached = null;
 }
 
+/**
+ * The props these polyfills pass, not RN's full prop types: the style
+ * carries `experimental_*` keys RN's published `ViewStyle` omits.
+ */
+interface BlendLayerProps {
+  pointerEvents: 'none';
+  shouldRasterizeIOS: boolean;
+  style: Record<string, unknown>;
+}
+
+interface BlendImageProps {
+  resizeMode: 'cover' | 'contain' | 'stretch' | 'center';
+  source: { uri: string };
+  style: Record<string, unknown>;
+}
+
+type BlendLayerComponent = React.ComponentType<BlendLayerProps>;
+
 type RNComponentRefs = {
-  View: React.ComponentType<any> | null;
-  Image: React.ComponentType<any> | null;
+  View: BlendLayerComponent | null;
+  Image: React.ComponentType<BlendImageProps> | null;
 };
 
 let cachedRn: RNComponentRefs | undefined = undefined;
@@ -54,10 +72,10 @@ function getRNComponents(): RNComponentRefs {
   if (cachedRn === undefined) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const rn = require('react-native') as {
-        View?: React.ComponentType<any>;
-        Image?: React.ComponentType<any>;
-      };
+      const rn: {
+        View?: BlendLayerComponent;
+        Image?: React.ComponentType<BlendImageProps>;
+      } = require('react-native');
       cachedRn = { View: rn.View ?? null, Image: rn.Image ?? null };
     } catch {
       cachedRn = { View: null, Image: null };
@@ -247,7 +265,7 @@ const BG_BLEND_STRIP_KEYS: ReadonlySet<string> = new Set([
  * lives in the same sRGB-encoded buffer as the overlay layers.
  */
 function createBlendLayer(
-  View: React.ComponentType<any>,
+  View: BlendLayerComponent,
   key: string,
   blend: string | null,
   extraStyle: Record<string, unknown>,

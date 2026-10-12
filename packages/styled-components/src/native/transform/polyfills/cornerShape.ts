@@ -96,7 +96,7 @@ function warnAndroid(): void {
 // Resolve one `<corner-shape-value>` token (keyword or superellipse())
 // to a Treatment, or `null` when no faithful RN contour exists.
 function resolveValue(t: Token): Treatment | null {
-  if (t.kind === TokenKind.Ident && t.name !== undefined) {
+  if (t.kind === TokenKind.Ident) {
     const treatment = KEYWORD_TREATMENT[t.name];
     if (treatment !== undefined) return treatment;
     return null;
@@ -110,7 +110,7 @@ function resolveValue(t: Token): Treatment | null {
     // zero radius draws exactly. -infinity is `notch` (concave) and has no
     // RN equivalent, so it falls through to the unsupported path.
     if (arg.kind === TokenKind.Ident && arg.name === 'infinity') return 'square';
-    if (arg.kind !== TokenKind.Number || arg.value === undefined) return null;
+    if (arg.kind !== TokenKind.Number) return null;
     const k = arg.value;
     if (k >= CONTINUOUS_MIN && k <= CONTINUOUS_MAX) return 'continuous';
     if (k >= CIRCULAR_MIN && k <= CIRCULAR_MAX) return 'circular';
@@ -119,15 +119,14 @@ function resolveValue(t: Token): Treatment | null {
   return null;
 }
 
-export function cornerShapeShorthand(tokens: Token[]): Dict<any> | null {
+export function cornerShapeShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const values: Token[] = [];
   while (!stream.eof()) {
     const t = stream.consume();
     if (!t) return null;
     const isValueToken =
-      (t.kind === TokenKind.Ident && t.name !== undefined) ||
-      (t.kind === TokenKind.Function && t.name === 'superellipse');
+      t.kind === TokenKind.Ident || (t.kind === TokenKind.Function && t.name === 'superellipse');
     if (!isValueToken) return null;
     values.push(t);
   }
@@ -142,21 +141,24 @@ export function cornerShapeShorthand(tokens: Token[]): Dict<any> | null {
     return { cornerShape: raw };
   }
 
-  const resolved: (Treatment | null)[] = [];
+  const resolved: Treatment[] = [];
+  let hasUnsupportedCorner = false;
   for (let i = 0; i < values.length; i++) {
     const t = values[i];
     // Validate the token shape before resolving so a bogus keyword is a
     // hard parse failure (null), not a silent drop with a warning.
-    if (t.kind === TokenKind.Ident && t.name !== undefined) {
+    if (t.kind === TokenKind.Ident) {
       if (KEYWORD_TREATMENT[t.name] === undefined && !UNSUPPORTED_KEYWORDS.has(t.name)) return null;
     }
-    resolved.push(resolveValue(t));
+    const treatment = resolveValue(t);
+    if (treatment === null) hasUnsupportedCorner = true;
+    else resolved.push(treatment);
   }
 
-  // A null in the resolved list means at least one corner has no RN
-  // contour. Whether the rest map cleanly or not, the whole declaration
-  // drops: a partial application would lie about the corners it skipped.
-  if (resolved.indexOf(null) !== -1) {
+  // An unresolved corner has no RN contour. Whether the rest map cleanly
+  // or not, the whole declaration drops: a partial application would lie
+  // about the corners it skipped.
+  if (hasUnsupportedCorner) {
     warnUnsupported(raw);
     return {};
   }
@@ -164,10 +166,10 @@ export function cornerShapeShorthand(tokens: Token[]): Dict<any> | null {
   // Expand `<corner-shape-value>{1,4}` across the four corners in the CSS
   // corner order (top-left, top-right, bottom-right, bottom-left), using
   // the same 1->aaaa / 2->abab / 3->abcb / 4->abcd rule as `border-radius`.
-  const a = resolved[0]!;
-  const b = resolved.length >= 2 ? resolved[1]! : a;
-  const c = resolved.length >= 3 ? resolved[2]! : a;
-  const d = resolved.length === 4 ? resolved[3]! : b;
+  const a = resolved[0];
+  const b = resolved.length >= 2 ? resolved[1] : a;
+  const c = resolved.length >= 3 ? resolved[2] : a;
+  const d = resolved.length === 4 ? resolved[3] : b;
   const corners: Treatment[] = [a, b, c, d];
 
   // Square corners become radii, so only the curved corners have to agree
@@ -198,7 +200,7 @@ export function cornerShapeShorthand(tokens: Token[]): Dict<any> | null {
     }
   }
 
-  const out: Dict<any> = {};
+  const out: Dict<unknown> = {};
   if (squareMask !== 0) out[CORNER_SQUARE_SENTINEL_KEY] = squareMask;
   // An all-`square` value needs no curve at all, and skipping it keeps the
   // Android warning quiet for a value Android renders exactly.

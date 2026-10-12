@@ -1,12 +1,12 @@
 import type { Dict } from '../types';
 import errorMap from './errors';
 
-const ERRORS: Dict<any> = __DEV__ ? errorMap : {};
+const ERRORS: Dict<string> = __DEV__ ? errorMap : {};
 
 /**
  * super basic version of sprintf
  */
-function format(...args: [string, ...any]) {
+function format(...args: [string, ...unknown[]]) {
   let a = args[0];
   const b = [];
 
@@ -15,7 +15,7 @@ function format(...args: [string, ...any]) {
   }
 
   b.forEach(d => {
-    a = a.replace(/%[a-z]/, d);
+    a = a.replace(/%[a-z]/, String(d));
   });
 
   return a;
@@ -27,7 +27,7 @@ function format(...args: [string, ...any]) {
  */
 export default function throwStyledComponentsError(
   code: string | number,
-  ...interpolations: any[]
+  ...interpolations: unknown[]
 ) {
   if (!__DEV__) {
     return new Error(

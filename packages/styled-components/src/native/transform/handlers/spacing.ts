@@ -72,7 +72,7 @@ export function borderRadiusShorthand(tokens: Token[]) {
  * `gap` handler. RN 0.85 has native `gap` (single value) plus separate `rowGap`
  * / `columnGap`; the two-value shorthand splits accordingly.
  */
-export function gapShorthand(tokens: Token[]): Dict<any> | null {
+export function gapShorthand(tokens: Token[]): Dict<unknown> | null {
   if (tokens.length === 1 && tokens[0].kind === TokenKind.Ident && tokens[0].name === 'normal') {
     return { gap: 'normal' };
   }
@@ -99,7 +99,7 @@ function rawTokens(tokens: Token[]): string {
   return out;
 }
 
-function collapseCircularSlashRadius(tokens: Token[]): Dict<any> | null {
+function collapseCircularSlashRadius(tokens: Token[]): Dict<unknown> | null {
   const horizontal: Token[] = [];
   const vertical: Token[] = [];
   let target = horizontal;

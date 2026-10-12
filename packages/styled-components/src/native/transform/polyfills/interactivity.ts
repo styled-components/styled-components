@@ -26,7 +26,7 @@ import { TokenStream } from '../tokenStream';
  * traverse the subtree at render time; for now the lift covers the
  * common case.
  */
-function interactivityHandler(tokens: Token[]): Dict<any> | null {
+function interactivityHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;

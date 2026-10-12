@@ -1,6 +1,7 @@
 import { escapeSentinelFallback } from '../native/transform/polyfills/resolvers';
+import type { Dict } from '../types';
 import { walkTheme } from './createTheme.shared';
-import type { ThemeContract } from './createTheme.types';
+import type { CSSVarTheme, ThemeContract } from './createTheme.types';
 
 interface CreateThemeOptions {
   prefix?: string;
@@ -19,13 +20,14 @@ interface CreateThemeOptions {
  * don't need a cascade-layer root because `<ThemeProvider>` deep-merges
  * overrides into a single resolved theme object each render.
  */
+// biome-ignore lint/suspicious/noExplicitAny: public constraint. `Record<string, unknown>` rejects every interface-typed theme: `createTheme<AppTheme>(...)` fails with "Index signature for type 'string' is missing in type 'AppTheme'"
 export default function createTheme<T extends Record<string, any>>(
   defaultTheme: T,
   options?: CreateThemeOptions
 ): ThemeContract<T> {
   const prefix = options?.prefix ?? 'sc';
 
-  const leaves: Record<string, any> = {};
+  const leaves: Dict<unknown> = {};
   walkTheme(defaultTheme, '.', leaves, (fullPath, val) => {
     // The sentinel terminator is whitespace / comma / slash; composite
     // leaves like `'rgba(0,0,0,0.4)'` would be truncated mid-fallback
@@ -35,7 +37,7 @@ export default function createTheme<T extends Record<string, any>>(
     return '\0' + prefix + ':' + fullPath + ':' + fallback;
   });
 
-  const vars: Record<string, any> = {};
+  const vars: Dict<unknown> = {};
   walkTheme(defaultTheme, '-', vars, fullPath => {
     return '--' + prefix + '-' + fullPath;
   });
@@ -45,7 +47,7 @@ export default function createTheme<T extends Record<string, any>>(
   return Object.assign(leaves, {
     GlobalStyle,
     raw: defaultTheme,
-    vars,
+    vars: vars as CSSVarTheme<T>,
     resolve(): T {
       return defaultTheme;
     },
