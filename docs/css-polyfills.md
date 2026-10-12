@@ -20,7 +20,7 @@ Unsupported on Native (no viable workaround) MUST emit `warnOnce` with a stable 
 
 ## rn-web parity rule
 
-Every polyfill must verify its rn-web output against `node_modules/react-native-web/src/`:
+Every polyfill must verify its rn-web output against react-native-web's source (`packages/native-showcase/node_modules/react-native-web/src/`):
 
 - If the browser ships the feature, the rn-web branch passes the raw CSS through. Don't expand, normalize, or fold what the browser handles.
 - Never emit a CSS property the browser doesn't ship yet. Lift the equivalent HTML attribute via SPECIAL_CASE_PROPS instead.

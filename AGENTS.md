@@ -10,7 +10,7 @@ This file is the repo's only agent instructions file; there is no CLAUDE.md. It 
 
 - When a task touches consumer-facing behavior, read the most recent llms.txt at https://styled-components.com/llms.txt for the current consumer-facing feature summary
 - GitHub Issues is the backlog: file a discovered deficiency or deferred work there, never in this file
-- Use pnpm package manager and associated commands
+- Use pnpm package manager and associated commands. `packageManager` in `package.json` pins the version; install settings live in `pnpm-workspace.yaml`, never `.npmrc`. Installs link from pnpm's global virtual store, so each git worktree installs in seconds. A package that imports another it does not declare resolves only through `packageExtensions` there; `pnpm check:type-resolution` catches the type-level cases, and `scripts/metro-workspace.cjs` holds the Metro-side resolution for the React Native apps
 - Formatting is Biome (config in `biome.jsonc`), enforced by a lint-staged pre-commit hook; `pnpm format` runs it repo-wide (fine to do). Match the config rather than hand-formatting. Biome has no Markdown or YAML formatter yet, so those files are left alone; keep them tidy by hand. Suppress a formatting decision with `// biome-ignore format: <reason>` (spaced, not hyphenated; the hyphenated spelling is a suppression parse error), never `// prettier-ignore`, which Biome does not honor. The linter is on with a curated rule set plus two GritQL plugins; see the Critical Constraints below and the comments in `biome.jsonc`.
 - Use conventional commits: `(feat|fix|chore|refactor|test|docs|style|perf|build|ci): [description]`
 - Default to short commit messages: title only, or title plus one tight sentence
@@ -106,6 +106,7 @@ This file is the repo's only agent instructions file; there is no CLAUDE.md. It 
 - `pnpm --filter styled-components type-perf`: Consumer type-check budget, measured against the built `dist` (needs `pnpm build` first). `--against <package root>` measures another copy of the package with the same fixture. See [docs/typescript-performance.md](docs/typescript-performance.md)
 - `pnpm knip`: Dead-code scan (unused files, dependencies, exports); config in `knip.jsonc`. Output is a candidate list, not a delete list
 - `pnpm verify`: The local gate; the steps and their order are in `scripts/verify.mjs`
+- `pnpm check:type-resolution`: Traces TypeScript resolution over the library and sandbox tsconfigs and fails when a package in pnpm's global store imports a type package it does not declare (those types would silently become `any`). Fix with an optional peer under `packageExtensions`, or a reasoned entry in the script's `KNOWN_FALSE_POSITIVES`. Exit 2 means the check saw nothing and is broken
 - Native render perf: use `packages/ios-benchmark` (real Hermes V1 on iOS sim). `react-test-renderer` 19.2 with the RN preset doesn't synchronously invoke function components, and V8 numbers don't predict Hermes, so no in-tree native render bench exists. Algorithm-shape benches (parser, responsive, RSC) run via `bench:web` / `bench:rsc`.
 - CPU profiling with Bun, and on-device animation debugging: [docs/profiling.md](docs/profiling.md). Debug channels log one line per event, never host instances or props objects.
 
