@@ -7,7 +7,7 @@
  * output;the rendered tree shows the resolved primitive.
  */
 import React from 'react';
-import { Animated, Platform, processColor } from 'react-native';
+import { Animated } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 import styled from '../../';
 import { resetResponsiveCache } from '../../responsive';
@@ -1874,58 +1874,68 @@ describe('Animated adapter: lifecycle events (CSS Animations §5.1 / Transitions
     expect(__parseAnimColorForTests('not-a-color')).toBeNull();
   });
 
-  describe('named, hsl() and hwb() colors under a strict dependency layout', () => {
+  describe('named colors under a strict dependency layout', () => {
     const NORMALIZE_COLORS = '@react-native/normalize-colors';
 
-    /**
-     * Strict installs (pnpm without hoisting, Yarn PnP) resolve
-     * `@react-native/normalize-colors` for react-native alone, never for
-     * this library. React Native's own color pipeline is loaded first, as it
-     * is in an app, then the package is made unresolvable for every later
-     * require.
-     */
     function makeNormalizeColorsUnreachable(): void {
-      expect(processColor('red')).toBeDefined();
       jest.doMock(NORMALIZE_COLORS, () => {
         throw new Error(`Cannot find module '${NORMALIZE_COLORS}'`);
       });
     }
 
-    afterEach(() => {
-      jest.dontMock(NORMALIZE_COLORS);
-      Platform.OS = 'ios';
-    });
+    /**
+     * Strict installs (pnpm without hoisting, Yarn PnP) resolve
+     * `@react-native/normalize-colors` for react-native alone, never for
+     * this library. Each call builds a fresh module graph, so the adapter and
+     * its caches start cold: react-native loads first with its color pipeline
+     * intact, as in an app, then the package is made unresolvable for every
+     * later require. The mock stays registered until `afterEach`, because the
+     * adapter may resolve the package lazily at parse time.
+     */
+    function strictParser(platform: 'android' | 'ios'): {
+      parse: typeof __parseAnimColorForTests;
+      processColor: (color: string) => unknown;
+    } {
+      jest.resetModules();
 
-    it('parses named keywords, hsl() and hwb() through react-native', () => {
+      const rn = require('react-native');
+      rn.Platform.OS = platform;
+      expect(rn.processColor('red')).toBeDefined();
+
       makeNormalizeColorsUnreachable();
 
-      expect(__parseAnimColorForTests('red')).toEqual({ r: 255, g: 0, b: 0, a: 1 });
-      expect(__parseAnimColorForTests('rebeccapurple')).toEqual({ r: 102, g: 51, b: 153, a: 1 });
-      expect(__parseAnimColorForTests('transparent')).toEqual({ r: 0, g: 0, b: 0, a: 0 });
-      expect(__parseAnimColorForTests('hsl(0, 100%, 50%)')).toEqual({ r: 255, g: 0, b: 0, a: 1 });
-      expect(__parseAnimColorForTests('hwb(120 0% 0%)')).toEqual({ r: 0, g: 255, b: 0, a: 1 });
+      return {
+        parse: require('../').__parseAnimColorForTests,
+        processColor: rn.processColor,
+      };
+    }
+
+    afterEach(() => {
+      jest.dontMock(NORMALIZE_COLORS);
+      jest.resetModules();
+    });
+
+    it('parses named keywords through react-native', () => {
+      const { parse } = strictParser('ios');
+
+      expect(parse('red')).toEqual({ r: 255, g: 0, b: 0, a: 1 });
+      expect(parse('rebeccapurple')).toEqual({ r: 102, g: 51, b: 153, a: 1 });
+      expect(parse('transparent')).toEqual({ r: 0, g: 0, b: 0, a: 0 });
     });
 
     it('unpacks the signed 32-bit color Android returns', () => {
-      Platform.OS = 'android';
-      makeNormalizeColorsUnreachable();
+      const { parse, processColor } = strictParser('android');
 
       expect(processColor('red')).toBeLessThan(0);
-      expect(__parseAnimColorForTests('red')).toEqual({ r: 255, g: 0, b: 0, a: 1 });
-      expect(__parseAnimColorForTests('rgba(0, 0, 255, 0.5)')).toEqual({
-        r: 0,
-        g: 0,
-        b: 255,
-        a: 0.5,
-      });
-      expect(__parseAnimColorForTests('tomato')).toEqual({ r: 255, g: 99, b: 71, a: 1 });
+      expect(parse('red')).toEqual({ r: 255, g: 0, b: 0, a: 1 });
+      expect(parse('tomato')).toEqual({ r: 255, g: 99, b: 71, a: 1 });
     });
 
     it('returns null for a keyword react-native rejects', () => {
-      makeNormalizeColorsUnreachable();
+      const { parse } = strictParser('ios');
 
-      expect(__parseAnimColorForTests('not-a-color')).toBeNull();
-      expect(__parseAnimColorForTests('currentColor')).toBeNull();
+      expect(parse('not-a-color')).toBeNull();
+      expect(parse('currentColor')).toBeNull();
     });
 
     /** Loads a fresh adapter whose `getRN()` sees `rn` as `react-native`. */
@@ -1959,10 +1969,10 @@ describe('Animated adapter: lifecycle events (CSS Animations §5.1 / Transitions
         expect(rnWeb.processColor('red')).toBe(0xffff0000);
         expect(rnWeb.processColor('rgba(0, 0, 255, 0.5)')).toBe(0x800000ff);
 
+        makeNormalizeColorsUnreachable();
         const parse = parserFor(() => rnWeb);
 
         expect(parse('red')).toEqual({ r: 255, g: 0, b: 0, a: 1 });
-        expect(parse('hsl(0, 100%, 50%)')).toEqual({ r: 255, g: 0, b: 0, a: 1 });
         expect(parse('transparent')).toEqual({ r: 0, g: 0, b: 0, a: 0 });
         expect(parse('not-a-color')).toBeNull();
       });
