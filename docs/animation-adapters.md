@@ -36,7 +36,7 @@ CSS Animations L1+L2, Transitions L1+L2, Easing L1+L2.
 - **transition-behavior: allow-discrete**: 50% flip for non-interpolable property pairs with cancellation on retarget.
 - **@starting-style**: first-mount value override + transition-into-base on update.
 - **onAnimationEnd / onTransitionEnd**: spec-shaped `{ animationName | propertyName, elapsedTime }` events fired on completion (suppressed for canceled / superseded timings per spec).
-- **Per-keyframe color interpolation**: full CSS `<color>` grammar: hex (3/4/6/8), `rgb()`/`rgba()`, named keywords via `@react-native/normalize-colors`, `hsl()`/`hwb()`, and modern function forms (`oklch`, `oklab`, `lab`, `lch`, `color-mix`) via the shared color-math polyfill. Genuinely discrete pairs (`display`, `visibility`) still snap at 50% per spec.
+- **Per-keyframe color interpolation**: full CSS `<color>` grammar: hex (3/4/6/8), `rgb()`/`rgba()`, named keywords via React Native's `processColor`, `hsl()`/`hwb()`, and modern function forms (`oklch`, `oklab`, `lab`, `lch`, `color-mix`) via the shared color-math polyfill. Genuinely discrete pairs (`display`, `visibility`) still snap at 50% per spec.
 - **Color interpolation space**: interpolates in oklab (CSS Color L4 §13 default) rather than linear-light sRGB. The conversion pair is hoisted out of the per-sample loop so the inner is a Lab lerp plus one matrix multiply.
 - **Per-keyframe easing**: same-unit numeric values ride per-frame easing; the segmented interpolation samples easing curves so `cubic-bezier(...)` keyframes don't degrade to linear under the native driver.
 - **Easing functions**: `linear`, `cubic-bezier(...)`, `steps(n, jump-type)`, multi-stop `linear(...)` with explicit positions.

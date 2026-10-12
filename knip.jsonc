@@ -22,9 +22,7 @@
     },
     "packages/benchmarks": {
       // Headless runners are executed directly.
-      "entry": ["headless/**/*.mjs"],
-      // Referenced only as a webpack/babel alias target for `react-native`.
-      "ignoreDependencies": ["react-native-web"]
+      "entry": ["headless/**/*.mjs"]
     },
     "packages/ios-benchmark": {
       // Bench orchestration scripts are executed directly.
@@ -73,8 +71,6 @@
         "@react-native/babel-preset",
         "babel-jest",
         "babel-plugin-add-module-exports",
-        // Guarded optional require; ships transitively with react-native.
-        "@react-native/normalize-colors",
         // Type-only import in the published test-utils; consumers of
         // enzymeFind bring their own enzyme.
         "enzyme"

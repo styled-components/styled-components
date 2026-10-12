@@ -5,6 +5,7 @@
  * build-time constants and that the ESM/browser/native builds don't
  * include code intended for other targets.
  */
+import { builtinModules } from 'module';
 import fs from 'fs';
 import path from 'path';
 import errorMap from '../utils/errors';
@@ -14,6 +15,11 @@ const nativeDistDir = path.resolve(__dirname, '../../native/dist');
 
 const read = (file: string) => fs.readFileSync(path.join(distDir, file), 'utf8');
 const readNative = (file: string) => fs.readFileSync(path.join(nativeDistDir, file), 'utf8');
+const jsFiles = (dir: string) =>
+  fs
+    .readdirSync(dir)
+    .filter(file => file.endsWith('.js'))
+    .sort();
 
 describe('dead-code elimination: browser build', () => {
   let browserESM: string;
@@ -139,12 +145,6 @@ describe('dead-code elimination: standalone production build', () => {
  * can see it, because Jest defines `__DEV__` as a real boolean.
  */
 describe('__DEV__ substitution in built output', () => {
-  const jsFiles = (dir: string) =>
-    fs
-      .readdirSync(dir)
-      .filter(file => file.endsWith('.js'))
-      .sort();
-
   it.each(jsFiles(distDir))('leaves no rebound negation in %s', file => {
     expect(read(file)).not.toContain('!process.env.NODE_ENV');
   });
@@ -508,6 +508,59 @@ describe('per-plugin DCE from plugins subpath', () => {
     expect(bundle).not.toContain(PREFIX_NEEDLE);
     expect(bundle).not.toContain(PREFIX_NEEDLE_B);
   }, 30000);
+});
+
+/**
+ * A package the consumer never lists resolves only when the install hoists it;
+ * strict layouts (pnpm without hoisting, Yarn PnP) throw at runtime. Every
+ * built JavaScript file may therefore reach only Node built-ins and packages
+ * the library declares as dependencies or peers.
+ */
+describe('built bundles reach only declared packages', () => {
+  const pkg = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8')
+  ) as { dependencies?: object; peerDependencies?: object };
+  const allowed = new Set([
+    ...Object.keys(pkg.dependencies ?? {}),
+    ...Object.keys(pkg.peerDependencies ?? {}),
+    ...builtinModules,
+  ]);
+  const bareSpecifier =
+    /\brequire\(["']([^"'./][^"']*)["']\)|(?:^|;)(?:import|export)\b[^;]*?\bfrom\s*["']([^"'./][^"']*)["']|(?:^|;)import\s*["']([^"'./][^"']*)["']/gm;
+  const packageName = (id: string) =>
+    id
+      .replace(/^node:/, '')
+      .split('/', id.startsWith('@') ? 2 : 1)
+      .join('/');
+  const reached = (source: string) =>
+    new Set([...source.matchAll(bareSpecifier)].map(m => packageName(m[1] ?? m[2] ?? m[3])));
+
+  /** Packages each entry must reach, proving the scan sees the bundle's imports. */
+  const mustReach: Record<string, string[]> = {
+    'plugins.cjs.js': [],
+    'plugins.esm.js': [],
+    'native/styled-components.js': ['react', 'react-native', 'react-native-web'],
+    'native/styled-components.native.esm.js': ['react', 'react-native'],
+    'native/styled-components.native.js': ['react', 'react-native'],
+    'native/styled-components.native.reanimated.cjs.js': ['react', 'react-native-reanimated'],
+    'native/styled-components.native.reanimated.esm.js': ['react', 'react-native-reanimated'],
+    'native/styled-components.web.esm.js': ['react', 'react-native', 'react-native-web'],
+    'native/styled-components.web.js': ['react', 'react-native', 'react-native-web'],
+  };
+  const bundles = [
+    ...jsFiles(distDir).map(file => ({ file, source: () => read(file) })),
+    ...jsFiles(nativeDistDir).map(file => ({
+      file: `native/${file}`,
+      source: () => readNative(file),
+    })),
+  ];
+
+  it.each(bundles)('$file', ({ file, source }) => {
+    const used = reached(source());
+
+    expect([...used].filter(name => !allowed.has(name))).toEqual([]);
+    expect([...used]).toEqual(expect.arrayContaining(mustReach[file] ?? ['react']));
+  });
 });
 
 describe('bundle size', () => {

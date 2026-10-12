@@ -5,11 +5,12 @@ import { fifoSet } from '../utils/fifoMap';
 // don't chase live module getters after Jest's environment teardown. The
 // references are captured once and reused across all subscriptions.
 type RNApis = {
-  Dimensions: any;
-  Appearance: any;
   AccessibilityInfo: any;
-  PixelRatio: any;
   Animated: any;
+  Appearance: any;
+  Dimensions: any;
+  PixelRatio: any;
+  processColor: any;
 };
 
 let rnApis: RNApis | null = null;
@@ -18,19 +19,21 @@ export function getRN(): RNApis {
     try {
       const rn: any = require('react-native');
       rnApis = {
-        Dimensions: rn.Dimensions,
-        Appearance: rn.Appearance,
         AccessibilityInfo: rn.AccessibilityInfo,
-        PixelRatio: rn.PixelRatio,
         Animated: rn.Animated,
+        Appearance: rn.Appearance,
+        Dimensions: rn.Dimensions,
+        PixelRatio: rn.PixelRatio,
+        processColor: rn.processColor,
       };
     } catch {
       rnApis = {
-        Dimensions: undefined,
-        Appearance: undefined,
         AccessibilityInfo: undefined,
-        PixelRatio: undefined,
         Animated: undefined,
+        Appearance: undefined,
+        Dimensions: undefined,
+        PixelRatio: undefined,
+        processColor: undefined,
       };
     }
   }
