@@ -3,15 +3,54 @@ packages:
   - 'packages/styled-components/native'
   - 'packages/native-showcase/modules/*'
 
-# Optional security features (NOT recommended for initial migration):
-# These may break legitimate dependencies and should only be enabled after testing
-#
-# catalog:
-#   # Centrally manage shared dependency versions
-#   react: ^18.0.0
-#   typescript: ^5.4.5
-#
-# enable-pre-post-scripts: false  # Block lifecycle scripts
-minimumReleaseAge: 4320 # Wait 3 days before installing new releases
+allowBuilds:
+  sharp: false
+  unrs-resolver: false
+autoInstallPeers: true
+minimumReleaseAge: 10080 # Wait 7 days before installing new releases
+# These cover next 16.4.0, which is younger than the window above.
+minimumReleaseAgeExclude:
+  - '@next/env@16.4.0'
+  - '@next/swc-darwin-arm64@16.4.0'
+  - '@next/swc-darwin-x64@16.4.0'
+  - '@next/swc-linux-arm64-gnu@16.4.0'
+  - '@next/swc-linux-arm64-musl@16.4.0'
+  - '@next/swc-linux-x64-gnu@16.4.0'
+  - '@next/swc-linux-x64-musl@16.4.0'
+  - '@next/swc-win32-arm64-msvc@16.4.0'
+  - '@next/swc-win32-x64-msvc@16.4.0'
+  - next@16.4.0
+# Type packages the published .d.ts files import without declaring. Under the
+# global store TypeScript resolves from a package's real path, so an undeclared
+# @types package is lost and the types silently become any.
+packageExtensions:
+  next:
+    peerDependencies:
+      '@types/react': '*'
+      '@types/react-dom': '*'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      '@types/react-dom':
+        optional: true
+overrides:
+  '@types/react': '19'
+  '@types/react-dom': '19'
+  react: 19.2.3
+  react-dom: 19.2.3
+  fast-xml-parser: '>=5.7.0'
+  postcss: '>=8.5.10'
+  serialize-javascript: '>=7.0.5'
+  shell-quote: '>=1.8.4'
+savePrefix: ''
+strictPeerDependencies: false
 trustPolicy: no-downgrade # Block packages with weaker authentication
-
+# Locked releases published without the provenance their earlier versions had.
+# pnpm 10 never evaluated trustPolicy, so these predate the check.
+trustPolicyExclude:
+  - react-native-worklets@0.8.1
+  - rollup@3.30.0
+  - semver@6.3.1
+  - ua-parser-js@1.0.41
+  - undici-types@6.21.0
+virtualStoreType: global

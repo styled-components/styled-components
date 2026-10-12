@@ -1,5 +1,6 @@
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
+const { pinSingletonsToApp, storeWatchFolders } = require('../../scripts/metro-workspace.cjs');
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, '../..');
@@ -21,50 +22,25 @@ const styledWebBridgeSource = path.resolve(
   'packages/styled-components/src/native/web-bridge/index.tsx'
 );
 
-// pretty-format v30 ships an ESM shim whose last line is
-// `export default cjsModule.default.default`, which assumes the importer
-// wrapped the CJS module in a `{ default: … }` envelope. Metro's interop
-// returns the module untouched when it already carries `__esModule`, so
-// `cjsModule.default` is the pretty-format function and `.default` on it
-// is undefined. That leaves the module's own `default` export undefined,
-// and React Native's HMR client dereferences it at startup, so the app
-// dies with "Cannot read property 'default' of undefined" before it
-// renders. Resolving the CJS build directly skips the broken shim.
-//
-// The workspace has v30 hoisted (Jest 30 pulls it in) while React Native
-// asks for v29. `disableHierarchicalLookup` below stops Metro walking up
-// into `react-native/node_modules`, so v30 is what it finds.
-// Resolved via `package.json`, the only subpath the package's `exports`
-// map exposes besides the root; asking for `build/index.js` directly is
-// blocked by exports resolution.
-const prettyFormatCjs = path.join(
-  path.dirname(require.resolve('pretty-format/package.json', { paths: [workspaceRoot] })),
-  'build/index.js'
-);
-
 const config = getDefaultConfig(projectRoot);
 
-config.watchFolders = [workspaceRoot];
+config.watchFolders = [workspaceRoot, ...storeWatchFolders(projectRoot)];
 
-config.resolver.nodeModulesPaths = [
-  path.resolve(projectRoot, 'node_modules'),
-  path.resolve(workspaceRoot, 'node_modules'),
-];
-config.resolver.disableHierarchicalLookup = true;
-config.resolver.unstable_enableSymlinks = true;
-
-const baseResolveRequest = config.resolver.resolveRequest;
+const defaultResolveRequest = config.resolver.resolveRequest;
+const baseResolveRequest = pinSingletonsToApp({
+  libraryRoot: path.resolve(workspaceRoot, 'packages/styled-components'),
+  projectRoot,
+  resolveRequest: (context, moduleName, platform) =>
+    defaultResolveRequest
+      ? defaultResolveRequest(context, moduleName, platform)
+      : context.resolveRequest(context, moduleName, platform),
+});
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName === 'styled-components' || moduleName === 'styled-components/native') {
     const filePath = platform === 'web' ? styledWebBridgeSource : styledNativeSource;
     return { type: 'sourceFile', filePath };
   }
-  if (moduleName === 'pretty-format') {
-    return { type: 'sourceFile', filePath: prettyFormatCjs };
-  }
-  return baseResolveRequest
-    ? baseResolveRequest(context, moduleName, platform)
-    : context.resolveRequest(context, moduleName, platform);
+  return baseResolveRequest(context, moduleName, platform);
 };
 
 module.exports = config;

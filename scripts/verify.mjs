@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Workspace gate: format with autofix, knip, then tests. Fail fast.
+ * Workspace gate: format with autofix, knip, type resolution, then tests. Fail fast.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -8,6 +8,7 @@ import { spawnSync } from 'node:child_process';
 const steps = [
   { label: 'format (biome check --write)', args: ['run', 'format'] },
   { label: 'knip', args: ['run', 'knip'] },
+  { label: 'check:type-resolution', args: ['run', 'check:type-resolution'] },
   { label: 'test:changeset-changelog', args: ['run', 'test:changeset-changelog'] },
   { label: 'test:effect-gate', args: ['run', 'test:effect-gate'] },
   { label: 'test (styled-components)', args: ['run', 'test'] },
