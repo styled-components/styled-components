@@ -266,8 +266,8 @@ export function mapDescriptorsToCSSLayer(
       out.transitionDuration = t.durationMs;
       out.transitionTimingFunction = toReanimatedTiming(host, t.timingFunction);
       out.transitionDelay = t.delayMs;
-      // Match cssAdapter: omit `transition-behavior` unless a layer needs
-      // allow-discrete (normal is the initial keyword and clutters the CSS layer).
+      // Omit `transition-behavior` unless a layer needs allow-discrete
+      // (normal is the initial keyword and clutters the CSS layer).
       if (t.behavior === 'allow-discrete') {
         out.transitionBehavior = t.behavior;
       }
