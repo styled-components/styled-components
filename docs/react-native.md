@@ -6,7 +6,7 @@ This is the RN-substrate view: what the platform underneath us can do. It is dis
 
 ## RN CSS capability by version
 
-Snapshot as of ~2026 (RN 0.86, released 2026-06-11). RN moves fast, so every row is version-stamped; re-verify against the RN changelog before trusting a floor.
+Snapshot as of RN 0.86 (released 2026-06-11); the repo installs RN 0.85, so 0.86 rows are untested here. RN moves fast, so every row is version-stamped; re-verify against the RN changelog before trusting a floor.
 
 The New Architecture (Fabric + TurboModules + bridgeless) is mandatory from RN 0.82 onward: `newArchEnabled=false` (Android) and `RCT_NEW_ARCH_ENABLED=0` (iOS) are ignored. RN 0.81 / Expo SDK 54 are the last versions that can run the Legacy Architecture. Every "New Arch only" feature below is therefore unconditionally available from 0.82 up.
 
@@ -22,7 +22,7 @@ The New Architecture (Fabric + TurboModules + bridgeless) is mandatory from RN 0
 - `inset` properties (`inset`, `inset-block`, `inset-block-start/end`, `inset-inline`, `inset-inline-start/end`): New Arch only.
 - `gap` / `row-gap` / `column-gap`: accept percentage values. RN 0.75+.
 - `cursor`: `auto`, `pointer` (iOS 17+).
-- `experimental-background-image` (gradients as a raw string, experimental): the two gradient types landed four minors apart despite sharing the prop. `linear-gradient()` and `repeating-linear-gradient()` in RN 0.76.0; `radial-gradient()` only in RN 0.80.0. A matrix stating "gradients: 0.76+" over-claims radial on 0.76-0.79 where there is none.
+- `experimental_backgroundImage` (gradients as a raw string, experimental): the two gradient types landed four minors apart despite sharing the prop. `linear-gradient()` and `repeating-linear-gradient()` in RN 0.76.0; `radial-gradient()` only in RN 0.80.0. A matrix stating "gradients: 0.76+" over-claims radial on 0.76-0.79 where there is none.
 
 ### `filter` on Android: hard API-31 cliff, applied per filter list
 
@@ -42,7 +42,7 @@ As of 0.86, the iOS SwiftUI filter backend is still gated behind `ReactNativeRel
 ### 0.85 removals and migrations
 
 - `StyleSheet.absoluteFillObject` removed (deprecated in 0.82); use `StyleSheet.absoluteFill` (same object). Source-breaking.
-- Jest preset extracted to a scoped package: `preset: 'react-native'` becomes `preset: '@react-native/jest-preset'`. Required migration, not an automatic shim.
+- Jest preset extracted to a scoped package: `preset: 'react-native'` becomes `preset: '@react-native/jest-preset'`. Required migration: a forwarding shim remains at `react-native/jest-preset`, but it throws until `@react-native/jest-preset` is installed as a direct dependency.
 - `AccessibilityInfo.setAccessibilityFocus` deprecated; use `sendAccessibilityEvent`.
 
 ### 0.86 no-churn signal
