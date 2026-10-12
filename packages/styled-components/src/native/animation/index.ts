@@ -1243,33 +1243,20 @@ interface RGBA255 {
 }
 
 /**
- * Cached resolver for `@react-native/normalize-colors`. Used for the
- * named-color / `hsl()` / `hwb()` fallback path. The module is a transitive
- * dep of `react-native` (peer floor 0.85), so requiring it lazily mirrors
- * the {@link getRN} pattern: no DOM-side resolution, no hard import edge.
+ * Resolve a named keyword / `hsl()` / `hwb()` string through react-native's
+ * public `processColor`, so the library never reaches for a package it does
+ * not declare (`@react-native/normalize-colors` is react-native's own
+ * dependency and is invisible to third parties under strict installs).
+ * `processColor` returns `0xAARRGGBB`: unsigned on iOS, a signed 32-bit int
+ * on Android. `undefined` means the string is not a color; an object means a
+ * platform color, which has no channels to read. react-native-web returns
+ * the unsigned form.
  */
-type NormalizeColorFn = (s: string) => number | null;
-let cachedNormalizeColor: NormalizeColorFn | null | undefined;
-function getNormalizeColor(): NormalizeColorFn | null {
-  if (cachedNormalizeColor !== undefined) return cachedNormalizeColor;
-  let resolved: NormalizeColorFn | null;
-  try {
-    const mod = require('@react-native/normalize-colors');
-    resolved = typeof mod === 'function' ? mod : (mod.default ?? null);
-  } catch {
-    resolved = null;
-  }
-  cachedNormalizeColor = resolved;
-  return resolved;
-}
-
-/**
- * Test seam used by `animated-adapter.test.tsx` to verify the lazy require
- * path. Resets the cache so a fresh `getNormalizeColor()` call hits the
- * `require` branch again.
- */
-function __resetNormalizeColorCacheForTests(): void {
-  cachedNormalizeColor = undefined;
+function processNativeColor(s: string): number | null {
+  const { processColor } = getRN();
+  if (typeof processColor !== 'function') return null;
+  const argb = processColor(s);
+  return typeof argb === 'number' ? argb : null;
 }
 
 /**
@@ -1281,8 +1268,8 @@ function __resetNormalizeColorCacheForTests(): void {
  *  2. Modern color functions (`oklch`, `oklab`, `lab`, `lch`, `hsl`,
  *     `hwb`, `color-mix`) via the static color-math polyfill. Falls
  *     through when an operand is a sentinel / `var()` / otherwise dynamic.
- *  3. RN's `@react-native/normalize-colors` for named keywords. Same
- *     table RN's StyleSheet pipeline consults at apply time.
+ *  3. RN's `processColor` for named keywords. Same table RN's
+ *     StyleSheet pipeline consults at apply time.
  *
  * Returns null when none of the paths match; the caller snaps at 50%
  * (discrete interpolation) as the documented fallback for genuinely
@@ -1343,17 +1330,15 @@ function parseAnimColor(s: string): RGBA255 | null {
     }
   }
 
-  // Final path: named keywords via RN's normalize-colors.
-  const normalizeColor = getNormalizeColor();
-  if (normalizeColor === null) return null;
-  const packed = normalizeColor(t);
-  if (packed === null || typeof packed !== 'number') return null;
-  // RN packs into 0xRRGGBBAA unsigned. Unpack as 8-bit + alpha 0..1.
+  // Final path: named keywords via RN's `processColor`.
+  const argb = processNativeColor(t);
+  if (argb === null) return null;
+  // `>>>` reads the high byte unsigned, so Android's signed form unpacks too.
   return {
-    r: (packed >>> 24) & 0xff,
-    g: (packed >>> 16) & 0xff,
-    b: (packed >>> 8) & 0xff,
-    a: (packed & 0xff) / 255,
+    r: (argb >>> 16) & 0xff,
+    g: (argb >>> 8) & 0xff,
+    b: argb & 0xff,
+    a: (argb >>> 24) / 255,
   };
 }
 
@@ -1469,7 +1454,7 @@ function buildSegmentedInterpolation(
     // Per-segment color parse (hoisted out of the sample loop). Accepts
     // anything `parseAnimColor` recognizes: hex, `rgb()`/`rgba()`,
     // `hsl()`, `hwb()`, modern function forms (`oklch`, `lab`,
-    // `color-mix`), and named keywords via `@react-native/normalize-colors`.
+    // `color-mix`), and named keywords via RN's `processColor`.
     // Falls through to the snap only when one side genuinely can't be
     // parsed (e.g. `currentColor`, mixed shapes).
     let segFromColor: RGBA255 | null = null;
@@ -2626,5 +2611,4 @@ export {
   interpolateColorOklab as __interpolateColorOklabForTests,
   additiveCombine as __additiveCombineForTests,
   additiveCombineTransform as __additiveCombineTransformForTests,
-  __resetNormalizeColorCacheForTests,
 };

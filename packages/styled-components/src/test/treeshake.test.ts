@@ -220,6 +220,29 @@ describe('native build isolation', () => {
     expect(nativeCJS).not.toMatch(/exports\.StyleSheetManager/);
   });
 
+  it('requires only packages the library declares as dependencies or peers', () => {
+    // A package the consumer never lists resolves only when the install hoists
+    // it; strict layouts (pnpm without hoisting, Yarn PnP) throw at runtime.
+    const pkg = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8')
+    ) as { dependencies?: object; peerDependencies?: object };
+    const declared = new Set([
+      ...Object.keys(pkg.dependencies ?? {}),
+      ...Object.keys(pkg.peerDependencies ?? {}),
+    ]);
+    const bareSpecifier =
+      /\brequire\(["']([^"'./][^"']*)["']\)|(?:^|;)(?:import|export)\b[^;]*?\bfrom\s*["']([^"'./][^"']*)["']|(?:^|;)import\s*["']([^"'./][^"']*)["']/gm;
+    const packageName = (id: string) => id.split('/', id.startsWith('@') ? 2 : 1).join('/');
+
+    for (const source of [nativeCJS, nativeESM]) {
+      const used = new Set(
+        [...source.matchAll(bareSpecifier)].map(m => packageName(m[1] ?? m[2] ?? m[3]))
+      );
+      expect(used).toContain('react-native');
+      expect([...used].filter(name => !declared.has(name))).toEqual([]);
+    }
+  });
+
   it('drops the rn-web matrix3d transport rewrite from the Hermes bundle', () => {
     // `normalizeStyleForWeb` gates on `__NATIVE_WEB__` so
     // `rewriteStyleForWebTransport` and `fixTransformMatrix3d` only

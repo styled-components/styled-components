@@ -73,8 +73,6 @@
         "@react-native/babel-preset",
         "babel-jest",
         "babel-plugin-add-module-exports",
-        // Guarded optional require; ships transitively with react-native.
-        "@react-native/normalize-colors",
         // Type-only import in the published test-utils; consumers of
         // enzymeFind bring their own enzyme.
         "enzyme"

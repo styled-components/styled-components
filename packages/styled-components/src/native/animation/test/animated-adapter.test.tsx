@@ -7,11 +7,12 @@
  * output;the rendered tree shows the resolved primitive.
  */
 import React from 'react';
-import { Animated } from 'react-native';
+import { Animated, Platform, processColor } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 import styled from '../../';
 import { resetResponsiveCache } from '../../responsive';
 import { resetNativeStyleCache, toNativeStyles } from '../../../models/compileNative';
+import { describeOnRnWeb } from '../../transform/describeOnRnWeb';
 import { resetWarningsForTest } from '../../transform/dev';
 import '../'; // ensure default adapter side-effect registers
 import {
@@ -1871,6 +1872,101 @@ describe('Animated adapter: lifecycle events (CSS Animations §5.1 / Transitions
     // Genuine unparseable: `currentColor` and gibberish.
     expect(__parseAnimColorForTests('currentColor')).toBeNull();
     expect(__parseAnimColorForTests('not-a-color')).toBeNull();
+  });
+
+  describe('named, hsl() and hwb() colors under a strict dependency layout', () => {
+    const NORMALIZE_COLORS = '@react-native/normalize-colors';
+
+    /**
+     * Strict installs (pnpm without hoisting, Yarn PnP) resolve
+     * `@react-native/normalize-colors` for react-native alone, never for
+     * this library. React Native's own color pipeline is loaded first, as it
+     * is in an app, then the package is made unresolvable for every later
+     * require.
+     */
+    function makeNormalizeColorsUnreachable(): void {
+      expect(processColor('red')).toBeDefined();
+      jest.doMock(NORMALIZE_COLORS, () => {
+        throw new Error(`Cannot find module '${NORMALIZE_COLORS}'`);
+      });
+    }
+
+    afterEach(() => {
+      jest.dontMock(NORMALIZE_COLORS);
+      Platform.OS = 'ios';
+    });
+
+    it('parses named keywords, hsl() and hwb() through react-native', () => {
+      makeNormalizeColorsUnreachable();
+
+      expect(__parseAnimColorForTests('red')).toEqual({ r: 255, g: 0, b: 0, a: 1 });
+      expect(__parseAnimColorForTests('rebeccapurple')).toEqual({ r: 102, g: 51, b: 153, a: 1 });
+      expect(__parseAnimColorForTests('transparent')).toEqual({ r: 0, g: 0, b: 0, a: 0 });
+      expect(__parseAnimColorForTests('hsl(0, 100%, 50%)')).toEqual({ r: 255, g: 0, b: 0, a: 1 });
+      expect(__parseAnimColorForTests('hwb(120 0% 0%)')).toEqual({ r: 0, g: 255, b: 0, a: 1 });
+    });
+
+    it('unpacks the signed 32-bit color Android returns', () => {
+      Platform.OS = 'android';
+      makeNormalizeColorsUnreachable();
+
+      expect(processColor('red')).toBeLessThan(0);
+      expect(__parseAnimColorForTests('red')).toEqual({ r: 255, g: 0, b: 0, a: 1 });
+      expect(__parseAnimColorForTests('rgba(0, 0, 255, 0.5)')).toEqual({
+        r: 0,
+        g: 0,
+        b: 255,
+        a: 0.5,
+      });
+      expect(__parseAnimColorForTests('tomato')).toEqual({ r: 255, g: 99, b: 71, a: 1 });
+    });
+
+    it('returns null for a keyword react-native rejects', () => {
+      makeNormalizeColorsUnreachable();
+
+      expect(__parseAnimColorForTests('not-a-color')).toBeNull();
+      expect(__parseAnimColorForTests('currentColor')).toBeNull();
+    });
+
+    /** Loads a fresh adapter whose `getRN()` sees `rn` as `react-native`. */
+    function parserFor(rn: () => unknown): typeof __parseAnimColorForTests {
+      let parse!: typeof __parseAnimColorForTests;
+      jest.resetModules();
+      jest.doMock('react-native', rn);
+      try {
+        parse = require('../').__parseAnimColorForTests;
+        require('../../responsive').getRN();
+      } finally {
+        jest.dontMock('react-native');
+        jest.resetModules();
+      }
+      return parse;
+    }
+
+    describe('without a usable processColor', () => {
+      it('returns null for named keywords and keeps hex and rgb()', () => {
+        const parse = parserFor(() => ({}));
+
+        expect(parse('red')).toBeNull();
+        expect(parse('#00f')).toEqual({ r: 0, g: 0, b: 255, a: 1 });
+        expect(parse('rgb(1, 2, 3)')).toEqual({ r: 1, g: 2, b: 3, a: 1 });
+      });
+    });
+
+    describeOnRnWeb(() => {
+      it('unpacks the unsigned 0xAARRGGBB react-native-web returns', () => {
+        const rnWeb = require('react-native-web');
+        expect(rnWeb.processColor('red')).toBe(0xffff0000);
+        expect(rnWeb.processColor('rgba(0, 0, 255, 0.5)')).toBe(0x800000ff);
+
+        const parse = parserFor(() => rnWeb);
+
+        expect(parse('red')).toEqual({ r: 255, g: 0, b: 0, a: 1 });
+        expect(parse('hsl(0, 100%, 50%)')).toEqual({ r: 255, g: 0, b: 0, a: 1 });
+        expect(parse('transparent')).toEqual({ r: 0, g: 0, b: 0, a: 0 });
+        expect(parse('not-a-color')).toBeNull();
+      });
+    });
   });
 
   it('interpolates colors in oklab space per CSS Color L4 §13', () => {
