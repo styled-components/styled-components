@@ -937,7 +937,7 @@ function extractScrollTimeline(base: Dict<any>): { name: string; axis: TimelineA
   if (__DEV__ && Array.isArray(name) && name.length > 1) {
     warnOnce(
       'native-scroll-timeline-multiple',
-      'Multiple `scroll-timeline-name` values were declared on one component. React Native scrollers publish a single timeline; only the first name is used. Split the scrollable areas into separate components to declare more timelines.',
+      'Multiple `scroll-timeline-name` values were declared on one component, and only the first is used. Split the scrollable areas into separate components to declare more timelines.',
       String(firstName)
     );
   }
@@ -1166,7 +1166,7 @@ function stripSpecialCasesFromConditional(styles: Dict<any>, entry: ConditionalS
         const cond = describeCondition(entry);
         warnOnce(
           'native-special-case-cond',
-          `\`${meta.source}\` is not supported inside \`${cond}\` on React Native. \`${meta.source}\` maps to React Native's \`${k}\` prop on <${meta.validOn[0]}>, which can't change per condition. Move \`${meta.source}\` to the top level of your styled component.`,
+          `\`${meta.source}\` is not supported inside \`${cond}\` on React Native. Move \`${meta.source}\` to the top level of your styled component.`,
           k + ':' + cond
         );
       }

@@ -220,7 +220,7 @@ export function mapDescriptorsToCSSLayer(
         if (__DEV__) {
           warnOnce(
             'native-scroll-timeline-reanimated',
-            `The animation "${animations[i].name}" uses \`animation-timeline\`, which the Reanimated adapter cannot drive (Reanimated's CSS layer is time-based). The animation is skipped; the default Animated adapter supports scroll-driven animations.`,
+            `The animation "${animations[i].name}" uses \`animation-timeline\`, which the Reanimated adapter does not support. The animation is skipped; the default Animated adapter supports scroll-driven animations.`,
             animations[i].name
           );
         }

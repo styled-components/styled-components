@@ -210,7 +210,7 @@ function readAlignKeyword(stream: TokenStream, allowed: ReadonlySet<string>): st
     if (__DEV__) {
       warnOnce(
         'native-align-overflow-position-dropped',
-        '`safe` and `unsafe` alignment prefixes are ignored on React Native because Yoga has no overflow-alignment control. The alignment value still applies.',
+        '`safe` and `unsafe` alignment prefixes are ignored on React Native. The alignment value still applies.',
         name
       );
     }

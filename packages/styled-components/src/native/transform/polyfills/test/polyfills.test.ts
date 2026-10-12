@@ -5542,7 +5542,7 @@ describe('corner-shape spec compliance (CSS Borders 4 §3.8)', () => {
   // (Unlike square, which is expressed as a radius and so composes freely.)
   it('mixed curves (round squircle) warn and drop', () => {
     expect(transformDecl('corner-shape', 'round squircle')).toEqual({});
-    expect(warnSpy.mock.calls[0][0]).toMatch(/applies one `borderCurve` to the whole view/);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/applies one curve to the whole view/);
     expect(warnSpy.mock.calls[0][0]).toMatch(/one curve for every non-`square` corner/);
   });
 

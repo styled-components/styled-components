@@ -116,7 +116,7 @@ export function useAnchorNamePublisher(
       } else if (__DEV__) {
         warnOnce(
           'native-anchor-name-ref-dropped',
-          `anchor-name: ${name} is inactive because the styled component never received a ref. styled-components publishes the anchor's rect from a ref callback so it can remove it again on unmount; a component that renders its own host without forwarding \`ref\` cannot participate. Forward the ref to the host element, or move anchor-name onto one that does.`,
+          `anchor-name: ${name} is inactive because the styled component never received a ref. A component that renders its own host without forwarding \`ref\` cannot participate. Forward the ref to the host element, or move anchor-name onto one that does.`,
           name
         );
       }

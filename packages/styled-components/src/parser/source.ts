@@ -77,7 +77,7 @@ function warnClientReference(ref: unknown): void {
   const label = (id && id.includes('#') ? id.split('#').pop() : id) || r.name || 'unknown';
   warnOnce(
     'rsc-client-ref-selector',
-    `interpolating a client component (${label}) as a selector is not supported in server components. The component selector pattern requires access to the component's internal class name, which is not available across the server/client boundary. Use a plain CSS class selector instead.`,
+    `interpolating a client component (${label}) as a selector is not supported in server components. Use a plain CSS class selector instead.`,
     label
   );
 }

@@ -258,7 +258,7 @@ function transformStyleHandler(tokens: Token[]): Dict<any> | null {
   if (__DEV__ && value === 'preserve-3d') {
     warnOnce(
       'native-transform-style-preserve-3d',
-      "`transform-style: preserve-3d` is ignored on React Native because iOS and Android expose no matching style property; descendants of a 3D-transformed element composite into the parent's 2D plane. Animated 3D transforms (`rotateX` / `rotateY` / `rotateZ`) are already isolated automatically.",
+      "`transform-style: preserve-3d` is ignored on React Native, so descendants of a 3D-transformed element flatten into the parent's 2D plane. Remove the declaration.",
       value
     );
   }

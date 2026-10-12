@@ -54,7 +54,7 @@ function caretColorShorthand(tokens: Token[]): Dict<any> | null {
     if (__DEV__) {
       warnOnce(
         'native-caret-color-ios',
-        '`caret-color` also tints the text-selection highlight on iOS because iOS exposes a single `selectionColor` for both surfaces. Android keeps the spec semantics where only the caret is colored.'
+        '`caret-color` also tints the text-selection highlight on iOS, which colors the caret and the selection together. Android keeps the spec semantics where only the caret is colored.'
       );
     }
     return { caretColor: v, cursorColor: v, selectionColor: v };

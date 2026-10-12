@@ -219,7 +219,7 @@ export function resolveTimelineEntry(
       if (__DEV__) {
         warnOnce(
           'native-scroll-timeline-scroller-unsupported',
-          `\`animation-timeline: scroll(${timeline.scroller})\` is not supported on React Native: there is no document viewport scroller, and self-referencing scrollers are not wired up yet. Use \`scroll(nearest)\` (the default) inside a styled ScrollView, or a named timeline via \`scroll-timeline-name\`.`,
+          `\`animation-timeline: scroll(${timeline.scroller})\` is not supported on React Native. Use \`scroll(nearest)\` (the default) inside a styled ScrollView, or a named timeline via \`scroll-timeline-name\`.`,
           timeline.scroller
         );
       }
@@ -466,7 +466,7 @@ export function attachNativeScrollMapping(
     if (__DEV__ && !isJestLikeHost()) {
       warnOnce(
         'native-scroll-timeline-attach-failed',
-        'Could not resolve a native view tag for a styled scroll container, so its scroll timeline (and any position: sticky children) fall back to JavaScript-paced updates and may visibly trail fast scrolling. This usually means the scroll component does not expose its host ref.',
+        'a styled scroll container could not be tracked, so its scroll-driven animations and position: sticky children may visibly trail fast scrolling. Make sure the styled scroll component forwards its `ref` to the underlying scroll view.',
         'attach'
       );
     }
@@ -490,9 +490,9 @@ export function attachNativeScrollMapping(
     if (__DEV__) {
       warnOnce(
         'native-scroll-timeline-attach-failed',
-        'Attaching the native scroll event for a styled scroll container threw' +
+        'a styled scroll container could not be tracked' +
           (e instanceof Error ? ` (${e.message})` : '') +
-          '; its scroll timeline and position: sticky children fall back to JavaScript-paced updates.',
+          ', so its scroll-driven animations and position: sticky children may visibly trail fast scrolling. Make sure the styled scroll component forwards its `ref` to the underlying scroll view.',
         'threw'
       );
     }
@@ -872,7 +872,7 @@ export function useSnapTargetRegistration(
       } else if (__DEV__) {
         warnOnce(
           'native-snap-align-ref-dropped',
-          'scroll-snap-align is inactive because the styled component never received a ref. styled-components registers the snap offset from a ref callback so it can deregister again on unmount; a component that renders its own host without forwarding `ref` cannot participate. Forward the ref to the host element, or move scroll-snap-align onto one that does.',
+          'scroll-snap-align is inactive because the styled component never received a ref. A component that renders its own host without forwarding `ref` cannot participate. Forward the ref to the host element, or move scroll-snap-align onto one that does.',
           'snap-align'
         );
       }

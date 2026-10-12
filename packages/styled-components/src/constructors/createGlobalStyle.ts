@@ -62,7 +62,7 @@ export default function createGlobalStyle<Props extends object>(
     if (hasImport) {
       warnOnce(
         'gs-import',
-        `please do not use @import CSS syntax in createGlobalStyle at this time, as the CSSOM APIs we use in production do not handle it well. Instead, we recommend using a library such as react-helmet to inject a typical <link> meta tag to the stylesheet, or simply embedding it manually in your index.html <head> section for a simpler app.`,
+        `@import CSS syntax is not supported in createGlobalStyle. Load the stylesheet with a <link> tag instead, injected with a library such as react-helmet or added to your index.html <head>.`,
         styledComponentId
       );
     }

@@ -93,7 +93,7 @@ function StyleInjector({
   if (__DEV__ && isServerRender) {
     warnOnce(
       'buffered-ssr-without-sheet',
-      'client styles inject through useInsertionEffect, which does not run during renderToString / renderToStaticMarkup. Wrap the tree in ServerStyleSheet#collectStyles so styles flush during render.'
+      'this tree is rendered with renderToString / renderToStaticMarkup without ServerStyleSheet, so its styles are missing from the output. Wrap the tree in ServerStyleSheet#collectStyles.'
     );
   }
   React.useInsertionEffect(() => {

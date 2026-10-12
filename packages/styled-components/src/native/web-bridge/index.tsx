@@ -973,9 +973,7 @@ function BridgeThemeProvider(props: {
 function toStyleSheet(): Record<string, unknown> {
   if (__DEV__) {
     // eslint-disable-next-line no-console
-    console.warn(
-      '`toStyleSheet` is a no-op on the rn-web bridge; the web pipeline emits CSS through CSSOM rather than RN style objects.'
-    );
+    console.warn('`toStyleSheet` is a no-op on the rn-web bridge and returns an empty object.');
   }
   return {};
 }

@@ -109,7 +109,7 @@ function scrollSnapTypeShorthand(tokens: Token[]): Dict<any> | null {
         'native-scroll-snap-paging',
         '`scroll-snap-type: ' +
           axis +
-          ' mandatory` defaults to full-scrollport paging on React Native. Declare `scroll-snap-align` on the children that should snap (the scroller measures them and snaps to their real positions), or pass `snapToInterval` / `snapToOffsets` on the styled ScrollView (your props win).',
+          ' mandatory` defaults to full-scrollport paging on React Native. Declare `scroll-snap-align` on the children that should snap, or pass `snapToInterval` / `snapToOffsets` on the styled ScrollView (your props win).',
         axis + ' mandatory'
       );
     }

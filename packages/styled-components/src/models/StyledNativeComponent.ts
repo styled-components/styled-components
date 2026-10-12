@@ -372,7 +372,7 @@ function applySpecialCases(
         const validList = meta.validOn.map(n => `<${n}>`).join(' or ');
         warnOnce(
           'native-special-case-target',
-          `\`${meta.source}\` only works on ${validList} in React Native, but it's being applied to <${name}>. \`${meta.source}\` maps to React Native's \`${k}\` prop, which ${validList} reads;other components will ignore it.`,
+          `\`${meta.source}\` only works on ${validList} in React Native, but it's being applied to <${name}>. Apply it to ${validList} instead.`,
           meta.source + ':' + name
         );
       }

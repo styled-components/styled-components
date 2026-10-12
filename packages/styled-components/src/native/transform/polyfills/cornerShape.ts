@@ -89,7 +89,7 @@ function warnAndroid(): void {
   if (getReactNativePlatformOS() !== 'android') return;
   warnOnce(
     'native-corner-shape-android',
-    'The Apple-smooth corner curve (`corner-shape: squircle`, or a `superellipse()` value near 2) renders as an ordinary circular corner on Android. The `borderCurve` it maps to is absent from the Android view config, so the prop is dropped. Use `corner-shape: square` for a contour Android draws, or accept the circular fallback.'
+    'The Apple-smooth corner curve (`corner-shape: squircle`, or a `superellipse()` value near 2) renders as an ordinary circular corner on Android. Use `corner-shape: square` for a contour Android draws, or accept the circular fallback.'
   );
 }
 
@@ -190,7 +190,7 @@ export function cornerShapeShorthand(tokens: Token[]): Dict<any> | null {
           'native-corner-shape-mixed',
           '`corner-shape: ' +
             raw +
-            '` gives two corners different curves, but React Native applies one `borderCurve` to the whole view. Use one curve for every non-`square` corner, or split the corners onto separate wrapping Views.',
+            '` gives two corners different curves, but React Native applies one curve to the whole view. Use one curve for every non-`square` corner, or split the corners onto separate wrapping Views.',
           raw
         );
       }

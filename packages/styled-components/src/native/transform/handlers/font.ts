@@ -75,7 +75,7 @@ function warnFontUnsupported(reason: 'width' | 'relative' | 'system', value: str
       'native-font-relative-size-unsupported',
       '`font: ' +
         value +
-        '` uses a relative-size keyword (smaller / larger). The cascade does not track which keyword produced the inherited size, so the browser ramp navigation cannot be matched. Use a specific length such as `14px`.',
+        '` uses a relative-size keyword (smaller / larger), which React Native does not support. Use a specific length such as `14px`.',
       value
     );
     return;

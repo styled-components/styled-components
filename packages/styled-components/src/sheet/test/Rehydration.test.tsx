@@ -196,7 +196,7 @@ describe('rehydrateSheet', () => {
 
       expect(warn).toHaveBeenCalledTimes(1);
       expect(warn.mock.calls[0][0]).toMatchInlineSnapshot(
-        `"[sc] server-rendered styles arrived in a <style> tag React manages through \`precedence\`, which strips the attributes needed to adopt them, so every rule is injected again on the client. Render the tag from \`ServerStyleSheet#getStyleElement()\` with no \`precedence\` or \`href\` prop."`
+        `"[sc] server-rendered styles were found in a <style> tag with a \`precedence\` prop, so every rule is injected again on the client. Render the tag from \`ServerStyleSheet#getStyleElement()\` with no \`precedence\` or \`href\` prop."`
       );
     });
 
