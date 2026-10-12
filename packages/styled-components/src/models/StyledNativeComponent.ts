@@ -69,7 +69,7 @@ import type {
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import { themeValue } from '../utils/themePath';
-import { isPostAttr, tracePostAttr, type PostAttrsPlan } from '../utils/tracePostAttrs';
+import { buildPostAttrsPlans, hasPostAttrs, type PostAttrsPlan } from '../utils/tracePostAttrs';
 import escape from '../utils/escape';
 import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
@@ -139,33 +139,6 @@ function resolveContext<Props extends object>(
   }
 
   return context;
-}
-
-function hasPostAttrsNative<Props extends object>(attrs: Attrs<Props>[]): boolean {
-  for (let i = 0; i < attrs.length; i++) {
-    const a = attrs[i];
-    if (typeof a === 'function' && (a as Function).length >= 2) return true;
-  }
-  return false;
-}
-
-/**
- * Walk the final attrs chain and trace each arity-2 callback against the
- * component's rules. Output is parallel-indexed with the arity-2 entries
- * in iteration order. A `null` slot signals an untraceable callback ;
- * the render path invokes the original function for that slot.
- */
-function buildPostAttrsPlans<Props extends object>(
-  attrs: Attrs<Props>[],
-  rules: RuleSet<Props>
-): ReadonlyArray<PostAttrsPlan | null> {
-  const plans: (PostAttrsPlan | null)[] = [];
-  for (let i = 0; i < attrs.length; i++) {
-    const a = attrs[i];
-    if (!isPostAttr(a)) continue;
-    plans.push(tracePostAttr(a, rules));
-  }
-  return plans;
 }
 
 /** Merge an arity-2 attr's result bag (plan output OR runtime return) into context. */
@@ -2763,7 +2736,7 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
     WrappedStyledComponent.nativeStyle = nativeStyleInstance;
     WrappedStyledComponent.displayName = displayName;
     WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
-    WrappedStyledComponent.hasPostAttrs = hasPostAttrsNative(finalAttrs);
+    WrappedStyledComponent.hasPostAttrs = hasPostAttrs(finalAttrs);
     WrappedStyledComponent.postAttrsPlans = WrappedStyledComponent.hasPostAttrs
       ? buildPostAttrsPlans(finalAttrs, finalRules)
       : undefined;

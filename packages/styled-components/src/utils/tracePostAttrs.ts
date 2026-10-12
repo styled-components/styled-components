@@ -87,6 +87,34 @@ export function isPostAttr(attr: unknown): attr is PostAttrCallback {
   return typeof attr === 'function' && attr.length >= 2;
 }
 
+/** True when any entry in the attrs chain is an arity-2 callback. */
+export function hasPostAttrs(attrs: ReadonlyArray<unknown>): boolean {
+  for (let i = 0; i < attrs.length; i++) {
+    if (isPostAttr(attrs[i])) return true;
+  }
+  return false;
+}
+
+/**
+ * Walk the final attrs chain and trace each arity-2 callback against the
+ * component's rules. Output is parallel-indexed with the arity-2 entries
+ * in iteration order (arity-1 and object attrs are skipped). A `null` slot
+ * means the callback couldn't be statically traced; the render path invokes
+ * the original function for that slot.
+ */
+export function buildPostAttrsPlans<Props extends BaseObject>(
+  attrs: ReadonlyArray<unknown>,
+  rules: RuleSet<Props>
+): ReadonlyArray<PostAttrsPlan | null> {
+  const plans: (PostAttrsPlan | null)[] = [];
+  for (let i = 0; i < attrs.length; i++) {
+    const a = attrs[i];
+    if (!isPostAttr(a)) continue;
+    plans.push(tracePostAttr(a, rules));
+  }
+  return plans;
+}
+
 export function tracePostAttr<Props extends BaseObject>(
   attr: PostAttrCallback,
   rules: RuleSet<Props>

@@ -31,7 +31,11 @@ import { NodeKind, type Root, type TemplateValue } from '../parser/ast';
 import { evaluateForFastPath, type FastPathFragment } from '../parser/compile';
 import { getSource, Source } from '../parser/source';
 import { themeValue } from '../utils/themePath';
-import { isPostAttr, tracePostAttr, type PostAttrsPlan } from '../utils/tracePostAttrs';
+import {
+  buildPostAttrsPlans,
+  hasPostAttrs as chainHasPostAttrs,
+  type PostAttrsPlan,
+} from '../utils/tracePostAttrs';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import createWarnTooManyClasses, {
   LIMIT as TOO_MANY_CLASSES_LIMIT,
@@ -520,36 +524,6 @@ function applyPostAttrsWeb<Props extends BaseObject>(
   return popOverrides;
 }
 
-function hasPostAttrsWeb<Props extends BaseObject>(
-  attrs: Attrs<React.HTMLAttributes<Element> & Props>[]
-): boolean {
-  for (let i = 0; i < attrs.length; i++) {
-    const a = attrs[i];
-    if (typeof a === 'function' && (a as Function).length >= 2) return true;
-  }
-  return false;
-}
-
-/**
- * Walk the final attrs chain and trace each arity-2 callback against the
- * component's rules. Output is parallel-indexed with the arity-2 entries
- * in iteration order (filter out arity-1 / object attrs). A `null` slot
- * means the callback couldn't be statically traced; the render path will
- * invoke the original function for that slot.
- */
-function buildPostAttrsPlans<Props extends BaseObject>(
-  attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
-  rules: RuleSet<Props>
-): ReadonlyArray<PostAttrsPlan | null> {
-  const plans: (PostAttrsPlan | null)[] = [];
-  for (let i = 0; i < attrs.length; i++) {
-    const a = attrs[i];
-    if (!isPostAttr(a)) continue;
-    plans.push(tracePostAttr(a, rules));
-  }
-  return plans;
-}
-
 function buildPropsForElement<Context extends ExecutionContext>(
   context: Context,
   elementToBeCreated: WebTarget,
@@ -889,7 +863,7 @@ function createStyledComponent<
   } = props => useImpl<OuterProps>(WrappedStyledComponent, props, props.ref);
   RenderInner.displayName = displayName;
 
-  const hasPostAttrs = hasPostAttrsWeb(finalAttrs);
+  const hasPostAttrs = chainHasPostAttrs(finalAttrs);
   const foldedComponentIds = isTargetStyledComp
     ? joinStrings(styledComponentTarget.foldedComponentIds, styledComponentTarget.styledComponentId)
     : '';
