@@ -7,6 +7,8 @@ Bun records a CPU profile and emits a markdown report (`--cpu-prof-md`: hot func
 - Color polyfill only (skips transformDecl orchestration; pre-tokenizes operands so the profile is dominated by polyfill self-time): `bun --cpu-prof --cpu-prof-md --cpu-prof-name=color-polyfill --cpu-prof-dir=./.cpu-profiles src/native/profile-color-polyfill.ts`
 - Animation only (per-segment color + value interpolation build + hot helpers): `bun --cpu-prof --cpu-prof-md --cpu-prof-name=animation --cpu-prof-dir=./.cpu-profiles src/native/profile-animation.ts`
 
+`SC_PROFILE_SMOKE=1` runs every scenario of the native scripts once with no warmup (numbers are meaningless); `pnpm verify` uses it to prove the native pipeline script still executes.
+
 `--cpu-prof-name` sets the output basename. If you omit `--cpu-prof-dir`, files are written in the current directory (Bun may use a name without a `.md` extension even for markdown content; the file is still markdown).
 
 On-device motion debugging: `setAnimationDebug('timeline')` (public export) logs scroll-timeline attach outcomes and sticky twin events, one `[sc/anim]` line per scroller; pass `true` for the full per-render adapter trace (very chatty). The showcase enables the quiet scope in dev builds. Keep debug channels scoped like this: one line per event, never dump host instances or props objects.

@@ -15,19 +15,26 @@ interface BenchOptions {
   pad?: number;
 }
 
+/**
+ * `SC_PROFILE_SMOKE=1` runs every scenario once with no warmup, so a script
+ * proves it still executes without producing meaningful numbers.
+ */
+const SMOKE = process.env.SC_PROFILE_SMOKE === '1';
+
 export function bench(
   name: string,
-  iters: number,
+  requestedIters: number,
   fn: (i?: number) => void,
   opts: BenchOptions = {}
 ): number {
   const g: any = globalThis;
+  const iters = SMOKE ? 1 : requestedIters;
   if (typeof g.gc === 'function') g.gc();
   // Warmup mirrors measurement shape so V8 tiers up before sampling.
-  const warm = Math.min(Math.max(Math.floor(iters / 10), 100), 5000);
+  const warm = SMOKE ? 0 : Math.min(Math.max(Math.floor(iters / 10), 100), 5000);
   for (let i = 0; i < warm; i++) fn();
   const samples: number[] = [];
-  const RUNS = 7;
+  const RUNS = SMOKE ? 1 : 7;
   for (let r = 0; r < RUNS; r++) {
     if (typeof g.gc === 'function') g.gc();
     const t0 = performance.now();
