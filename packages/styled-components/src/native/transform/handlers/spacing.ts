@@ -58,7 +58,7 @@ export function borderRadiusShorthand(tokens: Token[]) {
           'native-border-radius-elliptical',
           '`border-radius: ' +
             raw +
-            '` is ignored on React Native because iOS and Android cannot draw separate horizontal and vertical corner radii.',
+            '` is ignored on React Native because iOS and Android cannot draw separate horizontal and vertical corner radii. Use one radius per corner, such as `border-radius: 10px`.',
           raw
         );
       }

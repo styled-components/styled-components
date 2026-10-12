@@ -45,7 +45,7 @@ export function textAlignHandler(tokens: Token[]): Dict<unknown> | null {
     if (__DEV__) {
       warnOnce(
         'native-text-align-justify-all-degrades',
-        '`text-align: justify-all` falls back to `justify` on React Native because iOS and Android cannot justify the final line separately. rn-web keeps the authored value.',
+        '`text-align: justify-all` falls back to `justify` on React Native because iOS and Android cannot justify the final line separately. rn-web keeps the authored value. Use `text-align: justify` to make the fallback explicit.',
         value
       );
     }
@@ -113,7 +113,7 @@ export function textDecorationShorthand(tokens: Token[]): Dict<unknown> | null {
         if (__DEV__) {
           warnOnce(
             'native-text-decoration-style-wavy',
-            '`text-decoration-style: wavy` is ignored on React Native because iOS and Android cannot draw wavy underlines. Falling back to solid.',
+            '`text-decoration-style: wavy` is ignored on React Native because iOS and Android cannot draw wavy underlines. Falling back to solid. Use `solid`, `double`, `dotted`, or `dashed` for a style that renders.',
             style
           );
         }
@@ -133,7 +133,7 @@ export function textDecorationShorthand(tokens: Token[]): Dict<unknown> | null {
   if (__DEV__ && color !== null && getReactNativePlatformOS() === 'android') {
     warnOnce(
       'native-text-decoration-color-android',
-      '`text-decoration-color` is ignored on Android in React Native. Underlines use the text color there; iOS and rn-web keep the authored color.',
+      '`text-decoration-color` is ignored on Android in React Native. Underlines use the text color there; iOS and rn-web keep the authored color. Set the text `color` to the underline color you want so every platform matches.',
       color.raw
     );
   }

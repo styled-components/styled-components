@@ -21,7 +21,7 @@ function warnIosTextWrapBalancePretty(style: string): void {
     'native-text-wrap-ios',
     '`text-wrap: ' +
       style +
-      '` uses Android-only line-breaking controls. iOS keeps its default line breaking.',
+      '` uses Android-only line-breaking controls. iOS keeps its default line breaking. Add explicit line breaks to the text if iOS needs to match.',
     style
   );
 }
@@ -49,7 +49,7 @@ function applyTextWrapStyle(out: Dict<unknown>, style: string | null): void {
     if (__DEV__) {
       warnOnce(
         'native-text-wrap-stable',
-        '`text-wrap: stable` is ignored on React Native because iOS and Android do not expose reflow stability controls.'
+        '`text-wrap: stable` is ignored on React Native because iOS and Android do not expose reflow stability controls. Remove the declaration.'
       );
     }
   }

@@ -306,7 +306,7 @@ function outlineStyleHandler(tokens: Token[]): Dict<unknown> | null {
         'native-outline-style',
         '`outline-style: ' +
           name +
-          "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', or 'dashed'.",
+          "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', or 'dashed'. Use one of those styles.",
         name
       );
     }

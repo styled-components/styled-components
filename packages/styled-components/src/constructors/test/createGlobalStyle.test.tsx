@@ -681,7 +681,7 @@ describe(`createGlobalStyle`, () => {
     const warn = console.warn as jest.Mock<Console['warn']>;
 
     expect(warn.mock.calls[0][0]).toMatchInlineSnapshot(
-      `"[sc] the global style component sc-global-a was given child JSX. createGlobalStyle does not render children."`
+      `"[sc] the global style component sc-global-a was given child JSX. createGlobalStyle does not render children. Remove the children."`
     );
   });
 

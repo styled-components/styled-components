@@ -111,7 +111,7 @@ export function evaluateForFastPath(
             const name = getComponentName(fn as never);
             warnOnce(
               'non-styled-selector',
-              `${name} is not a styled component and cannot be referred to via component selector. See https://styled-components.com/docs/advanced#referring-to-other-components for more details.`,
+              `${name} is not a styled component and cannot be referred to via component selector. Wrap it with styled() first. See https://styled-components.com/docs/advanced#referring-to-other-components for more details.`,
               name
             );
           }

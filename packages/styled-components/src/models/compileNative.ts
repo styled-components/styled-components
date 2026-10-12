@@ -2104,13 +2104,13 @@ function handleAtRule(
     if (warnKind === 'web-only') {
       warnOnce(
         'native-at-rule-web-only',
-        `@${name} is a web-only at-rule and has no React Native equivalent. The rule was ignored.`,
+        `@${name} is a web-only at-rule and has no React Native equivalent. The rule was ignored. Remove it from styles that render on React Native.`,
         name
       );
     } else {
       warnOnce(
         'native-at-rule-unknown',
-        `@${name} is not supported on native. The rule was ignored.`,
+        `@${name} is not supported on native. The rule was ignored. Remove it or check the spelling.`,
         name
       );
     }
@@ -2145,7 +2145,7 @@ function pushDecl(out: StaticDeclNode[], node: StaticDeclNode): void {
     if (__DEV__) {
       warnOnce(
         'native-unsupported-value',
-        `the value "${v}" for "${node.prop}" is not supported in React Native and will be ignored.`,
+        `the value "${v}" for "${node.prop}" is not supported in React Native and will be ignored. Use a supported value or remove the declaration.`,
         node.prop + ':' + v
       );
     }

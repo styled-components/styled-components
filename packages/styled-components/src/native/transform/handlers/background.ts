@@ -267,13 +267,13 @@ export function backgroundShorthand(tokens: Token[]): Dict<unknown> | null {
       if (layer.attachment === 'fixed') {
         warnOnce(
           'native-background-attachment-fixed',
-          '`background-attachment: fixed` is ignored on React Native because iOS and Android do not expose scroll-anchored backgrounds.',
+          '`background-attachment: fixed` is ignored on React Native because iOS and Android do not expose scroll-anchored backgrounds. Remove the declaration.',
           'fixed'
         );
       } else {
         warnOnce(
           'native-background-attachment-local',
-          '`background-attachment: local` is ignored on React Native because iOS and Android do not expose content-anchored backgrounds. rn-web keeps it.',
+          '`background-attachment: local` is ignored on React Native because iOS and Android do not expose content-anchored backgrounds. rn-web keeps it. Remove the declaration.',
           'local'
         );
       }
@@ -283,7 +283,7 @@ export function backgroundShorthand(tokens: Token[]): Dict<unknown> | null {
         'native-background-origin-unsupported',
         '`background-origin: ' +
           layer.origin +
-          '` is ignored on React Native. Native backgrounds paint from the default box on iOS and Android.',
+          '` is ignored on React Native. Native backgrounds paint from the default box on iOS and Android. Remove the declaration.',
         layer.origin
       );
     }
@@ -402,7 +402,7 @@ export function backgroundAttachmentLonghand(tokens: Token[]): Dict<unknown> | n
       'native-background-attachment-unsupported',
       '`background-attachment: ' +
         raw +
-        '` is ignored on React Native because iOS and Android do not expose scroll-anchored or content-anchored backgrounds. rn-web keeps the authored value.',
+        '` is ignored on React Native because iOS and Android do not expose scroll-anchored or content-anchored backgrounds. rn-web keeps the authored value. Remove the declaration.',
       raw
     );
   }
@@ -419,7 +419,7 @@ export function backgroundOriginLonghand(tokens: Token[]): Dict<unknown> | null 
       'native-background-origin-unsupported',
       '`background-origin: ' +
         raw +
-        '` is ignored on React Native. Native backgrounds paint from the default box on iOS and Android.',
+        '` is ignored on React Native. Native backgrounds paint from the default box on iOS and Android. Remove the declaration.',
       raw
     );
   }

@@ -39,7 +39,7 @@ function warnUnsupportedBorderStyle(name: string): void {
     'native-border-style-unsupported',
     '`border-style: ' +
       name +
-      "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', 'dashed', or 'none'.",
+      "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', 'dashed', or 'none'. Use one of those styles.",
     name
   );
 }
@@ -50,7 +50,7 @@ function warnMultipleBorderStyles(value: string): void {
     'native-border-style-multiple',
     '`border-style: ' +
       value +
-      '` uses per-side styles that React Native cannot express. iOS and Android use the first style.',
+      '` uses per-side styles that React Native cannot express. iOS and Android use the first style. Write a single style to apply it to every side.',
     value
   );
 }
@@ -90,7 +90,7 @@ function matchOutlineStyle(t: Token, stream: TokenStream): string | null {
           'native-outline-style',
           '`outline-style: ' +
             name +
-            "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', or 'dashed'.",
+            "` is ignored on React Native. iOS and Android render only 'solid', 'dotted', or 'dashed'. Use one of those styles.",
           name
         );
       }

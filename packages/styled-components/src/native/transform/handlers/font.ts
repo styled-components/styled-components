@@ -65,7 +65,7 @@ function warnFontUnsupported(reason: 'width' | 'relative' | 'system', value: str
       'native-font-width-unsupported',
       '`font: ' +
         value +
-        '` uses a font-width / font-stretch keyword. React Native does not control glyph width; the declaration is ignored. rn-web keeps the authored value.',
+        '` uses a font-width / font-stretch keyword. React Native does not control glyph width; the declaration is ignored. rn-web keeps the authored value. Remove the keyword and pick a font family that has the width you want.',
       value
     );
     return;
@@ -211,7 +211,7 @@ export function fontShorthand(tokens: Token[]): Dict<unknown> | null {
   if (__DEV__ && hasFamilyFallbacks && !__NATIVE_WEB__) {
     warnOnce(
       'native-font-family-fallbacks-dropped',
-      '`font-family` accepts one family on React Native. Extra comma-separated fallbacks are ignored on iOS and Android.',
+      '`font-family` accepts one family on React Native. Extra comma-separated fallbacks are ignored on iOS and Android. List only the family you want.',
       fontFamily.name
     );
   }
@@ -250,7 +250,7 @@ export function fontFamilyShorthand(tokens: Token[]): Dict<unknown> | null {
   if (__DEV__ && hasFallbacks) {
     warnOnce(
       'native-font-family-fallbacks-dropped',
-      '`font-family` accepts one family on React Native. Extra comma-separated fallbacks are ignored on iOS and Android.',
+      '`font-family` accepts one family on React Native. Extra comma-separated fallbacks are ignored on iOS and Android. List only the family you want.',
       family.name
     );
   }

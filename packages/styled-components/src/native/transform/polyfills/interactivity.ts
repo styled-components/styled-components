@@ -47,7 +47,7 @@ function interactivityHandler(tokens: Token[]): Dict<unknown> | null {
     if (platform === 'android') {
       warnOnce(
         'native-interactivity-inert-focusable-leak',
-        '`interactivity: inert` cannot stop focus on every descendant on Android. A focusable child inside the inert subtree may still receive D-pad or keyboard focus; touch and screen-reader blocking still apply to the subtree.',
+        '`interactivity: inert` cannot stop focus on every descendant on Android. A focusable child inside the inert subtree may still receive D-pad or keyboard focus; touch and screen-reader blocking still apply to the subtree. Keep focusable children out of the inert subtree.',
         'inert'
       );
     }

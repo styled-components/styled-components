@@ -24,7 +24,7 @@ function warn3DDrop(code: string, prop: string): void {
     code,
     '`' +
       prop +
-      ': x y z` is only partially supported on React Native. iOS and Android use the X and Y values and ignore Z.',
+      ': x y z` is only partially supported on React Native. iOS and Android use the X and Y values and ignore Z. Write the two-value form to match what renders.',
     prop + '-3d'
   );
 }
@@ -231,7 +231,7 @@ function perspectiveOriginHandler(tokens: Token[]): Dict<unknown> | null {
   if (__DEV__) {
     warnOnce(
       'native-perspective-origin-unsupported',
-      "`perspective-origin` is ignored on React Native. The vanishing point stays at the parent's center on iOS and Android."
+      "`perspective-origin` is ignored on React Native. The vanishing point stays at the parent's center on iOS and Android. Remove the declaration."
     );
   }
   return {};

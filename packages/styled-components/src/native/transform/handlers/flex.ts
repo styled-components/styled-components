@@ -208,7 +208,7 @@ function readAlignKeyword(stream: TokenStream, allowed: ReadonlySet<string>): st
     if (__DEV__) {
       warnOnce(
         'native-align-overflow-position-dropped',
-        '`safe` and `unsafe` alignment prefixes are ignored on React Native. The alignment value still applies.',
+        '`safe` and `unsafe` alignment prefixes are ignored on React Native. The alignment value still applies. Remove the prefix.',
         name
       );
     }
@@ -221,7 +221,7 @@ function readAlignKeyword(stream: TokenStream, allowed: ReadonlySet<string>): st
     if (__DEV__) {
       warnOnce(
         'native-align-baseline-qualifier-dropped',
-        '`first baseline` and `last baseline` both map to `baseline` on React Native because iOS and Android do not expose first/last baseline alignment.',
+        '`first baseline` and `last baseline` both map to `baseline` on React Native because iOS and Android do not expose first/last baseline alignment. Write `baseline` directly.',
         name
       );
     }

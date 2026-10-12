@@ -27,7 +27,11 @@ export default function withTheme<T extends AnyComponent>(
 
     if (__DEV__ && themeProp === undefined) {
       const name = getComponentName(Component);
-      warnOnce('withTheme', `no ThemeProvider or theme prop in scope for "${name}"`, name);
+      warnOnce(
+        'withTheme',
+        `no ThemeProvider or theme prop in scope for "${name}". Wrap the tree in a <ThemeProvider theme={...}> or pass a theme prop.`,
+        name
+      );
     }
 
     return React.createElement(Component, {

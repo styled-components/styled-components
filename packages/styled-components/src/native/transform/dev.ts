@@ -176,7 +176,7 @@ export function warnIfAndroidSkew(value: unknown): void {
   if (getReactNativePlatformOS() !== 'android') return;
   warnOnce(
     'native-android-skew',
-    `\`skewX\` / \`skewY\` are ignored on Android (seen in transform: "${value}"). Android views support translation, rotation, and scale, but not skew. Tracked at https://github.com/facebook/react-native/issues/27649.`
+    `\`skewX\` / \`skewY\` are ignored on Android (seen in transform: "${value}"). Android views support translation, rotation, and scale, but not skew. Use \`rotate\`, \`scale\`, or \`translate\` where Android must match. Tracked at https://github.com/facebook/react-native/issues/27649.`
   );
 }
 

@@ -26,7 +26,7 @@ function buildVarRefs<T extends Dict<unknown>>(obj: T, varPrefix: string): CSSVa
       if (depth !== 0) {
         warnOnce(
           'theme-unbalanced',
-          `value "${str}" at "${fullPath}" contains unbalanced parentheses and may break the var() fallback`,
+          `value "${str}" at "${fullPath}" contains unbalanced parentheses and may break the var() fallback. Balance the parentheses in the value.`,
           fullPath
         );
       }

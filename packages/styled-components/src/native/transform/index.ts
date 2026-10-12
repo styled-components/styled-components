@@ -252,7 +252,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
       if (__DEV__) {
         warnOnce(
           'native-shorthand-parse',
-          `the value "${rawValue}" could not be parsed for property "${prop}". The declaration was ignored.`,
+          `the value "${rawValue}" could not be parsed for property "${prop}". The declaration was ignored. Rewrite the value in standard CSS syntax.`,
           camel + ':' + rawValue
         );
       }
@@ -326,7 +326,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
     if (__DEV__) {
       warnOnce(
         'native-shorthand-parse',
-        `the value "${rawValue}" could not be parsed for property "${camel}". The declaration was ignored.`,
+        `the value "${rawValue}" could not be parsed for property "${camel}". The declaration was ignored. Rewrite the value in standard CSS syntax.`,
         camel + ':' + rawValue
       );
     }

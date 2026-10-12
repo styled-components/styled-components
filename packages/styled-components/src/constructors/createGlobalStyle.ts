@@ -54,7 +54,7 @@ export default function createGlobalStyle<Props extends object>(
     if (__DEV__ && React.Children.count((props as { children?: React.ReactNode }).children)) {
       warnOnce(
         'gs-children',
-        `the global style component ${styledComponentId} was given child JSX. createGlobalStyle does not render children.`,
+        `the global style component ${styledComponentId} was given child JSX. createGlobalStyle does not render children. Remove the children.`,
         styledComponentId
       );
     }
