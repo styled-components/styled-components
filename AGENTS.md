@@ -9,7 +9,7 @@ NOTE: This file is the only home for these instructions. CLAUDE.md is a one-line
 ## Basics
 
 - At the start of each session, read the most recent llms.txt at https://styled-components.com/llms.txt for the current consumer-facing feature summary
-- Use pnpm package manager and associated commands
+- Use pnpm package manager and associated commands. `packageManager` in `package.json` pins the version; install settings live in `pnpm-workspace.yaml`, never `.npmrc`. Installs link from pnpm's global virtual store, so each git worktree installs in seconds. A package that imports another it does not declare resolves only through `packageExtensions` there; `pnpm check:type-resolution` catches the type-level cases, and `scripts/metro-workspace.cjs` holds the Metro-side resolution for the React Native apps
 - Formatting is Biome (config in `biome.jsonc`), enforced by a lint-staged pre-commit hook; `pnpm format` runs it repo-wide (fine to do). Match the config rather than hand-formatting. Biome has no Markdown or YAML formatter yet, so those files are left alone; keep them tidy by hand. Suppress a formatting decision with `// biome-ignore format: <reason>` (spaced, not hyphenated, and the hyphenated spelling fails silently), never `// prettier-ignore`, which Biome does not honor. The linter is on with a curated rule set plus two GritQL plugins; see the Critical Constraints below and the comments in `biome.jsonc`.
 - Use conventional commits: `(feat|fix|chore|refactor|test|docs|style|perf|build|ci): [description]`
 - Default to short commit messages: title only, or title plus one tight sentence
@@ -96,7 +96,8 @@ NOTE: This file is the only home for these instructions. CLAUDE.md is a one-line
 - `pnpm --filter styled-components bench:rsc`: `src/bench/rsc.test.tsx`, matched by `jest.config.bench-rsc.js` (node environment, `IS_RSC` server path)
 - `pnpm --filter styled-components type-perf`: Consumer type-check budget, measured against the built `dist` (needs `pnpm build` first). `--against <package root>` measures another copy of the package with the same fixture. See [docs/typescript-performance.md](docs/typescript-performance.md)
 - `pnpm knip`: Dead-code scan (unused files, dependencies, exports); config in `knip.jsonc`. Output is a candidate list, not a delete list
-- `pnpm verify`: Format with autofix (`biome check --write`), knip, changeset-changelog tests, then `pnpm test`
+- `pnpm verify`: Format with autofix (`biome check --write`), knip, `check:type-resolution`, changeset-changelog and effect-gate tests, then `pnpm test`
+- `pnpm check:type-resolution`: Traces TypeScript resolution over the library and sandbox tsconfigs and fails when a package in pnpm's global store imports a type package it does not declare (those types would silently become `any`). Fix with an optional peer under `packageExtensions`, or a reasoned entry in the script's `KNOWN_FALSE_POSITIVES`. Exit 2 means the check saw nothing and is broken
 - Native render perf: use `packages/ios-benchmark` (real Hermes V1 on iOS sim). The previous in-tree native React-rendering bench was retired; `react-test-renderer` 19.2 + RN preset doesn't synchronously invoke function components, and the V8 numbers wouldn't predict Hermes anyway. Algorithm-shape benches (parser, responsive, RSC) still run via `bench:web` / `bench:rsc`.
 
 ## Profiling (Bun)
@@ -148,7 +149,7 @@ Unsupported on Native (no viable workaround) MUST emit `warnOnce` with a stable 
 
 ### rn-web parity rule
 
-Every polyfill must verify its rn-web output against `node_modules/react-native-web/src/`:
+Every polyfill must verify its rn-web output against react-native-web's source (`packages/native-showcase/node_modules/react-native-web/src/`):
 
 - If the browser ships the feature, the rn-web branch passes the raw CSS through. Don't expand, normalize, or fold what the browser handles.
 - Never emit a CSS property the browser doesn't ship yet. Lift the equivalent HTML attribute via SPECIAL_CASE_PROPS instead.

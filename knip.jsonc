@@ -17,7 +17,7 @@
       // referenced by path from workspace babel configs.
       "entry": ["scripts/**/*.ts", "babel.config.cjs", "babel-preset.cjs"],
       // Referenced by string from babel-preset.cjs but declared by
-      // packages/styled-components (hoisted node_modules resolution).
+      // packages/styled-components, the workspace that runs the preset.
       "ignoreDependencies": ["@babel/preset-env"]
     },
     "packages/benchmarks": {
@@ -37,11 +37,7 @@
         // Babel engine, resolved by Metro/expo tooling rather than imported.
         "@babel/core",
         // Not referenced anywhere in the app; knip infers it from expo config.
-        "expo-updates",
-        // metro.config.js resolves it from the workspace root on purpose, to
-        // pin Metro to the CJS build; declaring it here would claim the app
-        // owns a copy it deliberately does not.
-        "pretty-format"
+        "expo-updates"
       ]
     },
     "packages/sandbox": {
