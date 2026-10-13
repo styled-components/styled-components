@@ -357,9 +357,23 @@ describe('StyleSheetManager', () => {
           <Test>Foo</Test>
         </StyleSheetManager>
       )
-    ).toThrow();
+    ).toThrow(/A stylis plugin has been supplied that is not named/);
 
     Object.defineProperty(stylisRTLPlugin, 'name', { value: cachedName });
+  });
+
+  it('an error is emitted if an anonymous function is provided as a stylis plugin', () => {
+    const Test = styled.div`
+      padding-left: 5px;
+    `;
+
+    expect(() =>
+      render(
+        <StyleSheetManager stylisPlugins={[() => undefined]}>
+          <Test>Foo</Test>
+        </StyleSheetManager>
+      )
+    ).toThrow(/A stylis plugin has been supplied that is not named/);
   });
 
   it('changing stylis plugins via StyleSheetManager works', () => {
