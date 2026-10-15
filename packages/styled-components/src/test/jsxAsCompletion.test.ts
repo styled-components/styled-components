@@ -11,7 +11,8 @@ import * as ts from 'typescript';
  */
 
 const pkgRoot = path.resolve(__dirname, '..', '..');
-const probeFile = path.resolve(__dirname, '__as_completion_probe__.tsx');
+// TypeScript hands the host forward-slash file names on every platform, so compare against one
+const probeFile = path.resolve(__dirname, '__as_completion_probe__.tsx').replace(/\\/g, '/');
 
 /** Return the completion entry names offered at the `/*|*\/` marker in `source`. */
 function completionsAt(source: string): Set<string> {
