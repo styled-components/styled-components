@@ -136,6 +136,232 @@ describe('rn-web bridge: Text', () => {
   });
 });
 
+/**
+ * Completion callbacks on rn-web primitives.
+ *
+ * CSS Animations 1 §5.2 (https://drafts.csswg.org/css-animations-1/#eventdef-globaleventhandlers-animationend):
+ * "The animationend event occurs when the animation finishes. In this case the value of the elapsedTime member of the event is equal to the active duration."
+ * "Bubbles: Yes"
+ * "Cancelable: No"
+ * "Context Info: animationName, elapsedTime, pseudoElement"
+ *
+ * CSS Animations 1 §5.1.2 (https://drafts.csswg.org/css-animations-1/#dom-animationevent-animationname):
+ * "The value of the animation-name property of the animation that fired the event."
+ * "The amount of time the animation has been running, in seconds, when this event fired, excluding any time the animation was paused."
+ *
+ * CSS Animations 1 §5.1.2 pseudoElement (https://drafts.csswg.org/css-animations-1/#dom-animationevent-pseudoelement):
+ * "The name (beginning with two colons) of the CSS pseudo-element on which the animation runs (in which case the target of the event is that pseudo-element’s corresponding element), or the empty string if the animation runs on an element (which means the target of the event is that element)."
+ *
+ * CSS Transitions 1 §6.2 (https://drafts.csswg.org/css-transitions-1/#transitionend):
+ * "The transitionend event occurs at the completion of the transition. In the case where a transition is removed before completion, such as if the transition-property is removed, then the event will not fire."
+ * "The value of elapsedTime for this event is equal to the value of transition-duration."
+ * "Bubbles: Yes"
+ * "Cancelable: No"
+ * "Context Info: propertyName, elapsedTime, pseudoElement"
+ *
+ * CSS Transitions 1 §6.1.2 (https://drafts.csswg.org/css-transitions-1/#Events-TransitionEvent-propertyName):
+ * "The name of the CSS property associated with the transition."
+ * "The amount of time the transition has been running, in seconds, when this event fired not including any time spent in the delay phase."
+ *
+ * Deviation from the bubbling clause: the Hermes adapter reports completion only for the styled component that owns the animation or transition. A descendant's bubbling `animationend` / `transitionend` does not call an ancestor's prop. `animationcancel` and `transitioncancel` are not these props (CSS Animations 1 §5.2: animationcancel "occurs when the animation stops running in a way that does not fire an animationend event").
+ *
+ * Deviation from the CSS property-name spelling: `propertyName` is camelCased to the runtime style key the Hermes adapter fires (`background-color` is `backgroundColor`). `elapsedTime` is the browser's seconds value, so a transition does not include `transition-delay`.
+ */
+describe('rn-web bridge: animation and transition end', () => {
+  function host(container: HTMLElement, testId: string): HTMLElement {
+    const node = container.querySelector(`[data-testid="${testId}"]`);
+    if (!(node instanceof HTMLElement)) {
+      throw new Error(`missing host ${testId}`);
+    }
+    return node;
+  }
+
+  // jsdom does not implement AnimationEvent or TransitionEvent. Dispatch an
+  // Event of the spec type and attach the context fields the interface
+  // would have carried. `typeof` is safe when the constructor is absent.
+  function dispatchWithFields(
+    node: Element,
+    type: string,
+    fields: Record<string, string | number>
+  ): void {
+    const event = new Event(type, { bubbles: true });
+    for (const key in fields) {
+      Object.defineProperty(event, key, { value: fields[key] });
+    }
+    node.dispatchEvent(event);
+  }
+
+  function fireAnimationEnd(
+    node: Element,
+    animationName: string,
+    elapsedTime: number,
+    pseudoElement = ''
+  ): void {
+    if (typeof AnimationEvent === 'function') {
+      node.dispatchEvent(
+        new AnimationEvent('animationend', {
+          animationName,
+          bubbles: true,
+          elapsedTime,
+          pseudoElement,
+        })
+      );
+      return;
+    }
+    dispatchWithFields(node, 'animationend', { animationName, elapsedTime, pseudoElement });
+  }
+
+  function fireTransitionEnd(
+    node: Element,
+    propertyName: string,
+    elapsedTime: number,
+    pseudoElement = ''
+  ): void {
+    if (typeof TransitionEvent === 'function') {
+      node.dispatchEvent(
+        new TransitionEvent('transitionend', {
+          bubbles: true,
+          elapsedTime,
+          propertyName,
+          pseudoElement,
+        })
+      );
+      return;
+    }
+    dispatchWithFields(node, 'transitionend', { elapsedTime, propertyName, pseudoElement });
+  }
+
+  it('fires onAnimationEnd and onTransitionEnd on View when the DOM events do, and still fires onClick', () => {
+    const onAnimationEnd = jest.fn();
+    const onClick = jest.fn();
+    const onTransitionEnd = jest.fn();
+    const Box = styled.View`
+      animation: fade 1s;
+    `;
+    const { container } = render(
+      <Box
+        onAnimationEnd={onAnimationEnd}
+        onClick={onClick}
+        onTransitionEnd={onTransitionEnd}
+        testID="box"
+      />
+    );
+    const node = host(container, 'box');
+
+    node.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fireAnimationEnd(node, 'fade', 1);
+    fireTransitionEnd(node, 'background-color', 0.28);
+    fireTransitionEnd(node, 'opacity', 0);
+    fireAnimationEnd(node, 'fade', 0, '::before');
+
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(onAnimationEnd.mock.calls).toEqual([
+      [{ animationName: 'fade', elapsedTime: 1 }],
+      [{ animationName: 'fade', elapsedTime: 0 }],
+    ]);
+    expect(onTransitionEnd.mock.calls).toEqual([
+      [{ elapsedTime: 0.28, propertyName: 'backgroundColor' }],
+      [{ elapsedTime: 0, propertyName: 'opacity' }],
+    ]);
+  });
+
+  it('fires the same callbacks on Text and on a component built from View', () => {
+    const onAnimationEnd = jest.fn();
+    const onTransitionEnd = jest.fn();
+    const Label = styled.Text`
+      color: purple;
+    `;
+    const Box = styled.View``;
+    const Card = styled(Box)``;
+    const { container } = render(
+      <>
+        <Label onAnimationEnd={onAnimationEnd} onTransitionEnd={onTransitionEnd} testID="label">
+          hi
+        </Label>
+        <Card onAnimationEnd={onAnimationEnd} onTransitionEnd={onTransitionEnd} testID="card" />
+      </>
+    );
+
+    fireAnimationEnd(host(container, 'label'), 'rise', 0.4);
+    fireTransitionEnd(host(container, 'card'), '--brand', 0.2);
+
+    expect(onAnimationEnd).toHaveBeenCalledTimes(1);
+    expect(onAnimationEnd).toHaveBeenCalledWith({ animationName: 'rise', elapsedTime: 0.4 });
+    expect(onTransitionEnd).toHaveBeenCalledTimes(1);
+    expect(onTransitionEnd).toHaveBeenCalledWith({ elapsedTime: 0.2, propertyName: '--brand' });
+  });
+
+  it('ignores a descendant completion and cancel events', () => {
+    const onAnimationEnd = jest.fn();
+    const onTransitionEnd = jest.fn();
+    const Box = styled.View``;
+    const { container } = render(
+      <Box onAnimationEnd={onAnimationEnd} onTransitionEnd={onTransitionEnd} testID="parent">
+        <Box testID="child" />
+      </Box>
+    );
+    const parent = host(container, 'parent');
+    const child = host(container, 'child');
+
+    fireAnimationEnd(child, 'fade', 1);
+    fireTransitionEnd(child, 'opacity', 0.2);
+    dispatchWithFields(child, 'animationcancel', { animationName: 'fade', elapsedTime: 0.1 });
+    dispatchWithFields(child, 'transitioncancel', { elapsedTime: 0.1, propertyName: 'opacity' });
+    dispatchWithFields(parent, 'animationcancel', { animationName: 'fade', elapsedTime: 0.1 });
+    dispatchWithFields(parent, 'transitioncancel', { elapsedTime: 0.1, propertyName: 'opacity' });
+
+    expect(onAnimationEnd).not.toHaveBeenCalled();
+    expect(onTransitionEnd).not.toHaveBeenCalled();
+  });
+
+  it('calls the latest callback, re-arms when a callback appears, and drops the listener on unmount', () => {
+    const first = jest.fn();
+    const second = jest.fn();
+    const Box = styled.View``;
+    const { container, rerender, unmount } = render(<Box testID="box" />);
+    const node = host(container, 'box');
+
+    fireAnimationEnd(node, 'fade', 1);
+    fireTransitionEnd(node, 'opacity', 0.2);
+    expect(first).not.toHaveBeenCalled();
+
+    rerender(<Box onAnimationEnd={first} onTransitionEnd={first} testID="box" />);
+    fireAnimationEnd(node, 'fade', 0.5);
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(first).toHaveBeenCalledWith({ animationName: 'fade', elapsedTime: 0.5 });
+
+    rerender(<Box onAnimationEnd={second} onTransitionEnd={second} testID="box" />);
+    fireTransitionEnd(node, 'opacity', 0.25);
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).toHaveBeenCalledWith({ elapsedTime: 0.25, propertyName: 'opacity' });
+
+    unmount();
+    fireAnimationEnd(node, 'fade', 1);
+    fireTransitionEnd(node, 'opacity', 0.2);
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a caller ref when the end callbacks are set', () => {
+    const seen: unknown[] = [];
+    const onAnimationEnd = jest.fn();
+    const Box = styled.View``;
+    render(
+      <Box
+        onAnimationEnd={onAnimationEnd}
+        ref={(node: unknown) => {
+          seen.push(node);
+        }}
+        testID="reffed"
+      />
+    );
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toBeInstanceOf(HTMLElement);
+    expect((seen[0] as HTMLElement).getAttribute('data-testid')).toBe('reffed');
+    fireAnimationEnd(seen[0] as HTMLElement, 'fade', 0.1);
+    expect(onAnimationEnd).toHaveBeenCalledWith({ animationName: 'fade', elapsedTime: 0.1 });
+  });
+});
+
 describe('rn-web bridge: Pressable', () => {
   it('emits the bridge class on a Pressable node', () => {
     const Btn = styled.Pressable`
