@@ -2,7 +2,8 @@
  * CSS properties that accept unitless numeric values.
  * Inlined from @emotion/unitless with IE-only entries removed
  * (boxFlex, boxFlexGroup, boxOrdinalGroup, flexPositive, flexNegative,
- * flexOrder, msGridRow, msGridRowSpan, msGridColumn, msGridColumnSpan).
+ * flexOrder, msGridRow, msGridRowSpan, msGridColumn, msGridColumnSpan),
+ * plus gridArea and lineClamp, which React's inline styles also leave unitless.
  */
 const unitless: Record<string, 1> = {
   animationIterationCount: 1,
@@ -15,6 +16,7 @@ const unitless: Record<string, 1> = {
   flex: 1,
   flexGrow: 1,
   flexShrink: 1,
+  gridArea: 1,
   gridRow: 1,
   gridRowEnd: 1,
   gridRowSpan: 1,
@@ -24,6 +26,7 @@ const unitless: Record<string, 1> = {
   gridColumnSpan: 1,
   gridColumnStart: 1,
   fontWeight: 1,
+  lineClamp: 1,
   lineHeight: 1,
   opacity: 1,
   order: 1,
