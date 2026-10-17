@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Ref } from 'react';
 import type { NativeAnimationEvent, NativeTransitionEvent } from '../animation/types';
-import { type ComposedRef, useComposedRef } from '../composeRef';
+import { useComposedRef } from '../composeRef';
 import { camelize } from '../transform';
 
 type AnimationEndHandler = (event: NativeAnimationEvent) => void;
@@ -62,6 +62,11 @@ function transitionPayload(event: Event): NativeTransitionEvent {
  * callback is read when the event fires. A new function identity does
  * not re-arm. Passing or removing a callback does, via `keys`.
  *
+ * With no callback the caller ref is returned unchanged, so an inline
+ * callback keeps the re-invoke behavior of the primitive's own ref.
+ * The composed ref is still built on that path: a callback has to be
+ * able to appear on a later render without remounting the host.
+ *
  * react-native-web merges refs in `useMergeRefs` and drops the callback's
  * return value, then clears with `null`. The remover is stored so that
  * null path still detaches. The returned cleanup covers a host that
@@ -71,7 +76,7 @@ export function useEndEventRef(
   onAnimationEnd: unknown,
   onTransitionEnd: unknown,
   incoming: Ref<unknown> | undefined
-): ComposedRef<unknown> {
+): Ref<unknown> | undefined {
   const handlers = React.useRef<EndHandlers>({
     onAnimationEnd: undefined,
     onTransitionEnd: undefined,
@@ -82,7 +87,7 @@ export function useEndEventRef(
     handlers.current.onAnimationEnd !== undefined || handlers.current.onTransitionEnd !== undefined;
   const detachRef = React.useRef<() => void>(() => {});
 
-  return useComposedRef<unknown>(
+  const composed = useComposedRef<unknown>(
     node => {
       detachRef.current();
       detachRef.current = () => {};
@@ -114,4 +119,5 @@ export function useEndEventRef(
     incoming,
     [listen]
   );
+  return listen ? composed : incoming;
 }

@@ -48,6 +48,35 @@ describe('rn-web bridge: View', () => {
     expect((seen[0] as HTMLElement).getAttribute('data-testid')).toBe('reffed');
   });
 
+  it('re-invokes an inline ref on re-render when no completion callback is set', () => {
+    // No completion callback: the bridge forwards the caller ref. rn-web's
+    // merged ref follows that identity, so a new inline callback is detached
+    // with null and then attached to the same host.
+    const Box = styled.View``;
+    const seen: unknown[] = [];
+    const { rerender } = render(
+      <Box
+        ref={(node: unknown) => {
+          seen.push(node);
+        }}
+        testID="reffed"
+      />
+    );
+    const node = seen[0];
+    expect(node).toBeInstanceOf(HTMLElement);
+
+    rerender(
+      <Box
+        ref={(next: unknown) => {
+          seen.push(next);
+        }}
+        testID="reffed"
+      />
+    );
+
+    expect(seen).toEqual([node, null, node]);
+  });
+
   it('emits a single styled-components class on the DOM node', () => {
     const Box = styled.View`
       background-color: red;
