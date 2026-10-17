@@ -85,6 +85,7 @@ import { warnOnce } from '../../utils/warnOnce';
 import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager';
 import ServerStyleSheet from '../../models/ServerStyleSheet';
 import { camelize } from '../transform';
+import { useEndEventRef } from './endEvents';
 import type { Styled } from '../../constructors/constructWithOptions';
 import type { WebTarget } from '../../types';
 
@@ -198,6 +199,9 @@ function bridgePrimitive(
     // `auto | none | box-none | box-only` pass through identically to
     // rn-web's own `pointerEventsStyles` map.
     const { className, style, pointerEvents, ref } = props;
+    // Completion props never reach the DOM through rn-web's allowlist.
+    // The hook listens on the host node instead. See endEvents.ts.
+    const hostRef = useEndEventRef(props.onAnimationEnd, props.onTransitionEnd, ref);
     // Build `rest` without object-rest destructuring so the bridge bundle does
     // not import tslib's `__rest` helper; the package declares no tslib dep.
     // The container is prototypeless so a prop literally named `__proto__` is
@@ -211,6 +215,8 @@ function bridgePrimitive(
         key !== 'style' &&
         key !== 'pointerEvents' &&
         key !== 'ref' &&
+        key !== 'onAnimationEnd' &&
+        key !== 'onTransitionEnd' &&
         Object.prototype.hasOwnProperty.call(props, key)
       ) {
         rest[key] = props[key];
@@ -230,7 +236,7 @@ function bridgePrimitive(
     }
     const { dataSet, other } = collectDataProps(rest);
     const base = other !== null ? other : rest;
-    const finalProps: Record<string, unknown> = { ...base, ref, style: finalStyle };
+    const finalProps: Record<string, unknown> = { ...base, ref: hostRef, style: finalStyle };
     if (dataSet !== undefined) finalProps.dataSet = dataSet;
     return React.createElement(Component, finalProps);
   };

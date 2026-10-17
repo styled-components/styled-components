@@ -61,6 +61,8 @@ CSS Animations L1+L2, Transitions L1+L2, Easing L1+L2.
 
 ## rn-web
 
-None of the gaps above apply on rn-web, where the browser runs the CSS itself. One gap is rn-web's own: its primitives (`View`, `Text`, and the components built on them) forward only an allowlist of props to the DOM element (`react-native-web/dist/modules/forwardedProps`), and `onAnimationEnd` / `onTransitionEnd` are not on it, so those callbacks do not fire on rn-web primitives.
+None of the gaps above apply on rn-web, where the browser runs the CSS itself. `onAnimationEnd` and `onTransitionEnd` fire on styled React Native primitives there too. The payload is `{ animationName, elapsedTime }` or `{ propertyName, elapsedTime }`. `propertyName` is the camelCase style key, so `background-color` is reported as `backgroundColor`. `elapsedTime` is the browser's value in seconds: for a transition that is the transition duration and does not include `transition-delay`. A completion that bubbles from a descendant does not call an ancestor's callback, and `animationcancel` / `transitioncancel` do not call these props.
 
-Test coverage: `src/native/animation/test/animated-adapter.test.tsx` (Hermes), `src/native/animation/test/reanimated-adapter.test.ts` (Reanimated), `src/native/animation/test/smoke.test.ts` (compile-time descriptor surface).
+react-native-web primitives forward only an allowlist of props to the DOM element (`react-native-web/dist/modules/forwardedProps`). Those two callbacks are not on it, so the bridge listens for `animationend` and `transitionend` on the host node.
+
+Test coverage: `src/native/animation/test/animated-adapter.test.tsx` (Hermes), `src/native/animation/test/reanimated-adapter.test.ts` (Reanimated), `src/native/animation/test/smoke.test.ts` (compile-time descriptor surface), `src/test/web-bridge.test.tsx` (rn-web completion callbacks).
