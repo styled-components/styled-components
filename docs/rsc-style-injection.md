@@ -126,10 +126,22 @@ The Map lives behind `IS_RSC`, so browser builds drop it.
 tag, so stale CSS cannot accumulate across HMR cycles. Clearing `keyframeIds` is safe because
 components re-register keyframes through `keyframe.inject()` during render.
 
+`mainSheet` is shared by every request in the process, so a concurrent request's reset can clear it
+mid-render. That is safe because each component compiles, registers and reads back its CSS for
+emission in one synchronous call.
+
 ## StyleSheetManager under RSC
 
-`StyleSheetManager` works in RSC through a module-level `rscContextOverride` slot. Single-threaded RSC
-renders plus the per-render `React.cache` reset make this safe.
+RSC has no context, so `StyleSheetManager` writes its resolved settings into a request-scoped slot
+(`React.cache`) and styled components read that slot when they render. Concurrent requests on one
+server never see or clear each other's settings. A React build without `React.cache` falls back to one
+module-level slot with no reset, so a manager's settings carry into later requests.
+
+The slot is not a scope. A manager's settings take effect when its body runs and apply to everything
+rendered after it in the same request, siblings outside the manager included. Next.js does not render
+shared layouts or templates on a client navigation, so a manager placed there does not reach the page
+in that request. A manager that must reach a page renders in that page, or in a component every page
+renders, before any await.
 
 The override carries exactly four things: `shouldForwardProp`, `styleSheet`, `stylis` and
 `stylisPlugins`. A nested manager inherits `stylisPlugins` and `shouldForwardProp` from its parent
@@ -137,6 +149,10 @@ when it omits them, which is what lets an inner manager set `namespace` or `enab
 while keeping the outer plugins. Passing `stylisPlugins={[]}` explicitly opts out and falls back to
 the default stylis instance. When neither a custom stylis instance nor a `shouldForwardProp` survives
 resolution, the override is cleared to `null` rather than set to a redundant object.
+
+The compiled stylis instance is memoized at module level, because the manager reads and writes it in
+one synchronous call. A memoized instance is reused only by a manager with the same plugins array
+(by identity), `namespace` and `enableVendorPrefixes`.
 
 `nonce` is not part of that override. It is a sheet option, resolved by `getNonce()` in priority
 order: `<meta property="csp-nonce">` (Vite, which puts the value in the `nonce` attribute and exposes
