@@ -6,17 +6,24 @@
 // StyleSheetManager's per-render reset and, in dev, the redundant-emit-tag
 // counter; see docs/rsc-style-injection.md)
 const mockCacheStore = new Map<Function, any>();
+// The store React.cache reads at call time. Swapping it simulates a new request.
+let mockActiveStore = mockCacheStore;
 
 jest.mock('react', () => {
   const actual = jest.requireActual('react');
   return {
     ...actual,
     cache: (fn: Function) => () => {
-      if (!mockCacheStore.has(fn)) mockCacheStore.set(fn, fn());
-      return mockCacheStore.get(fn);
+      if (!mockActiveStore.has(fn)) mockActiveStore.set(fn, fn());
+      return mockActiveStore.get(fn);
     },
   };
 });
+
+/** Point React.cache at another request's store (a fresh Map starts a new request). */
+const mockUseRequest = (store: Map<Function, any>) => {
+  mockActiveStore = store;
+};
 
 // Mock IS_RSC before importing the module
 jest.mock('../../constants', () => ({
@@ -43,6 +50,7 @@ const countStyleTags = (html: string): number => (html.match(/<style[^>]*>/g) ||
 
 describe('styled RSC mode', () => {
   beforeEach(() => {
+    mockActiveStore = mockCacheStore;
     mockCacheStore.clear();
     resetGroupIds();
     resetIdentifiers();
@@ -1705,6 +1713,127 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
       expect(allCSS).toMatchInlineSnapshot(`".dnGtrT:first-child{color:red;}"`);
       expect(allCSS).not.toContain(':not(style');
+    });
+  });
+
+  describe('StyleSheetManager settings are scoped per request', () => {
+    const plugins = [stylisPluginRSC];
+
+    /** The generated class hashes the CSS it names, so it is normalized; every other byte is asserted. */
+    const withGeneratedClass = (css: string): string =>
+      css.replace(/\.[A-Za-z]{5,6}(?=[:{])/g, '.<cls>');
+
+    /** Render one element in a fresh request, so each render re-emits its own CSS. */
+    const renderFreshRequest = (element: React.ReactElement): string => {
+      mockUseRequest(new Map());
+      return withGeneratedClass(extractStyleContents(ReactDOMServer.renderToString(element)));
+    };
+
+    it('does not leak a manager from one request into another request', () => {
+      const requestA = new Map<Function, any>();
+      const Other = styled.li`
+        color: blue;
+      `;
+      const FirstChild = styled.li`
+        &:first-child {
+          color: red;
+        }
+      `;
+
+      mockUseRequest(requestA);
+      ReactDOMServer.renderToString(
+        React.createElement(StyleSheetManager, { stylisPlugins: plugins, children: null })
+      );
+
+      renderFreshRequest(React.createElement(Other, null, 'Other request'));
+
+      mockUseRequest(requestA);
+      const allCSS = withGeneratedClass(
+        extractStyleContents(
+          ReactDOMServer.renderToString(React.createElement(FirstChild, null, 'First'))
+        )
+      );
+
+      expect(allCSS).toEqual('.<cls>:nth-child(1 of :not(style[data-styled])){color:red;}');
+      expect(allCSS).not.toContain(':first-child');
+    });
+
+    it('drops a namespace when a later manager sets only plugins', () => {
+      const Item = styled.li`
+        &:first-child {
+          color: red;
+        }
+      `;
+
+      renderFreshRequest(
+        React.createElement(StyleSheetManager, {
+          stylisPlugins: plugins,
+          namespace: '.ns',
+          children: React.createElement(Item, null, 'A'),
+        })
+      );
+      const allCSS = renderFreshRequest(
+        React.createElement(StyleSheetManager, {
+          stylisPlugins: plugins,
+          children: React.createElement(Item, null, 'B'),
+        })
+      );
+
+      expect(allCSS).toEqual('.<cls>:nth-child(1 of :not(style[data-styled])){color:red;}');
+      expect(allCSS).not.toContain('.ns');
+    });
+
+    it('drops vendor prefixes when a later manager sets only plugins', () => {
+      const Item = styled.div`
+        user-select: none;
+      `;
+
+      renderFreshRequest(
+        React.createElement(StyleSheetManager, {
+          stylisPlugins: plugins,
+          enableVendorPrefixes: true,
+          children: React.createElement(Item, null, 'A'),
+        })
+      );
+      const allCSS = renderFreshRequest(
+        React.createElement(StyleSheetManager, {
+          stylisPlugins: plugins,
+          children: React.createElement(Item, null, 'B'),
+        })
+      );
+
+      expect(allCSS).toEqual('.<cls>{user-select:none;}');
+      expect(allCSS).not.toMatch(/-webkit-|-moz-|-ms-/);
+    });
+
+    it('restores plugins when a namespace-only manager sits between two plugin managers', () => {
+      const Item = styled.li`
+        &:first-child {
+          color: red;
+        }
+      `;
+
+      renderFreshRequest(
+        React.createElement(StyleSheetManager, {
+          stylisPlugins: plugins,
+          children: React.createElement(Item, null, 'A'),
+        })
+      );
+      renderFreshRequest(
+        React.createElement(StyleSheetManager, {
+          namespace: '.ns',
+          children: React.createElement(Item, null, 'B'),
+        })
+      );
+      const allCSS = renderFreshRequest(
+        React.createElement(StyleSheetManager, {
+          stylisPlugins: plugins,
+          children: React.createElement(Item, null, 'C'),
+        })
+      );
+
+      expect(allCSS).toEqual('.<cls>:nth-child(1 of :not(style[data-styled])){color:red;}');
+      expect(allCSS).not.toContain('.ns');
     });
   });
 
