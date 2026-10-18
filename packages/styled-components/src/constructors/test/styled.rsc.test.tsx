@@ -1719,14 +1719,10 @@ describe('styled RSC mode', () => {
   describe('StyleSheetManager settings are scoped per request', () => {
     const plugins = [stylisPluginRSC];
 
-    /** The generated class hashes the CSS it names, so it is normalized; every other byte is asserted. */
-    const withGeneratedClass = (css: string): string =>
-      css.replace(/\.[A-Za-z]{5,6}(?=[:{])/g, '.<cls>');
-
     /** Render one element in a fresh request, so each render re-emits its own CSS. */
     const renderFreshRequest = (element: React.ReactElement): string => {
       mockUseRequest(new Map());
-      return withGeneratedClass(extractStyleContents(ReactDOMServer.renderToString(element)));
+      return extractStyleContents(ReactDOMServer.renderToString(element));
     };
 
     it('does not leak a manager from one request into another request', () => {
@@ -1748,14 +1744,13 @@ describe('styled RSC mode', () => {
       renderFreshRequest(React.createElement(Other, null, 'Other request'));
 
       mockUseRequest(requestA);
-      const allCSS = withGeneratedClass(
-        extractStyleContents(
-          ReactDOMServer.renderToString(React.createElement(FirstChild, null, 'First'))
-        )
+      const allCSS = extractStyleContents(
+        ReactDOMServer.renderToString(React.createElement(FirstChild, null, 'First'))
       );
 
-      expect(allCSS).toEqual('.<cls>:nth-child(1 of :not(style[data-styled])){color:red;}');
-      expect(allCSS).not.toContain(':first-child');
+      expect(allCSS).toMatchInlineSnapshot(
+        `".jxEASK:nth-child(1 of :not(style[data-styled])){color:red;}"`
+      );
     });
 
     it('drops a namespace when a later manager sets only plugins', () => {
@@ -1779,8 +1774,9 @@ describe('styled RSC mode', () => {
         })
       );
 
-      expect(allCSS).toEqual('.<cls>:nth-child(1 of :not(style[data-styled])){color:red;}');
-      expect(allCSS).not.toContain('.ns');
+      expect(allCSS).toMatchInlineSnapshot(
+        `".qMKal:nth-child(1 of :not(style[data-styled])){color:red;}"`
+      );
     });
 
     it('drops vendor prefixes when a later manager sets only plugins', () => {
@@ -1802,8 +1798,7 @@ describe('styled RSC mode', () => {
         })
       );
 
-      expect(allCSS).toEqual('.<cls>{user-select:none;}');
-      expect(allCSS).not.toMatch(/-webkit-|-moz-|-ms-/);
+      expect(allCSS).toMatchInlineSnapshot(`".bGgXCC{user-select:none;}"`);
     });
 
     it('restores plugins when a namespace-only manager sits between two plugin managers', () => {
@@ -1832,8 +1827,9 @@ describe('styled RSC mode', () => {
         })
       );
 
-      expect(allCSS).toEqual('.<cls>:nth-child(1 of :not(style[data-styled])){color:red;}');
-      expect(allCSS).not.toContain('.ns');
+      expect(allCSS).toMatchInlineSnapshot(
+        `".qMKal:nth-child(1 of :not(style[data-styled])){color:red;}"`
+      );
     });
   });
 
