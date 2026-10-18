@@ -11,20 +11,20 @@ export const mainStylis: Stringifier = createStylisInstance();
 
 type RscSlot = { override: IStyleSheetContext | null };
 const rscFallbackSlot: RscSlot = { override: null };
-const getRscSlot = createRSCCache((): RscSlot => ({ override: null }));
+
+/** Created once per server render; creating it is the per-render reset (see docs/rsc-style-injection.md). */
+const getRscSlot = createRSCCache((): RscSlot => {
+  mainSheet.names.clear();
+  mainSheet.keyframeIds.clear();
+  mainSheet.clearTag();
+  return { override: null };
+});
 const rscSlot = (): RscSlot => (getRscSlot ? getRscSlot() : rscFallbackSlot);
 
 let rscLastPlugins: stylis.Middleware[] | undefined;
 let rscLastNamespace: string | undefined;
 let rscLastPrefix: boolean | undefined;
 let rscCachedStylis: Stringifier = mainStylis;
-
-/** Per-render reset to prevent HMR accumulation (see docs/rsc-style-injection.md). */
-const ensureSheetReset: (() => void) | null = createRSCCache(() => {
-  mainSheet.names.clear();
-  mainSheet.keyframeIds.clear();
-  mainSheet.clearTag();
-});
 
 export type IStyleSheetContext = {
   shouldForwardProp?: ShouldForwardProp<'web'> | undefined;
@@ -58,11 +58,6 @@ export type IStylisContext = Stringifier | void;
 
 export function useStyleSheetContext() {
   if (!IS_RSC) return React.useContext(StyleSheetContext);
-
-  // Reset mainSheet once per render to prevent HMR accumulation.
-  // React.cache ensures this runs exactly once per render, so calling
-  // it here AND in StyleSheetManager is safe - whichever runs first wins.
-  if (ensureSheetReset) ensureSheetReset();
 
   return rscSlot().override || defaultContextValue;
 }
@@ -132,9 +127,6 @@ export type IStyleSheetManager = React.PropsWithChildren<{
 /** Configure style injection for descendant styled components (target element, stylis plugins, prop forwarding). */
 export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element {
   if (IS_RSC) {
-    // Reset once per render (React.cache scopes this per request)
-    if (ensureSheetReset) ensureSheetReset();
-
     const slot = rscSlot();
 
     // Merge with existing override: inherit parent values when props are omitted.
