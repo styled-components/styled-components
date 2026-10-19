@@ -22,6 +22,18 @@ function written(selector: string): string {
   return rules[0].slice(0, rules[0].lastIndexOf('{a:b;}'));
 }
 
+/** Run `fn` as the server build does, where combinator whitespace is removed. */
+function asServer<T>(fn: () => T): T {
+  const scope = globalThis as { __SERVER__?: boolean };
+  const was = scope.__SERVER__;
+  scope.__SERVER__ = true;
+  try {
+    return fn();
+  } finally {
+    scope.__SERVER__ = was;
+  }
+}
+
 /** CSS Syntax 3 tokens of `text` other than whitespace, as type and value. */
 function nonSpaceTokens(text: string): string[] {
   const out: string[] = [];
@@ -49,7 +61,16 @@ describe('web emitter', () => {
       ['-- > b', '.a -- >b'],
       ['1e + 2', '.a 1e + 2'],
       ['a + .b', '.a a+.b'],
-    ])('writes `%s` as `%s`', (selector, expected) => {
+    ])('writes `%s` as `%s` in the server build', (selector, expected) => {
+      expect(asServer(() => written(selector))).toBe(expected);
+    });
+
+    it.each([
+      ['a > b', '.a a > b'],
+      ['h1 + p', '.a h1 + p'],
+      ['a ~ b', '.a a ~ b'],
+      ['a + 2', '.a a + 2'],
+    ])('writes `%s` as `%s` in the browser build', (selector, expected) => {
       expect(written(selector)).toBe(expected);
     });
 
@@ -86,7 +107,8 @@ describe('web emitter', () => {
         const count = 2 + next(8);
         for (let p = 0; p < count; p++) selector += pieces[next(pieces.length)];
         const expected = nonSpaceTokens('.a ' + selector);
-        if (JSON.stringify(nonSpaceTokens(written(selector))) !== JSON.stringify(expected)) {
+        const actual = nonSpaceTokens(asServer(() => written(selector)));
+        if (JSON.stringify(actual) !== JSON.stringify(expected)) {
           failures.push(JSON.stringify(selector));
         }
       }
@@ -251,7 +273,7 @@ describe('web emitter', () => {
 
     it('writes every nesting `&` across a comma-separated parent', () => {
       expect(emit(`&[data-x="&"] + & { color: red; }`, '.a, .b')).toEqual([
-        '.a[data-x="&"]+.a,.b[data-x="&"]+.b{color:red;}',
+        '.a[data-x="&"] + .a,.b[data-x="&"] + .b{color:red;}',
       ]);
     });
   });
@@ -261,15 +283,21 @@ describe('web emitter', () => {
       componentId: 'c',
       selfRefSelector: '.a',
     });
-    expect(out).toEqual(['.aé+.c{color:red;}']);
+    expect(out).toEqual(['.aé + .c{color:red;}']);
   });
 
-  it('handles nested & + & self-reference (combinator spaces stripped)', () => {
+  it('handles nested & + & self-reference (combinator spaces kept in the browser build)', () => {
     expect(emit(`& + & { margin-left: 8px; }`)).toMatchInlineSnapshot(`
       [
-        ".a+.a{margin-left:8px;}",
+        ".a + .a{margin-left:8px;}",
       ]
     `);
+  });
+
+  it('handles nested & + & self-reference (combinator spaces stripped in the server build)', () => {
+    expect(asServer(() => emit(`& + & { margin-left: 8px; }`))).toEqual([
+      '.a+.a{margin-left:8px;}',
+    ]);
   });
 
   describe('parent comma-cross-product respects pseudo-fn parens (#4279)', () => {

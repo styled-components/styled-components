@@ -453,14 +453,19 @@ export function tokensJoin(tail: number, last: number, next: number, after: numb
   }
 }
 
+/** Code points no token continues past, on the left of a removed comment. */
+const ENDS_TOKEN = codeTable(';{}(),:"\'', false);
+/** Code points that start no token continuing the one before, on the right. */
+const STARTS_TOKEN = codeTable(';{}),:"\'', false);
+
 /**
  * Remove the comments CSS reads: `/* *\/` at any parenthesis depth, outside
  * strings, escapes, and unquoted `url(`; with `lineComments`, also `//` to
  * the end of its line outside parentheses (not after `:`, so `https://`
- * stays). A comment between two whitespace runs leaves the first run. Where
- * removal would join the code points on either side into one token, an
- * empty `/**\/` stays in the comment's place, so the text reads as the same
- * tokens.
+ * stays). A comment between two whitespace runs leaves the first run. A
+ * comment goes without a trace only where the text beside it cannot join (see
+ * docs/interpolation-slots.md); elsewhere an empty `/**\/` stays in its
+ * place, so the text reads as the same tokens.
  */
 export function removeComments(text: string, lineComments: boolean): string {
   if (text.indexOf('/*') === -1 && (!lineComments || text.indexOf('//') === -1)) return text;
@@ -469,11 +474,6 @@ export function removeComments(text: string, lineComments: boolean): string {
   let start = 0;
   let i = 0;
   let depth = 0;
-  // How `out` ends, read from `text` so `out` is never flattened. Reading
-  // back stops at the start of the text last copied: when that text starts
-  // with a backslash or hex digit, the code point before it in `out` is
-  // neither (removal there would have joined, keeping `/**/`).
-  let tail = TAIL_NONE;
   let last = -1;
   for (;;) {
     i = scan(text, i, len, SOLIDUS_STOP, ANY_DEPTH, depth);
@@ -488,9 +488,12 @@ export function removeComments(text: string, lineComments: boolean): string {
     }
     if (i > start) {
       out += text.substring(start, i);
-      tail = tailKind(text, start, i);
       last = text.charCodeAt(i - 1);
     }
+    // Whitespace near a backslash may end a hex escape, and so belong to it.
+    let plain = true;
+    for (let k = i > 8 ? i - 8 : 0; k < i; k++) if (text.charCodeAt(k) === BACKSLASH) plain = false;
+    const copied = i > start;
     if (line) {
       const eol = text.indexOf('\n', i + 2);
       i = eol === -1 ? len : eol;
@@ -498,11 +501,19 @@ export function removeComments(text: string, lineComments: boolean): string {
       const close = text.indexOf('*/', i + 2);
       i = close === -1 ? len : close + 2;
     }
-    if (tail === TAIL_SPACE && !line) {
-      while (i < len && isSpace(text.charCodeAt(i))) i++;
-    } else if (tokensJoin(tail, last, i < len ? text.charCodeAt(i) : -1, text.charCodeAt(i + 1))) {
+    const after = i < len ? text.charCodeAt(i) : -1;
+    if (last !== -1 && isSpace(last) && plain) {
+      if (!line) while (i < len && isSpace(text.charCodeAt(i))) i++;
+    } else if (
+      last !== -1 &&
+      after !== -1 &&
+      !(isSpace(after) && plain) &&
+      (copied || last !== SLASH) &&
+      !(plain && last < 128 && ENDS_TOKEN[last] === 1) &&
+      !(after < 128 && STARTS_TOKEN[after] === 1)
+    ) {
       out += '/**/';
-      tail = last = SLASH;
+      last = SLASH;
     }
     start = i;
   }

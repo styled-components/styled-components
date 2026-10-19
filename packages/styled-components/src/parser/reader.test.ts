@@ -220,7 +220,15 @@ describe('reader', () => {
         ['a string', '"a"/*x*/b', '"a"b'],
         ['a comma', 'a,/*x*/b', 'a,b'],
         ['an identifier and a string', 'a/*x*/"b"', 'a"b"'],
-        ['whitespace after the space that ends a hex escape', '\\62 /*x*/ c', '\\62  c'],
+      ])('%s', (_, text, expected) => {
+        expect(removeComments(text, false)).toBe(expected);
+      });
+    });
+
+    describe('keeps an empty comment beside a backslash even where removal would not join', () => {
+      it.each([
+        ['whitespace after a hex escape’s comment', '\\62/*x*/ c', '\\62/**/ c'],
+        ['whitespace after the space that ends a hex escape', '\\62 /*x*/ c', '\\62 /**/ c'],
       ])('%s', (_, text, expected) => {
         expect(removeComments(text, false)).toBe(expected);
       });

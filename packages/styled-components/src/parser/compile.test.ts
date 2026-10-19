@@ -1311,7 +1311,7 @@ describe('compileWeb', () => {
         [
           'an Inside value before a combinator',
           tagged`& ${'x\\ '}> p { color: red; }`,
-          '.a x\\ >p{color:red;}',
+          '.a x\\ > p{color:red;}',
         ],
         [
           'an at-rule prelude',
@@ -1827,7 +1827,7 @@ describe('compileWeb', () => {
      */
     describe('anchoring each part on the parent', () => {
       it.each([
-        ['`&:hover`', tagged`& > ${'p, &:hover'} { color: red; }`, '.a>p,.a:hover'],
+        ['`&:hover`', tagged`& > ${'p, &:hover'} { color: red; }`, '.a > p,.a:hover'],
         ['`html &`', tagged`& ${'p, html &'} { color: red; }`, '.a p,html .a'],
         ['`html :not(&)`', tagged`& ${'x, html :not(&)'} { color: red; }`, '.a x,.a html :not(.a)'],
         [
@@ -1997,7 +1997,7 @@ describe('compileWeb', () => {
         [
           'after an escaped parenthesis',
           tagged`${() => ':not([x=\\(])/*&*/ body'}:hover { color: red; }`,
-          '.a :not([x=\\(]) body:hover',
+          '.a :not([x=\\(])/**/ body:hover',
         ],
         [
           'twice inside parentheses',

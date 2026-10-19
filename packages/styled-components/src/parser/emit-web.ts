@@ -444,7 +444,7 @@ function resolveSingle(selector: string, parent: string): string {
   } else {
     expanded = replaceAmpersands(selector, parent);
   }
-  return stripCombinatorSpaces(expanded);
+  return __SERVER__ ? stripCombinatorSpaces(expanded) : expanded;
 }
 
 /** Replace each `&` {@link nextAmpersand} reads; with none, nest under the parent. */
