@@ -7,4 +7,5 @@ module.exports = Object.assign({}, baseConfig, {
   testEnvironment: 'node',
   testMatch: ['**/bench/native*.test.*'],
   testTimeout: 120000,
+  transformIgnorePatterns: require('./jest.config.native').transformIgnorePatterns,
 });
