@@ -53,6 +53,21 @@ describe('generateAlphabeticName', () => {
     expect(generateAlphabeticName(3819806601)).toEqual('kcwstn');
   });
 
+  it('pins the letters at each digit boundary and the largest uint32 input', () => {
+    expect(generateAlphabeticName(0)).toBe('a');
+    expect(generateAlphabeticName(25)).toBe('z');
+    expect(generateAlphabeticName(26)).toBe('A');
+    expect(generateAlphabeticName(51)).toBe('Z');
+    expect(generateAlphabeticName(52)).toBe('a');
+    expect(generateAlphabeticName(53)).toBe('bb');
+    expect(generateAlphabeticName(2703)).toBe('ZZ');
+    expect(generateAlphabeticName(2704)).toBe('aa');
+    expect(generateAlphabeticName(140607)).toBe('ZZZ');
+    expect(generateAlphabeticName(140608)).toBe('aaa');
+    expect(generateAlphabeticName(2147483647)).toBe('fHKRMx');
+    expect(generateAlphabeticName(4294967295)).toBe('lpvJyV');
+  });
+
   it('breaks up substrings of "ad" case-insensitive to avoid adblocker issues', () => {
     expect(generateAlphabeticName(1355)).toMatchInlineSnapshot(`"A-d"`);
     expect(generateAlphabeticName(1381)).toMatchInlineSnapshot(`"A-D"`);
