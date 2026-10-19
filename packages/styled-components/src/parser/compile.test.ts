@@ -24,6 +24,10 @@ function legacy(rawCSS: string, componentId = 'a'): string[] {
   return compiler.compile(rawCSS, `.${componentId}`, undefined, componentId);
 }
 
+/** The dev warning naming a construct that a failed value check dropped (docs/interpolation-slots.md, Value checks). */
+const droppedWarning = (construct: string) =>
+  `[sc] The ${construct} was dropped: an interpolated value in it holds \`{\` or \`}\` outside a string or \`url(\`, a \`;\` outside a declaration value, or a line break inside a string, ends in a backslash, or leaves a string, comment, parenthesis, bracket, or \`url(\` open. Interpolate plain values, and write rules and blocks in the template or a css\`\` mixin.`;
+
 describe('compileWeb', () => {
   describe('static templates (no interpolations)', () => {
     it('matches the legacy path on a simple decl', () => {
@@ -445,6 +449,9 @@ describe('compileWeb', () => {
       name => {
         const src = tagged`color: blue; @keyframes ${name} { to { opacity: 1; } }`;
         expect(compileWeb(src, {}, id, opts)).toEqual(legacy('color: blue;'));
+        expect(warnings()).toEqual([
+          `[sc] \`${name}\` is not a @keyframes name, so the @keyframes block was dropped. Interpolate a keyframes object or a name such as \`fade-in\`.`,
+        ]);
       }
     );
   });
@@ -877,6 +884,9 @@ describe('compileWeb', () => {
       const clientRef = { $$typeof: Symbol.for('react.client.reference'), $$id: 'x#Child' };
       const src = tagged`color: blue; ${clientRef} h2 { color: red; }`;
       expect(compileWeb(src, {}, '.a', opts)).toEqual(legacy('color: blue;'));
+      expect(warnings()).toEqual([
+        '[sc] interpolating a client component (Child) as a selector is not supported in server components. Use a plain CSS class selector instead.',
+      ]);
     });
 
     it('drops the rule when a value in the selector text after the Head fails its check', () => {
@@ -1207,11 +1217,13 @@ describe('compileWeb', () => {
       const src = tagged`content: "a
         b ${'x'}"; margin: 0;`;
       expect(out(src)).toEqual(legacy('margin: 0;'));
+      expect(warnings()).toEqual([droppedWarning('declaration `content`')]);
     });
 
     it('drops the declaration when the template leaves the field unbalanced', () => {
       const src = tagged`margin: 0; width: calc(${'1px'}`;
       expect(out(src)).toEqual(legacy('margin: 0;'));
+      expect(warnings()).toEqual([droppedWarning('declaration `width`')]);
     });
 
     it.each([
@@ -1225,6 +1237,7 @@ describe('compileWeb', () => {
     ])('drops the declaration for %s', (_, value) => {
       const src = tagged`color: ${value}; margin: 0;`;
       expect(out(src)).toEqual(legacy('margin: 0;'));
+      expect(warnings()).toEqual([droppedWarning('declaration `color`')]);
     });
 
     /**
@@ -1418,6 +1431,7 @@ describe('compileWeb', () => {
       it('drops the declaration when the bad url it makes does not close', () => {
         const src = tagged`background: ${'url(a\\\nb'}; margin: 0;`;
         expect(out(src)).toEqual(legacy('margin: 0;'));
+        expect(warnings()).toEqual([droppedWarning('declaration `background`')]);
       });
     });
 
@@ -1430,6 +1444,7 @@ describe('compileWeb', () => {
       // drops it, since readers that let a string span the newline disagree.
       const src = tagged`content: ${'"a\nb"c"'}; margin: 0;`;
       expect(out(src)).toEqual(legacy('margin: 0;'));
+      expect(warnings()).toEqual([droppedWarning('declaration `content`')]);
     });
 
     // CSS Syntax 3 §4.3.2 Consume comments: "If the next two input code point
@@ -1453,12 +1468,13 @@ describe('compileWeb', () => {
     });
 
     it.each([
-      ['a slash before the slot', tagged`font: 12px/${'* x'};`],
-      ['a slash ending the value', tagged`width: calc(${'10px/'}*2);`],
-      ['two adjacent values', tagged`color: ${'/'}${'* x'};`],
-      ['an empty value between a slash and an asterisk', tagged`font: 12px/${''}*2;`],
-    ])('drops the declaration when %s opens a comment', (_, src) => {
+      ['a slash before the slot', tagged`font: 12px/${'* x'};`, 'font'],
+      ['a slash ending the value', tagged`width: calc(${'10px/'}*2);`, 'width'],
+      ['two adjacent values', tagged`color: ${'/'}${'* x'};`, 'color'],
+      ['an empty value between a slash and an asterisk', tagged`font: 12px/${''}*2;`, 'font'],
+    ])('drops the declaration when %s opens a comment', (_, src, prop) => {
       expect(out(src)).toEqual([]);
+      expect(warnings()).toEqual([droppedWarning(`declaration \`${prop}\``)]);
     });
 
     // CSS Syntax 3 §4.3.6 Consume a url token: "U+0022 QUOTATION MARK (")
@@ -1474,6 +1490,7 @@ describe('compileWeb', () => {
     it('drops a bad url payload carrying braces', () => {
       const src = tagged`background: ${'url(a"b) } body{background:red} x"'}; margin: 0;`;
       expect(out(src)).toEqual(legacy('margin: 0;'));
+      expect(warnings()).toEqual([droppedWarning('declaration `background`')]);
     });
 
     // CSS Syntax 3 §4.3.6 Consume a url token: "U+0022 QUOTATION MARK (")
@@ -1501,11 +1518,13 @@ describe('compileWeb', () => {
       ])('drops the declaration for %s', (_, value) => {
         const src = tagged`background: ${value}; margin: 0;`;
         expect(out(src)).toEqual(legacy('margin: 0;'));
+        expect(warnings()).toEqual([droppedWarning('declaration `background`')]);
       });
 
       it('drops the declaration when text before the value makes url( with a nested parenthesis', () => {
         const src = tagged`background: u${'rl(a(b))'}; margin: 0;`;
         expect(out(src)).toEqual(legacy('margin: 0;'));
+        expect(warnings()).toEqual([droppedWarning('declaration `background`')]);
       });
 
       it('keeps a value whose identifier text before it cannot make url(', () => {
@@ -1545,6 +1564,7 @@ describe('compileWeb', () => {
       ])('drops the declaration for a url holding %s', (_, value) => {
         const src = tagged`background: ${value}; margin: 0;`;
         expect(out(src)).toEqual(legacy('margin: 0;'));
+        expect(warnings()).toEqual([droppedWarning('declaration `background`')]);
       });
     });
 
@@ -1567,6 +1587,7 @@ describe('compileWeb', () => {
       it('drops the declaration when text before the slot holds the non-ASCII code point', () => {
         const src = tagged`background:  ${'url(a)'}; margin: 0;`;
         expect(out(src)).toEqual(legacy('margin: 0;'));
+        expect(warnings()).toEqual([droppedWarning('declaration `background`')]);
       });
 
       it('keeps a non-ASCII code point that is not directly before url(', () => {
@@ -1624,6 +1645,7 @@ describe('compileWeb', () => {
       ])('drops the declaration when %s makes `url(` a function', (_, value) => {
         const src = tagged`background: ${value}; margin: 0;`;
         expect(out(src)).toEqual(legacy('margin: 0;'));
+        expect(warnings()).toEqual([droppedWarning('declaration `background`')]);
       });
     });
 
@@ -1662,6 +1684,7 @@ describe('compileWeb', () => {
     it('reads `url(` extended by an identifier before the slot as a function', () => {
       const src = tagged`background: x${'url(a"b)'}; margin: 0;`;
       expect(out(src)).toEqual(legacy('margin: 0;'));
+      expect(warnings()).toEqual([droppedWarning('declaration `background`')]);
     });
 
     it('reads url( an identifier value spells with the text after it', () => {
@@ -1692,6 +1715,7 @@ describe('compileWeb', () => {
     it('drops a value closing the url( it sits in when the field ends unbalanced', () => {
       const src = tagged`background: url(${'a) ; x: y ; z: f((b'}); margin: 0;`;
       expect(out(src)).toEqual(legacy('margin: 0;'));
+      expect(warnings()).toEqual([droppedWarning('declaration `background`')]);
     });
 
     // CSS Syntax 3 §4.3.5 Consume a string token: "U+005C REVERSE SOLIDUS (\):
@@ -1706,6 +1730,7 @@ describe('compileWeb', () => {
     it('drops the declaration when an empty value leaves a backslash escaping the closing quote', () => {
       const src = tagged`content: "\\${''}"; margin: 0;`;
       expect(out(src)).toEqual(legacy('margin: 0;'));
+      expect(warnings()).toEqual([droppedWarning('declaration `content`')]);
     });
 
     it('splits a declaration at a `;` in a value', () => {
@@ -1747,6 +1772,7 @@ describe('compileWeb', () => {
     ])('drops an at-rule whose prelude value holds %s', (_, value) => {
       const src = tagged`color: blue; @media ${value} { color: red; }`;
       expect(out(src)).toEqual(legacy('color: blue;'));
+      expect(warnings()).toEqual([droppedWarning('at-rule `@media ${…}`')]);
     });
 
     it('drops a rule whose Head remainder holds a brace, keeping the rest', () => {
@@ -1758,6 +1784,7 @@ describe('compileWeb', () => {
     it('drops a rule whose later Head slot holds a brace', () => {
       const src = tagged`${() => '.x'} ${() => '} body {'} h2 { color: red; } margin: 0;`;
       expect(out(src)).toEqual(legacy('margin: 0;'));
+      expect(warnings()).toEqual([droppedWarning('rule `.x } body { h2`')]);
     });
 
     /** Every reading is linear in the length of the text. */

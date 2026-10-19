@@ -1414,8 +1414,19 @@ describe('with styles', () => {
       const Comp = styled.div`
         content: "a ${frag}";
       `;
+      // Read the rule text handed to the sheet: the browser's CSSOM rejects a
+      // rule holding NUL, so the injected sheet alone would hide a leak.
+      const insert = jest.spyOn(mainSheet, 'insertRules');
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
       render(<Comp />);
-      expect(getCSS(document)).not.toContain('\0');
+      const inserted = insert.mock.calls.map(call => call[2].join('\n')).join('\n');
+      insert.mockRestore();
+      // A fragment in a non-Standalone role realizes to its filled source text,
+      // trimmed of surrounding whitespace (docs/interpolation-slots.md, Value shapes).
+      expect(inserted).toContain('content:"a margin: 0;";');
+      expect(inserted).not.toContain('\0');
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
     });
 
     it('keeps a fragment holding a quoted data URL in its declaration', () => {
@@ -1435,6 +1446,9 @@ describe('with styles', () => {
         </>
       );
       const [staticBody, interpolatedBody] = ruleBodies();
+      expect(interpolatedBody).toEqual(
+        '{background:no-repeat url("data:image/svg+xml;utf8,<svg/>"); color:red;}'
+      );
       expect(interpolatedBody).toEqual(staticBody);
     });
 
@@ -1455,6 +1469,9 @@ describe('with styles', () => {
         </>
       );
       const [staticBody, interpolatedBody] = ruleBodies();
+      expect(interpolatedBody).toEqual(
+        '{background:no-repeat url(data:image/png;base64,AAAA); color:red;}'
+      );
       expect(interpolatedBody).toEqual(staticBody);
     });
 
@@ -1484,6 +1501,7 @@ describe('with styles', () => {
         </>
       );
       const [staticBody, interpolatedBody] = ruleBodies();
+      expect(interpolatedBody).toEqual("{content:'{x}';}");
       expect(interpolatedBody).toEqual(staticBody);
     });
 
