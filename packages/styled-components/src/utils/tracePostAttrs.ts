@@ -35,7 +35,7 @@ export interface PostAttrsPlan {
 }
 
 /** Convert a kebab-case CSS prop to its camelCase form (no allocation when already camel). */
-function camelizeProp(prop: string): string {
+export function camelizeProp(prop: string): string {
   if (prop.indexOf('-') === -1) return prop;
   let out = '';
   let toUpper = false;

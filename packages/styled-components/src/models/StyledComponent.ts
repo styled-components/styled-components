@@ -32,11 +32,7 @@ import { fillSource } from '../parser/compile';
 import { evaluateForFastPath, type FastPathFragment, hasAnyFragment } from '../parser/evaluate';
 import { getSource, Source } from '../parser/source';
 import { themeValue } from '../utils/themePath';
-import {
-  buildPostAttrsPlans,
-  hasPostAttrs as chainHasPostAttrs,
-  type PostAttrsPlan,
-} from '../utils/tracePostAttrs';
+import { camelizeProp, hasPostAttrs as chainHasPostAttrs } from '../utils/tracePostAttrs';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import createWarnTooManyClasses, {
   LIMIT as TOO_MANY_CLASSES_LIMIT,
@@ -390,13 +386,10 @@ function applyPostAttrsWeb<Props extends BaseObject>(
   context: React.HTMLAttributes<Element> & ExecutionContext & Props,
   props: ExecutionProps & Props,
   attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
-  plans: ReadonlyArray<PostAttrsPlan | null> | undefined,
   webStyle: WebStyle
 ): Dict<string> | null {
   let popOverrides: Dict<string> | null = null;
-  let planIdx = 0;
-  // Lazy: only built when an attr without a static plan needs to invoke
-  // its callback at runtime (the fallback path).
+  // Lazy: built on the first arity-2 attr, which invokes its callback at render time.
   let lazyState:
     | {
         source: Source;
@@ -410,23 +403,8 @@ function applyPostAttrsWeb<Props extends BaseObject>(
     const attr = attrs[i];
     if (!isFunction(attr) || (attr as Function).length < 2) continue;
 
-    const plan = plans !== undefined ? plans[planIdx] : null;
-    planIdx++;
-
-    if (plan !== null && plan !== undefined) {
-      mergeAttrDict(context, props, plan.output);
-      if (plan.popped !== null) {
-        if (popOverrides === null) popOverrides = {};
-        plan.popped.forEach(key => {
-          (popOverrides as Dict<string>)[key] = 'unset';
-        });
-      }
-      continue;
-    }
-
-    // Runtime fallback for traces that bailed (props read, derived values,
-    // templated decls, etc.). Build the AST + filled state lazily;only
-    // pay this cost when we actually need to invoke the user's callback.
+    // Build the AST + filled state lazily; only pay this cost when we
+    // actually need to invoke the user's callback.
     if (lazyState === undefined) {
       const source = getSource(webStyle.rules);
       lazyState = source ? { source, filled: undefined } : null;
@@ -477,7 +455,7 @@ function applyPostAttrsWeb<Props extends BaseObject>(
           const v = lookup(keyOrPath);
           if (keyOrPath.indexOf('.') === -1 && v !== undefined) {
             if (popOverrides === null) popOverrides = {};
-            (popOverrides as Dict<string>)[keyOrPath] = 'unset';
+            (popOverrides as Dict<string>)[camelizeProp(keyOrPath)] = 'unset';
           }
           return v !== undefined ? v : fallback;
         },
@@ -606,13 +584,7 @@ function useImpl<Props extends BaseObject>(
     } else {
       context = resolveContext<Props>(componentAttrs, props, theme);
       if (wantsPostAttrs) {
-        popOverrides = applyPostAttrsWeb<Props>(
-          context,
-          props,
-          componentAttrs,
-          forwardedComponent.postAttrsPlans,
-          webStyle
-        );
+        popOverrides = applyPostAttrsWeb<Props>(context, props, componentAttrs, webStyle);
       }
       // ServerStyleSheet SSR never runs insertion effects, so the CSSOM write
       // must stay synchronous whenever styleSheet.server is set. The browser
@@ -647,13 +619,7 @@ function useImpl<Props extends BaseObject>(
   } else {
     context = resolveContext<Props>(componentAttrs, props, theme);
     if (wantsPostAttrs) {
-      popOverrides = applyPostAttrsWeb<Props>(
-        context,
-        props,
-        componentAttrs,
-        forwardedComponent.postAttrsPlans,
-        webStyle
-      );
+      popOverrides = applyPostAttrsWeb<Props>(context, props, componentAttrs, webStyle);
     }
     if (IS_RSC) {
       rscState = getRscRequestState ? getRscRequestState() : null;
@@ -853,8 +819,6 @@ function createStyledComponent<
     displayName,
     shouldForwardProp,
     hasPostAttrs,
-    // Static plan where possible; null slots fall back to runtime invocation.
-    postAttrsPlans: hasPostAttrs ? buildPostAttrsPlans(finalAttrs, rules) : undefined,
     foldedComponentIds,
     target: resolvedTarget,
     styledComponentId,
