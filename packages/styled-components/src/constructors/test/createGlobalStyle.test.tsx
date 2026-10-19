@@ -754,7 +754,7 @@ describe(`createGlobalStyle`, () => {
     render(<Component />);
 
     expect(warn.mock.calls.map(call => String(call[0]))).toEqual([
-      expect.stringContaining('please do not use @import'),
+      '[sc] @import CSS syntax is not supported in createGlobalStyle. Load the stylesheet with a <link> tag instead, injected with a library such as react-helmet or added to your index.html <head>.',
     ]);
   });
 
