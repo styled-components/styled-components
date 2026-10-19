@@ -70,6 +70,8 @@ Two traps produce a tree-shaking test that passes while proving nothing:
 - Asserting that a plugin's `.name` survives is not evidence its body was eliminated or kept: a minifier can constant-fold a bare `.name` read and inline the string. Exercise a load-bearing hook the plugin exposes (its declaration, rewrite, or transform function).
 - A needle built by concatenation in source (`'-webkit-' + 'backdrop-filter'`) need not appear contiguously after minification. Use needles written as single literals in source: full selector strings and object keys.
 
+The bundle size gates in `treeshake.test.ts` measure two builds. The standalone `min.js` gate reads rollup's own terser output. The webpack tree-shaken and all-in gates bundle `browser.esm.js` with webpack in production mode, which minifies with webpack's own terser defaults, so terser options in `rollup.config.mjs` do not move those numbers. Weight work for those gates changes source shape or rollup's `treeshake` options.
+
 A minifier renames locals but never object property names, so a property name ships verbatim at every occurrence. Keep frequently accessed keys on internal-only objects (options bags, descriptors, context objects) short, with full JSDoc on the declaration; keep user-facing API names descriptive. Searching the built bundle for the name shows which case applies.
 
 ## d.ts bundling and TS2742
