@@ -579,7 +579,7 @@ describe('bundle size', () => {
     // points a consumer bundle would shake away. Ceiling includes the
     // CSS-correct reading of interpolation slots and the value checks in
     // docs/interpolation-slots.md.
-    expect(sizeKB).toBeLessThan(19.8);
+    expect(sizeKB).toBeLessThan(19.4);
   });
   it('production bundle size with real bundler tree-shaking', async () => {
     const webpack = require('webpack');
@@ -656,7 +656,7 @@ describe('bundle size', () => {
       // dominates what survives here and cannot shake away. Ceiling includes
       // the CSS-correct reading of interpolation slots and the value checks in
       // docs/interpolation-slots.md.
-      expect(sizeKB).toBeLessThan(18.7);
+      expect(sizeKB).toBeLessThan(18.3);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
@@ -716,7 +716,7 @@ describe('bundle size', () => {
       // while v6 leaned on a smaller bundled preprocessor. Ceiling includes
       // the CSS-correct reading of interpolation slots and the value checks in
       // docs/interpolation-slots.md.
-      expect(sizeKB).toBeLessThan(18.7);
+      expect(sizeKB).toBeLessThan(18.3);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
