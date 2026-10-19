@@ -137,62 +137,91 @@ function backslashRun(s: string, low: number, i: number): number {
 }
 
 /**
- * Start of the identifier (escapes included) that ends at `end` in `s`;
- * equal to `end` when none does. A backslash run is counted once: its pairs
- * are escaped backslashes, and an odd one out escapes the code point after
- * the run.
- */
-function identifierStart(s: string, end: number): number {
-  let k = end;
-  while (k > 0) {
-    const c = s.charCodeAt(k - 1);
-    if (isIdentCode(c)) {
-      k--;
-      continue;
-    }
-    if (c === BACKSLASH) {
-      const run = backslashRun(s, 0, k - 1);
-      // An odd run directly before `end` escapes the code point at `end`.
-      if ((run & 1) === 1 && k === end) break;
-      k -= run;
-      continue;
-    }
-    const run = backslashRun(s, 0, k - 2);
-    if ((run & 1) === 1 && !isNewline(c)) {
-      k -= 1 + run;
-    } else if (isSpace(c)) {
-      // Whitespace ending a hex escape belongs to it.
-      const w = c === LF && k > 1 && s.charCodeAt(k - 2) === CR ? k - 2 : k - 1;
-      const escape = hexEscapeStart(s, 0, w);
-      if (escape === -1) break;
-      k = escape;
-    } else {
-      break;
-    }
-  }
-  // `<!--` reads as one token, so the hyphens it ends with start no identifier.
-  if (
-    k >= 2 &&
-    k + 1 < end &&
-    s.charCodeAt(k) === HYPHEN &&
-    s.charCodeAt(k + 1) === HYPHEN &&
-    s.charCodeAt(k - 1) === EXCLAMATION &&
-    s.charCodeAt(k - 2) === LT &&
-    (backslashRun(s, 0, k - 3) & 1) === 0
-  ) {
-    k += 2;
-  }
-  return k;
-}
-
-/**
  * Whether the `(` at `open` reads as CSS `url(`: the ident-like token before
  * it (escapes decoded) is `url` in any case, and that token is not the name
  * of a hash (`#url`) or at-keyword (`@url`). A quoted argument still makes
  * `url(` a function; see {@link opensUrl}.
  */
 export function isUrlCall(s: string, open: number): boolean {
-  return mayEndInL(s, open) && isUrlIdentifier(s, identifierStart(s, open), open);
+  return urlKind(s, open) === URL_CALL;
+}
+
+const URL_NONE = 0;
+const URL_CALL = 1;
+const URL_AFTER_NON_ASCII = 2;
+
+/**
+ * How the identifier ending at the `(` at `open` reads: {@link URL_CALL} when
+ * it is `url` (any case, escapes decoded) and not a hash or at-keyword name,
+ * {@link URL_AFTER_NON_ASCII} when its last three code points spell `url`
+ * directly after a code point at or above U+0080 (or NUL) written as itself,
+ * else {@link URL_NONE}. Reads forward from the nearest unescaped delimiter
+ * before `open`, where tokenization is unambiguous.
+ */
+function urlKind(s: string, open: number): number {
+  if (!mayEndInL(s, open)) return URL_NONE;
+  let k = open - 1;
+  while (k >= 0) {
+    const c = s.charCodeAt(k);
+    if (isIdentCode(c) || c === BACKSLASH || isSpace(c) || isEscaped(s, k)) k--;
+    else break;
+  }
+  let i = k + 1;
+  let runStart = -1;
+  let n = 0;
+  let before = -1;
+  let u = -1;
+  let r = -1;
+  let l = -1;
+  while (i < open) {
+    const c = s.charCodeAt(i);
+    const escape = c === BACKSLASH && i + 1 < open && !isNewline(s.charCodeAt(i + 1));
+    if (!escape && !isIdentCode(c)) {
+      runStart = -1;
+      i++;
+      continue;
+    }
+    if (runStart === -1) {
+      // `<!--` reads as one token, so the hyphens it ends with start no identifier.
+      if (
+        c === HYPHEN &&
+        s.charCodeAt(i + 1) === HYPHEN &&
+        s.charCodeAt(i - 1) === EXCLAMATION &&
+        s.charCodeAt(i - 2) === LT &&
+        !isEscaped(s, i - 2)
+      ) {
+        i += 2;
+        continue;
+      }
+      runStart = i;
+      n = 0;
+      before = u = r = l = -1;
+    }
+    before = u;
+    u = r;
+    r = l;
+    if (escape) {
+      l = escapedCode(s, i, open);
+      // An escaped code point counts as an identifier code point in every revision.
+      if (l >= 0x80 || l === NUL) l = LOWER_A;
+      i = escapeEnd(s, i, open);
+    } else {
+      l = c;
+      i++;
+    }
+    n++;
+  }
+  if (
+    runStart === -1 ||
+    (u | 0x20) !== LOWER_U ||
+    (r | 0x20) !== LOWER_R ||
+    (l | 0x20) !== LOWER_L
+  ) {
+    return URL_NONE;
+  }
+  if (n > 3) return before >= 0x80 || before === NUL ? URL_AFTER_NON_ASCII : URL_NONE;
+  const prev = runStart > 0 ? s.charCodeAt(runStart - 1) : -1;
+  return (prev === HASH || prev === AT) && !isEscaped(s, runStart - 1) ? URL_NONE : URL_CALL;
 }
 
 /** Whether the text before the `(` at `open` can spell `l` last: the letter, or an escape. */
@@ -206,39 +235,9 @@ function mayEndInL(s: string, open: number): boolean {
   return k >= stop;
 }
 
-/** {@link isUrlCall} for the identifier `s[start..open)` found by {@link identifierStart}. */
-function isUrlIdentifier(s: string, start: number, open: number): boolean {
-  if (open - start < 3) return false;
-  const before = start > 0 ? s.charCodeAt(start - 1) : -1;
-  if ((before === HASH || before === AT) && !isEscaped(s, start - 1)) return false;
-  if (open - start === 3) {
-    return (
-      (s.charCodeAt(start) | 0x20) === LOWER_U &&
-      (s.charCodeAt(start + 1) | 0x20) === LOWER_R &&
-      (s.charCodeAt(start + 2) | 0x20) === LOWER_L
-    );
-  }
-  // Longer text spells `url` only through escapes.
-  let i = start;
-  let n = 0;
-  while (i < open) {
-    let code: number;
-    if (s.charCodeAt(i) === BACKSLASH) {
-      code = escapedCode(s, i, open);
-      i = escapeEnd(s, i, open);
-    } else {
-      code = s.charCodeAt(i) | 0x20;
-      i++;
-    }
-    if (n === 3 || code !== (n === 0 ? LOWER_U : n === 1 ? LOWER_R : LOWER_L)) return false;
-    n++;
-  }
-  return n === 3;
-}
-
 /** Whether the `(` at `open` starts an unquoted `url(`: {@link isUrlCall}, and no quote opens its argument. */
-function opensUrl(s: string, open: number): boolean {
-  if (!isUrlCall(s, open)) return false;
+function opensUrl(s: string, open: number, kind = urlKind(s, open)): boolean {
+  if (kind !== URL_CALL) return false;
   let j = open + 1;
   while (j < s.length && isSpace(s.charCodeAt(j))) j++;
   const next = s.charCodeAt(j);
@@ -585,43 +584,6 @@ function inSpans(spans: ReadonlyArray<number>, count: number, pos: number): bool
   return false;
 }
 
-/**
- * Whether `url(` in any spelling (any case, escapes decoded) ends at the `(`
- * at `open`, directly after a code point at or above U+0080 (or NUL, read as
- * U+FFFD) written as itself. CSS Syntax 3 revisions disagree on whether such
- * a code point continues an identifier, so the text has no single reading.
- */
-function urlAfterNonAscii(s: string, open: number): boolean {
-  if (!mayEndInL(s, open)) return false;
-  // The last four code points of the identifier ending at `open`, decoded:
-  // `before` is the one ahead of the three that must spell `url`.
-  let before = -1;
-  let u = -1;
-  let r = -1;
-  let l = -1;
-  let i = identifierStart(s, open);
-  while (i < open) {
-    const escaped = s.charCodeAt(i) === BACKSLASH;
-    before = u;
-    u = r;
-    r = l;
-    // An escaped code point counts as an identifier code point in every revision.
-    l = escaped ? escapedCode(s, i, open) : s.charCodeAt(i);
-    if (escaped) {
-      i = escapeEnd(s, i, open);
-      if (l >= 0x80 || l === NUL) l = LOWER_A;
-    } else {
-      i++;
-    }
-  }
-  return (
-    (before >= 0x80 || before === NUL) &&
-    (u | 0x20) === LOWER_U &&
-    (r | 0x20) === LOWER_R &&
-    (l | 0x20) === LOWER_L
-  );
-}
-
 /** Index past the string whose quote is at `i`; -1 when it holds a raw newline or does not close. */
 function fieldStringEnd(s: string, i: number, end: number): number {
   const quote = s.charCodeAt(i);
@@ -719,8 +681,9 @@ export function readField(text: string, spans: ReadonlyArray<number>, count: num
         i++;
       }
     } else if (c === OPEN_PAREN) {
-      if (urlAfterNonAscii(text, i)) return FIELD_FAILED;
-      if (opensUrl(text, i)) {
+      const kind = urlKind(text, i);
+      if (kind === URL_AFTER_NON_ASCII) return FIELD_FAILED;
+      if (opensUrl(text, i, kind)) {
         i = fieldUrlEnd(text, i + 1, len);
         if (i < 0) return FIELD_FAILED;
       } else {
