@@ -576,9 +576,10 @@ describe('bundle size', () => {
 
     // Carries every export, so this is the widest surface: the in-house parser,
     // arity-2 attrs tracing with its runtime fallback, and the server entry
-    // points a consumer bundle would shake away. Ceiling includes buffered
-    // injection (StyleInjector + provisional rule stash) on top of main.
-    expect(sizeKB).toBeLessThan(15.4);
+    // points a consumer bundle would shake away. Ceiling includes the
+    // CSS-correct reading of interpolation slots and the value checks in
+    // docs/interpolation-slots.md.
+    expect(sizeKB).toBeLessThan(19.8);
   });
   it('production bundle size with real bundler tree-shaking', async () => {
     const webpack = require('webpack');
@@ -653,8 +654,9 @@ describe('bundle size', () => {
       // The in-house parser (Source, AST-direct emit, fragment splicing,
       // interpolation-sentinel gating) is reachable from any styled call, so it
       // dominates what survives here and cannot shake away. Ceiling includes
-      // buffered injection on top of main's plugin composition.
-      expect(sizeKB).toBeLessThan(14.3);
+      // the CSS-correct reading of interpolation slots and the value checks in
+      // docs/interpolation-slots.md.
+      expect(sizeKB).toBeLessThan(18.7);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
@@ -712,8 +714,9 @@ describe('bundle size', () => {
       // v6.4.1 all-in for this same entry is 11.44kB gzip. v7 sits above it
       // because the in-house parser and the arity-2 attrs bridge ship in full
       // while v6 leaned on a smaller bundled preprocessor. Ceiling includes
-      // buffered injection on top of main's plugin composition.
-      expect(sizeKB).toBeLessThan(14.3);
+      // the CSS-correct reading of interpolation slots and the value checks in
+      // docs/interpolation-slots.md.
+      expect(sizeKB).toBeLessThan(18.7);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
