@@ -28,71 +28,11 @@ export interface ObjectRender {
   fragmentText: (fragment: unknown) => string | null;
 }
 
-class TemplateWriter {
-  /** Allocated on the first slot; `null` while the text holds only ordinary values. */
-  interpolations: unknown[] | null = null;
-  pending = '';
-  strings: string[] | null = null;
-
-  slot(value: unknown): void {
-    if (this.strings === null || this.interpolations === null) {
-      this.strings = [];
-      this.interpolations = [];
-    }
-    this.strings.push(this.pending);
-    this.pending = '';
-    this.interpolations.push(value);
-  }
-
-  declaration(key: string, value: unknown): void {
-    const formatted = addUnitIfNeeded(key, value);
-    if (formatted === '') return;
-    if (typeof value === 'number' || readsAsTemplateValue(formatted)) {
-      this.pending += hyphenate(key) + ':' + formatted + ';';
-    } else {
-      this.pending += hyphenate(key) + ':';
-      this.slot(formatted);
-      this.pending += ';';
-    }
-  }
-
-  walk(o: Record<string, unknown>, render: ObjectRender | undefined): void {
-    for (const key in o) {
-      if (!hasOwn.call(o, key)) continue;
-      let val: unknown = o[key];
-      if (render !== undefined) {
-        while (isFunction(val)) {
-          val =
-            render.context === NO_CONTEXT
-              ? String(val)
-              : (val as (ctx: unknown) => unknown)(render.context);
-        }
-      }
-      if (val === undefined || val === null || val === false || val === '') continue;
-      if (isPlainObject(val)) {
-        // Own `toString` means the author wants a stringified value at
-        // this slot, not a nested selector block.
-        if (hasOwn.call(val, 'toString')) {
-          this.declaration(key, val);
-        } else {
-          this.pending += key + '{';
-          this.walk(val as Record<string, unknown>, render);
-          this.pending += '}';
-        }
-      } else if (isCssProduct(val) || isFunction(val)) {
-        if (render === undefined) {
-          this.pending += hyphenate(key) + ':';
-          this.slot(val);
-          this.pending += ';';
-        } else {
-          const text = render.fragmentText(val);
-          if (text !== null) this.declaration(key, text);
-        }
-      } else {
-        this.declaration(key, val);
-      }
-    }
-  }
+/** A walked style object; see {@link walkObject}. */
+export interface WalkedObject {
+  interpolations: unknown[] | null;
+  pending: string;
+  strings: string[] | null;
 }
 
 /**
@@ -114,16 +54,73 @@ export function walkObject(
   obj: Record<string, unknown>,
   render: ObjectRender | undefined
 ): WalkedObject {
-  const writer = new TemplateWriter();
-  writer.walk(obj, render);
-  return writer;
-}
+  /** Allocated on the first slot; `null` while the text holds only ordinary values. */
+  let interpolations: unknown[] | null = null;
+  let strings: string[] | null = null;
+  let pending = '';
 
-/** A walked style object; see {@link walkObject}. */
-export interface WalkedObject {
-  interpolations: unknown[] | null;
-  pending: string;
-  strings: string[] | null;
+  const slot = (value: unknown): void => {
+    if (strings === null || interpolations === null) {
+      strings = [];
+      interpolations = [];
+    }
+    strings.push(pending);
+    pending = '';
+    interpolations.push(value);
+  };
+
+  const declaration = (key: string, value: unknown): void => {
+    const formatted = addUnitIfNeeded(key, value);
+    if (formatted === '') return;
+    if (typeof value === 'number' || readsAsTemplateValue(formatted)) {
+      pending += hyphenate(key) + ':' + formatted + ';';
+    } else {
+      pending += hyphenate(key) + ':';
+      slot(formatted);
+      pending += ';';
+    }
+  };
+
+  const walk = (o: Record<string, unknown>): void => {
+    for (const key in o) {
+      if (!hasOwn.call(o, key)) continue;
+      let val: unknown = o[key];
+      if (render !== undefined) {
+        while (isFunction(val)) {
+          val =
+            render.context === NO_CONTEXT
+              ? String(val)
+              : (val as (ctx: unknown) => unknown)(render.context);
+        }
+      }
+      if (val === undefined || val === null || val === false || val === '') continue;
+      if (isPlainObject(val)) {
+        // Own `toString` means the author wants a stringified value at
+        // this slot, not a nested selector block.
+        if (hasOwn.call(val, 'toString')) {
+          declaration(key, val);
+        } else {
+          pending += key + '{';
+          walk(val as Record<string, unknown>);
+          pending += '}';
+        }
+      } else if (isCssProduct(val) || isFunction(val)) {
+        if (render === undefined) {
+          pending += hyphenate(key) + ':';
+          slot(val);
+          pending += ';';
+        } else {
+          const text = render.fragmentText(val);
+          if (text !== null) declaration(key, text);
+        }
+      } else {
+        declaration(key, val);
+      }
+    }
+  };
+
+  walk(obj);
+  return { interpolations, pending, strings };
 }
 
 /** {@link walkObject} for a static object, as a template for `parseSource`. */
