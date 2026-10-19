@@ -1420,13 +1420,15 @@ describe('with styles', () => {
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
       render(<Comp />);
       const inserted = insert.mock.calls.map(call => call[2].join('\n')).join('\n');
+      const warned = warn.mock.calls.length;
       insert.mockRestore();
+      warn.mockRestore();
+
       // A fragment in a non-Standalone role realizes to its filled source text,
       // trimmed of surrounding whitespace (docs/interpolation-slots.md, Value shapes).
       expect(inserted).toContain('content:"a margin: 0;";');
       expect(inserted).not.toContain('\0');
-      expect(warn).not.toHaveBeenCalled();
-      warn.mockRestore();
+      expect(warned).toBe(0);
     });
 
     it('keeps a fragment holding a quoted data URL in its declaration', () => {
