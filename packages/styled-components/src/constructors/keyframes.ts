@@ -30,7 +30,8 @@ export default function keyframes<Props extends object = {}>(
   const inputs = templateInputs(rules);
   if (inputs === undefined) return new Keyframes(name, text);
   const found: FunctionsFound = { any: false };
-  const values = functionsAsText(inputs[1], found);
+  const values = inputs[1];
+  if (__DEV__) functionsAsText(values, found);
   if (__DEV__ && found.any) {
     warnOnce(
       'keyframes-function',

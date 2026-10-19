@@ -2,7 +2,7 @@ import { KEYFRAMES_ID_PREFIX } from '../constants';
 import { evaluateForFastPath, FastPathFragment, hasAnyFragment } from '../parser/evaluate';
 import { keyframesRule } from '../parser/parser';
 import { parseFrameList, Source } from '../parser/source';
-import { EMPTY_ARRAY } from '../utils/empties';
+import { EMPTY_ARRAY, NO_CONTEXT } from '../utils/empties';
 import StyleSheet from '../sheet';
 import { groupForId } from '../sheet/GroupIDAllocator';
 import { Compiler, Keyframes as KeyframesType } from '../types';
@@ -105,7 +105,7 @@ export default class Keyframes implements KeyframesType {
     const keyframes: CompiledKeyframes[] = [];
     const filled = evaluateForFastPath(
       source,
-      undefined,
+      NO_CONTEXT,
       undefined,
       compiler,
       fragments,

@@ -1,6 +1,7 @@
 import type KeyframesClass from '../models/Keyframes';
 import type { CompiledKeyframes, KeyframesCompiler } from '../models/Keyframes';
 import type { RuleSet } from '../types';
+import { NO_CONTEXT } from '../utils/empties';
 import { fifoSet } from '../utils/fifoMap';
 import getComponentName from '../utils/getComponentName';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
@@ -106,7 +107,7 @@ export function evaluateForFastPath(
     const kind = kinds[i];
     if (kind === InterpolationKind.StatelessFn) {
       const fn = interps[i] as (ctx: unknown) => unknown;
-      const result = fn(fillContext);
+      const result = fillContext === NO_CONTEXT ? String(fn) : fn(fillContext);
       if (typeof result === 'string') {
         filled[i] = replaceNul(result);
         continue;
@@ -211,6 +212,7 @@ function resolveValue(
     if (fn.prototype !== undefined && fn.prototype.isReactComponent) {
       return nonStyled(fn, r, index);
     }
+    if (r.context === NO_CONTEXT) return replaceNul(String(fn));
     return resolveValue(fn(r.context), r, index, standalone, fn);
   }
   // React elements and component objects (forwardRef, memo, lazy) carry

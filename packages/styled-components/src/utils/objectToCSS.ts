@@ -1,6 +1,7 @@
 import { readsAsTemplateValue } from '../parser/slotValue';
 import { isCssProduct } from '../parser/source';
 import addUnitIfNeeded from './addUnitIfNeeded';
+import { NO_CONTEXT } from './empties';
 import hyphenate from './hyphenateStyleName';
 import isFunction from './isFunction';
 import isPlainObject from './isPlainObject';
@@ -60,7 +61,12 @@ class TemplateWriter {
       if (!hasOwn.call(o, key)) continue;
       let val: unknown = o[key];
       if (render !== undefined) {
-        while (isFunction(val)) val = (val as (ctx: unknown) => unknown)(render.context);
+        while (isFunction(val)) {
+          val =
+            render.context === NO_CONTEXT
+              ? String(val)
+              : (val as (ctx: unknown) => unknown)(render.context);
+        }
       }
       if (val === undefined || val === null || val === false || val === '') continue;
       if (isPlainObject(val)) {
