@@ -364,7 +364,7 @@ export default function createStylisInstance(
   const o = options as ICreateStylisInstance['options'];
   let h = SEED;
   for (let i = 0; i < plugins.length; i++) {
-    if (!plugins[i].name) throwStyledError(15);
+    if (!plugins[i].name) throw throwStyledError(15);
     h = phash(h, plugins[i].name);
   }
   if (o?.namespace) h = phash(h, o.namespace);
