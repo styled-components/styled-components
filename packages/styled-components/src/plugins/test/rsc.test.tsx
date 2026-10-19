@@ -408,7 +408,7 @@ describe('rscPlugin', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".sc-a+.sc-a,.sc-a+style[data-styled]+.sc-a,.sc-a+style[data-styled]+style[data-styled]+.sc-a {margin-top: 8px;}"`
+        `".sc-a + .sc-a,.sc-a +style[data-styled]+ .sc-a,.sc-a +style[data-styled]+style[data-styled]+ .sc-a {margin-top: 8px;}"`
       );
     });
 
@@ -426,7 +426,7 @@ describe('rscPlugin', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".item+.b,.item+style[data-styled]+.b,.item+style[data-styled]+style[data-styled]+.b {color: red;}"`
+        `".item + .b,.item +style[data-styled]+ .b,.item +style[data-styled]+style[data-styled]+ .b {color: red;}"`
       );
     });
 
@@ -444,7 +444,7 @@ describe('rscPlugin', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".b+.sibling,.b+style[data-styled]+.sibling,.b+style[data-styled]+style[data-styled]+.sibling {color: blue;}"`
+        `".b + .sibling,.b +style[data-styled]+ .sibling,.b +style[data-styled]+style[data-styled]+ .sibling {color: blue;}"`
       );
     });
 
@@ -463,7 +463,7 @@ describe('rscPlugin', () => {
       );
 
       // ~ is immune;no expansion needed
-      expect(getInjectedCSS()).toMatchInlineSnapshot(`".sc-a~.sc-a {color: green;}"`);
+      expect(getInjectedCSS()).toMatchInlineSnapshot(`".sc-a ~ .sc-a {color: green;}"`);
     });
 
     it('should not expand + inside :nth-child(2n+1)', () => {
@@ -501,7 +501,7 @@ describe('rscPlugin', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".b+.b:nth-child(1 of :not(style[data-styled])),.b+style[data-styled]+.b:nth-child(1 of :not(style[data-styled])),.b+style[data-styled]+style[data-styled]+.b:nth-child(1 of :not(style[data-styled])) {color: red;}"`
+        `".b + .b:nth-child(1 of :not(style[data-styled])),.b +style[data-styled]+ .b:nth-child(1 of :not(style[data-styled])),.b +style[data-styled]+style[data-styled]+ .b:nth-child(1 of :not(style[data-styled])) {color: red;}"`
       );
     });
 
@@ -521,7 +521,7 @@ describe('rscPlugin', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".sc-a+.sc-a+.sc-a,.sc-a+style[data-styled]+.sc-a+.sc-a,.sc-a+style[data-styled]+style[data-styled]+.sc-a+.sc-a,.sc-a+.sc-a+style[data-styled]+.sc-a,.sc-a+.sc-a+style[data-styled]+style[data-styled]+.sc-a {color: purple;}"`
+        `".sc-a + .sc-a + .sc-a,.sc-a +style[data-styled]+ .sc-a + .sc-a,.sc-a +style[data-styled]+style[data-styled]+ .sc-a + .sc-a,.sc-a + .sc-a +style[data-styled]+ .sc-a,.sc-a + .sc-a +style[data-styled]+style[data-styled]+ .sc-a {color: purple;}"`
       );
     });
 
@@ -542,7 +542,7 @@ describe('rscPlugin', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `"@media (min-width: 768px) {.sc-a+.sc-a,.sc-a+style[data-styled]+.sc-a,.sc-a+style[data-styled]+style[data-styled]+.sc-a {gap: 16px;}}"`
+        `"@media (min-width: 768px) {.sc-a + .sc-a,.sc-a +style[data-styled]+ .sc-a,.sc-a +style[data-styled]+style[data-styled]+ .sc-a {gap: 16px;}}"`
       );
     });
 
@@ -561,7 +561,7 @@ describe('rscPlugin', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".sc-a[data-icon='+']+.sc-a,.sc-a[data-icon='+']+style[data-styled]+.sc-a,.sc-a[data-icon='+']+style[data-styled]+style[data-styled]+.sc-a {color: red;}"`
+        `".sc-a[data-icon='+'] + .sc-a,.sc-a[data-icon='+'] +style[data-styled]+ .sc-a,.sc-a[data-icon='+'] +style[data-styled]+style[data-styled]+ .sc-a {color: red;}"`
       );
     });
 
@@ -632,7 +632,7 @@ describe('rscPlugin', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".parent>.b+.b~.b,.parent>.b+style[data-styled]+.b~.b,.parent>.b+style[data-styled]+style[data-styled]+.b~.b {color: red;}"`
+        `".parent > .b + .b ~ .b,.parent > .b +style[data-styled]+ .b ~ .b,.parent > .b +style[data-styled]+style[data-styled]+ .b ~ .b {color: red;}"`
       );
     });
 
@@ -651,7 +651,7 @@ describe('rscPlugin', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".sc-a:has(+ .next)+.sc-a,.sc-a:has(+ .next)+style[data-styled]+.sc-a,.sc-a:has(+ .next)+style[data-styled]+style[data-styled]+.sc-a {color: red;}"`
+        `".sc-a:has(+ .next) + .sc-a,.sc-a:has(+ .next) +style[data-styled]+ .sc-a,.sc-a:has(+ .next) +style[data-styled]+style[data-styled]+ .sc-a {color: red;}"`
       );
     });
 
@@ -679,7 +679,7 @@ describe('rscPlugin', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".b[data-a]+.b[data-b],.b[data-a]+style[data-styled]+.b[data-b],.b[data-a]+style[data-styled]+style[data-styled]+.b[data-b] {color: red;}"`
+        `".b[data-a] + .b[data-b],.b[data-a] +style[data-styled]+ .b[data-b],.b[data-a] +style[data-styled]+style[data-styled]+ .b[data-b] {color: red;}"`
       );
     });
 
@@ -698,7 +698,7 @@ describe('rscPlugin', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".sc-a[href*='a+b']+.sc-a,.sc-a[href*='a+b']+style[data-styled]+.sc-a,.sc-a[href*='a+b']+style[data-styled]+style[data-styled]+.sc-a {color: red;}"`
+        `".sc-a[href*='a+b'] + .sc-a,.sc-a[href*='a+b'] +style[data-styled]+ .sc-a,.sc-a[href*='a+b'] +style[data-styled]+style[data-styled]+ .sc-a {color: red;}"`
       );
     });
 
@@ -719,7 +719,7 @@ describe('rscPlugin', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".b:nth-child(2n + 1 of :not(style[data-styled]))+.b:nth-child(3n + 2 of :not(style[data-styled])),.b:nth-child(2n + 1 of :not(style[data-styled]))+style[data-styled]+.b:nth-child(3n + 2 of :not(style[data-styled])),.b:nth-child(2n + 1 of :not(style[data-styled]))+style[data-styled]+style[data-styled]+.b:nth-child(3n + 2 of :not(style[data-styled])) {color: red;}"`
+        `".b:nth-child(2n + 1 of :not(style[data-styled])) + .b:nth-child(3n + 2 of :not(style[data-styled])),.b:nth-child(2n + 1 of :not(style[data-styled])) +style[data-styled]+ .b:nth-child(3n + 2 of :not(style[data-styled])),.b:nth-child(2n + 1 of :not(style[data-styled])) +style[data-styled]+style[data-styled]+ .b:nth-child(3n + 2 of :not(style[data-styled])) {color: red;}"`
       );
     });
 
@@ -742,7 +742,7 @@ describe('rscPlugin', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".sc-a+.sc-a+.sc-a+.sc-a+.sc-a+.sc-a,.sc-a+style[data-styled]+.sc-a+.sc-a+.sc-a+.sc-a+.sc-a,.sc-a+style[data-styled]+style[data-styled]+.sc-a+.sc-a+.sc-a+.sc-a+.sc-a,.sc-a+.sc-a+style[data-styled]+.sc-a+.sc-a+.sc-a+.sc-a,.sc-a+.sc-a+style[data-styled]+style[data-styled]+.sc-a+.sc-a+.sc-a+.sc-a,.sc-a+.sc-a+.sc-a+style[data-styled]+.sc-a+.sc-a+.sc-a,.sc-a+.sc-a+.sc-a+style[data-styled]+style[data-styled]+.sc-a+.sc-a+.sc-a,.sc-a+.sc-a+.sc-a+.sc-a+style[data-styled]+.sc-a+.sc-a,.sc-a+.sc-a+.sc-a+.sc-a+style[data-styled]+style[data-styled]+.sc-a+.sc-a,.sc-a+.sc-a+.sc-a+.sc-a+.sc-a+style[data-styled]+.sc-a,.sc-a+.sc-a+.sc-a+.sc-a+.sc-a+style[data-styled]+style[data-styled]+.sc-a {color: red;}"`
+        `".sc-a + .sc-a + .sc-a + .sc-a + .sc-a + .sc-a,.sc-a +style[data-styled]+ .sc-a + .sc-a + .sc-a + .sc-a + .sc-a,.sc-a +style[data-styled]+style[data-styled]+ .sc-a + .sc-a + .sc-a + .sc-a + .sc-a,.sc-a + .sc-a +style[data-styled]+ .sc-a + .sc-a + .sc-a + .sc-a,.sc-a + .sc-a +style[data-styled]+style[data-styled]+ .sc-a + .sc-a + .sc-a + .sc-a,.sc-a + .sc-a + .sc-a +style[data-styled]+ .sc-a + .sc-a + .sc-a,.sc-a + .sc-a + .sc-a +style[data-styled]+style[data-styled]+ .sc-a + .sc-a + .sc-a,.sc-a + .sc-a + .sc-a + .sc-a +style[data-styled]+ .sc-a + .sc-a,.sc-a + .sc-a + .sc-a + .sc-a +style[data-styled]+style[data-styled]+ .sc-a + .sc-a,.sc-a + .sc-a + .sc-a + .sc-a + .sc-a +style[data-styled]+ .sc-a,.sc-a + .sc-a + .sc-a + .sc-a + .sc-a +style[data-styled]+style[data-styled]+ .sc-a {color: red;}"`
       );
     });
 
@@ -761,7 +761,7 @@ describe('rscPlugin', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".b#first+.b#second,.b#first+style[data-styled]+.b#second,.b#first+style[data-styled]+style[data-styled]+.b#second {color: red;}"`
+        `".b#first + .b#second,.b#first +style[data-styled]+ .b#second,.b#first +style[data-styled]+style[data-styled]+ .b#second {color: red;}"`
       );
     });
 
@@ -779,7 +779,7 @@ describe('rscPlugin', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `"*+.b,*+style[data-styled]+.b,*+style[data-styled]+style[data-styled]+.b {margin-top: 8px;}"`
+        `"* + .b,* +style[data-styled]+ .b,* +style[data-styled]+style[data-styled]+ .b {margin-top: 8px;}"`
       );
     });
 
@@ -798,7 +798,7 @@ describe('rscPlugin', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".sc-a:is(:has(+ .a), .x)+.sc-a,.sc-a:is(:has(+ .a), .x)+style[data-styled]+.sc-a,.sc-a:is(:has(+ .a), .x)+style[data-styled]+style[data-styled]+.sc-a {color: red;}"`
+        `".sc-a:is(:has(+ .a), .x) + .sc-a,.sc-a:is(:has(+ .a), .x) +style[data-styled]+ .sc-a,.sc-a:is(:has(+ .a), .x) +style[data-styled]+style[data-styled]+ .sc-a {color: red;}"`
       );
     });
   });

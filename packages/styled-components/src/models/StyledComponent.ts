@@ -27,15 +27,12 @@ import type {
   StyledOptions,
   WebTarget,
 } from '../types';
-import { NodeKind, type Root, type TemplateValue } from '../parser/ast';
-import { evaluateForFastPath, type FastPathFragment } from '../parser/compile';
+import { NodeKind, type StaticRoot } from '../parser/ast';
+import { fillSource } from '../parser/compile';
+import { evaluateForFastPath, type FastPathFragment, hasAnyFragment } from '../parser/evaluate';
 import { getSource, Source } from '../parser/source';
 import { themeValue } from '../utils/themePath';
-import {
-  buildPostAttrsPlans,
-  hasPostAttrs as chainHasPostAttrs,
-  type PostAttrsPlan,
-} from '../utils/tracePostAttrs';
+import { camelizeProp, hasPostAttrs as chainHasPostAttrs } from '../utils/tracePostAttrs';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import createWarnTooManyClasses, {
   LIMIT as TOO_MANY_CLASSES_LIMIT,
@@ -334,42 +331,15 @@ function wrapLevelInWhere(levelCss: string, name: string): string {
 }
 
 /**
- * Resolve a `TemplateValue` (interleaved chunks + slot indices) against the
- * already-evaluated `filled[]` array. Mirrors the `chunks[0] + filled[s] +
- * chunks[1] + ...` join the parser produces, without allocating an
- * intermediate array.
+ * Linear scan of the filled AST (the form the emitter reads) for a
+ * top-level declaration matching `prop`. Used by `ast.peek` / `ast.pop` to
+ * surface a CSS-style value into the post-compile attrs callback without
+ * building a full Map upfront.
  */
-function resolveTemplateValue(tv: TemplateValue, filled: ReadonlyArray<string>): string {
-  let s = tv.chunks[0];
-  for (let i = 0; i < tv.slots.length; i++) {
-    s += filled[tv.slots[i]] + tv.chunks[i + 1];
-  }
-  return s;
-}
-
-/**
- * Linear scan of the source AST for a top-level (non-nested) declaration
- * matching `prop`. Used by `ast.peek` / `ast.pop` to surface a CSS-style
- * value into the post-compile attrs callback without building a full Map
- * upfront. `filled` is the per-render evaluated interpolation array
- * (lazy;only requested when an attrs callback actually reads).
- */
-function findBaseDecl(
-  ast: Root,
-  filled: ReadonlyArray<string> | null,
-  prop: string
-): string | undefined {
+function findBaseDecl(ast: StaticRoot, prop: string): string | undefined {
   for (let i = 0; i < ast.length; i++) {
     const node = ast[i];
-    if (node.kind !== NodeKind.Decl) continue;
-    if (typeof node.prop !== 'string' || node.prop !== prop) continue;
-    const v = node.value;
-    if (typeof v === 'string') return v;
-    // Templated value: resolve interpolations against `filled`. If the
-    // fast-path evaluator bailed (`filled === null`), the value is
-    // unresolvable for this render; treat as absent.
-    if (filled === null) return undefined;
-    return resolveTemplateValue(v, filled);
+    if (node.kind === NodeKind.Decl && node.prop === prop) return node.value;
   }
   return undefined;
 }
@@ -416,18 +386,14 @@ function applyPostAttrsWeb<Props extends BaseObject>(
   context: React.HTMLAttributes<Element> & ExecutionContext & Props,
   props: ExecutionProps & Props,
   attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
-  plans: ReadonlyArray<PostAttrsPlan | null> | undefined,
   webStyle: WebStyle
 ): Dict<string> | null {
   let popOverrides: Dict<string> | null = null;
-  let planIdx = 0;
-  // Lazy: only built when an attr without a static plan needs to invoke
-  // its callback at runtime (the fallback path).
+  // Lazy: built on the first arity-2 attr, which invokes its callback at render time.
   let lazyState:
     | {
         source: Source;
-        ast: Root;
-        filled: ReadonlyArray<string> | null | undefined;
+        filled: StaticRoot | undefined;
       }
     | null
     | undefined = undefined;
@@ -437,33 +403,18 @@ function applyPostAttrsWeb<Props extends BaseObject>(
     const attr = attrs[i];
     if (!isFunction(attr) || (attr as Function).length < 2) continue;
 
-    const plan = plans !== undefined ? plans[planIdx] : null;
-    planIdx++;
-
-    if (plan !== null && plan !== undefined) {
-      mergeAttrDict(context, props, plan.output);
-      if (plan.popped !== null) {
-        if (popOverrides === null) popOverrides = {};
-        plan.popped.forEach(key => {
-          (popOverrides as Dict<string>)[key] = 'unset';
-        });
-      }
-      continue;
-    }
-
-    // Runtime fallback for traces that bailed (props read, derived values,
-    // templated decls, etc.). Build the AST + filled state lazily;only
-    // pay this cost when we actually need to invoke the user's callback.
+    // Build the AST + filled state lazily; only pay this cost when we
+    // actually need to invoke the user's callback.
     if (lazyState === undefined) {
       const source = getSource(webStyle.rules);
-      lazyState = source ? { source, ast: source.ast, filled: undefined } : null;
+      lazyState = source ? { source, filled: undefined } : null;
     }
     if (lazyState === null) continue;
     const state = lazyState;
 
     if (astAccessor === null) {
-      const ensureFilled = (): ReadonlyArray<string> | null => {
-        if (state.filled !== undefined) return state.filled as ReadonlyArray<string> | null;
+      const ensureFilled = (): StaticRoot => {
+        if (state.filled !== undefined) return state.filled;
         const src = state.source;
         // Push-fill to keep these PACKED_ELEMENTS; `new Array(n)` stays
         // HOLEY_ELEMENTS and infects the IC for `evaluateForFastPath`.
@@ -472,13 +423,14 @@ function applyPostAttrsWeb<Props extends BaseObject>(
         for (let i = 0; i < n; i++) buf.push('');
         const fragBuf: (FastPathFragment | null)[] = [];
         for (let i = 0; i < n; i++) fragBuf.push(null);
-        state.filled = evaluateForFastPath(
+        const filled = evaluateForFastPath(
           src,
           context as ExecutionContext,
           buf,
           undefined,
           fragBuf
         );
+        state.filled = fillSource(src, filled, hasAnyFragment(fragBuf) ? fragBuf : null);
         return state.filled;
       };
       const theme = (context as { theme?: unknown }).theme;
@@ -493,7 +445,7 @@ function applyPostAttrsWeb<Props extends BaseObject>(
         if (keyOrPath.indexOf('.') !== -1) {
           v = themeValue(theme, keyOrPath);
         } else {
-          v = findBaseDecl(state.ast, ensureFilled(), keyOrPath);
+          v = findBaseDecl(ensureFilled(), keyOrPath);
         }
         cache.set(keyOrPath, v);
         return v;
@@ -503,7 +455,7 @@ function applyPostAttrsWeb<Props extends BaseObject>(
           const v = lookup(keyOrPath);
           if (keyOrPath.indexOf('.') === -1 && v !== undefined) {
             if (popOverrides === null) popOverrides = {};
-            (popOverrides as Dict<string>)[keyOrPath] = 'unset';
+            (popOverrides as Dict<string>)[camelizeProp(keyOrPath)] = 'unset';
           }
           return v !== undefined ? v : fallback;
         },
@@ -632,13 +584,7 @@ function useImpl<Props extends BaseObject>(
     } else {
       context = resolveContext<Props>(componentAttrs, props, theme);
       if (wantsPostAttrs) {
-        popOverrides = applyPostAttrsWeb<Props>(
-          context,
-          props,
-          componentAttrs,
-          forwardedComponent.postAttrsPlans,
-          webStyle
-        );
+        popOverrides = applyPostAttrsWeb<Props>(context, props, componentAttrs, webStyle);
       }
       // ServerStyleSheet SSR never runs insertion effects, so the CSSOM write
       // must stay synchronous whenever styleSheet.server is set. The browser
@@ -673,13 +619,7 @@ function useImpl<Props extends BaseObject>(
   } else {
     context = resolveContext<Props>(componentAttrs, props, theme);
     if (wantsPostAttrs) {
-      popOverrides = applyPostAttrsWeb<Props>(
-        context,
-        props,
-        componentAttrs,
-        forwardedComponent.postAttrsPlans,
-        webStyle
-      );
+      popOverrides = applyPostAttrsWeb<Props>(context, props, componentAttrs, webStyle);
     }
     if (IS_RSC) {
       rscState = getRscRequestState ? getRscRequestState() : null;
@@ -879,8 +819,6 @@ function createStyledComponent<
     displayName,
     shouldForwardProp,
     hasPostAttrs,
-    // Static plan where possible; null slots fall back to runtime invocation.
-    postAttrsPlans: hasPostAttrs ? buildPostAttrsPlans(finalAttrs, rules) : undefined,
     foldedComponentIds,
     target: resolvedTarget,
     styledComponentId,

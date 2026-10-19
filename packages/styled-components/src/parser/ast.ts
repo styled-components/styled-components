@@ -19,10 +19,19 @@ export const enum NodeKind {
 export interface TemplateValue {
   chunks: string[];
   slots: number[];
+  [ALWAYS_READ]?: true;
 }
 
 /**
- * Parse-time eager flag set by `markDynamic` in `source.ts`: `true` when
+ * Parse-time flag on a {@link TemplateValue} whose template text, with plain
+ * text in place of each slot, does not read as a balanced field, so every
+ * fill reads the field whatever its values hold. Set only when true, and
+ * non-enumerable like {@link DYN}.
+ */
+export const ALWAYS_READ: unique symbol = Symbol('alwaysRead');
+
+/**
+ * Parse-time eager flag set by the templated parse in `parser.ts`: `true` when
  * the node, or any descendant, depends on a runtime interpolation slot.
  * Falsy means the subtree is structurally fixed across renders, so
  * consumers can return it by reference and skip the per-render fill walk.
@@ -164,7 +173,6 @@ export type NativeAtClass =
       condition: string | null;
     }
   | { kind: 'starting-style' }
-  | { kind: 'keyframes' }
   | { kind: 'property' }
   | { kind: 'unsupported'; warn: 'web-only' | 'unknown' };
 
@@ -175,11 +183,12 @@ export type NativeAtClass =
  * - `Root<string | TemplateValue>` (default, alias `Root`): the
  *   parse-time AST. `templateOrString` in `parser.ts` produces
  *   {@link TemplateValue} for fields containing interpolations.
- * - `Root<string>` (alias `StaticRoot`): post-`fillAst` ASTs and ASTs
+ * - `Root<string>` (alias `StaticRoot`): ASTs `fillSource` returns and ASTs
  *   from non-templated `parse(rawCss)` calls. Every string field is a
  *   plain string. emit-web and compileNative consume this.
  *
- * `fillAst` is the bridge: input `Root`, output `StaticRoot | null`.
+ * `fillSource` (`compile.ts`) is the bridge: a `Source`'s `Root` in, a
+ * `StaticRoot` out.
  */
 export interface DeclNode<F = string | TemplateValue> {
   kind: NodeKind.Decl;
@@ -188,18 +197,44 @@ export interface DeclNode<F = string | TemplateValue> {
   [DYN]?: boolean;
 }
 
+/**
+ * The slots of a Run heading a rule or keyframe frame. Resolved from the
+ * slots' values at fill time; the parse-time `selectors` (or `stops`) of a
+ * node carrying a head are empty.
+ */
+export interface SlotHead {
+  /** Raw whitespace written after each slot, parallel to `slots`. */
+  gaps: string[];
+  /** Selector (or stop) text after the Run, unsplit. */
+  rest: string | TemplateValue;
+  slots: number[];
+  /**
+   * Set by `parseSource` when a slot's value is a client reference, whose
+   * class name the server cannot read: the rule is dropped, so its selector
+   * never widens to the text around the slot.
+   */
+  unresolved?: true;
+}
+
+/**
+ * Parse-time-only field type. The fill turns every head into plain
+ * selectors, so the static (`F = string`) form cannot carry one.
+ */
+type HeadField<F> = [F] extends [string] ? never : SlotHead;
+
 export interface RuleNode<F = string | TemplateValue> {
   kind: NodeKind.Rule;
   selectors: F[];
   children: Node<F>[];
   [DYN]?: boolean;
+  head?: HeadField<F>;
   /**
    * Parse-time native-plan classification. Stamped by `stampRuleClass`
    * (parser/nativePlan.ts) on native builds at construction time.
    * Symbol-keyed and non-enumerable so test fixtures and JSON
-   * serialization see the original AST shape. Absent when any selector
-   * is a TemplateValue at construction time; the render path then
-   * re-classifies on the filled selectors.
+   * serialization see the original AST shape. Absent when the rule has a
+   * head or any selector is a TemplateValue at construction time; the
+   * render path then re-classifies on the filled selectors.
    */
   [NATIVE_RULE_CLASS]?: NativeRuleClass;
 }
@@ -218,16 +253,18 @@ export interface AtRuleNode<F = string | TemplateValue> {
   [NATIVE_AT_CLASS]?: NativeAtClass;
 }
 
-export interface KeyframeFrame<F = string | TemplateValue> {
-  stops: F[];
-  children: DeclNode<F>[];
-}
-
+/**
+ * `@keyframes`: its children are the frames, rules whose selectors are the
+ * stops. A slot in the frame list splices frames. Only frames, and only the
+ * declarations in them, are written; anything else the block holds is
+ * dropped.
+ */
 export interface KeyframesNode<F = string | TemplateValue> {
   kind: NodeKind.Keyframes;
-  name: F;
+  /** The at-keyword without `@`: `keyframes`, or a vendor-prefixed form. */
+  name: string;
   prelude: F;
-  frames: KeyframeFrame<F>[];
+  children: Node<F>[];
   [DYN]?: boolean;
 }
 
@@ -252,11 +289,10 @@ export type Node<F = string | TemplateValue> =
 
 export type Root<F = string | TemplateValue> = Node<F>[];
 
-/** Post-fillAst AST: every string field is a plain string. */
+/** A filled AST: every string field is a plain string. */
 export type StaticRoot = Root<string>;
 export type StaticNode = Node<string>;
 export type StaticDeclNode = DeclNode<string>;
 export type StaticRuleNode = RuleNode<string>;
 export type StaticAtRuleNode = AtRuleNode<string>;
 export type StaticKeyframesNode = KeyframesNode<string>;
-export type StaticKeyframeFrame = KeyframeFrame<string>;

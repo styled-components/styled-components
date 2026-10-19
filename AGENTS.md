@@ -65,7 +65,7 @@ This file is the repo's only agent instructions file; there is no CLAUDE.md. It 
 
 ## Security posture
 
-- Authored template CSS is developer-authored; the library does not sanitize it on the author's behalf. Interpolated `${...}` values can carry runtime data, so three structural guards stop an untrusted value from escaping its context: interpolation-slot realization in `parser/compile.ts` (a slot cannot introduce new declarations or rules), the SSR style-body escaping in `utils/escapeStyleSink.ts` (a value cannot close the `<style>` tag), and React's own DOM-attribute escaping for everything routed through `createElement`. Preserve all three when touching those paths; each has a regression test.
+- Authored template CSS is developer-authored; the library does not sanitize it on the author's behalf. Interpolated `${...}` values can carry runtime data, so three structural guards stop an untrusted value from escaping its context: slot value checks in `parser/reader.ts` and `parser/slotValue.ts` (a value in a declaration, selector, property, or prelude cannot open or close a rule; a `;` in a declaration value only adds declarations to the same rule; the rules are in [docs/interpolation-slots.md](docs/interpolation-slots.md), and a slot on its own line is a mixin parsed as full CSS), the SSR style-body escaping in `utils/escapeStyleSink.ts` (a value cannot close the `<style>` tag) with the rehydration-marker rules in the same spec, and React's own DOM-attribute escaping for everything routed through `createElement`. Preserve all three when touching those paths; each has a regression test.
 - The in-house parser and the native transform regexes run on user-influenced input, so they must stay linear-time. Never write a regex that can backtrack catastrophically: no `\s` inside a quantified class flanked by outer `\s*`, no lazy `[^X]+?` with a trailing `\s*`, no adjacent greedy-then-lazy `[^{}]` runs across a delimiter. Prefer `indexOf` plus anchored single-pass scanning over nested quantifiers, and give any hot-path regex a wall-clock-budget regression test.
 
 ## Agent Rules
@@ -104,6 +104,7 @@ This file is the repo's only agent instructions file; there is no CLAUDE.md. It 
 - `pnpm --filter styled-components bench:web:stress`: Stress benchmarks only (`src/bench/web.test.js`); uses `SC_BENCH_ITER_SCALE=0.2` and `SC_BENCH_RUNS=3` for quicker runs
 - `pnpm --filter styled-components bench:rsc`: `src/bench/rsc.test.tsx`, matched by `jest.config.bench-rsc.js` (node environment, `IS_RSC` server path)
 - `pnpm --filter styled-components type-perf`: Consumer type-check budget, measured against the built `dist` (needs `pnpm build` first). `--against <package root>` measures another copy of the package with the same fixture. See [docs/typescript-performance.md](docs/typescript-performance.md)
+- `node scripts/moduleSizes.mjs` (from `packages/styled-components`): Minified and gzip size of each module in the standalone production bundle, for finding where bytes live; `--save <file>` on one revision and `--compare <file>` on another diffs them. Scope and blind spots are in the script header
 - `pnpm knip`: Dead-code scan (unused files, dependencies, exports); config in `knip.jsonc`. Output is a candidate list, not a delete list
 - `pnpm verify`: The local gate; the steps and their order are in `scripts/verify.mjs`
 - `pnpm check:type-resolution`: Traces TypeScript resolution over the library and sandbox tsconfigs and fails when a package in pnpm's global store imports a type package it does not declare (those types would silently become `any`). Fix with an optional peer under `packageExtensions`, or a reasoned entry in the script's `KNOWN_FALSE_POSITIVES`. Exit 2 means the check saw nothing and is broken
@@ -143,6 +144,7 @@ The `packages/native-showcase` app is the visual QA surface for v7 native polyfi
 
 ## Topical references
 
+- Interpolation slot roles and what each slot's value may do (the parser's contract; update it before changing slot behavior). Its Position section (least surprise, widest composition, fast dynamic CSS) decides open questions about value handling: [docs/interpolation-slots.md](docs/interpolation-slots.md)
 - TypeScript type-instantiation budget, measured type constraints, and type-surface testing: [docs/typescript-performance.md](docs/typescript-performance.md)
 - React 19 behaviors that hit the render hot path and SSR/RSC output: [docs/react.md](docs/react.md)
 - React Native substrate: CSS capability by RN version, Yoga divergences, the in-house declaration transform: [docs/react-native.md](docs/react-native.md)

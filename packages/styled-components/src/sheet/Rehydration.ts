@@ -5,7 +5,10 @@ import { idForGroup, setGroupForId } from './GroupIDAllocator';
 import { Sheet } from './types';
 
 const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
-const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\].*?"([^"]*)`);
+/** A group marker in exactly the shape {@link outputSheet} writes it. */
+const MARKER_RE = new RegExp(
+  `^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\]\\{content:"([^"]*)"\\}$`
+);
 
 const isShadowRoot = (node: InsertionTarget | Node): node is ShadowRoot => {
   return (

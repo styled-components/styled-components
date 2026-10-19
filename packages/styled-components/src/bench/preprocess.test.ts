@@ -1,14 +1,14 @@
 /**
  * CSS preprocessing throughput at different scales.
  *
- * Measures normalize (comment stripping + brace validation) in isolation,
- * and the full compile pipeline (preprocess + parse + emit) to show how
- * preprocessing cost relates to total compilation.
+ * Measures comment removal in isolation, and the full compile pipeline
+ * (comment removal + parse + emit) to show how its cost relates to total
+ * compilation.
  *
  * Run: npx jest -c jest.config.bench.js -- preprocess
  */
 
-import { normalize } from '../utils/compiler';
+import { removeComments } from '../parser/reader';
 import createCompiler from '../utils/compiler';
 import { bench as _bench } from './bench-utils';
 
@@ -92,15 +92,19 @@ const CSS_LARGE = Array.from(
 ).join('\n');
 
 describe('preprocessing benchmarks', () => {
-  it('normalize isolated throughput', () => {
+  it('comment removal isolated throughput', () => {
     const N = 200_000;
-    console.log(`\n--- normalize isolated (${N.toLocaleString()} iterations, median of 7) ---`);
+    console.log(
+      `\n--- comment removal isolated (${N.toLocaleString()} iterations, median of 7) ---`
+    );
 
-    bench('small (3 decls, no comments)', N, () => normalize(CSS_SMALL));
-    bench('medium (16 decls, no comments)', N, () => normalize(CSS_MEDIUM));
-    bench('medium (16 decls, 6 line comments)', N, () => normalize(CSS_MEDIUM_COMMENTED));
-    bench('complex (urls + strings + block + line)', N, () => normalize(CSS_COMPLEX));
-    bench('large (20 nested rules + comments)', 20_000, () => normalize(CSS_LARGE));
+    bench('small (3 decls, no comments)', N, () => removeComments(CSS_SMALL, true));
+    bench('medium (16 decls, no comments)', N, () => removeComments(CSS_MEDIUM, true));
+    bench('medium (16 decls, 6 line comments)', N, () =>
+      removeComments(CSS_MEDIUM_COMMENTED, true)
+    );
+    bench('complex (urls + strings + block + line)', N, () => removeComments(CSS_COMPLEX, true));
+    bench('large (20 nested rules + comments)', 20_000, () => removeComments(CSS_LARGE, true));
   });
 
   it('full compile pipeline (preprocess + parse + emit)', () => {

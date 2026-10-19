@@ -1,7 +1,7 @@
 import React from 'react';
 import { Appearance, Dimensions, Text, View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
-import styled, { NativeStyleContext } from '../';
+import styled, { css, NativeStyleContext } from '../';
 import { DEFAULT_CASCADE } from '../NativeStyleContext';
 import { resetResponsiveCache } from '../responsive';
 import { resetWarningsForTest } from '../transform/dev';
@@ -2028,6 +2028,146 @@ describe('modern CSS on React Native', () => {
       );
       const inner = tree.root.findAllByType(View)[2];
       expect(inner.props.style).toEqual([{ color: 'green' }, { color: 'red' }, { padding: 7 }]);
+    });
+  });
+
+  // https://drafts.csswg.org/selectors-4/#descendant-combinators
+  // "A descendant combinator is whitespace that separates two compound
+  // selectors."
+  //
+  // https://drafts.csswg.org/css-syntax-3/#whitespace
+  // "whitespace: A newline, U+0009 CHARACTER TABULATION, or U+0020 SPACE."
+  // https://drafts.csswg.org/css-syntax-3/#newline
+  // "newline: U+000A LINE FEED. Note that U+000D CARRIAGE RETURN and
+  // U+000C FORM FEED are not included in this definition, as they are
+  // converted to U+000A LINE FEED during preprocessing."
+  //
+  // A template literal keeps the author's line breaks and indentation
+  // verbatim, so `${Foo}` on its own line followed by `&` on the next
+  // produces a selector string with an embedded newline (plus whatever
+  // indentation precedes `&`). Per the spec quotes above, every one of
+  // those raw characters is still "whitespace that separates two
+  // compound selectors": the combinator must fire the same as the
+  // single-space form.
+  describe('multi-line component-ancestor selectors (CSS Selectors 4 §14.1; CSS Syntax 3 §4.2 whitespace)', () => {
+    it('descendant combinator matches when `${Foo}` and `&` are separated by a newline', () => {
+      const Foo = styled.View.withConfig({ displayName: 'CombDescNlFoo' })`
+        background: blue;
+      `;
+      const Bar = styled.View.withConfig({ displayName: 'CombDescNlBar' })`
+        color: green;
+        ${Foo}
+          & {
+          color: red;
+        }
+      `;
+      const tree = TestRenderer.create(
+        <Foo>
+          <Bar />
+        </Foo>
+      );
+      const inner = tree.root.findAllByType(View)[1];
+      expect(inner.props.style).toEqual([{ color: 'green' }, { color: 'red' }]);
+    });
+
+    it('child combinator matches when `${Foo}`, `>`, and `&` are separated by newlines', () => {
+      const Foo = styled.View.withConfig({ displayName: 'CombChildNlFoo' })`
+        background: blue;
+      `;
+      const Bar = styled.View.withConfig({ displayName: 'CombChildNlBar' })`
+        color: green;
+        ${Foo}
+          > & {
+          color: red;
+        }
+      `;
+      const tree = TestRenderer.create(
+        <Foo>
+          <Bar />
+        </Foo>
+      );
+      const inner = tree.root.findAllByType(View)[1];
+      expect(inner.props.style).toEqual([{ color: 'green' }, { color: 'red' }]);
+    });
+
+    it('descendant combinator matches when `${Foo}` and `&` are separated by a tab', () => {
+      const Foo = styled.View.withConfig({ displayName: 'CombDescTabFoo' })`
+        background: blue;
+      `;
+      const Bar = styled.View.withConfig({ displayName: 'CombDescTabBar' })`
+        color: green;
+        ${Foo}\t& {
+          color: red;
+        }
+      `;
+      const tree = TestRenderer.create(
+        <Foo>
+          <Bar />
+        </Foo>
+      );
+      const inner = tree.root.findAllByType(View)[1];
+      expect(inner.props.style).toEqual([{ color: 'green' }, { color: 'red' }]);
+    });
+
+    it('preserves a double space inside a quoted attribute value (not a combinator)', () => {
+      const Comp = styled.View<{ 'data-label'?: string }>`
+        color: black;
+        &[data-label='a  b'] {
+          color: red;
+        }
+      `;
+      const matchTree = TestRenderer.create(<Comp data-label="a  b" />);
+      expect(matchTree.root.findByType(View).props.style).toEqual([
+        { color: 'black' },
+        { color: 'red' },
+      ]);
+
+      const collapsedTree = TestRenderer.create(<Comp data-label="a b" />);
+      expect(collapsedTree.root.findByType(View).props.style).toEqual({ color: 'black' });
+    });
+  });
+
+  describe('slots heading a rule', () => {
+    it('keeps a mixin before a `${Foo} &` rule and applies both', () => {
+      const Foo = styled.View.withConfig({ displayName: 'HeadMixinFoo' })`
+        background: blue;
+      `;
+      const mixin = css`
+        color: green;
+      `;
+      const Bar = styled.View.withConfig({ displayName: 'HeadMixinBar' })`
+        ${mixin}
+        ${Foo} & {
+          color: red;
+        }
+      `;
+      const nested = TestRenderer.create(
+        <Foo>
+          <Bar />
+        </Foo>
+      );
+      expect(nested.root.findAllByType(View)[1].props.style).toEqual([
+        { color: 'green' },
+        { color: 'red' },
+      ]);
+
+      const alone = TestRenderer.create(<Bar />);
+      expect(alone.root.findByType(View).props.style).toEqual({ color: 'green' });
+    });
+
+    it('turns a media query returned by a function into a conditional rule', () => {
+      // The RN jest mock reports a 750-wide window.
+      const Comp = styled.View`
+        color: red;
+        ${() => '@media (min-width: 500px)'} {
+          color: blue;
+        }
+        ${() => '@media (min-width: 2000px)'} {
+          padding-top: 10px;
+        }
+      `;
+      const tree = TestRenderer.create(<Comp />);
+      expect(tree.root.findByType(View).props.style).toEqual([{ color: 'red' }, { color: 'blue' }]);
     });
   });
 

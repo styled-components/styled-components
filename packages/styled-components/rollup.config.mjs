@@ -137,6 +137,18 @@ const configBase = {
 
 const globals = { react: 'React', 'react-dom': 'ReactDOM' };
 
+/**
+ * The edge-runtime guard is a top-level throw in a module whose only export is
+ * a constant the build folds to `false`. The `smallest` preset's
+ * `moduleSideEffects: false` would drop the module, and the guard with it.
+ */
+const keepsEdgeGuard = id => id.endsWith('/src/utils/isRsc.ts');
+const smallestTreeshake = {
+  preset: 'smallest',
+  moduleSideEffects: keepsEdgeGuard,
+  propertyReadSideEffects: false,
+};
+
 const standaloneBaseConfig = {
   ...configBase,
   input: './src/index-standalone.ts',
@@ -160,9 +172,7 @@ const standaloneBaseConfig = {
       "typeof React.createContext === 'undefined'": JSON.stringify(false),
     })
   ),
-  treeshake: {
-    propertyReadSideEffects: false,
-  },
+  treeshake: smallestTreeshake,
 };
 
 const standaloneConfig = {
@@ -213,6 +223,7 @@ const browserConfig = {
     getESM({ file: 'dist/styled-components.browser.esm.js' }),
     getCJS({ file: 'dist/styled-components.browser.cjs.js', footer: styledCJSInteropFooter }),
   ],
+  treeshake: smallestTreeshake,
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(false),

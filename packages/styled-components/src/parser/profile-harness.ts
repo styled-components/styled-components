@@ -14,7 +14,6 @@ import '../native/bunProfileGlobals';
 
 import { emitWeb } from './emit-web';
 import { parse } from './parser';
-import { normalize } from '../utils/normalize';
 
 // This harness profiles the web parser, so the native-only rule stamping stays off.
 globalThis.__NATIVE__ = false;
@@ -109,12 +108,12 @@ const CSS_HUGE = (() => {
 function run(css: string, iterations: number): void {
   // Warmup
   for (let i = 0; i < Math.min(iterations / 10, 200); i++) {
-    emitWeb(parse(normalize(css)), '.a');
+    emitWeb(parse(css), '.a');
   }
   // Measured
   const start = performance.now();
   for (let i = 0; i < iterations; i++) {
-    emitWeb(parse(normalize(css)), '.a');
+    emitWeb(parse(css), '.a');
   }
   const elapsed = performance.now() - start;
   const ops = (iterations / elapsed) * 1000;

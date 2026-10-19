@@ -70,6 +70,8 @@ Two traps produce a tree-shaking test that passes while proving nothing:
 - Asserting that a plugin's `.name` survives is not evidence its body was eliminated or kept: a minifier can constant-fold a bare `.name` read and inline the string. Exercise a load-bearing hook the plugin exposes (its declaration, rewrite, or transform function).
 - A needle built by concatenation in source (`'-webkit-' + 'backdrop-filter'`) need not appear contiguously after minification. Use needles written as single literals in source: full selector strings and object keys.
 
+The bundle size gates in `treeshake.test.ts` measure two builds. The standalone `min.js` gate reads rollup's own terser output. The webpack tree-shaken and all-in gates bundle `browser.esm.js` with webpack in production mode, which minifies with webpack's own terser defaults, so terser options in `rollup.config.mjs` do not move those numbers. Weight work for those gates changes source shape or rollup's `treeshake` options.
+
 A minifier renames locals but never object property names, so a property name ships verbatim at every occurrence. Keep frequently accessed keys on internal-only objects (options bags, descriptors, context objects) short, with full JSDoc on the declaration; keep user-facing API names descriptive. Searching the built bundle for the name shows which case applies.
 
 ## d.ts bundling and TS2742
@@ -101,7 +103,7 @@ Server rendering on an edge runtime is unsupported. Next.js applies the `browser
 - A server component fails `next build`: the browser build calls `React.createContext` at module load, and the `react-server` build of React has none. Error 19 reports this, thrown from a guard in `utils/isRsc.ts` (`!IS_RSC && !React.createContext`).
 - A client component renders unstyled HTML with no error, as it does on any runtime without a style registry, because client styles inject through `useInsertionEffect`, which never runs on the server. With a `ServerStyleSheet` registry (the documented Next.js setup), the first `<style>` creation fails at request time. Error 20 reports this, thrown from a `typeof document` guard at the top of `makeStyleTag` in `src/sheet/dom.ts`.
 
-Both messages tell the reader to use the Node.js runtime. Guard 1 is gated `!__SERVER__ && !__NATIVE__`, so only the bundles where it can fire carry it. Neither guard spells `typeof React.createContext === 'undefined'`, which every non-server bundle replaces with `false`.
+Both messages tell the reader to use the Node.js runtime. Guard 1 is gated `!__SERVER__ && !__NATIVE__`, so only the bundles where it can fire carry it. Neither guard spells `typeof React.createContext === 'undefined'`, which every non-server bundle replaces with `false`. The browser and standalone bundles tree-shake with rollup's `smallest` preset, which treats every module as free of side effects; `rollup.config.mjs` exempts `utils/isRsc.ts`, because guard 1 is a top-level throw in a module whose only export folds to `false`, and the preset would otherwise drop the module and the guard with it.
 
 ## Published files
 

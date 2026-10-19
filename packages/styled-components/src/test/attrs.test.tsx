@@ -816,22 +816,53 @@ describe('attrs', () => {
       expect(el.getAttribute('data-tint')).toBe('purple');
     });
 
-    it('static decl + static callback: callback is not invoked at render time', () => {
+    it('static decl + static callback: output and pop override hold across rerenders', () => {
       const cb = jest.fn((_p: any, ast: any) => ({
         'data-tint': ast.pop('color'),
       }));
       const Comp = styled.div.attrs<{ 'data-tint'?: string }>(cb)`
         color: red;
       `;
-      // Construction-time trace called the callback once. Clear, then assert
-      // that subsequent renders do NOT invoke it again;the plan supplies
-      // the output and the popped set without running user code.
-      cb.mockClear();
       const { rerender, container } = render(<Comp />);
       rerender(<Comp />);
       rerender(<Comp />);
-      expect(cb).not.toHaveBeenCalled();
-      expect((container.firstChild as HTMLElement).getAttribute('data-tint')).toBe('red');
+      const el = container.firstChild as HTMLElement;
+      expect(el.getAttribute('data-tint')).toBe('red');
+      expect(el.style.color).toBe('unset');
+    });
+
+    it('pop of a kebab-case decl emits a camelCase inline override without a React warning', () => {
+      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const Comp = styled.div.attrs<{ 'data-tint'?: string }>((_p, ast) => ({
+        'data-tint': ast.pop('accent-color'),
+      }))`
+        accent-color: red;
+      `;
+      const { container } = render(<Comp />);
+      const el = container.firstChild as HTMLElement;
+      expect(el.getAttribute('data-tint')).toBe('red');
+      expect(el.style.getPropertyValue('accent-color')).toBe('unset');
+      expect(errorSpy).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+
+    it('reads the declarations a value `;` splits a templated decl into', () => {
+      const Comp = styled.div.attrs<{ 'data-color'?: string; 'data-opacity'?: string }>(
+        (_p, ast) => ({
+          'data-color': ast.peek('color'),
+          'data-opacity': ast.peek('opacity'),
+        })
+      )`
+        color: ${(p: { theme: { c: string } }) => p.theme.c};
+      `;
+      const { container } = render(
+        <ThemeProvider theme={{ c: 'red; opacity: 0.5' }}>
+          <Comp />
+        </ThemeProvider>
+      );
+      const el = container.firstChild as HTMLElement;
+      expect(el.getAttribute('data-color')).toBe('red');
+      expect(el.getAttribute('data-opacity')).toBe('0.5');
     });
 
     it('templated decl falls back to per-render invocation', () => {
@@ -847,7 +878,7 @@ describe('attrs', () => {
           <Comp />
         </ThemeProvider>
       );
-      // Trace bailed (templated decl); render path invoked the callback.
+      // Templated decl has no static value, so the callback runs at render.
       expect(cb).toHaveBeenCalledTimes(1);
     });
 

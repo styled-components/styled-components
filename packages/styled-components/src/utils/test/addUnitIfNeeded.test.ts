@@ -11,6 +11,12 @@ it('adds a px prefix if needed for properties that require a unit', () => {
   pairs.forEach(([key, value]) => expect(addUnitIfNeeded(key, value)).toEqual(`${value}px`));
 });
 
+it('trims a string value, keeping whitespace an escaping backslash precedes', () => {
+  expect(addUnitIfNeeded('color', '  red \n')).toEqual('red');
+  expect(addUnitIfNeeded('content', ' x\\  ')).toEqual('x\\ ');
+  expect(addUnitIfNeeded('content', 'x\\\\ ')).toEqual('x\\\\');
+});
+
 it('does not add a px prefix for unitless properties', () => {
   const pairs: Array<[string, number]> = [
     ['lineHeight', 1],

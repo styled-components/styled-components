@@ -1,3 +1,7 @@
+import React from 'react';
+import css from '../../constructors/css';
+import keyframes from '../../constructors/keyframes';
+import type { ExecutionContext } from '../../types';
 import makeNativeStyleClass from '../NativeStyle';
 import {
   extractBaseDeclPairs as parseCSSDeclarations,
@@ -898,7 +902,7 @@ describe('parseCSSDeclarations', () => {
       ).toMatchInlineSnapshot(`
         [
           [
-            "visible  color",
+            "visible */ color",
             "red",
           ],
         ]
@@ -1043,11 +1047,13 @@ describe('parseCSSDeclarations', () => {
       `);
     });
 
+    // CSS reads `col/* x */or` as two identifiers, so the empty comment that
+    // keeps them apart stays and the name is not `color`.
     it('comment between property name chars', () => {
       expect(parseCSSDeclarations('col/* x */or: red;')).toMatchInlineSnapshot(`
         [
           [
-            "color",
+            "col/**/or",
             "red",
           ],
         ]
@@ -1294,7 +1300,7 @@ describe('parseCSSDeclarations', () => {
             "red",
           ],
           [
-            "font-size",
+            "font-size",
             "12px",
           ],
           [
@@ -1573,6 +1579,152 @@ describe('NativeStyle class;compile() fast-paths', () => {
       const inline = new NativeStyle([{ color: 'red', padding: 8 } as any] as any);
       const a = inline.compile({} as any);
       expect(a.base).toEqual({ color: 'red', padding: 8 });
+    });
+
+    const renderContext: ExecutionContext = { theme: {} };
+
+    it('splits a declaration at a `;` in a value', () => {
+      const inline = new NativeStyle(css`
+        opacity: ${() => '0.5; margin-top: 4px'};
+      `);
+      expect(inline.compile(renderContext).base).toEqual({ opacity: 0.5, marginTop: 4 });
+    });
+
+    it('collects the @keyframes block of an interpolated keyframes value', () => {
+      const fade = keyframes`
+        from { opacity: 0; }
+        to { opacity: 1; }
+      `;
+      const inline = new NativeStyle(css`
+        animation: ${fade} 1s linear;
+      `);
+      const out = inline.compile(renderContext);
+      expect(out.keyframes).toEqual([
+        {
+          name: fade.name,
+          frames: [
+            { stops: ['from'], decls: { opacity: 0 } },
+            { stops: ['to'], decls: { opacity: 1 } },
+          ],
+        },
+      ]);
+      expect(out.animations).toEqual([
+        {
+          composition: 'replace',
+          delayMs: 0,
+          direction: 'normal',
+          durationMs: 1000,
+          fillMode: 'none',
+          iterationCount: 1,
+          name: fade.name,
+          playState: 'running',
+          rangeEnd: 'normal',
+          rangeStart: 'normal',
+          timeline: { kind: 'auto' },
+          timingFunction: { kind: 'linear' },
+        },
+      ]);
+    });
+
+    it('reads the values of an interpolated keyframes template by their roles', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const fade = keyframes`
+        from { opacity: ${'0; } } & { color: red } @keyframes x { from { a: b'}; margin-top: 4px; }
+        ${'50%'} { opacity: ${'0.5; margin-top: 2px'}; }
+        to { ${css`
+          opacity: ${1};
+        `} }
+      `;
+      const inline = new NativeStyle(css`
+        color: blue;
+        animation: ${fade} 1s linear;
+      `);
+      const out = inline.compile(renderContext);
+      expect(out.base).toEqual({ color: 'blue' });
+      expect(out.keyframes).toEqual([
+        {
+          name: fade.name,
+          frames: [
+            { stops: ['from'], decls: { marginTop: 4 } },
+            { stops: ['50%'], decls: { opacity: 0.5, marginTop: 2 } },
+            { stops: ['to'], decls: { opacity: 1 } },
+          ],
+        },
+      ]);
+      warn.mockRestore();
+    });
+
+    it('compiles an interpolated keyframes value once across renders', () => {
+      const fade = keyframes`
+        from { opacity: 0; }
+        to { opacity: 1; }
+      `;
+      const nameSpy = jest.spyOn(fade, 'getName');
+      const inline = new NativeStyle(css<{ $ms: number }>`
+        animation: ${fade} ${p => p.$ms}ms linear;
+      `);
+      const first = inline.compile({ ...renderContext, $ms: 100 });
+      const second = inline.compile({ ...renderContext, $ms: 200 });
+      inline.compile({ ...renderContext, $ms: 300 });
+
+      expect(nameSpy).toHaveBeenCalledTimes(1);
+      expect(second.keyframes).toEqual(first.keyframes);
+      expect(second.animations?.[0].durationMs).toBe(200);
+      nameSpy.mockRestore();
+    });
+
+    it('drops a rule whose selector holds a non-styled component, with one dev warning', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      function Plain() {
+        return React.createElement('div');
+      }
+      const inline = new NativeStyle(css`
+        color: blue;
+        &:hover ${Plain} {
+          color: red;
+        }
+      `);
+      expect(inline.compile(renderContext)).toEqual(
+        new NativeStyle(css`
+          color: blue;
+        `).compile(renderContext)
+      );
+      expect(warn.mock.calls.map(call => String(call[0]))).toEqual([
+        expect.stringContaining('Plain is not a styled component'),
+      ]);
+      warn.mockRestore();
+    });
+
+    it('checks each value of a style object a function returns', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const inline = new NativeStyle(css((p: { $v: string }) => ({ opacity: p.$v, marginTop: 4 })));
+      const withValue = (v: string): ExecutionContext & { $v: string } => ({
+        ...renderContext,
+        $v: v,
+      });
+      expect(inline.compile(withValue('0.5 } x { color: red'))).toEqual(
+        new NativeStyle(css`
+          margin-top: 4px;
+        `).compile(renderContext)
+      );
+      expect(inline.compile(withValue('0.5; margin-bottom: 2px')).base).toEqual({
+        opacity: 0.5,
+        marginBottom: 2,
+        marginTop: 4,
+      });
+      expect(warn).toHaveBeenCalledTimes(1);
+      warn.mockRestore();
+    });
+
+    it('renders the rest when a value holds a brace', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const inline = new NativeStyle(css`
+        opacity: ${() => '0.5 } x {'};
+        margin-top: 4px;
+      `);
+      expect(inline.compile(renderContext).base).toEqual({ marginTop: 4 });
+      expect(warn).toHaveBeenCalledTimes(1);
+      warn.mockRestore();
     });
   });
 

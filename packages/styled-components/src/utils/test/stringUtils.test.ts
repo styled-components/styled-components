@@ -4,7 +4,9 @@ import generateAlphabeticName from '../generateAlphabeticName';
 import generateDisplayName from '../generateDisplayName';
 import hyphenateStyleName from '../hyphenateStyleName';
 import interleave from '../interleave';
-import { joinStrings } from '../joinStrings';
+import { compileWeb } from '../../parser/compile';
+import { parseSource } from '../../parser/source';
+import { joinRules, joinStrings, stripSplitter } from '../joinStrings';
 
 describe('hyphenateStyleName', () => {
   it('hyphenates camelCase style names', () => {
@@ -32,6 +34,15 @@ describe('joinStrings', () => {
   });
 });
 
+describe('joinRules', () => {
+  it('keeps a compiled rule as written when the splitter is removed, whatever a value holds', () => {
+    const src = parseSource(['color: ', '; margin: 0;'], [() => 'red //*!sc*/\n* b']);
+    const css = joinRules(compileWeb(src, {}, '.a'));
+    expect(css).toBe('.a{color:red //*!sc*/ * b;margin:0;}/*!sc*/\n');
+    expect(stripSplitter(css)).toBe('.a{color:red //*!sc*/ * b;margin:0;}');
+  });
+});
+
 describe('generateAlphabeticName', () => {
   it('should create alphabetic names for number input data', () => {
     expect(generateAlphabeticName(1000000000)).toEqual('cGNYzm');
@@ -40,6 +51,21 @@ describe('generateAlphabeticName', () => {
 
   it('should not fail for numbers above int32 limit', () => {
     expect(generateAlphabeticName(3819806601)).toEqual('kcwstn');
+  });
+
+  it('pins the letters at each digit boundary and the largest uint32 input', () => {
+    expect(generateAlphabeticName(0)).toBe('a');
+    expect(generateAlphabeticName(25)).toBe('z');
+    expect(generateAlphabeticName(26)).toBe('A');
+    expect(generateAlphabeticName(51)).toBe('Z');
+    expect(generateAlphabeticName(52)).toBe('a');
+    expect(generateAlphabeticName(53)).toBe('bb');
+    expect(generateAlphabeticName(2703)).toBe('ZZ');
+    expect(generateAlphabeticName(2704)).toBe('aa');
+    expect(generateAlphabeticName(140607)).toBe('ZZZ');
+    expect(generateAlphabeticName(140608)).toBe('aaa');
+    expect(generateAlphabeticName(2147483647)).toBe('fHKRMx');
+    expect(generateAlphabeticName(4294967295)).toBe('lpvJyV');
   });
 
   it('breaks up substrings of "ad" case-insensitive to avoid adblocker issues', () => {
