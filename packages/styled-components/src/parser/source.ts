@@ -398,7 +398,7 @@ export function attachSourceInputs<T extends RuleSet<never>>(
  * every evaluation of its call site, so every `RuleSet` built from it shares
  * one parse.
  */
-export function attachTemplateInputs<T extends RuleSet<any>>(
+export function attachTemplateInputs<T extends RuleSet<never>>(
   rules: T,
   strings: ReadonlyArray<string>,
   interpolations: ReadonlyArray<unknown>
@@ -408,7 +408,7 @@ export function attachTemplateInputs<T extends RuleSet<any>>(
 }
 
 /** The template inputs a `RuleSet` was built from; `undefined` for one built outside `css`. */
-export function templateInputs(rules: RuleSet<any>): Readonly<SourceSlot> | undefined {
+export function templateInputs(rules: RuleSet<never>): Readonly<SourceSlot> | undefined {
   return (rules as unknown as RulesWithSlot)[SOURCE_SLOT];
 }
 

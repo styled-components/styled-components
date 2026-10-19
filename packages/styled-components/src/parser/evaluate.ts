@@ -183,7 +183,7 @@ function resolveValue(
   }
   if (Array.isArray(value)) {
     if (isCssProduct(value)) {
-      const frag = resolveFragment(value as RuleSet<any>, r);
+      const frag = resolveFragment(value as RuleSet<never>, r);
       if (frag === null) return '';
       if (standalone && r.fragments !== undefined) {
         r.fragments[index] = frag;
@@ -233,7 +233,7 @@ function resolveValue(
     }
     const walked = walkObject(value as Record<string, unknown>, {
       context: r.context,
-      fragmentText: frag => fragmentValueText(frag as RuleSet<any>, r),
+      fragmentText: frag => fragmentValueText(frag as RuleSet<never>, r),
     });
     const interpolations = walked.interpolations;
     // Only ordinary values: the text parses as a mixin, as template text does.
@@ -277,7 +277,7 @@ function objectSource(strings: string[], values: string[]): Source {
 }
 
 /** A css fragment value's trimmed text in a style object; `null` when it holds a value that cannot be resolved. */
-function fragmentValueText(rules: RuleSet<any>, r: Resolver): string | null {
+function fragmentValueText(rules: RuleSet<never>, r: Resolver): string | null {
   const frag = resolveFragment(rules, r);
   if (frag === null) return '';
   if (holdsUnresolved(frag)) return null;
@@ -292,7 +292,7 @@ function nonStyled(component: unknown, r: Resolver, index: number): string {
     const name = getComponentName(component as never);
     warnOnce(
       'non-styled-selector',
-      `${name} is not a styled component and cannot be referred to via component selector. See https://styled-components.com/docs/advanced#referring-to-other-components for more details.`,
+      `${name} is not a styled component and cannot be referred to via component selector. Wrap it with styled() first. See https://styled-components.com/docs/advanced#referring-to-other-components for more details.`,
       name
     );
   }
@@ -323,7 +323,7 @@ function keyframesName(kf: KeyframesClass, r: Resolver): string {
  * slots see the same props and theme. Returns `null` when the child lacks a
  * Source.
  */
-function resolveFragment(rules: RuleSet<any>, r: Resolver): FastPathFragment | null {
+function resolveFragment(rules: RuleSet<never>, r: Resolver): FastPathFragment | null {
   const childSource = getSource(rules);
   if (childSource === undefined) return null;
   return evaluateFragment(childSource, r);
