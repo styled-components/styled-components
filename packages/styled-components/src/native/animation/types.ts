@@ -147,13 +147,13 @@ export interface TransitionDescriptor {
  */
 export interface NativeAnimationEvent {
   animationName: string;
-  /** Elapsed time in seconds. */
+  /** Active duration in seconds: duration times the iteration count. Does not include `animation-delay`. */
   elapsedTime: number;
 }
 
 export interface NativeTransitionEvent {
   propertyName: string;
-  /** Elapsed time in seconds. */
+  /** Transition duration in seconds. Does not include `transition-delay`. */
   elapsedTime: number;
 }
 
@@ -179,10 +179,10 @@ export interface AnimatedStyleInput {
   /**
    * User-supplied `onAnimationEnd` callback, lifted off the styled
    * component's React props. The Hermes adapter fires from
-   * `Animated.timing.start`'s completion; the rn-web CSS adapter relies on
-   * browser `animationend`. The Reanimated 4 CSS-layer path does not yet
-   * receive native completion events from upstream, so this callback is
-   * not invoked there until Reanimated exposes equivalent hooks.
+   * `Animated.timing.start`'s completion. On react-native-web the bridge
+   * listens for the browser `animationend` event. The Reanimated 4
+   * CSS-layer path does not yet receive completion events from upstream,
+   * so this callback is not invoked there.
    */
   onAnimationEnd?: (event: NativeAnimationEvent) => void;
   /**

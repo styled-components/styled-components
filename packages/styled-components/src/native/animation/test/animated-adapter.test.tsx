@@ -1676,7 +1676,7 @@ describe('Animated adapter: lifecycle events (CSS Animations §5.1 / Transitions
       expect(onTransitionEnd).toHaveBeenCalledWith(
         expect.objectContaining({
           propertyName: 'backgroundColor',
-          // elapsedTime is duration + delay in seconds.
+          // CSS Transitions 1 §6.2: "The value of elapsedTime for this event is equal to the value of transition-duration."
           elapsedTime: 0.1,
         })
       );
@@ -1685,7 +1685,11 @@ describe('Animated adapter: lifecycle events (CSS Animations §5.1 / Transitions
     }
   });
 
-  it('onTransitionEnd elapsedTime includes transition-delay', () => {
+  it('onTransitionEnd elapsedTime is the transition duration and leaves out transition-delay', () => {
+    // CSS Transitions 1 §6.1.2 (https://drafts.csswg.org/css-transitions-1/#Events-TransitionEvent-elapsedTime):
+    // "The amount of time the transition has been running, in seconds, when this event fired not including any time spent in the delay phase."
+    // CSS Transitions 1 §6.2 (https://drafts.csswg.org/css-transitions-1/#transitionend):
+    // "The value of elapsedTime for this event is equal to the value of transition-duration."
     jest.useFakeTimers();
     try {
       const onTransitionEnd = jest.fn();
@@ -1706,7 +1710,7 @@ describe('Animated adapter: lifecycle events (CSS Animations §5.1 / Transitions
       expect(onTransitionEnd).toHaveBeenCalledWith(
         expect.objectContaining({
           propertyName: 'backgroundColor',
-          elapsedTime: 0.15,
+          elapsedTime: 0.1,
         })
       );
     } finally {
@@ -1774,6 +1778,43 @@ describe('Animated adapter: lifecycle events (CSS Animations §5.1 / Transitions
         track(TestRenderer.create(<Fader onAnimationEnd={onAnimationEnd} />));
       });
       expect(onAnimationEnd).not.toHaveBeenCalled();
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+      expect(onAnimationEnd).toHaveBeenCalledTimes(1);
+      expect(onAnimationEnd).toHaveBeenCalledWith(
+        expect.objectContaining({
+          animationName: 'fade',
+          elapsedTime: 0.1,
+        })
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('onAnimationEnd elapsedTime is the active duration and leaves out animation-delay', () => {
+    // CSS Animations 1 §4.4 (https://drafts.csswg.org/css-animations-1/#animation-iteration-count):
+    // "The time window during which the animation is active (duration x iteration-count) is known as the active duration."
+    // CSS Animations 1 §5.2 (https://drafts.csswg.org/css-animations-1/#eventdef-globaleventhandlers-animationend):
+    // "In this case the value of the elapsedTime member of the event is equal to the active duration."
+    jest.useFakeTimers();
+    try {
+      const onAnimationEnd = jest.fn();
+      const Fader = styled.View`
+        animation: fade 100ms linear 50ms;
+        @keyframes fade {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+      `;
+      act(() => {
+        track(TestRenderer.create(<Fader onAnimationEnd={onAnimationEnd} />));
+      });
       act(() => {
         jest.advanceTimersByTime(200);
       });
