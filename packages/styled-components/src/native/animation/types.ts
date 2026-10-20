@@ -147,13 +147,13 @@ export interface TransitionDescriptor {
  */
 export interface NativeAnimationEvent {
   animationName: string;
-  /** Elapsed time in seconds. */
+  /** Active duration in seconds: duration times the iteration count. Does not include `animation-delay`. */
   elapsedTime: number;
 }
 
 export interface NativeTransitionEvent {
   propertyName: string;
-  /** Elapsed time in seconds. */
+  /** Transition duration in seconds. Does not include `transition-delay`. */
   elapsedTime: number;
 }
 

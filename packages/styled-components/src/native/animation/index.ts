@@ -845,7 +845,8 @@ function startTiming(
     // after a newer timing took over the same prop) do not dispatch;
     // the transition is "cancelled" instead.
     if (onTransitionEnd !== undefined && wasActive && result?.finished === true) {
-      onTransitionEnd({ propertyName: prop, elapsedTime: (duration + delay) / 1000 });
+      // transitionend reports the transition's duration. Delay is outside it.
+      onTransitionEnd({ propertyName: prop, elapsedTime: duration / 1000 });
     }
   });
 }
@@ -2159,8 +2160,10 @@ function startKeyframeAnimation(
   scratch.running.add(handle);
   animS.handle = handle;
 
-  const totalElapsedSec =
-    (desc.delayMs + duration * (iterCount === Infinity ? 1 : iterCount)) / 1000;
+  // Active duration is duration times the iteration count. Delay is outside it.
+  // An infinite animation does not finish; the single-iteration stand-in is
+  // only reached when a completion is reported for one anyway.
+  const totalElapsedSec = (desc.durationMs * (iterCount === Infinity ? 1 : iterCount)) / 1000;
   // Track when the timing began so the override-merge can distinguish
   // the delay window (animS.startedAt + delayMs > now) from the actual
   // animation phase. Fill-mode `backwards` / `both` apply the 0%

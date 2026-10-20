@@ -14,6 +14,7 @@ import { render } from '@testing-library/react';
 import styled, { ThemeProvider as BridgeThemeProvider } from '../native/web-bridge';
 import createTheme from '../constructors/createTheme';
 import ThemeProvider from '../models/ThemeProvider';
+import { resetWarnOnce } from '../utils/warnOnce';
 
 function readAllCss(): string {
   const buf: string[] = [];
@@ -194,7 +195,9 @@ describe('rn-web bridge: Text', () => {
  *
  * Deviation from the bubbling clause: the Hermes adapter reports completion only for the styled component that owns the animation or transition. A descendant's bubbling `animationend` / `transitionend` does not call an ancestor's prop. `animationcancel` and `transitioncancel` are not these props (CSS Animations 1 §5.2: animationcancel "occurs when the animation stops running in a way that does not fire an animationend event").
  *
- * Deviation from the CSS property-name spelling: `propertyName` is camelCased to the runtime style key the Hermes adapter fires (`background-color` is `backgroundColor`). `elapsedTime` is the browser's seconds value, so a transition does not include `transition-delay`.
+ * Deviation from pseudo-element dispatch: a non-empty `pseudoElement` is ignored. The event's target is still the host element (CSS Animations 1 §5.1.2, quoted above), and the callback payload has no field that would tell that completion from the element's own. The Hermes adapter does not fire for pseudo-elements.
+ *
+ * Deviation from the CSS property-name spelling: `propertyName` is camelCased to the runtime style key the Hermes adapter fires (`background-color` is `backgroundColor`). `elapsedTime` is the browser's seconds value. CSS Animations 1 §4.4: "The time window during which the animation is active (`duration` x `iteration-count`) is known as the active duration." CSS Animations 1 §5.2: "In this case the value of the elapsedTime member of the event is equal to the active duration." CSS Transitions 1 §6.2: "The value of elapsedTime for this event is equal to the value of transition-duration." Delay is outside both of those.
  */
 describe('rn-web bridge: animation and transition end', () => {
   function host(container: HTMLElement, testId: string): HTMLElement {
@@ -282,12 +285,10 @@ describe('rn-web bridge: animation and transition end', () => {
     fireTransitionEnd(node, 'background-color', 0.28);
     fireTransitionEnd(node, 'opacity', 0);
     fireAnimationEnd(node, 'fade', 0, '::before');
+    fireTransitionEnd(node, 'opacity', 0.5, '::after');
 
     expect(onClick).toHaveBeenCalledTimes(1);
-    expect(onAnimationEnd.mock.calls).toEqual([
-      [{ animationName: 'fade', elapsedTime: 1 }],
-      [{ animationName: 'fade', elapsedTime: 0 }],
-    ]);
+    expect(onAnimationEnd.mock.calls).toEqual([[{ animationName: 'fade', elapsedTime: 1 }]]);
     expect(onTransitionEnd.mock.calls).toEqual([
       [{ elapsedTime: 0.28, propertyName: 'backgroundColor' }],
       [{ elapsedTime: 0, propertyName: 'opacity' }],
@@ -368,6 +369,155 @@ describe('rn-web bridge: animation and transition end', () => {
     fireAnimationEnd(node, 'fade', 1);
     fireTransitionEnd(node, 'opacity', 0.2);
     expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it('detaches the listener when both callbacks are removed', () => {
+    const onAnimationEnd = jest.fn();
+    const onTransitionEnd = jest.fn();
+    const Box = styled.View``;
+    const { container, rerender } = render(
+      <Box onAnimationEnd={onAnimationEnd} onTransitionEnd={onTransitionEnd} testID="box" />
+    );
+    const node = host(container, 'box');
+
+    fireAnimationEnd(node, 'fade', 0.4);
+    expect(onAnimationEnd).toHaveBeenCalledTimes(1);
+
+    rerender(<Box testID="box" />);
+    fireAnimationEnd(node, 'fade', 1);
+    fireTransitionEnd(node, 'opacity', 0.2);
+
+    expect(onAnimationEnd).toHaveBeenCalledTimes(1);
+    expect(onTransitionEnd).not.toHaveBeenCalled();
+  });
+
+  it('follows a swapped caller ref while a callback is set, and a ref added later', () => {
+    const onAnimationEnd = jest.fn();
+    const Box = styled.View``;
+    const refA = React.createRef<HTMLElement>();
+    const refB = React.createRef<HTMLElement>();
+    const { rerender, unmount } = render(
+      <Box onAnimationEnd={onAnimationEnd} ref={refA} testID="box" />
+    );
+    const node = refA.current;
+    expect(node).toBeInstanceOf(HTMLElement);
+
+    rerender(<Box onAnimationEnd={onAnimationEnd} ref={refB} testID="box" />);
+    expect(refB.current).toBe(node);
+    expect(refA.current).toBeNull();
+
+    fireAnimationEnd(node as HTMLElement, 'fade', 0.2);
+    expect(onAnimationEnd).toHaveBeenCalledTimes(1);
+
+    rerender(<Box onAnimationEnd={onAnimationEnd} testID="box" />);
+    expect(refB.current).toBeNull();
+    rerender(<Box onAnimationEnd={onAnimationEnd} ref={refA} testID="box" />);
+    expect(refA.current).toBe(node);
+
+    unmount();
+    expect(refA.current).toBeNull();
+    fireAnimationEnd(node as HTMLElement, 'fade', 0.2);
+    expect(onAnimationEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-invokes an inline ref on re-render while a callback is set', () => {
+    const onAnimationEnd = jest.fn();
+    const Box = styled.View``;
+    const seen: unknown[] = [];
+    const { rerender } = render(
+      <Box
+        onAnimationEnd={onAnimationEnd}
+        ref={(node: unknown) => {
+          seen.push(node);
+        }}
+        testID="reffed"
+      />
+    );
+    const node = seen[0];
+    expect(node).toBeInstanceOf(HTMLElement);
+
+    rerender(
+      <Box
+        onAnimationEnd={onAnimationEnd}
+        ref={(next: unknown) => {
+          seen.push(next);
+        }}
+        testID="reffed"
+      />
+    );
+
+    expect(seen).toEqual([node, null, node]);
+    fireAnimationEnd(node as HTMLElement, 'fade', 0.3);
+    expect(onAnimationEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires on a FlatList, whose ref is the list instance, via its scrollable node', () => {
+    const onAnimationEnd = jest.fn();
+    const List = styled.FlatList``;
+    const { container } = render(
+      <List
+        data={['a']}
+        onAnimationEnd={onAnimationEnd}
+        renderItem={() => <span>a</span>}
+        testID="list"
+      />
+    );
+    fireAnimationEnd(host(container, 'list'), 'fade', 0.4);
+    expect(onAnimationEnd).toHaveBeenCalledWith({ animationName: 'fade', elapsedTime: 0.4 });
+  });
+
+  it('fires on a SectionList and a VirtualizedList through the same scrollable node', () => {
+    const onAnimationEnd = jest.fn();
+    const onTransitionEnd = jest.fn();
+    const Sections = styled.SectionList``;
+    const Virtual = styled.VirtualizedList``;
+    const { container } = render(
+      <>
+        <Sections
+          keyExtractor={(item: string) => item}
+          onAnimationEnd={onAnimationEnd}
+          renderItem={() => <span>a</span>}
+          sections={[{ data: ['a'] }]}
+          testID="sections"
+        />
+        <Virtual
+          data={['a']}
+          getItem={(data: readonly string[], index: number) => data[index]}
+          getItemCount={(data: readonly string[]) => data.length}
+          keyExtractor={(item: string) => item}
+          onTransitionEnd={onTransitionEnd}
+          renderItem={() => <span>b</span>}
+          testID="virtual"
+        />
+      </>
+    );
+    fireAnimationEnd(host(container, 'sections'), 'fade', 0.4);
+    fireTransitionEnd(host(container, 'virtual'), 'opacity', 0.2);
+    expect(onAnimationEnd).toHaveBeenCalledWith({ animationName: 'fade', elapsedTime: 0.4 });
+    expect(onTransitionEnd).toHaveBeenCalledWith({ elapsedTime: 0.2, propertyName: 'opacity' });
+  });
+
+  it('warns when the ref is not the element the CSS is on', () => {
+    resetWarnOnce();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const onAnimationEnd = jest.fn();
+      const Frame = styled.KeyboardAvoidingView``;
+      const { container } = render(
+        <Frame onAnimationEnd={onAnimationEnd} testID="frame">
+          <span>x</span>
+        </Frame>
+      );
+      const node = container.querySelector('[data-testid="frame"]');
+      expect(node).toBeInstanceOf(HTMLElement);
+      fireAnimationEnd(node as HTMLElement, 'fade', 0.4);
+      expect(onAnimationEnd).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledWith(
+        "[sc] onAnimationEnd and onTransitionEnd did not run because this component's ref is not the element the CSS is on. Move the callback to a styled View or Text. FlatList, SectionList, and VirtualizedList do run it. KeyboardAvoidingView does not, so put the callback on a styled View inside it."
+      );
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('keeps a caller ref when the end callbacks are set', () => {
