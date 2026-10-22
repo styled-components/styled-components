@@ -533,6 +533,59 @@ describe('StyleSheetManager', () => {
       expect(console.warn).not.toHaveBeenCalled();
     });
 
+    it('does not warn when same-named plugins sit under different namespaces', () => {
+      const upper = {
+        decl: (prop: string, value: string) => ({ prop, value: value.toUpperCase() }),
+        name: 'p',
+      };
+      const lower = {
+        decl: (prop: string, value: string) => ({ prop, value: value.toLowerCase() }),
+        name: 'p',
+      };
+      const Box = BoxFactory();
+
+      render(
+        <>
+          <StyleSheetManager namespace="#a" plugins={[upper]}>
+            <Box>A</Box>
+          </StyleSheetManager>
+          <StyleSheetManager namespace="#b" plugins={[lower]}>
+            <Box>B</Box>
+          </StyleSheetManager>
+        </>
+      );
+
+      expect(console.warn).not.toHaveBeenCalled();
+      const css = getCSS(document);
+      expect(css).toMatch(/#a \.[\w-]+\{color:RED;\}/);
+      expect(css).toMatch(/#b \.[\w-]+\{color:red;\}/);
+    });
+
+    it('warns when same-named plugins share a namespace', () => {
+      const upper = {
+        decl: (prop: string, value: string) => ({ prop, value: value.toUpperCase() }),
+        name: 'p',
+      };
+      const lower = {
+        decl: (prop: string, value: string) => ({ prop, value: value.toLowerCase() }),
+        name: 'p',
+      };
+      const Box = BoxFactory();
+
+      render(
+        <>
+          <StyleSheetManager namespace="#a" plugins={[upper]}>
+            <Box>A</Box>
+          </StyleSheetManager>
+          <StyleSheetManager namespace="#a" plugins={[lower]}>
+            <Box>B</Box>
+          </StyleSheetManager>
+        </>
+      );
+
+      expect(console.warn).toHaveBeenCalledTimes(1);
+    });
+
     it('does not warn in production', () => {
       (global as { __DEV__: boolean }).__DEV__ = false;
       try {

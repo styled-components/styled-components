@@ -70,8 +70,9 @@ function composeDecl(prev: DeclTransform, next: DeclTransform): DeclTransform {
 }
 
 /**
- * Plugins already seen in this process, keyed by name. Allocated on first
- * use inside the dev branch so a production bundle does not build it.
+ * Plugins already seen in this process, keyed by name plus namespace.
+ * Allocated on first use inside the dev branch so a production bundle does
+ * not build it.
  */
 let seenPluginsByName: Map<string, SCPlugin> | undefined;
 
@@ -82,24 +83,27 @@ let seenPluginsByName: Map<string, SCPlugin> | undefined;
  * renders first supplies the CSS for every subtree using the name. Object
  * identity is the right check for a warning and the wrong input for the
  * hash: a plugin object on the server is never the one on the client, and
- * function source is not stable across the two builds.
+ * function source is not stable across the two builds. The namespace also
+ * feeds the hash, so the same name under two namespaces is no collision.
  */
-function notePluginName(plugin: SCPlugin): void {
+function notePluginName(plugin: SCPlugin, namespace: string | undefined): void {
   if (__DEV__) {
     const name = plugin.name;
+    /** NUL cannot appear in a CSS selector, so no name/namespace pair aliases another. */
+    const key = namespace ? name + '\0' + namespace : name;
     let seen = seenPluginsByName;
     if (seen === undefined) {
       seen = new Map();
       seenPluginsByName = seen;
     }
-    const prior = seen.get(name);
+    const prior = seen.get(key);
     if (prior === undefined) {
-      seen.set(name, plugin);
+      seen.set(key, plugin);
     } else if (prior !== plugin) {
       warnOnce(
         'plugin-name-collision',
         `plugin name "${name}" is used by two different plugins. Every subtree using that name gets the same class, and the first one to render supplies the CSS for all of them. Give each plugin a distinct name.`,
-        name
+        key
       );
     }
   }
@@ -172,7 +176,7 @@ export default function createCompiler({
     const plugin = plugins[i];
     const name = plugin?.name;
     if (!name) throw throwStyledError(15);
-    if (__DEV__ && plugin) notePluginName(plugin);
+    if (__DEV__ && plugin) notePluginName(plugin, options.namespace);
     h = phash(h, name);
   }
   if (options.namespace) h = phash(h, options.namespace);
