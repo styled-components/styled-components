@@ -17,14 +17,12 @@
       // referenced by path from workspace babel configs.
       "entry": ["scripts/**/*.ts", "babel.config.cjs", "babel-preset.cjs"],
       // Referenced by string from babel-preset.cjs but declared by
-      // packages/styled-components (hoisted node_modules resolution).
+      // packages/styled-components, the workspace that runs the preset.
       "ignoreDependencies": ["@babel/preset-env"]
     },
     "packages/benchmarks": {
       // Headless runners are executed directly.
-      "entry": ["headless/**/*.mjs"],
-      // Referenced only as a webpack/babel alias target for `react-native`.
-      "ignoreDependencies": ["react-native-web"]
+      "entry": ["headless/**/*.mjs"]
     },
     "packages/ios-benchmark": {
       // Bench orchestration scripts are executed directly.
@@ -39,11 +37,7 @@
         // Babel engine, resolved by Metro/expo tooling rather than imported.
         "@babel/core",
         // Not referenced anywhere in the app; knip infers it from expo config.
-        "expo-updates",
-        // metro.config.js resolves it from the workspace root on purpose, to
-        // pin Metro to the CJS build; declaring it here would claim the app
-        // owns a copy it deliberately does not.
-        "pretty-format"
+        "expo-updates"
       ]
     },
     "packages/sandbox": {
@@ -52,8 +46,6 @@
     },
     "packages/styled-components": {
       "entry": [
-        // Published subpath (styled-components/test-utils).
-        "test-utils/index.ts",
         // Entries of the type-surface project (tsconfig.test-types.json).
         "src/test/types.tsx",
         "src/test/types.native.tsx",
@@ -72,12 +64,7 @@
         "@babel/preset-typescript",
         "@react-native/babel-preset",
         "babel-jest",
-        "babel-plugin-add-module-exports",
-        // Guarded optional require; ships transitively with react-native.
-        "@react-native/normalize-colors",
-        // Type-only import in the published test-utils; consumers of
-        // enzymeFind bring their own enzyme.
-        "enzyme"
+        "babel-plugin-add-module-exports"
       ]
     },
     "packages/styled-components/native": {

@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm --filter styled-components build",
+    "check:type-resolution": "node scripts/check-type-resolution.mjs packages/styled-components/tsconfig.json packages/styled-components/tsconfig.test-types.json packages/sandbox/tsconfig.json",
     "sandbox": "pnpm --filter sandbox dev",
     "release": "pnpm --filter styled-components prepublishOnly && changeset publish",
     "postinstall": "pnpm --filter styled-components generateErrors",
@@ -12,7 +13,6 @@
     "format:check": "biome ci",
     "knip": "knip --config knip.jsonc",
     "lint-staged": "lint-staged",
-    "size": "pnpm --filter styled-components size",
     "test": "pnpm --filter styled-components test",
     "test:changeset-changelog": "node --test scripts/release-notes/changelog.test.ts scripts/release-notes/prerelease-aggregation.test.ts scripts/release-notes/build-version-pr-body.test.ts",
     "test:effect-gate": "node --test scripts/effect-gate.test.ts",
@@ -29,7 +29,7 @@
   "engines": {
     "node": ">= 14"
   },
-  "packageManager": "pnpm@10.0.0",
+  "packageManager": "pnpm@12.11.1",
   "devDependencies": {
     "@biomejs/biome": "2.5.7",
     "@changesets/cli": "^2.27.7",
@@ -41,17 +41,5 @@
   },
   "lint-staged": {
     "*": "biome check --write --no-errors-on-unmatched"
-  },
-  "pnpm": {
-    "overrides": {
-      "@types/react": "19",
-      "@types/react-dom": "19",
-      "react": "19.2.3",
-      "react-dom": "19.2.3",
-      "fast-xml-parser": ">=5.7.0",
-      "postcss": ">=8.5.10",
-      "serialize-javascript": ">=7.0.5",
-      "shell-quote": ">=1.8.4"
-    }
   }
 }

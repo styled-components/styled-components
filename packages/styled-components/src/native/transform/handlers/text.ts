@@ -25,11 +25,11 @@ const DECORATION_STYLES = new Set(['solid', 'double', 'dotted', 'dashed', 'wavy'
  */
 const TEXT_ALIGN_NATIVE_PASS = new Set(['auto', 'left', 'right', 'center', 'justify']);
 
-export function textAlignHandler(tokens: Token[]): Dict<any> | null {
+export function textAlignHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
-  const value = t.name!;
+  const value = t.name;
 
   if (__NATIVE_WEB__) {
     return { textAlign: value };
@@ -45,7 +45,7 @@ export function textAlignHandler(tokens: Token[]): Dict<any> | null {
     if (__DEV__) {
       warnOnce(
         'native-text-align-justify-all-degrades',
-        '`text-align: justify-all` falls back to `justify` on React Native because iOS and Android cannot justify the final line separately. rn-web keeps the authored value.',
+        '`text-align: justify-all` falls back to `justify` on React Native because iOS and Android cannot justify the final line separately. rn-web keeps the authored value. Use `text-align: justify` to make the fallback explicit.',
         value
       );
     }
@@ -66,15 +66,14 @@ register('textAlignAll', textAlignHandler);
  * Supports the dual-line form `underline line-through`, which is stored as
  * a single space-separated value in canonical order (underline first).
  */
-export function textDecorationShorthand(tokens: Token[]): Dict<any> | null {
+export function textDecorationShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   let line: string | null = null;
   let style: string | null = null;
   let color: Token | null = null;
   let thickness: string | null = null;
 
-  while (!stream.eof()) {
-    const t = stream.peek()!;
+  for (let t = stream.peek(); t !== undefined; t = stream.peek()) {
     // `text-decoration-thickness` component: a <length-percentage> or the
     // `auto` / `from-font` keywords. RN can't honor it, but the rest of
     // the shorthand should still apply; consume the token, remember it,
@@ -89,31 +88,32 @@ export function textDecorationShorthand(tokens: Token[]): Dict<any> | null {
       stream.consume();
       continue;
     }
-    if (t.kind === TokenKind.Ident && DECORATION_LINES.has(t.name!)) {
+    if (t.kind === TokenKind.Ident && DECORATION_LINES.has(t.name)) {
       if (line !== null) return null;
-      const collected: string[] = [t.name!];
+      const collected: string[] = [t.name];
       stream.consume();
-      while (!stream.eof()) {
-        const next = stream.peek()!;
-        if (next.kind === TokenKind.Ident && DECORATION_LINES.has(next.name!)) {
-          collected.push(next.name!);
-          stream.consume();
-        } else break;
+      for (
+        let next = stream.peek();
+        next?.kind === TokenKind.Ident && DECORATION_LINES.has(next.name);
+        next = stream.peek()
+      ) {
+        collected.push(next.name);
+        stream.consume();
       }
       if (collected.length > 1 && collected.indexOf('none') !== -1) return null;
       collected.sort().reverse();
       line = collected.join(' ');
       continue;
     }
-    if (t.kind === TokenKind.Ident && DECORATION_STYLES.has(t.name!)) {
+    if (t.kind === TokenKind.Ident && DECORATION_STYLES.has(t.name)) {
       if (style !== null) return null;
-      style = t.name!;
+      style = t.name;
       stream.consume();
       if (!__NATIVE_WEB__ && style === 'wavy') {
         if (__DEV__) {
           warnOnce(
             'native-text-decoration-style-wavy',
-            '`text-decoration-style: wavy` is ignored on React Native because iOS and Android cannot draw wavy underlines. Falling back to solid.',
+            '`text-decoration-style: wavy` is ignored on React Native because iOS and Android cannot draw wavy underlines. Falling back to solid. Use `solid`, `double`, `dotted`, or `dashed` for a style that renders.',
             style
           );
         }
@@ -133,11 +133,11 @@ export function textDecorationShorthand(tokens: Token[]): Dict<any> | null {
   if (__DEV__ && color !== null && getReactNativePlatformOS() === 'android') {
     warnOnce(
       'native-text-decoration-color-android',
-      '`text-decoration-color` is ignored on Android in React Native. Underlines use the text color there; iOS and rn-web keep the authored color.',
+      '`text-decoration-color` is ignored on Android in React Native. Underlines use the text color there; iOS and rn-web keep the authored color. Set the text `color` to the underline color you want so every platform matches.',
       color.raw
     );
   }
-  const out: Dict<any> = {
+  const out: Dict<unknown> = {
     textDecorationLine: line !== null ? line : 'none',
     textDecorationStyle: style !== null ? style : 'solid',
     // An omitted color resets to the initial currentcolor. RN paints the
@@ -174,8 +174,8 @@ function makeUnsupportedTextDecorationLonghand(
   styleKey: 'textDecorationThickness' | 'textUnderlineOffset' | 'textUnderlinePosition',
   cssName: string,
   code: string
-): (tokens: Token[]) => Dict<any> | null {
-  return (tokens: Token[]): Dict<any> | null => {
+): (tokens: Token[]) => Dict<unknown> | null {
+  return (tokens: Token[]): Dict<unknown> | null => {
     const raw = tokens
       .map(t => t.raw)
       .join(' ')
@@ -219,13 +219,12 @@ export const textUnderlinePositionHandler = makeUnsupportedTextDecorationLonghan
  * `text-decoration-line: <line>{1,4}`. The `none` keyword is exclusive; it
  * can't combine with any other line keyword.
  */
-export function textDecorationLineShorthand(tokens: Token[]): Dict<any> | null {
+export function textDecorationLineShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const lines: string[] = [];
-  while (!stream.eof()) {
-    const t = stream.consume()!;
-    if (t.kind !== TokenKind.Ident || !DECORATION_LINES.has(t.name!)) return null;
-    lines.push(t.name!);
+  for (let t = stream.consume(); t !== undefined; t = stream.consume()) {
+    if (t.kind !== TokenKind.Ident || !DECORATION_LINES.has(t.name)) return null;
+    lines.push(t.name);
   }
   if (lines.length === 0) return null;
   if (lines.length > 1 && lines.indexOf('none') !== -1) return null;
@@ -241,7 +240,7 @@ export function textDecorationLineShorthand(tokens: Token[]): Dict<any> | null {
  * through raw: the browser ships the full grammar, and react-native-web
  * deprecates the textShadow* longhands in favor of a `textShadow` string.
  */
-export function textShadowShorthand(tokens: Token[], rawValue: string): Dict<any> | null {
+export function textShadowShorthand(tokens: Token[], rawValue: string): Dict<unknown> | null {
   if (__NATIVE_WEB__) {
     return { textShadow: rawValue };
   }
@@ -295,7 +294,7 @@ function isNoneLayer(layer: Token[]): boolean {
 }
 
 /** `shadow-offset` / `text-shadow-offset`: `<x> [<y>]` → `{width, height}`. */
-export function shadowOffsetShorthand(tokens: Token[]): Dict<any> | null {
+export function shadowOffsetShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const x = consumeDimensionLike(stream);
   if (x === null) return null;
@@ -304,7 +303,7 @@ export function shadowOffsetShorthand(tokens: Token[]): Dict<any> | null {
   return { shadowOffset: { width: tokenToValue(x), height: tokenToValue(y) } };
 }
 
-export function textShadowOffsetShorthand(tokens: Token[]): Dict<any> | null {
+export function textShadowOffsetShorthand(tokens: Token[]): Dict<unknown> | null {
   const r = shadowOffsetShorthand(tokens);
   if (r === null) return null;
   return { textShadowOffset: r.shadowOffset };

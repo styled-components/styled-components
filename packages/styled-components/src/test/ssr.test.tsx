@@ -774,7 +774,7 @@ describe('ssr', () => {
       </style>
     `);
     expect(warnSpy.mock.calls[0][0]).toMatchInlineSnapshot(
-      `"[sc] plugin "stylisRTLPlugin" is a stylis middleware function; v7 plugins are objects with an \`rw\` and/or \`decl\` hook."`
+      `"[sc] plugin "stylisRTLPlugin" is a stylis middleware function; v7 plugins are objects with an \`rw\` and/or \`decl\` hook. Rewrite the plugin as such an object."`
     );
     warnSpy.mockRestore();
   });

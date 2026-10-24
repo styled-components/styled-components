@@ -4,6 +4,7 @@
  * stub so the assertions don't depend on RN's runtime evaluation.
  */
 import {
+  __buildSegmentedInterpolationForTests as buildSegmentedInterpolation,
   __interpolateTransformForTests as interpolateTransform,
   __parseTransformStringForTests as parseTransformString,
   __transformIdentityForTests as transformIdentity,
@@ -310,6 +311,24 @@ describe('interpolateTransform', () => {
     expect((out![0].translateX as FakeInterp).outputRange).toEqual([0, 50]);
   });
 
+  // A transform entry whose value is neither a number nor a string (RN's
+  // `{ matrix: [..] }`) cannot be interpolated here. RN rejects an outputRange
+  // holding anything but numbers or strings, so the entry reads as absent and
+  // takes the kind's identity instead of reaching the range.
+  it('never puts a non-scalar array-form entry value into an outputRange', () => {
+    const out = interpolateTransform(
+      fakeProgress as any,
+      [{ matrix: [1, 0, 0, 1, 0, 0] }, { translateX: 10 }],
+      [{ matrix: [1, 0, 0, 1, 20, 0] }, { translateX: 30 }],
+      ['matrix', 'translateX'],
+      LINEAR,
+      300
+    );
+    const matrixRange = (out![0].matrix as FakeInterp).outputRange;
+    expect(matrixRange.every(v => typeof v === 'number' || typeof v === 'string')).toBe(true);
+    expect((out![1].translateX as FakeInterp).outputRange).toEqual([10, 30]);
+  });
+
   it('returns null when neither prev nor next is parseable', () => {
     expect(
       interpolateTransform(fakeProgress as any, 42, 99, ['translateX'], LINEAR, 300)
@@ -393,5 +412,57 @@ describe('interpolateTransform', () => {
     expect(longLen).toBeGreaterThan(shortLen);
     // 2000ms at 60fps = 120 frames; expect at least that many stops.
     expect(longLen).toBeGreaterThanOrEqual(120);
+  });
+});
+
+describe('buildSegmentedInterpolation', () => {
+  function build(values: Array<{ offset: number; value: unknown }>): FakeInterp {
+    return buildSegmentedInterpolation(
+      fakeProgress as any,
+      values,
+      values.slice(1).map(() => undefined),
+      LINEAR,
+      300
+    ) as FakeInterp;
+  }
+
+  it('interpolates numbers over a numeric range', () => {
+    const out = build([
+      { offset: 0, value: 0 },
+      { offset: 1, value: 10 },
+    ]);
+    expect(out.inputRange).toEqual([0, 1]);
+    expect(out.outputRange).toEqual([0, 10]);
+    expect(out.extrapolate).toBe('clamp');
+  });
+
+  it('interpolates matching-unit strings numerically and keeps the unit', () => {
+    const out = build([
+      { offset: 0, value: '0deg' },
+      { offset: 1, value: '180deg' },
+    ]);
+    expect(out.outputRange).toEqual(['0deg', '180deg']);
+  });
+
+  it('extends the range to cover 0 and 1, holding the nearest output', () => {
+    const out = build([
+      { offset: 0.2, value: 4 },
+      { offset: 0.8, value: 8 },
+    ]);
+    expect(out.inputRange).toEqual([0, 0.2, 0.8, 1]);
+    expect(out.outputRange).toEqual([4, 4, 8, 8]);
+  });
+
+  // React Native rejects an interpolation whose outputRange mixes numbers and
+  // strings, so a keyframe set that starts as a string and later holds a number
+  // (`width: 50%` then `width: 0`) has to stay a pure string range.
+  it('keeps the output range all strings when a later keyframe value is a number', () => {
+    const out = build([
+      { offset: 0, value: '50%' },
+      { offset: 1, value: 0 },
+    ]);
+    expect(out.outputRange.every(v => typeof v === 'string')).toBe(true);
+    expect(out.outputRange[0]).toBe('50%');
+    expect(out.outputRange[out.outputRange.length - 1]).toBe('0');
   });
 });

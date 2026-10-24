@@ -20,7 +20,7 @@ These days, we highly recommend trying an AI coding assistant to get instant fee
 
 ### Environment setup
 
-1. Ensure `pnpm` is installed (https://pnpm.io/installation)
+1. Ensure `pnpm` is installed (https://pnpm.io/installation). The repository pins its pnpm version in `package.json`, and pnpm 11.10 or newer switches to that version automatically, so Corepack isn't needed
 2. [Fork the repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo), then pull it down to your disk: `git clone git@github.com:YOUR_USERNAME/styled-components.git`
 3. Hop into the styled-components folder and run `pnpm install`
 4. Set the base repository as upstream: `git remote add upstream git@github.com:styled-components/styled-components.git` (makes it easier to pull updates to your fork)
@@ -32,7 +32,7 @@ Helpful commands:
 - run unit tests: `pnpm test`
 - check code style: `pnpm format:check` (or `pnpm format` to fix; handled automatically if you have the Biome extension installed in your IDE)
 - run build: `pnpm build`
-- run dev sandbox: `pnpm --filter sandbox dev` (or just `pnpm dev` if you're in that folder)
+- run dev sandbox: `pnpm --filter sandbox dev` (or just `pnpm dev` if you're in that folder). The sandbox uses the built library, so run `pnpm build` after changing library source
 
 ### Making changes
 
@@ -44,7 +44,7 @@ Here is a quick guide to doing code contributions to the library.
 
 2. See [Environment setup](#environment-setup)
 
-3. Update your local copy of the `main` branch with the latest code: `git checkout main && git pull -f upstream/main`
+3. Update your local copy of the `main` branch with the latest code: `git checkout main && git pull --ff-only upstream main`
 
 4. Create a branch with a meaningful name for the issue: `git checkout -b fix-something`
 
@@ -69,14 +69,11 @@ Here is a quick guide to doing code contributions to the library.
 
 ### Security updates
 
-For transitive dependency CVEs, pin the patched version in root `package.json` under `pnpm.overrides`. Do not add a root-level `dependencies` entry for packages the repo does not import directly.
+For transitive dependency CVEs, pin the patched version in `pnpm-workspace.yaml` under `overrides`. Do not add a root-level `dependencies` entry for packages the repo does not import directly.
 
-```json
-"pnpm": {
-  "overrides": {
-    "shell-quote": ">=1.8.4"
-  }
-}
+```yaml
+overrides:
+  shell-quote: '>=1.8.4'
 ```
 
 Run `pnpm install`, commit the lockfile, and confirm the vulnerable version is gone. Use `>=` to match existing override entries. No changeset needed. If the package is a direct dependency of a workspace package, bump it there instead.
@@ -91,13 +88,14 @@ To run the benchmarks run:
 cd packages/benchmarks
 ```
 
-Then build the benchmark page:
+Then build styled-components and the benchmark page:
 
 ```sh
+pnpm --filter styled-components build
 pnpm build
 ```
 
-Then open the page in your browser:
+Then open the page in your browser (`pnpm open` uses the macOS `open` command; on other systems, open `index.html` in a browser):
 
 ```sh
 pnpm open
@@ -105,11 +103,7 @@ pnpm open
 
 On the page which opens, select the benchmark to run and click the "Run" button in your browser.
 
-You may need to re-build styled-components and/or the benchmarks package after making changes if you want to re-run the benchmarks with your changes.
-
-## Credits
-
-These contribution guidelines are based on https://github.com/moya/contributors, big thanks to @alloy, @orta et al. for the inspiration and guidance.
+Re-build styled-components and then the benchmarks package after making changes if you want to re-run the benchmarks with your changes. See [packages/benchmarks/README.md](./packages/benchmarks/README.md) for the headless runs.
 
 ## Financial contributions
 
@@ -117,10 +111,12 @@ Please see the "Sponsor" button at the top of the repository, thank you!
 
 ## Credits
 
+These contribution guidelines are based on https://github.com/moya/contributors, big thanks to @alloy, @orta et al. for the inspiration and guidance.
+
 ### Contributors
 
 Thank you to all the people who have already contributed to styled-components!
-<a href="graphs/contributors"><img src="https://opencollective.com/styled-components/contributors.svg?width=890" /></a>
+<a href="https://github.com/styled-components/styled-components/graphs/contributors"><img src="https://opencollective.com/styled-components/contributors.svg?width=890" /></a>
 
 ### Backers
 

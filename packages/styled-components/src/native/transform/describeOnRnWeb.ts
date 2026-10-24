@@ -8,7 +8,8 @@ export function describeOnRnWeb(run: () => void): void;
 export function describeOnRnWeb(title: string, run: () => void): void;
 export function describeOnRnWeb(titleOrCb: string | (() => void), cbMaybe?: () => void): void {
   const title = typeof titleOrCb === 'function' ? 'on rn-web' : titleOrCb;
-  const run = typeof titleOrCb === 'function' ? titleOrCb : cbMaybe!;
+  const run = typeof titleOrCb === 'function' ? titleOrCb : cbMaybe;
+  if (run === undefined) throw new Error('describeOnRnWeb(title, run) needs a run callback.');
   const g = globalThis as { __NATIVE_WEB__?: boolean };
 
   describe(title, () => {

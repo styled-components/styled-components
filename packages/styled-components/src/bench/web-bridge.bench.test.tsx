@@ -33,7 +33,6 @@ import { compareBench } from './bench-utils';
 // native package's `browser` field does at consumer build time).
 jest.mock('react-native', () => require('react-native-web'));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const styledNativeMod = require('../native') as typeof import('../native');
 const styledNative = styledNativeMod.default;
 

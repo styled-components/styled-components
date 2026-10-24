@@ -40,7 +40,7 @@ export interface SCPlugin {
 
 export type ICreateCompiler = {
   options?: { namespace?: string | undefined } | undefined;
-  plugins?: SCPlugin[] | undefined;
+  plugins?: ReadonlyArray<SCPlugin> | undefined;
 };
 
 function composeDecl(prev: DeclTransform, next: DeclTransform): DeclTransform {
@@ -89,8 +89,7 @@ function composeRw(prev: SelectorTransform, next: SelectorTransform): SelectorTr
 
 export default function createCompiler({
   options = EMPTY_OBJECT,
-  // EMPTY_ARRAY is `Readonly<any[]>`; SCPlugin[] needs the mutable type.
-  plugins = EMPTY_ARRAY as SCPlugin[],
+  plugins = EMPTY_ARRAY,
 }: ICreateCompiler = EMPTY_OBJECT) {
   // Multiple plugins compose left-to-right.
   let postProcessSelector: SelectorTransform | undefined;

@@ -4,7 +4,7 @@ import { consumeDimensionLike, tokenToValue, withoutSlashes } from '../shorthand
 import { Token } from '../tokens';
 import { TokenStream } from '../tokenStream';
 
-function twoValue(tokens: Token[], startKey: string, endKey: string): Dict<any> | null {
+function twoValue(tokens: Token[], startKey: string, endKey: string): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const first = consumeDimensionLike(stream);
   if (first === null) return null;
@@ -40,7 +40,7 @@ function insetBlockShorthand(tokens: Token[]) {
   return twoValue(tokens, 'insetBlockStart', 'insetBlockEnd');
 }
 
-function insetShorthand(tokens: Token[]): Dict<any> | null {
+function insetShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   const values = [];
   while (!stream.eof()) {

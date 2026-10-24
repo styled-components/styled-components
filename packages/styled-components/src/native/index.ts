@@ -63,6 +63,7 @@ type KnownComponents = (typeof aliases)[number];
 
 /** Isolates RN-provided components since they don't expose a helper type for this. */
 type RNComponents = {
+  // biome-ignore lint/suspicious/noExplicitAny: public type of `styled.View` and kin. With `unknown`, `ComponentType<ViewProps>` no longer extends the check, every entry resolves to `never`, and `tsc -p tsconfig.test-types.json` fails with TS2769 in src/test/types.native.tsx ("Type '{ flex: number; backgroundColor: string; }' is not assignable to type 'never'").
   [K in keyof typeof reactNative]: (typeof reactNative)[K] extends React.ComponentType<any>
     ? (typeof reactNative)[K]
     : never;
@@ -88,7 +89,7 @@ function getScrollerBase(alias: string): NativeTarget {
   if (base === undefined) {
     base = styled(reactNative[alias as keyof typeof reactNative] as NativeTarget)`
       flex-shrink: 0;
-    ` as unknown as NativeTarget;
+    `;
     cachedScrollerBases.set(alias, base);
   }
   return base;

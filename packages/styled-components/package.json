@@ -40,7 +40,7 @@
     "type": "git",
     "url": "git+https://github.com/styled-components/styled-components.git"
   },
-  "files": ["LICENSE", "README.md", "dist", "native", "plugins", "test-utils"],
+  "files": ["LICENSE", "README.md", "dist", "native", "!native/node_modules", "plugins"],
   "keywords": ["react", "css", "css-in-js", "styled-components", "styling"],
   "author": "Glen Maddern",
   "license": "MIT",
@@ -56,7 +56,8 @@
     "react-dom": ">= 19.0.0",
     "react-native": ">= 0.85.0",
     "react-native-reanimated": ">= 4.0.0",
-    "react-native-safe-area-context": ">= 5.0.0"
+    "react-native-safe-area-context": ">= 5.0.0",
+    "react-native-web": ">= 0.20.0"
   },
   "peerDependenciesMeta": {
     "react-dom": {
@@ -69,6 +70,9 @@
       "optional": true
     },
     "react-native-safe-area-context": {
+      "optional": true
+    },
+    "react-native-web": {
       "optional": true
     }
   },

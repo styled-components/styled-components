@@ -47,7 +47,7 @@ export interface ContainerContextValue {
 
 const EMPTY_NAMED: Readonly<Record<string, ContainerEntry>> = Object.freeze({});
 
-export const EMPTY_CONTAINER_CTX: ContainerContextValue = Object.freeze({
+const EMPTY_CONTAINER_CTX: ContainerContextValue = Object.freeze({
   nearest: null,
   named: EMPTY_NAMED,
 });

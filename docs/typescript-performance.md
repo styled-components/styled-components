@@ -2,10 +2,9 @@
 
 ## Profiling
 
-- `~/.claude/tools/tsc-perf.sh measure tsconfig.test-types.json`
 - `npx tsc --noEmit --extendedDiagnostics --project tsconfig.test-types.json`
 - Delete tsbuildinfo for clean measurement.
-- Hot-spot detection + duplicate-package detection: `npx @typescript/analyze-trace /tmp/tsc-perf-trace`
+- Hot-spot detection + duplicate-package detection: `npx tsc --noEmit --generateTrace /tmp/tsc-perf-trace --project tsconfig.test-types.json`, then `npx @typescript/analyze-trace /tmp/tsc-perf-trace`
 
 ## Library self-check vs. consumer cost
 
@@ -25,7 +24,7 @@ stale. Raise the budget with `--update` only once the increase is understood.
 
 Design notes worth keeping:
 
-- The budget stores the measured figures plus a tolerance, not bare ceilings, so
+- The budget stores the measured figures, and the script applies a per-metric tolerance, rather than bare ceilings, so
   an improvement is reported ("run `--update` to bank it") instead of silently
   becoming slack for the next regression.
 - Memory is budgeted alongside the counters because the counters alone would have
@@ -40,7 +39,7 @@ Design notes worth keeping:
 - The fixture runs under `skipLibCheck: true`, which hides a broken `dist`: if
   the package's own declarations cannot resolve their dependencies, every export
   degrades to `any`, the fixture still compiles, and the run reports an enormous
-  fake win. `canary.tsx` is the guard. Its expressions error only while the types
+  fake win. `canary.tsx`, which the type-perf script writes into the fixture, is the guard. Its expressions error only while the types
   are intact, which is what keeps their `@ts-expect-error` directives used; once
   the types degrade the errors stop, `tsc` emits TS2578 on the now-unused
   directives, and the clean-compile gate catches it. Verify any change to that
@@ -95,7 +94,7 @@ Accepted limitation: a union whose members are all-optional still takes the fast
 
 ### `MakeAttrsOptional<P, K>`
 
-Defined as `FastOmit<P, K> & { [Key in Extract<keyof P, K>]?: P[Key] }`; direct mapped type rather than `Partial<Pick<P, K>>`.
+A direct mapped type over `FastOmit` rather than `Partial<Pick<P, K>>` (definition and JSDoc in `src/types.ts`).
 
 `Partial<Pick<P, K>>` forces TS to materialize an intermediate `Pick<P, K>` type that union-distributes across heavily-discriminated component prop types (antd `Button`, MUI), exploding past the TS complexity ceiling (TS2590). Direct mapped type avoids the intermediate. Saves ~6.5% total instantiations on the styled-components type test corpus (#5725).
 
@@ -148,7 +147,7 @@ load-bearing for the contextual typing of `.attrs({ as: 'label' })`: the literal
 `KnownTarget` becomes plain `string | ComponentType<any>`, the literal widens to
 `string` and downstream `ComponentPropsWithRef<Target>` resolves to the wrong
 element / event types - breaking ref typing for attrs-overridden styled
-components. The lib's `test/types.tsx:305-306` is the regression gate.
+components. The attrs `as`-override cases in `src/test/types.tsx` are the regression gate.
 
 Localizing the literal union to an attrs-only helper type keeps the literal
 narrowing but doesn't recover the win, since `Attrs<Props>` is referenced from

@@ -1,6 +1,6 @@
 /**
  * Render-path microbench. Measures per-render work on the native dynamic
- * render impl (`useDynamicImpl`);the path every styled native component
+ * render impl (`useDynamicImpl`), the path every styled native component
  * takes when its CSS isn't fully static.
  *
  * Three workloads:
@@ -10,8 +10,8 @@
  *     the adapter passthrough.
  *  3. Adapter passthrough in isolation.
  *
- * Hook overhead (`useContext`, `useMediaEnv`, `useContainerContext`,
- * `useRef`, the adapter's hooks) is well-known on V8 and not measured
+ * Hook overhead (context reads, `useMediaEnv`, `useRef`, the adapter's
+ * hooks) is well-known on V8 and not measured
  * here. Hermes characteristics differ; final validation belongs in
  * `packages/ios-benchmark`.
  */

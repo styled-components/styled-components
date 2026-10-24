@@ -10,7 +10,7 @@ import { TokenStream } from '../tokenStream';
  * currentColor.
  */
 
-function caretColorShorthand(tokens: Token[]): Dict<any> | null {
+function caretColorShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const first = stream.peek();
   if (first === undefined) return null;
@@ -36,7 +36,7 @@ function caretColorShorthand(tokens: Token[]): Dict<any> | null {
     if (__DEV__ && !__NATIVE_WEB__) {
       warnOnce(
         'native-caret-color-block',
-        "`caret-color`'s second value only affects block carets, which React Native does not render on iOS or Android. The first value still applies."
+        "`caret-color`'s second value only affects block carets, which React Native does not render on iOS or Android. The first value still applies. Write a single color to drop the warning."
       );
     }
   }
@@ -54,7 +54,7 @@ function caretColorShorthand(tokens: Token[]): Dict<any> | null {
     if (__DEV__) {
       warnOnce(
         'native-caret-color-ios',
-        '`caret-color` also tints the text-selection highlight on iOS because iOS exposes a single `selectionColor` for both surfaces. Android keeps the spec semantics where only the caret is colored.'
+        '`caret-color` also tints the text-selection highlight on iOS, which colors the caret and the selection together. Android keeps the spec semantics where only the caret is colored. Omit `caret-color` to keep the platform default selection color.'
       );
     }
     return { caretColor: v, cursorColor: v, selectionColor: v };

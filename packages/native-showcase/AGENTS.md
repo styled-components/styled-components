@@ -1,6 +1,6 @@
 ## native-showcase
 
-Expo Router app rendering every registry entry from `src/widgets/`. Used as the visual QA surface for v7 native polyfills across iOS, Android, and rn-web.
+Expo Router app rendering every registry entry from `src/widgets/`. Its purpose and widget rules are in the repo-root AGENTS.md, "native-showcase rules".
 
 ## Deep-link to a widget by slug (adb / xcrun)
 
@@ -28,7 +28,7 @@ Styled scrollers default `nestedScrollEnabled: true` (the library lifts it; user
 
 ## Source consumption
 
-Metro resolves `styled-components` and `styled-components/native` directly to the library's TypeScript source via `metro.config.js`. The babel config substitutes the build-time constants (`__SERVER__`, `__NATIVE__`, `__NATIVE_WEB__`, `__DEV__`) so source compiles in place. No `pnpm build` step is needed between editing library code and reloading the showcase - Metro picks up the change on next refresh.
+Metro resolves `styled-components` and `styled-components/native` directly to the library's TypeScript source via `metro.config.js`. The babel config substitutes the build-time constants (`__SERVER__`, `__NATIVE__`, `__NATIVE_WEB__`, `__DEV__`, `__VERSION__`) so source compiles in place. No `pnpm build` step is needed between editing library code and reloading the showcase; Metro picks up the change on next refresh.
 
 ## Theme tokens
 

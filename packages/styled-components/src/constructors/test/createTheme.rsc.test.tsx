@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 
-// Mock React.cache (not available in React 18 test env, but needed for RSC dedup)
+// React 19's client `cache` is a pass-through, so tests mock a request-scoped one.
 const mockCacheStore = new Map<Function, any>();
 
 jest.mock('react', () => {
@@ -21,22 +21,16 @@ jest.mock('../../utils/isRsc', () => ({ IS_RSC: true }));
 
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
-import { mainSheet } from '../../models/StyleSheetManager';
 import { resetGroupIds } from '../../sheet/GroupIDAllocator';
+import { extractStyleContents } from '../../test/rscStream';
 import styled, { createGlobalStyle, createTheme } from '../../index';
 import { StyleSheetManager } from '../../models/StyleSheetManager';
 import rscPlugin from '../../plugins/rsc';
-
-/** Extract all CSS rule text from <style> tags in rendered HTML */
-const extractStyleContents = (html: string): string =>
-  [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]).join('');
 
 describe('createTheme RSC integration', () => {
   beforeEach(() => {
     mockCacheStore.clear();
     resetGroupIds();
-    mainSheet.names = new Map();
-    mainSheet.clearTag();
   });
 
   describe('createTheme tokens in RSC render', () => {

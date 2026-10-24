@@ -11,12 +11,12 @@ const FLEX_DIRECTION = new Set(['row', 'row-reverse', 'column', 'column-reverse'
  * `flex: none | auto | <grow> [<shrink>] [<basis>]`
  * Matches the CSS spec short-circuits: `none` → 0/0/auto, `auto` → 1/1/auto.
  */
-export function flexShorthand(tokens: Token[]): Dict<any> | null {
+export function flexShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
 
   if (stream.tokens.length === 1) {
-    const t = stream.peek()!;
-    if (t.kind === TokenKind.Ident) {
+    const t = stream.peek();
+    if (t?.kind === TokenKind.Ident) {
       if (t.name === 'initial') return { flexGrow: 0, flexShrink: 1, flexBasis: 'auto' };
       if (t.name === 'none') return { flexGrow: 0, flexShrink: 0, flexBasis: 'auto' };
       if (t.name === 'auto') return { flexGrow: 1, flexShrink: 1, flexBasis: 'auto' };
@@ -27,17 +27,16 @@ export function flexShorthand(tokens: Token[]): Dict<any> | null {
   let flexShrink: number | undefined;
   let flexBasis: number | string | undefined;
 
-  while (!stream.eof()) {
-    const t = stream.peek()!;
+  for (let t = stream.peek(); t !== undefined; t = stream.peek()) {
     if (flexGrow === undefined && t.kind === TokenKind.Number) {
-      if (t.value! < 0) return null;
-      flexGrow = t.value!;
+      if (t.value < 0) return null;
+      flexGrow = t.value;
       stream.consume();
       // Second Number in sequence → flexShrink
       const next = stream.peek();
       if (next && next.kind === TokenKind.Number) {
-        if (next.value! < 0) return null;
-        flexShrink = next.value!;
+        if (next.value < 0) return null;
+        flexShrink = next.value;
         stream.consume();
       }
       continue;
@@ -59,7 +58,7 @@ export function flexShorthand(tokens: Token[]): Dict<any> | null {
         continue;
       }
       if (t.kind === TokenKind.Length || t.kind === TokenKind.Percent) {
-        if (t.value! < 0) return null;
+        if (t.value < 0) return null;
         flexBasis = tokenToValue(t) as number | string;
         stream.consume();
         continue;
@@ -76,15 +75,14 @@ export function flexShorthand(tokens: Token[]): Dict<any> | null {
 }
 
 /** `flex-flow: <direction> || <wrap>`; order-agnostic, either/both. */
-export function flexFlowShorthand(tokens: Token[]): Dict<any> | null {
+export function flexFlowShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   let flexDirection: string | undefined;
   let flexWrap: string | undefined;
 
-  while (!stream.eof()) {
-    const t = stream.peek()!;
+  for (let t = stream.peek(); t !== undefined; t = stream.peek()) {
     if (t.kind !== TokenKind.Ident) return null;
-    const n = t.name!;
+    const n = t.name;
     if (flexDirection === undefined && FLEX_DIRECTION.has(n)) {
       flexDirection = n;
       stream.consume();
@@ -144,21 +142,21 @@ function joinRaw(tokens: Token[]): string {
  * start/end to the flex- forms on native; rn-web passes the raw
  * declaration through so the browser sees the full CSS grammar.
  */
-export function placeContentShorthand(tokens: Token[]): Dict<any> | null {
+export function placeContentShorthand(tokens: Token[]): Dict<unknown> | null {
   if (__NATIVE_WEB__) {
     if (tokens.length === 0) return null;
     return { placeContent: joinRaw(tokens) };
   }
   const stream = new TokenStream(withoutSlashes(tokens));
   const first = stream.consume();
-  if (!first || first.kind !== TokenKind.Ident || !ALIGN_CONTENT.has(first.name!)) return null;
-  const alignContent = CONTENT_POSITION_NORMALIZE[first.name!] ?? first.name!;
+  if (!first || first.kind !== TokenKind.Ident || !ALIGN_CONTENT.has(first.name)) return null;
+  const alignContent = CONTENT_POSITION_NORMALIZE[first.name] ?? first.name;
   let justifyContent = alignContent;
   if (!stream.eof()) {
     const second = stream.consume();
-    if (!second || second.kind !== TokenKind.Ident || !JUSTIFY_CONTENT.has(second.name!))
+    if (!second || second.kind !== TokenKind.Ident || !JUSTIFY_CONTENT.has(second.name))
       return null;
-    justifyContent = CONTENT_POSITION_NORMALIZE[second.name!] ?? second.name!;
+    justifyContent = CONTENT_POSITION_NORMALIZE[second.name] ?? second.name;
   }
   if (!stream.eof()) return null;
   return { alignContent, justifyContent };
@@ -167,8 +165,8 @@ export function placeContentShorthand(tokens: Token[]): Dict<any> | null {
 /**
  * Keyword set for `align-items` / `justify-items` / `align-self` / `justify-self`.
  * Authors writing `start` / `end` / `self-start` / `self-end` get normalized to
- * RN's flex-prefixed enum since Yoga and rn-web both accept only those forms
- * (see `knowledge_rnweb_alignment_enum.md`). `first baseline` / `last baseline`
+ * RN's flex-prefixed enum since Yoga and rn-web both accept only those forms.
+ * `first baseline` / `last baseline`
  * collapse to `baseline` (with a dev warn); `safe` / `unsafe` overflow prefixes
  * are stripped (with a dev warn).
  */
@@ -198,19 +196,19 @@ const BASELINE_QUALIFIER = new Set(['first', 'last']);
 function readAlignKeyword(stream: TokenStream, allowed: ReadonlySet<string>): string | null {
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident) return null;
-  const name = t.name!;
+  const name = t.name;
 
   if (OVERFLOW_POSITION.has(name)) {
     const next = stream.consume();
     if (!next || next.kind !== TokenKind.Ident) return null;
-    const nextName = next.name!;
+    const nextName = next.name;
     // `auto` must stay disallowed after `safe`/`unsafe`, so this checks
     // against ITEMS_SELF_KEYWORDS regardless of `allowed`.
     if (!ITEMS_SELF_KEYWORDS.has(nextName)) return null;
     if (__DEV__) {
       warnOnce(
         'native-align-overflow-position-dropped',
-        '`safe` and `unsafe` alignment prefixes are ignored on React Native because Yoga has no overflow-alignment control. The alignment value still applies.',
+        '`safe` and `unsafe` alignment prefixes are ignored on React Native. The alignment value still applies. Remove the prefix.',
         name
       );
     }
@@ -223,7 +221,7 @@ function readAlignKeyword(stream: TokenStream, allowed: ReadonlySet<string>): st
     if (__DEV__) {
       warnOnce(
         'native-align-baseline-qualifier-dropped',
-        '`first baseline` and `last baseline` both map to `baseline` on React Native because iOS and Android do not expose first/last baseline alignment.',
+        '`first baseline` and `last baseline` both map to `baseline` on React Native because iOS and Android do not expose first/last baseline alignment. Write `baseline` directly.',
         name
       );
     }
@@ -243,7 +241,7 @@ function readItemsKeyword(stream: TokenStream): string | null {
  * second (or repeated first) is justify-items. `justify-items` is a no-op under
  * Yoga.
  */
-export function placeItemsShorthand(tokens: Token[]): Dict<any> | null {
+export function placeItemsShorthand(tokens: Token[]): Dict<unknown> | null {
   if (__NATIVE_WEB__) {
     if (tokens.length === 0) return null;
     return { placeItems: joinRaw(tokens) };
@@ -271,7 +269,7 @@ function readSelfKeyword(stream: TokenStream): string | null {
   return readAlignKeyword(stream, SELF_KEYWORDS_WITH_AUTO);
 }
 
-export function placeSelfShorthand(tokens: Token[]): Dict<any> | null {
+export function placeSelfShorthand(tokens: Token[]): Dict<unknown> | null {
   if (__NATIVE_WEB__) {
     if (tokens.length === 0) return null;
     return { placeSelf: joinRaw(tokens) };

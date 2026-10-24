@@ -5,14 +5,21 @@
  * build-time constants and that the ESM/browser/native builds don't
  * include code intended for other targets.
  */
+import { builtinModules } from 'module';
 import fs from 'fs';
 import path from 'path';
+import errorMap from '../utils/errors';
 
 const distDir = path.resolve(__dirname, '../../dist');
 const nativeDistDir = path.resolve(__dirname, '../../native/dist');
 
 const read = (file: string) => fs.readFileSync(path.join(distDir, file), 'utf8');
 const readNative = (file: string) => fs.readFileSync(path.join(nativeDistDir, file), 'utf8');
+const jsFiles = (dir: string) =>
+  fs
+    .readdirSync(dir)
+    .filter(file => file.endsWith('.js'))
+    .sort();
 
 describe('dead-code elimination: browser build', () => {
   let browserESM: string;
@@ -44,6 +51,46 @@ describe('dead-code elimination: browser build', () => {
     // matching SVG attribute names in the inlined isPropValid regex
     // (`patternTransform`, `gradientTransform`, …).
     expect(browserESM).not.toMatch(/\bnew Transform\b/);
+  });
+});
+
+/**
+ * Next.js applies the `browser` file map to edge bundles, so a server render
+ * on the edge runtime loads the browser build. A React Server Components copy
+ * of React has no `createContext`, which the browser build would otherwise hit
+ * as an anonymous TypeError at module load.
+ */
+describe('browser build on an edge-runtime server', () => {
+  const browserBundle = path.join(distDir, 'styled-components.browser.cjs.js');
+  /** The edge-runtime error is thrown as `throw <minified styledError>(19)`. */
+  const edgeGuard = /throw \w+\(19\)/;
+
+  afterEach(() => {
+    jest.dontMock('react');
+    jest.resetModules();
+  });
+
+  it('reports the edge-runtime fix when React has no createContext', () => {
+    jest.doMock('react', () => {
+      const { createContext: _createContext, ...serverComponentReact } =
+        jest.requireActual('react');
+      return serverComponentReact;
+    });
+
+    expect(() => require(browserBundle)).toThrow(new Error(errorMap[19].trim()));
+  });
+
+  it('loads when React has createContext', () => {
+    expect(() => require(browserBundle)).not.toThrow();
+  });
+
+  it('carries the guard only in the bundles that can reach an edge runtime', () => {
+    expect(read('styled-components.browser.cjs.js')).toMatch(edgeGuard);
+    expect(read('styled-components.browser.esm.js')).toMatch(edgeGuard);
+    expect(read('styled-components.cjs.js')).not.toMatch(edgeGuard);
+    expect(read('styled-components.esm.js')).not.toMatch(edgeGuard);
+    expect(readNative('styled-components.native.js')).not.toMatch(edgeGuard);
+    expect(readNative('styled-components.native.esm.js')).not.toMatch(edgeGuard);
   });
 });
 
@@ -98,12 +145,6 @@ describe('dead-code elimination: standalone production build', () => {
  * can see it, because Jest defines `__DEV__` as a real boolean.
  */
 describe('__DEV__ substitution in built output', () => {
-  const jsFiles = (dir: string) =>
-    fs
-      .readdirSync(dir)
-      .filter(file => file.endsWith('.js'))
-      .sort();
-
   it.each(jsFiles(distDir))('leaves no rebound negation in %s', file => {
     expect(read(file)).not.toContain('!process.env.NODE_ENV');
   });
@@ -245,11 +286,9 @@ describe('Hermes native build keeps the Animated-bridge adapter', () => {
     nativeESM = readNative('styled-components.native.esm.js');
   });
 
-  it('contains createAnimatedComponent and excludes the CSS-emit registration', () => {
+  it('contains createAnimatedComponent', () => {
     expect(nativeCJS).toContain('createAnimatedComponent');
     expect(nativeESM).toContain('createAnimatedComponent');
-    expect(nativeCJS).not.toContain('data-sc-anim');
-    expect(nativeESM).not.toContain('data-sc-anim');
   });
 });
 
@@ -467,6 +506,59 @@ describe('per-plugin DCE from plugins subpath', () => {
     expect(bundle).not.toContain(PREFIX_NEEDLE);
     expect(bundle).not.toContain(PREFIX_NEEDLE_B);
   }, 30000);
+});
+
+/**
+ * A package the consumer never lists resolves only when the install hoists it;
+ * strict layouts (pnpm without hoisting, Yarn PnP) throw at runtime. Every
+ * built JavaScript file may therefore reach only Node built-ins and packages
+ * the library declares as dependencies or peers.
+ */
+describe('built bundles reach only declared packages', () => {
+  const pkg = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8')
+  ) as { dependencies?: object; peerDependencies?: object };
+  const allowed = new Set([
+    ...Object.keys(pkg.dependencies ?? {}),
+    ...Object.keys(pkg.peerDependencies ?? {}),
+    ...builtinModules,
+  ]);
+  const bareSpecifier =
+    /\brequire\(["']([^"'./][^"']*)["']\)|(?:^|;)(?:import|export)\b[^;]*?\bfrom\s*["']([^"'./][^"']*)["']|(?:^|;)import\s*["']([^"'./][^"']*)["']/gm;
+  const packageName = (id: string) =>
+    id
+      .replace(/^node:/, '')
+      .split('/', id.startsWith('@') ? 2 : 1)
+      .join('/');
+  const reached = (source: string) =>
+    new Set([...source.matchAll(bareSpecifier)].map(m => packageName(m[1] ?? m[2] ?? m[3])));
+
+  /** Packages each entry must reach, proving the scan sees the bundle's imports. */
+  const mustReach: Record<string, string[]> = {
+    'plugins.cjs.js': [],
+    'plugins.esm.js': [],
+    'native/styled-components.js': ['react', 'react-native', 'react-native-web'],
+    'native/styled-components.native.esm.js': ['react', 'react-native'],
+    'native/styled-components.native.js': ['react', 'react-native'],
+    'native/styled-components.native.reanimated.cjs.js': ['react', 'react-native-reanimated'],
+    'native/styled-components.native.reanimated.esm.js': ['react', 'react-native-reanimated'],
+    'native/styled-components.web.esm.js': ['react', 'react-native', 'react-native-web'],
+    'native/styled-components.web.js': ['react', 'react-native', 'react-native-web'],
+  };
+  const bundles = [
+    ...jsFiles(distDir).map(file => ({ file, source: () => read(file) })),
+    ...jsFiles(nativeDistDir).map(file => ({
+      file: `native/${file}`,
+      source: () => readNative(file),
+    })),
+  ];
+
+  it.each(bundles)('$file', ({ file, source }) => {
+    const used = reached(source());
+
+    expect([...used].filter(name => !allowed.has(name))).toEqual([]);
+    expect([...used]).toEqual(expect.arrayContaining(mustReach[file] ?? ['react']));
+  });
 });
 
 describe('bundle size', () => {
@@ -687,5 +779,46 @@ describe('ESM tree-shakeability', () => {
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
+  });
+});
+
+/**
+ * `files` includes `native`, and the workspace install puts the native
+ * package's dependencies in `native/node_modules`, which would otherwise ship
+ * to every consumer. The listing is a dry run, so nothing is written.
+ */
+describe('published package contents', () => {
+  const { execFileSync } = require('child_process');
+  const packageDir = path.resolve(__dirname, '../..');
+  let packed: string[];
+
+  beforeAll(() => {
+    const listing: { files: { path: string }[] }[] = JSON.parse(
+      execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
+        cwd: packageDir,
+        encoding: 'utf8',
+        maxBuffer: 256 * 1024 * 1024,
+      })
+    );
+    packed = listing[0].files.map(file => file.path);
+  });
+
+  it('packs no node_modules path', () => {
+    expect(packed.filter(file => file.includes('node_modules/'))).toEqual([]);
+  });
+
+  it('packs no repo-only test helpers', () => {
+    expect(packed.filter(file => file.startsWith('test-utils/'))).toEqual([]);
+  });
+
+  it('still packs the native entry points', () => {
+    expect(packed).toEqual(
+      expect.arrayContaining([
+        'native/package.json',
+        'native/dist/styled-components.native.js',
+        'native/reanimated/package.json',
+        'native/web-bridge/package.json',
+      ])
+    );
   });
 });

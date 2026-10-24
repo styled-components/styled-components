@@ -76,7 +76,7 @@ import './shorthands.register';
 // either a target-specific lift, a value rewrite, or a dual-emit shape
 // that diverges from the generic identity passthrough. Properties not
 // listed fall through to `{ [passthroughKeys[0]]: value }`.
-type SinglePassthroughHandler = (value: string, rawValue: string) => Dict<any>;
+type SinglePassthroughHandler = (value: string, rawValue: string) => Dict<unknown>;
 const SINGLE_PASSTHROUGH_HANDLERS: Record<string, SinglePassthroughHandler> = {
   verticalAlign: value => {
     // rn-web Text defaults to `display: inline`, where height is a no-op
@@ -129,7 +129,7 @@ const SINGLE_PASSTHROUGH_HANDLERS: Record<string, SinglePassthroughHandler> = {
  * 5. Otherwise → coerce the value (`10px` → `10`, keep percent strings,
  *    etc.) and emit `{ [prop]: coerced }`.
  */
-export function transformDecl(prop: string, rawValue: string): Dict<any> {
+export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
   const camel = camelize(prop);
 
   // System color keywords. Route through PlatformColor so iOS / Android
@@ -252,7 +252,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
       if (__DEV__) {
         warnOnce(
           'native-shorthand-parse',
-          `the value "${rawValue}" could not be parsed for property "${prop}". The declaration was ignored.`,
+          `the value "${rawValue}" could not be parsed for property "${prop}". The declaration was ignored. Rewrite the value in standard CSS syntax.`,
           camel + ':' + rawValue
         );
       }
@@ -287,7 +287,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     // top-level value; emit only the experimental_* key so the native
     // side still receives the full grammar. See `isMultiTokenPosition`.
     const skipRnWebPosition = camel === 'backgroundPosition' && isMultiTokenPosition(value);
-    const out: Dict<any> = {};
+    const out: Dict<unknown> = {};
     for (let i = 0; i < passthroughKeys.length; i++) {
       const key = passthroughKeys[i];
       if (skipRnWebPosition && key === 'backgroundPosition') continue;
@@ -326,7 +326,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
     if (__DEV__) {
       warnOnce(
         'native-shorthand-parse',
-        `the value "${rawValue}" could not be parsed for property "${camel}". The declaration was ignored.`,
+        `the value "${rawValue}" could not be parsed for property "${camel}". The declaration was ignored. Rewrite the value in standard CSS syntax.`,
         camel + ':' + rawValue
       );
     }

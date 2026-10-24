@@ -57,8 +57,10 @@ function parseFilterScalarAmount(filterName: string, filterArgs: string): number
  * Same ordering as RN `parseDropShadowString`, but colors use
  * {@link isSingleTokenColorArg} so CSS system keywords parse as `<color>`.
  */
-function parseDropShadowInner(inner: string): { layer: Dict<any>; hadSystemColor: boolean } | null {
-  const dropShadow: Dict<any> = {};
+function parseDropShadowInner(
+  inner: string
+): { layer: Dict<unknown>; hadSystemColor: boolean } | null {
+  const dropShadow: Dict<unknown> = {};
   let offsetX: string | undefined;
   let offsetY: string | undefined;
   let keywordDetectedAfterLength = false;
@@ -108,7 +110,9 @@ function parseDropShadowInner(inner: string): { layer: Dict<any>; hadSystemColor
  * folding, rewrite the whole `filter` string to RN's array form so sibling
  * functions stay composited.
  */
-export function maybeExpandFilterDropShadowSystemColors(rawValue: string): string | Dict<any>[] {
+export function maybeExpandFilterDropShadowSystemColors(
+  rawValue: string
+): string | Dict<unknown>[] {
   // The browser parses system keywords inside drop-shadow() natively; the
   // array rewrite is a native-only workaround.
   if (__NATIVE_WEB__) return rawValue;
@@ -124,7 +128,7 @@ export function maybeExpandFilterDropShadowSystemColors(rawValue: string): strin
   if (matches.length === 0) return rawValue;
 
   let anySystem = false;
-  const out: Dict<any>[] = [];
+  const out: Dict<unknown>[] = [];
 
   for (let i = 0; i < matches.length; i++) {
     const filterName = matches[i][1].toLowerCase();

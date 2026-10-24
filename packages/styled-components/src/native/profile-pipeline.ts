@@ -325,6 +325,11 @@ const stateCallback = assembleFinalStyle(
   undefined,
   elementProps
 );
+if (typeof stateCallback !== 'function') {
+  throw new Error(
+    'profile-pipeline: assembleFinalStyle returned a static style for the mixed fixture, but the pseudo-state bench needs the state callback. Give the fixture a pseudo-state rule such as :hover.'
+  );
+}
 const hoveredState = { hovered: true };
 bench('pseudoStylesForState hovered (state callback)', 1_000_000, () =>
   stateCallback(hoveredState)

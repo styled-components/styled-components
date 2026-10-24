@@ -7,7 +7,7 @@ import isPropValid from '../utils/isPropValid';
  *  single object literal keeps every styled component on a single hidden
  *  class. */
 const REACT_MEMO_TYPE = Symbol.for('react.memo');
-import { SC_ATTR, SC_VERSION } from '../constants';
+import { RSC_REDUNDANT_EMIT_WARN_THRESHOLD, SC_ATTR, SC_VERSION } from '../constants';
 import { IS_RSC } from '../utils/isRsc';
 import type StyleSheet from '../sheet';
 import type {
@@ -31,7 +31,11 @@ import { NodeKind, type Root, type TemplateValue } from '../parser/ast';
 import { evaluateForFastPath, type FastPathFragment } from '../parser/compile';
 import { getSource, Source } from '../parser/source';
 import { themeValue } from '../utils/themePath';
-import { tracePostAttr, type PostAttrsPlan } from '../utils/tracePostAttrs';
+import {
+  buildPostAttrsPlans,
+  hasPostAttrs as chainHasPostAttrs,
+  type PostAttrsPlan,
+} from '../utils/tracePostAttrs';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import createWarnTooManyClasses, {
   LIMIT as TOO_MANY_CLASSES_LIMIT,
@@ -47,12 +51,16 @@ import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
 import { joinRules, joinStrings, stripSplitter } from '../utils/joinStrings';
-import { createRSCCache } from '../utils/rscCache';
-import { setToString } from '../utils/setToString';
+import {
+  getRscRequestState,
+  noteRscEmit,
+  recallRscRules,
+  type RscRequestState,
+} from '../utils/rscCache';
 import shallowEqual from '../utils/shallowEqual';
 import { warnOnce } from '../utils/warnOnce';
 import WebStyle, { GeneratedStyle } from './WebStyle';
-import { useStyleSheetContext } from './StyleSheetManager';
+import { type IStyleSheetContext, useStyleSheetContext } from './StyleSheetManager';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
 declare const __SERVER__: boolean;
@@ -88,7 +96,7 @@ function StyleInjector({
   if (__DEV__ && isServerRender) {
     warnOnce(
       'buffered-ssr-without-sheet',
-      'client styles inject through useInsertionEffect, which does not run during renderToString / renderToStaticMarkup. Wrap the tree in ServerStyleSheet#collectStyles so styles flush during render.'
+      'this tree is rendered with renderToString / renderToStaticMarkup without ServerStyleSheet, so its styles are missing from the output. Wrap the tree in ServerStyleSheet#collectStyles.'
     );
   }
   React.useInsertionEffect(() => {
@@ -182,6 +190,75 @@ function rscFlush<T extends ExecutionContext>(
   return generated;
 }
 
+/**
+ * A level whose name another instance registered first arrives empty; its rules
+ * come from the process-wide cache (docs/react.md "RSC style emission and
+ * Suspense"), or are compiled again when the cache has evicted them.
+ */
+function rscLevelRules(
+  webStyle: WebStyle,
+  level: GeneratedStyle['levels'][number],
+  context: ExecutionContext,
+  ssc: IStyleSheetContext
+): string[] {
+  if (level.rules.length > 0) return level.rules;
+
+  for (let w: WebStyle | null | undefined = webStyle; w; w = w.baseStyle) {
+    if (w.componentId !== level.componentId) continue;
+
+    const recalled = recallRscRules(w, level.name);
+    if (recalled !== undefined) return recalled;
+
+    const regenerated = webStyle.generate(context, ssc.styleSheet, ssc.compiler, {
+      recompile: true,
+    }).levels;
+    for (let i = 0; i < regenerated.length; i++) {
+      if (regenerated[i].componentId === level.componentId && regenerated[i].name === level.name) {
+        return regenerated[i].rules;
+      }
+    }
+    break;
+  }
+  return level.rules;
+}
+
+/**
+ * The CSS one RSC instance emits: referenced keyframes, then each level of its
+ * chain with every base level wrapped in :where() for zero specificity, so any
+ * extension overrides it without !important.
+ */
+function buildRscStyleCss(
+  webStyle: WebStyle,
+  generatedStyle: GeneratedStyle,
+  context: ExecutionContext,
+  ssc: IStyleSheetContext
+): string {
+  const levels = generatedStyle.levels;
+  const lastIdx = levels.length - 1;
+  let css = '';
+
+  for (let i = 0; i < levels.length; i++) {
+    const level = levels[i];
+    const rules = rscLevelRules(webStyle, level, context, ssc);
+    if (rules.length === 0) continue;
+
+    let levelCss = joinRules(rules);
+    if (i !== lastIdx) levelCss = wrapLevelInWhere(levelCss, level.name);
+    css += levelCss;
+  }
+
+  let kfCss = '';
+  const kfList = generatedStyle.keyframes;
+  outer: for (let i = 0; i < kfList.length; i++) {
+    for (let j = 0; j < i; j++) {
+      if (kfList[j].name === kfList[i].name) continue outer;
+    }
+    kfCss += joinRules(kfList[i].rules);
+  }
+
+  return stripSplitter(kfCss + css);
+}
+
 // Cached render inputs + style result: [prevProps, prevTheme, prevStyleSheet, prevCompiler,
 // prevPropsKeyCount, cachedContext, cachedClassName, prevWebStyle, popOverrides,
 // cachedGenerated]
@@ -233,9 +310,6 @@ function resolveContext<Props extends BaseObject>(
 }
 
 let seenUnknownProps: Set<string> | undefined;
-
-/** Per-render tracking of emitted class names and keyframe IDs for RSC dedup. */
-const getEmittedNames = createRSCCache(() => new Set<string>());
 
 /**
  * Cache RegExp objects for :where() wrapping to avoid recompilation per
@@ -449,43 +523,13 @@ function applyPostAttrsWeb<Props extends BaseObject>(
   return popOverrides;
 }
 
-function hasPostAttrsWeb<Props extends BaseObject>(
-  attrs: Attrs<React.HTMLAttributes<Element> & Props>[]
-): boolean {
-  for (let i = 0; i < attrs.length; i++) {
-    const a = attrs[i];
-    if (typeof a === 'function' && (a as Function).length >= 2) return true;
-  }
-  return false;
-}
-
-/**
- * Walk the final attrs chain and trace each arity-2 callback against the
- * component's rules. Output is parallel-indexed with the arity-2 entries
- * in iteration order (filter out arity-1 / object attrs). A `null` slot
- * means the callback couldn't be statically traced; the render path will
- * invoke the original function for that slot.
- */
-function buildPostAttrsPlans<Props extends BaseObject>(
-  attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
-  rules: RuleSet<Props>
-): ReadonlyArray<PostAttrsPlan | null> {
-  const plans: (PostAttrsPlan | null)[] = [];
-  for (let i = 0; i < attrs.length; i++) {
-    const a = attrs[i];
-    if (typeof a !== 'function' || (a as Function).length < 2) continue;
-    plans.push(tracePostAttr(a as (p: any, ast: CompiledAst) => any, rules));
-  }
-  return plans;
-}
-
-function buildPropsForElement(
-  context: Record<string, any>,
+function buildPropsForElement<Context extends ExecutionContext>(
+  context: Context,
   elementToBeCreated: WebTarget,
   theme: DefaultTheme | undefined,
   shouldForwardProp: ((prop: string, el: WebTarget) => boolean) | undefined
-): Dict<any> {
-  const out: Dict<any> = {};
+): Dict<unknown> {
+  const out: Dict<unknown> = {};
 
   for (const key in context) {
     if (context[key] === undefined) {
@@ -553,6 +597,7 @@ function useImpl<Props extends BaseObject>(
   let context: React.HTMLAttributes<Element> & ExecutionContext & Props;
   let generatedClassName: string;
   let generatedStyle: GeneratedStyle | null = null;
+  let rscState: RscRequestState | null = null;
   let popOverrides: Dict<string> | null = null;
   const wantsPostAttrs = forwardedComponent.hasPostAttrs === true;
   /** The CSSOM write to schedule in the insertion effect (buffered path only). */
@@ -637,6 +682,7 @@ function useImpl<Props extends BaseObject>(
       );
     }
     if (IS_RSC) {
+      rscState = getRscRequestState ? getRscRequestState() : null;
       generatedStyle = rscFlush(webStyle, context, ssc.styleSheet, ssc.compiler);
       generatedClassName = generatedStyle.className;
     } else {
@@ -707,50 +753,36 @@ function useImpl<Props extends BaseObject>(
     );
   }
 
-  // RSC mode: emit this component's CSS (and its inheritance chain + keyframes)
-  // as an inline <style> tag. No `precedence`; server component output isn't
-  // hydrated, so no mismatch. Inline body styles come after the registry's
-  // <head> styles in source order, so extensions naturally win (#5672).
+  // RSC: one plain tag per instance, shared element objects; see docs/react.md "RSC style emission and Suspense".
   if (IS_RSC && generatedStyle) {
-    const emitted = getEmittedNames ? getEmittedNames() : null;
-    const levels = generatedStyle.levels;
-    const lastIdx = levels.length - 1;
-    let css = '';
+    const sharedElements = rscState !== null ? rscState.styleElements : null;
+    const sharedKey = webStyle.componentId + ' ' + generatedClassName;
+    let styleElement = sharedElements ? sharedElements.get(sharedKey) : undefined;
 
-    for (let i = 0; i < levels.length; i++) {
-      const level = levels[i];
-      if (emitted && emitted.has(level.name)) continue;
-      if (level.rules.length === 0) continue;
-
-      let levelCss = joinRules(level.rules);
-      if (i !== lastIdx) {
-        // Base levels in an inheritance chain are wrapped in :where() so their
-        // specificity is zero, letting any extension override without !important.
-        levelCss = wrapLevelInWhere(levelCss, level.name);
+    if (styleElement === undefined) {
+      const combined = buildRscStyleCss(webStyle, generatedStyle, context, ssc);
+      if (combined) {
+        styleElement = React.createElement('style', {
+          [SC_ATTR]: '',
+          key: 'sc-' + webStyle.componentId,
+          children: combined,
+        });
+        if (sharedElements) sharedElements.set(sharedKey, styleElement);
       }
-      css += levelCss;
-      if (emitted) emitted.add(level.name);
     }
 
-    // Keyframes carried as pure data on `generatedStyle.keyframes`. Each entry
-    // already holds the compiled `@keyframes` rules; the per-render `emitted`
-    // set dedups by resolved name so duplicate refs across siblings collapse.
-    let kfCss = '';
-    const kfList = generatedStyle.keyframes;
-    for (let i = 0; i < kfList.length; i++) {
-      const compiled = kfList[i];
-      if (emitted && emitted.has(compiled.name)) continue;
-      kfCss += joinRules(compiled.rules);
-      if (emitted) emitted.add(compiled.name);
-    }
+    if (styleElement !== undefined) {
+      if (__DEV__ && rscState !== null) {
+        const emitted = noteRscEmit(rscState, webStyle.componentId);
+        if (emitted === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
+          warnOnce(
+            'rsc-redundant-emit',
+            `${emitted} instances of the styled component ${forwardedComponent.displayName || styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML. This is fine at normal sizes. To trim a very large list, style the items from one styled parent element (for example a \`& > li\` selector) and render plain children, so the whole list emits a single tag.`,
+            webStyle.componentId
+          );
+        }
+      }
 
-    const combined = stripSplitter(kfCss + css);
-    if (combined) {
-      const styleElement = React.createElement('style', {
-        [SC_ATTR]: '',
-        key: 'sc-' + webStyle.componentId,
-        children: combined,
-      });
       return React.createElement(React.Fragment, null, styleElement, element);
     }
   }
@@ -830,7 +862,7 @@ function createStyledComponent<
   } = props => useImpl<OuterProps>(WrappedStyledComponent, props, props.ref);
   RenderInner.displayName = displayName;
 
-  const hasPostAttrs = hasPostAttrsWeb(finalAttrs);
+  const hasPostAttrs = chainHasPostAttrs(finalAttrs);
   const foldedComponentIds = isTargetStyledComp
     ? joinStrings(styledComponentTarget.foldedComponentIds, styledComponentTarget.styledComponentId)
     : '';
@@ -857,7 +889,7 @@ function createStyledComponent<
     // closure. ${StyledFoo} interpolation calls toString() with the styled
     // component as `this`, so the lookup binds correctly.
     toString: styledToString,
-  } as unknown as IStyledComponent<'web', any> & Statics;
+  } as unknown as IStyledComponent<'web', OuterProps> & Statics;
 
   if (__DEV__) {
     checkDynamicCreation(displayName, styledComponentId);

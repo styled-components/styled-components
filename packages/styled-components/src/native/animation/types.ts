@@ -65,7 +65,7 @@ export type RangeBoundary = 'normal' | RangeOffset;
 export type TimelineAxis = 'block' | 'inline' | 'x' | 'y';
 
 /**
- * Parsed `<single-animation-timeline>` (CSS Animations 2 §4.9).
+ * Parsed `<single-animation-timeline>`.
  * `named` carries the case-sensitive dashed-ident. `view` is parsed at
  * this layer; its engine support ships with view progress timelines.
  */
@@ -164,6 +164,7 @@ export interface AnimatedStyleInput {
   /** Compiled output from `compileNative` (carries keyframes etc.). */
   compiled: NativeStyles;
   /** Final resolved style this render would have applied without animation. */
+  // biome-ignore lint/suspicious/noExplicitAny: public adapter contract (AnimationAdapter is reachable from the reanimatedAdapter export). With `unknown`, an adapter reading `input.resolved.opacity` fails with TS18046: 'input.resolved' is of type 'unknown'.
   resolved: any;
   /** Element type the render path is about to create (e.g. RN's `View`). */
   target: NativeTarget;
@@ -202,6 +203,7 @@ export interface AnimatedStyleOutput {
    * `Animated.AnimatedInterpolation` references in place of static
    * primitives for any property currently being driven.
    */
+  // biome-ignore lint/suspicious/noExplicitAny: public adapter contract (AnimationAdapter is reachable from the reanimatedAdapter export). With `unknown`, a caller reading `output.style.opacity` fails with TS18046: 'out.style' is of type 'unknown'.
   style: any;
   /**
    * Element type the render path should use. Adapters wrap the native

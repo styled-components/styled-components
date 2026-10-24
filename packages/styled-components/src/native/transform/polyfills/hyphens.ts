@@ -35,18 +35,18 @@ const SPEC_TO_ANDROID: Record<string, 'none' | 'normal' | 'full'> = {
   auto: 'normal',
 };
 
-function hyphensShorthand(tokens: Token[]): Dict<any> | null {
+function hyphensShorthand(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
-  const name = t.name!;
+  const name = t.name;
   if (!VALUES.has(name)) return null;
   if (__NATIVE_WEB__) {
     // Browser ships hyphens end-to-end; the Android prop lift and the
     // iOS-limitation warn are native-only.
     return { hyphens: name };
   }
-  const out: Dict<any> = {
+  const out: Dict<unknown> = {
     hyphens: name,
     android_hyphenationFrequency: SPEC_TO_ANDROID[name],
   };

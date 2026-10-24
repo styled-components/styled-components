@@ -11,7 +11,7 @@ import { Token } from './tokens';
  * work off tokens; grid passthrough handlers use it to re-emit the raw
  * CSS untouched on rn-web.
  */
-export type ShorthandHandler = (tokens: Token[], rawValue: string) => Dict<any> | null;
+export type ShorthandHandler = (tokens: Token[], rawValue: string) => Dict<unknown> | null;
 
 const registry: Record<string, ShorthandHandler> = Object.create(null);
 

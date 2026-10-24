@@ -44,7 +44,7 @@ function countEqualFrColumns(tokens: Token[]): number | null {
       args[1].kind === TokenKind.Comma &&
       isOneFr(args[2])
     ) {
-      const n = args[0].value!;
+      const n = args[0].value;
       if (Number.isInteger(n) && n >= 1) return n;
     }
     return null;
@@ -60,7 +60,7 @@ function isOneFr(tok: Token): boolean {
   return tok.kind === TokenKind.Length && tok.unit === 'fr' && tok.value === 1;
 }
 
-function gridTemplateColumnsHandler(tokens: Token[], rawValue: string): Dict<any> | null {
+function gridTemplateColumnsHandler(tokens: Token[], rawValue: string): Dict<unknown> | null {
   if (__NATIVE_WEB__) return { gridTemplateColumns: rawValue };
   const columns = countEqualFrColumns(tokens);
   if (columns !== null) return { __scGridColumns: columns };
@@ -74,7 +74,7 @@ function gridTemplateColumnsHandler(tokens: Token[], rawValue: string): Dict<any
   return {};
 }
 
-function gridColumnHandler(tokens: Token[], rawValue: string): Dict<any> | null {
+function gridColumnHandler(tokens: Token[], rawValue: string): Dict<unknown> | null {
   if (__NATIVE_WEB__) return { gridColumn: rawValue };
   // `span N`: Ident('span') followed by an integer.
   if (
@@ -83,7 +83,7 @@ function gridColumnHandler(tokens: Token[], rawValue: string): Dict<any> | null 
     tokens[0].name === 'span' &&
     tokens[1].kind === TokenKind.Number
   ) {
-    const n = tokens[1].value!;
+    const n = tokens[1].value;
     if (Number.isInteger(n) && n >= 1) return { __scGridSpan: n };
   }
   if (__DEV__) {
@@ -100,7 +100,7 @@ function gridPlacementUnsupportedHandler(
   rawValue: string,
   camelKey: string,
   cssName: string
-): Dict<any> | null {
+): Dict<unknown> | null {
   if (__NATIVE_WEB__) return { [camelKey]: rawValue };
   if (__DEV__) {
     warnOnce(
@@ -112,7 +112,7 @@ function gridPlacementUnsupportedHandler(
   return {};
 }
 
-function gridAutoFlowHandler(tokens: Token[], rawValue: string): Dict<any> | null {
+function gridAutoFlowHandler(tokens: Token[], rawValue: string): Dict<unknown> | null {
   if (__NATIVE_WEB__) return { gridAutoFlow: rawValue };
   // `row` is the initial value and the only flow the subset implements.
   if (tokens.length === 1 && tokens[0].kind === TokenKind.Ident && tokens[0].name === 'row') {

@@ -20,7 +20,6 @@ sequenceDiagram
     User->>styled: styled.div with CSS rules
     styled->>createStyledComponent: createStyledComponent(target, options, rules)
     createStyledComponent->>WebStyle: new WebStyle(rules, componentId)
-    WebStyle->>WebStyle: synthesizeSourceForRuleSet (parse + AST built once)
     WebStyle->>StyleSheet: StyleSheet.registerId(componentId)
     StyleSheet-->>WebStyle: group allocated
     createStyledComponent-->>User: StyledComponent
@@ -35,16 +34,23 @@ sequenceDiagram
     useImpl->>useImpl: render-cache check (fast skip on shallow-equal props/theme)
     useImpl->>useImpl: resolveContext(attrs, props, theme)
     useImpl->>WebStyle: generate(context, styleSheet, compiler)
+    WebStyle->>WebStyle: getSource (parse + AST built once, lazily on first render)
     WebStyle->>WebStyle: evaluateForFastPath (fill sentinels in pre-built AST)
     WebStyle->>WebStyle: buildInterpKey -> interpKeyCache lookup
-    WebStyle->>StyleSheet: claimNameForId (turn-scoped; stash rules for siblings)
-    Note over WebStyle: Cache hit returns prior class name<br/>without re-emitting CSS
 
-    alt cache miss
+    alt interp-key miss
         WebStyle->>WebStyle: buildHashCSS (joined string for hash)
-        WebStyle->>WebStyle: cssKeyCache lookup
-        WebStyle->>WebStyle: generateName(phash(baseHash, hash, css))
+        WebStyle->>WebStyle: cssKeyCache lookup, else generateName(phash(baseHash, hash, css))
+    end
+
+    WebStyle->>StyleSheet: claimNameForId (turn-scoped; hasNameForId under RSC)
+
+    alt claim won
         WebStyle->>WebStyle: compiler.emit (AST-direct)
+        Note over WebStyle: emit bails on a structural character<br/>in a substitution: compiler.compile on the joined CSS
+        WebStyle->>StyleSheet: stash rules for same-turn siblings
+    else claim lost
+        Note over WebStyle: reuse the winner's stashed rules<br/>without compiling
     end
 
     WebStyle-->>useImpl: GeneratedStyle (className + rules)
@@ -68,7 +74,7 @@ sequenceDiagram
     end
 
     Note over useImpl,DOM: 5. ELEMENT CREATION
-    useImpl->>useImpl: buildClassName(foldedIds + styledId + generated + props)
+    useImpl->>useImpl: classString (foldedIds + styledId + generated + props className)
     useImpl->>useImpl: createElement(type, props)
     React-->>User: DOM element with injected styles
 ```

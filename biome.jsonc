@@ -144,6 +144,7 @@
         "noVoidTypeReturn": "error"
       },
       "style": {
+        "noNonNullAssertion": "error",
         // The other half of the effect ban. The GritQL plugin matches a call,
         // so it sees `React.useEffect(...)` and a bare `useEffect(...)`, but it
         // cannot see the import that produced the bare name. This rule closes
@@ -170,6 +171,7 @@
         "noDuplicateCase": "error",
         "noDuplicateObjectKeys": "error",
         "noDuplicateParameters": "error",
+        "noExplicitAny": "error",
         "noFallthroughSwitchClause": "error",
         "noSparseArray": "error",
         "noUnsafeNegation": "error",
@@ -177,6 +179,32 @@
       }
     }
   },
+  "overrides": [
+    // The same test globs the two effect-ban plugins exempt: `noRestrictedImports`
+    // has no exclusion option of its own, so tests opt out here.
+    {
+      "includes": ["**/test/**", "**/*.test.*"],
+      "linter": { "rules": { "style": { "noRestrictedImports": "off" } } }
+    },
+    // Test and harness code is exempt from the escape-hatch rules for now.
+    {
+      "includes": [
+        "**/*.test.*",
+        "**/test/**",
+        "**/test-utils/**",
+        "**/bench/**",
+        "**/profile-*.ts",
+        "**/profileHarness.ts",
+        "**/bunProfileGlobals.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": { "noNonNullAssertion": "off" },
+          "suspicious": { "noExplicitAny": "off" }
+        }
+      }
+    }
+  ],
   "javascript": {
     "formatter": {
       "trailingCommas": "es5",

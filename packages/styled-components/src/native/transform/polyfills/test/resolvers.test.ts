@@ -385,6 +385,18 @@ describe('runtime resolvers', () => {
     expect(r({ ...baseEnv, theme: { spacing: null } })).toBe('16px');
   });
 
+  it('passes a non-scalar provider value through unchanged, as a platform color override', () => {
+    const r = buildResolver('\0sc:colors.bg:#fff')!;
+    const platformColor = { semantic: ['systemBackground'] };
+    expect(r({ ...baseEnv, theme: { colors: { bg: platformColor } } })).toBe(platformColor);
+  });
+
+  it('falls back when the provider value at the path is null or undefined', () => {
+    const r = buildResolver('\0sc:colors.bg:#fff')!;
+    expect(r({ ...baseEnv, theme: { colors: { bg: null } } })).toBe('#fff');
+    expect(r({ ...baseEnv, theme: { colors: { bg: undefined } } })).toBe('#fff');
+  });
+
   it('rejects theme paths that would walk the prototype chain', () => {
     expect(buildResolver('\0sc:__proto__.toString:fb')).toBeNull();
     expect(buildResolver('\0sc:constructor.name:fb')).toBeNull();

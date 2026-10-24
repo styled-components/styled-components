@@ -17,12 +17,12 @@ const TIMELINE_RANGE_NAMES: ReadonlySet<string> = new Set([
 
 function offsetFromToken(rangeName: TimelineRangeName | null, t: Token): RangeOffset | null {
   if (t.kind === TokenKind.Percent) {
-    return { rangeName, value: t.value!, unit: '%', calcRaw: null };
+    return { rangeName, value: t.value, unit: '%', calcRaw: null };
   }
   if (t.kind === TokenKind.Length) {
-    const ratio = ABSOLUTE_LENGTH_PX_PER_UNIT[t.unit!];
+    const ratio = ABSOLUTE_LENGTH_PX_PER_UNIT[t.unit];
     if (ratio === undefined) return null;
-    return { rangeName, value: t.value! * ratio, unit: 'px', calcRaw: null };
+    return { rangeName, value: t.value * ratio, unit: 'px', calcRaw: null };
   }
   if (t.kind === TokenKind.Number && t.value === 0) {
     return { rangeName, value: 0, unit: 'px', calcRaw: null };
@@ -70,7 +70,7 @@ export function parseRangeBoundary(
   const t = tokens[i];
   if (t === undefined) return null;
   if (t.kind === TokenKind.Ident) {
-    const name = t.name!;
+    const name = t.name;
     if (name === 'normal') return ['normal', i + 1];
     if (!TIMELINE_RANGE_NAMES.has(name)) return null;
     const rangeName = name as TimelineRangeName;

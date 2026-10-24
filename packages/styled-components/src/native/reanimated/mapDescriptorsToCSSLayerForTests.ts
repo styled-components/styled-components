@@ -11,6 +11,5 @@ export function __mapDescriptorsToCSSLayerForTests(
   transitions: TransitionDescriptor[] | undefined,
   ctx?: ReanimatedMapContext
 ): Record<string, unknown> {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   return mapDescriptorsToCSSLayer(require('react-native-reanimated'), animations, transitions, ctx);
 }

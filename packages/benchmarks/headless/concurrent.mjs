@@ -10,7 +10,7 @@
  *   node --expose-gc headless/concurrent.mjs [--runs 8] [--warmup 1] [--throttle 4]
  *
  * The benchmarks app must already be served on 127.0.0.1:8899
- * (devctl `benchmarks` on this worktree, or any static server of packages/benchmarks).
+ * (any static server rooted at packages/benchmarks, after `pnpm build` there).
  */
 
 import { spawn } from 'node:child_process';

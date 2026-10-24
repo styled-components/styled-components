@@ -26,9 +26,9 @@ function fallbackValue(raw: string | null): number | string | null {
   const toks = tokenize(raw);
   if (toks.length === 1) {
     const t = toks[0];
-    if (t.kind === TokenKind.Length && (t.unit === 'px' || t.unit === '')) return t.value!;
-    if (t.kind === TokenKind.Number) return t.value!;
-    if (t.kind === TokenKind.Percent) return t.value! + '%';
+    if (t.kind === TokenKind.Length && (t.unit === 'px' || t.unit === '')) return t.value;
+    if (t.kind === TokenKind.Number) return t.value;
+    if (t.kind === TokenKind.Percent) return t.value + '%';
   }
   return raw;
 }
@@ -68,9 +68,9 @@ export function buildAnchorResolver(value: string, prop: string, isSize: boolean
     if (t.raw.startsWith('--')) {
       if (name !== null) return null;
       name = t.raw;
-    } else if ((isSize ? SIZE_KEYWORDS : PHYSICAL_SIDES).has(t.name!)) {
+    } else if ((isSize ? SIZE_KEYWORDS : PHYSICAL_SIDES).has(t.name)) {
       if (keyword !== null) return null;
-      keyword = t.name!;
+      keyword = t.name;
     } else {
       // start/end/self-*/center/<percentage>/inside/outside (and the
       // omitted anchor-size keyword) are outside the supported subset;

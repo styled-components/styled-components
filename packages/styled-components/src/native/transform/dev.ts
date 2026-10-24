@@ -123,7 +123,7 @@ export function warnIfSentinelLeak(prop: string, value: unknown): void {
     }
     warnOnce(
       'native-token-leak',
-      `a createTheme token was concatenated into the value of "${prop}" with JS arithmetic and won't resolve at render time. Common cause: \`\${p => p.x + t.space.xl}\`. The JS \`+\` flattens the token into a placeholder string before the active theme can be applied. Use \`calc(\${p.x}px + \${t.space.xl}px)\` instead so each side resolves separately against the active ThemeProvider. See https://styled-components.com/docs/api#createtheme for the composition rules.`,
+      `a createTheme token was concatenated into the value of "${prop}" with JS arithmetic and won't resolve at render time. Common cause: \`\${p => p.x + t.space.xl}\`. Use \`calc(\${p.x}px + \${t.space.xl}px)\` instead. See https://styled-components.com/docs/api#createtheme for the composition rules.`,
       prop
     );
     return;
@@ -176,7 +176,7 @@ export function warnIfAndroidSkew(value: unknown): void {
   if (getReactNativePlatformOS() !== 'android') return;
   warnOnce(
     'native-android-skew',
-    `\`skewX\` / \`skewY\` are ignored on Android (seen in transform: "${value}"). Android views support translation, rotation, and scale, but not skew. Tracked at https://github.com/facebook/react-native/issues/27649.`
+    `\`skewX\` / \`skewY\` are ignored on Android (seen in transform: "${value}"). Android views support translation, rotation, and scale, but not skew. Use \`rotate\`, \`scale\`, or \`translate\` where Android must match. Tracked at https://github.com/facebook/react-native/issues/27649.`
   );
 }
 

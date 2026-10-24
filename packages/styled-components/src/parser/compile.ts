@@ -111,7 +111,7 @@ export function evaluateForFastPath(
             const name = getComponentName(fn as never);
             warnOnce(
               'non-styled-selector',
-              `${name} is not a styled component and cannot be referred to via component selector. See https://styled-components.com/docs/advanced#referring-to-other-components for more details.`,
+              `${name} is not a styled component and cannot be referred to via component selector. Wrap it with styled() first. See https://styled-components.com/docs/advanced#referring-to-other-components for more details.`,
               name
             );
           }
@@ -128,7 +128,12 @@ export function evaluateForFastPath(
       filled[i] = compiled.name;
       outKeyframes.push(compiled);
     } else if (kind === InterpolationKind.Fragment) {
-      const frag = resolveFragment(interps[i] as RuleSet<any>, fillContext, compiler, outKeyframes);
+      const frag = resolveFragment(
+        interps[i] as RuleSet<never>,
+        fillContext,
+        compiler,
+        outKeyframes
+      );
       if (frag === null) return null;
       if (standalone) {
         // Block-position: splice the child's AST as parent siblings via the
@@ -165,7 +170,7 @@ const EMPTY_FILLED: string[] = [];
  * Source or any nested slot bails.
  */
 function resolveFragment(
-  rules: RuleSet<any>,
+  rules: RuleSet<never>,
   fillContext: unknown,
   compiler?: Compiler,
   outKeyframes?: CompiledKeyframes[]
@@ -376,7 +381,7 @@ function resolveInterpolation(
     // the surrounding value/selector). Standalone slots populate the
     // fragments side table for AST splicing in fillAst.
     if (Array.isArray(slot)) {
-      const frag = resolveFragment(slot as RuleSet<any>, fillContext, compiler, outKeyframes);
+      const frag = resolveFragment(slot as RuleSet<never>, fillContext, compiler, outKeyframes);
       if (frag === null) return null;
       if (embedded) return stringifyEmbeddedFragment(frag);
       if (fragmentsOut === undefined || slotIndex === undefined) return null;

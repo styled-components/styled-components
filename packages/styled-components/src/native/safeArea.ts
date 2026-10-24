@@ -8,7 +8,7 @@
  *  3. otherwise the frozen zero insets.
  *
  * Recognized names always substitute (zeros when no source is present,
- * matching a rectangular display per CSS Environment Variables §2.1). The
+ * matching a rectangular display). The
  * peer's `useSafeAreaInsets()` throws without a provider; reading
  * `SafeAreaInsetsContext` directly keeps a missing provider a silent zero
  * rather than a render crash.

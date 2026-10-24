@@ -1,5 +1,9 @@
 import React from 'react';
 import type { Ref } from 'react';
+import type { Dict } from '../types';
+
+/** Props bag of a styled element as the render-path hooks see it. `ref` is the one entry whose shape they rely on. */
+export type ElementProps = Dict<unknown> & { ref?: Ref<unknown> | undefined };
 
 /** Brand marking a ref this module produced, so a hook composing onto
  *  another hook's ref can tell it apart from a caller's. */

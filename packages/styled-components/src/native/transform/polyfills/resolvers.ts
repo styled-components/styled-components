@@ -1,3 +1,4 @@
+import type { Dict } from '../../../types';
 import { MediaQueryEnv } from '../../responsive';
 import * as $ from '../../../utils/charCodes';
 import { warnOnce } from '../dev';
@@ -26,6 +27,7 @@ export interface ResolveEnv {
   /** Nearest named / unnamed container dimensions. */
   container: { width: number; height: number } | null;
   /** Current theme object (deep-merged from ThemeProvider stack on native). */
+  // biome-ignore lint/suspicious/noExplicitAny: public adapter contract (AnimatedStyleInput.env is reachable from the reanimatedAdapter export). With `unknown`, an adapter reading `input.env.theme.colors.primary` fails with TS18046: 'input.env.theme.colors' is of type 'unknown'.
   theme: Record<string, any>;
   /** Safe-area insets for `env(safe-area-inset-*)`, supplied by the native render path. */
   insets: SafeAreaInsets;
@@ -868,12 +870,12 @@ function themeResolver(value: string): Resolver | null {
   // dot-path walk on every render where the theme reference hasn't changed.
   // Within a typical app theme is allocated once per createTheme + persists
   // across renders, so the hit rate is dominated by re-renders.
-  let lastTheme: any = NO_THEME_SEEN;
-  let lastResult: any;
+  let lastTheme: object = NO_THEME_SEEN;
+  let lastResult: number | string = fallback;
 
   return env => {
     if (env.theme === lastTheme) return lastResult;
-    let v: any = env.theme;
+    let v: unknown = env.theme;
     for (let i = 0; i < segments.length; i++) {
       if (
         v == null ||
@@ -883,9 +885,10 @@ function themeResolver(value: string): Resolver | null {
         v = undefined;
         break;
       }
-      v = v[segments[i]];
+      v = Reflect.get(v, segments[i]);
     }
-    const out = v === undefined || v === null ? fallback : v;
+    // Known gap: the public `Resolver` type is narrower than what a ThemeProvider override can supply (a `PlatformColor` object, for example).
+    const out = v === undefined || v === null ? fallback : (v as number | string);
     lastTheme = env.theme;
     lastResult = out;
     return out;
@@ -1252,13 +1255,13 @@ function resolveAttrSyntax(
   if (syntax === 'length') {
     if (t.kind === TokenKind.Number && t.value === 0) return 0;
     if (t.kind !== TokenKind.Length) return getFallback();
-    if (t.unit === 'px' || t.unit === '') return t.value!;
+    if (t.unit === 'px' || t.unit === '') return t.value;
     // Dynamic length units re-enter the resolver pipeline as strings;
     // RN itself can't consume them, so anything non-px falls back.
     return getFallback();
   }
   if (syntax === 'percentage') {
-    return t.kind === TokenKind.Percent ? t.value! + '%' : getFallback();
+    return t.kind === TokenKind.Percent ? t.value + '%' : getFallback();
   }
   // <color>: structural validation only (hash, color function, or ident);
   // ident names are not checked against the named-color table.
@@ -1612,12 +1615,12 @@ function buildOperand(
   opts?: BuildOpts
 ): ((env: ResolveEnv) => NumericResult | null) | null {
   if (t.kind === TokenKind.Number) {
-    const v = t.value!;
+    const v = t.value;
     return () => ({ value: v, unit: '' });
   }
   if (t.kind === TokenKind.Length) {
-    const v = t.value!;
-    const unit = t.unit!;
+    const v = t.value;
+    const unit = t.unit;
     if (unit === 'px' || unit === '') {
       return () => ({ value: v, unit });
     }
@@ -1629,7 +1632,7 @@ function buildOperand(
     return env => valueToNumeric(r(env), 'px');
   }
   if (t.kind === TokenKind.Percent) {
-    const v = t.value!;
+    const v = t.value;
     return () => ({ value: v, unit: '%' });
   }
   if (t.kind === TokenKind.Sentinel) {
@@ -1640,7 +1643,7 @@ function buildOperand(
   if (t.kind === TokenKind.Ident) {
     // Math-context numeric constants. `pi` / `e` are <number>s.
     // `infinity` / `-infinity` / `NaN` warn + drop.
-    const num = identToNumeric(t.name!, t.raw);
+    const num = identToNumeric(t.name, t.raw);
     if (num === null) return null;
     return () => num;
   }
@@ -1953,10 +1956,10 @@ function colorFnResolver(value: string): Resolver | null {
  * renders.
  */
 export function applyResolvers(
-  base: Record<string, any>,
+  base: Dict<unknown>,
   resolvers: Array<[string, Resolver]>,
   env: ResolveEnv
-): Record<string, any> {
+): Dict<unknown> {
   if (resolvers.length === 0) return base;
   return applyResolversWithCache(base, resolvers, env);
 }
@@ -1964,14 +1967,14 @@ export function applyResolvers(
 const APPLY_CACHE: unique symbol = Symbol('sc-apply-cache');
 
 interface ResolversWithCache extends Array<[string, Resolver]> {
-  [APPLY_CACHE]?: { base: unknown; env: unknown; result: Record<string, any> };
+  [APPLY_CACHE]?: { base: unknown; env: unknown; result: Dict<unknown> };
 }
 
 function applyResolversWithCache(
-  base: Record<string, any>,
+  base: Dict<unknown>,
   resolvers: Array<[string, Resolver]>,
   env: ResolveEnv
-): Record<string, any> {
+): Dict<unknown> {
   const stashed = (resolvers as ResolversWithCache)[APPLY_CACHE];
   if (stashed !== undefined && stashed.base === base && stashed.env === env) {
     return stashed.result;

@@ -123,7 +123,7 @@ const warnOnUnadoptableStyles = (container: Document | ShadowRoot) => {
     if ((nodes[i].textContent ?? '').indexOf(SC_ATTR + '.g') > -1) {
       warnOnce(
         'rehydration-precedence-style',
-        'server-rendered styles arrived in a <style> tag React manages through `precedence`, which strips the attributes needed to adopt them, so every rule is injected again on the client. Render the tag from `ServerStyleSheet#getStyleElement()` with no `precedence` or `href` prop.'
+        'server-rendered styles were found in a <style> tag with a `precedence` prop, so every rule is injected again on the client. Render the tag from `ServerStyleSheet#getStyleElement()` with no `precedence` or `href` prop.'
       );
       return;
     }

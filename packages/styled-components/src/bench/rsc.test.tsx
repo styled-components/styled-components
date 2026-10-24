@@ -4,7 +4,7 @@
  * Run: pnpm --filter styled-components bench:rsc
  *
  * Measures server-side renderToString performance with IS_RSC=true,
- * including inline style tag emission, dedup, :where() wrapping,
+ * including per-instance inline style tag emission, :where() wrapping,
  * and keyframe handling.
  */
 
@@ -160,8 +160,8 @@ describe('RSC benchmarks', () => {
     });
   });
 
-  it('dedup efficiency', () => {
-    console.log('\n--- Dedup (1K iterations, median of 5) ---');
+  it('repeated instances (per-instance emission)', () => {
+    console.log('\n--- Repeated instances, one tag each (1K iterations, median of 5) ---');
 
     const Item = styled.div`
       color: red;
@@ -267,7 +267,7 @@ describe('RSC benchmarks', () => {
       ReactDOMServer.renderToString(React.createElement(GlobalStatic));
     });
 
-    bench('3 instances of same static global (dedup)', 1_000, () => {
+    bench('3 instances of same static global (one tag each)', 1_000, () => {
       ReactDOMServer.renderToString(
         React.createElement(
           React.Fragment,

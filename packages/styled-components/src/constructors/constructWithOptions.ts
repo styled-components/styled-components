@@ -19,7 +19,11 @@ import { EMPTY_OBJECT } from '../utils/empties';
 import styledError from '../utils/error';
 import { cssWithInterpolations } from './css';
 
-type AttrsResult<T extends Attrs<any>> = T extends (...args: any) => infer P
+// biome-ignore lint/suspicious/noExplicitAny: the constraint must admit `Attrs` of every props shape, and `Attrs<BaseObject>` does not: it changes `.attrs<{ bar: string }>()` inference so `<Component />` stops reporting the missing required prop (src/test/types.tsx: TS2769 "Property 'bar' is missing in type '{}'")
+type AttrsResult<T extends Attrs<any>> = T extends (
+  // biome-ignore lint/suspicious/noExplicitAny: `(...args: unknown)` fails with "A rest parameter must be of an array type", and `unknown[]` rejects every attrs callback that declares a typed `props` parameter
+  ...args: any
+) => infer P
   ? P extends object
     ? P
     : never
@@ -34,6 +38,7 @@ type AttrsResult<T extends Attrs<any>> = T extends (...args: any) => infer P
  */
 type AttrsTarget<
   R extends Runtime,
+  // biome-ignore lint/suspicious/noExplicitAny: same constraint as `AttrsResult`: it must admit `Attrs` of every props shape, and `Attrs<BaseObject>` changes `.attrs<{ bar: string }>()` inference (src/test/types.tsx: TS2769)
   T extends Attrs<any>,
   FallbackTarget extends StyledTarget<R>,
   Result extends ExecutionProps = AttrsResult<T>,
@@ -48,7 +53,7 @@ export interface Styled<
   out Target extends StyledTarget<R>,
   in out OuterProps extends object,
   out OuterStatics extends object = BaseObject,
-  out AttrsKeys extends keyof any = never,
+  out AttrsKeys extends PropertyKey = never,
 > {
   <Props extends object = BaseObject, Statics extends object = BaseObject>(
     initialStyles: Styles<MergeProps<OuterProps, NoInfer<Props>>>,
@@ -68,7 +73,8 @@ export interface Styled<
     (R extends 'web'
       ? Target extends string
         ? {}
-        : Omit<Target, keyof React.Component<any>>
+        : // biome-ignore lint/suspicious/noExplicitAny: public `Styled` signature; the key set does not depend on the props argument, but any other argument changes the emitted .d.ts
+          Omit<Target, keyof React.Component<any>>
       : {});
 
   attrs: <
@@ -109,9 +115,9 @@ export default function constructWithOptions<
   Target extends StyledTarget<R>,
   OuterProps extends object = TargetProps<R, Target>,
   OuterStatics extends object = BaseObject,
-  AttrsKeys extends keyof any = never,
+  AttrsKeys extends PropertyKey = never,
 >(
-  componentConstructor: IStyledComponentFactory<R, StyledTarget<R>, object, any>,
+  componentConstructor: IStyledComponentFactory<R, StyledTarget<R>, object, BaseObject>,
   tag: StyledTarget<R>,
   options: StyledOptions<R, OuterProps> = EMPTY_OBJECT
 ): Styled<R, Target, OuterProps, OuterStatics, AttrsKeys> {

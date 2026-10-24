@@ -1,6 +1,6 @@
 import type { Dict } from '../../types';
 import { tokenizeFunctionArgs } from '../transform/tokenize';
-import type { Token } from '../transform/tokens';
+import type { TimeToken, Token } from '../transform/tokens';
 import { TokenKind } from '../transform/tokens';
 import type {
   EasingDescriptor,
@@ -52,8 +52,12 @@ function splitTopLevelCommas(tokens: Token[]): Token[][] {
   return out;
 }
 
-function isTimeToken(t: Token): boolean {
+function isTimeToken(t: Token): t is TimeToken {
   return t.kind === TokenKind.Time;
+}
+
+function timeTokenToMs(t: TimeToken): number {
+  return t.unit === 's' ? t.value * 1000 : t.value;
 }
 
 function isEasingToken(t: Token): boolean {
@@ -62,23 +66,20 @@ function isEasingToken(t: Token): boolean {
     return name === 'cubic-bezier' || name === 'steps' || name === 'linear';
   }
   if (t.kind === TokenKind.Ident) {
-    return TIMING_KEYWORDS.has(t.name!);
+    return TIMING_KEYWORDS.has(t.name);
   }
   return false;
 }
 
 function tokenToEasing(t: Token): EasingDescriptor | null {
-  if (t.kind === TokenKind.Ident) return parseEasing(t.name!);
+  if (t.kind === TokenKind.Ident) return parseEasing(t.name);
   if (t.kind === TokenKind.Function) return parseEasing(t.raw);
   return null;
 }
 
 function tokenToMs(t: Token): number | null {
-  if (t.kind === TokenKind.Time) {
-    const v = t.value!;
-    return t.unit === 's' ? v * 1000 : v;
-  }
-  if (t.kind === TokenKind.Number) return t.value!;
+  if (t.kind === TokenKind.Time) return timeTokenToMs(t);
+  if (t.kind === TokenKind.Number) return t.value;
   return null;
 }
 
@@ -93,7 +94,7 @@ function parseSingleAnimation(tokens: Token[]): Partial<AnimationDescriptor> | n
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
     if (isTimeToken(t)) {
-      const ms = tokenToMs(t)!;
+      const ms = timeTokenToMs(t);
       if (timeIndex === 0) {
         out.durationMs = ms;
         timeIndex = 1;
@@ -113,7 +114,7 @@ function parseSingleAnimation(tokens: Token[]): Partial<AnimationDescriptor> | n
     }
     if (t.kind === TokenKind.Number) {
       // Iteration count.
-      out.iterationCount = t.value!;
+      out.iterationCount = t.value;
       continue;
     }
     if (t.kind === TokenKind.Function && (t.name === 'scroll' || t.name === 'view')) {
@@ -134,7 +135,7 @@ function parseSingleAnimation(tokens: Token[]): Partial<AnimationDescriptor> | n
       continue;
     }
     if (t.kind === TokenKind.Ident) {
-      const name = t.name!;
+      const name = t.name;
       if (name === 'infinite' || name === 'infinity') {
         out.iterationCount = Infinity;
         continue;
@@ -193,7 +194,7 @@ const DEFAULT_ANIMATION: AnimationDescriptor = {
  * Single-animation form emits primitives; multi-animation form emits
  * arrays. The render path branches on `Array.isArray()`.
  */
-export function animationShorthand(tokens: Token[]): Dict<any> | null {
+export function animationShorthand(tokens: Token[]): Dict<unknown> | null {
   return shorthand(tokens, parseSingleAnimation, ANIMATION_LONGHAND_MAPPING, DEFAULT_ANIMATION);
 }
 
@@ -234,7 +235,7 @@ function shorthand<T>(
   mapping: ReadonlyArray<[string, keyof T]>,
   defaults: T,
   validate?: (parsed: Partial<T>[]) => boolean
-): Dict<any> | null {
+): Dict<unknown> | null {
   const groups = splitTopLevelCommas(tokens);
   if (groups.length === 0) return null;
   const parsed: Partial<T>[] = [];
@@ -244,7 +245,7 @@ function shorthand<T>(
     parsed.push(single);
   }
   if (validate && !validate(parsed)) return null;
-  const out: Dict<any> = {};
+  const out: Dict<unknown> = {};
   const single = parsed.length === 1;
   for (let i = 0; i < mapping.length; i++) {
     const [key, field] = mapping[i];
@@ -273,7 +274,7 @@ function parseSingleTransition(tokens: Token[]): Partial<TransitionDescriptor> |
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
     if (isTimeToken(t)) {
-      const ms = tokenToMs(t)!;
+      const ms = timeTokenToMs(t);
       if (timeIndex === 0) {
         out.durationMs = ms;
         timeIndex = 1;
@@ -292,7 +293,7 @@ function parseSingleTransition(tokens: Token[]): Partial<TransitionDescriptor> |
       continue;
     }
     if (t.kind === TokenKind.Ident) {
-      const name = t.name!;
+      const name = t.name;
       if (TRANSITION_BEHAVIOR_KEYWORDS.has(name)) {
         out.behavior = name as TransitionDescriptor['behavior'];
         continue;
@@ -316,7 +317,7 @@ function parseSingleTransition(tokens: Token[]): Partial<TransitionDescriptor> |
  * Output keys: `transitionProperty | transitionDuration |
  * transitionTimingFunction | transitionDelay | transitionBehavior`.
  */
-export function transitionShorthand(tokens: Token[]): Dict<any> | null {
+export function transitionShorthand(tokens: Token[]): Dict<unknown> | null {
   return shorthand(
     tokens,
     parseSingleTransition,
@@ -343,21 +344,21 @@ const TRANSITION_LONGHAND_MAPPING: ReadonlyArray<[string, keyof TransitionDescri
 // (e.g. `animation-name: pulse`). Each delegates to the generic
 // `listLonghand` with a per-token validator/extractor.
 
-export function animationNameLonghand(tokens: Token[]): Dict<any> | null {
+export function animationNameLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'animationName', t =>
     t.kind === TokenKind.Ident || t.kind === TokenKind.String ? t.raw : null
   );
 }
 
-export function animationDurationLonghand(tokens: Token[]): Dict<any> | null {
+export function animationDurationLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'animationDuration', tokenToMs);
 }
 
-export function animationDelayLonghand(tokens: Token[]): Dict<any> | null {
+export function animationDelayLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'animationDelay', tokenToMs);
 }
 
-export function animationTimingFunctionLonghand(tokens: Token[]): Dict<any> | null {
+export function animationTimingFunctionLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'animationTimingFunction', tokenToEasing);
 }
 
@@ -370,9 +371,9 @@ function calcToIterationCount(args: string): number | null {
   return CALC_HAS_INFINITY_RE.test(args) ? Infinity : null;
 }
 
-export function animationIterationCountLonghand(tokens: Token[]): Dict<any> | null {
+export function animationIterationCountLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'animationIterationCount', t => {
-    if (t.kind === TokenKind.Number) return t.value!;
+    if (t.kind === TokenKind.Number) return t.value;
     if (t.kind === TokenKind.Ident) {
       if (t.name === 'infinite' || t.name === 'infinity') return Infinity;
     }
@@ -383,19 +384,19 @@ export function animationIterationCountLonghand(tokens: Token[]): Dict<any> | nu
   });
 }
 
-export function animationDirectionLonghand(tokens: Token[]): Dict<any> | null {
+export function animationDirectionLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'animationDirection', validateDirection);
 }
 
-export function animationFillModeLonghand(tokens: Token[]): Dict<any> | null {
+export function animationFillModeLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'animationFillMode', validateFillMode);
 }
 
-export function animationPlayStateLonghand(tokens: Token[]): Dict<any> | null {
+export function animationPlayStateLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'animationPlayState', validatePlayState);
 }
 
-export function animationCompositionLonghand(tokens: Token[]): Dict<any> | null {
+export function animationCompositionLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'animationComposition', validateComposition);
 }
 
@@ -420,7 +421,7 @@ function parseTimelineFunction(t: Token): AnimationTimeline | null {
     for (let i = 0; i < args.length; i++) {
       const a = args[i];
       if (a.kind !== TokenKind.Ident) return null;
-      const name = a.name!;
+      const name = a.name;
       if (TIMELINE_SCROLLERS.has(name)) {
         if (scroller !== null) return null;
         scroller = name as 'nearest' | 'root' | 'self';
@@ -439,7 +440,7 @@ function parseTimelineFunction(t: Token): AnimationTimeline | null {
   const insetParts: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (a.kind === TokenKind.Ident && TIMELINE_AXES.has(a.name!)) {
+    if (a.kind === TokenKind.Ident && TIMELINE_AXES.has(a.name)) {
       if (axis !== null) return null;
       axis = a.name as TimelineAxis;
     } else {
@@ -466,7 +467,7 @@ function parseSingleTimelineValue(t: Token): AnimationTimeline | null {
   return null;
 }
 
-export function animationTimelineLonghand(tokens: Token[]): Dict<any> | null {
+export function animationTimelineLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'animationTimeline', parseSingleTimelineValue);
 }
 
@@ -474,7 +475,7 @@ export function animationTimelineLonghand(tokens: Token[]): Dict<any> | null {
  * `scroll-timeline-name: [ none | <dashed-ident> ]#`. Emits the raw
  * (case-sensitive) ident, or the string `'none'`.
  */
-export function scrollTimelineNameLonghand(tokens: Token[]): Dict<any> | null {
+export function scrollTimelineNameLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'scrollTimelineName', t => {
     if (t.kind !== TokenKind.Ident) return null;
     if (t.name === 'none') return 'none';
@@ -482,14 +483,14 @@ export function scrollTimelineNameLonghand(tokens: Token[]): Dict<any> | null {
   });
 }
 
-export function scrollTimelineAxisLonghand(tokens: Token[]): Dict<any> | null {
+export function scrollTimelineAxisLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'scrollTimelineAxis', t =>
-    t.kind === TokenKind.Ident && TIMELINE_AXES.has(t.name!) ? t.name! : null
+    t.kind === TokenKind.Ident && TIMELINE_AXES.has(t.name) ? t.name : null
   );
 }
 
 /** `scroll-timeline: [ <'scroll-timeline-name'> <'scroll-timeline-axis'>? ]#` */
-export function scrollTimelineShorthand(tokens: Token[]): Dict<any> | null {
+export function scrollTimelineShorthand(tokens: Token[]): Dict<unknown> | null {
   const groups = splitTopLevelCommas(tokens);
   if (groups.length === 0) return null;
   const names: string[] = [];
@@ -504,8 +505,8 @@ export function scrollTimelineShorthand(tokens: Token[]): Dict<any> | null {
     else return null;
     if (g.length === 2) {
       const axisTok = g[1];
-      if (axisTok.kind !== TokenKind.Ident || !TIMELINE_AXES.has(axisTok.name!)) return null;
-      axes.push(axisTok.name!);
+      if (axisTok.kind !== TokenKind.Ident || !TIMELINE_AXES.has(axisTok.name)) return null;
+      axes.push(axisTok.name);
     } else {
       axes.push('block');
     }
@@ -522,7 +523,11 @@ export function scrollTimelineShorthand(tokens: Token[]): Dict<any> | null {
  * / `-end` longhands. Each comma group must be exactly one boundary
  * (1-2 tokens); any unparseable group invalidates the declaration.
  */
-function rangeBoundaryLonghand(tokens: Token[], key: string, isStart: boolean): Dict<any> | null {
+function rangeBoundaryLonghand(
+  tokens: Token[],
+  key: string,
+  isStart: boolean
+): Dict<unknown> | null {
   const groups = splitTopLevelCommas(tokens);
   if (groups.length === 0) return null;
   const out: RangeBoundary[] = [];
@@ -535,11 +540,11 @@ function rangeBoundaryLonghand(tokens: Token[], key: string, isStart: boolean): 
   return { [key]: out.length === 1 ? out[0] : out };
 }
 
-export function animationRangeStartLonghand(tokens: Token[]): Dict<any> | null {
+export function animationRangeStartLonghand(tokens: Token[]): Dict<unknown> | null {
   return rangeBoundaryLonghand(tokens, 'animationRangeStart', true);
 }
 
-export function animationRangeEndLonghand(tokens: Token[]): Dict<any> | null {
+export function animationRangeEndLonghand(tokens: Token[]): Dict<unknown> | null {
   return rangeBoundaryLonghand(tokens, 'animationRangeEnd', false);
 }
 
@@ -549,7 +554,7 @@ export function animationRangeEndLonghand(tokens: Token[]): Dict<any> | null {
  * named start copies its range name with 100%; an unnamed start leaves
  * the end at its initial `normal`.
  */
-export function animationRangeShorthand(tokens: Token[]): Dict<any> | null {
+export function animationRangeShorthand(tokens: Token[]): Dict<unknown> | null {
   const groups = splitTopLevelCommas(tokens);
   if (groups.length === 0) return null;
   const starts: RangeBoundary[] = [];
@@ -578,25 +583,25 @@ export function animationRangeShorthand(tokens: Token[]): Dict<any> | null {
   };
 }
 
-export function transitionPropertyLonghand(tokens: Token[]): Dict<any> | null {
+export function transitionPropertyLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'transitionProperty', t =>
     t.kind === TokenKind.Ident ? t.raw : null
   );
 }
 
-export function transitionDurationLonghand(tokens: Token[]): Dict<any> | null {
+export function transitionDurationLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'transitionDuration', tokenToMs);
 }
 
-export function transitionDelayLonghand(tokens: Token[]): Dict<any> | null {
+export function transitionDelayLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'transitionDelay', tokenToMs);
 }
 
-export function transitionTimingFunctionLonghand(tokens: Token[]): Dict<any> | null {
+export function transitionTimingFunctionLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'transitionTimingFunction', tokenToEasing);
 }
 
-export function transitionBehaviorLonghand(tokens: Token[]): Dict<any> | null {
+export function transitionBehaviorLonghand(tokens: Token[]): Dict<unknown> | null {
   return listLonghand(tokens, 'transitionBehavior', validateTransitionBehavior);
 }
 
@@ -611,7 +616,7 @@ function listLonghand<T>(
   tokens: Token[],
   key: string,
   parseOne: (t: Token) => T | null
-): Dict<any> | null {
+): Dict<unknown> | null {
   const groups = splitTopLevelCommas(tokens);
   const out: T[] = [];
   for (let i = 0; i < groups.length; i++) {
@@ -628,7 +633,7 @@ function listLonghand<T>(
 function enumValidator(valid: Set<string>): (t: Token) => string | null {
   return t => {
     if (t.kind !== TokenKind.Ident) return null;
-    return valid.has(t.name!) ? t.name! : null;
+    return valid.has(t.name) ? t.name : null;
   };
 }
 

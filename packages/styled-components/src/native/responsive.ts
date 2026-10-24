@@ -1,36 +1,41 @@
 import React, { useContext, useMemo } from 'react';
+import type { ColorSchemeName, EmitterSubscription, NativeEventSubscription } from 'react-native';
 import { fifoSet } from '../utils/fifoMap';
+import type { AnimatedApi, ReactNativeModule } from './animation/animatedTypes';
 
-// Resolved lazily on first call and cached, so the `useEffect` closures
-// don't chase live module getters after Jest's environment teardown. The
-// references are captured once and reused across all subscriptions.
+// Resolved lazily on first call and cached, so the store subscriptions and
+// snapshot readers don't chase live module getters after Jest's environment
+// teardown. The references are captured once and reused across all subscriptions.
 type RNApis = {
-  Dimensions: any;
-  Appearance: any;
-  AccessibilityInfo: any;
-  PixelRatio: any;
-  Animated: any;
+  AccessibilityInfo: ReactNativeModule['AccessibilityInfo'] | undefined;
+  Animated: AnimatedApi | undefined;
+  Appearance: ReactNativeModule['Appearance'] | undefined;
+  Dimensions: ReactNativeModule['Dimensions'] | undefined;
+  PixelRatio: ReactNativeModule['PixelRatio'] | undefined;
+  processColor: ReactNativeModule['processColor'] | undefined;
 };
 
 let rnApis: RNApis | null = null;
 export function getRN(): RNApis {
   if (!rnApis) {
     try {
-      const rn: any = require('react-native');
+      const rn: ReactNativeModule = require('react-native');
       rnApis = {
-        Dimensions: rn.Dimensions,
-        Appearance: rn.Appearance,
         AccessibilityInfo: rn.AccessibilityInfo,
-        PixelRatio: rn.PixelRatio,
         Animated: rn.Animated,
+        Appearance: rn.Appearance,
+        Dimensions: rn.Dimensions,
+        PixelRatio: rn.PixelRatio,
+        processColor: rn.processColor,
       };
     } catch {
       rnApis = {
-        Dimensions: undefined,
-        Appearance: undefined,
         AccessibilityInfo: undefined,
-        PixelRatio: undefined,
         Animated: undefined,
+        Appearance: undefined,
+        Dimensions: undefined,
+        PixelRatio: undefined,
+        processColor: undefined,
       };
     }
   }
@@ -387,7 +392,7 @@ function matchFeature(f: Feature, env: MediaQueryEnv): boolean {
   }
 }
 
-function safeReadDimensions(RN: any): { width: number; height: number; fontScale: number } {
+function safeReadDimensions(RN: RNApis): { width: number; height: number; fontScale: number } {
   try {
     const win = RN.Dimensions?.get?.('window');
     if (win && typeof win.width === 'number') {
@@ -401,9 +406,14 @@ function safeReadDimensions(RN: any): { width: number; height: number; fontScale
   return { width: 0, height: 0, fontScale: 1 };
 }
 
-function safeReadColorScheme(RN: any): 'light' | 'dark' | null | undefined {
+/** RN also reports `'unspecified'`; `MediaQueryEnv` models only the two schemes a query can match. */
+function toColorScheme(scheme: ColorSchemeName | null | undefined): 'light' | 'dark' | null {
+  return scheme === 'light' || scheme === 'dark' ? scheme : null;
+}
+
+function safeReadColorScheme(RN: RNApis): 'light' | 'dark' | null | undefined {
   try {
-    return RN.Appearance?.getColorScheme?.() ?? null;
+    return toColorScheme(RN.Appearance?.getColorScheme?.());
   } catch {
     return null;
   }
@@ -415,9 +425,9 @@ function safeReadColorScheme(RN: any): 'light' | 'dark' | null | undefined {
 let mediaSnapshot: MediaQueryEnv | null = null;
 const mediaListeners = new Set<() => void>();
 let mediaInitialized = false;
-let dimsSub: any = null;
-let appearanceSub: any = null;
-let reduceSub: any = null;
+let dimsSub: EmitterSubscription | null | undefined = null;
+let appearanceSub: NativeEventSubscription | null | undefined = null;
+let reduceSub: EmitterSubscription | null | undefined = null;
 
 function readSnapshot(
   prev: MediaQueryEnv | null,
@@ -477,7 +487,7 @@ function ensureMediaSubscriptions(): void {
   if (mediaSnapshot === null) mediaSnapshot = readSnapshot(null);
   const RN = getRN();
   try {
-    dimsSub = RN.Dimensions?.addEventListener?.('change', (change: any) => {
+    dimsSub = RN.Dimensions?.addEventListener?.('change', change => {
       if (change?.window) {
         updateMediaSnapshot({
           width: change.window.width,
@@ -488,8 +498,8 @@ function ensureMediaSubscriptions(): void {
     });
   } catch {}
   try {
-    appearanceSub = RN.Appearance?.addChangeListener?.((prefs: any) => {
-      updateMediaSnapshot({ colorScheme: prefs?.colorScheme ?? null });
+    appearanceSub = RN.Appearance?.addChangeListener?.(prefs => {
+      updateMediaSnapshot({ colorScheme: toColorScheme(prefs?.colorScheme) });
     });
   } catch {}
   try {
@@ -561,7 +571,7 @@ import {
   NativeStyleContext,
 } from './NativeStyleContext';
 
-export function useContainerContext(): ContainerContextValue {
+function useContainerContext(): ContainerContextValue {
   return useContext(NativeStyleContext).container;
 }
 

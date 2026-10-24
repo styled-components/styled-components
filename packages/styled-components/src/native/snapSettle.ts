@@ -1,6 +1,5 @@
 import React from 'react';
-import { Dict } from '../types';
-import { useComposedRef } from './composeRef';
+import { useComposedRef, type ElementProps } from './composeRef';
 import type { ScrollTimelineEntry } from './scrollTimeline';
 import type { GestureResponderEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 
@@ -29,8 +28,8 @@ interface SettleState {
  * RN's Android snap engine leaves holes where the scroller rests between
  * snap positions (device-verified on RN 0.85: touch-down cancels an
  * in-flight snap animation and touch-up without a drag never re-snaps).
- * css-scroll-snap-1 §6.1 requires a mandatory snap container to rest on
- * a snap position whenever there is no active scroll operation, so the
+ * A mandatory snap container must rest on a snap position whenever there
+ * is no active scroll operation, so the
  * styled scroller watches its own rest position and issues an animated
  * scrollTo to the nearest snap point when the engine misses. iOS paging
  * is native and never misses; there the check is a no-op.
@@ -47,8 +46,8 @@ interface SettleState {
 export function useSnapSettle(
   active: boolean,
   entry: ScrollTimelineEntry | null,
-  elementProps: Dict<any>
-): Dict<any> {
+  elementProps: ElementProps
+): ElementProps {
   const stateRef = React.useRef<SettleState | null>(null);
   // Frozen: the teardown is unmount-only, and reads the pending timer out
   // of a ref rather than closing over it.
