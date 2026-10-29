@@ -9,6 +9,7 @@ import { mainSheet } from '../models/StyleSheetManager';
 import { resetGroupIds } from '../sheet/GroupIDAllocator';
 import { rehydrateSheet } from '../sheet/Rehydration';
 import styledError from '../utils/error';
+import { resetGlobalStyleComponentIds } from '../utils/globalStyleId';
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
 let mockIndex = 0;
@@ -51,6 +52,10 @@ export const resetStyled = (isServer = false) => {
   }
 
   resetGroupIds();
+  // Tests call this between cases and then build another global style.
+  // The function-body count has to restart with the class-name mock, or
+  // the next function-bodied global takes a counted id.
+  resetGlobalStyleComponentIds();
   resetIdentifiers();
   mainSheet.names = new Map();
   mainSheet.clearTag();

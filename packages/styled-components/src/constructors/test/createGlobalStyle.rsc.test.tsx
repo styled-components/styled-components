@@ -31,6 +31,7 @@ import {
   tick,
 } from '../../test/rscStream';
 import createGlobalStyle from '../createGlobalStyle';
+import css from '../css';
 
 describe('createGlobalStyle RSC mode', () => {
   beforeEach(() => {
@@ -413,5 +414,82 @@ describe('createGlobalStyle RSC mode', () => {
         Hello
       </h1>
     `);
+  });
+
+  describe('ids when rules contain a function', () => {
+    function renderPair(
+      First: React.ComponentType<Record<string, never>>,
+      Second: React.ComponentType<Record<string, never>>
+    ) {
+      return ReactDOMServer.renderToString(
+        <>
+          <First />
+          <Second />
+        </>
+      );
+    }
+
+    it('emits both function-only global styles under different ids', () => {
+      const First = createGlobalStyle`${() => 'html { --a: 1; }'}`;
+      const Second = createGlobalStyle`${() => 'html { --b: 1; }'}`;
+      const html = renderPair(First, Second);
+
+      expect(First.styledComponentId).not.toBe(Second.styledComponentId);
+      expect(html).toContain(`data-styled-global="${First.styledComponentId}"`);
+      expect(html).toContain(`data-styled-global="${Second.styledComponentId}"`);
+      expect(html).toContain('--a');
+      expect(html).toContain('--b');
+    });
+
+    it('emits both function-argument global styles under different ids', () => {
+      const First = createGlobalStyle(() => 'html { --fn-a: 1; }');
+      const Second = createGlobalStyle(() => 'html { --fn-b: 1; }');
+      const html = renderPair(First, Second);
+
+      expect(First.styledComponentId).not.toBe(Second.styledComponentId);
+      expect(html).toContain('--fn-a');
+      expect(html).toContain('--fn-b');
+    });
+
+    it('emits both nested function css helpers under different ids', () => {
+      const First = createGlobalStyle`${css`${() => 'html { --nest-a: 1; }'}`}`;
+      const Second = createGlobalStyle`${css`${() => 'html { --nest-b: 1; }'}`}`;
+      const html = renderPair(First, Second);
+
+      expect(First.styledComponentId).not.toBe(Second.styledComponentId);
+      expect(html).toContain('--nest-a');
+      expect(html).toContain('--nest-b');
+    });
+
+    it('emits both globals that share static text and differ by a function', () => {
+      const First = createGlobalStyle`html { color: ${() => 'red'}; }`;
+      const Second = createGlobalStyle`html { color: ${() => 'blue'}; }`;
+      const html = renderPair(First, Second);
+
+      expect(First.styledComponentId).not.toBe(Second.styledComponentId);
+      expect(html).toContain('red');
+      expect(html).toContain('blue');
+    });
+
+    it('emits both factory closures under different ids', () => {
+      const make = (token: string) => createGlobalStyle`${() => `html { ${token}: 1; }`}`;
+      const First = make('--fact-a');
+      const Second = make('--fact-b');
+      const html = renderPair(First, Second);
+
+      expect(First.styledComponentId).not.toBe(Second.styledComponentId);
+      expect(html).toContain('--fact-a');
+      expect(html).toContain('--fact-b');
+    });
+
+    it('keeps one id when two calls have the same static text', () => {
+      const First = createGlobalStyle`html { --same: 1; }`;
+      const Second = createGlobalStyle`html { --same: 1; }`;
+      const html = renderPair(First, Second);
+
+      expect(First.styledComponentId).toBe(Second.styledComponentId);
+      expect(html).toContain('--same');
+      expect(html.match(new RegExp(First.styledComponentId, 'g'))?.length).toBe(2);
+    });
   });
 });
