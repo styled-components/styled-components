@@ -59,12 +59,12 @@ describe('createGlobalStyle RSC mode', () => {
 
     // Same component should produce same key even with different prop values
     expect(html1).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-kVtqfD">
+      <style data-styled-global="sc-global-fgldVv">
         body{background:red;}
       </style>
     `);
     expect(html2).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-kVtqfD">
+      <style data-styled-global="sc-global-fgldVv">
         body{background:blue;}
       </style>
     `);
@@ -113,10 +113,10 @@ describe('createGlobalStyle RSC mode', () => {
     );
 
     expect(html).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-kVtqfD">
+      <style data-styled-global="sc-global-fgldVv">
         body{background:red;}
       </style>
-      <style data-styled-global="sc-global-kVtqfD">
+      <style data-styled-global="sc-global-fgldVv">
         body{background:red;}
       </style>
     `);
@@ -236,10 +236,10 @@ describe('createGlobalStyle RSC mode', () => {
     );
 
     expect(html).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-kVtqfD">
+      <style data-styled-global="sc-global-fgldVv">
         body{background:red;}
       </style>
-      <style data-styled-global="sc-global-kVtqfD">
+      <style data-styled-global="sc-global-fgldVv">
         body{background:blue;}
       </style>
     `);
@@ -256,17 +256,17 @@ describe('createGlobalStyle RSC mode', () => {
     const html3 = ReactDOMServer.renderToString(<GlobalStyle $size="18px" />);
 
     expect(html1).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-fLdnMX">
+      <style data-styled-global="sc-global-cWZpXL">
         html{font-size:14px;}
       </style>
     `);
     expect(html2).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-fLdnMX">
+      <style data-styled-global="sc-global-cWZpXL">
         html{font-size:16px;}
       </style>
     `);
     expect(html3).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-fLdnMX">
+      <style data-styled-global="sc-global-cWZpXL">
         html{font-size:18px;}
       </style>
     `);
@@ -280,7 +280,7 @@ describe('createGlobalStyle RSC mode', () => {
     // No ThemeProvider in RSC - theme is undefined, should not crash
     const html = ReactDOMServer.renderToString(<GlobalStyle />);
     expect(html).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-ekSA-DU">
+      <style data-styled-global="sc-global-jrWtvo">
         body{color:black;}
       </style>
     `);
