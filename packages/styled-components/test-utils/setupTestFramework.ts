@@ -12,6 +12,16 @@ const suppressedErrors = [
 ];
 
 beforeEach(() => {
+  // Load here, not at module scope. A top-level import would cache the real
+  // id helper before a test file mocks `generateAlphabeticName`, and every
+  // generated class name in that file would stop being sequential.
+  // Function-bodied global styles take a per-process count. Restart it so
+  // each test starts from zero and the first call keeps a stable id.
+  const { resetGlobalStyleComponentIds } = require('../src/utils/globalStyleId') as {
+    resetGlobalStyleComponentIds: () => void;
+  };
+  resetGlobalStyleComponentIds();
+
   // Suppress errors from JSDOM CSS parser
   // See: https://github.com/jsdom/jsdom/issues/2177
   console.error = jest.fn((logged: any) => {

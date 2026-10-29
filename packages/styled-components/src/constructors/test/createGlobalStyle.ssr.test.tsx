@@ -8,9 +8,10 @@ import ServerStyleSheet from '../../models/ServerStyleSheet';
 import { mainStylis } from '../../models/StyleSheetManager';
 import StyleSheet from '../../sheet';
 import { STATIC_EXECUTION_CONTEXT } from '../../constants';
-import { stripComments, stripWhitespace } from '../../test/utils';
+import { resetStyled, stripComments, stripWhitespace } from '../../test/utils';
 import createGlobalStyle from '../createGlobalStyle';
 import css from '../css';
+import { globalStyleShapes } from '../../test/globalStyleShapes';
 
 describe(`createGlobalStyle`, () => {
   let context: ReturnType<typeof setup>;
@@ -98,3 +99,33 @@ describe(`createGlobalStyle`, () => {
 function stripOuterHTML(html: string) {
   return html.replace(/<[^>]*>([^<]*)<[^>]*>/g, '$1');
 }
+
+describe('createGlobalStyle ids on the server', () => {
+  beforeEach(() => {
+    // Node has no document. resetStyled(true) still restarts group ids.
+    resetStyled(true);
+  });
+
+  it.each(globalStyleShapes)('$name keeps both rules in SSR', ({ make, tokens }) => {
+    const [First, Second] = make();
+    const sheet = new ServerStyleSheet();
+
+    ReactDOMServer.renderToString(
+      sheet.collectStyles(
+        <>
+          <First />
+          <Second />
+        </>
+      )
+    );
+
+    const tags = sheet.getStyleTags();
+    expect(tags).toContain(tokens[0]);
+    expect(tags).toContain(tokens[1]);
+    // Identical tokens still have to come from both calls. One shared group
+    // keeps only the second call's rule.
+    if (tokens[0] === tokens[1]) {
+      expect(tags.split(tokens[0]).length - 1).toBe(2);
+    }
+  });
+});

@@ -7,7 +7,7 @@ import StyleSheet from '../sheet';
 import { ExecutionContext, ExecutionProps, Interpolation, Stringifier, Styles } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
-import generateComponentId from '../utils/generateComponentId';
+import { globalStyleComponentId } from '../utils/globalStyleId';
 import { joinRules, stripSplitter } from '../utils/joinStrings';
 import { createRSCCache } from '../utils/rscCache';
 import css from './css';
@@ -48,7 +48,7 @@ export default function createGlobalStyle<Props extends object>(
   ...interpolations: Array<Interpolation<Props>>
 ) {
   const rules = css<Props>(strings, ...interpolations);
-  const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
+  const styledComponentId = globalStyleComponentId(rules);
   const globalStyle = new GlobalStyle<Props>(rules, styledComponentId);
 
   if (process.env.NODE_ENV !== 'production') {
