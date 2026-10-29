@@ -11,7 +11,7 @@ import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
 import { Compiler, ExecutionContext, ExecutionProps, Interpolation, Styles } from '../types';
 import determineTheme from '../utils/determineTheme';
-import generateComponentId from '../utils/generateComponentId';
+import { globalStyleComponentId } from '../utils/globalStyleId';
 import { joinRules, stripSplitter } from '../utils/joinStrings';
 import { getRscRequestState, noteRscEmit } from '../utils/rscCache';
 import { warnOnce } from '../utils/warnOnce';
@@ -35,7 +35,7 @@ export default function createGlobalStyle<Props extends object>(
   ...interpolations: Array<Interpolation<Props>>
 ) {
   const rules = css<Props>(strings, ...interpolations);
-  const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
+  const styledComponentId = globalStyleComponentId(rules);
   const globalStyle = new WebGlobalStyle<Props>(rules, styledComponentId);
 
   const hasImport =

@@ -67,4 +67,12 @@ beforeEach(() => {
   // The shared `warnOnce` dedupe Set persists across tests; reset so each
   // assertion that expects a warning to fire actually sees it.
   resetWarnOnce();
+  // Load here, not at module scope. A top-level import would cache the real
+  // id helper before a test file mocks `generateAlphabeticName`, and every
+  // generated class name in that file would stop being sequential.
+  // Function-bodied global styles take a per-process count. Restart it so
+  // each test's first call keeps the id the content hash produces.
+  const { resetGlobalStyleComponentIds } =
+    require('../src/utils/globalStyleId') as typeof import('../src/utils/globalStyleId');
+  resetGlobalStyleComponentIds();
 });

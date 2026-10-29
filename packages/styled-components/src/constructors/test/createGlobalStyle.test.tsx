@@ -1,14 +1,18 @@
 import { act, render } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import React from 'react';
+import { renderToString } from 'react-dom/server';
 import WebGlobalStyle from '../../models/WebGlobalStyle';
+import ServerStyleSheet from '../../models/ServerStyleSheet';
 import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager';
 import ThemeProvider from '../../models/ThemeProvider';
 import StyleSheet from '../../sheet';
 import { getRenderedCSS, resetStyled } from '../../test/utils';
+import { resetGlobalStyleComponentIds } from '../../utils/globalStyleId';
 import createGlobalStyle from '../createGlobalStyle';
 import css from '../css';
 import keyframes from '../keyframes';
+import styled from '../styled';
 
 describe(`createGlobalStyle`, () => {
   beforeEach(() => {
@@ -1327,5 +1331,401 @@ describe('createGlobalStyle rebuildGroup on cleanup (#5730)', () => {
         --token: 1;
       }"
     `);
+  });
+});
+
+/**
+ * `JSON.stringify` drops functions, so two global styles can hash to one id.
+ * Each case below is a separate call. Distinct calls that are not the same
+ * static text must keep their own CSS when the other mounts or unmounts.
+ */
+describe('createGlobalStyle ids', () => {
+  type GlobalComponent = React.ComponentType<Record<string, never>> & {
+    styledComponentId: string;
+  };
+
+  interface Shape {
+    make: () => readonly [GlobalComponent, GlobalComponent];
+    name: string;
+    tokens: readonly [string, string];
+  }
+
+  const shapes: readonly Shape[] = [
+    {
+      name: 'static text that differs',
+      tokens: ['--a', '--b'],
+      make: () => [createGlobalStyle`html { --a: 1; }`, createGlobalStyle`html { --b: 1; }`],
+    },
+    {
+      name: 'the same CSS with different source text',
+      tokens: ['--a', '--a'],
+      make: () => [createGlobalStyle`html { --a: 1; }`, createGlobalStyle`html{--a:1;}`],
+    },
+    {
+      name: 'a single function interpolation',
+      tokens: ['--a', '--b'],
+      make: () => [
+        createGlobalStyle`${() => 'html { --a: 1; }'}`,
+        createGlobalStyle`${() => 'html { --b: 1; }'}`,
+      ],
+    },
+    {
+      name: 'several functions and different static text',
+      tokens: ['--a', '--b'],
+      make: () => [
+        createGlobalStyle`html { --a: ${() => '1'}; --c: ${() => '2'}; }`,
+        createGlobalStyle`html { --b: ${() => '3'}; --d: ${() => '4'}; }`,
+      ],
+    },
+    {
+      name: 'several functions and the same static text',
+      tokens: ['red', 'black'],
+      make: () => [
+        createGlobalStyle`html { color: ${() => 'red'}; background: ${() => 'blue'}; }`,
+        createGlobalStyle`html { color: ${() => 'black'}; background: ${() => 'white'}; }`,
+      ],
+    },
+    {
+      name: 'a function inside different static text',
+      tokens: ['--a', '--b'],
+      make: () => [
+        createGlobalStyle`html { --a: ${() => 1}; }`,
+        createGlobalStyle`html { --b: ${() => 1}; }`,
+      ],
+    },
+    {
+      name: 'a function inside the same static text',
+      tokens: ['red', 'blue'],
+      make: () => [
+        createGlobalStyle`html { color: ${() => 'red'}; }`,
+        createGlobalStyle`html { color: ${() => 'blue'}; }`,
+      ],
+    },
+    {
+      name: 'a nested css helper that is only a function',
+      tokens: ['--a', '--b'],
+      make: () => [
+        createGlobalStyle`${css`${() => 'html { --a: 1; }'}`}`,
+        createGlobalStyle`${css`${() => 'html { --b: 1; }'}`}`,
+      ],
+    },
+    {
+      name: 'a nested css helper with different static text',
+      tokens: ['--a', '--b'],
+      make: () => [
+        createGlobalStyle`${css`html { --a: 1; }`}`,
+        createGlobalStyle`${css`html { --b: 1; }`}`,
+      ],
+    },
+    {
+      name: 'a nested css helper with the same static text',
+      tokens: ['red', 'blue'],
+      make: () => [
+        createGlobalStyle`${css`html { color: ${() => 'red'}; }`}`,
+        createGlobalStyle`${css`html { color: ${() => 'blue'}; }`}`,
+      ],
+    },
+    {
+      name: 'the function argument form',
+      tokens: ['--a', '--b'],
+      make: () => [
+        createGlobalStyle(() => 'html { --a: 1; }'),
+        createGlobalStyle(() => 'html { --b: 1; }'),
+      ],
+    },
+    {
+      name: 'object styles with different custom properties',
+      tokens: ['--a', '--b'],
+      make: () => [
+        createGlobalStyle({ html: { '--a': () => '1' } }),
+        createGlobalStyle({ html: { '--b': () => '1' } }),
+      ],
+    },
+    {
+      name: 'object styles with the same static text',
+      tokens: ['red', 'blue'],
+      make: () => [
+        createGlobalStyle({ html: { color: () => 'red' } }),
+        createGlobalStyle({ html: { color: () => 'blue' } }),
+      ],
+    },
+    {
+      name: 'the same function passed to two calls',
+      tokens: ['--shared', '--shared'],
+      make: () => {
+        const fn = () => 'html { --shared: 1; }';
+        return [createGlobalStyle`${fn}`, createGlobalStyle`${fn}`];
+      },
+    },
+    {
+      name: 'a factory that closes over different values',
+      tokens: ['--fact-a', '--fact-b'],
+      make: () => {
+        const make = (token: string) => createGlobalStyle`${() => `html { ${token}: 1; }`}`;
+        return [make('--fact-a'), make('--fact-b')];
+      },
+    },
+    {
+      name: 'styled component selectors',
+      tokens: ['--a', '--b'],
+      make: () => {
+        const Button = styled.button`color: red;`;
+        const Link = styled.a`color: blue;`;
+        return [createGlobalStyle`${Button} { --a: 1; }`, createGlobalStyle`${Link} { --b: 1; }`];
+      },
+    },
+    {
+      name: 'keyframes interpolations',
+      tokens: ['--a', '--b'],
+      make: () => {
+        const fade = keyframes`from { opacity: 0; }`;
+        const rise = keyframes`from { opacity: 1; }`;
+        return [
+          createGlobalStyle`html { animation-name: ${fade}; --a: 1; }`,
+          createGlobalStyle`html { animation-name: ${rise}; --b: 1; }`,
+        ];
+      },
+    },
+  ];
+
+  beforeEach(() => {
+    resetStyled();
+  });
+
+  it.each(shapes)('$name keeps both rules on the client', ({ make, tokens }) => {
+    const [First, Second] = make();
+    expect(First.styledComponentId).not.toBe(Second.styledComponentId);
+
+    function App({ showFirst, showSecond }: { showFirst: boolean; showSecond: boolean }) {
+      return (
+        <>
+          {showFirst ? <First /> : null}
+          {showSecond ? <Second /> : null}
+        </>
+      );
+    }
+
+    const view = render(<App showFirst showSecond />);
+    expect(getRenderedCSS()).toContain(tokens[0]);
+    expect(getRenderedCSS()).toContain(tokens[1]);
+
+    view.rerender(<App showFirst showSecond={false} />);
+    expect(getRenderedCSS()).toContain(tokens[0]);
+    if (tokens[0] !== tokens[1]) {
+      expect(getRenderedCSS()).not.toContain(tokens[1]);
+    }
+
+    view.rerender(<App showFirst={false} showSecond />);
+    expect(getRenderedCSS()).toContain(tokens[1]);
+    if (tokens[0] !== tokens[1]) {
+      expect(getRenderedCSS()).not.toContain(tokens[0]);
+    }
+
+    view.unmount();
+    expect(getRenderedCSS()).not.toContain(tokens[0]);
+    expect(getRenderedCSS()).not.toContain(tokens[1]);
+  });
+
+  it.each(shapes)('$name keeps both rules in SSR', ({ make, tokens }) => {
+    const [First, Second] = make();
+    const sheet = new ServerStyleSheet();
+    renderToString(
+      sheet.collectStyles(
+        <>
+          <First />
+          <Second />
+        </>
+      )
+    );
+    const tags = sheet.getStyleTags();
+
+    expect(First.styledComponentId).not.toBe(Second.styledComponentId);
+    expect(tags).toContain(tokens[0]);
+    expect(tags).toContain(tokens[1]);
+    expect(tags).toContain(First.styledComponentId);
+    expect(tags).toContain(Second.styledComponentId);
+  });
+
+  it('dedupes two calls that have the same static text, and dedupes two mounts of one component', () => {
+    const First = createGlobalStyle`html { --a: 1; }`;
+    const Second = createGlobalStyle`html { --a: 1; }`;
+    expect(First.styledComponentId).toBe(Second.styledComponentId);
+
+    const { rerender, unmount } = render(
+      <>
+        <First />
+        <Second />
+      </>
+    );
+    expect(getRenderedCSS().match(/--a/g)).toHaveLength(1);
+
+    const One = createGlobalStyle`html { --once: 1; }`;
+    function Mounts({ count }: { count: number }) {
+      return (
+        <>
+          {count > 0 ? <One /> : null}
+          {count > 1 ? <One /> : null}
+        </>
+      );
+    }
+    rerender(<Mounts count={2} />);
+    expect(getRenderedCSS()).toContain('--once');
+    expect(getRenderedCSS().match(/--once/g)).toHaveLength(1);
+    rerender(<Mounts count={1} />);
+    expect(getRenderedCSS()).toContain('--once');
+    rerender(<Mounts count={0} />);
+    expect(getRenderedCSS()).not.toContain('--once');
+    unmount();
+  });
+
+  it('keeps each mount of one dynamic global style when the other unmounts', () => {
+    const GlobalStyle = createGlobalStyle<{ token: string }>`
+      html { ${props => props.token}: 1; }
+    `;
+
+    function App({ showFirst, showSecond }: { showFirst: boolean; showSecond: boolean }) {
+      return (
+        <>
+          {showFirst ? <GlobalStyle token="--dyn-a" /> : null}
+          {showSecond ? <GlobalStyle token="--dyn-b" /> : null}
+        </>
+      );
+    }
+
+    const view = render(<App showFirst showSecond />);
+    expect(getRenderedCSS()).toContain('--dyn-a');
+    expect(getRenderedCSS()).toContain('--dyn-b');
+    view.rerender(<App showFirst showSecond={false} />);
+    expect(getRenderedCSS()).toContain('--dyn-a');
+    expect(getRenderedCSS()).not.toContain('--dyn-b');
+    view.rerender(<App showFirst={false} showSecond />);
+    expect(getRenderedCSS()).toContain('--dyn-b');
+    expect(getRenderedCSS()).not.toContain('--dyn-a');
+    view.unmount();
+    expect(getRenderedCSS()).not.toContain('--dyn-a');
+  });
+
+  it('dedupes two calls that interpolate the same styled component', () => {
+    const Button = styled.button`color: red;`;
+    const First = createGlobalStyle`${Button} { --btn: 1; }`;
+    const Second = createGlobalStyle`${Button} { --btn: 1; }`;
+
+    expect(First.styledComponentId).toBe(Second.styledComponentId);
+
+    render(
+      <>
+        <First />
+        <Second />
+      </>
+    );
+    expect(getRenderedCSS().match(/--btn/g)).toHaveLength(1);
+  });
+
+  it('dedupes two calls that interpolate the same keyframes value', () => {
+    const fade = keyframes`from { opacity: 0; }`;
+    const First = createGlobalStyle`html { animation-name: ${fade}; --k: 1; }`;
+    const Second = createGlobalStyle`html { animation-name: ${fade}; --k: 1; }`;
+
+    expect(First.styledComponentId).toBe(Second.styledComponentId);
+
+    render(
+      <>
+        <First />
+        <Second />
+      </>
+    );
+    expect(getRenderedCSS().match(/--k/g)).toHaveLength(1);
+  });
+
+  it.each(['Infinity', 'NaN'] as const)(
+    'keeps a static %s slot when a function body stringifies the same way',
+    slotName => {
+      const slot = slotName === 'Infinity' ? Infinity : NaN;
+      const Static = createGlobalStyle`html { color: red; z-index: ${slot}; }`;
+      const Dynamic = createGlobalStyle`html { color: red; z-index: ${() => 1}; }`;
+
+      expect(Static.styledComponentId).not.toBe(Dynamic.styledComponentId);
+
+      function App({ showDynamic }: { showDynamic: boolean }) {
+        return (
+          <>
+            <Static />
+            {showDynamic ? <Dynamic /> : null}
+          </>
+        );
+      }
+
+      const view = render(<App showDynamic />);
+      expect(getRenderedCSS()).toContain('red');
+
+      view.rerender(<App showDynamic={false} />);
+      expect(getRenderedCSS()).toContain('red');
+
+      view.unmount();
+      expect(getRenderedCSS()).not.toContain('red');
+    }
+  );
+
+  it('paints the later function body on top, and the opposite order paints the other way', () => {
+    resetStyled();
+    resetGlobalStyleComponentIds();
+    const Red = createGlobalStyle`${() => 'html { color: red; }'}`;
+    const Blue = createGlobalStyle`${() => 'html { color: blue; }'}`;
+    const forward = render(
+      <>
+        <Red />
+        <Blue />
+      </>
+    );
+    const redThenBlue = getRenderedCSS();
+    expect(redThenBlue.indexOf('red')).toBeLessThan(redThenBlue.indexOf('blue'));
+    forward.unmount();
+
+    resetStyled();
+    resetGlobalStyleComponentIds();
+    const BlueFirst = createGlobalStyle`${() => 'html { color: blue; }'}`;
+    const RedSecond = createGlobalStyle`${() => 'html { color: red; }'}`;
+    render(
+      <>
+        <RedSecond />
+        <BlueFirst />
+      </>
+    );
+    const blueThenRed = getRenderedCSS();
+    expect(blueThenRed.indexOf('blue')).toBeLessThan(blueThenRed.indexOf('red'));
+  });
+
+  it('clears the shared rule when one of two identical static calls unmounts', () => {
+    const First = createGlobalStyle`html { --keep: 1; }`;
+    const Second = createGlobalStyle`html { --keep: 1; }`;
+    expect(First.styledComponentId).toBe(Second.styledComponentId);
+
+    function App({ showFirst, showSecond }: { showFirst: boolean; showSecond: boolean }) {
+      return (
+        <>
+          {showFirst ? <First /> : null}
+          {showSecond ? <Second /> : null}
+        </>
+      );
+    }
+
+    const view = render(<App showFirst showSecond />);
+    expect(getRenderedCSS()).toContain('--keep');
+
+    view.rerender(<App showFirst={false} showSecond />);
+    expect(getRenderedCSS()).not.toContain('--keep');
+  });
+
+  it('injects once per mounted instance of one function-bodied global', () => {
+    const GlobalStyle = createGlobalStyle`html { --dup: ${() => 1}; }`;
+
+    render(
+      <>
+        <GlobalStyle />
+        <GlobalStyle />
+      </>
+    );
+
+    expect(getRenderedCSS().match(/--dup/g)).toHaveLength(2);
   });
 });
