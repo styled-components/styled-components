@@ -8,7 +8,7 @@ function plain(rules: readonly unknown[]): string {
 
 function counted(rules: readonly unknown[], issued: number): string {
   const serialized = JSON.stringify(rules);
-  return `sc-global-${generateComponentId(issued === 0 ? serialized : `${serialized}\0${issued}`)}`;
+  return `sc-global-${generateComponentId(`${serialized}\0${issued}`)}`;
 }
 
 describe('globalStyleComponentId', () => {
@@ -41,7 +41,7 @@ describe('globalStyleComponentId', () => {
     expect(rightSecond).toBe(rightFirst);
   });
 
-  it('uses the plain hash for the first function body and a count for later ones', () => {
+  it('salts every function body, including the first', () => {
     const firstRules = [() => 'html { --a: 1; }'];
     const secondRules = [() => 'html { --b: 1; }'];
     const thirdRules = [() => 'html { --c: 1; }'];
@@ -51,8 +51,8 @@ describe('globalStyleComponentId', () => {
     const third = globalStyleComponentId(thirdRules);
 
     expect(JSON.stringify(firstRules)).toBe(JSON.stringify(secondRules));
-    expect(first).toBe(plain(firstRules));
     expect(first).toBe(counted(firstRules, 0));
+    expect(first).not.toBe(plain(firstRules));
     expect(second).toBe(counted(secondRules, 1));
     expect(third).toBe(counted(thirdRules, 2));
     expect(new Set([first, second, third]).size).toBe(3);
@@ -73,9 +73,9 @@ describe('globalStyleComponentId', () => {
     const wholeSecond = globalStyleComponentId(whole);
     const mixedSecond = globalStyleComponentId(sameSkeleton);
 
-    expect(wholeFirst).toBe(plain(whole));
-    expect(mixedFirst).toBe(plain(mixed));
-    expect(otherFirst).toBe(plain(otherSkeleton));
+    expect(wholeFirst).toBe(counted(whole, 0));
+    expect(mixedFirst).toBe(counted(mixed, 0));
+    expect(otherFirst).toBe(counted(otherSkeleton, 0));
     expect(wholeSecond).toBe(counted(whole, 1));
     expect(mixedSecond).toBe(counted(mixed, 1));
   });
@@ -88,7 +88,8 @@ describe('globalStyleComponentId', () => {
     const first = globalStyleComponentId(nested);
     const second = globalStyleComponentId(nestedAgain);
 
-    expect(first).toBe(plain(nested));
+    expect(first).toBe(counted(nested, 0));
+    expect(first).not.toBe(plain(nested));
     expect(second).toBe(counted(nestedAgain, 1));
     expect(globalStyleComponentId(staticNested)).toBe(plain(staticNested));
     expect(globalStyleComponentId(staticNested)).toBe(plain(staticNested));
@@ -167,8 +168,63 @@ describe('globalStyleComponentId', () => {
     cyclic.self = cyclic;
     const rules = [cyclic];
 
-    expect(globalStyleComponentId(rules)).toBe(plain(rules));
+    expect(globalStyleComponentId(rules)).toBe(counted(rules, 0));
     expect(globalStyleComponentId([cyclic])).toBe(counted(rules, 1));
+  });
+
+  it('does not share an id with a static Infinity or NaN slot that stringifies the same way', () => {
+    for (const slot of [Infinity, NaN]) {
+      const staticRules = ['html { color: red; z-index: ', slot, '; }'];
+      const dynamicRules = ['html { color: red; z-index: ', () => 1, '; }'];
+
+      expect(JSON.stringify(staticRules)).toBe(JSON.stringify(dynamicRules));
+
+      const staticId = globalStyleComponentId(staticRules);
+      const dynamicId = globalStyleComponentId(dynamicRules);
+
+      expect(staticId).toBe(plain(staticRules));
+      expect(dynamicId).toBe(counted(dynamicRules, 0));
+      expect(dynamicId).not.toBe(staticId);
+
+      resetGlobalStyleComponentIds();
+    }
+  });
+
+  it('assigns salt 0 to whichever function body runs first', () => {
+    const red = [() => 'html { color: red; }'];
+    const blue = [() => 'html { color: blue; }'];
+
+    const redFirst = globalStyleComponentId(red);
+    const blueSecond = globalStyleComponentId(blue);
+
+    expect(redFirst).toBe(counted(red, 0));
+    expect(blueSecond).toBe(counted(blue, 1));
+
+    resetGlobalStyleComponentIds();
+
+    const blueFirst = globalStyleComponentId(blue);
+    const redSecond = globalStyleComponentId(red);
+
+    expect(blueFirst).toBe(counted(blue, 0));
+    expect(redSecond).toBe(counted(red, 1));
+    expect(redFirst).not.toBe(redSecond);
+    expect(blueFirst).not.toBe(blueSecond);
+  });
+
+  it('moves the later function bodies when an earlier call exists on only one side', () => {
+    const lib = [() => 'html { color: black; }'];
+    const page = [() => 'html { color: red; }'];
+
+    globalStyleComponentId(lib);
+    const pageAfterLib = globalStyleComponentId(page);
+
+    resetGlobalStyleComponentIds();
+
+    const pageFirst = globalStyleComponentId(page);
+
+    expect(pageAfterLib).toBe(counted(page, 1));
+    expect(pageFirst).toBe(counted(page, 0));
+    expect(pageAfterLib).not.toBe(pageFirst);
   });
 
   it('still throws when the rules contain a cycle JSON cannot encode', () => {

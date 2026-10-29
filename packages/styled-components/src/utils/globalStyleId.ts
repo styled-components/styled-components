@@ -5,7 +5,7 @@ import isStyledComponent from './isStyledComponent';
 
 /**
  * How many times this process has already issued an id for one serialization
- * that contains a function. The count is part of later ids, so it has to
+ * that contains a function. The count is part of every such id, so it has to
  * live as long as the page: a repeat call must keep hashing to the same
  * string.
  */
@@ -17,14 +17,17 @@ const issuedBySerialization = new Map<string, number>();
  * Rules with no function hash to the JSON of those rules, so the same static
  * text shares one stylesheet group no matter which module ran first. A
  * styled component or a keyframes value keeps its identity in that JSON, so
- * two copies of the same selector still share an id.
+ * two copies of the same selector share an id.
  *
- * `JSON.stringify` omits functions. Two calls whose remaining text matches
- * would share one group, and rendering one would drop the other's CSS. The
- * first time a serialization that contains a function is seen, the id is
- * the plain hash, the same id a single dynamic global already has, so a
- * server render and the client hydration of that global still agree. Each
- * later call mixes in how many times that serialization was already issued.
+ * `JSON.stringify` writes `null` for a function, and also for `Infinity`
+ * and `NaN`. A function body always mixes in how many times this process
+ * has already issued that serialization, including the first time, so its
+ * id cannot equal the static rule that stringifies the same way.
+ *
+ * The count follows call order. The call created first is earlier in the
+ * stylesheet, and the later call paints on top. The server and the client
+ * agree when they run the calls in the same order. A different order swaps
+ * the ids, and each side's rules land in the other side's group.
  */
 export function globalStyleComponentId(rules: readonly unknown[]): string {
   const serialized = JSON.stringify(rules);
@@ -34,9 +37,8 @@ export function globalStyleComponentId(rules: readonly unknown[]): string {
 
   const issued = issuedBySerialization.get(serialized) ?? 0;
   issuedBySerialization.set(serialized, issued + 1);
-  // JSON text has no raw NUL, so a counted serialization cannot equal
-  // another call's plain JSON.
-  return componentId(issued === 0 ? serialized : `${serialized}\0${issued}`);
+  // JSON text has no raw NUL, so this cannot equal another call's plain JSON.
+  return componentId(`${serialized}\0${issued}`);
 }
 
 /** Clears the function-body counts. Tests call this between cases. */

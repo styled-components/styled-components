@@ -8,6 +8,7 @@ import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager'
 import ThemeProvider from '../../models/ThemeProvider';
 import StyleSheet from '../../sheet';
 import { getRenderedCSS, resetStyled } from '../../test/utils';
+import { resetGlobalStyleComponentIds } from '../../utils/globalStyleId';
 import createGlobalStyle from '../createGlobalStyle';
 import css from '../css';
 import keyframes from '../keyframes';
@@ -1634,5 +1635,97 @@ describe('createGlobalStyle ids', () => {
       </>
     );
     expect(getRenderedCSS().match(/--k/g)).toHaveLength(1);
+  });
+
+  it.each(['Infinity', 'NaN'] as const)(
+    'keeps a static %s slot when a function body stringifies the same way',
+    slotName => {
+      const slot = slotName === 'Infinity' ? Infinity : NaN;
+      const Static = createGlobalStyle`html { color: red; z-index: ${slot}; }`;
+      const Dynamic = createGlobalStyle`html { color: red; z-index: ${() => 1}; }`;
+
+      expect(Static.styledComponentId).not.toBe(Dynamic.styledComponentId);
+
+      function App({ showDynamic }: { showDynamic: boolean }) {
+        return (
+          <>
+            <Static />
+            {showDynamic ? <Dynamic /> : null}
+          </>
+        );
+      }
+
+      const view = render(<App showDynamic />);
+      expect(getRenderedCSS()).toContain('red');
+
+      view.rerender(<App showDynamic={false} />);
+      expect(getRenderedCSS()).toContain('red');
+
+      view.unmount();
+      expect(getRenderedCSS()).not.toContain('red');
+    }
+  );
+
+  it('paints the later function body on top, and the opposite order paints the other way', () => {
+    resetStyled();
+    resetGlobalStyleComponentIds();
+    const Red = createGlobalStyle`${() => 'html { color: red; }'}`;
+    const Blue = createGlobalStyle`${() => 'html { color: blue; }'}`;
+    const forward = render(
+      <>
+        <Red />
+        <Blue />
+      </>
+    );
+    const redThenBlue = getRenderedCSS();
+    expect(redThenBlue.indexOf('red')).toBeLessThan(redThenBlue.indexOf('blue'));
+    forward.unmount();
+
+    resetStyled();
+    resetGlobalStyleComponentIds();
+    const BlueFirst = createGlobalStyle`${() => 'html { color: blue; }'}`;
+    const RedSecond = createGlobalStyle`${() => 'html { color: red; }'}`;
+    render(
+      <>
+        <RedSecond />
+        <BlueFirst />
+      </>
+    );
+    const blueThenRed = getRenderedCSS();
+    expect(blueThenRed.indexOf('blue')).toBeLessThan(blueThenRed.indexOf('red'));
+  });
+
+  it('clears the shared rule when one of two identical static calls unmounts', () => {
+    const First = createGlobalStyle`html { --keep: 1; }`;
+    const Second = createGlobalStyle`html { --keep: 1; }`;
+    expect(First.styledComponentId).toBe(Second.styledComponentId);
+
+    function App({ showFirst, showSecond }: { showFirst: boolean; showSecond: boolean }) {
+      return (
+        <>
+          {showFirst ? <First /> : null}
+          {showSecond ? <Second /> : null}
+        </>
+      );
+    }
+
+    const view = render(<App showFirst showSecond />);
+    expect(getRenderedCSS()).toContain('--keep');
+
+    view.rerender(<App showFirst={false} showSecond />);
+    expect(getRenderedCSS()).not.toContain('--keep');
+  });
+
+  it('injects once per mounted instance of one function-bodied global', () => {
+    const GlobalStyle = createGlobalStyle`html { --dup: ${() => 1}; }`;
+
+    render(
+      <>
+        <GlobalStyle />
+        <GlobalStyle />
+      </>
+    );
+
+    expect(getRenderedCSS().match(/--dup/g)).toHaveLength(2);
   });
 });
