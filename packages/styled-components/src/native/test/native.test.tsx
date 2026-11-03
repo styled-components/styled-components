@@ -567,6 +567,18 @@ describe('native', () => {
         expect([view.props.tint, view.props.style]).toEqual(['red', { color: 'blue' }]);
       });
 
+      it('peeks a vendor-prefixed declaration by its compiled spelling in a callback that reads no props', () => {
+        const Comp = styled.View.attrs<{ tint?: unknown }>((_p, ast) => ({
+          tint: ast.peek('textFillColor'),
+        }))`
+          -webkit-text-fill-color: red;
+        `;
+
+        const view = TestRenderer.create(<Comp />).root.findByType(View);
+
+        expect(view.props.tint).toBe('red');
+      });
+
       it('reads a popped value again under a different spelling of the same key', () => {
         const Comp = styled.View.attrs<{ $on?: boolean; again?: unknown; first?: unknown }>(
           (p, ast) =>

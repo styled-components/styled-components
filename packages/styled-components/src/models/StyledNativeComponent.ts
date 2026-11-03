@@ -85,7 +85,7 @@ import type {
   NthSpec,
   PseudoState,
 } from './compileNative';
-import type { NthOfBranch } from '../parser/ast';
+import { NodeKind, type NthOfBranch, type Root } from '../parser/ast';
 import { applyVarDeferred, hasResponsiveOutput, SPECIAL_CASE_PROPS } from './compileNative';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
@@ -137,6 +137,28 @@ function resolveContext<Props extends object>(
 /** The key the compiled style holds for a declaration (vendor prefix stripped); a theme path stays verbatim. */
 function nativeDeclKey(keyOrPath: string): string {
   return keyOrPath.indexOf('.') === -1 ? camelize(keyOrPath) : keyOrPath;
+}
+
+/**
+ * {@link findBaseDecl} for the native style: a key that is absent as written
+ * but names a declaration under the compiled spelling (vendor prefix
+ * stripped) is only knowable at render time.
+ */
+function findNativeBaseDecl(ast: Root, prop: string): string | undefined | null {
+  const v = findBaseDecl(ast, prop, null);
+  if (v !== undefined) return v;
+  const key = nativeDeclKey(prop);
+  for (let i = 0; i < ast.length; i++) {
+    const node = ast[i];
+    if (
+      node.kind === NodeKind.Decl &&
+      typeof node.prop === 'string' &&
+      nativeDeclKey(node.prop) === key
+    ) {
+      return null;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -1395,15 +1417,19 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
       if (postAttrsPlans !== undefined) {
         const base = { ...compiled.base };
         effectiveBase = base;
+        // Deletes wait until every callback ran so a read in any spelling still sees a popped value.
+        const popped: string[] = [];
         applyPostAttrs(context, componentAttrs, postAttrsPlans, {
           lookup: keyOrPath =>
-            keyOrPath.indexOf('.') !== -1 ? themeValue(context.theme, keyOrPath) : base[keyOrPath],
+            keyOrPath.indexOf('.') !== -1
+              ? themeValue(context.theme, keyOrPath)
+              : base[nativeDeclKey(keyOrPath)],
           merge: mergeAttrsResult,
           onPop: key => {
-            delete base[camelize(key)];
+            popped.push(nativeDeclKey(key));
           },
-          resolveKey: nativeDeclKey,
         });
+        for (let i = 0; i < popped.length; i++) delete base[popped[i]];
       } else {
         effectiveBase = compiled.base;
       }
@@ -2674,9 +2700,7 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
     const postAttrsSource = chainHasPostAttrs ? getSource(finalRules) : undefined;
     WrappedStyledComponent.postAttrsPlans = chainHasPostAttrs
       ? buildPostAttrsPlans(finalAttrs, prop =>
-          postAttrsSource === undefined
-            ? null
-            : findBaseDecl(postAttrsSource.ast, prop, null, camelize)
+          postAttrsSource === undefined ? null : findNativeBaseDecl(postAttrsSource.ast, prop)
         )
       : undefined;
 

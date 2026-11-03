@@ -47,17 +47,11 @@ interface PostAttrsHost<Context extends object> {
    */
   merge: (context: Context, resolved: Dict<unknown>) => void;
   /**
-   * Record a popped declaration key (as resolved by `resolveKey`, or as a
-   * plan recorded it); each host normalizes the spelling it needs.
+   * Record a popped declaration key, as the author spelled it; each host
+   * normalizes the spelling it needs.
    * @internal
    */
   onPop: (key: string) => void;
-  /**
-   * Spelling a declaration key resolves under on this host, so two spellings
-   * of one declaration share a cache entry. Absent: keys are used as written.
-   * @internal
-   */
-  resolveKey?: (key: string) => string;
 }
 
 type PostAttrCallback = (p: object, ast: CompiledAst) => unknown;
@@ -112,16 +106,15 @@ function resolveTemplateValue(tv: TemplateValue, filled: ReadonlyArray<string>):
 export function findBaseDecl(
   ast: Root,
   prop: string,
-  filled: ReadonlyArray<string> | null,
-  camel: (prop: string) => string = camelizeProp
+  filled: ReadonlyArray<string> | null
 ): string | undefined | null {
-  const camelTarget = camel(prop);
+  const camelTarget = camelizeProp(prop);
   let found: string | undefined | null;
   for (let i = 0; i < ast.length; i++) {
     const node = ast[i];
     if (node.kind !== NodeKind.Decl || typeof node.prop !== 'string') continue;
     if (node.prop !== prop) {
-      if (camel(node.prop) === camelTarget) found = null;
+      if (camelizeProp(node.prop) === camelTarget) found = null;
       continue;
     }
     const v = node.value;
@@ -131,33 +124,28 @@ export function findBaseDecl(
 }
 
 /**
- * The `ast` handed to an arity-2 callback. Keys reach the host as the author
- * spelled them, or as `resolveKey` maps them. Each resolved key is read once
- * per accessor, so a pop stays idempotent and a peek after a pop still reads
- * the value; a pop of a present declaration key reports through `onPop`.
+ * The `ast` handed to an arity-2 callback. Keys reach the host verbatim as
+ * the author spelled them. Each key resolves once per accessor, so a pop
+ * stays idempotent and a peek after a pop still reads the value; a pop of a
+ * present declaration key reports through `onPop`.
  */
-function createAstAccessor(
-  lookup: PostAttrsLookup,
-  onPop: (key: string) => void,
-  resolveKey?: (key: string) => string
-): CompiledAst {
+function createAstAccessor(lookup: PostAttrsLookup, onPop: (key: string) => void): CompiledAst {
   const cache = new Map<string, unknown>();
-  const get = (key: string): unknown => {
-    let v: unknown = cache.get(key);
-    if (v !== undefined || cache.has(key)) return v;
-    v = lookup(key);
-    cache.set(key, v);
+  const get = (keyOrPath: string): unknown => {
+    let v: unknown = cache.get(keyOrPath);
+    if (v !== undefined || cache.has(keyOrPath)) return v;
+    v = lookup(keyOrPath);
+    cache.set(keyOrPath, v);
     return v;
   };
   return {
     pop(keyOrPath: string, fallback?: unknown): unknown {
-      const key = resolveKey ? resolveKey(keyOrPath) : keyOrPath;
-      const v = get(key);
-      if (v !== undefined && key.indexOf('.') === -1) onPop(key);
+      const v = get(keyOrPath);
+      if (v !== undefined && keyOrPath.indexOf('.') === -1) onPop(keyOrPath);
       return v !== undefined ? v : fallback;
     },
     peek(keyOrPath: string, fallback?: unknown): unknown {
-      const v = get(resolveKey ? resolveKey(keyOrPath) : keyOrPath);
+      const v = get(keyOrPath);
       return v !== undefined ? v : fallback;
     },
   } as CompiledAst;
@@ -241,7 +229,7 @@ export function applyPostAttrs<Context extends object>(
       continue;
     }
 
-    if (ast === null) ast = createAstAccessor(host.lookup, host.onPop, host.resolveKey);
+    if (ast === null) ast = createAstAccessor(host.lookup, host.onPop);
     host.merge(context, attr({ ...context }, ast) as Dict<unknown>);
   }
 }
