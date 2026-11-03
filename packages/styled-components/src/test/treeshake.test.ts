@@ -577,8 +577,9 @@ describe('bundle size', () => {
     // Carries every export, so this is the widest surface: the in-house parser,
     // arity-2 attrs tracing with its runtime fallback, and the server entry
     // points a consumer bundle would shake away. Ceiling includes buffered
-    // injection (StyleInjector + provisional rule stash) on top of main.
-    expect(sizeKB).toBeLessThan(15.4);
+    // injection (StyleInjector + provisional rule stash) on top of main, and
+    // the 6.x forward-ports (explicit-undefined forwarding, native attrs parity).
+    expect(sizeKB).toBeLessThan(15.5);
   });
   it('production bundle size with real bundler tree-shaking', async () => {
     const webpack = require('webpack');

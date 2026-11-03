@@ -537,23 +537,14 @@ function buildPropsForElement<Context extends ExecutionContext>(
   const out: Dict<unknown> = {};
 
   for (const key in context) {
-    if (context[key] === undefined) {
-      // Attrs delete the keys they clear, so an `undefined` left here is the caller's
-      // explicit one: it reaches a component target so that component can fall back
-      // to its own default, and never a DOM tag.
-      if (
-        !isDOMTarget &&
-        key !== 'className' &&
-        key !== 'forwardedAs' &&
-        key !== 'ref' &&
-        key !== 'theme' &&
-        key[0] !== '$' &&
-        key !== 'as' &&
-        (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated))
-      ) {
-        out[key] = undefined;
-      }
-
+    // Attrs delete the keys they clear, so an `undefined` left here is the caller's
+    // explicit one: it takes the normal filters to a component target so that
+    // component can fall back to its own default, and never reaches a DOM tag.
+    // `className` is assigned after the loop, so it must not claim key order here.
+    if (
+      context[key] === undefined &&
+      (isDOMTarget || key === 'className' || key === 'forwardedAs')
+    ) {
       continue;
     }
     if (
