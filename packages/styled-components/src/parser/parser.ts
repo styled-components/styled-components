@@ -170,19 +170,29 @@ export function parse(css: string, options?: ParseOptions): Root<string>;
 export function parse(css: string, options?: ParseOptions): Root<string | TemplateValue> {
   const ctx: ParseContext = {
     css,
-    len: css.length,
+    depth: 0,
     i: 0,
     keepCommaSpaces: !!options?.keepCommaSpaces,
+    len: css.length,
     templates: !!options?.templates,
   };
   return parseBlock(ctx);
 }
 
+/**
+ * A block nested past this depth is skipped with its contents, so input
+ * carrying runtime values cannot exhaust the call stack. Authored CSS nests
+ * a handful deep.
+ */
+const MAX_DEPTH = 512;
+
 interface ParseContext {
   css: string;
-  len: number;
+  /** Blocks currently open; the root block is 1. */
+  depth: number;
   i: number;
   keepCommaSpaces: boolean;
+  len: number;
   /**
    * Runtime gate for sentinel detection. Only `parseSource` (templated
    * tagged-template input) sets this `true`; static-string callers
@@ -203,8 +213,39 @@ interface ParseContext {
   templates: boolean;
 }
 
-/** Single-pass parse of a CSS block body. */
+/** Parse a block body, tracking nesting depth against {@link MAX_DEPTH}. */
 function parseBlock(ctx: ParseContext): Node[] {
+  if (ctx.depth >= MAX_DEPTH) {
+    skipBlock(ctx);
+    return [];
+  }
+  ctx.depth++;
+  const out = parseBlockBody(ctx);
+  ctx.depth--;
+  return out;
+}
+
+/** Move `ctx.i` just past the `}` closing the block whose body starts at `ctx.i`. */
+function skipBlock(ctx: ParseContext): void {
+  const css = ctx.css;
+  const len = ctx.len;
+  let open = 1;
+  let i = ctx.i;
+  while (i < len) {
+    const j = scanQP(css, i, len, OPEN_BRACE, CLOSE_BRACE, -1, -1);
+    if (j >= len) {
+      i = len;
+      break;
+    }
+    i = j + 1;
+    if (css.charCodeAt(j) === OPEN_BRACE) open++;
+    else if (--open === 0) break;
+  }
+  ctx.i = i;
+}
+
+/** Single-pass parse of a CSS block body. */
+function parseBlockBody(ctx: ParseContext): Node[] {
   const css = ctx.css;
   const len = ctx.len;
   const out: Node[] = [];

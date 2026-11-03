@@ -243,6 +243,48 @@ describe('parser', () => {
     ]);
   });
 
+  describe('nesting depth cap', () => {
+    // Input can carry runtime values, so nesting depth must not be able to
+    // exhaust the call stack. The block past the cap is skipped with its
+    // contents; the statements around the chain still parse.
+    it.each([
+      ['rule', 'a{'],
+      ['at-rule', '@media x{'],
+    ])('skips a %s chain nested 80k deep without overflowing the stack', (_label, opener) => {
+      const css = 'b: c; ' + opener.repeat(80_000) + 'color:red;' + '}'.repeat(80_000) + ' d: e;';
+      const start = performance.now();
+      const ast = parse(css);
+      expect(performance.now() - start).toBeLessThan(200);
+
+      expect(ast[0]).toEqual({ kind: NodeKind.Decl, prop: 'b', value: 'c' });
+      expect(ast[2]).toEqual({ kind: NodeKind.Decl, prop: 'd', value: 'e' });
+      expect(ast).toHaveLength(3);
+      let node = ast[1];
+      let depth = 0;
+      while (
+        (node.kind === NodeKind.Rule || node.kind === NodeKind.AtRule) &&
+        node.children?.length
+      ) {
+        depth++;
+        node = node.children[0];
+      }
+      expect(depth).toBeGreaterThan(100);
+      expect(depth).toBeLessThan(1_000);
+      expect(node.kind === NodeKind.Rule || node.kind === NodeKind.AtRule).toBe(true);
+    });
+
+    it('keeps nesting under the cap intact', () => {
+      let node = parse('a{'.repeat(100) + 'color:red;' + '}'.repeat(100))[0];
+      let depth = 0;
+      while (node.kind === NodeKind.Rule) {
+        depth++;
+        node = node.children[0];
+      }
+      expect(depth).toBe(100);
+      expect(node).toEqual({ kind: NodeKind.Decl, prop: 'color', value: 'red' });
+    });
+  });
+
   it('splits comma-separated selectors', () => {
     expect(splitSelectors('.a, .b, .c')).toEqual(['.a', '.b', '.c']);
   });

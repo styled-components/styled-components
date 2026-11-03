@@ -58,6 +58,10 @@ export function normalize(css: string): string {
   let inString = 0;
   let parenDepth = 0;
   let braceDepth = 0;
+  /** A `}` without its `{` would close the component scope even when the totals balance. */
+  let strayClose = false;
+  /** Last char appended to `out`; reading `out` itself would flatten the concat rope per comment. */
+  let lastOutCh = 0;
   let modified = false;
 
   while (i < len) {
@@ -99,7 +103,10 @@ export function normalize(css: string): string {
 
     if (code === SLASH && i + 1 < len && css.charCodeAt(i + 1) === ASTERISK) {
       // Emit everything up to the comment, then skip the comment entirely.
-      out += css.substring(start, i);
+      if (i > start) {
+        out += css.substring(start, i);
+        lastOutCh = css.charCodeAt(i - 1);
+      }
       i += 2;
       while (i + 1 < len && !(css.charCodeAt(i) === ASTERISK && css.charCodeAt(i + 1) === SLASH)) {
         i++;
@@ -108,8 +115,7 @@ export function normalize(css: string): string {
       // When the comment is bordered by whitespace on both sides, collapse the
       // pair to a single space so selector templates with annotative comments
       // (`a /* foo */ b`) hash consistently.
-      const prevCh = out.length > 0 ? out.charCodeAt(out.length - 1) : 0;
-      if (isWS(prevCh) && i < len && isWS(css.charCodeAt(i))) {
+      if (isWS(lastOutCh) && i < len && isWS(css.charCodeAt(i))) {
         while (i < len && isWS(css.charCodeAt(i))) i++;
       }
       start = i;
@@ -118,7 +124,10 @@ export function normalize(css: string): string {
     }
 
     if (code === ASTERISK && i + 1 < len && css.charCodeAt(i + 1) === SLASH) {
-      out += css.substring(start, i);
+      if (i > start) {
+        out += css.substring(start, i);
+        lastOutCh = css.charCodeAt(i - 1);
+      }
       i += 2;
       start = i;
       modified = true;
@@ -133,7 +142,10 @@ export function normalize(css: string): string {
         i += 2;
         continue;
       }
-      out += css.substring(start, i);
+      if (i > start) {
+        out += css.substring(start, i);
+        lastOutCh = css.charCodeAt(i - 1);
+      }
       while (i < len && css.charCodeAt(i) !== LF) {
         i++;
       }
@@ -144,22 +156,20 @@ export function normalize(css: string): string {
 
     if (code === OPEN_BRACE) {
       braceDepth++;
-    } else if (code === CLOSE_BRACE) {
-      braceDepth--;
+    } else if (code === CLOSE_BRACE && --braceDepth < 0) {
+      strayClose = true;
     }
 
     i++;
   }
 
-  if (!modified) {
-    if (braceDepth === 0) return css;
-    return sanitizeBraces(css);
-  }
+  const balanced = braceDepth === 0 && !strayClose;
+
+  if (!modified) return balanced ? css : sanitizeBraces(css);
 
   if (start < len) out += css.substring(start);
 
-  if (braceDepth === 0) return out;
-  return sanitizeBraces(out);
+  return balanced ? out : sanitizeBraces(out);
 }
 
 function sanitizeBraces(css: string): string {
