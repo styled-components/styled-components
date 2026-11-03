@@ -356,6 +356,23 @@ describe.each([
     expect(rulesOf(sheet.toString())).toEqual(['.c1 {color: blue;}']);
   });
 
+  it('jest-styled-components reset makes a component rendered before it inject again', () => {
+    const lib = load(bundles);
+    const { React } = lib;
+    const { __PRIVATE__, default: styled } = lib[key];
+    const { mainSheet, masterSheet } = __PRIVATE__;
+    const sheet = mainSheet || masterSheet;
+    const Box = styled.div`color: red;`;
+
+    renderWith(lib, key, React.createElement(Box));
+    sheet.gs = {};
+    sheet.names = new Map();
+    sheet.clearTag();
+    renderWith(lib, key, React.createElement(Box));
+
+    expect(rulesOf(sheet.toString())).toEqual(['.c1 {color: red;}']);
+  });
+
   // The documented Next.js App Router registry: collect, read the tags, then clear for the next request.
   it('Next.js registry pattern reads the rendered rules and clears the sheet', () => {
     const lib = load(bundles);
