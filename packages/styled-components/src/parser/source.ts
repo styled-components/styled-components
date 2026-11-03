@@ -401,7 +401,7 @@ function interleaveWithSentinels(
     const prefix = strings[i] || '';
     const suffix = strings[i + 1] || '';
     const standalone = isStandaloneSlot(prefix, suffix, prevWasStandalone);
-    if (__DEV__ && !standalone) warnSwallowedFragment(prefix, interpolations[i]);
+    if (__DEV__ && !standalone) warnSwallowedFragment(out, prefix, interpolations[i]);
     out += standalone ? '\0J' : '\0I';
     out += i;
     out += '\0';
@@ -418,7 +418,7 @@ function interleaveWithSentinels(
  * value. Value-position slots (prefix ends in `:` `,` `(` `/`) are the
  * intended embedded use and stay silent.
  */
-function warnSwallowedFragment(prefix: string, interpolation: unknown): void {
+function warnSwallowedFragment(sourceSoFar: string, prefix: string, interpolation: unknown): void {
   const last = nonWsCharCode(prefix, prefix.length - 1, -1);
   if (last === COLON || last === COMMA || last === OPEN_PAREN || last === SLASH) return;
   if (!isCssProduct(interpolation)) return;
@@ -430,21 +430,27 @@ function warnSwallowedFragment(prefix: string, interpolation: unknown): void {
     for (let j = 0; j < s.length; j++) {
       const c = s.charCodeAt(j);
       if (c === SEMICOLON || c === OPEN_BRACE || c === CLOSE_BRACE) {
-        // Quote only the unterminated declaration: the text after the
-        // prefix's last top-level `;` `{` `}`.
+        // The swallowing declaration starts after the last top-level `;` `{`
+        // `}` of the whole source so far, so it can span earlier slots.
+        const sourceEnd = sourceSoFar.length;
         let from = 0;
         let k: number;
         while (
-          (k = scanQP(prefix, from, prefix.length, SEMICOLON, OPEN_BRACE, CLOSE_BRACE, -1)) <
-          prefix.length
+          (k = scanQP(sourceSoFar, from, sourceEnd, SEMICOLON, OPEN_BRACE, CLOSE_BRACE, -1)) <
+          sourceEnd
         ) {
           from = k + 1;
         }
-        const tail = prefix.slice(from).trim();
+        const statement = sourceSoFar.slice(from).trim();
+        const colon = scanQP(statement, 0, statement.length, COLON, -1, -1, -1);
+        const property = statement
+          .slice(0, colon)
+          .trim()
+          .replace(/\0[IJ]\d+\0/g, '${...}');
         warnOnce(
           'fragment-missing-semicolon',
-          `a css fragment is interpolated after \`${tail}\` with no \`;\` between them, so the fragment text becomes part of that declaration's value. Add a \`;\` before the \`\${...}\` interpolation.`,
-          tail
+          `a css fragment is interpolated inside the \`${property}\` declaration with no \`;\` before it, so the fragment text becomes part of that declaration's value. Add a \`;\` before the \`\${...}\` interpolation.`,
+          statement
         );
         return;
       }

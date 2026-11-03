@@ -506,13 +506,32 @@ describe('compileWeb', () => {
         );
         expect(warn.mock.calls).toEqual([
           [
-            "[sc] a css fragment is interpolated after `padding: 0 1px` with no `;` between them, so the fragment text becomes part of that declaration's value. Add a `;` before the `${...}` interpolation.",
+            "[sc] a css fragment is interpolated inside the `padding` declaration with no `;` before it, so the fragment text becomes part of that declaration's value. Add a `;` before the `${...}` interpolation.",
           ],
         ]);
         warn.mockRestore();
         // The embedded fragment text carries `;` / `{`, structural characters
         // the AST splice refuses, so this path bails to the string path.
         expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toBeNull();
+      });
+
+      it('names the declaration across earlier slots and warns once per site, not once per chunk tail', () => {
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const block = css`
+          color: red;
+        `;
+        // Both sites end in `px` before the fragment; only the declaration differs.
+        parseSource(['margin: 0 ', 'px ', ';'], [10, block]);
+        parseSource(['padding: 0 ', 'px ', ';'], [10, block]);
+        expect(warn.mock.calls).toEqual([
+          [
+            "[sc] a css fragment is interpolated inside the `margin` declaration with no `;` before it, so the fragment text becomes part of that declaration's value. Add a `;` before the `${...}` interpolation.",
+          ],
+          [
+            "[sc] a css fragment is interpolated inside the `padding` declaration with no `;` before it, so the fragment text becomes part of that declaration's value. Add a `;` before the `${...}` interpolation.",
+          ],
+        ]);
+        warn.mockRestore();
       });
 
       it('compiles the swallowed value as written on the string path', () => {
