@@ -890,6 +890,107 @@ describe('attrs', () => {
       expect(el.style.color).toBe('');
     });
 
+    it('applies an arity-2 callback added when extending a styled component that has none', () => {
+      const Base = styled.div`
+        color: red;
+      `;
+      const Extended = styled(Base).attrs<{ 'data-tint'?: string }>((_p, ast) => ({
+        'data-tint': ast.peek('color'),
+      }))``;
+      const { container } = render(<Extended />);
+      expect((container.firstChild as HTMLElement).getAttribute('data-tint')).toBe('red');
+    });
+
+    it("keeps a base's arity-2 callback reading the whole chain when an extension adds only CSS", () => {
+      const Base = styled.div.attrs<{ 'data-tint'?: string; 'data-pad'?: string }>((_p, ast) => ({
+        'data-pad': ast.peek('padding'),
+        'data-tint': ast.peek('color'),
+      }))`
+        color: red;
+      `;
+      const Extended = styled(Base)`
+        padding: 4px;
+      `;
+      const el = render(<Extended />).container.firstChild as HTMLElement;
+      expect([el.getAttribute('data-tint'), el.getAttribute('data-pad')]).toEqual(['red', '4px']);
+    });
+
+    it('reads the base declarations from an extension callback that bails to the render-time path', () => {
+      const Base = styled.div<{ $on?: boolean }>`
+        color: ${p => (p.$on ? 'green' : 'red')};
+      `;
+      const Extended = styled(Base).attrs<{ 'data-tint'?: string }>((p, ast) => ({
+        'data-tint': p.$on ? ast.peek('color') : 'off',
+      }))``;
+      const el = render(<Extended $on />).container.firstChild as HTMLElement;
+      expect(el.getAttribute('data-tint')).toBe('green');
+    });
+
+    it("reads the extension's value when base and extension declare the same property", () => {
+      const Base = styled.div`
+        color: red;
+      `;
+      const Extended = styled(Base).attrs<{ 'data-tint'?: string }>((_p, ast) => ({
+        'data-tint': ast.pop('color'),
+      }))`
+        color: blue;
+      `;
+      const el = render(<Extended />).container.firstChild as HTMLElement;
+      // The extension's class is emitted after the base's, so its value is
+      // the one the cascade applies, and the one pop lifts and unsets.
+      expect([el.getAttribute('data-tint'), el.style.color]).toEqual(['blue', 'unset']);
+    });
+
+    it('reads the last declaration when one template repeats a property', () => {
+      const Comp = styled.div.attrs<{ 'data-tint'?: string }>((_p, ast) => ({
+        'data-tint': ast.pop('color'),
+      }))`
+        color: red;
+        color: blue;
+      `;
+      const el = render(<Comp />).container.firstChild as HTMLElement;
+      expect([el.getAttribute('data-tint'), el.style.color]).toEqual(['blue', 'unset']);
+    });
+
+    it('reads a base declaration whose template has no trailing `;`', () => {
+      const Base = styled.div`color: red`;
+      const Extended = styled(Base).attrs<{ 'data-tint'?: string }>((_p, ast) => ({
+        'data-tint': ast.peek('color'),
+      }))`
+        padding: 4px;
+      `;
+      const el = render(<Extended />).container.firstChild as HTMLElement;
+      // Web compiles each level's template separately, so the base's last
+      // declaration ends at its own template boundary.
+      expect(el.getAttribute('data-tint')).toBe('red');
+    });
+
+    it('camelizes a kebab-case key popped by a render-time callback into the inline style', () => {
+      const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const Comp = styled.div.attrs<{ 'data-bg'?: string; $on?: boolean }>((p, ast) => ({
+        'data-bg': p.$on ? ast.pop('background-color') : 'off',
+      }))`
+        background-color: red;
+      `;
+      const el = render(<Comp $on />).container.firstChild as HTMLElement;
+      expect([el.getAttribute('data-bg'), el.style.backgroundColor]).toEqual(['red', 'unset']);
+      expect(error.mock.calls).toEqual([]);
+      error.mockRestore();
+    });
+
+    it('pops a custom property by its verbatim name and unsets it inline', () => {
+      const Comp = styled.div.attrs<{ 'data-tint'?: string; $on?: boolean }>((p, ast) => ({
+        'data-tint': p.$on ? ast.pop('--tint') : 'off',
+      }))`
+        --tint: red;
+      `;
+      const el = render(<Comp $on />).container.firstChild as HTMLElement;
+      expect([el.getAttribute('data-tint'), el.style.getPropertyValue('--tint')]).toEqual([
+        'red',
+        'unset',
+      ]);
+    });
+
     it('user style prop overrides pop inline-style override', () => {
       const Comp = styled.div.attrs<{ 'data-tint'?: string }>((_p, ast) => ({
         'data-tint': ast.pop('color'),

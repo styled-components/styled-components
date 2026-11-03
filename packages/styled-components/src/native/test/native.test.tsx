@@ -478,6 +478,84 @@ describe('native', () => {
         expect(view.props.style).toEqual({ padding: 5 });
       });
 
+      it.each([
+        [
+          'a folded callback',
+          (_p: { $on?: boolean }, ast: any) => ({ fill: ast.pop('background-color') }),
+        ],
+        [
+          'a props-reading callback',
+          (p: { $on?: boolean }, ast: any) => ({
+            fill: p.$on ? ast.pop('background-color') : 'off',
+          }),
+        ],
+      ])('camelizes a kebab-case key popped by %s', (_name, cb) => {
+        const Comp = styled.View.attrs<{ $on?: boolean; fill?: string }>(cb)`
+          background-color: red;
+          padding: 5px;
+        `;
+
+        const view = TestRenderer.create(<Comp $on />).root.findByType(View);
+
+        expect([view.props.fill, view.props.style]).toEqual(['red', { padding: 5 }]);
+      });
+
+      it('camelizes a kebab-case key peeked by a props-reading callback', () => {
+        const Comp = styled.View.attrs<{ $on?: boolean; tint?: string }>((p, ast) => ({
+          tint: p.$on ? ast.peek('background-color') : 'off',
+        }))`
+          background-color: red;
+        `;
+
+        const view = TestRenderer.create(<Comp $on />).root.findByType(View);
+
+        expect([view.props.tint, view.props.style]).toEqual(['red', { backgroundColor: 'red' }]);
+      });
+
+      // A camelCase key against a kebab-case declaration is only knowable at
+      // render time (a polyfill may transform the value), so it never folds
+      // the raw CSS text. The render-time value of light-dark() is not in
+      // the base style, so the read is undefined and the style is untouched.
+      it.each([
+        [
+          'a static callback',
+          (_p: { $on?: boolean }, ast: any) => ({ tint: ast.pop('backgroundColor') }),
+        ],
+        [
+          'a props-reading callback',
+          (p: { $on?: boolean }, ast: any) => ({
+            tint: p.$on ? ast.pop('backgroundColor') : 'off',
+          }),
+        ],
+      ])(
+        '%s popping a camelCase key reads the render-time value, not the raw CSS text',
+        (_name, cb) => {
+          const Comp = styled.View.attrs<{ $on?: boolean; tint?: unknown }>(cb)`
+          background-color: light-dark(white, black);
+        `;
+
+          const view = TestRenderer.create(<Comp $on />).root.findByType(View);
+
+          expect([view.props.tint, view.props.style]).toEqual([
+            undefined,
+            { backgroundColor: 'white' },
+          ]);
+        }
+      );
+
+      it('pops a custom property by its verbatim name', () => {
+        const Comp = styled.View.attrs<{ $on?: boolean; tint?: unknown }>((p, ast) => ({
+          tint: p.$on ? ast.pop('--tint') : 'off',
+        }))`
+          --tint: red;
+          padding: 5px;
+        `;
+
+        const view = TestRenderer.create(<Comp $on />).root.findByType(View);
+
+        expect([view.props.tint, view.props.style]).toEqual([undefined, { padding: 5 }]);
+      });
+
       it('reads without removing via ast.peek', () => {
         const Comp = styled.View.attrs<{ tint?: string }>((_props, ast) => ({
           tint: ast.peek('color'),
@@ -490,6 +568,65 @@ describe('native', () => {
 
         expect(view.props.tint).toBe('blue');
         expect(view.props.style).toEqual({ color: 'blue' });
+      });
+
+      it('applies an arity-2 callback added when extending a styled component that has none', () => {
+        const Base = styled.View`
+          color: blue;
+        `;
+        const Extended = styled(Base).attrs<{ tint?: string }>((_props, ast) => ({
+          tint: ast.peek('color'),
+        }))``;
+
+        const view = TestRenderer.create(<Extended />).root.findByType(View);
+
+        expect(view.props.tint).toBe('blue');
+      });
+
+      it("keeps a base's arity-2 callback reading the whole chain when an extension adds only CSS", () => {
+        const Base = styled.View.attrs<{ pad?: string; tint?: string }>((_props, ast) => ({
+          pad: ast.peek('padding'),
+          tint: ast.peek('color'),
+        }))`
+          color: blue;
+        `;
+        const Extended = styled(Base)`
+          padding: 4px;
+        `;
+
+        const view = TestRenderer.create(<Extended />).root.findByType(View);
+
+        expect([view.props.tint, view.props.pad]).toEqual(['blue', '4px']);
+      });
+
+      it("reads the extension's value when base and extension declare the same property", () => {
+        const Base = styled.View`
+          color: red;
+        `;
+        const Extended = styled(Base).attrs<{ tint?: string }>((_props, ast) => ({
+          tint: ast.pop('color'),
+        }))`
+          color: blue;
+        `;
+
+        const view = TestRenderer.create(<Extended />).root.findByType(View);
+
+        // The extension's declaration wins the cascade, so it is the value
+        // pop lifts and removes from the style.
+        expect([view.props.tint, view.props.style]).toEqual(['blue', {}]);
+      });
+
+      it('reads the last declaration when one template repeats a property', () => {
+        const Comp = styled.View.attrs<{ tint?: string }>((_props, ast) => ({
+          tint: ast.pop('color'),
+        }))`
+          color: red;
+          color: blue;
+        `;
+
+        const view = TestRenderer.create(<Comp />).root.findByType(View);
+
+        expect([view.props.tint, view.props.style]).toEqual(['blue', {}]);
       });
 
       it('does not mutate the cached compiled.base across renders', () => {

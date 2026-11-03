@@ -222,18 +222,14 @@ export interface CommonStatics<out R extends Runtime, in out Props extends BaseO
   target: StyledTarget<R>;
   shouldForwardProp?: ShouldForwardProp<R> | undefined;
   /**
-   * Internal: `true` when at least one entry in `attrs` is a function
-   * with arity >= 2 (a `(props, ast) => ...` post-compile callback). The
-   * render path reads this flag instead of scanning `attrs` per render.
+   * Internal: pre-computed plans for arity-2 attrs (`(props, ast) => ...`
+   * post-compile callbacks), aligned in order with those entries in `attrs`.
+   * Each entry is either a static plan (output bag + popped keys) folded at
+   * construction time, or `null` to signal that the render path must invoke
+   * the original callback. `undefined` when `attrs` has no arity-2 entry.
+   * @internal
    */
-  hasPostAttrs?: boolean | undefined;
-  /**
-   * Internal: pre-computed plans for arity-2 attrs, aligned in order with
-   * the arity-2 entries in `attrs`. Each entry is either a static plan
-   * (output bag + popped keys) folded at construction time, or `null` to
-   * signal that the render path must invoke the original callback.
-   */
-  postAttrsPlans?: ReadonlyArray<import('./utils/tracePostAttrs').PostAttrsPlan | null> | undefined;
+  postAttrsPlans?: ReadonlyArray<import('./utils/postAttrs').PostAttrsPlan | null> | undefined;
 }
 
 export interface IStyledStatics<out R extends Runtime, in out OuterProps extends BaseObject>

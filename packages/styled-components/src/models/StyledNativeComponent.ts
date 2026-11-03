@@ -42,11 +42,10 @@ import {
 } from '../native/scrollTimeline';
 import { EMPTY_SAFE_AREA_INSETS, type SafeAreaInsets, useSafeAreaInsets } from '../native/safeArea';
 import { applyResolvers, ResolveEnv } from '../native/transform/polyfills/resolvers';
-import { concatSourceInputs } from '../parser/source';
+import { concatSourceInputs, getSource } from '../parser/source';
 import type {
   Attrs,
   BaseObject,
-  CompiledAst,
   Dict,
   ExecutionContext,
   ExecutionProps,
@@ -62,7 +61,14 @@ import type {
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import { themeValue } from '../utils/themePath';
-import { buildPostAttrsPlans, hasPostAttrs, type PostAttrsPlan } from '../utils/tracePostAttrs';
+import {
+  applyPostAttrs,
+  buildPostAttrsPlans,
+  camelizeProp,
+  findBaseDecl,
+  hasPostAttrs,
+  isPostAttr,
+} from '../utils/postAttrs';
 import escape from '../utils/escape';
 import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
@@ -98,6 +104,7 @@ const HOIST_EXCLUDE = {
   attrs: true,
   nativeStyle: true,
   displayName: true,
+  postAttrsPlans: true,
   shouldForwardProp: true,
   styledComponentId: true,
   target: true,
@@ -114,7 +121,7 @@ function resolveContext<Props extends object>(
     const attr = attrs[i];
     // Arity-2 function attrs run after compile in `applyPostAttrs` so they can
     // pop/peek the compiled style. Skip them in the pre-compile phase.
-    if (isFunction(attr) && (attr as Function).length >= 2) continue;
+    if (isPostAttr(attr)) continue;
     const resolvedAttrDef = isFunction(attr)
       ? (attr as unknown as (p: ExecutionContext & Props) => ExecutionProps & Partial<Props>)({
           ...context,
@@ -143,76 +150,6 @@ function mergeAttrsResult(context: object, resolved: Dict<unknown>): void {
     } else if (target[key] !== undefined) {
       delete target[key];
     }
-  }
-}
-
-/**
- * Post-compile attrs phase. Each arity-2 attr runs in order: a static
- * plan (folded at construction by `tracePostAttr`) merges directly into
- * context and applies pops to `effectiveBase`. Untraceable callbacks
- * fall back to runtime invocation with a live `ast` accessor over
- * `effectiveBase`. `effectiveBase` is the cloned compiled base;safe to
- * mutate; the canonical compiled object is left intact for cache reuse.
- */
-function applyPostAttrs<Props extends object>(
-  context: ExecutionContext & Props,
-  attrs: Attrs<Props>[],
-  plans: ReadonlyArray<PostAttrsPlan | null> | undefined,
-  effectiveBase: Dict<unknown>
-): void {
-  let ast: CompiledAst | null = null;
-  let planIdx = 0;
-  for (let i = 0; i < attrs.length; i++) {
-    const attr = attrs[i];
-    if (!isFunction(attr) || (attr as Function).length < 2) continue;
-    const plan = plans !== undefined ? plans[planIdx] : null;
-    planIdx++;
-
-    if (plan !== null && plan !== undefined) {
-      mergeAttrsResult(context, plan.output);
-      if (plan.popped !== null) {
-        plan.popped.forEach(key => {
-          delete effectiveBase[key];
-        });
-      }
-      continue;
-    }
-
-    if (ast === null) {
-      const theme = (context as { theme?: unknown }).theme;
-      // Per-render lookup cache: same key resolved once. Theme-path walks
-      // and effectiveBase reads alike skip on a cache hit. Pop's destructive
-      // intent is preserved because the cached value is returned even after
-      // the source slot is removed; the cache also makes pop idempotent
-      // when called more than once with the same key in one render.
-      const cache = new Map<string, unknown>();
-      const lookup = (keyOrPath: string): unknown => {
-        let v: unknown = cache.get(keyOrPath);
-        if (v !== undefined || cache.has(keyOrPath)) return v;
-        if (keyOrPath.indexOf('.') !== -1) {
-          v = themeValue(theme, keyOrPath);
-        } else {
-          v = effectiveBase[keyOrPath];
-        }
-        cache.set(keyOrPath, v);
-        return v;
-      };
-      ast = {
-        pop(keyOrPath: string, fallback?: unknown): unknown {
-          const v = lookup(keyOrPath);
-          if (keyOrPath.indexOf('.') === -1) delete effectiveBase[keyOrPath];
-          return v !== undefined ? v : fallback;
-        },
-        peek(keyOrPath: string, fallback?: unknown): unknown {
-          const v = lookup(keyOrPath);
-          return v !== undefined ? v : fallback;
-        },
-      } as CompiledAst;
-    }
-    const resolvedAttrDef = (
-      attr as (p: ExecutionContext & Props, a: CompiledAst) => ExecutionProps & Partial<Props>
-    )({ ...context }, ast);
-    mergeAttrsResult(context, resolvedAttrDef as Dict<unknown>);
   }
 }
 
@@ -1449,14 +1386,20 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
       // either applies a static plan (folded at construction) or invokes
       // its callback at runtime via the `ast` accessor. Skipped entirely
       // when no arity-2 attrs are present (zero overhead for the common case).
-      if (forwardedComponent.hasPostAttrs === true) {
-        effectiveBase = { ...compiled.base };
-        applyPostAttrs<Props>(
-          context,
-          componentAttrs,
-          forwardedComponent.postAttrsPlans,
-          effectiveBase
-        );
+      const postAttrsPlans = forwardedComponent.postAttrsPlans;
+      if (postAttrsPlans !== undefined) {
+        const base = { ...compiled.base };
+        effectiveBase = base;
+        applyPostAttrs(context, componentAttrs, postAttrsPlans, {
+          lookup: keyOrPath =>
+            keyOrPath.indexOf('.') !== -1
+              ? themeValue(context.theme, keyOrPath)
+              : base[camelizeProp(keyOrPath)],
+          merge: mergeAttrsResult,
+          onPop: key => {
+            delete base[camelizeProp(key)];
+          },
+        });
       } else {
         effectiveBase = compiled.base;
       }
@@ -2723,9 +2666,12 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
     WrappedStyledComponent.nativeStyle = nativeStyleInstance;
     WrappedStyledComponent.displayName = displayName;
     WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
-    WrappedStyledComponent.hasPostAttrs = hasPostAttrs(finalAttrs);
-    WrappedStyledComponent.postAttrsPlans = WrappedStyledComponent.hasPostAttrs
-      ? buildPostAttrsPlans(finalAttrs, finalRules)
+    const chainHasPostAttrs = hasPostAttrs(finalAttrs);
+    const postAttrsSource = chainHasPostAttrs ? getSource(finalRules) : undefined;
+    WrappedStyledComponent.postAttrsPlans = chainHasPostAttrs
+      ? buildPostAttrsPlans(finalAttrs, prop =>
+          postAttrsSource === undefined ? null : findBaseDecl(postAttrsSource.ast, prop, null)
+        )
       : undefined;
 
     WrappedStyledComponent.styledComponentId = styledComponentId;

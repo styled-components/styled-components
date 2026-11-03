@@ -14,7 +14,6 @@ import type {
   AnyComponent,
   Attrs,
   BaseObject,
-  CompiledAst,
   Dict,
   ExecutionContext,
   ExecutionProps,
@@ -27,15 +26,18 @@ import type {
   StyledOptions,
   WebTarget,
 } from '../types';
-import { NodeKind, type Root, type TemplateValue } from '../parser/ast';
 import { evaluateForFastPath, type FastPathFragment } from '../parser/compile';
 import { getSource, Source } from '../parser/source';
 import { themeValue } from '../utils/themePath';
 import {
+  applyPostAttrs,
   buildPostAttrsPlans,
+  camelizeProp,
+  findBaseDecl,
   hasPostAttrs as chainHasPostAttrs,
+  isPostAttr,
   type PostAttrsPlan,
-} from '../utils/tracePostAttrs';
+} from '../utils/postAttrs';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import createWarnTooManyClasses, {
   LIMIT as TOO_MANY_CLASSES_LIMIT,
@@ -87,17 +89,20 @@ function StyleInjector({
   sheet: StyleSheet;
   webStyle: WebStyle;
 }): null {
-  // getServerSnapshot runs under renderToString; getSnapshot under createRoot.
-  // Distinguishes the jsdom-without-ServerStyleSheet footgun (buffered path,
-  // insertion effects never fire) from a normal client mount, without the
-  // false positives a post-render microtask probe would raise on discarded
-  // concurrent renders.
-  const isServerRender = React.useSyncExternalStore(subscribeNoop, getFalse, getTrue);
-  if (__DEV__ && isServerRender) {
-    warnOnce(
-      'buffered-ssr-without-sheet',
-      'this tree is rendered with renderToString / renderToStaticMarkup without ServerStyleSheet, so its styles are missing from the output. Wrap the tree in ServerStyleSheet#collectStyles.'
-    );
+  if (__DEV__) {
+    // getServerSnapshot runs under renderToString; getSnapshot under createRoot.
+    // Distinguishes the jsdom-without-ServerStyleSheet footgun (buffered path,
+    // insertion effects never fire) from a normal client mount, without the
+    // false positives a post-render microtask probe would raise on discarded
+    // concurrent renders.
+    // biome-ignore lint/correctness/useHookAtTopLevel: __DEV__ is a build-time constant, so a given bundle always runs this hook or never does
+    const isServerRender = React.useSyncExternalStore(subscribeNoop, getFalse, getTrue);
+    if (isServerRender) {
+      warnOnce(
+        'buffered-ssr-without-sheet',
+        'this tree is rendered with renderToString / renderToStaticMarkup without ServerStyleSheet, so its styles are missing from the output. Wrap the tree in ServerStyleSheet#collectStyles.'
+      );
+    }
   }
   React.useInsertionEffect(() => {
     webStyle.inject(sheet, generated);
@@ -140,6 +145,7 @@ const HOIST_EXCLUDE = {
   webStyle: true,
   displayName: true,
   foldedComponentIds: true,
+  postAttrsPlans: true,
   shouldForwardProp: true,
   styledComponentId: true,
   target: true,
@@ -292,7 +298,7 @@ function resolveContext<Props extends BaseObject>(
     const attrDef = attrs[i];
     // Arity-2 attrs are post-compile (need access to resolved decls); they
     // run later in `applyPostAttrsWeb`, not here.
-    if (isFunction(attrDef) && (attrDef as Function).length >= 2) continue;
+    if (isPostAttr(attrDef)) continue;
     const resolvedAttrDef = isFunction(attrDef)
       ? (attrDef as unknown as (p: typeof context) => ExecutionProps & Partial<Props>)(
           needsCopy ? { ...context } : context
@@ -334,59 +340,6 @@ function wrapLevelInWhere(levelCss: string, name: string): string {
 }
 
 /**
- * Resolve a `TemplateValue` (interleaved chunks + slot indices) against the
- * already-evaluated `filled[]` array. Mirrors the `chunks[0] + filled[s] +
- * chunks[1] + ...` join the parser produces, without allocating an
- * intermediate array.
- */
-function resolveTemplateValue(tv: TemplateValue, filled: ReadonlyArray<string>): string {
-  let s = tv.chunks[0];
-  for (let i = 0; i < tv.slots.length; i++) {
-    s += filled[tv.slots[i]] + tv.chunks[i + 1];
-  }
-  return s;
-}
-
-/**
- * Linear scan of the source AST for a top-level (non-nested) declaration
- * matching `prop`. Used by `ast.peek` / `ast.pop` to surface a CSS-style
- * value into the post-compile attrs callback without building a full Map
- * upfront. `filled` is the per-render evaluated interpolation array
- * (lazy;only requested when an attrs callback actually reads).
- */
-function findBaseDecl(
-  ast: Root,
-  filled: ReadonlyArray<string> | null,
-  prop: string
-): string | undefined {
-  for (let i = 0; i < ast.length; i++) {
-    const node = ast[i];
-    if (node.kind !== NodeKind.Decl) continue;
-    if (typeof node.prop !== 'string' || node.prop !== prop) continue;
-    const v = node.value;
-    if (typeof v === 'string') return v;
-    // Templated value: resolve interpolations against `filled`. If the
-    // fast-path evaluator bailed (`filled === null`), the value is
-    // unresolvable for this render; treat as absent.
-    if (filled === null) return undefined;
-    return resolveTemplateValue(v, filled);
-  }
-  return undefined;
-}
-
-/**
- * Post-compile attrs phase for the web runtime. Mirrors the native
- * counterpart: arity-2 attrs run after `resolveContext`, with an `ast`
- * accessor backed by a lazy walk over the source AST. Pop calls collect
- * keys into `popOverrides` so the caller can apply inline-style overrides
- * (CSS `unset`) to the rendered element;best-effort removal because the
- * emitted CSS class is hash-derived from the full decl set and cannot be
- * filtered per render without exploding the cache.
- *
- * Native fully removes the decl from the compiled style object; web
- * relies on the inline-style override. Documented asymmetry.
- */
-/**
  * Merge an attrs-resolved dict into the execution context: `className` joins,
  * `style` shallow-merges, and every other key overwrites, so attrs always wins
  * (docs/attrs.md). An `undefined` value deletes the key when context held a
@@ -417,113 +370,77 @@ function mergeAttrDict<Props extends BaseObject>(
   }
 }
 
+/** Evaluated interpolations of one chain level, or `null` when unavailable. */
+type FilledOf = (style: WebStyle, source: Source) => ReadonlyArray<string> | null;
+
+const noFilled: FilledOf = () => null;
+
+/**
+ * Resolve a declaration key across the extension chain, innermost template
+ * first: each level emits its own class after its base's, so the innermost
+ * match is the cascade winner. Returns {@link findBaseDecl}'s tri-state.
+ */
+function findChainDecl(
+  style: WebStyle | null | undefined,
+  prop: string,
+  filledOf: FilledOf
+): string | undefined | null {
+  for (let w = style; w; w = w.baseStyle) {
+    const source = getSource(w.rules);
+    if (source === undefined) continue;
+    const v = findBaseDecl(source.ast, prop, filledOf(w, source));
+    if (v !== undefined) return v;
+  }
+  return undefined;
+}
+
+/**
+ * Post-compile attrs phase for the web runtime. Pop calls collect keys into
+ * `popOverrides` so the caller applies inline-style overrides (CSS `unset`)
+ * to the rendered element; best-effort removal because the emitted class is
+ * hash-derived from the full decl set. Native removes the decl from the
+ * compiled style object instead.
+ */
 function applyPostAttrsWeb<Props extends BaseObject>(
   context: React.HTMLAttributes<Element> & ExecutionContext & Props,
   attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
-  plans: ReadonlyArray<PostAttrsPlan | null> | undefined,
+  plans: ReadonlyArray<PostAttrsPlan | null>,
   webStyle: WebStyle
 ): Dict<string> | null {
   let popOverrides: Dict<string> | null = null;
-  let planIdx = 0;
-  // Lazy: only built when an attr without a static plan needs to invoke
-  // its callback at runtime (the fallback path).
-  let lazyState:
-    | {
-        source: Source;
-        ast: Root;
-        filled: ReadonlyArray<string> | null | undefined;
+  // Per-render evaluated interpolations by level, built on the first read
+  // of a templated declaration.
+  let filledByLevel: Map<WebStyle, ReadonlyArray<string> | null> | null = null;
+  const filledOf: FilledOf = (style, source) => {
+    if (filledByLevel === null) filledByLevel = new Map();
+    let filled = filledByLevel.get(style);
+    if (filled === undefined) {
+      // Push-fill to keep these PACKED_ELEMENTS; `new Array(n)` stays
+      // HOLEY_ELEMENTS and infects the IC for `evaluateForFastPath`.
+      const n = source.interpolations.length;
+      const buf: string[] = [];
+      const fragBuf: (FastPathFragment | null)[] = [];
+      for (let i = 0; i < n; i++) {
+        buf.push('');
+        fragBuf.push(null);
       }
-    | null
-    | undefined = undefined;
-  let astAccessor: CompiledAst | null = null;
-
-  for (let i = 0; i < attrs.length; i++) {
-    const attr = attrs[i];
-    if (!isFunction(attr) || (attr as Function).length < 2) continue;
-
-    const plan = plans !== undefined ? plans[planIdx] : null;
-    planIdx++;
-
-    if (plan !== null && plan !== undefined) {
-      mergeAttrDict(context, plan.output);
-      if (plan.popped !== null) {
-        if (popOverrides === null) popOverrides = {};
-        plan.popped.forEach(key => {
-          (popOverrides as Dict<string>)[key] = 'unset';
-        });
-      }
-      continue;
+      filled = evaluateForFastPath(source, context, buf, undefined, fragBuf);
+      filledByLevel.set(style, filled);
     }
-
-    // Runtime fallback for traces that bailed (props read, derived values,
-    // templated decls, etc.). Build the AST + filled state lazily;only
-    // pay this cost when we actually need to invoke the user's callback.
-    if (lazyState === undefined) {
-      const source = getSource(webStyle.rules);
-      lazyState = source ? { source, ast: source.ast, filled: undefined } : null;
-    }
-    if (lazyState === null) continue;
-    const state = lazyState;
-
-    if (astAccessor === null) {
-      const ensureFilled = (): ReadonlyArray<string> | null => {
-        if (state.filled !== undefined) return state.filled as ReadonlyArray<string> | null;
-        const src = state.source;
-        // Push-fill to keep these PACKED_ELEMENTS; `new Array(n)` stays
-        // HOLEY_ELEMENTS and infects the IC for `evaluateForFastPath`.
-        const n = src.interpolations.length;
-        const buf: string[] = [];
-        for (let i = 0; i < n; i++) buf.push('');
-        const fragBuf: (FastPathFragment | null)[] = [];
-        for (let i = 0; i < n; i++) fragBuf.push(null);
-        state.filled = evaluateForFastPath(
-          src,
-          context as ExecutionContext,
-          buf,
-          undefined,
-          fragBuf
-        );
-        return state.filled;
-      };
-      const theme = (context as { theme?: unknown }).theme;
-      // Per-render lookup cache: same key resolved once. Theme-path walks
-      // and AST decl scans alike skip on a cache hit. Pop's inline-style
-      // override is idempotent;the override is set on the first lookup
-      // and subsequent pops on the same key are cheap.
-      const cache = new Map<string, unknown>();
-      const lookup = (keyOrPath: string): unknown => {
-        let v: unknown = cache.get(keyOrPath);
-        if (v !== undefined || cache.has(keyOrPath)) return v;
-        if (keyOrPath.indexOf('.') !== -1) {
-          v = themeValue(theme, keyOrPath);
-        } else {
-          v = findBaseDecl(state.ast, ensureFilled(), keyOrPath);
-        }
-        cache.set(keyOrPath, v);
-        return v;
-      };
-      astAccessor = {
-        pop(keyOrPath: string, fallback?: unknown): unknown {
-          const v = lookup(keyOrPath);
-          if (keyOrPath.indexOf('.') === -1 && v !== undefined) {
-            if (popOverrides === null) popOverrides = {};
-            (popOverrides as Dict<string>)[keyOrPath] = 'unset';
-          }
-          return v !== undefined ? v : fallback;
-        },
-        peek(keyOrPath: string, fallback?: unknown): unknown {
-          const v = lookup(keyOrPath);
-          return v !== undefined ? v : fallback;
-        },
-      } as CompiledAst;
-    }
-
-    const resolved = (
-      attr as (p: ExecutionContext & Props, a: CompiledAst) => ExecutionProps & Partial<Props>
-    )({ ...context }, astAccessor);
-    mergeAttrDict(context, resolved as Dict<unknown>);
-  }
-
+    return filled;
+  };
+  applyPostAttrs(context, attrs, plans, {
+    lookup: keyOrPath => {
+      if (keyOrPath.indexOf('.') !== -1) return themeValue(context.theme, keyOrPath);
+      const v = findChainDecl(webStyle, keyOrPath, filledOf);
+      return v === null ? undefined : v;
+    },
+    merge: mergeAttrDict,
+    onPop: key => {
+      if (popOverrides === null) popOverrides = {};
+      popOverrides[camelizeProp(key)] = 'unset';
+    },
+  });
   return popOverrides;
 }
 
@@ -611,7 +528,7 @@ function useImpl<Props extends BaseObject>(
   let generatedStyle: GeneratedStyle | null = null;
   let rscState: RscRequestState | null = null;
   let popOverrides: Dict<string> | null = null;
-  const wantsPostAttrs = forwardedComponent.hasPostAttrs === true;
+  const postAttrsPlans = forwardedComponent.postAttrsPlans;
   /** The CSSOM write to schedule in the insertion effect (buffered path only). */
   let pendingInject: GeneratedStyle | null = null;
 
@@ -643,13 +560,8 @@ function useImpl<Props extends BaseObject>(
       }
     } else {
       context = resolveContext<Props>(componentAttrs, props, theme);
-      if (wantsPostAttrs) {
-        popOverrides = applyPostAttrsWeb<Props>(
-          context,
-          componentAttrs,
-          forwardedComponent.postAttrsPlans,
-          webStyle
-        );
+      if (postAttrsPlans !== undefined) {
+        popOverrides = applyPostAttrsWeb<Props>(context, componentAttrs, postAttrsPlans, webStyle);
       }
       // ServerStyleSheet SSR never runs insertion effects, so the CSSOM write
       // must stay synchronous whenever styleSheet.server is set. The browser
@@ -683,13 +595,8 @@ function useImpl<Props extends BaseObject>(
     }
   } else {
     context = resolveContext<Props>(componentAttrs, props, theme);
-    if (wantsPostAttrs) {
-      popOverrides = applyPostAttrsWeb<Props>(
-        context,
-        componentAttrs,
-        forwardedComponent.postAttrsPlans,
-        webStyle
-      );
+    if (postAttrsPlans !== undefined) {
+      popOverrides = applyPostAttrsWeb<Props>(context, componentAttrs, postAttrsPlans, webStyle);
     }
     if (IS_RSC) {
       rscState = getRscRequestState ? getRscRequestState() : null;
@@ -878,7 +785,6 @@ function createStyledComponent<
   } = props => useImpl<OuterProps>(WrappedStyledComponent, props, props.ref);
   RenderInner.displayName = displayName;
 
-  const hasPostAttrs = chainHasPostAttrs(finalAttrs);
   const foldedComponentIds = isTargetStyledComp
     ? joinStrings(styledComponentTarget.foldedComponentIds, styledComponentTarget.styledComponentId)
     : '';
@@ -894,9 +800,11 @@ function createStyledComponent<
     webStyle,
     displayName,
     shouldForwardProp,
-    hasPostAttrs,
     // Static plan where possible; null slots fall back to runtime invocation.
-    postAttrsPlans: hasPostAttrs ? buildPostAttrsPlans(finalAttrs, rules) : undefined,
+    // `undefined` when the chain has no arity-2 attrs.
+    postAttrsPlans: chainHasPostAttrs(finalAttrs)
+      ? buildPostAttrsPlans(finalAttrs, prop => findChainDecl(webStyle, prop, noFilled))
+      : undefined,
     foldedComponentIds,
     target: resolvedTarget,
     styledComponentId,
