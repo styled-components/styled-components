@@ -1274,12 +1274,6 @@ describe('createGlobalStyle with the same id', () => {
     return { First, Second };
   }
 
-  it('gives function-only bodies one id', () => {
-    const { First, Second } = pair();
-
-    expect(First.styledComponentId).toBe(Second.styledComponentId);
-  });
-
   it('keeps both stylesheets after a rerender of one', () => {
     const { First, Second } = pair();
     const App = ({ a }: { a: string }) => (

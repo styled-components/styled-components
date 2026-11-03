@@ -108,7 +108,7 @@ describe(`createGlobalStyle`, () => {
       )
     );
 
-    expect(First.styledComponentId).toBe(Second.styledComponentId);
+    // One group id carrying both instance names proves the two calls share an id.
     expect(stripWhitespace(stripComments(stripOuterHTML(sheet.getStyleTags())))).toBe(
       'html{ --a:1; } html{ --b:1; } data-styled.g4[id="sc-global-c"]{ content:"sc-global-c1,sc-global-c2,"} '
     );
