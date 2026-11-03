@@ -45,6 +45,18 @@ describe('with styles', () => {
     `);
   });
 
+  it('keeps rendering when a runtime value nests rules past the parser depth cap', () => {
+    const Comp = styled.div<{ $v: string }>`
+      color: ${p => p.$v};
+    `;
+    render(<Comp $v={'red; ' + 'a{'.repeat(80_000) + 'color:blue;' + '}'.repeat(80_000)} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a {
+        color: red;
+      }"
+    `);
+  });
+
   it('should append multiple styles', () => {
     const rule1 = 'color: blue;';
     const rule2 = 'background: red;';
