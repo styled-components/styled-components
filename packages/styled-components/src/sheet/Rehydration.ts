@@ -7,34 +7,20 @@ import { Sheet } from './types';
 const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
 const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\].*?"([^"]*)`);
 
-const isShadowRoot = (node: InsertionTarget | Node): node is ShadowRoot => {
-  return (
-    (typeof ShadowRoot !== 'undefined' && node instanceof ShadowRoot) ||
-    ('host' in node &&
-      // https://dom.spec.whatwg.org/#dom-node-document_fragment_node
-      node.nodeType === 11)
-  );
-};
+/** A shadow root is a document fragment (nodeType 11) with a `host`. */
+const isShadowRoot = (node: InsertionTarget | Node): node is ShadowRoot =>
+  'host' in node && node.nodeType === 11;
 
+/**
+ * The document or shadow root holding `target`'s server-rendered tags. A
+ * shadow root is its own root node, so one `getRootNode()` covers both a
+ * shadow root target and an element inside one.
+ */
 export const getRehydrationContainer = (
   target?: InsertionTarget | undefined
 ): Document | ShadowRoot => {
-  if (!target) {
-    return document;
-  }
-
-  if (isShadowRoot(target)) {
-    return target;
-  }
-
-  if ('getRootNode' in target) {
-    const root = target.getRootNode();
-    if (isShadowRoot(root)) {
-      return root;
-    }
-  }
-
-  return document;
+  const root = target && 'getRootNode' in target ? target.getRootNode() : target;
+  return root && isShadowRoot(root) ? root : document;
 };
 
 export const outputSheet = (sheet: Sheet) => {
@@ -70,17 +56,6 @@ export const outputSheet = (sheet: Sheet) => {
   return css;
 };
 
-const rehydrateNamesFromContent = (sheet: Sheet, id: string, content: string) => {
-  const names = content.split(',');
-  let name;
-
-  for (let i = 0, l = names.length; i < l; i++) {
-    if ((name = names[i])) {
-      sheet.registerName(id, name);
-    }
-  }
-};
-
 const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
   const parts = (style.textContent ?? '').split(SPLITTER);
   const rules: string[] = [];
@@ -92,13 +67,16 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
     const marker = part.match(MARKER_RE);
 
     if (marker) {
-      const group = parseInt(marker[1], 10) | 0;
+      // looks like: data-styled.g11[id="idA"]{content:"nameA,"}
+      const group = +marker[1] | 0;
       const id = marker[2];
 
       if (group !== 0) {
         setGroupForId(id, group);
-        // looks like: data-styled.g11[id="idA"]{content:"nameA,"}
-        rehydrateNamesFromContent(sheet, id, marker[3]);
+        const names = marker[3].split(',');
+        for (let j = 0; j < names.length; j++) {
+          if (names[j]) sheet.registerName(id, names[j]);
+        }
         sheet.getTag().insertRules(group, rules);
       }
 
@@ -165,12 +143,9 @@ export const rehydrateSheet = (sheet: Sheet) => {
 
   for (let i = 0, l = nodes.length; i < l; i++) {
     const node = nodes[i];
-    if (node && node.getAttribute(SC_ATTR) !== SC_ATTR_ACTIVE) {
+    if (node.getAttribute(SC_ATTR) !== SC_ATTR_ACTIVE) {
       rehydrateSheetFromTag(sheet, node);
-
-      if (node.parentNode) {
-        node.parentNode.removeChild(node);
-      }
+      node.remove();
     }
   }
 

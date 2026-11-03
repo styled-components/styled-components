@@ -1,26 +1,38 @@
 import { attachSourceInputs, isCssProduct } from '../parser/source';
 import { BaseObject, Interpolation, RuleSet, StyleFunction, Styles } from '../types';
-import interleave from '../utils/interleave';
 import isFunction from '../utils/isFunction';
 import isPlainObject from '../utils/isPlainObject';
 import objectToTemplate from '../utils/objectToCSS';
 
 /**
- * Flatten only the array structure (un-nest), dropping `false` / `null` /
- * `undefined` / `''` slots. No function evaluation; that's deferred to
+ * Append `chunk` to `out`, un-nesting plain arrays and dropping `false` /
+ * `null` / `undefined` / `''`. No function evaluation; that's deferred to
  * the per-render Source path.
  */
-function flattenStructure<T>(input: ReadonlyArray<unknown>, out: T[] = [] as T[]): T[] {
-  for (let i = 0; i < input.length; i++) {
-    const chunk = input[i];
-    if (chunk === undefined || chunk === null || chunk === false || chunk === '') continue;
-    if (Array.isArray(chunk) && !isCssProduct(chunk)) {
-      flattenStructure<T>(chunk, out);
-    } else {
-      out.push(chunk as T);
-    }
+function pushFlat(out: unknown[], chunk: unknown): void {
+  if (chunk === undefined || chunk === null || chunk === false || chunk === '') return;
+  if (Array.isArray(chunk) && !isCssProduct(chunk)) {
+    for (let i = 0; i < chunk.length; i++) pushFlat(out, chunk[i]);
+  } else {
+    out.push(chunk);
   }
-  return out;
+}
+
+/**
+ * The `RuleSet` for a template: strings and slots interleaved and
+ * flattened, with the template inputs attached for the lazy `Source`.
+ */
+function rulesFor<Props extends object>(
+  strings: ReadonlyArray<string>,
+  interpolations: ReadonlyArray<unknown>
+): RuleSet<NoInfer<Props>> {
+  const rules: unknown[] = [];
+  pushFlat(rules, strings[0]);
+  for (let i = 0; i < interpolations.length; i++) {
+    pushFlat(rules, interpolations[i]);
+    pushFlat(rules, strings[i + 1]);
+  }
+  return attachSourceInputs(rules as RuleSet<NoInfer<Props>>, strings, interpolations);
 }
 
 /** Internal `css(...)` body for callers that already have an interpolation array. */
@@ -31,52 +43,22 @@ export function cssWithInterpolations<Props extends object = BaseObject>(
   if (isPlainObject(styles)) {
     // Object styles use the same Source/fast-path pipeline as template literals.
     const objTemplate = objectToTemplate(styles as Record<string, unknown>);
-    const allStrings = objTemplate.strings.slice();
-    const allInterps: Interpolation<NoInfer<Props>>[] =
-      objTemplate.interpolations.slice() as Interpolation<NoInfer<Props>>[];
+    const allStrings = objTemplate.strings;
+    const allInterps = objTemplate.interpolations;
     for (let i = 0; i < interpolations.length; i++) {
       allInterps.push(interpolations[i]);
       allStrings.push('');
     }
-    const rules = flattenStructure<Interpolation<NoInfer<Props>>>(
-      interleave<Props>(allStrings, allInterps) as ReadonlyArray<unknown>
-    );
-    attachSourceInputs(rules, allStrings, allInterps);
-    return rules as RuleSet<NoInfer<Props>>;
+    return rulesFor<Props>(allStrings, allInterps);
   }
 
   if (isFunction(styles)) {
     // Treat function input as a block-level interpolation.
     const slots = [styles as StyleFunction<Props>, ...interpolations];
-    const synthesizedStrings: string[] = new Array(slots.length + 1).fill('');
-    const rules = flattenStructure<Interpolation<NoInfer<Props>>>(
-      interleave<Props>(synthesizedStrings, slots) as ReadonlyArray<unknown>
-    );
-    attachSourceInputs(rules, synthesizedStrings, slots);
-    return rules as RuleSet<NoInfer<Props>>;
+    return rulesFor<Props>(new Array<string>(slots.length + 1).fill(''), slots);
   }
 
-  const styleStringArray = styles as TemplateStringsArray;
-
-  if (
-    interpolations.length === 0 &&
-    styleStringArray.length === 1 &&
-    typeof styleStringArray[0] === 'string'
-  ) {
-    // Pure-static templates (no interpolations): skip flattenStructure
-    // while still attaching Source metadata for `${staticMixin}` reuse.
-    const rules: Interpolation<NoInfer<Props>>[] = [
-      styleStringArray[0] as Interpolation<NoInfer<Props>>,
-    ];
-    attachSourceInputs(rules, styleStringArray, interpolations);
-    return rules as RuleSet<NoInfer<Props>>;
-  }
-
-  const rules = flattenStructure<Interpolation<NoInfer<Props>>>(
-    interleave<Props>(styleStringArray, interpolations) as ReadonlyArray<unknown>
-  );
-  attachSourceInputs(rules, styleStringArray, interpolations);
-  return rules as RuleSet<NoInfer<Props>>;
+  return rulesFor<Props>(styles as TemplateStringsArray, interpolations);
 }
 
 /**

@@ -151,6 +151,13 @@ describe('web emitter', () => {
     `);
   });
 
+  it('rewrites & + & to a withConfig componentId verbatim, even one holding replacement patterns', () => {
+    const root = parse(normalize(`& + & { margin-left: 8px; }`));
+    expect(emitWeb(root, '.a', { componentId: 'x$&y', selfRefSelector: '.a' })).toEqual([
+      '.x$&y+.x$&y{margin-left:8px;}',
+    ]);
+  });
+
   describe('parent comma-cross-product respects pseudo-fn parens (#4279)', () => {
     // When the outer selector contains a `,` INSIDE :is()/:where()/:has(),
     // child rules must NOT split that comma as if it were a top-level

@@ -285,6 +285,167 @@ describe('parser', () => {
     });
   });
 
+  describe('brace repair at the root block', () => {
+    it('drops the statement around a stray `}` up to the next `;` and keeps the rest', () => {
+      expect(parse('a: b; } c: d; e: f;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'a', value: 'b' },
+        { kind: NodeKind.Decl, prop: 'e', value: 'f' },
+      ]);
+    });
+
+    it('drops a declaration a stray `}` interrupts and resumes after the newline', () => {
+      expect(parse('a: b}\nc: d;')).toEqual([{ kind: NodeKind.Decl, prop: 'c', value: 'd' }]);
+    });
+
+    // CSS Syntax, "Consume a block's contents": "<EOF-token> <}-token> Return rules."
+    // A block still open at the end of input ends there and keeps what it parsed.
+    it.each([
+      ['rule', 'a: b; x { y: z', 'x'],
+      ['rule with a trailing `;`', 'a: b; x { y: z;', 'x'],
+      ['rule with trailing whitespace', 'a: b; x { y: z; ', 'x'],
+    ])(
+      'closes an unclosed %s at the end of input and keeps its declarations',
+      (_label, css, sel) => {
+        expect(parse(css)).toEqual([
+          { kind: NodeKind.Decl, prop: 'a', value: 'b' },
+          {
+            kind: NodeKind.Rule,
+            selectors: [sel],
+            children: [{ kind: NodeKind.Decl, prop: 'y', value: 'z' }],
+          },
+        ]);
+      }
+    );
+
+    it('closes every unclosed level and keeps the innermost declaration', () => {
+      expect(parse('&:hover { &:focus { color: red')).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: ['&:hover'],
+          children: [
+            {
+              kind: NodeKind.Rule,
+              selectors: ['&:focus'],
+              children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+            },
+          ],
+        },
+      ]);
+    });
+
+    it('closes an unclosed at-rule block at the end of input', () => {
+      expect(parse('@media (min-width: 1px) { color: red')).toEqual([
+        {
+          kind: NodeKind.AtRule,
+          name: 'media',
+          prelude: '(min-width: 1px)',
+          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+        },
+      ]);
+    });
+
+    it('keeps a closed nested rule inside an at-rule block left open', () => {
+      expect(parse('@media x { &:hover { color: red; }')).toEqual([
+        {
+          kind: NodeKind.AtRule,
+          name: 'media',
+          prelude: 'x',
+          children: [
+            {
+              kind: NodeKind.Rule,
+              selectors: ['&:hover'],
+              children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+            },
+          ],
+        },
+      ]);
+    });
+
+    it('closes an unclosed @font-face block at the end of input', () => {
+      expect(parse('@font-face { font-family: x')).toEqual([
+        {
+          kind: NodeKind.AtRule,
+          name: 'font-face',
+          prelude: '',
+          children: [{ kind: NodeKind.Decl, prop: 'font-family', value: 'x' }],
+        },
+      ]);
+    });
+
+    it('closes an unclosed @keyframes block at the end of input and keeps its frames', () => {
+      expect(parse('@keyframes k { from { opacity: 0 } to { opacity: 1')).toEqual([
+        {
+          kind: NodeKind.Keyframes,
+          name: 'keyframes',
+          prelude: 'k',
+          frames: [
+            { stops: ['from'], children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '0' }] },
+            { stops: ['to'], children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '1' }] },
+          ],
+        },
+      ]);
+    });
+
+    it('drops the statement holding an unclosed string', () => {
+      expect(parse('a: b; content: "x; c: d;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'a', value: 'b' },
+      ]);
+    });
+
+    it('drops only the declaration holding an unclosed string inside an unclosed block', () => {
+      expect(parse('x { a: b; content: "y')).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: ['x'],
+          children: [{ kind: NodeKind.Decl, prop: 'a', value: 'b' }],
+        },
+      ]);
+    });
+
+    it('drops an at-rule whose prelude holds an unclosed string', () => {
+      expect(parse('a: b; @import "x')).toEqual([{ kind: NodeKind.Decl, prop: 'a', value: 'b' }]);
+    });
+
+    // CSS Syntax, "Consume an at-rule", `<}-token>`: "If nested is true: If rule is
+    // valid in the current context, return it. Otherwise, return nothing.
+    // Otherwise, consume a token and append the result to rule's prelude."
+    // At the root block a `}` joins the prelude, so a bodiless at-rule that
+    // swallowed it is not a valid rule.
+    it.each([
+      ['a bodiless at-rule', 'color: blue; @media screen } color: red;'],
+      ['an at-rule at the end of input', 'color: blue; @media screen }'],
+      ['an at-rule with a block', 'color: blue; @media screen } x { y: z }'],
+    ])('drops %s whose prelude swallows a stray `}`', (_label, css) => {
+      expect(parse(css)).toEqual([{ kind: NodeKind.Decl, prop: 'color', value: 'blue' }]);
+    });
+
+    it.each([
+      ['stray closers', 'a:b; } c:d;\n'.repeat(80_000), 80_000],
+      ['unclosed openers', '{'.repeat(80_000), 1],
+      ['unclosed at-rule openers', '@media x{'.repeat(80_000), 1],
+    ])('repairs %s in linear time', (_label, css, nodes) => {
+      const start = performance.now();
+      expect(parse(css)).toHaveLength(nodes);
+      expect(performance.now() - start).toBeLessThan(200);
+    });
+  });
+
+  it('drops a nested rule inside a keyframe frame and keeps the next frame', () => {
+    // A frame body is a declaration list; a rule inside it has no meaning
+    // and is dropped without disturbing the frames that follow.
+    expect(parse('@keyframes k { from { a { color: red } } to { opacity: 1 } }')).toEqual([
+      {
+        kind: NodeKind.Keyframes,
+        name: 'keyframes',
+        prelude: 'k',
+        frames: [
+          { stops: ['from'], children: [] },
+          { stops: ['to'], children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '1' }] },
+        ],
+      },
+    ]);
+  });
+
   it('splits comma-separated selectors', () => {
     expect(splitSelectors('.a, .b, .c')).toEqual(['.a', '.b', '.c']);
   });

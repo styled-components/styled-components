@@ -1,7 +1,7 @@
 /**
  * CSS preprocessing throughput at different scales.
  *
- * Measures normalize (comment stripping + brace validation) in isolation,
+ * Measures normalize (comment stripping) in isolation,
  * and the full compile pipeline (preprocess + parse + emit) to show how
  * preprocessing cost relates to total compilation.
  *

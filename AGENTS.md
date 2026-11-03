@@ -94,13 +94,14 @@ This file is the repo's only agent instructions file; there is no CLAUDE.md. It 
 
 ## Key Commands
 
-- `pnpm build`: Build main package; its `prebuild` type-checks and its `postbuild` runs `test:build` (bundle and tree-shaking assertions against `dist`)
+- `pnpm build`: Build main package; its `prebuild` type-checks and its `postbuild` runs `test:build` (bundle, tree-shaking, and built-bundle behavior assertions against `dist`)
+- `pnpm --filter styled-components size`: Builds only the bundles the size metric reads and prints their gzip bytes (flags in the `scripts/size.mjs` header). See [docs/bundling.md](docs/bundling.md)
 - `pnpm test`: Run the web, native, and type suites (not `test:build`, benches, or the `verify`-only checks)
 - `pnpm --filter sandbox dev`: Start Next.js dev server
 - `pnpm --filter styled-components test:web`: Run the web suite against source under jsdom
 - `pnpm --filter styled-components test:native`: Run the React Native suite against source
 - `pnpm --filter styled-components bench`: `bench:web` then `bench:rsc`
-- `pnpm --filter styled-components bench:web`: Every suite under `src/bench/` matched by `jest.config.bench.js` (`*.bench.test.*`, `web*.test.*`, `preprocess*.test.*`). Each file's header docblock states what it measures, so a new suite joins the run by matching one of those patterns. Do not enumerate the suites here.
+- `pnpm --filter styled-components bench:web`: Every suite under `src/bench/` matched by `jest.config.bench.js` (`*.bench.test.*`, `web*.test.*`, `preprocess*.test.*`), each in its own jest process (`scripts/benchWeb.mjs`; path patterns narrow the run). Compare trees only on the same copy of a bench file. Each file's header docblock states what it measures, so a new suite joins the run by matching one of those patterns. Do not enumerate the suites here.
 - `pnpm --filter styled-components bench:web:stress`: Stress benchmarks only (`src/bench/web.test.js`); uses `SC_BENCH_ITER_SCALE=0.2` and `SC_BENCH_RUNS=3` for quicker runs
 - `pnpm --filter styled-components bench:rsc`: `src/bench/rsc.test.tsx`, matched by `jest.config.bench-rsc.js` (node environment, `IS_RSC` server path)
 - `pnpm --filter styled-components type-perf`: Consumer type-check budget, measured against the built `dist` (needs `pnpm build` first). `--against <package root>` measures another copy of the package with the same fixture. See [docs/typescript-performance.md](docs/typescript-performance.md)
@@ -124,6 +125,7 @@ This file is the repo's only agent instructions file; there is no CLAUDE.md. It 
 - `__VERSION__`: build-time constant holding the package version string; every substitution site (rollup, the Jest globals, the showcase's babel config, the Bun profiling globals) must define it alongside the constants above.
 - Browser builds always use CSSOM injection; consumers wanting CSS as text call `extractCSS()`.
 - CSS injection ordering: group IDs are allocated at call time, lower ID emits earlier in the stylesheet.
+- A property name in the mangle list (`scripts/internalPropertyNames.cjs`) must never be public, cross a bundle boundary, or be read by jest-styled-components; a listed member reachable from a public type carries `@internal`. `src/test/dist-behavior.test.js` guards the list. See [docs/bundling.md](docs/bundling.md).
 
 ## CSS polyfills
 
@@ -147,7 +149,7 @@ The `packages/native-showcase` app is the visual QA surface for v7 native polyfi
 - React 19 behaviors that hit the render hot path and SSR/RSC output: [docs/react.md](docs/react.md)
 - React Native substrate: CSS capability by RN version, Yoga divergences, the in-house declaration transform: [docs/react-native.md](docs/react-native.md)
 - Jest + jsdom: jsdom's modern-CSS ceiling and how the web suite reads injected CSS: [docs/jest.md](docs/jest.md)
-- Bundling: per-bundle build-constant substitution, terser DCE traps, testing tree-shaking, dts/TS2742, edge runtime, published files: [docs/bundling.md](docs/bundling.md)
+- Bundling: per-bundle build-constant substitution, terser DCE traps, testing tree-shaking, bundle size and property mangling, dts/TS2742, edge runtime, published files: [docs/bundling.md](docs/bundling.md)
 - Web rendering sequence diagram: [docs/rendering-flow.md](docs/rendering-flow.md) (web flow only)
 - Animation adapters + spec coverage (Hermes / reanimated; rn-web hands CSS animation to the browser): [docs/animation-adapters.md](docs/animation-adapters.md)
 - Native CSS polyfill procedure and rn-web parity: [docs/css-polyfills.md](docs/css-polyfills.md)

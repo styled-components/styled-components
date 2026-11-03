@@ -90,10 +90,11 @@
   // comparing recorded hook sequences, which the rule alone cannot do.
   //
   // Wanted but blocked on pre-existing violations, mostly in test files:
-  // `correctness/noUnusedImports` (30), `suspicious/useIterableCallbackReturn`
-  // (10), `suspicious/noDoubleEquals` (4). See them with
-  // `biome lint . --only=<rule>`. The first would have caught a dead import in
-  // this very change, so it is worth a dedicated pass.
+  // `correctness/noUnusedImports`, `suspicious/useIterableCallbackReturn`,
+  // `suspicious/noDoubleEquals`. See them with
+  // `biome lint . --only=<rule>`. Library source already fails on an unused
+  // import through `noUnusedLocals` in packages/styled-components/tsconfig.json;
+  // the Biome rule would extend that to tests.
   "linter": {
     "enabled": true,
     "includes": ["packages/styled-components/src/**", "packages/styled-components/scripts/**"],

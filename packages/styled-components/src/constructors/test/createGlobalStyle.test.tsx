@@ -25,6 +25,20 @@ describe(`createGlobalStyle`, () => {
     `);
   });
 
+  it('drops the statement around a stray `}` and keeps the rule on the next line', () => {
+    const Component = createGlobalStyle`body { color: red; } }
+      html { margin: 0; }`;
+    render(<Component />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        color: red;
+      }
+      html {
+        margin: 0;
+      }"
+    `);
+  });
+
   it(`supports interpolation`, () => {
     const Component = createGlobalStyle<{ color: string }>`div {color:${props => props.color};} `;
     render(<Component color="orange" />);

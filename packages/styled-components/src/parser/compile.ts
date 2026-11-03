@@ -2,7 +2,6 @@ import type KeyframesClass from '../models/Keyframes';
 import type { CompiledKeyframes } from '../models/Keyframes';
 import type StyleSheet from '../sheet';
 import type { Compiler, RuleSet } from '../types';
-import { isWS } from '../utils/charCodes';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import getComponentName from '../utils/getComponentName';
 import isPlainObject from '../utils/isPlainObject';
@@ -24,7 +23,7 @@ import {
   TemplateValue,
 } from './ast';
 import { emitWeb, EmitOptions } from './emit-web';
-import { isCustomProperty, parse, stripCommaSpaces } from './parser';
+import { isCustomProperty, parse, stripCommaSpaces, trimRange } from './parser';
 import { CLIENT_REFERENCE, getSource, InterpolationKind, Source } from './source';
 
 /**
@@ -33,7 +32,9 @@ import { CLIENT_REFERENCE, getSource, InterpolationKind, Source } from './source
  */
 export interface FastPathFragment {
   source: Source;
+  /** @internal */
   filled: string[];
+  /** @internal */
   fragments: (FastPathFragment | null)[] | null;
 }
 
@@ -84,43 +85,43 @@ export function evaluateForFastPath(
     const kind = kinds[i];
     const standalone = source.slotIsStandalone[i];
     const embedded = !standalone;
-    if (kind === InterpolationKind.StatelessFn) {
-      const fn = interps[i] as (ctx: unknown) => unknown;
-      const result = fn(fillContext);
-      if (typeof result === 'string') {
-        filled[i] = result;
-      } else {
-        const resolved = resolveInterpolation(
-          result,
-          fillContext,
-          compiler,
-          outFragments,
-          i,
-          embedded,
-          outKeyframes
-        );
-        if (resolved === null) {
-          // Likely a non-styled component used as a selector ref.
-          if (
-            __DEV__ &&
-            typeof result === 'object' &&
-            result !== null &&
-            !Array.isArray(result) &&
-            !isPlainObject(result)
-          ) {
-            const name = getComponentName(fn as never);
-            warnOnce(
-              'non-styled-selector',
-              `${name} is not a styled component and cannot be referred to via component selector. Wrap it with styled() first. See https://styled-components.com/docs/advanced#referring-to-other-components for more details.`,
-              name
-            );
-          }
-          return null;
-        }
-        filled[i] = resolved;
-      }
-    } else if (kind === InterpolationKind.Static) {
+    if (kind === InterpolationKind.Static) {
       filled[i] = statics[i];
+    } else if (kind === InterpolationKind.StatelessFn || kind === InterpolationKind.General) {
+      const stateless = kind === InterpolationKind.StatelessFn;
+      const slot = stateless ? (interps[i] as (ctx: unknown) => unknown)(fillContext) : interps[i];
+      const resolved =
+        typeof slot === 'string'
+          ? slot
+          : resolveInterpolation(
+              slot,
+              fillContext,
+              compiler,
+              outFragments,
+              i,
+              embedded,
+              outKeyframes
+            );
+      if (resolved === null) {
+        // Likely a non-styled component used as a selector ref.
+        if (
+          __DEV__ &&
+          stateless &&
+          typeof slot === 'object' &&
+          slot !== null &&
+          !Array.isArray(slot) &&
+          !isPlainObject(slot)
+        ) {
+          const name = getComponentName(interps[i] as never);
+          warnOnce(
+            'non-styled-selector',
+            `${name} is not a styled component and cannot be referred to via component selector. Wrap it with styled() first. See https://styled-components.com/docs/advanced#referring-to-other-components for more details.`,
+            name
+          );
+        }
+        return null;
+      }
+      filled[i] = resolved;
     } else if (kind === InterpolationKind.Keyframes) {
       if (compiler === undefined || outKeyframes === undefined) return null;
       const kf = interps[i] as KeyframesClass;
@@ -144,18 +145,6 @@ export function evaluateForFastPath(
       } else {
         filled[i] = stringifyEmbeddedFragment(frag);
       }
-    } else {
-      const resolved = resolveInterpolation(
-        interps[i],
-        fillContext,
-        compiler,
-        outFragments,
-        i,
-        embedded,
-        outKeyframes
-      );
-      if (resolved === null) return null;
-      filled[i] = resolved;
     }
   }
   return filled;
@@ -189,17 +178,10 @@ function resolveFragment(
   if (childFilled === null) return null;
   // Drop the fragments array when no slots are populated, so callers can
   // skip the per-slot consult.
-  let hasChildFragments = false;
-  for (let i = 0; i < childFragments.length; i++) {
-    if (childFragments[i] !== null) {
-      hasChildFragments = true;
-      break;
-    }
-  }
   return {
     source: childSource,
     filled: childFilled === EMPTY_FILLED ? [] : childFilled,
-    fragments: hasChildFragments ? childFragments : null,
+    fragments: hasAnyFragment(childFragments) ? childFragments : null,
   };
 }
 
@@ -231,8 +213,8 @@ export function buildHashCSS(
  * Stringify a fragment for embedded substitution. Trims outer whitespace
  * so multi-line fragment templates flow correctly in mid-value position
  * (e.g. `animation: ${frag} linear`); whole-value position already trims
- * via `normalizeSubstituted`. Internal whitespace is preserved;users
- * may write meaningful runs inside fragments.
+ * in `fillNode`. Internal whitespace is preserved; users may write
+ * meaningful runs inside fragments.
  */
 function stringifyEmbeddedFragment(frag: FastPathFragment): string {
   return trimWhitespace(buildHashCSS(frag.source.strings, frag.filled, frag.fragments));
@@ -390,9 +372,9 @@ function resolveInterpolation(
     }
     // Plain-object style block returned from a function (`css(p => ({...}))`).
     // `objectToCSS` resolves nested function values against `fillContext`
-    // and stringifies the rest. Returns `null` only for shapes that need
-    // Source-aware splicing (e.g. tagged `css\`...\`` fragments inside an
-    // object value); the caller bails on null.
+    // and stringifies the rest. Returns `null` for a `css\`...\`` fragment
+    // inside an object value (needs Source-aware splicing) and for a function
+    // value met with no `fillContext` (always set here); the caller bails on null.
     if (t === 'object' && isPlainObject(slot)) {
       // Design-token shape; an own `toString` on the object means the
       // author wants a stringified value, not iteration of every key as a
@@ -508,10 +490,12 @@ function fillNode(
       if (prop === '') return undefined;
       const valueRaw = realize(node.value, filled);
       if (valueRaw === null) return null;
-      // Re-normalize substituted values to match the parser's normalizeValue;
-      // skip re-normalization on the static-decl warm path. Custom properties
-      // preserve empty values (`--x: ;` is spec-legal).
-      const final = typeof node.value !== 'string' ? normalizeSubstituted(valueRaw) : valueRaw;
+      // Re-normalize substituted values to match the parser's normalizeValue
+      // (trim, then strip spaces after top-level commas) so output bytes match
+      // the string-input path; skip it on the static-decl warm path. Custom
+      // properties preserve empty values (`--x: ;` is spec-legal).
+      const final =
+        typeof node.value !== 'string' ? stripCommaSpaces(trimWhitespace(valueRaw)) : valueRaw;
       if (final === '' && !isCustomProperty(prop)) return undefined;
       const decl: StaticDeclNode = { kind: NodeKind.Decl, prop, value: final };
       return decl;
@@ -614,11 +598,8 @@ function fillNode(
  * Returns `null` when any spliced slot value would inject CSS structural
  * characters (`;` `{` `}`), forcing the caller to bail the fast path
  * to the string-input compile path. The slot-out-of-bounds case also
- * returns `null` for safety.
- *
- * Phase C: replaces the v7-pre-Phase-C `substitute(s, filled)` scan over
- * a `\0I<n>\0` sentinel string with a direct splice over pre-extracted
- * chunks + slot indices.
+ * returns `null` for safety. Splices the filled values directly between the
+ * field's pre-extracted chunks.
  */
 function realize(field: string | TemplateValue, filled: ReadonlyArray<string>): string | null {
   if (typeof field === 'string') return field;
@@ -639,31 +620,7 @@ function realize(field: string | TemplateValue, filled: ReadonlyArray<string>): 
 }
 
 function trimWhitespace(s: string): string {
-  let start = 0;
-  let end = s.length;
-  while (start < end) {
-    const c = s.charCodeAt(start);
-    if (isWS(c)) start++;
-    else break;
-  }
-  while (end > start) {
-    const c = s.charCodeAt(end - 1);
-    if (isWS(c)) end--;
-    else break;
-  }
-  if (start === 0 && end === s.length) return s;
-  return s.substring(start, end);
-}
-
-/**
- * Mirror the parser's `normalizeValue` for substituted text. Output bytes
- * match the string-input `compiler.compile` path so SSR class hashes stay stable.
- */
-function normalizeSubstituted(value: string): string {
-  const trimmed = trimWhitespace(value);
-  if (trimmed.length === 0) return trimmed;
-  if (trimmed.indexOf(',') === -1) return trimmed;
-  return stripCommaSpaces(trimmed);
+  return trimRange(s, 0, s.length);
 }
 
 /**

@@ -20,8 +20,8 @@ import type { BaseObject, RuleSet } from '../types';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import { normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
-import { DYN, Node, NodeKind, Root } from './ast';
-import { parse, ParseOptions } from './parser';
+import { DYN, NodeKind, Root } from './ast';
+import { parse, ParseOptions, scanQP } from './parser';
 
 /**
  * Pre-classified slot shape so the fast path skips typeof checks. Order
@@ -53,12 +53,20 @@ export const enum InterpolationKind {
  * fast dispatch.
  */
 export interface Source {
+  /** @internal */
   ast: Root;
+  /** @internal */
   strings: ReadonlyArray<string>;
+  /** @internal */
   interpolations: ReadonlyArray<unknown>;
+  /** @internal */
   kinds: ReadonlyArray<InterpolationKind>;
+  /** @internal */
   staticValues: ReadonlyArray<string>;
-  /** `true` for block-position (lifted to `InterpolationNode`), `false` for embedded. */
+  /**
+   * `true` for block-position (lifted to `InterpolationNode`), `false` for embedded.
+   * @internal
+   */
   slotIsStandalone: ReadonlyArray<boolean>;
 }
 
@@ -106,53 +114,42 @@ export function parseSource(
   const n = interpolations.length;
   const kinds: InterpolationKind[] = [];
   const staticValues: string[] = [];
+  const slotIsStandalone: boolean[] = [];
   for (let i = 0; i < n; i++) {
     const slot = interpolations[i];
     const t = typeof slot;
+    const ref = t === 'function' || t === 'object';
+    let kind = InterpolationKind.Static;
+    let value = '';
     if (t === 'string') {
-      kinds[i] = InterpolationKind.Static;
-      staticValues[i] = slot as string;
+      value = slot as string;
     } else if (t === 'number') {
-      kinds[i] = InterpolationKind.Static;
-      staticValues[i] = String(slot);
+      value = String(slot);
     } else if (slot === null || slot === undefined || slot === false) {
-      kinds[i] = InterpolationKind.Static;
-      staticValues[i] = '';
-    } else if (
-      (t === 'function' || t === 'object') &&
-      (slot as { styledComponentId?: string }).styledComponentId !== undefined
-    ) {
+      // Static-empty.
+    } else if (ref && (slot as { styledComponentId?: string }).styledComponentId !== undefined) {
       // Styled-component ref: pre-stringify the class selector and dispatch as Static.
-      kinds[i] = InterpolationKind.Static;
-      staticValues[i] = '.' + (slot as { styledComponentId: string }).styledComponentId;
+      value = '.' + (slot as { styledComponentId: string }).styledComponentId;
     } else if (t === 'object' && KEYFRAMES_SYMBOL in (slot as object)) {
       // Keyframes ref: hash + sheet registration deferred to fill time.
-      kinds[i] = InterpolationKind.Keyframes;
-      staticValues[i] = '';
+      kind = InterpolationKind.Keyframes;
     } else if (isCssProduct(slot)) {
       // `css\`...\`` fragment ref; the child's Source is lazy-parsed at fill time.
-      kinds[i] = InterpolationKind.Fragment;
-      staticValues[i] = '';
-    } else if (
-      (t === 'function' || t === 'object') &&
-      (slot as { $$typeof?: symbol }).$$typeof === CLIENT_REFERENCE
-    ) {
+      kind = InterpolationKind.Fragment;
+    } else if (ref && (slot as { $$typeof?: symbol }).$$typeof === CLIENT_REFERENCE) {
       // Client reference proxies throw when invoked from a server component.
       // Classify as Static-empty + dev warn so the rest of the template renders.
       if (__DEV__) warnClientReference(slot);
-      kinds[i] = InterpolationKind.Static;
-      staticValues[i] = '';
-    } else if (t === 'function' && (slot as Function).length <= 1) {
-      kinds[i] = InterpolationKind.StatelessFn;
-      staticValues[i] = '';
     } else {
-      kinds[i] = InterpolationKind.General;
-      staticValues[i] = '';
+      kind =
+        t === 'function' && (slot as Function).length <= 1
+          ? InterpolationKind.StatelessFn
+          : InterpolationKind.General;
     }
+    kinds[i] = kind;
+    staticValues[i] = value;
+    slotIsStandalone[i] = false;
   }
-  const slotIsStandalone: boolean[] = [];
-  for (let i = 0; i < n; i++) slotIsStandalone[i] = false;
-  markStandaloneSlots(ast, slotIsStandalone);
   // Eagerly mark every node whose subtree depends on an interpolation slot
   // (`\0I` embedded in any string field, or an InterpolationNode descendant).
   // The flag rides on the node as a Symbol-keyed property so consumers do a
@@ -161,21 +158,8 @@ export function parseSource(
   // Native classifications for Rule / AtRule nodes (`[NATIVE_RULE_CLASS]` /
   // `[NATIVE_AT_CLASS]`) are stamped by the parser at construction time
   // and ride through here untouched.
-  markDynamic(ast);
+  markDynamic(ast, slotIsStandalone);
   return { ast, strings, interpolations, kinds, staticValues, slotIsStandalone };
-}
-
-function markStandaloneSlots(nodes: Root, out: boolean[]): void {
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    if (node.kind === NodeKind.Interpolation) {
-      out[node.index] = true;
-    } else if (node.kind === NodeKind.Rule) {
-      markStandaloneSlots(node.children, out);
-    } else if (node.kind === NodeKind.AtRule) {
-      if (node.children !== null) markStandaloneSlots(node.children, out);
-    }
-  }
 }
 
 /**
@@ -184,17 +168,16 @@ function markStandaloneSlots(nodes: Root, out: boolean[]): void {
  * field, or an InterpolationNode descendant). Sets `node[DYN] = true` on
  * matched nodes; absence (`undefined`) is the static encoding.
  *
- * Phase C reduces the per-field check from `indexOf('\0I')` scans to a
- * single `typeof !== 'string'` test (TemplateValue fields are objects,
- * static fields are strings). The parser converted sentinel-bearing
- * strings to TemplateValue at construction time so this walk is the
- * subtree-aggregating pass only.
+ * The per-field check is a single `typeof !== 'string'` test (TemplateValue
+ * fields are objects, static fields are strings). The parser converted
+ * sentinel-bearing strings to TemplateValue at construction time so this
+ * walk is the subtree-aggregating pass only.
  *
  * `dynamic(node)` in `compile.ts` reads the flag via a single property
  * access; descendants don't need to be re-walked because the flag bubbles
- * up here.
+ * up here. The same walk records each block-position slot in `standalone`.
  */
-function markDynamic(nodes: Root): boolean {
+function markDynamic(nodes: Root, standalone: boolean[]): boolean {
   let any = false;
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
@@ -210,14 +193,14 @@ function markDynamic(nodes: Root): boolean {
             break;
           }
         }
-        if (markDynamic(node.children) || dyn) dyn = true;
+        if (markDynamic(node.children, standalone)) dyn = true;
         break;
       }
       case NodeKind.AtRule: {
         if (typeof node.name !== 'string' || typeof node.prelude !== 'string') {
           dyn = true;
         }
-        if (node.children !== null && markDynamic(node.children)) dyn = true;
+        if (node.children !== null && markDynamic(node.children, standalone)) dyn = true;
         break;
       }
       case NodeKind.Keyframes: {
@@ -244,6 +227,7 @@ function markDynamic(nodes: Root): boolean {
         break;
       }
       case NodeKind.Interpolation:
+        standalone[node.index] = true;
         dyn = true;
         break;
     }
@@ -282,15 +266,10 @@ type SourceSlot = [
 /** Module-private symbol; users cannot reach it without
  *  `Object.getOwnPropertySymbols`, so the slot is invisible to typical
  *  consumers (iteration, spread, JSON, for..in). */
-const SOURCE_SLOT: unique symbol = Symbol('sc.source');
-/** Memoizes `shouldRecoverFragmentSlot`'s scan of the fragment's source
- *  strings. A `css\`\`` product reused across many outer templates only
- *  needs the scan once. */
-const BLOCK_LIKE: unique symbol = Symbol('sc.blocklike');
+const SOURCE_SLOT: unique symbol = Symbol();
 
 type RulesWithSlot = ReadonlyArray<unknown> & {
   [SOURCE_SLOT]?: SourceSlot;
-  [BLOCK_LIKE]?: boolean;
 };
 
 /**
@@ -310,7 +289,7 @@ export function attachSourceInputs<T extends RuleSet<never>>(
   return rules;
 }
 
-export function isCssProduct(arr: unknown): boolean {
+export function isCssProduct(arr: unknown): arr is RulesWithSlot & { [SOURCE_SLOT]: SourceSlot } {
   return Array.isArray(arr) && (arr as RulesWithSlot)[SOURCE_SLOT] !== undefined;
 }
 
@@ -421,17 +400,8 @@ function interleaveWithSentinels(
   for (let i = 0; i < count; i++) {
     const prefix = strings[i] || '';
     const suffix = strings[i + 1] || '';
-    let standalone = isStandaloneSlot(prefix, suffix, prevWasStandalone);
-    if (!standalone && shouldRecoverFragmentSlot(prefix, interpolations[i])) {
-      // User forgot a `;` before what is clearly a block-style fragment
-      // (its source carries top-level `;`/`{`/`}`). Inject the missing
-      // terminator and promote the slot to standalone so the pending
-      // decl closes instead of swallowing the fragment as part of its
-      // value. Value-position fragments (prefix ends in `:`, `,`, `(`,
-      // `/`) are out of scope.
-      out += ';';
-      standalone = true;
-    }
+    const standalone = isStandaloneSlot(prefix, suffix, prevWasStandalone);
+    if (__DEV__ && !standalone) warnSwallowedFragment(out, prefix, interpolations[i]);
     out += standalone ? '\0J' : '\0I';
     out += i;
     out += '\0';
@@ -442,44 +412,50 @@ function interleaveWithSentinels(
 }
 
 /**
- * Return `true` when an embedded-classified slot should be flipped to
- * standalone with a `;` injected before its sentinel. Triggers only
- * when the interpolation is a `css\`...\`` fragment whose source
- * strings carry top-level `;`/`{`/`}` (so it can't be just a value)
- * AND the prefix does not end in a value-continuation character
- * (`:` `,` `(` `/`).
+ * Dev warning for an embedded slot holding a `css\`...\`` fragment whose
+ * source carries statements (`;` `{` `}`): the author left out the `;`
+ * before it, so the fragment text lands inside the preceding declaration's
+ * value. Value-position slots (prefix ends in `:` `,` `(` `/`) are the
+ * intended embedded use and stay silent.
  */
-function shouldRecoverFragmentSlot(prefix: string, interpolation: unknown): boolean {
+function warnSwallowedFragment(sourceSoFar: string, prefix: string, interpolation: unknown): void {
   const last = nonWsCharCode(prefix, prefix.length - 1, -1);
-  if (last === COLON || last === COMMA || last === OPEN_PAREN || last === SLASH) return false;
-  if (!Array.isArray(interpolation)) return false;
-  const slot = (interpolation as RulesWithSlot)[SOURCE_SLOT];
-  if (slot === undefined) return false;
-  const cached = (interpolation as RulesWithSlot)[BLOCK_LIKE];
-  if (cached !== undefined) return cached;
+  if (last === COLON || last === COMMA || last === OPEN_PAREN || last === SLASH) return;
+  if (!isCssProduct(interpolation)) return;
+  const slot = interpolation[SOURCE_SLOT];
   const strings = slot[2] !== null ? slot[2].strings : slot[0];
-  if (strings === null) return false;
-  let blockLike = false;
-  outer: for (let i = 0; i < strings.length; i++) {
+  if (strings === null) return;
+  for (let i = 0; i < strings.length; i++) {
     const s = strings[i];
     for (let j = 0; j < s.length; j++) {
       const c = s.charCodeAt(j);
       if (c === SEMICOLON || c === OPEN_BRACE || c === CLOSE_BRACE) {
-        blockLike = true;
-        break outer;
+        // The swallowing declaration starts after the last top-level `;` `{`
+        // `}` of the whole source so far, so it can span earlier slots.
+        const sourceEnd = sourceSoFar.length;
+        let from = 0;
+        let k: number;
+        while (
+          (k = scanQP(sourceSoFar, from, sourceEnd, SEMICOLON, OPEN_BRACE, CLOSE_BRACE, -1)) <
+          sourceEnd
+        ) {
+          from = k + 1;
+        }
+        const statement = sourceSoFar.slice(from).trim();
+        const colon = scanQP(statement, 0, statement.length, COLON, -1, -1, -1);
+        const property = statement
+          .slice(0, colon)
+          .trim()
+          .replace(/\0[IJ]\d+\0/g, '${...}');
+        warnOnce(
+          'fragment-missing-semicolon',
+          `a css fragment is interpolated inside the \`${property}\` declaration with no \`;\` before it, so the fragment text becomes part of that declaration's value. Add a \`;\` before the \`\${...}\` interpolation.`,
+          statement
+        );
+        return;
       }
     }
   }
-  // Non-enumerable so the cached flag stays invisible to `toEqual` /
-  // `Object.keys` / JSON walks, matching the documented pattern used by
-  // {@link DYN} and the parser's NATIVE_RULE_CLASS / NATIVE_AT_CLASS
-  // symbol slots.
-  Object.defineProperty(interpolation, BLOCK_LIKE, {
-    value: blockLike,
-    enumerable: false,
-    configurable: true,
-  });
-  return blockLike;
 }
 
 /**

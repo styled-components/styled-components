@@ -574,32 +574,6 @@ describe('parseCSSDeclarations', () => {
       ).toMatchInlineSnapshot(`[]`);
     });
 
-    it('drops unterminated double quote and recovers', () => {
-      expect(
-        parseCSSDeclarations('font-family: "Unterminated; color: red;')
-      ).toMatchInlineSnapshot(`
-        [
-          [
-            "font-family",
-            ""Unterminated; color: red;",
-          ],
-        ]
-      `);
-    });
-
-    it('drops unterminated single quote and recovers', () => {
-      expect(
-        parseCSSDeclarations("font-family: 'Unterminated; color: red;")
-      ).toMatchInlineSnapshot(`
-        [
-          [
-            "font-family",
-            "'Unterminated; color: red;",
-          ],
-        ]
-      `);
-    });
-
     it('handles single quotes inside double quotes', () => {
       const result = parseCSSDeclarations(`font-family: "it's complex"; color: red;`);
       expect(result).toEqual([
@@ -815,14 +789,7 @@ describe('parseCSSDeclarations', () => {
     });
 
     it('backslash at end of quoted string before EOF (dropped, nothing to recover)', () => {
-      expect(parseCSSDeclarations('content: "end\\')).toMatchInlineSnapshot(`
-        [
-          [
-            "content",
-            ""end\\",
-          ],
-        ]
-      `);
+      expect(parseCSSDeclarations('content: "end\\')).toEqual([]);
     });
 
     it('backslash-n inside quotes preserved as-is', () => {
@@ -849,17 +816,6 @@ describe('parseCSSDeclarations', () => {
     it('interpolation returning /* (unquoted comment start)', () => {
       const result = parseCSSDeclarations('color: red /* hey; font-size: 12px;');
       expect(result).toEqual([['color', 'red']]);
-    });
-
-    it('interpolation returning unmatched quote drops and recovers', () => {
-      expect(parseCSSDeclarations('content: "broken; color: red;')).toMatchInlineSnapshot(`
-        [
-          [
-            "content",
-            ""broken; color: red;",
-          ],
-        ]
-      `);
     });
 
     it('interpolation returning semicolon splits into two declarations', () => {
@@ -915,19 +871,6 @@ describe('parseCSSDeclarations', () => {
     it('custom property with unquoted /* truncates (correct CSS behavior)', () => {
       const result = parseCSSDeclarations('--code: a /* b; color: red;');
       expect(result).toEqual([['--code', 'a']]);
-    });
-
-    it('unclosed quote drops and recovers remaining declarations', () => {
-      expect(
-        parseCSSDeclarations("content: 'unclosed; color: red; margin: 10px;")
-      ).toMatchInlineSnapshot(`
-        [
-          [
-            "content",
-            "'unclosed; color: red; margin: 10px;",
-          ],
-        ]
-      `);
     });
 
     it('unclosed paren drops and recovers remaining declarations', () => {
@@ -987,37 +930,14 @@ describe('parseCSSDeclarations', () => {
       `);
     });
 
-    it('unbalanced double quote recovers gracefully', () => {
-      expect(parseCSSDeclarations('content: "unclosed; color: red;')).toMatchInlineSnapshot(`
-        [
-          [
-            "content",
-            ""unclosed; color: red;",
-          ],
-        ]
-      `);
-    });
-
-    it('unbalanced single quote recovers gracefully', () => {
-      expect(parseCSSDeclarations("content: 'unclosed; color: red;")).toMatchInlineSnapshot(`
-        [
-          [
-            "content",
-            "'unclosed; color: red;",
-          ],
-        ]
-      `);
-    });
-
-    it('unbalanced quote with no recovery semicolons', () => {
-      expect(parseCSSDeclarations('content: "unclosed forever')).toMatchInlineSnapshot(`
-        [
-          [
-            "content",
-            ""unclosed forever",
-          ],
-        ]
-      `);
+    // Contract: a statement holding an unclosed string is dropped, so no
+    // guessed value ships to React Native.
+    it.each([
+      ['unbalanced double quote', 'content: "unclosed; color: red;'],
+      ['unbalanced single quote', "content: 'unclosed; color: red;"],
+      ['unbalanced quote with no recovery semicolons', 'content: "unclosed forever'],
+    ])('drops the statement holding an %s', (_label, css) => {
+      expect(parseCSSDeclarations(css)).toEqual([]);
     });
 
     it('comments in various positions', () => {
@@ -1371,17 +1291,10 @@ describe('parseCSSDeclarations', () => {
       `);
     });
 
-    it('both unclosed paren and unclosed quote in sequence', () => {
-      expect(
-        parseCSSDeclarations('a: url(broken; b: "unterminated; c: valid; d: 10px;')
-      ).toMatchInlineSnapshot(`
-        [
-          [
-            "a",
-            "url(broken; b: "unterminated; c: valid; d: 10px;",
-          ],
-        ]
-      `);
+    it('both unclosed paren and unclosed quote in sequence drop the statement', () => {
+      expect(parseCSSDeclarations('a: url(broken; b: "unterminated; c: valid; d: 10px;')).toEqual(
+        []
+      );
     });
 
     it('empty string value between quotes', () => {

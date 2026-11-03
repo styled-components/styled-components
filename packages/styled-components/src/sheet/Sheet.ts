@@ -34,6 +34,7 @@ export default class StyleSheet implements Sheet {
    * discarded claimer cannot leave a committed follower with an empty payload.
    * Dropped on a microtask so a discarded concurrent render cannot pin a name
    * past the turn that claimed it.
+   * @internal
    */
   provisionalRules: Map<string, string[]> | null = null;
   server: boolean;

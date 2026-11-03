@@ -4,7 +4,7 @@ import { IS_RSC } from './isRsc';
 
 const invalidHookCallRe = /invalid hook call/i;
 const SEEN_LIMIT = 200;
-const seen: Map<string, true> = new Map();
+const seen: Map<string, true> = /* @__PURE__ */ new Map();
 
 export const checkDynamicCreation = (displayName: string, componentId?: string | undefined) => {
   // RSC: components are module-level by construction and hook-detection is

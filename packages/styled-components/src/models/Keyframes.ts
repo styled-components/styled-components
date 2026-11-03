@@ -20,13 +20,14 @@ export interface CompiledKeyframes {
 }
 
 export default class Keyframes implements KeyframesType {
-  readonly [KEYFRAMES_SYMBOL] = true as const;
+  readonly [KEYFRAMES_SYMBOL]: true;
 
   id: string;
   name: string;
   rules: string;
 
   constructor(name: string, rules: string) {
+    this[KEYFRAMES_SYMBOL] = true;
     this.name = name;
     this.id = KEYFRAMES_ID_PREFIX + name;
     this.rules = rules;

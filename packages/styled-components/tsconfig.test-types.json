@@ -1,5 +1,8 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noUnusedLocals": false
+  },
   "include": ["src"],
   "exclude": ["dist", ".rollup.cache", "**/*.test.ts", "**/*.test.tsx"]
 }

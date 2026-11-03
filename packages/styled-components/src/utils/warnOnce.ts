@@ -1,4 +1,4 @@
-const warned: Set<string> = new Set();
+const warned: Set<string> = /* @__PURE__ */ new Set();
 
 /** Compute the dedupe key from `code` + optional `dedupeSuffix`. */
 export function warnKey(code: string, dedupeSuffix?: string): string {

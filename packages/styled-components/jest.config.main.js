@@ -9,6 +9,7 @@ module.exports = Object.assign({}, baseConfig, {
     '<rootDir>/src/native',
     '<rootDir>/src/primitives',
     'treeshake\\.test',
+    'dist-behavior\\.test',
     '<rootDir>/src/bench',
   ],
 });

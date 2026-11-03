@@ -17,7 +17,9 @@ export const enum NodeKind {
  * when it actually contains slot references.
  */
 export interface TemplateValue {
+  /** @internal */
   chunks: string[];
+  /** @internal */
   slots: number[];
 }
 
@@ -33,7 +35,7 @@ export interface TemplateValue {
  * `Object.keys`, and `for..in`. V8 still inline-caches the hidden-class
  * slot for the read.
  */
-export const DYN: unique symbol = Symbol('dyn');
+export const DYN: unique symbol = Symbol();
 
 /**
  * Parse-time native-plan classification slots, stamped by
@@ -104,7 +106,12 @@ export type NthOfBranch =
 export type NativeRuleClass =
   | { kind: 'pseudo'; pseudo: PseudoState; negate?: boolean }
   | { kind: 'pseudoFanOut'; pseudos: PseudoState[] }
-  | { kind: 'attr'; selectors: AttrSelector[]; negate?: boolean }
+  | {
+      kind: 'attr';
+      /** @internal */
+      selectors: AttrSelector[];
+      negate?: boolean;
+    }
   | {
       /**
        * Combinator selector against a referenced styled component.
@@ -190,6 +197,7 @@ export interface DeclNode<F = string | TemplateValue> {
 
 export interface RuleNode<F = string | TemplateValue> {
   kind: NodeKind.Rule;
+  /** @internal */
   selectors: F[];
   children: Node<F>[];
   [DYN]?: boolean;
@@ -207,6 +215,7 @@ export interface RuleNode<F = string | TemplateValue> {
 export interface AtRuleNode<F = string | TemplateValue> {
   kind: NodeKind.AtRule;
   name: F;
+  /** @internal */
   prelude: F;
   children: Node<F>[] | null;
   [DYN]?: boolean;
@@ -226,6 +235,7 @@ export interface KeyframeFrame<F = string | TemplateValue> {
 export interface KeyframesNode<F = string | TemplateValue> {
   kind: NodeKind.Keyframes;
   name: F;
+  /** @internal */
   prelude: F;
   frames: KeyframeFrame<F>[];
   [DYN]?: boolean;

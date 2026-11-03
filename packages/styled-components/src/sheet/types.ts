@@ -10,8 +10,11 @@ export interface Tag {
 
 /** Group-aware Tag that sorts rules by indices */
 export interface GroupedTag {
+  /** @internal */
   clearGroup(group: number): void;
+  /** @internal */
   getGroup(group: number): string;
+  /** @internal */
   groupSizes: Uint32Array;
   insertRules(group: number, rules: string[]): void;
   length: number;

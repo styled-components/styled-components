@@ -8,13 +8,16 @@ export const makeGroupedTag = (tag: Tag) => {
 
 const BASE_SIZE = 1 << 9;
 
-const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
+class DefaultGroupedTag implements GroupedTag {
+  /** @internal */
   groupSizes: Uint32Array;
   length: number;
   tag: Tag;
 
   // Sequential lookup cache: [group, absoluteIndex].
+  /** @internal */
   _cGroup: number;
+  /** @internal */
   _cIndex: number;
 
   constructor(tag: Tag) {
@@ -25,6 +28,7 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
     this._cIndex = 0;
   }
 
+  /** @internal */
   indexOfGroup(group: number) {
     if (group === this._cGroup) return this._cIndex;
 
@@ -78,6 +82,7 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
     }
   }
 
+  /** @internal */
   clearGroup(group: number) {
     if (group < this.length) {
       const length = this.groupSizes[group];
@@ -96,6 +101,7 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
     }
   }
 
+  /** @internal */
   getGroup(group: number) {
     let css = '';
     if (group >= this.length || this.groupSizes[group] === 0) {
@@ -112,4 +118,4 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
 
     return css;
   }
-};
+}

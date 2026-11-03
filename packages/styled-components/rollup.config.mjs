@@ -9,6 +9,7 @@ import terser from '@rollup/plugin-terser';
 const req = createRequire(import.meta.url);
 
 const pkg = req('./package.json');
+const { INTERNAL_PROPERTY_NAMES } = req('./scripts/internalPropertyNames.cjs');
 
 /**
  * NODE_ENV explicit replacement is only needed for standalone packages, as webpack
@@ -57,6 +58,7 @@ const defaultTypescriptPlugin = typescript({
     noEmit: false,
     declaration: true,
     declarationMap: false,
+    stripInternal: true,
   },
 });
 
@@ -72,6 +74,7 @@ const nativeTypescriptPlugin = typescript({
     noEmit: false,
     declaration: true,
     declarationMap: false,
+    stripInternal: true,
   },
 });
 
@@ -116,6 +119,11 @@ const minifierPlugin = terser({
     passes: 10,
     keep_infinity: true,
     pure_getters: true,
+  },
+  mangle: {
+    properties: {
+      regex: new RegExp(`^(${INTERNAL_PROPERTY_NAMES.join('|')})$`),
+    },
   },
   ecma: 2020,
   format: {
@@ -354,7 +362,7 @@ const webBridgeConfig = {
   ],
 };
 
-export default [
+const allConfigs = [
   standaloneConfig,
   standaloneProdConfig,
   serverConfig,
@@ -364,3 +372,24 @@ export default [
   reanimatedConfig,
   webBridgeConfig,
 ];
+
+/**
+ * `SC_BUILD_ONLY=size` builds only the bundles the size metric reads (the
+ * browser ESM and the standalone min.js); `scripts/size.mjs` sets it.
+ */
+const SIZE_BUNDLES = new Set([
+  'dist/styled-components.browser.esm.js',
+  'dist/styled-components.min.js',
+]);
+
+const buildOnly = process.env.SC_BUILD_ONLY;
+
+if (buildOnly && buildOnly !== 'size') {
+  throw new Error(`SC_BUILD_ONLY="${buildOnly}" is not supported; the only value is "size".`);
+}
+
+export default buildOnly
+  ? allConfigs.filter(config =>
+      [config.output].flat().some(output => SIZE_BUNDLES.has(output.file))
+    )
+  : allConfigs;

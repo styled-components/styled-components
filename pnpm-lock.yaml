@@ -576,6 +576,9 @@ importers:
       rollup-plugin-sourcemaps:
         specifier: ^0.6.3
         version: 0.6.3(@types/node@18.19.130)(rollup@3.30.0)
+      source-map:
+        specifier: ^0.6.1
+        version: 0.6.1
       stylis-plugin-rtl:
         specifier: ^2.1.1
         version: 2.1.1(stylis@4.3.6)

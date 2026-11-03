@@ -467,40 +467,105 @@ describe('compileWeb', () => {
       expect(out).toEqual(expected);
     });
 
-    it('terminates a prior decl when the user forgot `;` before a block-style fragment', () => {
-      // Authored: `margin: 0 ${10}px ${css\`color: red\`};`. The user
-      // forgot the `;` after the unit literal. The fragment has top-level
-      // `;` so it's clearly a block; recovery promotes it to a sibling
-      // declaration and injects `;` before its sentinel so `margin: 0
-      // 10px` terminates cleanly instead of swallowing the fragment as
-      // part of its value.
-      const block = css`
-        color: red;
-      `;
-      const src = parseSource(['margin: 0 ', 'px\n', ';'], [10, block]);
-      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual(
-        legacy('margin: 0 10px; color: red;')
-      );
+    describe('a block-style fragment with no `;` before it', () => {
+      // A `css` fragment carrying statements (`;` or a nested block) that
+      // follows a declaration with no `;` between them is part of that
+      // declaration's value: the author's `margin: 0 ${10}px ${block};` reads
+      // as `margin: 0 10px <block text>`. The library does not repair the
+      // template; it warns in development and lets the string path compile
+      // the swallowed value as written.
+      it.each([
+        [
+          'declarations',
+          css`
+            color: red;
+          `,
+        ],
+        [
+          'a nested rule',
+          css`
+            &:hover {
+              color: blue;
+            }
+          `,
+        ],
+        [
+          'a `;` inside a quoted string',
+          css`
+            content: 'hi;there';
+          `,
+        ],
+      ])('warns and keeps the fragment inside the preceding value (%s)', (_label, block) => {
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        // The warning quotes only the unterminated declaration (the text after
+        // the chunk's last top-level `;`, `{` or `}`), so `content: ';'` and
+        // the `margin` declaration before it are not part of the quote.
+        const src = parseSource(
+          ['margin: 0 ', "px; content: ';'; padding: 0 1px\n", ';'],
+          [10, block]
+        );
+        expect(warn.mock.calls).toEqual([
+          [
+            "[sc] a css fragment is interpolated inside the `padding` declaration with no `;` before it, so the fragment text becomes part of that declaration's value. Add a `;` before the `${...}` interpolation.",
+          ],
+        ]);
+        warn.mockRestore();
+        // The embedded fragment text carries `;` / `{`, structural characters
+        // the AST splice refuses, so this path bails to the string path.
+        expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toBeNull();
+      });
+
+      it('names the declaration across earlier slots and warns once per site, not once per chunk tail', () => {
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const block = css`
+          color: red;
+        `;
+        // Both sites end in `px` before the fragment; only the declaration differs.
+        parseSource(['margin: 0 ', 'px ', ';'], [10, block]);
+        parseSource(['padding: 0 ', 'px ', ';'], [10, block]);
+        expect(warn.mock.calls).toEqual([
+          [
+            "[sc] a css fragment is interpolated inside the `margin` declaration with no `;` before it, so the fragment text becomes part of that declaration's value. Add a `;` before the `${...}` interpolation.",
+          ],
+          [
+            "[sc] a css fragment is interpolated inside the `padding` declaration with no `;` before it, so the fragment text becomes part of that declaration's value. Add a `;` before the `${...}` interpolation.",
+          ],
+        ]);
+        warn.mockRestore();
+      });
+
+      it('compiles the swallowed value as written on the string path', () => {
+        expect(legacy('margin: 0 10px\ncolor: red;;')).toEqual(['.a{margin:0 10px\ncolor: red;}']);
+      });
+
+      it('does not warn when the fragment sits at a statement boundary', () => {
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const block = css`
+          color: red;
+        `;
+        const src = parseSource(['margin: 0 ', 'px;\n', ';'], [10, block]);
+        expect(warn).not.toHaveBeenCalled();
+        warn.mockRestore();
+        expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual(
+          legacy('margin: 0 10px; color: red;')
+        );
+      });
+
+      it('does not warn for a value-position fragment after `:`', () => {
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const frag = css`
+          1px solid red;
+        `;
+        const src = parseSource(['border: ', ''], [frag]);
+        expect(warn).not.toHaveBeenCalled();
+        warn.mockRestore();
+      });
     });
 
-    it('terminates a prior decl when the user forgot `;` before a nested-rule fragment', () => {
-      // The fragment carries `{`/`}` so it's unambiguously a rule block.
-      const hover = css`
-        &:hover {
-          color: blue;
-        }
-      `;
-      const src = parseSource(['color: red\n', ''], [hover]);
-      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual(
-        legacy('color: red; &:hover { color: blue; }')
-      );
-    });
-
-    it('promotes both fragments when two block-style fragments are adjacent', () => {
-      // Author wrote `${first}${second}` with no separator. Both source
-      // strings carry top-level `;` so both must be standalone siblings;
-      // the inherited `prevWasStandalone` flag carries through the empty
-      // gap between them.
+    it('keeps both fragments standalone when two block-style fragments are adjacent', () => {
+      // Author wrote `${first}${second}` with no separator. The first slot
+      // starts the template (a statement boundary) and the second inherits
+      // that classification through the empty gap between them.
       const first = css`
         color: red;
       `;
@@ -513,31 +578,10 @@ describe('compileWeb', () => {
       );
     });
 
-    it('does not crash on a fragment whose only top-level `;` lives inside a quoted string', () => {
-      // `content: "hi;there"` — the recovery scan walks raw strings
-      // without honoring quotes, so the in-string `;` triggers the
-      // promotion. The behavior is correct in this case because the
-      // surrounding context (a styled component's body) makes the
-      // fragment a sibling decl regardless. Lock that no crash + a
-      // sensible decl output happens.
-      const frag = css`
-        content: 'hi;there';
-      `;
-      const src = parseSource(['color: red\n', ''], [frag]);
-      const out = compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' });
-      // Either the legacy splice path produces the decl, or it bails to
-      // the slow string path. Both flows are valid; the requirement is
-      // no thrown exception and the literal quoted content preserved.
-      if (out !== null) {
-        expect(out.join('\n')).toMatch(/hi;there/);
-      }
-    });
-
     it('handles a fragment whose only braces live inside a comment', () => {
-      // `/* {} */` braces trigger the look-like-block check but the
-      // recovery is harmless when the slot is already at a statement
-      // boundary. Lock that the comment is stripped and the surrounding
-      // decls compile.
+      // The slot is at a statement boundary, so the comment's braces have
+      // no bearing on classification. Lock that the comment is stripped and
+      // the surrounding decls compile.
       const frag = css`
         /* {} */
         color: red;
