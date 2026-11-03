@@ -11,6 +11,19 @@ import { StyleSheetManager } from './StyleSheetManager';
 const CLOSING_TAG_R = /*#__PURE__*/ /^\s*<\/[a-z]/i;
 
 /**
+ * Empty stand-ins for the Node stream types named below. With `@types/node`
+ * loaded they merge into the real interfaces and change nothing; without it they
+ * keep the emitted declarations resolvable, since `@types/node` is not a dependency.
+ */
+declare global {
+  namespace NodeJS {
+    interface ReadableStream {}
+    interface WritableStream {}
+    interface ReadWriteStream {}
+  }
+}
+
+/**
  * The one member of `react-dom/server`'s `PipeableStream` (what
  * `renderToPipeableStream` returns) that is read here. Declared locally because
  * `@types/react-dom` is not a dependency: importing the type leaves a consumer
