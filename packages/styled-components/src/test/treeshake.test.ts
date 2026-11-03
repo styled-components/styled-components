@@ -10,6 +10,8 @@ import fs from 'fs';
 import path from 'path';
 import errorMap from '../utils/errors';
 
+const { buildConsumerBundle } = require('../../scripts/consumerBundle');
+
 const distDir = path.resolve(__dirname, '../../dist');
 const nativeDistDir = path.resolve(__dirname, '../../native/dist');
 
@@ -385,48 +387,20 @@ describe('rscPlugin tree-shaking', () => {
   });
 
   it('is eliminated by webpack when unused', async () => {
-    const webpack = require('webpack');
-    const os = require('os');
+    const { bundle } = await buildConsumerBundle({
+      distDir,
+      entrySource: `import styled from '${distDir}/styled-components.browser.esm.js';\nconsole.log(styled.div);\n`,
+    });
 
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sc-treeshake-'));
-    const entryFile = path.join(tmpDir, 'entry.js');
-    const outputFile = path.join(tmpDir, 'bundle.js');
+    expect(bundle).not.toContain('rewriteSelector');
+    expect(bundle).not.toContain('rscPlugin');
+    expect(bundle).not.toContain(':not(style[data-styled])');
+    expect(bundle).not.toContain('prefixPlugin');
+    expect(bundle).not.toContain('::-webkit-input-placeholder');
+    expect(bundle).not.toContain('backdrop-filter');
 
-    try {
-      fs.writeFileSync(
-        entryFile,
-        `import styled from '${distDir}/styled-components.browser.esm.js';\nconsole.log(styled.div);\n`
-      );
-
-      const stats: any = await new Promise((resolve, reject) => {
-        webpack(
-          {
-            mode: 'production',
-            entry: entryFile,
-            output: { path: tmpDir, filename: 'bundle.js' },
-            externals: { react: 'React', 'react-dom': 'ReactDOM' },
-          },
-          (err: any, stats: any) => (err ? reject(err) : resolve(stats))
-        );
-      });
-
-      if (stats.hasErrors()) {
-        throw new Error(stats.compilation.errors.map((e: any) => e.message).join('\n'));
-      }
-
-      const bundle = fs.readFileSync(outputFile, 'utf8');
-      expect(bundle).not.toContain('rewriteSelector');
-      expect(bundle).not.toContain('rscPlugin');
-      expect(bundle).not.toContain(':not(style[data-styled])');
-      expect(bundle).not.toContain('prefixPlugin');
-      expect(bundle).not.toContain('::-webkit-input-placeholder');
-      expect(bundle).not.toContain('backdrop-filter');
-
-      // Sanity: core styled-components code IS present
-      expect(bundle.length).toBeGreaterThan(1000);
-    } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    }
+    // Sanity: core styled-components code IS present
+    expect(bundle.length).toBeGreaterThan(1000);
   }, 30000);
 });
 
@@ -441,31 +415,9 @@ describe('per-plugin DCE from plugins subpath', () => {
   const RSC_NEEDLE = 'nth-child(1 of';
 
   async function webpackBundle(entrySource: string): Promise<string> {
-    const webpack = require('webpack');
-    const os = require('os');
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sc-plugin-dce-'));
-    const entryFile = path.join(tmpDir, 'entry.js');
-    const outputFile = path.join(tmpDir, 'bundle.js');
-    try {
-      fs.writeFileSync(entryFile, entrySource);
-      const stats: any = await new Promise((resolve, reject) => {
-        webpack(
-          {
-            mode: 'production',
-            entry: entryFile,
-            output: { path: tmpDir, filename: 'bundle.js' },
-            externals: { react: 'React', 'react-dom': 'ReactDOM' },
-          },
-          (err: any, stats: any) => (err ? reject(err) : resolve(stats))
-        );
-      });
-      if (stats.hasErrors()) {
-        throw new Error(stats.compilation.errors.map((e: any) => e.message).join('\n'));
-      }
-      return fs.readFileSync(outputFile, 'utf8');
-    } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    }
+    const { bundle } = await buildConsumerBundle({ distDir, entrySource });
+
+    return bundle;
   }
 
   it('keeps rtlPlugin and drops prefix/rsc when only rtl is imported', async () => {
@@ -564,8 +516,7 @@ describe('built bundles reach only declared packages', () => {
 describe('bundle size', () => {
   // Ceilings sit just above the current figures so any regression trips here.
   // `pnpm --filter styled-components test:build` prints each live number.
-  // v7 release targets to ratchet toward: standalone 12.0kB, webpack 6.8kB,
-  // all-in 10.5kB.
+  // v7 release targets to ratchet toward: standalone 12.0kB, webpack 10.5kB.
   it('standalone minified bundle stays under its gzip ceiling', () => {
     const zlib = require('zlib');
     const minified = fs.readFileSync(path.join(distDir, 'styled-components.min.js'));
@@ -576,152 +527,45 @@ describe('bundle size', () => {
 
     // Carries every export, so this is the widest surface: the in-house parser,
     // arity-2 attrs tracing with its runtime fallback, and the server entry
-    // points a consumer bundle would shake away. Ceiling includes buffered
-    // injection (StyleInjector + provisional rule stash) on top of main, and
-    // the 6.x forward-ports (explicit-undefined forwarding, native attrs parity),
-    // and the parser hardening against hostile interpolated values (brace
-    // repair with comments, nesting depth cap).
-    expect(sizeKB).toBeLessThan(15.6);
+    // points a consumer bundle would shake away.
+    expect(sizeKB).toBeLessThan(14.5);
   });
   it('production bundle size with real bundler tree-shaking', async () => {
-    const webpack = require('webpack');
     const zlib = require('zlib');
-    const os = require('os');
 
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sc-size-'));
-    const entryFile = path.join(tmpDir, 'entry.js');
+    const { bundle } = await buildConsumerBundle({ distDir });
+    const gzipped = zlib.gzipSync(bundle);
+    const sizeKB = gzipped.length / 1024;
 
-    try {
-      fs.writeFileSync(
-        entryFile,
-        [
-          `import styled, { css, keyframes, createGlobalStyle, ThemeProvider } from '${distDir}/styled-components.browser.esm.js';`,
-          'const fade = keyframes`from{opacity:1}to{opacity:0}`;',
-          'const mixin = css`color: red;`;',
-          'const GlobalStyle = createGlobalStyle`body{margin:0}`;',
-          'const Box = styled.div`${mixin}animation:${fade} 1s;`;',
-          'const Link = styled(Box)`text-decoration:none;`;',
-          'export { Box, Link, GlobalStyle, ThemeProvider };',
-        ].join('\n')
-      );
+    console.log(`  production bundle (webpack): ${sizeKB.toFixed(2)}kB gzip`);
 
-      const stats: any = await new Promise((resolve, reject) => {
-        webpack(
-          {
-            mode: 'production',
-            entry: entryFile,
-            output: { path: tmpDir, filename: 'bundle.js', library: { type: 'module' } },
-            experiments: { outputModule: true },
-            externals: {
-              react: 'react',
-              'react-dom': 'react-dom',
-            },
-          },
-          (err: any, stats: any) => (err ? reject(err) : resolve(stats))
-        );
-      });
+    // Verify unused exports are tree-shaken
+    expect(bundle).not.toContain('WithTheme');
+    expect(bundle).not.toContain('rscPlugin');
+    expect(bundle).not.toContain('rewriteSelector');
+    expect(bundle).not.toContain(':not(style[data-styled])');
+    expect(bundle).not.toContain('ServerStyleSheet');
+    expect(bundle).not.toContain('isStyledComponent');
+    // Plugins live on the `styled-components/plugins` subpath;no plugin
+    // module code should leak into a main-entry import.
+    expect(bundle).not.toContain('border-top-left-radius');
+    expect(bundle).not.toContain('styled-components/plugins/rtl');
 
-      if (stats.hasErrors()) {
-        throw new Error(stats.compilation.errors.map((e: any) => e.message).join('\n'));
-      }
+    // `styled.div` is synthesized on first access, so the element table does
+    // not ship. A few camelCase SVG names remain in the shorthand shape
+    // test; assert names that exist only in the dropped table.
+    expect(bundle).not.toContain('blockquote');
+    expect(bundle).not.toContain('feConvolveMatrix');
+    expect(bundle).not.toContain('optgroup');
+    // Control for the tag-name checks above: a string that IS present, proving
+    // the probe reads a bundle it can actually match against.
+    expect(bundle).toContain('sc-');
 
-      const bundle = fs.readFileSync(path.join(tmpDir, 'bundle.js'), 'utf8');
-      const gzipped = zlib.gzipSync(bundle);
-      const sizeKB = gzipped.length / 1024;
-
-      console.log(`  production bundle (webpack): ${sizeKB.toFixed(2)}kB gzip`);
-
-      // Verify unused exports are tree-shaken
-      expect(bundle).not.toContain('WithTheme');
-      expect(bundle).not.toContain('rscPlugin');
-      expect(bundle).not.toContain('rewriteSelector');
-      expect(bundle).not.toContain(':not(style[data-styled])');
-      expect(bundle).not.toContain('ServerStyleSheet');
-      expect(bundle).not.toContain('isStyledComponent');
-      // Plugins live on the `styled-components/plugins` subpath;no plugin
-      // module code should leak into a main-entry import.
-      expect(bundle).not.toContain('border-top-left-radius');
-      expect(bundle).not.toContain('styled-components/plugins/rtl');
-
-      // `styled.div` is synthesized on first access, so the element table does
-      // not ship. A few camelCase SVG names remain in the shorthand shape
-      // test; assert names that exist only in the dropped table.
-      expect(bundle).not.toContain('blockquote');
-      expect(bundle).not.toContain('feConvolveMatrix');
-      expect(bundle).not.toContain('optgroup');
-      // Control for the tag-name checks above: a string that IS present, proving
-      // the probe reads a bundle it can actually match against.
-      expect(bundle).toContain('sc-');
-
-      // The in-house parser (Source, AST-direct emit, fragment splicing,
-      // interpolation-sentinel gating) is reachable from any styled call, so it
-      // dominates what survives here and cannot shake away. Ceiling includes
-      // buffered injection on top of main's plugin composition, and the parser
-      // hardening against hostile interpolated values.
-      expect(sizeKB).toBeLessThan(14.4);
-    } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    }
-  }, 30000);
-
-  it('all-in consumer bundle (only react/react-dom external) stays under its gzip ceiling', async () => {
-    // Real consumer cost: what an app actually ships when it imports
-    // styled-components. v6 shipped a bundled CSS preprocessor; v7 replaced it with the
-    // in-house parser AND inlined the prop-validator (formerly
-    // @emotion/is-prop-valid). This test guards against transitive-dep drift.
-    const webpack = require('webpack');
-    const zlib = require('zlib');
-    const os = require('os');
-
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sc-allin-'));
-    const entryFile = path.join(tmpDir, 'entry.js');
-
-    try {
-      fs.writeFileSync(
-        entryFile,
-        [
-          `import styled, { css, keyframes, createGlobalStyle, ThemeProvider } from '${distDir}/styled-components.browser.esm.js';`,
-          'const fade = keyframes`from{opacity:1}to{opacity:0}`;',
-          'const mixin = css`color: red;`;',
-          'const GlobalStyle = createGlobalStyle`body{margin:0}`;',
-          'const Box = styled.div`${mixin}animation:${fade} 1s;`;',
-          'const Link = styled(Box)`text-decoration:none;`;',
-          'export { Box, Link, GlobalStyle, ThemeProvider };',
-        ].join('\n')
-      );
-
-      const stats: any = await new Promise((resolve, reject) => {
-        webpack(
-          {
-            mode: 'production',
-            entry: entryFile,
-            output: { path: tmpDir, filename: 'bundle.js', library: { type: 'module' } },
-            experiments: { outputModule: true },
-            externals: { react: 'react', 'react-dom': 'react-dom' },
-          },
-          (err: any, stats: any) => (err ? reject(err) : resolve(stats))
-        );
-      });
-
-      if (stats.hasErrors()) {
-        throw new Error(stats.compilation.errors.map((e: any) => e.message).join('\n'));
-      }
-
-      const bundle = fs.readFileSync(path.join(tmpDir, 'bundle.js'), 'utf8');
-      const gzipped = zlib.gzipSync(bundle);
-      const sizeKB = gzipped.length / 1024;
-
-      console.log(`  all-in consumer bundle: ${sizeKB.toFixed(2)}kB gzip`);
-
-      // v6.4.1 all-in for this same entry is 11.44kB gzip. v7 sits above it
-      // because the in-house parser and the arity-2 attrs bridge ship in full
-      // while v6 leaned on a smaller bundled preprocessor. Ceiling includes
-      // buffered injection on top of main's plugin composition, and the parser
-      // hardening against hostile interpolated values.
-      expect(sizeKB).toBeLessThan(14.4);
-    } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    }
+    // The in-house parser (Source, AST-direct emit, fragment splicing,
+    // interpolation-sentinel gating) is reachable from any styled call, so it
+    // dominates what survives here and cannot shake away.
+    // v6.4.1 for this same entry is 11.44kB gzip.
+    expect(sizeKB).toBeLessThan(13.3);
   }, 30000);
 });
 

@@ -70,7 +70,12 @@ Two traps produce a tree-shaking test that passes while proving nothing:
 - Asserting that a plugin's `.name` survives is not evidence its body was eliminated or kept: a minifier can constant-fold a bare `.name` read and inline the string. Exercise a load-bearing hook the plugin exposes (its declaration, rewrite, or transform function).
 - A needle built by concatenation in source (`'-webkit-' + 'backdrop-filter'`) need not appear contiguously after minification. Use needles written as single literals in source: full selector strings and object keys.
 
-A minifier renames locals but never object property names, so a property name ships verbatim at every occurrence. Keep frequently accessed keys on internal-only objects (options bags, descriptors, context objects) short, with full JSDoc on the declaration; keep user-facing API names descriptive. Searching the built bundle for the name shows which case applies.
+## Bundle size and property mangling
+
+- The size metric is the consumer bundle defined once in `scripts/consumerBundle.js` (webpack, production mode, a typical import of the browser ESM). The "production bundle size with real bundler tree-shaking" test and `pnpm --filter styled-components size` both measure it; `size --attribute` charges its bytes to source files through the composed source maps.
+- Terser renames only the property names listed in `scripts/internalPropertyNames.cjs`; every other property name ships verbatim at each occurrence. Keep frequently accessed internal keys short or list them. The list's doc comment states which names qualify.
+- Each bundle gets its own mapping, so a listed field must never cross a bundle boundary, and a sheet handed between the CommonJS and ES module copies of the library has differently named members (mixing the two copies is unsupported).
+- The source suites cannot see mangling. `src/test/dist-behavior.test.js`, run by `test:build`, exercises the built bundles and is the guard for a list change: its "published type declarations" block fails on a listed name declared in the emitted `.d.ts` or used by the reanimated bundle's sources.
 
 ## d.ts bundling and TS2742
 

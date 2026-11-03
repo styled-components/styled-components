@@ -9,6 +9,7 @@ type InstanceEntry = { name: string; rules: string[] };
 
 export default class WebGlobalStyle<Props extends object> {
   componentId: string;
+  /** @internal */
   isStatic: boolean;
   rules: RuleSet<Props>;
 
@@ -79,6 +80,7 @@ export default class WebGlobalStyle<Props extends object> {
     this.rebuildGroup(styleSheet);
   }
 
+  /** @internal */
   private computeRules(
     instance: string,
     executionContext: ExecutionContext & Props,
@@ -129,6 +131,7 @@ export default class WebGlobalStyle<Props extends object> {
    * Clear all CSS rules in the shared group and re-insert from surviving instances.
    * Must run synchronously; no yielding between clear and re-insert.
    * Static globals: all instances share identical CSS, emit once.
+   * @internal
    */
   private rebuildGroup(styleSheet: StyleSheet): void {
     const id = this.componentId;
