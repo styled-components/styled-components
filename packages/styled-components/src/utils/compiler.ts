@@ -1,5 +1,5 @@
 import { emitWeb } from '../parser/emit-web';
-import { parse } from '../parser/parser';
+import { parse, wrapAst } from '../parser/parser';
 import { compileWebFilled } from '../parser/compile';
 import type { Compiler } from '../types';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
@@ -137,12 +137,18 @@ export default function createCompiler({
   options = EMPTY_OBJECT,
   plugins = EMPTY_ARRAY,
 }: ICreateCompiler = EMPTY_OBJECT) {
-  // Multiple plugins compose left-to-right.
+  // Multiple plugins compose left-to-right. The hash includes plugin names
+  // and the namespace so different configs produce different class names
+  // and cache keys.
   let postProcessSelector: SelectorTransform | undefined;
   let postProcessDecl: DeclTransform | undefined;
+  let h = SEED;
   for (let i = 0; i < plugins.length; i++) {
     const plugin = plugins[i];
-    if (!plugin) continue;
+    const name = plugin?.name;
+    if (!name) throw throwStyledError(15);
+    if (__DEV__) notePluginName(plugin, options.namespace);
+    h = phash(h, name);
     const rw = plugin.rw;
     if (rw) {
       postProcessSelector = postProcessSelector ? composeRw(postProcessSelector, rw) : rw;
@@ -155,10 +161,11 @@ export default function createCompiler({
 
   // Byte-identical to the v7 web emit path for hash + SSR rehydration stability.
   const compileString = (css: string, selector = '', prefix = '', componentId = '&'): string[] => {
-    const flatCSS = normalize(css);
+    // The author's CSS parses as the root block, so the parser's brace repair
+    // keeps a stray `}` inside it; the wrapper is added as an AST node.
     const wrapSelector = prefix || selector ? (prefix ? prefix + ' ' : '') + selector : '';
-    const wrappedCSS = wrapSelector ? wrapSelector + '{' + flatCSS + '}' : flatCSS;
-    const ast = parse(wrappedCSS);
+    const body = parse(normalize(css));
+    const ast = wrapSelector ? wrapAst(body, wrapSelector) : body;
     if (ast.length === 0) return [];
     return emitWeb(ast, '', {
       selfRefSelector: selector,
@@ -169,16 +176,6 @@ export default function createCompiler({
     });
   };
 
-  // Hash includes plugins + options so different configs produce
-  // different class names and cache keys.
-  let h = SEED;
-  for (let i = 0; i < plugins.length; i++) {
-    const plugin = plugins[i];
-    const name = plugin?.name;
-    if (!name) throw throwStyledError(15);
-    if (__DEV__ && plugin) notePluginName(plugin, options.namespace);
-    h = phash(h, name);
-  }
   if (options.namespace) h = phash(h, options.namespace);
 
   const compiler: Compiler = {

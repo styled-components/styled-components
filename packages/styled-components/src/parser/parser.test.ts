@@ -285,6 +285,54 @@ describe('parser', () => {
     });
   });
 
+  describe('brace repair at the root block', () => {
+    it('drops the statement around a stray `}` up to the next `;` and keeps the rest', () => {
+      expect(parse('a: b; } c: d; e: f;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'a', value: 'b' },
+        { kind: NodeKind.Decl, prop: 'e', value: 'f' },
+      ]);
+    });
+
+    it('drops a declaration a stray `}` interrupts and resumes after the newline', () => {
+      expect(parse('a: b}\nc: d;')).toEqual([{ kind: NodeKind.Decl, prop: 'c', value: 'd' }]);
+    });
+
+    it('drops an unclosed block and everything inside it', () => {
+      expect(parse('a: b; x { y: z')).toEqual([{ kind: NodeKind.Decl, prop: 'a', value: 'b' }]);
+    });
+
+    it('drops the statement holding an unclosed string', () => {
+      expect(parse('a: b; content: "x; c: d;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'a', value: 'b' },
+      ]);
+    });
+
+    it.each([
+      ['stray closers', 'a:b; } c:d;\n'.repeat(80_000), 80_000],
+      ['unclosed openers', '{'.repeat(80_000), 0],
+    ])('repairs %s in linear time', (_label, css, nodes) => {
+      const start = performance.now();
+      expect(parse(css)).toHaveLength(nodes);
+      expect(performance.now() - start).toBeLessThan(200);
+    });
+  });
+
+  it('drops a nested rule inside a keyframe frame and keeps the next frame', () => {
+    // A frame body is a declaration list; a rule inside it has no meaning
+    // and is dropped without disturbing the frames that follow.
+    expect(parse('@keyframes k { from { a { color: red } } to { opacity: 1 } }')).toEqual([
+      {
+        kind: NodeKind.Keyframes,
+        name: 'keyframes',
+        prelude: 'k',
+        frames: [
+          { stops: ['from'], children: [] },
+          { stops: ['to'], children: [{ kind: NodeKind.Decl, prop: 'opacity', value: '1' }] },
+        ],
+      },
+    ]);
+  });
+
   it('splits comma-separated selectors', () => {
     expect(splitSelectors('.a, .b, .c')).toEqual(['.a', '.b', '.c']);
   });

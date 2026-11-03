@@ -41,6 +41,7 @@ type GeneratedLevel = {
    * True when this generate call won the name claim and produced `rules`.
    * A later claimant sees false but still receives the winner's `rules` so
    * inject can write them if the winner's render was discarded.
+   * @internal
    */
   isNew: boolean;
 };
@@ -48,7 +49,10 @@ type GeneratedLevel = {
 export type GeneratedStyle = {
   /** Space-joined class name chain (base first, `this` last). */
   className: string;
-  /** Inheritance chain output, base first, `this` last. */
+  /**
+   * Inheritance chain output, base first, `this` last.
+   * @internal
+   */
   levels: GeneratedLevel[];
   /**
    * Compiled keyframes referenced via `${kf}` interpolation, including those
@@ -60,25 +64,43 @@ export type GeneratedStyle = {
 
 /** CSS-side state for one styled component (parallel to the React-side `StyledComponent`). */
 export default class WebStyle {
+  /** @internal */
   baseHash: number;
+  /** @internal */
   baseStyle: WebStyle | null | undefined;
   componentId: string;
   // biome-ignore lint/suspicious/noExplicitAny: public through `IStyledStatics.webStyle`; each component stores rules of its own props shape, and `RuleSet<never>` changes the emitted .d.ts of the exposed property
   rules: RuleSet<any>;
-  /** Interp-tuple → class name. Hit skips `buildHashCSS` entirely. */
+  /**
+   * Interp-tuple → class name. Hit skips `buildHashCSS` entirely.
+   * @internal
+   */
   interpKeyCache: Map<string, string> | undefined;
-  /** Joined-CSS → class name. Hit skips `phash + generateName`. */
+  /**
+   * Joined-CSS → class name. Hit skips `phash + generateName`.
+   * @internal
+   */
   cssKeyCache: Map<string, string> | undefined;
-  /** Lazy `getSource(rules)` cache; once read, future renders skip the WeakMap. */
+  /**
+   * Lazy `getSource(rules)` cache; once read, future renders skip the WeakMap.
+   * @internal
+   */
   private resolvedSource: Source | null | undefined = undefined;
-  /** Reused scratch buffer so warm renders don't allocate fresh `filled[]`. */
+  /**
+   * Reused scratch buffer so warm renders don't allocate fresh `filled[]`.
+   * @internal
+   */
   private filledBuffer: string[] | undefined;
-  /** Parallel fragment side-table; allocated lazily on first fragment-bearing render. */
+  /**
+   * Parallel fragment side-table; allocated lazily on first fragment-bearing render.
+   * @internal
+   */
   private fragmentsBuffer: (FastPathFragment | null)[] | undefined;
   /**
    * Pending keyframes collected during `evaluateForFastPath`. Reused across
    * renders; cleared at the top of `generate()`. Only allocated lazily when
    * the source actually carries `${kf}` interpolations.
+   * @internal
    */
   private keyframesBuffer: CompiledKeyframes[] | undefined;
 
@@ -126,21 +148,22 @@ export default class WebStyle {
 
     let fastFragments: (FastPathFragment | null)[] | null = null;
     if (source !== null) {
-      if (this.filledBuffer === undefined) {
+      let filledBuffer = this.filledBuffer;
+      let fragmentsBuffer = this.fragmentsBuffer;
+      if (filledBuffer === undefined || fragmentsBuffer === undefined) {
         // Pre-fill via push so V8 keeps these PACKED_ELEMENTS. `new Array(n)`
         // stays HOLEY_ELEMENTS even after every slot is overwritten, which
         // infects the IC for the per-slot reads in `evaluateForFastPath` and
         // the fragments scan below. See NativeStyle.ts for the same pattern.
         const n = source.interpolations.length;
-        const buf: string[] = [];
-        for (let i = 0; i < n; i++) buf.push('');
-        this.filledBuffer = buf;
-      }
-      if (this.fragmentsBuffer === undefined) {
-        const n = source.interpolations.length;
-        const buf: (FastPathFragment | null)[] = [];
-        for (let i = 0; i < n; i++) buf.push(null);
-        this.fragmentsBuffer = buf;
+        filledBuffer = [];
+        fragmentsBuffer = [];
+        for (let i = 0; i < n; i++) {
+          filledBuffer.push('');
+          fragmentsBuffer.push(null);
+        }
+        this.filledBuffer = filledBuffer;
+        this.fragmentsBuffer = fragmentsBuffer;
       }
       if (this.keyframesBuffer === undefined) {
         this.keyframesBuffer = [];
@@ -150,14 +173,14 @@ export default class WebStyle {
       const filled = evaluateForFastPath(
         source,
         executionContext,
-        this.filledBuffer,
+        filledBuffer,
         compiler,
-        this.fragmentsBuffer,
+        fragmentsBuffer,
         this.keyframesBuffer
       );
       if (filled !== null) {
         fastFilled = filled;
-        fastFragments = hasAnyFragment(this.fragmentsBuffer) ? this.fragmentsBuffer : null;
+        fastFragments = hasAnyFragment(fragmentsBuffer) ? fragmentsBuffer : null;
         interpKey = buildInterpKey(filled, fastFragments, compiler.hash);
         name = this.interpKeyCache && this.interpKeyCache.get(interpKey);
         if (name === undefined) {
@@ -178,18 +201,13 @@ export default class WebStyle {
       }
     }
 
-    const localKf =
-      this.keyframesBuffer && this.keyframesBuffer.length > 0 ? this.keyframesBuffer : null;
-    const baseKf =
-      baseGenerated && baseGenerated.keyframes.length > 0 ? baseGenerated.keyframes : null;
-    let keyframes: CompiledKeyframes[];
-    if (baseKf !== null) {
-      keyframes = localKf !== null ? baseKf.concat(localKf) : baseKf.slice();
-    } else if (localKf !== null) {
-      keyframes = localKf.slice();
-    } else {
-      keyframes = EMPTY_KEYFRAMES;
-    }
+    const localKf = this.keyframesBuffer?.length ? this.keyframesBuffer : EMPTY_KEYFRAMES;
+    const baseKf = baseGenerated?.keyframes.length ? baseGenerated.keyframes : EMPTY_KEYFRAMES;
+    // A fresh array whenever either side has entries, so no caller shares a buffer.
+    const keyframes =
+      baseKf === EMPTY_KEYFRAMES && localKf === EMPTY_KEYFRAMES
+        ? EMPTY_KEYFRAMES
+        : baseKf.concat(localKf);
 
     if (name === undefined && !css) {
       // Fresh levels array so siblings don't share a mutable reference.
@@ -260,7 +278,10 @@ export default class WebStyle {
     };
   }
 
-  /** Hand a freshly compiled name's rules to whoever renders it next: later requests on the server, same-turn siblings elsewhere. */
+  /**
+   * Hand a freshly compiled name's rules to whoever renders it next: later requests on the server, same-turn siblings elsewhere.
+   * @internal
+   */
   private shareRules(styleSheet: StyleSheet, name: string, rules: string[]): void {
     if (IS_RSC) rememberRscRules(this, name, rules);
     else styleSheet.stashProvisionalRules(this.componentId, name, rules);

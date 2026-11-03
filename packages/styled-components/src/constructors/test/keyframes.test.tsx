@@ -76,6 +76,31 @@ describe('keyframes', () => {
     `);
   });
 
+  it('drops the frame around a stray `}` and keeps the frame on the next line', () => {
+    const animation = keyframes`
+      0% { opacity: 0; } }
+      100% { opacity: 1; }
+    `;
+    const Comp = styled.div`
+      animation: ${animation} 2s linear infinite;
+    `;
+    render(<Comp />);
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "@keyframes a {
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+      .c {
+        animation: a 2s linear infinite;
+      }"
+    `);
+  });
+
   it('should insert the correct styles for objects', () => {
     const rules = `
       0% {

@@ -1,15 +1,13 @@
+import { skipParenComment } from '../parser/parser';
 import {
   ASTERISK,
   BACKSLASH,
-  CLOSE_BRACE,
   CLOSE_PAREN,
   COLON,
   DOUBLE_QUOTE,
   isWS,
   LF,
-  OPEN_BRACE,
   OPEN_PAREN,
-  SEMICOLON,
   SINGLE_QUOTE,
   SLASH,
   SPACE,
@@ -41,15 +39,13 @@ function isPrecededByColon(css: string, i: number): boolean {
   return false;
 }
 
-/** Strip JS-style line comments + CSS block comments and validate brace balance in one pass. */
+/**
+ * Strip JS-style line comments and CSS block comments in one pass. Brace
+ * repair (a stray `}`, an unclosed block or string) is the parser's job at
+ * its root block, so comment-free input returns as is.
+ */
 export function normalize(css: string): string {
-  const hasLineComments = css.indexOf('//') !== -1;
-  const hasBlockComments = css.indexOf('/*') !== -1;
-  const hasCloseBrace = css.indexOf('}') !== -1;
-
-  if (!hasLineComments && !hasBlockComments && !hasCloseBrace) return css;
-
-  if (!hasLineComments && !hasBlockComments) return sanitizeBraces(css);
+  if (css.indexOf('//') === -1 && css.indexOf('/*') === -1) return css;
 
   const len = css.length;
   let out = '';
@@ -57,12 +53,8 @@ export function normalize(css: string): string {
   let i = 0;
   let inString = 0;
   let parenDepth = 0;
-  let braceDepth = 0;
-  /** A `}` without its `{` would close the component scope even when the totals balance. */
-  let strayClose = false;
   /** Last char appended to `out`; reading `out` itself would flatten the concat rope per comment. */
   let lastOutCh = 0;
-  let modified = false;
 
   while (i < len) {
     const code = css.charCodeAt(i);
@@ -94,10 +86,13 @@ export function normalize(css: string): string {
       continue;
     }
 
-    // Inside parentheses (any function call), skip comment/brace detection
-    // so that url(https://...), image-set(), url(.../*.png), etc. are preserved
+    // Inside parentheses (any function call), skip comment detection so that
+    // url(https://...), image-set(), url(.../*.png), etc. are preserved
     if (parenDepth > 0) {
-      i++;
+      i =
+        code === SLASH && css.charCodeAt(i + 1) === ASTERISK
+          ? skipParenComment(css, i, len)
+          : i + 1;
       continue;
     }
 
@@ -119,7 +114,6 @@ export function normalize(css: string): string {
         while (i < len && isWS(css.charCodeAt(i))) i++;
       }
       start = i;
-      modified = true;
       continue;
     }
 
@@ -130,7 +124,6 @@ export function normalize(css: string): string {
       }
       i += 2;
       start = i;
-      modified = true;
       continue;
     }
 
@@ -150,123 +143,13 @@ export function normalize(css: string): string {
         i++;
       }
       start = i;
-      modified = true;
       continue;
-    }
-
-    if (code === OPEN_BRACE) {
-      braceDepth++;
-    } else if (code === CLOSE_BRACE && --braceDepth < 0) {
-      strayClose = true;
     }
 
     i++;
   }
 
-  const balanced = braceDepth === 0 && !strayClose;
-
-  if (!modified) return balanced ? css : sanitizeBraces(css);
-
+  if (start === 0) return css;
   if (start < len) out += css.substring(start);
-
-  return balanced ? out : sanitizeBraces(out);
-}
-
-function sanitizeBraces(css: string): string {
-  const len = css.length;
-  // Optimistic: stay in pure-scan mode (no result allocation) until the first
-  // event that demands rewriting (a comment to strip, or a brace imbalance).
-  // Balanced comment-free input is the dominant production case from
-  // `normalize`; it hits the early-return at the bottom and pays only
-  // one O(n) charCode walk with zero substring or concat work.
-  let result = '';
-  let resultActive = false;
-  let declStart = 0;
-  let braceDepth = 0;
-  let inString = 0;
-  let inComment = false;
-  let imbalanced = false;
-
-  for (let i = 0; i < len; i++) {
-    const code = css.charCodeAt(i);
-
-    if (inString === 0 && !inComment && code === SLASH && css.charCodeAt(i + 1) === ASTERISK) {
-      if (resultActive) {
-        result += css.substring(declStart, i);
-      } else {
-        // First comment: capture everything up to it in one substring rather
-        // than `css.substring(0, declStart) + css.substring(declStart, i)`.
-        result = css.substring(0, i);
-        resultActive = true;
-      }
-      inComment = true;
-      i++;
-      continue;
-    }
-    if (inComment) {
-      if (code === ASTERISK && css.charCodeAt(i + 1) === SLASH) {
-        inComment = false;
-        i++;
-        declStart = i + 1; // start collecting from AFTER the */
-      }
-      continue;
-    }
-
-    if ((code === DOUBLE_QUOTE || code === SINGLE_QUOTE) && !isEscaped(css, i)) {
-      if (inString === 0) {
-        inString = code;
-      } else if (inString === code) {
-        inString = 0;
-      }
-      continue;
-    }
-    if (inString !== 0) continue;
-
-    if (code === OPEN_BRACE) {
-      braceDepth++;
-    } else if (code === CLOSE_BRACE) {
-      braceDepth--;
-
-      if (braceDepth < 0) {
-        if (!resultActive) {
-          result = css.substring(0, declStart);
-          resultActive = true;
-        }
-        imbalanced = true;
-        let skipEnd = i + 1;
-        while (skipEnd < len) {
-          const skipCode = css.charCodeAt(skipEnd);
-          if (skipCode === SEMICOLON || skipCode === LF) break;
-          skipEnd++;
-        }
-        if (skipEnd < len && css.charCodeAt(skipEnd) === SEMICOLON) skipEnd++;
-
-        braceDepth = 0;
-        i = skipEnd - 1;
-        declStart = skipEnd;
-        continue;
-      }
-
-      if (braceDepth === 0) {
-        if (resultActive) result += css.substring(declStart, i + 1);
-        declStart = i + 1;
-      }
-    } else if (code === SEMICOLON && braceDepth === 0) {
-      if (resultActive) result += css.substring(declStart, i + 1);
-      declStart = i + 1;
-    }
-  }
-
-  if (!imbalanced && braceDepth === 0 && inString === 0) return css;
-
-  // Imbalance OR braceDepth ended non-zero OR unclosed string. If we never
-  // activated the result builder (e.g. a stray opening brace with no matching
-  // close), backfill the good prefix now so we drop the unclosed tail.
-  if (!resultActive) result = css.substring(0, declStart);
-
-  if (declStart < len && braceDepth === 0 && inString === 0) {
-    result += css.substring(declStart);
-  }
-
-  return result;
+  return out;
 }

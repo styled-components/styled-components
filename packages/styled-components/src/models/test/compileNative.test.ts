@@ -41,6 +41,11 @@ describe('toNativeStyles', () => {
       expect(r.keyframes).toEqual([]);
     });
 
+    it('keeps a stray `}` from leaking the rest of the template into the style output', () => {
+      const r = compile('color: red; } body { background: red } x {');
+      expect([r.base, r.conditional, r.keyframes]).toEqual([{ color: 'red' }, [], []]);
+    });
+
     it('returns empty base for comment-only input', () => {
       const r = compile('/* just a comment */');
       expect(r.base).toEqual({});

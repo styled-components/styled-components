@@ -15,102 +15,93 @@ const hasOwn = Object.prototype.hasOwnProperty;
  * `strings.length === interpolations.length + 1` always holds.
  */
 export interface ObjectTemplate {
+  /** @internal */
   strings: string[];
+  /** @internal */
   interpolations: unknown[];
+}
+
+/**
+ * One walk serves both object entry points. Primitives format inline through
+ * `write`; nested plain objects become nested rules whose key is the raw
+ * selector text (so `&:hover`, `@media (...)`, etc. round-trip unchanged); a
+ * function or `css\`...\`` fragment at value position goes to `slot`, which
+ * returns `false` to abandon the walk. With a `fillContext`, function values
+ * keep resolving against it until the value is no longer a function.
+ * A plain object with its own `toString` is a design token, not a block.
+ */
+function walkStyleObject(
+  obj: Record<string, unknown>,
+  write: (text: string) => void,
+  slot: (value: unknown) => boolean,
+  fillContext?: unknown
+): boolean {
+  for (const key in obj) {
+    if (!hasOwn.call(obj, key)) continue;
+    let val: unknown = obj[key];
+    while (isFunction(val) && fillContext !== undefined) {
+      val = (val as (ctx: unknown) => unknown)(fillContext);
+    }
+    if (val === undefined || val === null || val === false || val === '') continue;
+    if (isPlainObject(val) && !hasOwn.call(val, 'toString')) {
+      write(key + '{');
+      if (!walkStyleObject(val as Record<string, unknown>, write, slot, fillContext)) return false;
+      write('}');
+    } else if (isFunction(val) || isCssProduct(val)) {
+      write(hyphenate(key) + ':');
+      if (!slot(val)) return false;
+      write(';');
+    } else {
+      const formatted = addUnitIfNeeded(key, val);
+      if (formatted !== '') write(hyphenate(key) + ':' + formatted + ';');
+    }
+  }
+  return true;
 }
 
 /**
  * Walk a style object and produce a synthetic template literal. Function
  * values and `css\`...\`` fragments are extracted as interpolation slots
- * at value position; primitives format inline. Nested plain-object values
- * become nested rules whose key is the raw selector text (so `&:hover`,
- * `@media (...)`, etc. round-trip unchanged).
+ * at value position; primitives format inline.
  */
 export default function objectToTemplate(obj: Record<string, unknown>): ObjectTemplate {
   const strings: string[] = [];
   const interpolations: unknown[] = [];
   let pending = '';
 
-  function pushSlot(slot: unknown): void {
-    strings.push(pending);
-    pending = '';
-    interpolations.push(slot);
-  }
-
-  function walk(o: Record<string, unknown>): void {
-    for (const key in o) {
-      if (!hasOwn.call(o, key)) continue;
-      const val = o[key];
-      if (val === undefined || val === null || val === false || val === '') continue;
-      if (isPlainObject(val)) {
-        // Own `toString` means the author wants a stringified value at
-        // this slot, not a nested selector block.
-        if (hasOwn.call(val, 'toString')) {
-          const formatted = addUnitIfNeeded(key, val);
-          if (formatted === '') continue;
-          pending += hyphenate(key) + ':' + formatted + ';';
-        } else {
-          pending += key + '{';
-          walk(val as Record<string, unknown>);
-          pending += '}';
-        }
-      } else if (isFunction(val) || isCssProduct(val)) {
-        pending += hyphenate(key) + ':';
-        pushSlot(val);
-        pending += ';';
-      } else {
-        const formatted = addUnitIfNeeded(key, val);
-        if (formatted === '') continue;
-        pending += hyphenate(key) + ':' + formatted + ';';
-      }
+  walkStyleObject(
+    obj,
+    text => {
+      pending += text;
+    },
+    value => {
+      strings.push(pending);
+      pending = '';
+      interpolations.push(value);
+      return true;
     }
-  }
-
-  walk(obj);
+  );
   strings.push(pending);
   return { strings, interpolations };
 }
 
 /**
  * Render-time stringifier for plain objects produced by function
- * interpolations (`css(p => ({color: p.fg}))`, `${p => ({...})}`). Resolves
- * nested function values against the supplied fill context (mirroring
- * legacy `flatten`'s recursive call behavior) and emits a flat CSS text
- * string. Returns `null` when an unsupported shape (e.g. an unresolved
- * `css\`...\`` fragment inside an object value, deeply nested arrays) is
- * encountered so the caller can fall through to a legacy path.
+ * interpolations (`css(p => ({color: p.fg}))`, `${p => ({...})}`). Emits a
+ * flat CSS text string. Returns `null` when a `css\`...\`` fragment sits
+ * inside an object value, which needs the Source-aware splicing only the
+ * string-input compile path can do, and when a function value is met with
+ * no `fillContext` to resolve it against.
  */
 export function objectToCSS(obj: Record<string, unknown>, fillContext?: unknown): string | null {
   let css = '';
-  for (const key in obj) {
-    if (!hasOwn.call(obj, key)) continue;
-    let val: unknown = obj[key];
-    // Resolve function values recursively (with a shallow recursion limit
-    // implicit in the call chain) so `{ color: p => p.fg }` works the same
-    // as `{ color: 'tomato' }` once the prop reaches us.
-    while (isFunction(val) && fillContext !== undefined) {
-      val = (val as (ctx: unknown) => unknown)(fillContext);
-    }
-    if (val === undefined || val === null || val === false || val === '') continue;
-    if (isPlainObject(val)) {
-      if (hasOwn.call(val, 'toString')) {
-        const formatted = addUnitIfNeeded(key, val);
-        if (formatted === '') continue;
-        css += hyphenate(key) + ':' + formatted + ';';
-        continue;
-      }
-      const inner = objectToCSS(val as Record<string, unknown>, fillContext);
-      if (inner === null) return null;
-      css += key + '{' + inner + '}';
-    } else if (isCssProduct(val)) {
-      // Tagged css`` fragment inside an object value; needs Source-aware
-      // splicing the caller can do with the slot variant.
-      return null;
-    } else {
-      const formatted = addUnitIfNeeded(key, val);
-      if (formatted === '') continue;
-      css += hyphenate(key) + ':' + formatted + ';';
-    }
-  }
-  return css;
+  const complete = walkStyleObject(
+    obj,
+    text => {
+      css += text;
+    },
+    () => false,
+    fillContext
+  );
+  return complete ? css : null;
 }

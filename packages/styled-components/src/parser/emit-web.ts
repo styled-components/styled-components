@@ -7,7 +7,6 @@ import {
   StaticKeyframesNode,
   StaticNode,
   StaticRoot,
-  StaticRuleNode,
 } from './ast';
 import { scanQPB, splitTopLevelCommas, stripCommaSpaces } from './parser';
 
@@ -115,6 +114,7 @@ export interface EmitOptions {
    * class.
    */
   componentId?: string | undefined;
+  /** @internal */
   selfRefSelector?: string | undefined;
   /**
    * Prepended to every emitted rule selector AFTER `&` resolution (namespace
@@ -170,35 +170,24 @@ export function emitWeb(root: StaticRoot, parentSelector: string, options?: Emit
 }
 
 function maybeAugmentWithAutoName(root: StaticRoot, componentId: string): StaticRoot {
-  // compileString wrap: a single top-level Rule contains the user's decls.
-  if (root.length === 1 && root[0].kind === NodeKind.Rule) {
-    const rule = root[0];
-    if (!shouldAutoNameContainer(rule.children)) return root;
-    const newChildren = rule.children.slice();
-    newChildren.push(makeContainerNameDecl(componentId));
-    return [{ ...rule, children: newChildren }] as StaticRoot;
-  }
-  // AST-direct path: user decls live at the root.
-  if (!shouldAutoNameContainer(root)) return root;
-  const augmented = root.slice() as StaticRoot;
-  augmented.push(makeContainerNameDecl(componentId));
-  return augmented;
-}
-
-function makeContainerNameDecl(componentId: string): StaticNode {
-  return { kind: NodeKind.Decl, prop: 'container-name', value: componentId } as StaticNode;
-}
-
-function shouldAutoNameContainer(nodes: ReadonlyArray<StaticNode>): boolean {
+  // compileString wrap: a single top-level Rule contains the user's decls;
+  // the AST-direct path keeps them at the root.
+  const wrapper = root.length === 1 && root[0].kind === NodeKind.Rule ? root[0] : null;
+  const decls = wrapper ? wrapper.children : root;
   let hasType = false;
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
+  for (let i = 0; i < decls.length; i++) {
+    const node = decls[i];
     if (node.kind !== NodeKind.Decl) continue;
-    if (typeof node.prop !== 'string' || typeof node.value !== 'string') continue;
-    if (node.prop === 'container-name') return false;
+    if (node.prop === 'container-name') return root;
     if (node.prop === 'container-type' && node.value !== 'normal') hasType = true;
   }
-  return hasType;
+  if (!hasType) return root;
+  const augmented = decls.concat({
+    kind: NodeKind.Decl,
+    prop: 'container-name',
+    value: componentId,
+  });
+  return wrapper ? [{ ...wrapper, children: augmented }] : augmented;
 }
 
 function emitNodes(
@@ -206,7 +195,7 @@ function emitNodes(
   currentSelector: string,
   options: EmitOptions | undefined
 ): string[] {
-  const baseDecls: string[] = [];
+  let body = '';
   const other: string[] = [];
 
   const declTransform = options && options.decl;
@@ -218,7 +207,7 @@ function emitNodes(
         // TemplateValue was realized by `realize` in `fillNode`). The
         // `string | TemplateValue` AST type covers the parse-time form;
         // emit-web is only called on filled (or never-templated) ASTs.
-        baseDecls.push(formatDecl(node.prop, node.value, declTransform));
+        body += formatDecl(node.prop, node.value, declTransform) + ';';
         break;
       case NodeKind.Rule: {
         let resolved = resolveRuleSelectors(node.selectors, currentSelector);
@@ -246,21 +235,21 @@ function emitNodes(
   }
 
   const result: string[] = [];
-  if (baseDecls.length > 0 && currentSelector) {
-    let wrappingSelector =
+  if (body && currentSelector) {
+    const wrappingSelector =
       options && options.namespace
         ? prependNamespace(currentSelector, options.namespace)
         : currentSelector;
-    const body = '{' + baseDecls.join(';') + ';}';
+    const block = '{' + body + '}';
     if (options && options.rw) {
       const rewritten = options.rw(wrappingSelector);
       if (Array.isArray(rewritten)) {
-        for (let i = 0; i < rewritten.length; i++) result.push(rewritten[i] + body);
+        for (let i = 0; i < rewritten.length; i++) result.push(rewritten[i] + block);
       } else {
-        result.push(rewritten + body);
+        result.push(rewritten + block);
       }
     } else {
-      result.push(wrappingSelector + body);
+      result.push(wrappingSelector + block);
     }
   }
   for (let i = 0; i < other.length; i++) result.push(other[i]);
@@ -302,16 +291,8 @@ function emitAtRule(
 
   if (DECL_BODY_AT_RULES.has(node.name)) {
     // Body is bare declarations; emit inline, no selector wrap.
-    const declTransform = options && options.decl;
-    const decls: string[] = [];
-    for (let i = 0; i < node.children.length; i++) {
-      const child = node.children[i];
-      if (child.kind === NodeKind.Decl) {
-        decls.push(formatDecl(child.prop, child.value, declTransform));
-      }
-    }
-    if (decls.length === 0) return '';
-    return header + '{' + decls.join(';') + ';}';
+    const body = declBody(node.children, options);
+    return body ? header + '{' + body + '}' : '';
   }
 
   // Body contains rules and/or declarations; inherit the parent selector.
@@ -334,15 +315,21 @@ function emitKeyframes(node: StaticKeyframesNode, options: EmitOptions | undefin
 }
 
 function emitFrame(frame: StaticKeyframeFrame, options: EmitOptions | undefined): string {
+  // emitKeyframes skips empty frames, so the body is never empty here.
+  return frame.stops.join(',') + '{' + declBody(frame.children, options) + '}';
+}
+
+/** `prop:value;` per declaration child, joined; '' when there are none. */
+function declBody(children: ReadonlyArray<StaticNode>, options: EmitOptions | undefined): string {
   const declTransform = options && options.decl;
-  const stops = frame.stops.join(',');
-  const decls: string[] = [];
-  for (let i = 0; i < frame.children.length; i++) {
-    const d = frame.children[i];
-    decls.push(formatDecl(d.prop, d.value, declTransform));
+  let body = '';
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    if (child.kind === NodeKind.Decl) {
+      body += formatDecl(child.prop, child.value, declTransform) + ';';
+    }
   }
-  // emitKeyframes skips empty frames, so decls.length is always > 0 here.
-  return stops + '{' + decls.join(';') + ';}';
+  return body;
 }
 
 /**
@@ -400,22 +387,18 @@ function applySelfReferenceRewrite(
   selfRefSelector: string,
   componentId: string
 ): string {
-  if (!compiledSelector.includes(selfRefSelector)) return compiledSelector;
   if (
     !compiledSelector.startsWith(selfRefSelector) ||
-    !compiledSelector.endsWith(selfRefSelector)
+    !compiledSelector.endsWith(selfRefSelector) ||
+    compiledSelector.split(selfRefSelector).join('') === ''
   ) {
     return compiledSelector;
   }
-  // Remove all occurrences and check non-empty remainder
-  const without = compiledSelector.split(selfRefSelector).join('');
-  if (without.length === 0) return compiledSelector;
-
   const replacement = '.' + componentId;
-  let out = '';
-  let i = 0;
   const len = compiledSelector.length;
   const selLen = selfRefSelector.length;
+  let out = '';
+  let i = 0;
   while (i < len) {
     const idx = compiledSelector.indexOf(selfRefSelector, i);
     if (idx === -1) {
@@ -423,14 +406,8 @@ function applySelfReferenceRewrite(
       break;
     }
     const after = idx + selLen;
-    const afterCh = after < len ? compiledSelector.charCodeAt(after) : 0;
-    const isBoundary = after >= len || !$.isIdentChar(afterCh);
-    out += compiledSelector.substring(i, idx);
-    if (isBoundary) {
-      out += replacement;
-    } else {
-      out += selfRefSelector;
-    }
+    const isBoundary = after >= len || !$.isIdentChar(compiledSelector.charCodeAt(after));
+    out += compiledSelector.substring(i, idx) + (isBoundary ? replacement : selfRefSelector);
     i = after;
   }
   return out;

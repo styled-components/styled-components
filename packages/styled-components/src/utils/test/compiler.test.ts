@@ -164,6 +164,15 @@ describe('compiler', () => {
       `);
     });
 
+    it('drops the statement holding an unterminated string even with no brace in the input', () => {
+      expect(
+        runCssCompile(`
+        width: 100px;
+        content: "unterminated; color: red;
+      `)
+      ).toEqual(['.a{width:100px;}']);
+    });
+
     it('handles valid CSS unchanged (fast path)', () => {
       expect(
         runCssCompile(`
@@ -1454,6 +1463,29 @@ background-color: green;`)
       `);
     });
 
+    it('keeps a quote inside a block comment inside a function call from opening a string', () => {
+      // Comments inside parentheses are preserved as text; the apostrophe
+      // inside one must not be read as a string delimiter, or the rest of
+      // the template is swallowed as string content.
+      expect(runCssCompile(`width: calc(100% /* don't */ - 10px); color: red;`)).toEqual([
+        ".a{width:calc(100% /* don't */ - 10px);color:red;}",
+      ]);
+    });
+
+    it('keeps a quote after a balanced paren pair inside a comment inside a function call from opening a string', () => {
+      // The comment ends at its `*/`, not at the `)` of `(a)`, so the
+      // apostrophe after that `)` is still comment text.
+      expect(runCssCompile(`width: calc(100% /* (a) don't */ - 10px); color: red;`)).toEqual([
+        ".a{width:calc(100% /* (a) don't */ - 10px);color:red;}",
+      ]);
+    });
+
+    it('keeps an unquoted url whose path looks like an unclosed comment', () => {
+      expect(runCssCompile(`background: url(x/*.png); color: red;`)).toEqual([
+        '.a{background:url(x/*.png);color:red;}',
+      ]);
+    });
+
     // Backtick in CSS content (not a CSS string delimiter)
     it('handles backtick in content value', () => {
       expect(
@@ -1482,8 +1514,8 @@ background-color: green;`)
       `);
     });
 
-    // Complex path 3j: comment removal changes what sanitizeBraces sees
-    it('handles line comment hiding a closing brace from sanitizer', () => {
+    // Complex path 3j: comment removal changes what the parser's root-block brace repair sees
+    it('handles line comment hiding a closing brace from the root-block brace repair', () => {
       expect(
         runCssCompile(`
         width: 100px;
