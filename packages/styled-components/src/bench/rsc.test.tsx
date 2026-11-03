@@ -26,7 +26,13 @@ jest.mock('../utils/isRsc', () => ({ IS_RSC: true }));
 
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
-import styled, { keyframes, createGlobalStyle } from '../index';
+import styled, {
+  keyframes,
+  createGlobalStyle,
+  StyleSheetManager,
+  configureServerStyles,
+} from '../index';
+import rscPlugin from '../plugins/rsc';
 
 import { bench as _bench } from './bench-utils';
 
@@ -370,6 +376,104 @@ describe('RSC benchmarks', () => {
         )
       );
     });
+  });
+
+  it('realistic page under a StyleSheetManager and configured server plugins', () => {
+    console.log('\n--- Realistic page (200 iterations, median of 5) ---');
+
+    const Page = styled.main`
+      max-width: 960px;
+      margin: 0 auto;
+      font-family: system-ui, sans-serif;
+    `;
+    const NavLink = styled.a<{ $active: boolean }>`
+      color: ${p => (p.$active ? '#111827' : '#6b7280')};
+      font-weight: ${p => (p.$active ? 700 : 400)};
+      padding: 8px 12px;
+      &:hover {
+        color: #111827;
+      }
+    `;
+    const Card = styled.section`
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 24px;
+      & + & {
+        margin-top: 16px;
+      }
+    `;
+    const CardTitle = styled.h2`
+      font-size: 18px;
+      margin: 0 0 8px;
+    `;
+    const Badge = styled.span<{ $variant: string }>`
+      background: ${p => p.$variant};
+      border-radius: 4px;
+      padding: 2px 8px;
+    `;
+    const Button = styled.button<{ $primary?: boolean }>`
+      background: ${p => (p.$primary ? '#2563eb' : 'transparent')};
+      color: ${p => (p.$primary ? 'white' : '#2563eb')};
+      border: 1px solid #2563eb;
+      padding: 8px 16px;
+    `;
+    const Item = styled.li`
+      padding: 4px 0;
+      &:first-child {
+        font-weight: 600;
+      }
+      &:nth-child(2) {
+        color: #374151;
+      }
+    `;
+
+    const variants = ['#dcfce7', '#fef9c3', '#fee2e2', '#dbeafe'];
+    const Section = ({ index }: { index: number }) => (
+      <Card>
+        <CardTitle>Card {index}</CardTitle>
+        <Badge $variant={variants[index % variants.length]}>tag {index % 4}</Badge>
+        <ul>
+          <Item>first</Item>
+          <Item>second</Item>
+          <Item>third</Item>
+        </ul>
+        <Button $primary={index % 2 === 0}>Open</Button>
+      </Card>
+    );
+    const page = (
+      <Page>
+        <nav>
+          {Array.from({ length: 12 }, (_, i) => (
+            <NavLink key={i} href={'/' + i} $active={i === 3}>
+              Link {i}
+            </NavLink>
+          ))}
+        </nav>
+        {Array.from({ length: 40 }, (_, i) => (
+          <Section key={i} index={i} />
+        ))}
+      </Page>
+    );
+
+    bench('no manager', 200, () => {
+      ReactDOMServer.renderToString(page);
+    });
+
+    bench('root StyleSheetManager with a plugin', 200, () => {
+      ReactDOMServer.renderToString(
+        <StyleSheetManager plugins={[rscPlugin]}>{page}</StyleSheetManager>
+      );
+    });
+
+    configureServerStyles({ plugins: [rscPlugin] });
+    try {
+      bench('configured server plugins, no manager', 200, () => {
+        ReactDOMServer.renderToString(page);
+      });
+    } finally {
+      configureServerStyles({ plugins: [] });
+    }
   });
 
   it('output size', () => {

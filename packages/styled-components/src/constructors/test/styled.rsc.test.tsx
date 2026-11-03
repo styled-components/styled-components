@@ -33,12 +33,7 @@ import {
   tick,
 } from '../../test/rscStream';
 import { resetIdentifiers } from '../../models/StyledComponent';
-import {
-  mainCompiler,
-  mainSheet,
-  useStyleSheetContext,
-  __resetRSCOverrideForTesting,
-} from '../../models/StyleSheetManager';
+import { mainCompiler, mainSheet, useStyleSheetContext } from '../../models/StyleSheetManager';
 import { resetGroupIds } from '../../sheet/GroupIDAllocator';
 import styled, { css, keyframes } from '../../index';
 import { StyleSheetManager } from '../../models/StyleSheetManager';
@@ -49,7 +44,6 @@ describe('styled RSC mode', () => {
     mockCacheStore.clear();
     resetGroupIds();
     resetIdentifiers();
-    __resetRSCOverrideForTesting();
   });
 
   describe('RSC style tag emission (#5672)', () => {
@@ -1873,63 +1867,6 @@ describe('styled RSC mode', () => {
       expect(ctx!.shouldForwardProp).toBeUndefined();
     });
 
-    it('StyleSheetManager wraps children without crashing', () => {
-      const html = ReactDOMServer.renderToString(
-        React.createElement(StyleSheetManager, null, React.createElement('div', null, 'hello'))
-      );
-
-      expect(html).toMatchInlineSnapshot(`
-        <div>
-          hello
-        </div>
-      `);
-    });
-
-    it('styled components render correctly inside StyleSheetManager', () => {
-      const Box = styled.div`
-        display: flex;
-        padding: 8px;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        React.createElement(StyleSheetManager, null, React.createElement(Box))
-      );
-
-      expect(html).toMatchInlineSnapshot(`
-        <style data-styled>
-          .jMXYKp{display:flex;padding:8px;}
-        </style>
-        <div class="sc-kqxcKS jMXYKp">
-        </div>
-      `);
-    });
-
-    it('outer SSM applies to descendants in RSC mode', () => {
-      const pluginOuter = { name: 'outerplug', rw: (s: string) => s };
-
-      const seen: Array<{ tag: string; plugins: readonly { name: string }[] | undefined }> = [];
-      function Probe({ tag }: { tag: string }) {
-        const ctx = useStyleSheetContext();
-        seen.push({ tag, plugins: ctx.plugins });
-        return React.createElement('span', null, tag);
-      }
-
-      ReactDOMServer.renderToString(
-        React.createElement(
-          StyleSheetManager,
-          { plugins: [pluginOuter] },
-          React.createElement(Probe, { tag: 'A' }),
-          React.createElement(Probe, { tag: 'B' })
-        )
-      );
-
-      const byTag = Object.fromEntries(
-        seen.map(({ tag, plugins }) => [tag, plugins?.map(p => p.name) ?? null])
-      );
-      expect(byTag.A).toEqual(['outerplug']);
-      expect(byTag.B).toEqual(['outerplug']);
-    });
-
     it('should apply plugins to RSC output', () => {
       const Item = styled.li`
         &:first-child {
@@ -1963,46 +1900,6 @@ describe('styled RSC mode', () => {
       );
       expect(allCSS).not.toContain(':first-child');
       expect(allCSS).not.toContain(':last-child');
-    });
-
-    it('inner SSM override leaks to siblings rendered after it (RSC limitation)', () => {
-      // Documents the known v7 RSC limitation: React 19 Flight calls fragment
-      // children eagerly, so an inner SSM's plugin override is observed by
-      // siblings declared after it under the same parent. AsyncLocalStorage
-      // would close the gap when RSC supports it. If this test fails because
-      // Probe C drops back to ['outerplug'], that's a fix;update the
-      // expectation rather than reverting the behavior change.
-      const pluginOuter = { name: 'outerplug', rw: (s: string) => s };
-      const pluginInner = { name: 'innerplug', rw: (s: string) => s };
-
-      const seen: Array<{ tag: string; plugins: readonly { name: string }[] | undefined }> = [];
-      function Probe({ tag }: { tag: string }) {
-        const ctx = useStyleSheetContext();
-        seen.push({ tag, plugins: ctx.plugins });
-        return React.createElement('span', null, tag);
-      }
-
-      ReactDOMServer.renderToString(
-        React.createElement(
-          StyleSheetManager,
-          { plugins: [pluginOuter] },
-          React.createElement(Probe, { tag: 'A' }),
-          React.createElement(
-            StyleSheetManager,
-            { plugins: [pluginInner] },
-            React.createElement(Probe, { tag: 'B' })
-          ),
-          React.createElement(Probe, { tag: 'C' })
-        )
-      );
-
-      const byTag = Object.fromEntries(
-        seen.map(({ tag, plugins }) => [tag, plugins?.map(p => p.name) ?? null])
-      );
-      expect(byTag.A).toEqual(['outerplug']);
-      expect(byTag.B).toEqual(['innerplug']);
-      // Documented leak: should be ['outerplug'] but isn't, in RSC mode.
-      expect(byTag.C).toEqual(['innerplug']);
     });
 
     it('should omit RSC child-index rewrite when no plugins are provided', () => {

@@ -5,7 +5,8 @@ import Frame, { FrameContextConsumer } from 'react-frame-component';
 import rscPlugin from '../../plugins/rsc';
 import StyleSheet from '../../sheet';
 import { getCSS, resetStyled } from '../../test/utils';
-import { StyleSheetManager } from '../StyleSheetManager';
+import { resetWarnOnce } from '../../utils/warnOnce';
+import { StyleSheetManager, configureServerStyles } from '../StyleSheetManager';
 
 let styled: ReturnType<typeof resetStyled>;
 
@@ -18,6 +19,29 @@ describe('StyleSheetManager', () => {
 
     jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  it('warns once that configureServerStyles does nothing in the browser build, and leaves client styling alone', () => {
+    resetWarnOnce();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    configureServerStyles({ plugins: [rscPlugin] });
+    configureServerStyles({ plugins: [rscPlugin] });
+
+    expect(warn.mock.calls).toEqual([
+      [
+        '[sc] configureServerStyles has no effect in the browser. Call it at the top level of a server component module, such as the root layout in Next.js, never from a client component or code bundled for the browser.',
+      ],
+    ]);
+
+    const Item = styled.li`
+      &:first-child {
+        color: red;
+      }
+    `;
+    render(<Item />);
+
+    expect(getCSS(document)).not.toContain(':not(style');
   });
 
   it('should render its child', () => {

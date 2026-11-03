@@ -154,6 +154,24 @@ const projectPrefixes: SCPlugin = {
 
 The `enableVendorPrefixes` prop from v6 has been removed in favor of this plugin.
 
+### Plugins in server components
+
+In server components, a `StyleSheetManager` applies to exactly the components rendered inside it. A manager in a Next.js layout styles only the layout's own markup, not its pages. To give every server component the same plugins, call `configureServerStyles` once at the top level of your root layout file:
+
+```tsx
+// app/layout.tsx
+import { configureServerStyles } from 'styled-components';
+import { rscPlugin } from 'styled-components/plugins';
+
+configureServerStyles({ plugins: [rscPlugin] });
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // ...
+}
+```
+
+The call is a plain statement, not a component, so it reaches every page, nested layout, and client-side navigation, including pages prerendered at build time. Make one call per app. A `StyleSheetManager` in a server component starts from these plugins; `plugins={[]}` drops them for its subtree. Client components take their plugins from a `StyleSheetManager` rendered on the client.
+
 ### Animations
 
 Define `@keyframes` once, reference them across components. Names are scoped automatically.

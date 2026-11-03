@@ -12,6 +12,7 @@ import {
   StyleSheetConsumer,
   StyleSheetContext,
   StyleSheetManager,
+  configureServerStyles,
 } from './models/StyleSheetManager';
 import ThemeProvider, { ThemeConsumer, ThemeContext, useTheme } from './models/ThemeProvider';
 import extractCSS from './utils/extractCSS';
@@ -50,6 +51,7 @@ export {
   ThemeConsumer,
   ThemeContext,
   ThemeProvider,
+  configureServerStyles,
   createGlobalStyle,
   createTheme,
   css,
