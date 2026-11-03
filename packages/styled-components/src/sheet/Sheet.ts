@@ -1,7 +1,6 @@
 import { IS_BROWSER } from '../constants';
 import { InsertionTarget } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
-import { setToString } from '../utils/setToString';
 import { makeGroupedTag } from './GroupedTag';
 import { groupForId } from './GroupIDAllocator';
 import { getRehydrationContainer, outputSheet, rehydrateSheet } from './Rehydration';
@@ -62,8 +61,14 @@ export default class StyleSheet implements Sheet {
       SHOULD_REHYDRATE = false;
       rehydrateSheet(this);
     }
+  }
 
-    setToString(this, () => outputSheet(this));
+  /**
+   * The sheet's CSS. A prototype method rather than an own property:
+   * assigning an own `toString` throws when the built-ins are frozen.
+   */
+  toString(): string {
+    return outputSheet(this);
   }
 
   rehydrate(): void {

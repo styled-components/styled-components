@@ -725,6 +725,84 @@ describe('bundle size', () => {
   }, 30000);
 });
 
+/**
+ * SES lockdown freezes every intrinsic, so `Object.prototype.toString` is
+ * non-writable and a strict-mode `fn.toString = ...` throws. The check runs in
+ * a child process because freezing the prototypes inside the Jest worker would
+ * break the worker. The freeze runs before the bundles load, as lockdown does,
+ * so module evaluation (the browser bundle's default sheet) runs frozen too.
+ */
+describe('built bundles under frozen intrinsics', () => {
+  it('define keyframes, ServerStyleSheet, and styled components without assigning toString', () => {
+    const { spawnSync } = require('child_process');
+    const browserBundle = path.join(distDir, 'styled-components.browser.cjs.js');
+    const serverBundle = path.join(distDir, 'styled-components.cjs.js');
+    const script = `
+      Object.freeze(Object.prototype);
+      Object.freeze(Function.prototype);
+
+      const browser = require(${JSON.stringify(browserBundle)});
+      const server = require(${JSON.stringify(serverBundle)});
+
+      const attempt = fn => {
+        try {
+          return { ok: fn() };
+        } catch (error) {
+          return { error: String(error && error.message) };
+        }
+      };
+      const outcome = {};
+
+      for (const [name, bundle] of [['browser', browser], ['server', server]]) {
+        const fade = attempt(() => bundle.keyframes\`from{opacity:1}to{opacity:0}\`);
+
+        outcome[name + ' keyframes'] = fade.error ? fade : { ok: typeof fade.ok.name === 'string' };
+        // A keyframes object refuses string interpolation; the refusal proves the guard was installed.
+        const refusal = fade.error ? fade : attempt(() => String(fade.ok));
+
+        outcome[name + ' keyframes toString guard'] = refusal.error
+          ? { error: refusal.error.split(String(fade.ok && fade.ok.name)).join('NAME') }
+          : refusal;
+        outcome[name + ' styled.div'] = attempt(
+          () => typeof bundle.default.div\`color:red;\` === 'object'
+        );
+      }
+
+      // An empty sheet emits no tags only when the sheet's toString runs;
+      // Object's would yield "[object Object]".
+      outcome['server ServerStyleSheet'] = attempt(
+        () => new server.ServerStyleSheet().getStyleTags() === ''
+      );
+
+      console.log(JSON.stringify(outcome));
+    `;
+
+    // A development NODE_ENV makes the CJS bundles throw error 12's full text.
+    const result = spawnSync(process.execPath, ['-e', script], {
+      encoding: 'utf8',
+      env: { ...process.env, NODE_ENV: 'development' },
+    });
+
+    // Error 12 is the keyframes toString guard.
+    const keyframesGuard = { error: errorMap[12].trim().replace('%s', 'NAME') };
+
+    expect({ status: result.status, stderr: result.stderr, stdout: result.stdout }).toEqual({
+      status: 0,
+      stderr: '',
+      stdout:
+        JSON.stringify({
+          'browser keyframes': { ok: true },
+          'browser keyframes toString guard': keyframesGuard,
+          'browser styled.div': { ok: true },
+          'server keyframes': { ok: true },
+          'server keyframes toString guard': keyframesGuard,
+          'server styled.div': { ok: true },
+          'server ServerStyleSheet': { ok: true },
+        }) + '\n',
+    });
+  });
+});
+
 describe('ESM tree-shakeability', () => {
   it('browser ESM uses named exports', () => {
     const browserESM = read('styled-components.browser.esm.js');
