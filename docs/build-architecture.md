@@ -25,10 +25,9 @@ mode collect styles synchronously in a build where `__SERVER__` is false (#3551)
 the browser build work on a server: that build's tags are always DOM tags, so a server render there
 fails at the first `<style>` creation (see "Edge runtime").
 
-Combine all three (`__SERVER__ || IS_RSC || ssc.styleSheet.server`) with one deliberate exception:
-`createGlobalStyle`'s server-cache cleanup drops the `IS_RSC` term, because the `IS_RSC` branch above
-it has already handled the render and returned, so reaching that line under RSC means there was
-nothing left to clean.
+Each gate uses the smallest subset of the three that covers its cases. `createGlobalStyle` renders
+during component execution on `IS_RSC || ssc.styleSheet.server`, without `__SERVER__`: the server
+build has no cleanup effect, so rendering there under jsdom would pile styles up across renders.
 
 `IS_BROWSER` is `typeof window !== 'undefined' && typeof document !== 'undefined'`. Both halves are
 needed: a non-browser host can define `window` without a DOM. It is a runtime check, so bundlers
