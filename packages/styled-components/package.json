@@ -29,6 +29,7 @@
     "test:types": "tsc --noEmit --project tsconfig.test-types.json && tsc --noEmit --project tsconfig.test-template-index.json",
     "test:types:dist": "node scripts/typeCheckDist.mjs",
     "type-perf": "node scripts/typePerf.mjs",
+    "type-perf:augment": "node scripts/typePerf.mjs --augment",
     "test:web": "jest -c jest.config.main.js",
     "test:native": "jest -c jest.config.native.js --forceExit",
     "bench": "pnpm run bench:web && pnpm run bench:rsc",

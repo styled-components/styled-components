@@ -15,8 +15,15 @@
  *
  *   node scripts/typePerf.mjs            check against the budget
  *   node scripts/typePerf.mjs --update   rewrite the budget from this run
+ *   node scripts/typePerf.mjs --augment  measure the `data-*`-augmented path
  *   node scripts/typePerf.mjs --against node_modules/styled-components
  *   node scripts/typePerf.mjs --count 500 --against node_modules/styled-components
+ *
+ * `--augment` adds the `data-${string}` template-literal index signature to
+ * `HTMLAttributes` that large apps declare for arbitrary data attributes. That
+ * switches intrinsic props to a different omit (#5796), a cost the default
+ * fixture never exercises. It checks against its own budget file, so the two
+ * paths are guarded independently.
  *
  * `--count` only makes sense alongside `--against`, or with `--update` when the
  * intent is to move the budget to a new fixture size. A bare `--count` that
@@ -52,7 +59,6 @@ import { parseArgs } from 'node:util';
 const require = createRequire(import.meta.url);
 const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const workDir = join(pkgRoot, '.type-perf');
-const budgetFile = join(pkgRoot, 'type-perf.budget.json');
 
 // parseArgs over hand-rolled indexOf: it accepts `--count=500` as well as
 // `--count 500`, and throws on an unknown flag or a valueless one instead of
@@ -63,6 +69,7 @@ try {
   parsed = parseArgs({
     options: {
       against: { type: 'string' },
+      augment: { type: 'boolean' },
       count: { type: 'string', default: '100' },
       update: { type: 'boolean' },
     },
@@ -74,6 +81,15 @@ try {
 }
 
 const update = parsed.values.update === true;
+const augment = parsed.values.augment === true;
+
+// The augmented and default paths have different costs and different baselines,
+// so they keep separate budget files; one run never clobbers the other.
+const budgetFile = join(
+  pkgRoot,
+  augment ? 'type-perf.augment.budget.json' : 'type-perf.budget.json'
+);
+const updateHint = augment ? '--augment --update' : '--update';
 const count = Number(parsed.values.count);
 if (!Number.isInteger(count) || count < 1) {
   console.error(`type-perf: --count needs a positive integer, got ${parsed.values.count}`);
@@ -146,12 +162,25 @@ const AS_TAGS = ['a', 'button', 'label', 'section', 'video', 'ul'];
 // this area reads "free to remove" off a fixture that never used it. Because the
 // run fails on any fixture compile error, it also makes this gate a correctness
 // canary for that collapse.
+//
+// `annotatedPublic*` price the declaration site: a styled result assigned to an
+// explicit `StyledComponent<Target, Props>` annotation, as `.d.ts`-emitting
+// packages and isolatedDeclarations write. The three cover its distinct
+// construction arms, so a change to `StyledComponent`, `MergeProps`,
+// `TargetProps`, or `WidenForUntypedTarget` that makes the annotation diverge
+// from the inferred result regresses them: `annotatedPublic` an intrinsic tag,
+// `annotatedPublicWrap` a wrapped component, `annotatedPublicFactory` an
+// un-introspectable target. Expensive per component, so each moved the recorded
+// budget on its own (fixture growth, not a regression).
 const KIND_WEIGHTS = [
   ['plainTag', 8],
   ['wrapComponent', 5],
   ['chained', 3],
   ['attrsTag', 2],
   ['attrsWrap', 1],
+  ['annotatedPublic', 1],
+  ['annotatedPublicWrap', 1],
+  ['annotatedPublicFactory', 1],
   ['genericWrapper', 1],
   ['unionTarget', 1],
 ];
@@ -167,7 +196,7 @@ function kindOf(i) {
 }
 
 const HEADER = `import * as React from 'react';
-import styled from 'styled-components';
+import styled, { type StyledComponent } from 'styled-components';
 
 interface BaseProps {
   $variant?: 'primary' | 'secondary';
@@ -186,6 +215,24 @@ type PressableProps =
   | React.ButtonHTMLAttributes<HTMLButtonElement>
   | React.AnchorHTMLAttributes<HTMLAnchorElement>;
 const Pressable = (_props: PressableProps) => null;
+
+// Un-introspectable polymorphic-factory target (Mantine v7 shape). Its generic
+// callable signature makes React.ComponentPropsWithRef resolve to {}, so styled()
+// routes it through the permissive WidenUntypedProps fallback.
+type FactoryProps<C, P = {}> = C extends React.ElementType
+  ? (Omit<React.ComponentProps<C>, keyof P> & P & { component?: C }) & { ref?: any }
+  : P & { component: React.ElementType };
+interface FactoryOwnProps {
+  variant?: string;
+  children?: React.ReactNode;
+}
+type PolymorphicFactory = (<C = 'button'>(
+  props: FactoryProps<C, FactoryOwnProps>
+) => React.ReactElement) &
+  Omit<React.FunctionComponent<FactoryProps<any, FactoryOwnProps>>, never> & {
+    extend: (p: any) => any;
+  };
+declare const Factory: PolymorphicFactory;
 
 const spreadProps = { className: 'x', id: 'y' };
 `;
@@ -221,6 +268,24 @@ function unit(i) {
     case 'attrsTag':
       decl = `const ${N} = styled.${tag}.attrs<{ $a${i}?: number }>({ $a${i}: ${i} })\`
   width: \${p => p.$a${i}}px;
+\`;`;
+      break;
+    case 'annotatedPublic':
+      // Public annotation on an intrinsic tag (see KIND_WEIGHTS).
+      decl = `const ${N}: StyledComponent<'div', { $a${i}?: number }> = styled.div<{ $a${i}?: number }>\`
+  color: \${p => (p.$a${i} ? 'red' : 'blue')};
+\`;`;
+      break;
+    case 'annotatedPublicWrap':
+      // Public annotation on a wrapped component.
+      decl = `const ${N}: StyledComponent<typeof Plain, { $a${i}?: number }> = styled(Plain)<{ $a${i}?: number }>\`
+  margin: \${p => p.$a${i} ?? 0}px;
+\`;`;
+      break;
+    case 'annotatedPublicFactory':
+      // Public annotation on an un-introspectable target: the widening arm.
+      decl = `const ${N}: StyledComponent<typeof Factory> = styled(Factory)\`
+  color: ${i % 2 ? 'red' : 'blue'};
 \`;`;
       break;
     case 'attrsWrap':
@@ -300,6 +365,18 @@ export const CanaryNative = <NativeCanary notAPropOfView={1} />;
 export const NativeOk = <NativeCanary testID="ok" />;
 `;
 
+// The `data-*` template-literal augmentation (#5796). A separate module (an
+// `import` makes it one) so the `declare module` merges into every fixture file
+// without editing the shared HEADER. Only written under `--augment`.
+const AUGMENT = `import 'react';
+
+declare module 'react' {
+  interface HTMLAttributes<T> {
+    [dataAttribute: \`data-\${string}\`]: string | undefined;
+  }
+}
+`;
+
 rmSync(workDir, { recursive: true, force: true });
 mkdirSync(join(workDir, 'src'), { recursive: true });
 
@@ -309,6 +386,7 @@ for (let start = 0, f = 0; start < count; start += PER_FILE, f++) {
   writeFileSync(join(workDir, 'src', `mod${f}.tsx`), `${HEADER}\n${body.join('\n')}`);
 }
 writeFileSync(join(workDir, 'src', 'canary.tsx'), CANARY);
+if (augment) writeFileSync(join(workDir, 'src', '_augment.d.ts'), AUGMENT);
 
 writeFileSync(
   join(workDir, 'tsconfig.json'),
@@ -421,7 +499,7 @@ const versions = {
 
 const subject = against === undefined ? 'dist' : target;
 console.log(
-  `type-perf: ${count} components against ${subject}, ` +
+  `type-perf${augment ? ' (augmented)' : ''}: ${count} components against ${subject}, ` +
     `TypeScript ${versions.typescript}, @types/react ${versions.typesReact}`
 );
 console.log(`  types:          ${measured.types.toLocaleString()}`);
@@ -438,9 +516,14 @@ if (update) {
   process.exit(0);
 }
 
+if (!existsSync(budgetFile)) {
+  console.error(`type-perf: ${budgetFile} does not exist, run with ${updateHint} to create it.`);
+  process.exit(1);
+}
+
 const budget = JSON.parse(readFileSync(budgetFile, 'utf8'));
 if (!budget.measured) {
-  console.error(`type-perf: ${budgetFile} is not in the expected shape, run with --update.`);
+  console.error(`type-perf: ${budgetFile} is not in the expected shape, run with ${updateHint}.`);
   process.exit(1);
 }
 
@@ -450,7 +533,9 @@ if (!budget.measured) {
 // enforce. Any budget written before a metric existed has exactly this shape.
 for (const metric of Object.keys(METRICS)) {
   if (!Number.isFinite(budget.measured[metric])) {
-    console.error(`type-perf: budget is missing '${metric}', run with --update to re-measure.`);
+    console.error(
+      `type-perf: budget is missing '${metric}', run with ${updateHint} to re-measure.`
+    );
     process.exit(1);
   }
 }
@@ -490,7 +575,7 @@ if (over.length > 0) {
   }
   console.error(
     'Consumer type-check cost grew. Find the cause before raising the budget; ' +
-      'run with --update only when the increase is understood and intended.'
+      `run with ${updateHint} only when the increase is understood and intended.`
   );
   process.exit(1);
 }
@@ -498,7 +583,7 @@ if (over.length > 0) {
 for (const [label, actual, baseline] of under) {
   console.log(
     `type-perf: ${label} improved ${Math.round((1 - actual / baseline) * 100)}% ` +
-      `(${baseline.toLocaleString()} -> ${actual.toLocaleString()}); run --update to bank it`
+      `(${baseline.toLocaleString()} -> ${actual.toLocaleString()}); run ${updateHint} to bank it`
   );
 }
 
