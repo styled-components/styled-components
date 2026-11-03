@@ -21,6 +21,11 @@ types, instantiations, or memory drift past what `type-perf.budget.json` records
 That file is the live figure and `type-perf` prints the current one; neither is
 restated here, because a number copied into prose is a number that silently goes
 stale. Raise the budget with `--update` only once the increase is understood.
+`type-perf:augment` runs the same fixture under an app's `data-${string}`
+augmentation of `React.HTMLAttributes` against its own budget,
+`type-perf.augment.budget.json`, since that path takes a different `Omit`. The
+fixture's kinds, including the explicitly annotated declarations, are listed in
+the `scripts/typePerf.mjs` header.
 
 Design notes worth keeping:
 
@@ -73,6 +78,10 @@ Applied once per target inside `TargetProps`, never to a merged prop bag at a JS
 The outer `P extends unknown` is what makes the widening distribute over a union of prop shapes. Without it a component typed `ButtonProps | AnchorProps` stops accepting `href`.
 
 The test is `'style' extends keyof P`, not `P extends { style?: infer S }`. The latter is vacuously satisfied by `{}`, which hands a `style` key to targets that expose no props at all and defeats `WidenForUntypedTarget`.
+
+A bag with a string index signature (`string extends keyof P`) passes through unwidened. A generic polymorphic component introspects at its `ElementType` constraint and gains `[k: string]: any`; `Omit` over that index collapses every narrow key into it, so `styled(Button)` would accept props `Button` rejects (#5756).
+
+Under an app's `data-${string}` template-index augmentation of `React.HTMLAttributes`, `IntrinsicProps` switches to a `FastOmit` variant: distributing `Omit`'s `Exclude` over the template key across every intrinsic element exceeds the union limit (TS2590, #5796). The switch is a global constant, so the unaugmented path keeps built-in `Omit`. An `aria-${string}` augmentation is not detected.
 
 The `& {}` wrap inside `style?: CSSPropertiesWithVars | (P[keyof P & 'style'] & {}) | undefined` is a real undefined-filter under `exactOptionalPropertyTypes: true`; DO NOT remove it. Without it, both `style?:` AND `style: undefined` become assignable, which changes semantics. The explicit `| undefined` then restores `style={undefined}`.
 
@@ -156,8 +165,8 @@ styled component appears.
 
 ## Testing the type surface
 
-Type contracts are gated in `src/test/types.tsx` (web) and `src/test/types.native.tsx` (the React Native entry), compiled by `pnpm test:types` (`tsc --noEmit -p tsconfig.test-types.json`, which includes all of `src`). No runtime, no extra deps. Keep native-only cases in the native file: both entries resolve target props through the same types, so a regression on the component arm would otherwise pass on web coverage alone. Both files are listed as knip entries, since nothing imports them.
+Type contracts are gated in `src/test/types.tsx` (web) and `src/test/types.native.tsx` (the React Native entry), compiled by `pnpm test:types` (`tsc --noEmit -p tsconfig.test-types.json`, which includes all of `src`, then a pass over `tsconfig.test-template-index.json` for the `data-*` augmentation in `test-types/template-index-signature.tsx`, and one over `tsconfig.test-intrinsic-index-signature.json` for an app that adds an index signature to `JSX.IntrinsicElements`). No runtime, no extra deps. Keep native-only cases in the native file: both entries resolve target props through the same types, so a regression on the component arm would otherwise pass on web coverage alone. Both files are listed as knip entries, since nothing imports them.
 
 - Negative assertions use `@ts-expect-error` on the line directly above the offending expression, each with a one-line comment stating what must fail. This is a deliberate test, not a suppression: if the type gets looser and the error stops occurring, the directive itself errors as unused, which flags the regression.
 - `declare module` augmentation is project-wide: it leaks into every file in the same `tsc` program. The suite augments the declaration's own source location (`'../models/ThemeProvider'` for `DefaultTheme`, `'react'` for `CSSProp`) because the test imports from `src`, not the published package; consumers instead augment the public specifier, `declare module 'styled-components'`. If a future augmentation test needs a variant that would collide with the suite's, give it its own tsconfig project (including only that file) run as a separate `tsc` pass, rather than letting two augmentations collide in one program.
-- `test:types` checks `src`, not the built `.d.ts`. A regression that only appears after the dts rollup (a dropped or mangled export) is not caught here; `pnpm --filter styled-components type-perf` compiles against the built `dist` and is the gate for that class.
+- `test:types` checks `src`, not the built `.d.ts`. `pnpm --filter styled-components test:types:dist` is the gate for what only appears in `dist` (a dropped or mangled export, a reference to a type the package does not declare): it compiles every published entry plus `test-types/published-types-consumer.tsx` under `skipLibCheck: false`, against the oldest, pinned, and newest supported `@types/react`, with no `@types/node` loaded. A declaration may name a type only from a declared dependency or peer, or from a local stand-in (the empty `NodeJS` interfaces in `ServerStyleSheet.tsx` merge into `@types/node` when an app has it).

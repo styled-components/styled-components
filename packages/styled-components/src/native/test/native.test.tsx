@@ -387,20 +387,44 @@ describe('native', () => {
       });
     });
 
-    it('preserves explicitly passed undefined props', () => {
-      // Mirrors the web behavior (PR #5683): `<Comp prop={undefined} />` opts
-      // out of an attrs-provided default rather than forwarding the default.
+    it('attrs wins over an explicitly passed undefined prop (#5807)', () => {
       const Comp = styled.View.attrs<{ accessible?: boolean }>({
         accessible: true,
       })``;
 
       const withDefault = TestRenderer.create(<Comp />);
-      const viewDefault = withDefault.root.findByType(View);
-      expect(viewDefault.props.accessible).toBe(true);
+      expect(withDefault.root.findByType(View).props.accessible).toBe(true);
 
       const withUndefined = TestRenderer.create(<Comp accessible={undefined} />);
-      const viewUndefined = withUndefined.root.findByType(View);
-      expect(viewUndefined.props.accessible).toBe(undefined);
+      expect(withUndefined.root.findByType(View).props.accessible).toBe(true);
+    });
+
+    it('forwards an explicitly passed undefined prop as an own key (#4338)', () => {
+      const Comp = styled.View``;
+
+      const view = TestRenderer.create(<Comp accessible={undefined} />).root.findByType(View);
+      expect('accessible' in view.props).toBe(true);
+    });
+
+    it('keeps a key out of the element when attrs clear a defined value', () => {
+      const Comp = styled.View.attrs<{ accessibilityLabel?: string }>(() => ({
+        accessibilityLabel: undefined,
+      }))``;
+
+      const view = TestRenderer.create(<Comp accessibilityLabel="original" />).root.findByType(
+        View
+      );
+      expect('accessibilityLabel' in view.props).toBe(false);
+    });
+
+    it('an identity-spread attrs function keeps forwarding a caller-passed undefined', () => {
+      const Comp = styled.View.attrs<{ accessible?: boolean; nativeID?: string }>(
+        ({ nativeID = 'id', ...rest }) => ({ nativeID, ...rest })
+      )``;
+
+      const view = TestRenderer.create(<Comp accessible={undefined} />).root.findByType(View);
+      expect('accessible' in view.props).toBe(true);
+      expect(view.props.nativeID).toBe('id');
     });
 
     it('theme prop works', () => {
@@ -500,7 +524,7 @@ describe('native', () => {
         expect(view.props.style).toEqual({ color: 'orange' });
       });
 
-      it('explicit undefined prop wins over post-compile attrs', () => {
+      it('post-compile attrs win over an explicit undefined prop', () => {
         const Comp = styled.View.attrs<{ fill?: string }>((_props, ast) => ({
           fill: ast.pop('color'),
         }))`
@@ -510,9 +534,8 @@ describe('native', () => {
         const wrapper = TestRenderer.create(<Comp fill={undefined} />);
         const view = wrapper.root.findByType(View);
 
-        // The user passed `fill={undefined}` to opt out of the attrs default;
-        // post-compile attrs honor the same convention as arity-1 attrs.
-        expect(view.props.fill).toBeUndefined();
+        // Attrs win over a caller's `fill={undefined}`, as arity-1 attrs do.
+        expect(view.props.fill).toBe('red');
         // Pop still removed the decl, so color is gone from style as well.
         expect(view.props.style).toEqual({});
       });

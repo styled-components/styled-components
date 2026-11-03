@@ -22,6 +22,7 @@ export {
   PolymorphicComponentProps,
   RuleSet,
   Runtime,
+  StyledComponent,
   StyledObject,
   StyledOptions,
   StyleFunction,

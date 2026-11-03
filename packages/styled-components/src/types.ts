@@ -289,6 +289,35 @@ export type TargetProps<R extends Runtime, T> = T extends keyof React.JSX.Intrin
     : {};
 
 /**
+ * True when an application has augmented `React.HTMLAttributes` with a `data-*`
+ * template-literal index signature, the common pattern for allowing arbitrary
+ * data attributes. Detected by testing whether {@link DataAttributes}' key is
+ * already a key of a stock intrinsic element.
+ *
+ * Scope is exactly `data-${string}`: an `aria-${string}` or other custom-prefix
+ * template augmentation is not detected and still takes the {@link WithCSSVars}
+ * path (#5796). Widening the probe means OR-ing another literal prefix in here.
+ */
+type IntrinsicElementsHaveDataIndex =
+  keyof DataAttributes extends keyof React.JSX.IntrinsicElements['div'] ? true : false;
+
+/**
+ * {@link WithCSSVars} for the augmented intrinsic path. Identical widening, but
+ * filters `style` with {@link FastOmit}'s mapped-type `as` clause instead of the
+ * built-in `Omit`. `Omit<P, 'style'>` is `Pick<P, Exclude<keyof P, 'style'>>`,
+ * and distributing that `Exclude` over a template-literal key across every
+ * intrinsic element exceeds TypeScript's union complexity limit (#5796);
+ * `FastOmit` drops the key without the distribution.
+ *
+ * Kept off the normal path: `FastOmit` costs materially more instantiations at
+ * that scale, and the union `style` member (mirroring {@link WithCSSVars}) is
+ * what preserves the declaration-site relation a plain intersection regresses.
+ */
+type WithCSSVarsForDataIndex<P extends BaseObject> = FastOmit<P, 'style'> & {
+  style?: CSSPropertiesWithVars | (P[keyof P & 'style'] & {}) | undefined;
+};
+
+/**
  * Props of an HTML or SVG tag.
  *
  * Both branches of {@link TargetProps} are named rather than inlined, so a
@@ -298,10 +327,14 @@ export type TargetProps<R extends Runtime, T> = T extends keyof React.JSX.Intrin
  *
  * Applies the widening directly rather than through {@link OverrideStyle}: every
  * intrinsic element declares `style`, so the guard has nothing to decide here.
+ * Under a `data-*` augmentation it uses {@link WithCSSVarsForDataIndex}, which
+ * avoids the `Omit` that overflows the union complexity limit. The probe is a
+ * global constant, so the common path is untouched.
  */
-type IntrinsicProps<T extends keyof React.JSX.IntrinsicElements> = WithCSSVars<
-  React.JSX.IntrinsicElements[T]
->;
+type IntrinsicProps<T extends keyof React.JSX.IntrinsicElements> =
+  IntrinsicElementsHaveDataIndex extends true
+    ? WithCSSVarsForDataIndex<React.JSX.IntrinsicElements[T]>
+    : WithCSSVars<React.JSX.IntrinsicElements[T]>;
 
 /**
  * Props of a component render target. Named for the same reason as {@link IntrinsicProps}.
@@ -466,6 +499,56 @@ export type IStyledComponent<
   R extends Runtime,
   Props extends BaseObject = BaseObject,
 > = IStyledComponentBase<R, Props> & string;
+
+/**
+ * The type of a web styled component, for annotating an explicit export.
+ * `isolatedDeclarations` and `.d.ts`-emitting packages require one; inference does
+ * not survive declaration emit. Name the target and props as you passed them to
+ * `styled`:
+ *
+ * ```ts
+ * export const Card: StyledComponent<'div', { $active?: boolean }> = styled.div<{ $active?: boolean }>`…`;
+ * export const CloseButton: StyledComponent<typeof IconButton> = styled(IconButton)`…`;
+ * ```
+ *
+ * Resolves to the exact type `styled(Target)<Props>` produces for every target kind
+ * and `.withConfig(…)`, hoisted statics included.
+ *
+ * `.attrs(…)` needs two adjustments, since its backfilled keys and target redirect
+ * are not in `<Target, Props>`:
+ * - A backfilled required prop becomes optional: declare it optional in `Props`.
+ * - An object-form `as` redirect (`.attrs({ as: 'a' })`) keeps the base props and
+ *   adds the resolved target's: pass those as `Props`
+ *   (`StyledComponent<'button', React.ComponentPropsWithRef<'a'>>`), or redirect
+ *   with the `as` prop at the call site.
+ *
+ * Web only; the native entry exports {@link NativeStyledComponent} under this name.
+ */
+export type StyledComponent<
+  Target extends WebTarget,
+  Props extends BaseObject = BaseObject,
+> = IStyledComponent<
+  'web',
+  WidenForUntypedTarget<TargetProps<'web', Target>, MergeProps<TargetProps<'web', Target>, Props>>
+> &
+  // biome-ignore lint/suspicious/noExplicitAny: mirrors the statics intersection in `Styled`; the key set does not depend on the props argument, but any other argument changes the emitted .d.ts
+  (Target extends string ? {} : Omit<Target, keyof React.Component<any>>);
+
+/**
+ * The React Native counterpart to {@link StyledComponent}, exported as
+ * `StyledComponent` from `styled-components/native`. No hoisted-statics
+ * intersection: the constructor's statics intersection is web-only.
+ */
+export type NativeStyledComponent<
+  Target extends NativeTarget,
+  Props extends BaseObject = BaseObject,
+> = IStyledComponent<
+  'native',
+  WidenForUntypedTarget<
+    TargetProps<'native', Target>,
+    MergeProps<TargetProps<'native', Target>, Props>
+  >
+>;
 
 export interface IStyledComponentFactory<
   out R extends Runtime,
@@ -637,11 +720,22 @@ type WithCSSVars<P extends BaseObject> = Omit<P, 'style'> & {
  * undistributed pass widens `A | B` against the shared keys alone and drops
  * every member-specific prop: a component typed `ButtonProps | AnchorProps`
  * stops accepting `href`. Widening member by member keeps the union intact.
+ *
+ * `string extends keyof P` returns a bag carrying a string index signature
+ * untouched. A generic polymorphic component (`<C extends ElementType>(p: … &
+ * ComponentProps<C>)`) introspects at the `ElementType` constraint, where
+ * `ComponentProps<ElementType>` is `any`, so its bag gains `[k: string]: any`
+ * beside its narrow props. {@link WithCSSVars}' `Omit` would collapse every narrow
+ * key into that index (`Exclude<string, 'style'>` is still `string`), so
+ * `styled(Button)` would accept a `variant` the component itself rejects (#5756).
+ * Only custom-property widening of a `style` that is already `any` is given up.
  */
 type OverrideStyle<P extends BaseObject> = P extends unknown
-  ? 'style' extends keyof P
-    ? WithCSSVars<P>
-    : P
+  ? string extends keyof P
+    ? P
+    : 'style' extends keyof P
+      ? WithCSSVars<P>
+      : P
   : never;
 
 export type CSSPseudos = { [K in CSS.Pseudos]?: CSSObject };

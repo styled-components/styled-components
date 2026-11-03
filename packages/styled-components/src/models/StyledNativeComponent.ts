@@ -121,28 +121,28 @@ function resolveContext<Props extends object>(
         })
       : attr;
 
-    for (const key in resolvedAttrDef) {
-      // Mirrors the web behavior (PR #5683): an explicit `undefined` prop
-      // wins over an attrs-provided value so users can opt out of an attrs
-      // default by passing `undefined`.
-      if (key in props && (props as Dict<unknown>)[key] === undefined) continue;
-      // attrs intentionally add arbitrary keys; cast at the assignment site.
-      (context as unknown as Dict<unknown>)[key] = (resolvedAttrDef as Dict<unknown>)[key];
-    }
+    mergeAttrsResult(context, resolvedAttrDef as Dict<unknown>);
   }
 
   return context;
 }
 
-/** Merge an arity-2 attr's result bag (plan output OR runtime return) into context. */
-function mergePostAttrsResult<Props extends object>(
-  context: ExecutionContext & Props,
-  props: Props,
-  resolved: Dict<unknown>
-): void {
+/**
+ * Merge an attrs result bag into context so attrs always wins (docs/attrs.md).
+ * An `undefined` value removes the key when context held a defined value; a
+ * context that already holds the caller's explicit `undefined` (echoed back by
+ * an identity-spread attrs function) keeps it, and a key never present stays
+ * absent.
+ */
+function mergeAttrsResult(context: object, resolved: Dict<unknown>): void {
+  const target = context as Dict<unknown>;
+
   for (const key in resolved) {
-    if (key in props && (props as Dict<unknown>)[key] === undefined) continue;
-    (context as unknown as Dict<unknown>)[key] = resolved[key];
+    if (resolved[key] !== undefined) {
+      target[key] = resolved[key];
+    } else if (target[key] !== undefined) {
+      delete target[key];
+    }
   }
 }
 
@@ -156,7 +156,6 @@ function mergePostAttrsResult<Props extends object>(
  */
 function applyPostAttrs<Props extends object>(
   context: ExecutionContext & Props,
-  props: Props,
   attrs: Attrs<Props>[],
   plans: ReadonlyArray<PostAttrsPlan | null> | undefined,
   effectiveBase: Dict<unknown>
@@ -170,7 +169,7 @@ function applyPostAttrs<Props extends object>(
     planIdx++;
 
     if (plan !== null && plan !== undefined) {
-      mergePostAttrsResult(context, props, plan.output);
+      mergeAttrsResult(context, plan.output);
       if (plan.popped !== null) {
         plan.popped.forEach(key => {
           delete effectiveBase[key];
@@ -213,7 +212,7 @@ function applyPostAttrs<Props extends object>(
     const resolvedAttrDef = (
       attr as (p: ExecutionContext & Props, a: CompiledAst) => ExecutionProps & Partial<Props>
     )({ ...context }, ast);
-    mergePostAttrsResult(context, props, resolvedAttrDef as Dict<unknown>);
+    mergeAttrsResult(context, resolvedAttrDef as Dict<unknown>);
   }
 }
 
@@ -1454,7 +1453,6 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
         effectiveBase = { ...compiled.base };
         applyPostAttrs<Props>(
           context,
-          props,
           componentAttrs,
           forwardedComponent.postAttrsPlans,
           effectiveBase

@@ -22,7 +22,9 @@
     },
     "packages/benchmarks": {
       // Headless runners are executed directly.
-      "entry": ["headless/**/*.mjs"]
+      "entry": ["headless/**/*.mjs"],
+      // Webpack aliases `react-native$` to react-native-web (webpack.config.js).
+      "ignoreDependencies": ["react-native"]
     },
     "packages/ios-benchmark": {
       // Bench orchestration scripts are executed directly.
@@ -49,6 +51,12 @@
         // Entries of the type-surface project (tsconfig.test-types.json).
         "src/test/types.tsx",
         "src/test/types.native.tsx",
+        // Entry of the template-index augmentation project (tsconfig.test-template-index.json).
+        "test-types/template-index-signature.tsx",
+        // Entry of the IntrinsicElements index-signature project (tsconfig.test-intrinsic-index-signature.json).
+        "test-types/intrinsic-elements-index-signature.tsx",
+        // Consumer fixture compiled against the built dist by scripts/typeCheckDist.mjs.
+        "test-types/published-types-consumer.tsx",
         // Bun CPU-profiling harnesses, run directly (see AGENTS.md "Profiling").
         "src/parser/profile-harness.ts",
         "src/native/profile*.ts",

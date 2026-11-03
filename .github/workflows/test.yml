@@ -45,6 +45,15 @@ jobs:
       # here are invisible to the unit and type-contract suites, which measure
       # the library's own workload over src (see #5767).
       - run: pnpm --filter styled-components type-perf
+      # The `data-*`-augmented path has its own cost and budget (see #5796).
+      - run: pnpm --filter styled-components type-perf:augment
+
+      # Guards that the emitted .d.ts compiles under `skipLibCheck: false`, with
+      # no @types/node, against the oldest and newest supported @types/react.
+      # The contract suite checks src against the pinned version only, so a name
+      # missing from another version or an ambient Node reference otherwise ships
+      # straight into `dist`.
+      - run: pnpm --filter styled-components test:types:dist
   test:
     runs-on: ubuntu-latest
     steps:

@@ -1,0 +1,12 @@
+{
+  "count": 100,
+  "measured": {
+    "instantiations": 868039,
+    "memoryKb": 199101,
+    "types": 31298
+  },
+  "versions": {
+    "typescript": "5.9.3",
+    "typesReact": "19.2.14"
+  }
+}

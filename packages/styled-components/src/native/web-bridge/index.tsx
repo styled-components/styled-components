@@ -1053,6 +1053,7 @@ export type {
   IStyledComponent,
   IStyledComponentFactory,
   IStyledStatics,
+  NativeStyledComponent as StyledComponent,
   NativeTarget,
   PolymorphicComponent,
   PolymorphicComponentProps,
