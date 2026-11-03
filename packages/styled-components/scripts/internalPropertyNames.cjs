@@ -37,7 +37,6 @@ const INTERNAL_PROPERTY_NAMES = [
   'len',
   'selfRefSelector',
   'templates',
-  'unterminated',
   // WebStyle / generated style
   'baseHash',
   'baseStyle',
