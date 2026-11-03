@@ -21,6 +21,13 @@ it('does not add a px prefix for unitless properties', () => {
   pairs.forEach(([key, value]) => expect(addUnitIfNeeded(key, value)).toEqual(String(value)));
 });
 
+it('treats an Object.prototype key as a property that takes a unit', () => {
+  // No prototype key is a CSS property, so only the listed names are unitless.
+  expect(addUnitIfNeeded('constructor', 5)).toEqual('5px');
+  expect(addUnitIfNeeded('toString', 2)).toEqual('2px');
+  expect(addUnitIfNeeded('opacity', 0.5)).toEqual('0.5');
+});
+
 it('does not add a px prefix to grid-area and line-clamp integers', () => {
   // https://drafts.csswg.org/css-grid-2/#propdef-grid-area
   // "grid-area Value: <grid-line> [ / <grid-line> ]{0,3}"

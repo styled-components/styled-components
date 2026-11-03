@@ -70,7 +70,6 @@ import {
 import type {
   AnimatedApi,
   CompositeAnimation,
-  AnimatedInterpolationNode,
   AnimatedValue,
   InterpolatableNode,
 } from './animatedTypes';
