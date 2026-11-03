@@ -1208,6 +1208,22 @@ background-color: green;`)
     });
   });
 
+  describe('normalize keeps a stray `}` from closing the component scope', () => {
+    test.each([
+      ['a block comment', 'color: red; } body { background: red } /* note */ x {;'],
+      ['a line comment', 'color: red; } body { background: red } // note\nx {;'],
+    ])('drops the escaping statement when the template also has %s', (_label, css) => {
+      expect(runCssCompile(css)).toEqual(['.a{color:red;}']);
+    });
+  });
+
+  it('strips many block comments in linear time', () => {
+    const start = performance.now();
+
+    expect(normalize('a/**/b;'.repeat(80_000))).toBe('ab;'.repeat(80_000));
+    expect(performance.now() - start).toBeLessThan(200);
+  });
+
   describe('normalize unified-path edge cases', () => {
     // Path 3j: comment stripping + brace imbalance fire together
     it('handles comment stripping that reveals brace imbalance', () => {

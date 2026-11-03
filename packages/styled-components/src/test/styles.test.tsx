@@ -33,6 +33,18 @@ describe('with styles', () => {
     `);
   });
 
+  it('keeps a runtime value with a stray `}` inside the component when the template has a comment', () => {
+    const Comp = styled.div<{ $v: string }>`
+      color: ${p => p.$v}; /* note */
+    `;
+    render(<Comp $v="red; } body { background: red } x {" />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a {
+        color: red;
+      }"
+    `);
+  });
+
   it('should append multiple styles', () => {
     const rule1 = 'color: blue;';
     const rule2 = 'background: red;';
