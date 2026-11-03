@@ -68,11 +68,15 @@ export default function createGlobalStyle<Props extends object>(
     if (__SERVER__) {
       instance = ssc.styleSheet.allocateGSInstance(styledComponentId);
     } else {
-      const instanceRef = React.useRef<number | null>(null);
-      if (instanceRef.current === null) {
-        instanceRef.current = ssc.styleSheet.allocateGSInstance(styledComponentId);
+      const instanceRef = React.useRef<{ instance: number; sheet: StyleSheet } | null>(null);
+      // Independent sheets count from 1, so a number kept across a sheet swap could collide.
+      if (instanceRef.current === null || instanceRef.current.sheet !== ssc.styleSheet) {
+        instanceRef.current = {
+          instance: ssc.styleSheet.allocateGSInstance(styledComponentId),
+          sheet: ssc.styleSheet,
+        };
       }
-      instance = instanceRef.current;
+      instance = instanceRef.current.instance;
     }
 
     if (
@@ -128,18 +132,8 @@ export default function createGlobalStyle<Props extends object>(
         ? [instance, ssc.styleSheet, globalStyle]
         : [instance, props, ssc.styleSheet, theme, ssc.stylis, globalStyle];
 
-      const prevGlobalStyleRef = React.useRef(globalStyle);
-
       React.useLayoutEffect(() => {
         if (!ssc.styleSheet.server) {
-          // HMR creates a new globalStyle instance but the componentId stays stable
-          // (SWC plugin assigns by file location), so stale hasNameForId hits skip injection.
-          if (prevGlobalStyleRef.current !== globalStyle) {
-            // Drops this instance's entry too, or the fast path would skip the re-insert.
-            globalStyle.removeStyles(instance, ssc.styleSheet);
-            prevGlobalStyleRef.current = globalStyle;
-          }
-
           renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
         }
       }, renderDeps);

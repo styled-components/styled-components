@@ -113,6 +113,24 @@ describe(`createGlobalStyle`, () => {
       'html{ --a:1; } html{ --b:1; } data-styled.g4[id="sc-global-c"]{ content:"sc-global-c1,sc-global-c2,"} '
     );
   });
+
+  it(`collects the rules of two mounts of one dynamic global with different props`, () => {
+    const sheet = new ServerStyleSheet();
+    const Component = createGlobalStyle<{ color: string }>`body { color: ${p => p.color}; }`;
+
+    context.renderToString(
+      sheet.collectStyles(
+        <>
+          <Component color="red" />
+          <Component color="blue" />
+        </>
+      )
+    );
+
+    expect(stripWhitespace(stripComments(stripOuterHTML(sheet.getStyleTags())))).toBe(
+      'body{ color:red; } body{ color:blue; } data-styled.g5[id="sc-global-d"]{ content:"sc-global-d1,sc-global-d2,"} '
+    );
+  });
 });
 
 function stripOuterHTML(html: string) {
