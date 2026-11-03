@@ -72,7 +72,7 @@ describe(`createGlobalStyle`, () => {
 
     // First render with a fixed instance number (simulates WeakMap caching)
     gs.renderStyles(1, executionContext, sheet, mainStylis);
-    expect(liveInstanceCount(gs.componentId)).toBe(1);
+    expect(liveInstanceCount(sheet, gs.componentId)).toBe(1);
     expect(sheet.toString()).toMatchInlineSnapshot(`
       "body{color:red;}/*!sc*/
       data-styled.g3[id="sc-global-clearTag-test"]{content:"sc-global-clearTag-test1,"}/*!sc*/

@@ -14,13 +14,15 @@ Each mount needs its own instance ID, allocated by `allocateGSInstance`. The ser
 directly, since a server render is one-shot. The client allocates through a `useRef` so the ID stays
 stable across re-renders.
 
-A module-level registry in `GlobalStyle.ts`, `Map<componentId, Map<instance, { name, rules }>>`,
-tracks each mount's compiled CSS, whichever `GlobalStyle` object produced it. `computeRules()`
-flattens and compiles the CSS and stores it under the name `componentId + instance`, making the
-registry the single source of truth for a rebuild. An id's map is deleted with its last instance.
+A module-level registry in `GlobalStyle.ts`,
+`WeakMap<StyleSheet, Map<componentId, Map<instance, { name, rules }>>>`, tracks each mount's compiled
+CSS, whichever `GlobalStyle` object produced it. It is keyed by sheet first because each sheet owns
+its own tag, and independent sheets count instances from 1. `computeRules()` flattens and compiles
+the CSS and stores it under the name `componentId + instance`, making the registry the single source
+of truth for a rebuild. An id's map is deleted with its last instance.
 
-`rebuildGroup()` clears the shared group and re-inserts every surviving instance for the id. It is
-O(N) in mounted instances, which is typically one to three.
+`rebuildGroup()` clears the shared group and re-inserts every surviving instance for the id on that
+sheet. It is O(N) in mounted instances, which is typically one to three.
 
 ## Static and dynamic rules take different paths
 

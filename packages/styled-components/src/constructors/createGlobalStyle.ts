@@ -166,11 +166,13 @@ export default function createGlobalStyle<Props extends object>(
     // the request; see "Per-instance emission" in docs/rsc-style-injection.md.
     if (IS_RSC) {
       const entry =
-        typeof window === 'undefined' ? getInstance(styledComponentId, instance) : undefined;
+        typeof window === 'undefined'
+          ? getInstance(ssc.styleSheet, styledComponentId, instance)
+          : undefined;
       const css = entry ? joinRules(entry.rules) : '';
 
       if (css) {
-        deleteInstance(styledComponentId, instance);
+        deleteInstance(ssc.styleSheet, styledComponentId, instance);
 
         if (process.env.NODE_ENV !== 'production' && getGlobalEmitCounts) {
           const counts = getGlobalEmitCounts();
@@ -206,7 +208,7 @@ export default function createGlobalStyle<Props extends object>(
     // Clean up server instance cache - no useLayoutEffect cleanup runs on the
     // server, so the shared instance entries would grow unboundedly across SSR requests.
     if (__SERVER__ || ssc.styleSheet.server) {
-      deleteInstance(styledComponentId, instance);
+      deleteInstance(ssc.styleSheet, styledComponentId, instance);
     }
 
     return null;
