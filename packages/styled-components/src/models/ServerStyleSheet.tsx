@@ -1,5 +1,4 @@
 import React from 'react';
-import { type PipeableStream } from 'react-dom/server';
 import { SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
 import styledError from '../utils/error';
@@ -10,6 +9,16 @@ import getNonce from '../utils/nonce';
 import { StyleSheetManager } from './StyleSheetManager';
 
 const CLOSING_TAG_R = /*#__PURE__*/ /^\s*<\/[a-z]/i;
+
+/**
+ * The one member of `react-dom/server`'s `PipeableStream` (what
+ * `renderToPipeableStream` returns) that is read here. Declared locally because
+ * `@types/react-dom` is not a dependency: importing the type leaves a consumer
+ * without it an unresolved import in the emitted declarations.
+ */
+interface PipeableStream {
+  pipe: <Writable extends NodeJS.WritableStream>(destination: Writable) => Writable;
+}
 
 export default class ServerStyleSheet {
   instance: StyleSheet;

@@ -3,7 +3,16 @@
  * Run via: pnpm --filter styled-components test:types
  */
 import React from 'react';
-import { css, CSSProp, CustomStyle, IStyledComponent, StyledObject } from '../index';
+import type { PipeableStream } from 'react-dom/server';
+import {
+  css,
+  CSSProp,
+  CustomStyle,
+  IStyledComponent,
+  ServerStyleSheet,
+  StyledComponent,
+  StyledObject,
+} from '../index';
 import styled from '../index-standalone';
 import { DataAttributes } from '../types';
 import { VeryLargeUnionType } from './veryLargeUnionType';
@@ -1096,6 +1105,30 @@ const PolyButtonFnAttrs = styled(PolyButton).attrs(props => ({
 <PolyButtonFnAttrs color="blue">hi</PolyButtonFnAttrs>;
 
 /**
+ * #5756 -- a generic polymorphic component introspects at its `ElementType`
+ * constraint, where `React.ComponentProps<ElementType>` is `any`, so the extracted
+ * bag carries a `[k: string]: any` index alongside its narrow props. That bag is
+ * introspectable (it names keys), so it must keep its declared props narrow rather
+ * than be widened: the wrapper rejects exactly what the direct call rejects.
+ */
+type GenericPolyProps<C extends React.ElementType, P = object> = React.PropsWithChildren<
+  P & { as?: C }
+> &
+  Omit<React.ComponentPropsWithoutRef<C>, keyof (P & { as?: C })>;
+const GenericPolyButton = <C extends React.ElementType = 'button'>(
+  _props: GenericPolyProps<C, { variant?: 'primary' | 'secondary' }>
+) => null;
+
+// Positive control: the direct call site narrows `variant`.
+// @ts-expect-error the direct call site rejects this
+<GenericPolyButton variant="totally-fake">x</GenericPolyButton>;
+
+const StyledGenericPolyButton = styled(GenericPolyButton)``;
+// @ts-expect-error the wrapper keeps `variant` narrow too (#5756)
+<StyledGenericPolyButton variant="totally-fake">x</StyledGenericPolyButton>;
+<StyledGenericPolyButton variant="primary">x</StyledGenericPolyButton>;
+
+/**
  * The widening is keyed on the target resolving to no props, so it also fires
  * for targets that are perfectly introspectable and simply declare none. There
  * is no discriminator that separates them from a polymorphic factory: both
@@ -1186,3 +1219,140 @@ declare const NoStyleComp: (props: { a?: string }) => React.ReactElement;
 const StyledNoStyle = styled(NoStyleComp)``;
 // @ts-expect-error the wrapped component has no style prop to widen
 <StyledNoStyle style={{ color: 'red' }} />;
+
+/**
+ * Contract for the public `StyledComponent<Target, Props>` annotation: it must
+ * resolve to the exact type `styled(Target)<Props>` produces for every target kind
+ * and construction form. `ScExact` is true only when the two types are mutually
+ * assignable; `Props` is invariant, so that is an identity check, not one-way
+ * compatibility. The `.attrs()` rules the cases enumerate are documented on
+ * `StyledComponent` in `types.ts`.
+ */
+type ScExact<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const scExact = <_T extends true>(): void => {};
+
+// Headline form: explicit annotation, both assignment directions.
+const scPlain = styled.div<{ $active?: boolean }>``;
+const scPlainAnnotated: StyledComponent<'div', { $active?: boolean }> = scPlain;
+const scPlainBack: typeof scPlain = scPlainAnnotated;
+void scPlainBack;
+
+// An annotated export keeps the target's props and the declared props, and still
+// rejects what neither declares.
+export const ScCard: StyledComponent<'div', { $active?: boolean }> = styled.div<{
+  $active?: boolean;
+}>``;
+<ScCard $active id="card" style={{ '--x': '1px', color: 'red' }} />;
+// @ts-expect-error `$active` is declared as boolean
+<ScCard $active="yes" />;
+// @ts-expect-error `notAProp` belongs to neither the target nor the declaration
+<ScCard notAProp="x" />;
+
+// Wrapping a component: hoisted target statics survive into the annotation.
+function IconButtonBase(props: { label: string; className?: string }) {
+  return <button className={props.className}>{props.label}</button>;
+}
+IconButtonBase.displayName = 'IconButton';
+const scWrap = styled(IconButtonBase)``;
+const scWrapAnnotated: StyledComponent<typeof IconButtonBase> = scWrap;
+const scWrapBack: typeof scWrap = scWrapAnnotated;
+void scWrapBack;
+scWrapAnnotated.displayName satisfies string | undefined;
+
+export const ScCloseButton: StyledComponent<typeof IconButtonBase, { $tone?: 'a' | 'b' }> = styled(
+  IconButtonBase
+)<{ $tone?: 'a' | 'b' }>``;
+<ScCloseButton label="x" $tone="a" />;
+// @ts-expect-error the wrapped component's required prop stays required
+<ScCloseButton $tone="a" />;
+// @ts-expect-error $tone is constrained to the declared union
+<ScCloseButton label="x" $tone="c" />;
+
+// Breadth: every distinct target kind resolves exactly.
+const scCustomEl = styled('my-element')``;
+scExact<ScExact<typeof scCustomEl, StyledComponent<'my-element'>>>();
+
+class ScCls extends React.Component<{ label: string; className?: string }> {
+  render() {
+    return <div className={this.props.className}>{this.props.label}</div>;
+  }
+}
+const scClass = styled(ScCls)``;
+scExact<ScExact<typeof scClass, StyledComponent<typeof ScCls>>>();
+
+const ScFwd = React.forwardRef<HTMLDivElement, { label: string }>((p, ref) => (
+  <div ref={ref}>{p.label}</div>
+));
+const scFwd = styled(ScFwd)``;
+scExact<ScExact<typeof scFwd, StyledComponent<typeof ScFwd>>>();
+
+const ScMemo = React.memo(IconButtonBase);
+const scMemo = styled(ScMemo)``;
+scExact<ScExact<typeof scMemo, StyledComponent<typeof ScMemo>>>();
+
+// styled-of-styled: the wrapped styled component's statics chain through.
+const ScBase = styled.button<{ $v?: number }>``;
+const scOfStyled = styled(ScBase)<{ $w?: string }>``;
+scExact<ScExact<typeof scOfStyled, StyledComponent<typeof ScBase, { $w?: string }>>>();
+
+// Union-props target (#5787).
+const ScPressable = (
+  _p: React.ButtonHTMLAttributes<HTMLButtonElement> | React.AnchorHTMLAttributes<HTMLAnchorElement>
+) => null;
+const scUnion = styled(ScPressable)<{ $x?: number }>``;
+scExact<ScExact<typeof scUnion, StyledComponent<typeof ScPressable, { $x?: number }>>>();
+
+// Disjoint-union target (#5787 sibling).
+const ScDisjoint = (_p: { onlyA: string } | { onlyB: number }) => null;
+const scDisjoint = styled(ScDisjoint)``;
+scExact<ScExact<typeof scDisjoint, StyledComponent<typeof ScDisjoint>>>();
+
+// `.withConfig()` leaves the type unchanged.
+const scWithConfig = styled.div.withConfig({ displayName: 'X' })<{ $x?: number }>``;
+scExact<ScExact<typeof scWithConfig, StyledComponent<'div', { $x?: number }>>>();
+
+// Un-introspectable factory target: the annotation carries the same permissive
+// widening the constructor applies.
+const scFactory = styled(PolyButton)``;
+const scFactoryAnnotated: StyledComponent<typeof PolyButton> = scFactory;
+const scFactoryBack: typeof scFactory = scFactoryAnnotated;
+void scFactoryBack;
+export const ScFactoryExport: StyledComponent<typeof PolyButton> = styled(PolyButton)``;
+<ScFactoryExport arbitraryProp="x">hi</ScFactoryExport>;
+
+// `.attrs()` rules: a backfilled required prop becomes optional in `Props`; an
+// object-form `as` redirect adds the resolved target's props to `Props`. Attrs
+// over already-optional props (the common case) needs neither.
+const scAttrsPlain = styled.input.attrs({ type: 'text' })<{ $x?: number }>``;
+scExact<ScExact<typeof scAttrsPlain, StyledComponent<'input', { $x?: number }>>>();
+
+const scAttrsBackfill = styled(IconButtonBase).attrs({ label: 'x' })``;
+scExact<
+  ScExact<typeof scAttrsBackfill, StyledComponent<typeof IconButtonBase, { label?: string }>>
+>();
+
+const scAttrsRedirect = styled.button.attrs({ as: 'a' })``;
+scExact<
+  ScExact<typeof scAttrsRedirect, StyledComponent<'button', React.ComponentPropsWithRef<'a'>>>
+>();
+
+// A genuinely different required prop is rejected, never silently accepted or
+// dropped.
+// @ts-expect-error the real required prop is $y; annotating a required $x is rejected
+const scWrongReq: StyledComponent<'div', { $x: number }> = styled.div<{ $y: number }>``;
+void scWrongReq;
+
+/**
+ * `interleaveWithNodeStream` takes a structural `pipe`-only stream, declared
+ * locally because `@types/react-dom` is not a dependency. What
+ * `renderToPipeableStream` returns (`PipeableStream` from `react-dom/server`) must
+ * still be accepted, as must a Node readable stream; a value with neither shape
+ * must not.
+ */
+declare const pipeableStream: PipeableStream;
+declare const nodeReadable: NodeJS.ReadableStream;
+const sss = new ServerStyleSheet();
+sss.interleaveWithNodeStream(pipeableStream) satisfies NodeJS.ReadWriteStream;
+sss.interleaveWithNodeStream(nodeReadable) satisfies NodeJS.ReadWriteStream;
+// @ts-expect-error a string is neither a Node readable stream nor a pipeable stream
+sss.interleaveWithNodeStream('<div />');

@@ -74,6 +74,10 @@ The outer `P extends unknown` is what makes the widening distribute over a union
 
 The test is `'style' extends keyof P`, not `P extends { style?: infer S }`. The latter is vacuously satisfied by `{}`, which hands a `style` key to targets that expose no props at all and defeats `WidenForUntypedTarget`.
 
+A bag with a string index signature (`string extends keyof P`) passes through unwidened. A generic polymorphic component introspects at its `ElementType` constraint and gains `[k: string]: any`; `Omit` over that index collapses every narrow key into it, so `styled(Button)` would accept props `Button` rejects (#5756).
+
+Under an app's `data-${string}` template-index augmentation of `React.HTMLAttributes`, `IntrinsicProps` switches to a `FastOmit` variant: distributing `Omit`'s `Exclude` over the template key across every intrinsic element exceeds the union limit (TS2590, #5796). The switch is a global constant, so the unaugmented path keeps built-in `Omit`. An `aria-${string}` augmentation is not detected.
+
 The `& {}` wrap inside `style?: CSSPropertiesWithVars | (P[keyof P & 'style'] & {}) | undefined` is a real undefined-filter under `exactOptionalPropertyTypes: true`; DO NOT remove it. Without it, both `style?:` AND `style: undefined` become assignable, which changes semantics. The explicit `| undefined` then restores `style={undefined}`.
 
 Don't replace built-in `Omit` with `FastOmit` in `WithCSSVars`; built-in `Omit` (Pick + Exclude) is more optimized (+17% instantiations when replaced).
@@ -156,7 +160,7 @@ styled component appears.
 
 ## Testing the type surface
 
-Type contracts are gated in `src/test/types.tsx` (web) and `src/test/types.native.tsx` (the React Native entry), compiled by `pnpm test:types` (`tsc --noEmit -p tsconfig.test-types.json`, which includes all of `src`). No runtime, no extra deps. Keep native-only cases in the native file: both entries resolve target props through the same types, so a regression on the component arm would otherwise pass on web coverage alone. Both files are listed as knip entries, since nothing imports them.
+Type contracts are gated in `src/test/types.tsx` (web) and `src/test/types.native.tsx` (the React Native entry), compiled by `pnpm test:types` (`tsc --noEmit -p tsconfig.test-types.json`, which includes all of `src`, then a second pass over `tsconfig.test-template-index.json` for the `data-*` augmentation in `test-types/template-index-signature.tsx`). No runtime, no extra deps. Keep native-only cases in the native file: both entries resolve target props through the same types, so a regression on the component arm would otherwise pass on web coverage alone. Both files are listed as knip entries, since nothing imports them.
 
 - Negative assertions use `@ts-expect-error` on the line directly above the offending expression, each with a one-line comment stating what must fail. This is a deliberate test, not a suppression: if the type gets looser and the error stops occurring, the directive itself errors as unused, which flags the regression.
 - `declare module` augmentation is project-wide: it leaks into every file in the same `tsc` program. The suite augments the declaration's own source location (`'../models/ThemeProvider'` for `DefaultTheme`, `'react'` for `CSSProp`) because the test imports from `src`, not the published package; consumers instead augment the public specifier, `declare module 'styled-components'`. If a future augmentation test needs a variant that would collide with the suite's, give it its own tsconfig project (including only that file) run as a separate `tsc` pass, rather than letting two augmentations collide in one program.

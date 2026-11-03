@@ -192,5 +192,9 @@ export default function constructWithOptions<
       }
     );
 
-  return templateFunction;
+  // Suppression: under a `data-${string}` augmentation, relating this body to
+  // `Styled`'s hoisted-statics `Omit<Target, ...>` overflows the union limit
+  // (TS2590, #5796). Only a compile of the library source hits it (the emitted
+  // .d.ts has no body); the assertion still checks comparability.
+  return templateFunction as Styled<R, Target, OuterProps, OuterStatics, AttrsKeys>;
 }

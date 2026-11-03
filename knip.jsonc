@@ -49,6 +49,8 @@
         // Entries of the type-surface project (tsconfig.test-types.json).
         "src/test/types.tsx",
         "src/test/types.native.tsx",
+        // Entry of the template-index augmentation project (tsconfig.test-template-index.json).
+        "test-types/template-index-signature.tsx",
         // Bun CPU-profiling harnesses, run directly (see AGENTS.md "Profiling").
         "src/parser/profile-harness.ts",
         "src/native/profile*.ts",

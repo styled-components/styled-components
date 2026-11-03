@@ -15,9 +15,9 @@
  * the real reason lives in the nested "Overload N of 2" detail.
  */
 import React from 'react';
-import { Text } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 import type { ViewProps as RNViewProps } from 'react-native';
-import styled from '../native';
+import styled, { StyledComponent } from '../native';
 
 /**
  * The `style` widening is web-only. A native `style` takes a native style
@@ -70,3 +70,37 @@ const StyledPlain = styled(Plain)``;
 <StyledPlain testID="x" />;
 // @ts-expect-error still not a View prop
 <StyledPlain notAProp="x" />;
+
+/**
+ * `StyledComponent<Target, Props>` from the native entry resolves to the exact
+ * type `styled(Target)<Props>` produces (assignable both directions), keeping the
+ * target's props and the declared props. Native carries no hoisted-statics
+ * intersection, so a wrapped-component case covers that difference.
+ */
+const scNativeTag = styled.View<{ $active?: boolean }>``;
+const scNativeTagAnnotated: StyledComponent<typeof View, { $active?: boolean }> = scNativeTag;
+const scNativeTagBack: typeof scNativeTag = scNativeTagAnnotated;
+void scNativeTagBack;
+
+export const ScNativeBox: StyledComponent<typeof View, { $active?: boolean }> = styled.View<{
+  $active?: boolean;
+}>``;
+<ScNativeBox $active testID="box" />;
+// @ts-expect-error `$active` is declared as boolean
+<ScNativeBox $active="yes" />;
+// @ts-expect-error `notAProp` belongs to neither the target nor the declaration
+<ScNativeBox notAProp="x" />;
+// The web `style` widening stays off for the native annotation as well.
+// @ts-expect-error a CSS custom property is not a native style field
+<ScNativeBox style={{ '--x': '1px' }} />;
+
+const scNativeWrap = styled(TextInput)``;
+const scNativeWrapAnnotated: StyledComponent<typeof TextInput> = scNativeWrap;
+const scNativeWrapBack: typeof scNativeWrap = scNativeWrapAnnotated;
+void scNativeWrapBack;
+
+// `.attrs()` over an already-optional prop leaves the type unchanged.
+const scNativeAttrs = styled.TextInput.attrs({ editable: true })<{ $x?: number }>``;
+const scNativeAttrsAnnotated: StyledComponent<typeof TextInput, { $x?: number }> = scNativeAttrs;
+const scNativeAttrsBack: typeof scNativeAttrs = scNativeAttrsAnnotated;
+void scNativeAttrsBack;

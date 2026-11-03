@@ -153,6 +153,7 @@ export {
   IStyledComponent,
   IStyledComponentFactory,
   IStyledStatics,
+  NativeStyledComponent as StyledComponent,
   NativeTarget,
   PolymorphicComponent,
   PolymorphicComponentProps,
