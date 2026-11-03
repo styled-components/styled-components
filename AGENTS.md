@@ -101,7 +101,7 @@ This file is the repo's only agent instructions file; there is no CLAUDE.md. It 
 - `pnpm --filter styled-components test:web`: Run the web suite against source under jsdom
 - `pnpm --filter styled-components test:native`: Run the React Native suite against source
 - `pnpm --filter styled-components bench`: `bench:web` then `bench:rsc`
-- `pnpm --filter styled-components bench:web`: Every suite under `src/bench/` matched by `jest.config.bench.js` (`*.bench.test.*`, `web*.test.*`, `preprocess*.test.*`). Each file's header docblock states what it measures, so a new suite joins the run by matching one of those patterns. Do not enumerate the suites here.
+- `pnpm --filter styled-components bench:web`: Every suite under `src/bench/` matched by `jest.config.bench.js` (`*.bench.test.*`, `web*.test.*`, `preprocess*.test.*`), each in its own jest process (`scripts/benchWeb.mjs`; path patterns narrow the run). Compare trees only on the same copy of a bench file. Each file's header docblock states what it measures, so a new suite joins the run by matching one of those patterns. Do not enumerate the suites here.
 - `pnpm --filter styled-components bench:web:stress`: Stress benchmarks only (`src/bench/web.test.js`); uses `SC_BENCH_ITER_SCALE=0.2` and `SC_BENCH_RUNS=3` for quicker runs
 - `pnpm --filter styled-components bench:rsc`: `src/bench/rsc.test.tsx`, matched by `jest.config.bench-rsc.js` (node environment, `IS_RSC` server path)
 - `pnpm --filter styled-components type-perf`: Consumer type-check budget, measured against the built `dist` (needs `pnpm build` first). `--against <package root>` measures another copy of the package with the same fixture. See [docs/typescript-performance.md](docs/typescript-performance.md)

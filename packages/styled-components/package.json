@@ -34,7 +34,7 @@
     "test:web": "jest -c jest.config.main.js",
     "test:native": "jest -c jest.config.native.js --forceExit",
     "bench": "pnpm run bench:web && pnpm run bench:rsc",
-    "bench:web": "NODE_OPTIONS='--expose-gc --max-old-space-size=12288' jest -c jest.config.bench.js --verbose --no-coverage --forceExit --runInBand",
+    "bench:web": "node scripts/benchWeb.mjs",
     "bench:web:stress": "SC_BENCH_ITER_SCALE=0.2 SC_BENCH_RUNS=3 NODE_OPTIONS='--expose-gc --max-old-space-size=12288' jest -c jest.config.bench.js --verbose --no-coverage --forceExit --runInBand -- src/bench/web.test.js",
     "bench:rsc": "jest -c jest.config.bench-rsc.js --verbose --no-coverage --nodeOptions=--expose-gc",
     "prepublishOnly": "pnpm run build"

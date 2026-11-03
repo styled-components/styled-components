@@ -16,6 +16,11 @@
  *   - creation at scale: cost of styled() / attrs / extension factories
  *   - render at scale: mount/unmount, siblings, parent re-renders, attrs at 1K–10K children
  *   - 10K decomposition: isolate createElement vs reconcile vs SC render vs forwardRef baseline
+ *   - arity-2 attrs render: a statically planned callback vs one that reads props
+ *
+ * A row reads slower the more benches ran before it in the same process, so
+ * compare a row across trees only when both run the same copy of this file in
+ * its own jest process, and add new rows at the end.
  */
 
 const React = require('react');
@@ -513,5 +518,30 @@ describe('stress benchmarks', () => {
       },
       flushOpts
     );
+  });
+
+  it('arity-2 attrs render', () => {
+    // A callback the construction-time trace folds into a static plan, and
+    // one that reads props so it runs on every render miss.
+    const PlannedPostAttrs = styled.div.attrs((_p, ast) => ({ 'data-tint': ast.pop('color') }))`
+      color: red;
+      cursor: pointer;
+    `;
+    const LivePostAttrs = styled.div.attrs((p, ast) => ({
+      'data-tint': p.$on ? ast.pop('color') : 'off',
+    }))`
+      color: red;
+      cursor: pointer;
+    `;
+
+    console.log('\n--- Arity-2 attrs render (50K iterations, median of 3) ---');
+    bench('arity-2 attrs, static plan (render miss)', 50_000, () => {
+      const t = TestRenderer.create(React.createElement(PlannedPostAttrs));
+      t.unmount();
+    });
+    bench('arity-2 attrs, live callback (render miss)', 50_000, () => {
+      const t = TestRenderer.create(React.createElement(LivePostAttrs, { $on: true }));
+      t.unmount();
+    });
   });
 });
