@@ -9,6 +9,7 @@ const realNextPath = realpathSync(createRequire(import.meta.url).resolve('next/p
 const storeMarkerAt = realNextPath.indexOf(storeMarker);
 
 const nextConfig: NextConfig = {
+  agentRules: false,
   compiler: {
     styledComponents: true,
   },
