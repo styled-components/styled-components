@@ -15,6 +15,6 @@ const Icon = styled(Path).attrs((_props, ast) => ({
 `;
 ```
 
-Both methods take an optional fallback as the second argument, returned when the value is missing. A property name may be written in kebab-case (`background-color`) on both platforms, and also in camelCase (`backgroundColor`) on React Native. A custom property (`--tint`) is read by its exact name on both platforms. Supported on the web and React Native, with no per-render overhead when the callback resolves entirely from static declarations.
+Both methods take an optional fallback as the second argument, returned when the value is missing. A property name may be written in kebab-case (`background-color`) on both platforms, and also in camelCase (`backgroundColor`) on React Native. On the web a custom property (`--tint`) is read by its exact name. On React Native a custom property is readable only by a callback that does not read `props`; a callback that reads `props` gets `undefined`. On React Native a callback that does not read `props` also receives the value as written in the CSS (`'4px'`), while one that reads `props` receives the React Native value (`4`). Supported on the web and React Native, with no per-render overhead when the callback resolves entirely from static declarations.
 
 The arity-2 callback receives `ast` as a non-optional `CompiledAst`, so you can read it directly without optional-chaining under TypeScript `strict: true`. The arity-1 form (`.attrs((props) => ...)`) takes only `props`.

@@ -543,6 +543,48 @@ describe('native', () => {
         }
       );
 
+      // The compiled style spells a vendor-prefixed declaration without its
+      // prefix, so the pop has to remove that spelling.
+      it.each([
+        [
+          'a folded callback',
+          (_p: { $on?: boolean }, ast: any) => ({ tint: ast.pop('-webkit-text-fill-color') }),
+        ],
+        [
+          'a props-reading callback',
+          (p: { $on?: boolean }, ast: any) => ({
+            tint: p.$on ? ast.pop('-webkit-text-fill-color') : 'off',
+          }),
+        ],
+      ])('removes a vendor-prefixed declaration popped by %s', (_name, cb) => {
+        const Comp = styled.View.attrs<{ $on?: boolean; tint?: unknown }>(cb)`
+          -webkit-text-fill-color: red;
+          color: blue;
+        `;
+
+        const view = TestRenderer.create(<Comp $on />).root.findByType(View);
+
+        expect([view.props.tint, view.props.style]).toEqual(['red', { color: 'blue' }]);
+      });
+
+      it('reads a popped value again under a different spelling of the same key', () => {
+        const Comp = styled.View.attrs<{ $on?: boolean; again?: unknown; first?: unknown }>(
+          (p, ast) =>
+            p.$on ? { first: ast.pop('background-color'), again: ast.peek('backgroundColor') } : {}
+        )`
+          background-color: red;
+          padding: 5px;
+        `;
+
+        const view = TestRenderer.create(<Comp $on />).root.findByType(View);
+
+        expect([view.props.first, view.props.again, view.props.style]).toEqual([
+          'red',
+          'red',
+          { padding: 5 },
+        ]);
+      });
+
       it('pops a custom property by its verbatim name', () => {
         const Comp = styled.View.attrs<{ $on?: boolean; tint?: unknown }>((p, ast) => ({
           tint: p.$on ? ast.pop('--tint') : 'off',

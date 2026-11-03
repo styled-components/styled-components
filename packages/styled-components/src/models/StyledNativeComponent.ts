@@ -41,6 +41,7 @@ import {
   useViewTimelineSubject,
 } from '../native/scrollTimeline';
 import { EMPTY_SAFE_AREA_INSETS, type SafeAreaInsets, useSafeAreaInsets } from '../native/safeArea';
+import { camelize } from '../native/transform';
 import { applyResolvers, ResolveEnv } from '../native/transform/polyfills/resolvers';
 import { concatSourceInputs, getSource } from '../parser/source';
 import type {
@@ -64,7 +65,6 @@ import { themeValue } from '../utils/themePath';
 import {
   applyPostAttrs,
   buildPostAttrsPlans,
-  camelizeProp,
   findBaseDecl,
   hasPostAttrs,
   isPostAttr,
@@ -132,6 +132,11 @@ function resolveContext<Props extends object>(
   }
 
   return context;
+}
+
+/** The key the compiled style holds for a declaration (vendor prefix stripped); a theme path stays verbatim. */
+function nativeDeclKey(keyOrPath: string): string {
+  return keyOrPath.indexOf('.') === -1 ? camelize(keyOrPath) : keyOrPath;
 }
 
 /**
@@ -1392,13 +1397,12 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
         effectiveBase = base;
         applyPostAttrs(context, componentAttrs, postAttrsPlans, {
           lookup: keyOrPath =>
-            keyOrPath.indexOf('.') !== -1
-              ? themeValue(context.theme, keyOrPath)
-              : base[camelizeProp(keyOrPath)],
+            keyOrPath.indexOf('.') !== -1 ? themeValue(context.theme, keyOrPath) : base[keyOrPath],
           merge: mergeAttrsResult,
           onPop: key => {
-            delete base[camelizeProp(key)];
+            delete base[camelize(key)];
           },
+          resolveKey: nativeDeclKey,
         });
       } else {
         effectiveBase = compiled.base;
@@ -2670,7 +2674,9 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
     const postAttrsSource = chainHasPostAttrs ? getSource(finalRules) : undefined;
     WrappedStyledComponent.postAttrsPlans = chainHasPostAttrs
       ? buildPostAttrsPlans(finalAttrs, prop =>
-          postAttrsSource === undefined ? null : findBaseDecl(postAttrsSource.ast, prop, null)
+          postAttrsSource === undefined
+            ? null
+            : findBaseDecl(postAttrsSource.ast, prop, null, camelize)
         )
       : undefined;
 
