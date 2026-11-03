@@ -206,7 +206,7 @@ class Form extends Component {
 
 ## Run a style function only in the outermost wrapper
 
-A design system can offer a style function (for example an `sx` handler that turns a prop into CSS) on every component it creates. When one of its components wraps another, the function should run once, in the outermost component, and not again in each layer underneath. Give each layer an id, set it as a transient prop with `.attrs`, and run the function only in the layer whose id matches:
+A design system can offer a style function (for example an `sx` handler that turns a prop into CSS) on every component it creates. When one of its components wraps another by extending it with `styled`, the function should run once, in the outermost component, and not again in each layer underneath. Give each layer an id, set it as a transient prop with `.attrs`, and run the function only in the layer whose id matches:
 
 ```js
 import styled from 'styled-components';
