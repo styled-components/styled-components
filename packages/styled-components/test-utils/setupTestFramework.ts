@@ -1,5 +1,6 @@
 import failOnConsole from 'jest-fail-on-console';
 
+import { resetSeenPlugins } from '../src/utils/compiler';
 import { resetWarnOnce } from '../src/utils/warnOnce';
 
 /**
@@ -65,6 +66,9 @@ failOnConsole({
 
 beforeEach(() => {
   // The shared `warnOnce` dedupe Set persists across tests; reset so each
-  // assertion that expects a warning to fire actually sees it.
+  // assertion that expects a warning to fire actually sees it. The plugin
+  // name registry persists for the same reason (a class-name collision
+  // survives for the life of the page), so suites start each test clear.
   resetWarnOnce();
+  resetSeenPlugins();
 });

@@ -6,6 +6,7 @@ import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
 import { SEED, phash } from './hash';
 import { normalize } from './normalize';
+import { warnOnce } from './warnOnce';
 
 export { normalize } from './normalize';
 
@@ -68,6 +69,51 @@ function composeDecl(prev: DeclTransform, next: DeclTransform): DeclTransform {
   };
 }
 
+/**
+ * Plugins already seen in this process, keyed by name plus namespace.
+ * Allocated on first use inside the dev branch so a production bundle does
+ * not build it.
+ */
+let seenPluginsByName: Map<string, SCPlugin> | undefined;
+
+/**
+ * Class names hash a plugin's `name` and nothing else about it, and the
+ * server and the client both have to reproduce that hash. Two different
+ * plugins with one name therefore share a class, and whichever subtree
+ * renders first supplies the CSS for every subtree using the name. Object
+ * identity is the right check for a warning and the wrong input for the
+ * hash: a plugin object on the server is never the one on the client, and
+ * function source is not stable across the two builds. The namespace also
+ * feeds the hash, so the same name under two namespaces is no collision.
+ */
+function notePluginName(plugin: SCPlugin, namespace: string | undefined): void {
+  if (__DEV__) {
+    const name = plugin.name;
+    /** NUL cannot appear in a CSS selector, so no name/namespace pair aliases another. */
+    const key = namespace ? name + '\0' + namespace : name;
+    let seen = seenPluginsByName;
+    if (seen === undefined) {
+      seen = new Map();
+      seenPluginsByName = seen;
+    }
+    const prior = seen.get(key);
+    if (prior === undefined) {
+      seen.set(key, plugin);
+    } else if (prior !== plugin) {
+      warnOnce(
+        'plugin-name-collision',
+        `plugin name "${name}" is used by two different plugins. Every subtree using that name gets the same class, and the first one to render supplies the CSS for all of them. Give each plugin a distinct name.`,
+        key
+      );
+    }
+  }
+}
+
+/** Test-only. Clears the dev registry of plugins seen by name. */
+export function resetSeenPlugins(): void {
+  seenPluginsByName = undefined;
+}
+
 function composeRw(prev: SelectorTransform, next: SelectorTransform): SelectorTransform {
   return (s: string) => {
     const first = prev(s);
@@ -127,8 +173,10 @@ export default function createCompiler({
   // different class names and cache keys.
   let h = SEED;
   for (let i = 0; i < plugins.length; i++) {
-    const name = plugins[i]?.name;
+    const plugin = plugins[i];
+    const name = plugin?.name;
     if (!name) throw throwStyledError(15);
+    if (__DEV__ && plugin) notePluginName(plugin, options.namespace);
     h = phash(h, name);
   }
   if (options.namespace) h = phash(h, options.namespace);

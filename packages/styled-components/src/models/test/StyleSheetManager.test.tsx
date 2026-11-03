@@ -400,6 +400,223 @@ describe('StyleSheetManager', () => {
     `);
   });
 
+  describe('plugins that share a name', () => {
+    function BoxFactory() {
+      return styled.div`
+        color: Red;
+      `;
+    }
+
+    it('warns in development when two different plugins share a name', () => {
+      const upper = {
+        decl: (prop: string, value: string) => ({ prop, value: value.toUpperCase() }),
+        name: 'p',
+      };
+      const lower = {
+        decl: (prop: string, value: string) => ({ prop, value: value.toLowerCase() }),
+        name: 'p',
+      };
+      const Box = BoxFactory();
+
+      render(
+        <>
+          <StyleSheetManager plugins={[upper]}>
+            <Box>A</Box>
+          </StyleSheetManager>
+          <StyleSheetManager plugins={[lower]}>
+            <Box>B</Box>
+          </StyleSheetManager>
+        </>
+      );
+
+      expect(console.warn).toHaveBeenCalledTimes(1);
+      expect(console.warn).toHaveBeenCalledWith(
+        '[sc] plugin name "p" is used by two different plugins. Every subtree using that name gets the same class, and the first one to render supplies the CSS for all of them. Give each plugin a distinct name.'
+      );
+    });
+
+    it('warns when one plugins array holds two plugins with the same name', () => {
+      const upper = {
+        decl: (prop: string, value: string) => ({ prop, value: value.toUpperCase() }),
+        name: 'p',
+      };
+      const lower = {
+        decl: (prop: string, value: string) => ({ prop, value: value.toLowerCase() }),
+        name: 'p',
+      };
+      const Box = BoxFactory();
+
+      render(
+        <StyleSheetManager plugins={[upper, lower]}>
+          <Box>A</Box>
+        </StyleSheetManager>
+      );
+
+      expect(console.warn).toHaveBeenCalledTimes(1);
+      expect(console.warn).toHaveBeenCalledWith(
+        '[sc] plugin name "p" is used by two different plugins. Every subtree using that name gets the same class, and the first one to render supplies the CSS for all of them. Give each plugin a distinct name.'
+      );
+    });
+
+    it('warns once for a repeated name', () => {
+      const Box = BoxFactory();
+      const renderPair = () => {
+        const upper = {
+          decl: (prop: string, value: string) => ({ prop, value: value.toUpperCase() }),
+          name: 'p',
+        };
+        const lower = {
+          decl: (prop: string, value: string) => ({ prop, value: value.toLowerCase() }),
+          name: 'p',
+        };
+        render(
+          <>
+            <StyleSheetManager plugins={[upper]}>
+              <Box>A</Box>
+            </StyleSheetManager>
+            <StyleSheetManager plugins={[lower]}>
+              <Box>B</Box>
+            </StyleSheetManager>
+          </>
+        );
+      };
+
+      renderPair();
+      renderPair();
+
+      expect(console.warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not warn when the same plugin object is used in two managers', () => {
+      const upper = {
+        decl: (prop: string, value: string) => ({ prop, value: value.toUpperCase() }),
+        name: 'p',
+      };
+      const Box = BoxFactory();
+
+      render(
+        <>
+          <StyleSheetManager plugins={[upper]}>
+            <Box>A</Box>
+          </StyleSheetManager>
+          <StyleSheetManager plugins={[upper]}>
+            <Box>B</Box>
+          </StyleSheetManager>
+        </>
+      );
+
+      expect(console.warn).not.toHaveBeenCalled();
+    });
+
+    it('does not warn when plugin names differ', () => {
+      const upper = {
+        decl: (prop: string, value: string) => ({ prop, value: value.toUpperCase() }),
+        name: 'upper',
+      };
+      const lower = {
+        decl: (prop: string, value: string) => ({ prop, value: value.toLowerCase() }),
+        name: 'lower',
+      };
+      const Box = BoxFactory();
+
+      render(
+        <>
+          <StyleSheetManager plugins={[upper]}>
+            <Box>A</Box>
+          </StyleSheetManager>
+          <StyleSheetManager plugins={[lower]}>
+            <Box>B</Box>
+          </StyleSheetManager>
+        </>
+      );
+
+      expect(console.warn).not.toHaveBeenCalled();
+    });
+
+    it('does not warn when same-named plugins sit under different namespaces', () => {
+      const upper = {
+        decl: (prop: string, value: string) => ({ prop, value: value.toUpperCase() }),
+        name: 'p',
+      };
+      const lower = {
+        decl: (prop: string, value: string) => ({ prop, value: value.toLowerCase() }),
+        name: 'p',
+      };
+      const Box = BoxFactory();
+
+      render(
+        <>
+          <StyleSheetManager namespace="#a" plugins={[upper]}>
+            <Box>A</Box>
+          </StyleSheetManager>
+          <StyleSheetManager namespace="#b" plugins={[lower]}>
+            <Box>B</Box>
+          </StyleSheetManager>
+        </>
+      );
+
+      expect(console.warn).not.toHaveBeenCalled();
+      const css = getCSS(document);
+      expect(css).toMatch(/#a \.[\w-]+\{color:RED;\}/);
+      expect(css).toMatch(/#b \.[\w-]+\{color:red;\}/);
+    });
+
+    it('warns when same-named plugins share a namespace', () => {
+      const upper = {
+        decl: (prop: string, value: string) => ({ prop, value: value.toUpperCase() }),
+        name: 'p',
+      };
+      const lower = {
+        decl: (prop: string, value: string) => ({ prop, value: value.toLowerCase() }),
+        name: 'p',
+      };
+      const Box = BoxFactory();
+
+      render(
+        <>
+          <StyleSheetManager namespace="#a" plugins={[upper]}>
+            <Box>A</Box>
+          </StyleSheetManager>
+          <StyleSheetManager namespace="#a" plugins={[lower]}>
+            <Box>B</Box>
+          </StyleSheetManager>
+        </>
+      );
+
+      expect(console.warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not warn in production', () => {
+      (global as { __DEV__: boolean }).__DEV__ = false;
+      try {
+        const upper = {
+          decl: (prop: string, value: string) => ({ prop, value: value.toUpperCase() }),
+          name: 'p',
+        };
+        const lower = {
+          decl: (prop: string, value: string) => ({ prop, value: value.toLowerCase() }),
+          name: 'p',
+        };
+        const Box = BoxFactory();
+
+        render(
+          <>
+            <StyleSheetManager plugins={[upper]}>
+              <Box>A</Box>
+            </StyleSheetManager>
+            <StyleSheetManager plugins={[lower]}>
+              <Box>B</Box>
+            </StyleSheetManager>
+          </>
+        );
+
+        expect(console.warn).not.toHaveBeenCalled();
+      } finally {
+        (global as { __DEV__: boolean }).__DEV__ = true;
+      }
+    });
+  });
+
   it('subtrees with different StyleSheetManager configs should not conflict', () => {
     const Test = styled.div`
       padding-left: 5px;
