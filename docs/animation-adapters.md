@@ -36,7 +36,7 @@ CSS Animations L1+L2, Transitions L1+L2, Easing L1+L2.
 - **animation-direction**: `normal`, `reverse`, `alternate`, `alternate-reverse`.
 - **transition-behavior: allow-discrete**: 50% flip for non-interpolable property pairs with cancellation on retarget.
 - **@starting-style**: first-mount value override + transition-into-base on update.
-- **onAnimationEnd / onTransitionEnd**: spec-shaped `{ animationName | propertyName, elapsedTime }` events fired on completion (suppressed for canceled / superseded timings per spec).
+- **onAnimationEnd / onTransitionEnd**: spec-shaped `{ animationName | propertyName, elapsedTime }` events fired on completion (suppressed for canceled / superseded timings per spec). `elapsedTime` is in seconds. For an animation it is the active duration (duration times the iteration count) and does not include `animation-delay`. For a transition it is the transition duration and does not include `transition-delay`.
 - **Per-keyframe color interpolation**: full CSS `<color>` grammar: hex (3/4/6/8), `rgb()`/`rgba()`, named keywords via React Native's `processColor`, `hsl()`/`hwb()`, and modern function forms (`oklch`, `oklab`, `lab`, `lch`, `color-mix`) via the shared color-math polyfill. Genuinely discrete pairs (`display`, `visibility`) still snap at 50% per spec.
 - **Color interpolation space**: interpolates in oklab (the [CSS Color 4](https://drafts.csswg.org/css-color-4/) default interpolation space) rather than linear-light sRGB. The conversion pair is hoisted out of the per-sample loop so the inner is a Lab lerp plus one matrix multiply.
 - **Per-keyframe easing**: same-unit numeric values ride per-frame easing; the segmented interpolation samples easing curves so `cubic-bezier(...)` keyframes don't degrade to linear under the native driver.
@@ -61,6 +61,8 @@ CSS Animations L1+L2, Transitions L1+L2, Easing L1+L2.
 
 ## rn-web
 
-None of the gaps above apply on rn-web, where the browser runs the CSS itself. One gap is rn-web's own: its primitives (`View`, `Text`, and the components built on them) forward only an allowlist of props to the DOM element (`react-native-web/dist/modules/forwardedProps`), and `onAnimationEnd` / `onTransitionEnd` are not on it, so those callbacks do not fire on rn-web primitives.
+None of the gaps above apply on rn-web, where the browser runs the CSS itself. `onAnimationEnd` and `onTransitionEnd` fire on styled primitives whose ref is the DOM element, including `View` and `Text`, and on `FlatList`, `SectionList`, and `VirtualizedList`. They do not fire on `KeyboardAvoidingView`, whose ref is the component instance; put the callback on a styled `View` inside it. The payload is `{ animationName, elapsedTime }` or `{ propertyName, elapsedTime }`. `propertyName` is the camelCase style key, so `background-color` is reported as `backgroundColor`. `elapsedTime` is in seconds and does not include `animation-delay` or `transition-delay`, matching the Hermes adapter. A completion that bubbles from a descendant does not call an ancestor's callback, a completion on a pseudo-element does not call it, and `animationcancel` / `transitioncancel` do not call these props.
 
-Test coverage: `src/native/animation/test/animated-adapter.test.tsx` (Hermes), `src/native/animation/test/reanimated-adapter.test.ts` (Reanimated), `src/native/animation/test/smoke.test.ts` (compile-time descriptor surface).
+react-native-web primitives forward only an allowlist of props to the DOM element (`react-native-web/dist/modules/forwardedProps`). Those two callbacks are not on it, so the bridge listens for `animationend` and `transitionend` on the host node.
+
+Test coverage: `src/native/animation/test/animated-adapter.test.tsx` (Hermes), `src/native/animation/test/reanimated-adapter.test.ts` (Reanimated), `src/native/animation/test/smoke.test.ts` (compile-time descriptor surface), `src/test/web-bridge.test.tsx` (rn-web completion callbacks).
