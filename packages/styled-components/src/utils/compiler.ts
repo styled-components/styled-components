@@ -163,7 +163,7 @@ export default function createCompiler({
   const compileString = (css: string, selector = '', prefix = '', componentId = '&'): string[] => {
     // The author's CSS parses as the root block, so the parser's brace repair
     // keeps a stray `}` inside it; the wrapper is added as an AST node.
-    const wrapSelector = prefix || selector ? (prefix ? prefix + ' ' : '') + selector : '';
+    const wrapSelector = prefix && selector ? prefix + ' ' + selector : prefix || selector;
     const body = parse(normalize(css));
     const ast = wrapSelector ? wrapAst(body, wrapSelector) : body;
     if (ast.length === 0) return [];

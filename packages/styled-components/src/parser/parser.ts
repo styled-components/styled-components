@@ -188,8 +188,10 @@ export interface ParseOptions {
 /**
  * Parse a CSS string into a parser AST. Comments are expected to be gone
  * already (`normalize` in src/utils/normalize.ts); brace repair happens
- * here, at the root block, so a stray `}` or an unclosed block or string
- * can never close the scope the caller wraps the result in.
+ * here, at the root block, so a stray `}` can never close the scope the
+ * caller wraps the result in. A block left open at the end of input closes
+ * there and keeps its contents; a statement holding a string still open at
+ * the end of input is dropped.
  */
 export function parse(
   css: string,
@@ -207,12 +209,8 @@ export function parse(css: string, options?: ParseOptions): Root<string | Templa
     keepCommaSpaces: !!options?.keepCommaSpaces,
     len: css.length,
     templates: !!options?.templates,
-    unterminated: false,
   };
-  const out = parseBlock(ctx);
-  // The statement holding the unterminated block or string is the last one.
-  if (ctx.unterminated) out.pop();
-  return out;
+  return parseBlock(ctx);
 }
 
 /**
@@ -247,12 +245,6 @@ interface ParseContext {
    * promised a `string` and crashing downstream consumers.
    */
   templates: boolean;
-  /**
-   * Set when the input ended inside a block or a string. The statement
-   * holding that block is dropped on the way back to the root, matching
-   * what a stray `}` does to its own statement.
-   */
-  unterminated: boolean;
 }
 
 /**
@@ -294,7 +286,7 @@ function parseNested(ctx: ParseContext): Node[] {
 
 /**
  * Move `ctx.i` just past the `}` closing the block whose body starts at
- * `ctx.i`; reaching the end of input first marks the input unterminated.
+ * `ctx.i`, or to the end of input when the block is left open.
  */
 function skipBlock(ctx: ParseContext): void {
   const css = ctx.css;
@@ -304,7 +296,6 @@ function skipBlock(ctx: ParseContext): void {
   while (open > 0) {
     const j = scanQP(css, i, len, OPEN_BRACE, CLOSE_BRACE, -1, -1);
     if (j >= len) {
-      ctx.unterminated = true;
       i = len;
       break;
     }
@@ -350,7 +341,8 @@ function parseBlock(ctx: ParseContext): Node[] {
 
     if (first === AT) {
       ctx.i = i;
-      out.push(parseAtRule(ctx));
+      const atRule = parseAtRule(ctx);
+      if (atRule !== null) out.push(atRule);
       continue;
     }
 
@@ -382,7 +374,6 @@ function parseBlock(ctx: ParseContext): Node[] {
         // string still open (`stop > len`) drops the statement instead.
         if (colon !== -1 && stop === len) pushDecl(ctx, out, start, colon, stop);
         ctx.i = len;
-        if (!root) ctx.unterminated = true;
         return out;
       }
       const c = css.charCodeAt(stop);
@@ -597,9 +588,15 @@ function isNameStop(code: number): boolean {
   return isWS(code) || code === OPEN_BRACE || code === SEMICOLON;
 }
 
-function parseAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode {
+/**
+ * Parse the at-rule at `ctx.i`, or return `null` for one that is not a valid
+ * rule: a prelude holding a string still open at the end of input, or, at the
+ * root block, a stray `}` (which joins the prelude there instead of ending it).
+ */
+function parseAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode | null {
   const css = ctx.css;
   const len = ctx.len;
+  const root = ctx.depth === 0;
   let j = ctx.i + 1;
 
   // Read the at-rule name up to whitespace, `{`, or `;`.
@@ -617,22 +614,26 @@ function parseAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode {
     else break;
   }
 
-  // Scan prelude until `{`, `;`, `}`, or EOF
+  // Scan prelude until `{`, `;`, `}` (nested blocks only), or EOF
   const preludeStart = j;
+  let strayClose = false;
   j = scanQP(css, j, len, OPEN_BRACE, SEMICOLON, CLOSE_BRACE, -1);
+  while (root && j < len && css.charCodeAt(j) === CLOSE_BRACE) {
+    strayClose = true;
+    j = scanQP(css, j + 1, len, OPEN_BRACE, SEMICOLON, CLOSE_BRACE, -1);
+  }
 
   const prelude = trimRange(css, preludeStart, j);
   const nameField = templateOrString(ctx, name);
   const preludeField = templateOrString(ctx, prelude);
-  // A `;` ends a bodiless at-rule and is consumed; `}` or EOF ends it and
-  // is left for the enclosing block. A string still open at EOF drops the
-  // statement.
+  // A `;` ends a bodiless at-rule and is consumed; a nested `}` or EOF ends
+  // it and is left for the enclosing block.
   const delim = j < len ? css.charCodeAt(j) : -1;
   const hasBody = delim === OPEN_BRACE;
   ctx.i = hasBody || delim === SEMICOLON ? j + 1 : Math.min(j, len);
-  if (j > len) ctx.unterminated = true;
 
   const children = hasBody ? parseNested(ctx) : null;
+  if (strayClose || j > len) return null;
 
   if (children !== null && isKeyframesName(name)) {
     return {

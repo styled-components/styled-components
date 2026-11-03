@@ -173,6 +173,87 @@ describe('compiler', () => {
       ).toEqual(['.a{width:100px;}']);
     });
 
+    // CSS Syntax, "Consume a block's contents": "<EOF-token> <}-token> Return rules."
+    test.each([
+      [
+        'an open rule',
+        'color: blue; &:hover { color: red',
+        '.a',
+        ['.a{color:blue;}', '.a:hover{color:red;}'],
+      ],
+      [
+        'an open rule ending in `;`',
+        'color: blue; &:hover { color: red;',
+        '.a',
+        ['.a{color:blue;}', '.a:hover{color:red;}'],
+      ],
+      [
+        'an open rule ending in `; `',
+        'color: blue; &:hover { color: red; ',
+        '.a',
+        ['.a{color:blue;}', '.a:hover{color:red;}'],
+      ],
+      ['an open element rule', 'a: b; x { y: z', '.a', ['.a{a:b;}', '.a x{y:z;}']],
+      ['two open rules', '&:hover { &:focus { color: red', '.a', ['.a:hover:focus{color:red;}']],
+      [
+        'an open @media',
+        '@media (min-width: 1px) { color: red',
+        '.a',
+        ['@media (min-width: 1px){.a{color:red;}}'],
+      ],
+      [
+        'an open @media holding a closed rule',
+        '@media (min-width: 1px) { &:hover { color: red; }',
+        '.a',
+        ['@media (min-width: 1px){.a:hover{color:red;}}'],
+      ],
+      [
+        'an open @media after a declaration',
+        'color: blue; @media screen { color: red',
+        '.a',
+        ['.a{color:blue;}', '@media screen{.a{color:red;}}'],
+      ],
+      [
+        'an open @font-face with no selector',
+        '@font-face { font-family: x',
+        '',
+        ['@font-face{font-family:x;}'],
+      ],
+      [
+        'an open @keyframes with no selector',
+        '@keyframes k { from { opacity: 0 } to { opacity: 1',
+        '',
+        ['@keyframes k{from{opacity:0;}to{opacity:1;}}'],
+      ],
+      ['a string open at the end of input', 'a: b; content: "x; c: d;', '.a', ['.a{a:b;}']],
+      ['a single-quoted string open at the end of input', "a: b; content: 'x", '.a', ['.a{a:b;}']],
+      [
+        'a stray `}` swallowed by an at-rule prelude',
+        'color: blue; @media screen } color: red;',
+        '.a',
+        ['.a{color:blue;}'],
+      ],
+    ])('closes %s at the end of input', (_label, css, selector, expected) => {
+      expect(createCompiler().compile(css, selector)).toEqual(expected);
+    });
+
+    test.each([
+      ['no selector', 'color:red', '', '.parent', ['.parent{color:red;}']],
+      ['a selector', 'color:red', '.a', '.parent', ['.parent .a{color:red;}']],
+      [
+        'no selector and a nested rule',
+        '&:hover { color: red }',
+        '',
+        '.parent',
+        ['.parent:hover{color:red;}'],
+      ],
+    ])(
+      'wraps in a prefix with %s without a stray space',
+      (_label, css, selector, prefix, expected) => {
+        expect(createCompiler().compile(css, selector, prefix)).toEqual(expected);
+      }
+    );
+
     it('handles valid CSS unchanged (fast path)', () => {
       expect(
         runCssCompile(`
