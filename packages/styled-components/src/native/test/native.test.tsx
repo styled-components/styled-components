@@ -814,6 +814,57 @@ describe('native', () => {
     });
   });
 
+  describe('outermost-wrapper style function (attrs marker contract)', () => {
+    let nextLayerId: number;
+    // Records the id of the layer that ran it, since folded native layers share one style.
+    let systemStyles: jest.Mock<string, [number]>;
+
+    const createLayer = (tag: any) => {
+      const layerId = ++nextLayerId;
+
+      return (strings: TemplateStringsArray) =>
+        styled(tag).attrs({ $styleOwner: layerId })(strings, (props: Record<string, unknown>) =>
+          props.$styleOwner === layerId ? systemStyles(layerId) : null
+        );
+    };
+
+    beforeEach(() => {
+      nextLayerId = 0;
+      systemStyles = jest.fn(() => 'margin-top: 7px;');
+    });
+
+    it('runs the style function once for wrapped View layers, and the marker does not reach the host', () => {
+      const Inner = createLayer(View)`
+        padding-top: 1px;
+      `;
+      const Outer = createLayer(Inner)`
+        padding-bottom: 2px;
+      `;
+      const view = TestRenderer.create(<Outer />).root.findByType(View);
+
+      expect(systemStyles.mock.calls).toEqual([[2]]);
+      expect(mergeStyle(view.props.style)).toEqual({
+        marginTop: 7,
+        paddingBottom: 2,
+        paddingTop: 1,
+      });
+      expect(view.props).not.toHaveProperty('$styleOwner');
+    });
+
+    it('still runs the style function for the inner layer rendered alone', () => {
+      const Inner = createLayer(View)`
+        padding-top: 1px;
+      `;
+      createLayer(Inner)`
+        padding-bottom: 2px;
+      `;
+      const view = TestRenderer.create(<Inner />).root.findByType(View);
+
+      expect(systemStyles.mock.calls).toEqual([[1]]);
+      expect(mergeStyle(view.props.style)).toEqual({ marginTop: 7, paddingTop: 1 });
+    });
+  });
+
   describe('expanded API', () => {
     it('should attach a displayName', () => {
       const Dummy = (props: PropsWithChildren<{}>) => <View {...props} />;

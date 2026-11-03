@@ -203,3 +203,36 @@ class Form extends Component {
   }
 }
 ```
+
+## Run a style function only in the outermost wrapper
+
+A design system can offer a style function (for example an `sx` handler that turns a prop into CSS) on every component it creates. When one of its components wraps another by extending it with `styled`, the function should run once, in the outermost component, and not again in each layer underneath. Give each layer an id, set it as a transient prop with `.attrs`, and run the function only in the layer whose id matches:
+
+```js
+import styled from 'styled-components';
+
+let nextLayerId = 0;
+
+const designSystemStyled = tag => (strings, ...exprs) => {
+  const layerId = ++nextLayerId;
+  const layerStyles = props => (props.$styleOwner === layerId ? systemStyles(props) : null);
+
+  return styled(tag).attrs({ $styleOwner: layerId })(strings, ...exprs, layerStyles);
+};
+
+const Inner = designSystemStyled('div')`
+  color: red;
+`;
+
+const Outer = designSystemStyled(Inner)`
+  padding: 4px;
+`;
+```
+
+`<Outer />` runs `systemStyles` once, and its declarations land in the rule of the outer layer. `<Inner />` rendered on its own still runs it.
+
+When styled components wrap each other, their `attrs` apply from the innermost layer to the outermost, so the outermost `$styleOwner` wins. Every layer's interpolations then read that same winning value, and only the layer whose id matches it returns styles. A transient prop (`$` prefix) stays out of the props of the rendered element or component.
+
+Set the marker on every layer, including a layer that adds no style function. Such a layer still claims the marker, so the layers beneath it skip the function and nothing runs it. This is how a layer opts out of the style function for the whole chain below it.
+
+Each layer's result stays correct when it is rendered alone, because the marker only changes when another layer wraps it. Creating `Outer` does not change `Inner`.

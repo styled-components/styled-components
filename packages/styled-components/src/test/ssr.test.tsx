@@ -1022,6 +1022,40 @@ describe('ssr', () => {
       expect(html).toContain('placeholder="Enter email"');
     });
 
+    it('runs an outermost-wrapper style function once, in the outer rule only, in SSR', () => {
+      let nextLayerId = 0;
+      const systemStyles = jest.fn(() => 'margin: 7px;');
+      const createLayer = (tag: any) => {
+        const layerId = ++nextLayerId;
+
+        return (strings: TemplateStringsArray) =>
+          styled(tag).attrs({ $styleOwner: layerId })(strings, (props: Record<string, unknown>) =>
+            props.$styleOwner === layerId ? systemStyles() : null
+          );
+      };
+      const Inner = createLayer('div')`
+        color: red;
+      `;
+      const Outer = createLayer(Inner)`
+        padding: 1px;
+      `;
+      const sheet = new ServerStyleSheet();
+      const html = renderToString(sheet.collectStyles(<Outer />));
+
+      expect(systemStyles).toHaveBeenCalledTimes(1);
+      expect(sheet.getStyleTags()).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .c{color:red;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"c,"}/*!sc*/
+        .d{padding:1px;margin:7px;}/*!sc*/
+        data-styled.g2[id="sc-b"]{content:"d,"}/*!sc*/
+        </style>
+      `);
+      expect(html).toBe('<div class="sc-a sc-b c d"></div>');
+    });
+
     it('should render themed components in SSR', () => {
       const Heading = styled.h1`
         color: ${p => p.theme.color};
