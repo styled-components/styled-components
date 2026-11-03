@@ -578,8 +578,10 @@ describe('bundle size', () => {
     // arity-2 attrs tracing with its runtime fallback, and the server entry
     // points a consumer bundle would shake away. Ceiling includes buffered
     // injection (StyleInjector + provisional rule stash) on top of main, and
-    // the 6.x forward-ports (explicit-undefined forwarding, native attrs parity).
-    expect(sizeKB).toBeLessThan(15.5);
+    // the 6.x forward-ports (explicit-undefined forwarding, native attrs parity),
+    // and the parser hardening against hostile interpolated values (brace
+    // repair with comments, nesting depth cap).
+    expect(sizeKB).toBeLessThan(15.6);
   });
   it('production bundle size with real bundler tree-shaking', async () => {
     const webpack = require('webpack');
@@ -654,8 +656,9 @@ describe('bundle size', () => {
       // The in-house parser (Source, AST-direct emit, fragment splicing,
       // interpolation-sentinel gating) is reachable from any styled call, so it
       // dominates what survives here and cannot shake away. Ceiling includes
-      // buffered injection on top of main's plugin composition.
-      expect(sizeKB).toBeLessThan(14.3);
+      // buffered injection on top of main's plugin composition, and the parser
+      // hardening against hostile interpolated values.
+      expect(sizeKB).toBeLessThan(14.4);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
@@ -713,8 +716,9 @@ describe('bundle size', () => {
       // v6.4.1 all-in for this same entry is 11.44kB gzip. v7 sits above it
       // because the in-house parser and the arity-2 attrs bridge ship in full
       // while v6 leaned on a smaller bundled preprocessor. Ceiling includes
-      // buffered injection on top of main's plugin composition.
-      expect(sizeKB).toBeLessThan(14.3);
+      // buffered injection on top of main's plugin composition, and the parser
+      // hardening against hostile interpolated values.
+      expect(sizeKB).toBeLessThan(14.4);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
