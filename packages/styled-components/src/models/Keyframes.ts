@@ -5,7 +5,6 @@ import { Compiler, Keyframes as KeyframesType } from '../types';
 import styledError from '../utils/error';
 import generateAlphabeticName from '../utils/generateAlphabeticName';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
-import { setToString } from '../utils/setToString';
 import { mainCompiler } from './StyleSheetManager';
 
 /**
@@ -37,10 +36,14 @@ export default class Keyframes implements KeyframesType {
     // Uses groupForId directly (not StyleSheet.registerId) because
     // GroupIDAllocator is pure JS; safe for native builds.
     groupForId(this.id);
+  }
 
-    setToString(this, () => {
-      throw styledError(12, String(this.name));
-    });
+  /**
+   * Refuses string interpolation. A prototype method rather than an own
+   * property: assigning an own `toString` throws when the built-ins are frozen.
+   */
+  toString(): string {
+    throw styledError(12, String(this.name));
   }
 
   /**
