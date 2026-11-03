@@ -12,6 +12,8 @@ import {
   SEMICOLON,
   SINGLE_QUOTE,
   SLASH,
+  SPACE,
+  TAB,
 } from './charCodes';
 
 /**
@@ -26,13 +28,14 @@ export function isEscaped(css: string, i: number): boolean {
 }
 
 /**
- * True when the nearest non-whitespace character before `i` is `:`, so a `//`
- * at `i` starts a value (`--cdn: //cdn.example.com/x.png`) rather than a line comment.
+ * True when the nearest non-blank character before `i` on the same line is `:`,
+ * so a `//` at `i` starts a value (`--cdn: //cdn.example.com/x.png`) rather than
+ * a line comment. A `//` on a later line than the colon stays a comment.
  */
 function isPrecededByColon(css: string, i: number): boolean {
   while (--i >= 0) {
     const code = css.charCodeAt(i);
-    if (!isWS(code)) return code === COLON;
+    if (code !== SPACE && code !== TAB) return code === COLON;
   }
 
   return false;

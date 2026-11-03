@@ -307,9 +307,14 @@ background-color: green;`)
         ['one space', '--cdn: //cdn.example.com/x.png;\ncolor: red;'],
         ['no space', '--cdn://cdn.example.com/x.png;\ncolor: red;'],
         ['a tab', '--cdn:\t//cdn.example.com/x.png;\ncolor: red;'],
-        ['a newline', '--cdn:\n//cdn.example.com/x.png;\ncolor: red;'],
       ])('keeps the value with %s between the colon and //', (_label, css) => {
         expect(normalize(css)).toBe(css);
+      });
+
+      // A `//` on a later line than the colon is far likelier a comment inside a
+      // multi-line value than a value that starts on its own line.
+      it('strips a comment on the line after a trailing colon', () => {
+        expect(normalize('background:\n  // stops\n  red;')).toBe('background:\n  \n  red;');
       });
 
       it('compiles a protocol-relative custom property value', () => {

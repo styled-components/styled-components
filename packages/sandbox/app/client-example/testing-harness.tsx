@@ -223,10 +223,10 @@ export function ClientTestingHarness() {
         </DisabledButton>
       </Section>
 
-      {/* 5. Explicit undefined preserves prop (#5683) */}
+      {/* 5. `as={undefined}` renders the default element */}
       <Section>
         <SectionTitle>
-          5. Explicit undefined override (#5683) <TestStatus checks={test5Checks} />
+          5. Undefined <code>as</code> prop <TestStatus checks={test5Checks} />
         </SectionTitle>
         <SectionDesc>
           Passing <code>as={'{undefined}'}</code> should render the default element (button), not
