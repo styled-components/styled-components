@@ -4,31 +4,27 @@ import { IS_RSC } from '../constants';
 import StyleSheet from '../sheet';
 import { InsertionTarget, ShouldForwardProp, Stringifier } from '../types';
 import createStylisInstance from '../utils/stylis';
+import { createRSCCache } from '../utils/rscCache';
 
 export const mainSheet: StyleSheet = new StyleSheet();
 export const mainStylis: Stringifier = createStylisInstance();
 
-/**
- * RSC context slot - module-level mutable state scoped per render via React.cache.
- * In RSC, createContext doesn't exist, so StyleSheetManager writes here and
- * useStyleSheetContext reads from here. Single-threaded RSC renders guarantee
- * no concurrent mutation. React.cache ensures reset between renders.
- */
-let rscContextOverride: IStyleSheetContext | null = null;
-let rscLastPlugins: stylis.Middleware[] | undefined;
-let rscCachedStylis: Stringifier = mainStylis;
+type RscSlot = { override: IStyleSheetContext | null };
+const rscFallbackSlot: RscSlot = { override: null };
 
-/** Per-render reset to prevent HMR accumulation (see docs/rsc-style-injection.md). */
-const ensureSheetReset: (() => void) | null = IS_RSC
-  ? (((React as any).cache as (<T extends (...args: any[]) => any>(fn: T) => T) | undefined)?.(
-      () => {
-        mainSheet.names.clear();
-        mainSheet.keyframeIds.clear();
-        mainSheet.clearTag();
-        rscContextOverride = null;
-      }
-    ) ?? null)
-  : null;
+/** Created once per server render; creating it is the per-render reset (see docs/rsc-style-injection.md). */
+const getRscSlot = createRSCCache((): RscSlot => {
+  mainSheet.names.clear();
+  mainSheet.keyframeIds.clear();
+  mainSheet.clearTag();
+  return { override: null };
+});
+const rscSlot = (): RscSlot => (getRscSlot ? getRscSlot() : rscFallbackSlot);
+
+let rscLastPlugins: stylis.Middleware[] | undefined;
+let rscLastNamespace: string | undefined;
+let rscLastPrefix: boolean | undefined;
+let rscCachedStylis: Stringifier = mainStylis;
 
 export type IStyleSheetContext = {
   shouldForwardProp?: ShouldForwardProp<'web'> | undefined;
@@ -63,12 +59,7 @@ export type IStylisContext = Stringifier | void;
 export function useStyleSheetContext() {
   if (!IS_RSC) return React.useContext(StyleSheetContext);
 
-  // Reset mainSheet once per render to prevent HMR accumulation.
-  // React.cache ensures this runs exactly once per render, so calling
-  // it here AND in StyleSheetManager is safe - whichever runs first wins.
-  if (ensureSheetReset) ensureSheetReset();
-
-  return rscContextOverride || defaultContextValue;
+  return rscSlot().override || defaultContextValue;
 }
 
 export type IStyleSheetManager = React.PropsWithChildren<{
@@ -135,14 +126,11 @@ export type IStyleSheetManager = React.PropsWithChildren<{
 
 /** Configure style injection for descendant styled components (target element, stylis plugins, prop forwarding). */
 export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element {
-  // In RSC, context doesn't exist but we can set module-level state.
-  // Single-threaded RSC renders + React.cache reset make this safe.
   if (IS_RSC) {
-    // Reset once per render (React.cache scopes this per request)
-    if (ensureSheetReset) ensureSheetReset();
+    const slot = rscSlot();
 
     // Merge with existing override: inherit parent values when props are omitted.
-    const parentOverride = rscContextOverride || defaultContextValue;
+    const parentOverride = slot.override || defaultContextValue;
 
     // Build a stylis instance when any stylis-related prop is provided.
     // Cache it when the plugins array ref is stable.
@@ -152,8 +140,15 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
       props.enableVendorPrefixes !== undefined;
 
     if (hasStylisProps) {
-      if (props.stylisPlugins && props.stylisPlugins !== rscLastPlugins) {
+      if (
+        props.stylisPlugins &&
+        (props.stylisPlugins !== rscLastPlugins ||
+          props.namespace !== rscLastNamespace ||
+          props.enableVendorPrefixes !== rscLastPrefix)
+      ) {
         rscLastPlugins = props.stylisPlugins;
+        rscLastNamespace = props.namespace;
+        rscLastPrefix = props.enableVendorPrefixes;
         rscCachedStylis = createStylisInstance({
           options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
           plugins: props.stylisPlugins,
@@ -165,6 +160,9 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
           options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
           plugins: props.stylisPlugins ?? parentOverride.stylisPlugins,
         });
+        rscLastPlugins = undefined;
+        rscLastNamespace = undefined;
+        rscLastPrefix = undefined;
       }
     }
 
@@ -179,14 +177,14 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     const resolvedPlugins = props.stylisPlugins ?? parentOverride.stylisPlugins;
 
     if (resolvedStylis !== mainStylis || resolvedShouldForwardProp) {
-      rscContextOverride = {
+      slot.override = {
         shouldForwardProp: resolvedShouldForwardProp,
         styleSheet: mainSheet,
         stylis: resolvedStylis,
         stylisPlugins: resolvedPlugins,
       };
     } else {
-      rscContextOverride = null;
+      slot.override = null;
     }
 
     return props.children as React.JSX.Element;
