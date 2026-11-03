@@ -228,9 +228,9 @@ describe('server build (minified)', () => {
     const html = renderToString(sheet.collectStyles(React.createElement(Box, null, 'x')));
 
     expect(html.replace(/class="[^"]*"/, 'class="…"')).toBe('<div class="…">x</div>');
-    expect(rulesOf(sheet.getStyleTags().replace(/<\/?style[^>]*>/g, ''))).toEqual([
-      '.c1{color:red;}',
-    ]);
+    // One <style> tag holding every rule.
+    const [, styleBody] = sheet.getStyleTags().match(/^<style[^>]*>([^<]*)<\/style>$/) ?? [];
+    expect(rulesOf(styleBody ?? '')).toEqual(['.c1{color:red;}']);
     expect(typeof server.__PRIVATE__.mainSheet.toString).toBe('function');
     expect(server.__PRIVATE__.mainSheet.toString()).not.toBe('[object Object]');
     expect(server.__PRIVATE__.mainSheet.names instanceof Map).toBe(true);
