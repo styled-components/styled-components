@@ -295,6 +295,41 @@ background-color: green;`)
         ]
       `);
     });
+
+    // CSS Syntax, "consume comments": "If the next two input code points are
+    // U+002F SOLIDUS (/) followed by a U+002A ASTERISK (*), consume them and all
+    // following code points up to and including the first U+002A ASTERISK (*)
+    // followed by a U+002F SOLIDUS (/), or up to an EOF code point." A `//`
+    // never opens a CSS comment, so after a `:` it is the start of a value
+    // (a protocol-relative URL); the line-comment strip is a library extension.
+    describe('protocol-relative value after a colon', () => {
+      test.each([
+        ['one space', '--cdn: //cdn.example.com/x.png;\ncolor: red;'],
+        ['no space', '--cdn://cdn.example.com/x.png;\ncolor: red;'],
+        ['a tab', '--cdn:\t//cdn.example.com/x.png;\ncolor: red;'],
+        ['a newline', '--cdn:\n//cdn.example.com/x.png;\ncolor: red;'],
+      ])('keeps the value with %s between the colon and //', (_label, css) => {
+        expect(normalize(css)).toBe(css);
+      });
+
+      it('compiles a protocol-relative custom property value', () => {
+        expect(runCssCompile('--cdn: //cdn.example.com/x.png;\ncolor: red;')).toEqual([
+          '.a{--cdn://cdn.example.com/x.png;color:red;}',
+        ]);
+      });
+
+      it('still strips a comment that follows a declaration terminator', () => {
+        expect(normalize('color: blue; // note\ncolor: red;')).toBe('color: blue; \ncolor: red;');
+      });
+
+      it('scans a long whitespace run before // in linear time', () => {
+        const css = 'a: b;' + ' '.repeat(200_000) + '// c\ncolor: red;';
+        const start = performance.now();
+
+        expect(normalize(css)).toBe('a: b;' + ' '.repeat(200_000) + '\ncolor: red;');
+        expect(performance.now() - start).toBeLessThan(500);
+      });
+    });
   });
 
   describe('url() function handling', () => {
@@ -1560,6 +1595,24 @@ background-color: green;`)
       expect(compiler.compile(`appearance: none;`, '.a', undefined, 'a')).toEqual([
         '.a{-webkit-appearance:NONE;appearance:NONE;}',
       ]);
+    });
+
+    const unnamedPluginError = new Error(
+      "A plugin has been supplied that is not named. We need a name for each plugin to be able to prevent styling collisions between different plugin configurations within the same app. Before you pass your plugin to `<StyleSheetManager plugins={[]}>`, please make sure each plugin is uniquely-named, e.g.\n\n```js\nObject.defineProperty(importedPlugin, 'name', { value: 'some-unique-name' });\n```"
+    );
+
+    it('throws error 15 for a plugin object with no name', () => {
+      expect(() => {
+        // @ts-expect-error negative-behavior assertion: a plugin without `name` is a type error and a runtime error
+        createCompiler({ plugins: [{ decl: () => undefined }] });
+      }).toThrow(unnamedPluginError);
+    });
+
+    it('throws error 15 for an anonymous arrow-function plugin', () => {
+      expect(() => {
+        // @ts-expect-error negative-behavior assertion: a function is not a plugin object, and an inline arrow has no name
+        createCompiler({ plugins: [() => undefined] });
+      }).toThrow(unnamedPluginError);
     });
 
     it('leaves single-result plugins unchanged when neighbors return undefined', () => {

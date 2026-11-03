@@ -25,6 +25,19 @@ export function isEscaped(css: string, i: number): boolean {
   return (backslashes & 1) === 1;
 }
 
+/**
+ * True when the nearest non-whitespace character before `i` is `:`, so a `//`
+ * at `i` starts a value (`--cdn: //cdn.example.com/x.png`) rather than a line comment.
+ */
+function isPrecededByColon(css: string, i: number): boolean {
+  while (--i >= 0) {
+    const code = css.charCodeAt(i);
+    if (!isWS(code)) return code === COLON;
+  }
+
+  return false;
+}
+
 /** Strip JS-style line comments + CSS block comments and validate brace balance in one pass. */
 export function normalize(css: string): string {
   const hasLineComments = css.indexOf('//') !== -1;
@@ -110,10 +123,10 @@ export function normalize(css: string): string {
     }
 
     if (code === SLASH && i + 1 < len && css.charCodeAt(i + 1) === SLASH) {
-      // URL scheme guard: `https://`, `mailto://`, etc. are NOT line comments.
-      // If the char immediately before `//` is `:`, treat the whole sequence
-      // as part of a URL and skip the line-comment strip.
-      if (i > 0 && css.charCodeAt(i - 1) === COLON) {
+      // URL guard: `https://` and a protocol-relative `: //host` value are NOT
+      // line comments. A `:` before the `//` (past any whitespace) means the
+      // sequence belongs to a value, so skip the line-comment strip.
+      if (isPrecededByColon(css, i)) {
         i += 2;
         continue;
       }

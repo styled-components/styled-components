@@ -395,6 +395,78 @@ describe('rehydrateSheet', () => {
   });
 });
 
+describe('version mismatch warning', () => {
+  let warn: jest.SpyInstance;
+
+  beforeEach(() => {
+    warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warn.mockRestore();
+  });
+
+  it('warns once with the exact message when a mismatched-version tag exists', () => {
+    document.head.innerHTML = `
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="5.4.0">
+        .a {}/*!sc*/
+        ${SC_ATTR}.g11[id="idA"]{content:"nameA,"}/*!sc*/
+      </style>
+    `;
+
+    rehydrateSheet(new StyleSheet({ isServer: true }));
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      `[sc] found server-rendered styles from styled-components 5.4.0, but this copy is ${SC_VERSION}. If both come from the same app, class names will not match and hydration will fail: make sure the server and the browser load the same version (run \`npm ls styled-components\` to find duplicates). Pages that intentionally host separate apps on different versions can ignore this.`
+    );
+  });
+
+  it('does not warn when the server and browser versions match', () => {
+    document.head.innerHTML = `
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="${SC_VERSION}">
+        .a {}/*!sc*/
+        ${SC_ATTR}.g11[id="idA"]{content:"nameA,"}/*!sc*/
+      </style>
+    `;
+
+    rehydrateSheet(new StyleSheet({ isServer: true }));
+
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('does not warn when there are no style tags', () => {
+    document.head.innerHTML = '';
+
+    rehydrateSheet(new StyleSheet({ isServer: true }));
+
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('does not warn about a mismatched-version active tag created at runtime by another client copy', () => {
+    document.head.innerHTML = `
+      <style ${SC_ATTR}="${SC_ATTR_ACTIVE}" ${SC_ATTR_VERSION}="5.4.0">.a {}/*!sc*/</style>
+    `;
+
+    rehydrateSheet(new StyleSheet({ isServer: true }));
+
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('warns once even with several mismatched-version tags, across multiple rehydration calls', () => {
+    document.head.innerHTML = `
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="5.4.0">.a {}/*!sc*/</style>
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="5.5.0">.b {}/*!sc*/</style>
+    `;
+
+    // Neither tag matches the running version, so both stay in the DOM for the second call.
+    rehydrateSheet(new StyleSheet({ isServer: true }));
+    rehydrateSheet(new StyleSheet({ isServer: true }));
+
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('rehydrateSheet with different target types', () => {
   it('rehydrates from document when no target is provided', () => {
     document.head.innerHTML = `

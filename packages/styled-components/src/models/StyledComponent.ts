@@ -299,7 +299,7 @@ function resolveContext<Props extends BaseObject>(
         )
       : attrDef;
 
-    mergeAttrDict(context, props, resolvedAttrDef as Dict<unknown>);
+    mergeAttrDict(context, resolvedAttrDef as Dict<unknown>);
   }
 
   if ('className' in props && typeof props.className === 'string') {
@@ -388,16 +388,19 @@ function findBaseDecl(
  */
 /**
  * Merge an attrs-resolved dict into the execution context: `className` joins,
- * `style` shallow-merges, and every other key overwrites unless the user
- * explicitly passed `undefined` for it (which signals intent to reset the
- * value). The final `else` casts at the assignment site since attrs
- * intentionally add arbitrary keys to the resolved context.
+ * `style` shallow-merges, and every other key overwrites, so attrs always wins
+ * (docs/attrs.md). An `undefined` value deletes the key when context held a
+ * defined value; context already holding the caller's explicit `undefined`
+ * (an identity-spread attrs function echoes it back) keeps it, so a component
+ * target still receives it. A key context never held stays absent. Only a
+ * render where attrs clears a key pays the `delete` slow-object cost.
  */
 function mergeAttrDict<Props extends BaseObject>(
   context: React.HTMLAttributes<Element> & ExecutionContext & Props,
-  props: ExecutionProps & Props,
   resolved: Dict<unknown>
 ): void {
+  const target = context as unknown as Dict<unknown>;
+
   for (const key in resolved) {
     if (key === 'className') {
       context.className = joinStrings(context.className, resolved[key] as string);
@@ -406,15 +409,16 @@ function mergeAttrDict<Props extends BaseObject>(
         ...context.style,
         ...(resolved[key] as React.CSSProperties),
       };
-    } else if (!(key in props && (props as Dict<unknown>)[key] === undefined)) {
-      (context as unknown as Dict<unknown>)[key] = resolved[key];
+    } else if (resolved[key] !== undefined) {
+      target[key] = resolved[key];
+    } else if (target[key] !== undefined) {
+      delete target[key];
     }
   }
 }
 
 function applyPostAttrsWeb<Props extends BaseObject>(
   context: React.HTMLAttributes<Element> & ExecutionContext & Props,
-  props: ExecutionProps & Props,
   attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
   plans: ReadonlyArray<PostAttrsPlan | null> | undefined,
   webStyle: WebStyle
@@ -441,7 +445,7 @@ function applyPostAttrsWeb<Props extends BaseObject>(
     planIdx++;
 
     if (plan !== null && plan !== undefined) {
-      mergeAttrDict(context, props, plan.output);
+      mergeAttrDict(context, plan.output);
       if (plan.popped !== null) {
         if (popOverrides === null) popOverrides = {};
         plan.popped.forEach(key => {
@@ -517,7 +521,7 @@ function applyPostAttrsWeb<Props extends BaseObject>(
     const resolved = (
       attr as (p: ExecutionContext & Props, a: CompiledAst) => ExecutionProps & Partial<Props>
     )({ ...context }, astAccessor);
-    mergeAttrDict(context, props, resolved as Dict<unknown>);
+    mergeAttrDict(context, resolved as Dict<unknown>);
   }
 
   return popOverrides;
@@ -527,12 +531,29 @@ function buildPropsForElement<Context extends ExecutionContext>(
   context: Context,
   elementToBeCreated: WebTarget,
   theme: DefaultTheme | undefined,
-  shouldForwardProp: ((prop: string, el: WebTarget) => boolean) | undefined
+  shouldForwardProp: ((prop: string, el: WebTarget) => boolean) | undefined,
+  isDOMTarget: boolean
 ): Dict<unknown> {
   const out: Dict<unknown> = {};
 
   for (const key in context) {
     if (context[key] === undefined) {
+      // Attrs delete the keys they clear, so an `undefined` left here is the caller's
+      // explicit one: it reaches a component target so that component can fall back
+      // to its own default, and never a DOM tag.
+      if (
+        !isDOMTarget &&
+        key !== 'className' &&
+        key !== 'forwardedAs' &&
+        key !== 'ref' &&
+        key !== 'theme' &&
+        key[0] !== '$' &&
+        key !== 'as' &&
+        (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated))
+      ) {
+        out[key] = undefined;
+      }
+
       continue;
     }
     if (
@@ -634,7 +655,6 @@ function useImpl<Props extends BaseObject>(
       if (wantsPostAttrs) {
         popOverrides = applyPostAttrsWeb<Props>(
           context,
-          props,
           componentAttrs,
           forwardedComponent.postAttrsPlans,
           webStyle
@@ -675,7 +695,6 @@ function useImpl<Props extends BaseObject>(
     if (wantsPostAttrs) {
       popOverrides = applyPostAttrsWeb<Props>(
         context,
-        props,
         componentAttrs,
         forwardedComponent.postAttrsPlans,
         webStyle
@@ -702,7 +721,14 @@ function useImpl<Props extends BaseObject>(
   }
 
   const elementToBeCreated: WebTarget = context.as || target;
-  const elementProps = buildPropsForElement(context, elementToBeCreated, theme, shouldForwardProp);
+  const isDOMTarget = isTag(elementToBeCreated);
+  const elementProps = buildPropsForElement(
+    context,
+    elementToBeCreated,
+    theme,
+    shouldForwardProp,
+    isDOMTarget
+  );
 
   // Apply popped declarations as inline-style overrides; user-passed
   // `style` keys win so explicit overrides aren't clobbered by the reset.
@@ -718,9 +744,8 @@ function useImpl<Props extends BaseObject>(
     classString += ' ' + context.className;
   }
 
-  elementProps[
-    isTag(elementToBeCreated) && elementToBeCreated.includes('-') ? 'class' : 'className'
-  ] = classString;
+  elementProps[isDOMTarget && elementToBeCreated.includes('-') ? 'class' : 'className'] =
+    classString;
 
   if (forwardedRef) {
     elementProps.ref = forwardedRef;

@@ -130,8 +130,37 @@ const warnOnUnadoptableStyles = (container: Document | ShadowRoot) => {
   }
 };
 
+/**
+ * {@link SELECTOR} only matches the running version, so a server-rendered tag
+ * from another version is skipped without a trace and its class names go stale.
+ * Browser-created "active" tags carry a version stamp too; a second client copy
+ * at another version is the base.ts multiple-instances warning's case, not this one.
+ */
+const warnOnVersionMismatch = (container: Document | ShadowRoot) => {
+  const tags = container.querySelectorAll(`style[${SC_ATTR}]`);
+
+  for (let i = 0, l = tags.length; i < l; i++) {
+    if (tags[i].getAttribute(SC_ATTR) === SC_ATTR_ACTIVE) continue;
+
+    const serverVersion = tags[i].getAttribute(SC_ATTR_VERSION);
+
+    if (serverVersion !== null && serverVersion !== SC_VERSION) {
+      warnOnce(
+        'rehydration-version-mismatch',
+        `found server-rendered styles from styled-components ${serverVersion}, but this copy is ${SC_VERSION}. If both come from the same app, class names will not match and hydration will fail: make sure the server and the browser load the same version (run \`npm ls styled-components\` to find duplicates). Pages that intentionally host separate apps on different versions can ignore this.`
+      );
+      return;
+    }
+  }
+};
+
 export const rehydrateSheet = (sheet: Sheet) => {
   const container = getRehydrationContainer(sheet.options.target);
+
+  if (__DEV__) {
+    warnOnVersionMismatch(container);
+  }
+
   const nodes = container.querySelectorAll<HTMLStyleElement>(SELECTOR);
 
   for (let i = 0, l = nodes.length; i < l; i++) {
