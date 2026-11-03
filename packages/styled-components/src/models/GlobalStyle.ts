@@ -89,11 +89,10 @@ export default class GlobalStyle<Props extends object> {
     const prev = entries.get(instance);
     entries.set(instance, next);
 
-    const appendsToCollection =
-      styleSheet.server && !prev && !styleSheet.hasNameForId(id, next.name);
+    // Server entries are kept for the sheet's lifetime, so a repeat render rebuilds with
+    // every sibling. A first render appends: a rebuild would re-emit rules a stream already flushed.
+    const appendsToCollection = styleSheet.server && !prev;
 
-    // A server render deletes its entry right after, so a rebuild would drop every
-    // earlier instance's output from a per-request collection: append instead.
     if (appendsToCollection) {
       styleSheet.insertRules(id, next.name, next.rules);
       return;

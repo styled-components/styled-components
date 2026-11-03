@@ -49,12 +49,15 @@ length and element-wise equal, the CSSOM rebuild is skipped. That fast path is c
 caches, so a cache-based fast path would skip a rebuild the DOM still needs. Any new fast path here
 must make the same check.
 
-Server-side registry entries must be deleted explicitly once styles are collected, because no
-`useLayoutEffect` cleanup runs on the server. Because each server instance's entry is deleted right
-after its render, a rebuild would drop every earlier instance's output from a per-request
-collection (`ServerStyleSheet`), so a server render appends instead, unless the instance's name is
-already in the sheet: a second render of the same instance into one collection rebuilds, so its
-earlier rules are replaced rather than duplicated.
+No `useLayoutEffect` cleanup runs on the server. A server sheet's entries stay until the sheet
+itself is collected (the registry is keyed by sheet, and a server sheet lives for one request), so a
+rebuild there sees every instance. RSC renders into the process-wide default sheet, so the RSC
+branch deletes each entry right after reading it.
+
+An instance's first render into a server sheet appends: a rebuild would re-emit siblings' rules that
+a stream already flushed (`clearTag` empties the tag after each chunk but keeps the names). A repeat
+render of the same instance (a client re-render against a server sheet) rebuilds, so its earlier
+rules are replaced and its siblings' rules stay.
 
 Only a sheet constructed with `isServer: true` (`ServerStyleSheet`, or a sheet derived from one)
 takes this path. The process-wide default sheet is never a server sheet, even on a server:

@@ -165,9 +165,10 @@ export default function createGlobalStyle<Props extends object>(
           : undefined;
       const css = entry ? joinRules(entry.rules) : '';
 
-      if (css) {
-        deleteInstance(ssc.styleSheet, styledComponentId, instance);
+      // RSC renders into the process-wide default sheet, so the entry is freed here.
+      deleteInstance(ssc.styleSheet, styledComponentId, instance);
 
+      if (css) {
         if (process.env.NODE_ENV !== 'production' && getGlobalEmitCounts) {
           const counts = getGlobalEmitCounts();
           const count = (counts.get(styledComponentId) || 0) + 1;
@@ -197,12 +198,6 @@ export default function createGlobalStyle<Props extends object>(
         // inside an array; a bare returned element repeats its type and key.
         return [styleElement];
       }
-    }
-
-    // Clean up server instance cache - no useLayoutEffect cleanup runs on the
-    // server, so the shared instance entries would grow unboundedly across SSR requests.
-    if (__SERVER__ || ssc.styleSheet.server) {
-      deleteInstance(ssc.styleSheet, styledComponentId, instance);
     }
 
     return null;

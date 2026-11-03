@@ -1072,13 +1072,12 @@ describe('GlobalStyle.renderStyles (unit)', () => {
       'sc-global-repeat-test'
     );
 
-    for (const color of ['a', 'b', 'c']) {
-      gs.renderStyles(1, { theme: { color } } as any, serverSheet, mainStylis);
-      deleteInstance(serverSheet, gs.componentId, 1);
-    }
+    gs.renderStyles(1, { theme: { color: 'a' } } as any, serverSheet, mainStylis);
+    gs.renderStyles(2, { theme: { color: 'b' } } as any, serverSheet, mainStylis);
+    gs.renderStyles(1, { theme: { color: 'c' } } as any, serverSheet, mainStylis);
 
     expect(serverSheet.getTag().getGroup(getGroupForId(gs.componentId))).toBe(
-      'body{color:c;}/*!sc*/\n'
+      'body{color:c;}/*!sc*/\nbody{color:b;}/*!sc*/\n'
     );
   });
 
@@ -1363,6 +1362,25 @@ describe('createGlobalStyle with the same id', () => {
     rerender(<App v="updated" />);
 
     expect(getRenderedCSS()).toBe('body {\n  color: updated;\n}\nbody {\n  color: secondx;\n}');
+  });
+
+  it('keeps sibling mounts when one mount re-renders into a server sheet', () => {
+    const Global = createGlobalStyle<{ v: string }>`body { color: ${p => p.v}; }`;
+    const serverSheet = new StyleSheet({ isServer: true, useCSSOMInjection: false });
+    const app = (first: string) => (
+      <StyleSheetManager sheet={serverSheet}>
+        <Global v={first} />
+        <Global v="second" />
+      </StyleSheetManager>
+    );
+
+    const { rerender } = render(app('first'));
+    rerender(app('updated'));
+
+    const group = getGroupForId(Object.keys(serverSheet.gs).join());
+    expect(serverSheet.getTag().getGroup(group)).toBe(
+      'body{color:updated;}/*!sc*/\nbody{color:second;}/*!sc*/\n'
+    );
   });
 
   it('allocates a fresh instance when the StyleSheetManager sheet changes', () => {
