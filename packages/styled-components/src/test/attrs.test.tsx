@@ -861,6 +861,130 @@ describe('attrs', () => {
     });
   });
 
+  describe('outermost-wrapper style function (attrs marker contract)', () => {
+    // Outermost attrs win across a wrapped chain, and every layer's interpolations see
+    // the resolved value, so a layer runs the style function only when the marker is its own id.
+    let nextLayerId: number;
+    let systemStyles: jest.Mock<string, [Record<string, unknown>]>;
+
+    const createLayer = (tag: any, options: { withStyleFunction?: boolean } = {}) => {
+      const layerId = ++nextLayerId;
+      const layerStyles = (props: Record<string, unknown>) =>
+        props.$styleOwner === layerId ? systemStyles(props) : null;
+
+      return (strings: TemplateStringsArray, ...exprs: any[]) =>
+        styled(tag).attrs({ $styleOwner: layerId })(
+          strings,
+          ...exprs,
+          ...(options.withStyleFunction === false ? [] : [layerStyles])
+        );
+    };
+
+    beforeEach(() => {
+      nextLayerId = 0;
+      systemStyles = jest.fn(() => 'margin: 7px;');
+    });
+
+    it('runs the style function once per render of the outer layer, in the outer rule only', () => {
+      const Inner = createLayer('div')`
+        color: red;
+      `;
+      const Outer = createLayer(Inner)`
+        padding: 1px;
+      `;
+
+      render(<Outer />);
+
+      expect(systemStyles).toHaveBeenCalledTimes(1);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".c {
+          color: red;
+        }
+        .d {
+          padding: 1px;
+          margin: 7px;
+        }"
+      `);
+    });
+
+    it('still runs the style function for the inner layer rendered alone, after the outer layer exists', () => {
+      const Inner = createLayer('div')`
+        color: red;
+      `;
+      createLayer(Inner)`
+        padding: 1px;
+      `;
+
+      render(<Inner />);
+
+      expect(systemStyles).toHaveBeenCalledTimes(1);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".c {
+          color: red;
+          margin: 7px;
+        }"
+      `);
+    });
+
+    it('runs the style function once for three layers, in the outermost rule only', () => {
+      const Base = createLayer('div')`
+        color: red;
+      `;
+      const Middle = createLayer(Base)`
+        padding: 1px;
+      `;
+      const Top = createLayer(Middle)`
+        display: block;
+      `;
+
+      render(<Top />);
+
+      expect(systemStyles).toHaveBeenCalledTimes(1);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".d {
+          color: red;
+        }
+        .e {
+          padding: 1px;
+        }
+        .f {
+          display: block;
+          margin: 7px;
+        }"
+      `);
+    });
+
+    it('runs the style function nowhere when the outer layer sets the marker without a style function', () => {
+      const Inner = createLayer('div')`
+        color: red;
+      `;
+      const Outer = createLayer(Inner, { withStyleFunction: false })`
+        padding: 1px;
+      `;
+
+      render(<Outer />);
+
+      expect(systemStyles).not.toHaveBeenCalled();
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".c {
+          color: red;
+        }
+        .d {
+          padding: 1px;
+        }"
+      `);
+    });
+
+    it('does not forward the marker to the DOM', () => {
+      const Inner = createLayer('div')``;
+      const Outer = createLayer(Inner)``;
+      const { container } = render(<Outer />);
+      const el = container.firstChild as HTMLElement;
+
+      expect(el.getAttributeNames()).toEqual(['class']);
+    });
+  });
+
   describe('post-compile (arity-2 ast)', () => {
     it('lifts a static decl into a prop via ast.pop and overrides via inline style', () => {
       const Comp = styled.div.attrs<{ 'data-tint'?: string }>((_p, ast) => ({
