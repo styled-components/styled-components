@@ -9,8 +9,9 @@
  * `stripInternal` removes from the emitted declarations. A field that crosses
  * a bundle boundary stays out: `kind`, `stops` and `frames` ride on the
  * keyframes, easing and timeline descriptors the native bundle hands the
- * reanimated adapter bundle, and jest-styled-components reads
- * `mainSheet.gs`, `.names`, `.clearTag()` and `.toString()`.
+ * reanimated adapter bundle, and jest-styled-components resets
+ * `mainSheet.names` and calls `.clearTag()` and `.toString()` (the
+ * ecosystem-contract tests in `src/test/dist-behavior.test.js` replay it).
  *
  * `rollup.config.mjs` builds the mangle regex from this list;
  * `src/test/dist-behavior.test.js` checks the published declarations and the
