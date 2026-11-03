@@ -4,12 +4,9 @@ import flatten from '../utils/flatten';
 import isStaticRules from '../utils/isStaticRules';
 import { joinStringArray } from '../utils/joinStrings';
 
-type InstanceEntry = { name: string; order: number; rules: string[] };
+type InstanceEntry = { name: string; rules: string[] };
 
 type InstanceEntries = Map<number, InstanceEntry>;
-
-/** Hands each GlobalStyle its definition position; same-id groups re-insert in this order. */
-let nextOrder = 0;
 
 /**
  * Per-instance entries keyed by sheet, then component id, then instance. Same-id
@@ -45,20 +42,15 @@ export function deleteInstance(
   if (entries.size === 0) ids.delete(componentId);
 }
 
-/** Array.prototype.sort is stable, so equal orders keep mount order. */
-const byOrder = (a: InstanceEntry, b: InstanceEntry) => a.order - b.order;
-
 export default class GlobalStyle<Props extends object> {
   componentId: string;
   isStatic: boolean;
-  order: number;
   rules: RuleSet<Props>;
 
   constructor(rules: RuleSet<Props>, componentId: string) {
     this.rules = rules;
     this.componentId = componentId;
     this.isStatic = isStaticRules(rules);
-    this.order = nextOrder++;
 
     // Pre-register the shared group so global styles defined before
     // components always appear before them in the stylesheet.
@@ -90,8 +82,8 @@ export default class GlobalStyle<Props extends object> {
       return;
     }
 
-    // Skip the CSSOM rebuild when the CSS is unchanged. Only the client may: the server
-    // clears the tag between requests while these entries outlive it.
+    // Skip the CSSOM rebuild when the CSS is unchanged. Only the client may: a server
+    // sheet's tag can be cleared (clearTag) while its entries survive.
     const next = this.buildEntry(instance, executionContext, styleSheet, stylis);
     const entries = this.entriesFor(styleSheet);
     const prev = entries.get(instance);
@@ -136,7 +128,6 @@ export default class GlobalStyle<Props extends object> {
 
     return {
       name: this.componentId + instance,
-      order: this.order,
       rules: stylis(flatCSS, ''),
     };
   }
@@ -170,18 +161,15 @@ export default class GlobalStyle<Props extends object> {
 
   /**
    * Clear the shared group and re-insert every surviving entry on the sheet, including
-   * those of other globals with the same id, in definition then mount order (see
-   * docs/global-styles.md). Must run synchronously: nothing may yield between clear and re-insert.
+   * those of other globals with the same id, in mount order (see docs/global-styles.md).
+   * Must run synchronously: nothing may yield between clear and re-insert.
    */
   private rebuildGroup(styleSheet: StyleSheet, entries: InstanceEntries | undefined): void {
     styleSheet.clearRules(this.componentId);
 
     if (entries === undefined) return;
 
-    const survivors =
-      entries.size > 1 ? Array.from(entries.values()).sort(byOrder) : entries.values();
-
-    for (const entry of survivors) {
+    for (const entry of entries.values()) {
       styleSheet.insertRules(this.componentId, entry.name, entry.rules);
     }
   }

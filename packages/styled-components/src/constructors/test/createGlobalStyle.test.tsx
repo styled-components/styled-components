@@ -1329,7 +1329,7 @@ describe('createGlobalStyle with the same id', () => {
     expect(sheetB.getTag().getGroup(group)).toBe('html{--two:a;}/*!sc*/\nhtml{--two:b;}/*!sc*/\n');
   });
 
-  it('keeps definition order when the first global remounts after the second', () => {
+  it('the most recently mounted same-id global wins after a remount', () => {
     const First = createGlobalStyle<{ v: string }>`${p => `body { color: ${p.v}; }`}`;
     const Second = createGlobalStyle<{ v: string }>`${p => `body { color: ${p.v}x; }`}`;
     const idsBefore = Object.keys(mainSheet.gs);
@@ -1339,15 +1339,30 @@ describe('createGlobalStyle with the same id', () => {
         <Second v="second" />
       </>
     );
-    const ordered = 'body {\n  color: first;\n}\nbody {\n  color: secondx;\n}';
 
     const { rerender } = render(<App show />);
     expect(Object.keys(mainSheet.gs).filter(id => !idsBefore.includes(id))).toHaveLength(1);
-    expect(getRenderedCSS()).toBe(ordered);
+    expect(getRenderedCSS()).toBe('body {\n  color: first;\n}\nbody {\n  color: secondx;\n}');
 
     rerender(<App show={false} />);
     rerender(<App show />);
-    expect(getRenderedCSS()).toBe(ordered);
+    expect(getRenderedCSS()).toBe('body {\n  color: secondx;\n}\nbody {\n  color: first;\n}');
+  });
+
+  it('keeps a same-id global in place when its props change', () => {
+    const First = createGlobalStyle<{ v: string }>`${p => `body { color: ${p.v}; }`}`;
+    const Second = createGlobalStyle<{ v: string }>`${p => `body { color: ${p.v}x; }`}`;
+    const App = ({ v }: { v: string }) => (
+      <>
+        <First v={v} />
+        <Second v="second" />
+      </>
+    );
+
+    const { rerender } = render(<App v="first" />);
+    rerender(<App v="updated" />);
+
+    expect(getRenderedCSS()).toBe('body {\n  color: updated;\n}\nbody {\n  color: secondx;\n}');
   });
 
   it('allocates a fresh instance when the StyleSheetManager sheet changes', () => {
