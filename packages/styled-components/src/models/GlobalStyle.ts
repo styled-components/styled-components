@@ -6,13 +6,37 @@ import { joinStringArray } from '../utils/joinStrings';
 
 type InstanceEntry = { name: string; rules: string[] };
 
+/**
+ * Per-instance rules keyed by component id. Global styles whose rules differ only
+ * in their functions serialize identically, so they share one id and one sheet
+ * group; a rebuild must re-insert every survivor, not only its own object's.
+ * An id's map is deleted with its last instance.
+ */
+const registry = new Map<string, Map<number, InstanceEntry>>();
+
+/** Test-only. Live instances sharing a component id; bundles drop it as unused. */
+export function liveInstanceCount(componentId: string): number {
+  const entries = registry.get(componentId);
+  return entries === undefined ? 0 : entries.size;
+}
+
+export function getInstance(componentId: string, instance: number): InstanceEntry | undefined {
+  const entries = registry.get(componentId);
+  return entries === undefined ? undefined : entries.get(instance);
+}
+
+export function deleteInstance(componentId: string, instance: number): void {
+  const entries = registry.get(componentId);
+  if (entries === undefined) return;
+
+  entries.delete(instance);
+  if (entries.size === 0) registry.delete(componentId);
+}
+
 export default class GlobalStyle<Props extends object> {
   componentId: string;
   isStatic: boolean;
   rules: RuleSet<Props>;
-
-  /** @internal Per-instance rule cache for shared-group rebuild. */
-  instanceRules: Map<number, InstanceEntry> = new Map();
 
   constructor(rules: RuleSet<Props>, componentId: string) {
     this.rules = rules;
@@ -25,7 +49,7 @@ export default class GlobalStyle<Props extends object> {
   }
 
   removeStyles(instance: number, styleSheet: StyleSheet): void {
-    this.instanceRules.delete(instance);
+    deleteInstance(this.componentId, instance);
     this.rebuildGroup(styleSheet);
   }
 
@@ -41,7 +65,7 @@ export default class GlobalStyle<Props extends object> {
       if (!styleSheet.hasNameForId(id, id + instance)) {
         const entry = this.computeRules(instance, executionContext, styleSheet, stylis);
         styleSheet.insertRules(id, entry.name, entry.rules);
-      } else if (!this.instanceRules.has(instance)) {
+      } else if (getInstance(id, instance) === undefined) {
         // Rehydrated style: populate cache so rebuildGroup can restore
         // survivors if another instance unmounts.
         this.computeRules(instance, executionContext, styleSheet, stylis);
@@ -52,11 +76,19 @@ export default class GlobalStyle<Props extends object> {
     // Compute new rules; skip CSSOM rebuild if CSS is unchanged.
     // The fast-path is only safe on the client where the tag persists between renders.
     // During SSR, clearTag() destroys the tag between requests, so we must always rebuild.
-    const prev = this.instanceRules.get(instance);
-    this.computeRules(instance, executionContext, styleSheet, stylis);
+    const prev = getInstance(id, instance);
+    const next = this.computeRules(instance, executionContext, styleSheet, stylis);
+
+    // A server render deletes its entry right after, so a rebuild would drop
+    // every earlier instance's output: append instead.
+    if (styleSheet.server && !prev) {
+      styleSheet.insertRules(id, next.name, next.rules);
+      return;
+    }
+
     if (!styleSheet.server && prev) {
       const a = prev.rules;
-      const b = this.instanceRules.get(instance)!.rules;
+      const b = next.rules;
       if (a.length === b.length) {
         let same = true;
         for (let i = 0; i < a.length; i++) {
@@ -84,18 +116,28 @@ export default class GlobalStyle<Props extends object> {
       name: this.componentId + instance,
       rules: stylis(flatCSS, ''),
     };
-    this.instanceRules.set(instance, entry);
+    let entries = registry.get(this.componentId);
+    if (entries === undefined) {
+      entries = new Map();
+      registry.set(this.componentId, entries);
+    }
+    entries.set(instance, entry);
     return entry;
   }
 
   /**
-   * Clear all CSS rules in the shared group and re-insert from surviving instances.
+   * Clear all CSS rules in the shared group and re-insert from every surviving
+   * instance, including those of other global styles with the same id.
    * Must run synchronously - no yielding between clear and re-insert.
    */
   private rebuildGroup(styleSheet: StyleSheet): void {
     const id = this.componentId;
     styleSheet.clearRules(id);
-    for (const entry of this.instanceRules.values()) {
+
+    const entries = registry.get(id);
+    if (entries === undefined) return;
+
+    for (const entry of entries.values()) {
       styleSheet.insertRules(id, entry.name, entry.rules);
     }
   }

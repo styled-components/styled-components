@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
-import GlobalStyle from '../../models/GlobalStyle';
+import GlobalStyle, { liveInstanceCount } from '../../models/GlobalStyle';
 import ServerStyleSheet from '../../models/ServerStyleSheet';
 import { mainStylis } from '../../models/StyleSheetManager';
 import StyleSheet from '../../sheet';
@@ -72,7 +72,7 @@ describe(`createGlobalStyle`, () => {
 
     // First render with a fixed instance number (simulates WeakMap caching)
     gs.renderStyles(1, executionContext, sheet, mainStylis);
-    expect(gs.instanceRules.size).toBe(1);
+    expect(liveInstanceCount(gs.componentId)).toBe(1);
     expect(sheet.toString()).toMatchInlineSnapshot(`
       "body{color:red;}/*!sc*/
       data-styled.g3[id="sc-global-clearTag-test"]{content:"sc-global-clearTag-test1,"}/*!sc*/
@@ -83,7 +83,7 @@ describe(`createGlobalStyle`, () => {
     sheet.clearTag();
 
     // Second render with SAME instance 1, SAME CSS - the exact regression path.
-    // Bug: instanceRules still has instance 1's entry from render 1.
+    // Bug: the registry still has instance 1's entry from render 1.
     // computeRules produces identical rules. rulesEqual returns true.
     // rebuildGroup is skipped. Tag is empty. CSS is lost.
     gs.renderStyles(1, executionContext, sheet, mainStylis);
@@ -92,6 +92,26 @@ describe(`createGlobalStyle`, () => {
       data-styled.g3[id="sc-global-clearTag-test"]{content:"sc-global-clearTag-test1,"}/*!sc*/
       "
     `);
+  });
+
+  it(`emits both stylesheets of two global styles that differ only in their functions`, () => {
+    const sheet = new ServerStyleSheet();
+    const First = createGlobalStyle`${() => 'html { --a: 1; }'}`;
+    const Second = createGlobalStyle`${() => 'html { --b: 1; }'}`;
+
+    context.renderToString(
+      sheet.collectStyles(
+        <>
+          <First />
+          <Second />
+        </>
+      )
+    );
+
+    expect(First.styledComponentId).toBe(Second.styledComponentId);
+    expect(stripWhitespace(stripComments(stripOuterHTML(sheet.getStyleTags())))).toBe(
+      'html{ --a:1; } html{ --b:1; } data-styled.g4[id="sc-global-c"]{ content:"sc-global-c1,sc-global-c2,"} '
+    );
   });
 });
 

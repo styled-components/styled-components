@@ -1,6 +1,6 @@
 import React from 'react';
 import { IS_RSC, RSC_REDUNDANT_EMIT_WARN_THRESHOLD, STATIC_EXECUTION_CONTEXT } from '../constants';
-import GlobalStyle from '../models/GlobalStyle';
+import GlobalStyle, { deleteInstance, getInstance } from '../models/GlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
@@ -59,7 +59,7 @@ export default function createGlobalStyle<Props extends object>(
     const ssc = useStyleSheetContext();
     const theme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
 
-    // Each mount needs a unique instance ID for the shared-group instanceRules cache.
+    // Each mount needs a unique instance ID for the shared-group instance entries.
     // __SERVER__ is a build-time constant: the dead branch is entirely eliminated,
     // so React never sees a conditional hook call.
     // Server bundle: direct allocation (one-shot renders, no stability needed).
@@ -135,7 +135,8 @@ export default function createGlobalStyle<Props extends object>(
           // HMR creates a new globalStyle instance but the componentId stays stable
           // (SWC plugin assigns by file location), so stale hasNameForId hits skip injection.
           if (prevGlobalStyleRef.current !== globalStyle) {
-            ssc.styleSheet.clearRules(styledComponentId);
+            // Drops this instance's entry too, or the fast path would skip the re-insert.
+            globalStyle.removeStyles(instance, ssc.styleSheet);
             prevGlobalStyleRef.current = globalStyle;
           }
 
@@ -165,11 +166,11 @@ export default function createGlobalStyle<Props extends object>(
     // the request; see "Per-instance emission" in docs/rsc-style-injection.md.
     if (IS_RSC) {
       const entry =
-        typeof window === 'undefined' ? globalStyle.instanceRules.get(instance) : undefined;
+        typeof window === 'undefined' ? getInstance(styledComponentId, instance) : undefined;
       const css = entry ? joinRules(entry.rules) : '';
 
       if (css) {
-        globalStyle.instanceRules.delete(instance);
+        deleteInstance(styledComponentId, instance);
 
         if (process.env.NODE_ENV !== 'production' && getGlobalEmitCounts) {
           const counts = getGlobalEmitCounts();
@@ -203,9 +204,9 @@ export default function createGlobalStyle<Props extends object>(
     }
 
     // Clean up server instance cache - no useLayoutEffect cleanup runs on the
-    // server, so instanceRules would grow unboundedly across SSR requests.
+    // server, so the shared instance entries would grow unboundedly across SSR requests.
     if (__SERVER__ || ssc.styleSheet.server) {
-      globalStyle.instanceRules.delete(instance);
+      deleteInstance(styledComponentId, instance);
     }
 
     return null;
