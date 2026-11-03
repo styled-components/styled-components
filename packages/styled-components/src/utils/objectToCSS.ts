@@ -34,7 +34,7 @@ function walkStyleObject(
   obj: Record<string, unknown>,
   write: (text: string) => void,
   slot: (value: unknown) => boolean,
-  fillContext?: unknown
+  fillContext: unknown
 ): boolean {
   for (const key in obj) {
     if (!hasOwn.call(obj, key)) continue;
@@ -79,7 +79,8 @@ export default function objectToTemplate(obj: Record<string, unknown>): ObjectTe
       pending = '';
       interpolations.push(value);
       return true;
-    }
+    },
+    undefined
   );
   strings.push(pending);
   return { strings, interpolations };
