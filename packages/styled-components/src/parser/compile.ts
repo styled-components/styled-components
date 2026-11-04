@@ -6,6 +6,7 @@ import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import getComponentName from '../utils/getComponentName';
 import isPlainObject from '../utils/isPlainObject';
 import { fifoSet } from '../utils/fifoMap';
+import { normalize } from '../utils/normalize';
 import { objectToCSS } from '../utils/objectToCSS';
 import { warnOnce } from '../utils/warnOnce';
 import {
@@ -23,7 +24,7 @@ import {
   TemplateValue,
 } from './ast';
 import { emitWeb, EmitOptions } from './emit-web';
-import { isCustomProperty, parse, stripCommaSpaces, trimRange } from './parser';
+import { isCustomProperty, parse, scanQP, stripCommaSpaces, trimRange } from './parser';
 import { CLIENT_REFERENCE, getSource, InterpolationKind, Source } from './source';
 
 /**
@@ -195,7 +196,6 @@ export function buildHashCSS(
   filled: ReadonlyArray<string>,
   fragments?: ReadonlyArray<FastPathFragment | null> | null
 ): string {
-  if (filled.length === 0) return strings.length > 0 ? strings[0] : '';
   let out = strings[0] || '';
   for (let i = 0; i < filled.length; i++) {
     const frag = fragments ? fragments[i] : null;
@@ -261,7 +261,7 @@ export function buildInterpKey(
 /**
  * Fill the construction-time AST with `filled` values and emit web CSS.
  * Output bytes match `compiler.compile(css, ...)` on the same logical input.
- * Returns `null` when block-level filled text carries unparseable structure.
+ * Returns `null` when {@link realize} refuses a field.
  */
 export function compileWebFilled(
   source: Source,
@@ -423,8 +423,7 @@ function dynamic(node: Node): boolean {
  * Replace structural splices in node fields ({@link TemplateValue})
  * with their resolved string forms; lift `InterpolationNode` slots into
  * spliced siblings (string fragments or pre-parsed `${mixin}` ASTs).
- * Returns `null` to bail when block-level filled text carries
- * unparseable structure (structural CSS chars in a substituted slot).
+ * Returns `null` to bail when {@link realize} refuses a field.
  *
  * Identity-preserving: when no descendant of any input node depends on
  * `filled`, returns `nodes` itself; per-node identity is preserved
@@ -445,22 +444,12 @@ export function fillAst(
     const node = nodes[i];
     const filledNode = fillNode(node, filled, fragments);
     if (filledNode === null) return null;
+    if (out === null && (filledNode as Node) === node) continue;
 
+    if (out === null) out = nodes.slice(0, i) as StaticNode[];
     if (Array.isArray(filledNode)) {
-      if (out === null) {
-        out = nodes.slice(0, i) as StaticNode[];
-      }
       for (let j = 0; j < filledNode.length; j++) out.push(filledNode[j]);
-    } else if (filledNode === undefined) {
-      if (out === null) {
-        out = nodes.slice(0, i) as StaticNode[];
-      }
-    } else if ((filledNode as Node) !== node) {
-      if (out === null) {
-        out = nodes.slice(0, i) as StaticNode[];
-      }
-      out.push(filledNode);
-    } else if (out !== null) {
+    } else if (filledNode !== undefined) {
       out.push(filledNode);
     }
   }
@@ -485,8 +474,7 @@ function fillNode(
       // `${theme.vars.colors.bg}: #111;` (createTheme.vars overrides).
       const propRaw = realize(node.prop, filled);
       if (propRaw === null) return null;
-      const prop =
-        typeof node.prop !== 'string' && propRaw !== '' ? trimWhitespace(propRaw) : propRaw;
+      const prop = typeof node.prop !== 'string' ? trimWhitespace(propRaw) : propRaw;
       if (prop === '') return undefined;
       const valueRaw = realize(node.value, filled);
       if (valueRaw === null) return null;
@@ -579,27 +567,25 @@ function fillNode(
       // splices resolve in its own index space.
       const frag = fragments ? fragments[node.index] : null;
       if (frag !== null && frag !== undefined) {
-        const childFilled = fillAst(frag.source.ast, frag.filled, frag.fragments);
-        if (childFilled === null) return null;
-        return childFilled.length === 0 ? undefined : childFilled;
+        return fillAst(frag.source.ast, frag.filled, frag.fragments);
       }
       const fragment = filled[node.index];
-      if (fragment === '' || fragment === undefined) return undefined;
+      if (!fragment) return undefined;
       // String fragment: parse the substituted text and splice. The cache
       // amortizes the round-trip across repeated dynamic strings.
-      const parsed = parseStringFragment(fragment);
-      return parsed.length === 0 ? undefined : parsed;
+      return parseStringFragment(fragment);
     }
   }
 }
 
 /**
  * Realize a {@link TemplateValue} or pass through a static string.
- * Returns `null` when any spliced slot value would inject CSS structural
- * characters (`;` `{` `}`), forcing the caller to bail the fast path
- * to the string-input compile path. The slot-out-of-bounds case also
- * returns `null` for safety. Splices the filled values directly between the
- * field's pre-extracted chunks.
+ * Returns `null`, forcing the caller to bail the fast path to the string-input
+ * compile path, when a spliced slot value would inject CSS structural characters
+ * (`;` `{` `}`), when the field names a slot past every filled value, and when the
+ * filled text holds a comment or an unclosed string or paren, which would otherwise
+ * run on through the rules emitted after it. Splices the filled values directly
+ * between the field's pre-extracted chunks.
  */
 function realize(field: string | TemplateValue, filled: ReadonlyArray<string>): string | null {
   if (typeof field === 'string') return field;
@@ -616,7 +602,9 @@ function realize(field: string | TemplateValue, filled: ReadonlyArray<string>): 
     out += value;
     out += chunks[i + 1];
   }
-  return out;
+  return scanQP(out, 0, out.length, -1, -1, -1, -1) > out.length || out.indexOf('/*') !== -1
+    ? null
+    : out;
 }
 
 function trimWhitespace(s: string): string {
@@ -637,7 +625,7 @@ const STRING_FRAGMENT_CACHE_LIMIT = 200;
 function parseStringFragment(s: string): StaticRoot {
   const cached = stringFragmentCache.get(s);
   if (cached !== undefined) return cached;
-  const parsed = parse(s);
+  const parsed = parse(normalize(s));
   fifoSet(stringFragmentCache, s, parsed, STRING_FRAGMENT_CACHE_LIMIT);
   return parsed;
 }

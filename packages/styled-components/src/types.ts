@@ -194,9 +194,8 @@ export interface Compiler {
   /**
    * Source-input fast emit path. Walks the construction-time AST + filled
    * interpolation values, skipping the per-render `normalize + parse`
-   * work `compile` performs against a freshly joined CSS string. Returns
-   * `null` only on shape bailouts the fast path doesn't yet cover; callers
-   * fall through to `compile` in that case.
+   * work `compile` performs against a freshly joined CSS string, which it
+   * falls back to for the values the AST walk refuses.
    *
    * `fragments` is the parallel side table populated by
    * `evaluateForFastPath` for slots that resolved to a `css\`...\`` fragment.
@@ -210,7 +209,7 @@ export interface Compiler {
     parentSelector: string,
     componentId: string,
     fragments?: ReadonlyArray<import('./parser/compile').FastPathFragment | null> | null
-  ) => string[] | null;
+  ) => string[];
 }
 
 export interface ShouldForwardProp<R extends Runtime> {

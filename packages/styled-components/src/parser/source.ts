@@ -20,7 +20,7 @@ import type { BaseObject, RuleSet } from '../types';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import { normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
-import { DYN, NodeKind, Root } from './ast';
+import { DYN, NodeKind, Root, TemplateValue } from './ast';
 import { parse, ParseOptions, scanQP } from './parser';
 
 /**
@@ -177,6 +177,10 @@ export function parseSource(
  * access; descendants don't need to be re-walked because the flag bubbles
  * up here. The same walk records each block-position slot in `standalone`.
  */
+function isTemplated(field: string | TemplateValue): boolean {
+  return typeof field !== 'string';
+}
+
 function markDynamic(nodes: Root, standalone: boolean[]): boolean {
   let any = false;
   for (let i = 0; i < nodes.length; i++) {
@@ -184,46 +188,27 @@ function markDynamic(nodes: Root, standalone: boolean[]): boolean {
     let dyn = false;
     switch (node.kind) {
       case NodeKind.Decl:
-        dyn = typeof node.prop !== 'string' || typeof node.value !== 'string';
+        dyn = isTemplated(node.prop) || isTemplated(node.value);
         break;
       case NodeKind.Rule: {
-        for (let j = 0; j < node.selectors.length; j++) {
-          if (typeof node.selectors[j] !== 'string') {
-            dyn = true;
-            break;
-          }
-        }
+        dyn = node.selectors.some(isTemplated);
         if (markDynamic(node.children, standalone)) dyn = true;
         break;
       }
       case NodeKind.AtRule: {
-        if (typeof node.name !== 'string' || typeof node.prelude !== 'string') {
-          dyn = true;
-        }
+        dyn = isTemplated(node.name) || isTemplated(node.prelude);
         if (node.children !== null && markDynamic(node.children, standalone)) dyn = true;
         break;
       }
       case NodeKind.Keyframes: {
-        if (typeof node.name !== 'string' || typeof node.prelude !== 'string') {
-          dyn = true;
-        } else {
-          outer: for (let f = 0; f < node.frames.length; f++) {
-            const frame = node.frames[f];
-            for (let s = 0; s < frame.stops.length; s++) {
-              if (typeof frame.stops[s] !== 'string') {
-                dyn = true;
-                break outer;
-              }
-            }
-            for (let d = 0; d < frame.children.length; d++) {
-              const decl = frame.children[d];
-              if (typeof decl.prop !== 'string' || typeof decl.value !== 'string') {
-                dyn = true;
-                break outer;
-              }
-            }
-          }
-        }
+        dyn =
+          isTemplated(node.name) ||
+          isTemplated(node.prelude) ||
+          node.frames.some(
+            frame =>
+              frame.stops.some(isTemplated) ||
+              frame.children.some(decl => isTemplated(decl.prop) || isTemplated(decl.value))
+          );
         break;
       }
       case NodeKind.Interpolation:
@@ -393,8 +378,6 @@ function interleaveWithSentinels(
   interpolations: ReadonlyArray<unknown>
 ): string {
   const count = interpolations.length;
-  if (count === 0) return strings.length > 0 ? strings[0] : '';
-
   let prevWasStandalone = true; // start of input is a statement boundary
   let out = strings[0] || '';
   for (let i = 0; i < count; i++) {
@@ -432,16 +415,16 @@ function warnSwallowedFragment(sourceSoFar: string, prefix: string, interpolatio
       if (c === SEMICOLON || c === OPEN_BRACE || c === CLOSE_BRACE) {
         // The swallowing declaration starts after the last top-level `;` `{`
         // `}` of the whole source so far, so it can span earlier slots.
-        const sourceEnd = sourceSoFar.length;
+        const text = normalize(sourceSoFar);
+        const textEnd = text.length;
         let from = 0;
         let k: number;
         while (
-          (k = scanQP(sourceSoFar, from, sourceEnd, SEMICOLON, OPEN_BRACE, CLOSE_BRACE, -1)) <
-          sourceEnd
+          (k = scanQP(text, from, textEnd, SEMICOLON, OPEN_BRACE, CLOSE_BRACE, -1)) < textEnd
         ) {
           from = k + 1;
         }
-        const statement = sourceSoFar.slice(from).trim();
+        const statement = text.slice(from).trim();
         const colon = scanQP(statement, 0, statement.length, COLON, -1, -1, -1);
         const property = statement
           .slice(0, colon)

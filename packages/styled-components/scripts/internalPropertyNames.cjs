@@ -36,6 +36,7 @@ const INTERNAL_PROPERTY_NAMES = [
   'keepCommaSpaces',
   'len',
   'selfRefSelector',
+  'slotLeftOpen',
   'templates',
   // WebStyle / generated style
   'baseHash',

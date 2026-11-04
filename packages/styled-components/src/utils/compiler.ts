@@ -1,6 +1,6 @@
 import { emitWeb } from '../parser/emit-web';
 import { parse, wrapAst } from '../parser/parser';
-import { compileWebFilled } from '../parser/compile';
+import { buildHashCSS, compileWebFilled } from '../parser/compile';
 import type { Compiler } from '../types';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
@@ -194,6 +194,12 @@ export default function createCompiler({
           decl: postProcessDecl,
         },
         fragments
+      ) ??
+      compileString(
+        buildHashCSS(source.strings, filled, fragments),
+        parentSelector,
+        undefined,
+        componentId
       ),
   };
 

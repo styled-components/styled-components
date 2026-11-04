@@ -39,6 +39,31 @@ describe(`createGlobalStyle`, () => {
     `);
   });
 
+  it('keeps its rules when an interpolated value closes a paren the template left open', () => {
+    const Component = createGlobalStyle`body { color: red; } a { width: calc(${'1px)'}; top: 0; }`;
+    render(<Component />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        color: red;
+      }
+      a {
+        width: calc(1px);
+        top: 0;
+      }"
+    `);
+  });
+
+  it('keeps its rules when an interpolated value holds a `;`', () => {
+    const Component = createGlobalStyle`body { color: ${'red; top: 0'}; }`;
+    render(<Component />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        color: red;
+        top: 0;
+      }"
+    `);
+  });
+
   it(`supports interpolation`, () => {
     const Component = createGlobalStyle<{ color: string }>`div {color:${props => props.color};} `;
     render(<Component color="orange" />);

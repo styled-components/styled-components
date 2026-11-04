@@ -142,9 +142,9 @@ export function tokenize(value: string): Token[] {
     }
 
     // Slash (context-dependent; rgb(r g b / a) uses it, calc uses / as op.
-    // We emit as Slash; calc consumers remap to Op.) `/* … */` block
-    // comments are valid CSS inside function args (WPT exercises this in
-    // `rgb(/* R */ 0, /* G */ 51, /* B */ 255)`); strip and continue.
+    // We emit as Slash; calc consumers remap to Op.) A template's comments are
+    // gone by now; a direct call can still pass a `/* … */` block comment,
+    // so strip it and continue.
     if (c === $.SLASH) {
       if (i + 1 < len && value.charCodeAt(i + 1) === $.ASTERISK) {
         const close = value.indexOf('*/', i + 2);
@@ -258,8 +258,7 @@ export function tokenize(value: string): Token[] {
     }
 
     // Unknown character; skip to avoid infinite loops. In a well-formed
-    // CSS value this shouldn't happen; the preprocessor has already
-    // scrubbed comments and validated braces.
+    // CSS value this shouldn't happen.
     i++;
   }
 

@@ -1314,6 +1314,17 @@ background-color: green;`)
     expect(performance.now() - start).toBeLessThan(200);
   });
 
+  it.each([
+    ['comments inside a function call', 'f(1/**/);'.repeat(80_000), 'f(1 );'.repeat(80_000)],
+    ['unquoted urls', 'url(x/*);'.repeat(80_000), 'url(x/*);'.repeat(80_000)],
+    ['urls left open', 'url(a '.repeat(80_000) + '/**/', 'url(a '.repeat(80_000) + '/**/'],
+  ])('scans many %s in linear time', (_label, css, expected) => {
+    const start = performance.now();
+
+    expect(normalize(css)).toBe(expected);
+    expect(performance.now() - start).toBeLessThan(200);
+  });
+
   describe('normalize unified-path edge cases', () => {
     // Path 3j: comment stripping + brace imbalance fire together
     it('handles comment stripping that reveals brace imbalance', () => {
@@ -1544,27 +1555,132 @@ background-color: green;`)
       `);
     });
 
-    it('keeps a quote inside a block comment inside a function call from opening a string', () => {
-      // Comments inside parentheses are preserved as text; the apostrophe
-      // inside one must not be read as a string delimiter, or the rest of
-      // the template is swallowed as string content.
-      expect(runCssCompile(`width: calc(100% /* don't */ - 10px); color: red;`)).toEqual([
-        ".a{width:calc(100% /* don't */ - 10px);color:red;}",
+    // CSS Syntax, "Consume comments": "consume them and all following code points
+    // up to and including the first U+002A ASTERISK (*) followed by a U+002F
+    // SOLIDUS (/), or up to an EOF code point."
+    it.each([
+      ['a quote', `don't`],
+      ['a balanced paren pair', `(a) don't`],
+      ['an unmatched `)`', `)`],
+      ['an unmatched `(`', `(`],
+      ['a `;`', `a; b`],
+      ['a `}`', `}`],
+    ])('strips a comment holding %s inside a function call', (_label, comment) => {
+      expect(runCssCompile(`width: calc(100% /* ${comment} */ - 10px); color: red;`)).toEqual([
+        '.a{width:calc(100% - 10px);color:red;}',
       ]);
     });
 
-    it('keeps a quote after a balanced paren pair inside a comment inside a function call from opening a string', () => {
-      // The comment ends at its `*/`, not at the `)` of `(a)`, so the
-      // apostrophe after that `)` is still comment text.
-      expect(runCssCompile(`width: calc(100% /* (a) don't */ - 10px); color: red;`)).toEqual([
-        ".a{width:calc(100% /* (a) don't */ - 10px);color:red;}",
+    it('treats a function whose name only ends in url as a function', () => {
+      expect(runCssCompile(`width: myurl(1px /* ) */ + 2px); color: red;`)).toEqual([
+        '.a{width:myurl(1px + 2px);color:red;}',
       ]);
     });
 
-    it('keeps an unquoted url whose path looks like an unclosed comment', () => {
-      expect(runCssCompile(`background: url(x/*.png); color: red;`)).toEqual([
-        '.a{background:url(x/*.png);color:red;}',
+    // CSS Syntax, "Consume a token": "Consume comments." runs before every token, so
+    // a comment ends the token before it. Serialization: "the pair of tokens must be
+    // serialized with a comment between them." Whitespace keeps them apart the same way.
+    it.each([
+      ['two numbers', 'rgb(0/**/51/**/255)', 'rgb(0 51 255)'],
+      ['a number and a dot number', 'rgb(0/**/.5/**/1)', 'rgb(0 .5 1)'],
+      ['a number and a percent sign', 'calc(1/**/%)', 'calc(1 %)'],
+      ['an ident and a paren', 'f(a/* c */(b))', 'f(a (b))'],
+      ['a value and an operator', 'calc(1px/* c */+ 2px)', 'calc(1px + 2px)'],
+      ['two adjacent comments', 'f(a/**//**/b)', 'f(a b)'],
+      ['a comment with space around it', 'f(a /* c */ b)', 'f(a b)'],
+      ['a comment with space before it', 'f(a /* c */b)', 'f(a b)'],
+      ['a comment with space after it', 'f(a/* c */ b)', 'f(a b)'],
+    ])('keeps %s apart around a comment inside a function call', (_label, value, expected) => {
+      expect(runCssCompile(`color: ${value}; top: 0;`)).toEqual([`.a{color:${expected};top:0;}`]);
+    });
+
+    it('drops a declaration whose function call holds a comment left open', () => {
+      expect(runCssCompile(`color: red; width: calc(1px /* oops; top: 0;`)).toEqual([
+        '.a{color:red;}',
       ]);
+    });
+
+    // CSS Syntax, "Consume an ident-like token": "If string's value is an ASCII
+    // case-insensitive match for "url", and the next input code point is U+0028
+    // LEFT PARENTHESIS ((), consume it. [...] If the next one or two input code
+    // points are U+0022 QUOTATION MARK ("), U+0027 APOSTROPHE ('), or whitespace
+    // followed by U+0022 QUOTATION MARK (") or U+0027 APOSTROPHE ('), then create
+    // a <function-token> [...] Otherwise, consume a url token, and return it."
+    it.each([
+      ['a path that looks like an unclosed comment', 'url(x/*.png)'],
+      ['an uppercase name', 'URL(x/*.png)'],
+      ['whitespace around the path', 'url(  x/*.png  )'],
+      ['an escaped `)` in the path', 'url(x\\)/*.png)'],
+    ])('keeps an unquoted url with %s', (_label, url) => {
+      expect(runCssCompile(`background: ${url}; color: red;`)).toEqual([
+        `.a{background:${url};color:red;}`,
+      ]);
+    });
+
+    // CSS Syntax, "Consume a url token": a quote makes the token bad, and "Consume
+    // the remnants of a bad url" returns at "U+0029 RIGHT PARENTHESIS ())", so the
+    // quote opens no string and the text after that `)` is outside the token.
+    it.each([
+      ['a lowercase name', 'url'],
+      ['an uppercase name', 'URL'],
+      ['an escaped letter', 'u\\72l'],
+      ['an escaped last letter', 'ur\\6c'],
+      ['a hex escape ended by a space', '\\75 rl'],
+    ])('keeps rules inside the scope past a bad url with %s', (_label, name) => {
+      expect(runCssCompile(`width: ${name}(a'b);}x{color:red;}y{'); top: 0;`)).toEqual([
+        `.a{width:${name}(a'b);top:0;}`,
+      ]);
+    });
+
+    it.each([
+      ['a quoted url', `background: url( "a)b" ); top: 0;`, '.a{background:url( "a)b" );top:0;}'],
+      [
+        'a function after an escaped selector',
+        '.md\\:x:not([a=")"]) { top: 0; }',
+        '.a .md\\:x:not([a=")"]){top:0;}',
+      ],
+      [
+        'a quoted url with an escaped name',
+        `background: ur\\6c("a)b"); top: 0;`,
+        '.a{background:ur\\6c("a)b");top:0;}',
+      ],
+    ])('reads the string in %s', (_label, css, rule) => {
+      expect(runCssCompile(css)).toEqual([rule]);
+    });
+
+    it('strips a comment that follows the string in a quoted url', () => {
+      expect(runCssCompile(`background: url("x/*.png" /* ) */); color: red;`)).toEqual([
+        '.a{background:url("x/*.png" );color:red;}',
+      ]);
+    });
+
+    // CSS Syntax, "Consume a token", U+005C REVERSE SOLIDUS (\): "If the input
+    // stream starts with a valid escape, reconsume the current input code point,
+    // consume an ident-like token, and return it."
+    it.each([
+      [
+        'an escaped `(`',
+        "&.a\\(b { color: red; /* don't */ top: 0; }",
+        '.a.a\\(b{color:red;top:0;}',
+      ],
+      ['an escaped `(` in a value', 'left: \\(; /* note */ top: 0;', '.a{left:\\(;top:0;}'],
+      [
+        'an escaped `)` in a function call',
+        'width: calc(1px \\) /* c */ + 2px); top: 0;',
+        '.a{width:calc(1px \\) + 2px);top:0;}',
+      ],
+      ['an escaped quote', 'left: \\"; /* note */ top: 0;', '.a{left:\\";top:0;}'],
+      [
+        'an escaped backslash before a `(`',
+        'width: \\\\(1 /* ) */ + 2); top: 0;',
+        '.a{width:\\\\(1 + 2);top:0;}',
+      ],
+    ])('strips a comment after %s', (_label, css, rule) => {
+      expect(runCssCompile(css)).toEqual([rule]);
+    });
+
+    it('reads an escaped `/` before a `*` as text and not as the start of a comment', () => {
+      expect(normalize('left: \\/* top: 0; // x')).toBe('left: \\/* top: 0; ');
     });
 
     // Backtick in CSS content (not a CSS string delimiter)

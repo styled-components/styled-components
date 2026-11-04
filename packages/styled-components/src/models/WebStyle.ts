@@ -253,15 +253,7 @@ export default class WebStyle {
         ? EMPTY_RULES
         : (styleSheet.getProvisionalRules(this.componentId, name) ?? EMPTY_RULES);
     } else if (source !== null && fastFilled !== null) {
-      const fast = compiler.emit(source, fastFilled, '.' + name, this.componentId, fastFragments);
-      if (fast !== null) {
-        rules = fast;
-      } else {
-        // AST-direct emit bailed (e.g. structural char in a substitution);
-        // fall back to the string-input emit on the joined CSS.
-        if (!css) css = buildHashCSS(source.strings, fastFilled, fastFragments);
-        rules = compiler.compile(css, '.' + name, undefined, this.componentId);
-      }
+      rules = compiler.emit(source, fastFilled, '.' + name, this.componentId, fastFragments);
       this.shareRules(styleSheet, name, rules);
     } else {
       rules = compiler.compile(css, '.' + name, undefined, this.componentId);
