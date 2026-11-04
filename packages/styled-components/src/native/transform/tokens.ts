@@ -48,7 +48,10 @@ interface UnusedFields {
 }
 
 interface TokenBase {
-  /** Exact source substring; useful for pass-through emission. */
+  /**
+   * The text pass-through emission hands the host. It matches the source, except that a
+   * name holding an escape is decoded on iOS and Android, whose host cannot read one.
+   */
   raw: string;
   /**
    * Function: lazily tokenized argument tokens. Populated on demand by
