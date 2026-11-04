@@ -41,31 +41,18 @@ const DROPPED_AT_RULES = new Set(['charset']);
  */
 function stripCombinatorSpaces(sel: string): string {
   const len = sel.length;
-  let hasCombinator = false;
-  for (let i = 0; i < len; i++) {
-    const c = sel.charCodeAt(i);
-    if (c === $.GT || c === $.PLUS || c === $.TILDE) {
-      hasCombinator = true;
-      break;
-    }
-  }
-  if (!hasCombinator) return sel;
   let out = '';
   let segStart = 0;
-  let i = 0;
-  while (i < len) {
-    const stop = scanQPB(sel, i, len, $.GT, $.PLUS, $.TILDE, -1);
+  while (segStart < len) {
+    const stop = scanQPB(sel, segStart, len, $.GT, $.PLUS, $.TILDE, -1);
     if (stop >= len) break;
-    // Find left boundary of emitted segment (trim trailing whitespace).
+
     let left = stop;
     while (left > segStart && isWS(sel.charCodeAt(left - 1))) left--;
-    out += sel.substring(segStart, left);
-    out += sel[stop];
-    // Skip whitespace after combinator.
-    let j = stop + 1;
-    while (isWS(sel.charCodeAt(j))) j++;
-    segStart = j;
-    i = j;
+    out += sel.substring(segStart, left) + sel[stop];
+
+    segStart = stop + 1;
+    while (isWS(sel.charCodeAt(segStart))) segStart++;
   }
 
   return out + sel.substring(segStart);
@@ -346,13 +333,25 @@ function resolveRuleSelectors(selectors: string[], parent: string): string {
   return resolved.join(',');
 }
 
+/** An escaped `&` or one in a string is text, so only the rest take the parent. */
 function resolveSingle(selector: string, parent: string): string {
-  let expanded: string;
-  if (selector.indexOf('&') === -1) {
-    expanded = parent ? parent + ' ' + selector : selector;
-  } else {
-    expanded = selector.split('&').join(parent);
+  let expanded = '';
+  let from = 0;
+  let quote = 0;
+  for (let i = 0; i < selector.length; i++) {
+    const c = selector.charCodeAt(i);
+    if (c === $.BACKSLASH) i++;
+    else if (quote) {
+      if (c === quote) quote = 0;
+    } else if (c === $.DOUBLE_QUOTE || c === $.SINGLE_QUOTE) quote = c;
+    else if (c === $.AMPERSAND) {
+      expanded += selector.substring(from, i) + parent;
+      from = i + 1;
+    }
   }
+
+  if (from) expanded += selector.substring(from);
+  else expanded = parent ? parent + ' ' + selector : selector;
   return stripCombinatorSpaces(expanded);
 }
 
