@@ -7,6 +7,7 @@
 export const NUL = 0;
 export const TAB = 9; // \t
 export const LF = 10; // \n
+export const FF = 12; // \f
 export const CR = 13; // \r
 export const SPACE = 32; // ' '
 export const DOUBLE_QUOTE = 34; // "
@@ -44,6 +45,7 @@ export const CARET = 94; // ^
 export const UNDERSCORE = 95; // _
 export const LOWER_A = 97; // a
 export const LOWER_E = 101; // e
+export const LOWER_F = 102; // f
 export const LOWER_I = 105; // i
 export const LOWER_S = 115; // s
 export const LOWER_Z = 122; // z
@@ -55,7 +57,7 @@ export const TILDE = 126; // ~
 export const UPPER_TO_LOWER = 32;
 
 /**
- * Inline-friendly CSS whitespace predicate: matches ` ` `\t` `\n` `\r`.
+ * Inline-friendly whitespace predicate: matches ` ` `\t` `\n` `\r`, not `\f`.
  * Shared by ~16 trim / skip loops across parser, normalize, and emitters
  * so the 4-way OR ships once.
  */
@@ -79,25 +81,16 @@ export function isIdentChar(c: number): boolean {
 }
 
 /**
- * A name holding an escape may mean `url`, so it counts as one. `ur\l` is the
- * shortest spelling; a hex escape may end in a space (`\75 rl`).
+ * A character that takes the name before a `(` into a longer token: `&` becomes a
+ * class name when emitted, and `@` and `#` start an at-keyword and a hash.
  */
-function namesUrl(s: string, i: number, escape: number): boolean {
-  // `| 32` lowercases an ASCII letter; no other code lands on these three.
-  if (
-    (s.charCodeAt(i - 1) | 32) === 108 &&
-    (s.charCodeAt(i - 2) | 32) === 114 &&
-    (s.charCodeAt(i - 3) | 32) === 117 &&
-    !isIdentChar(s.charCodeAt(i - 4))
-  ) {
-    return true;
-  }
-  if (escape === -1) return false;
+function extendsName(c: number): boolean {
+  return isIdentChar(c) || c > 127 || c === AMPERSAND || c === AT || c === HASH;
+}
 
-  let j = i - 1;
-  for (let c = s.charCodeAt(j); isIdentChar(c) || isWS(c) || c === BACKSLASH; )
-    c = s.charCodeAt(--j);
-  return j < escape && i - j > 4;
+function isHexDigit(c: number): boolean {
+  const lower = c | UPPER_TO_LOWER;
+  return (c >= DIGIT_0 && c <= DIGIT_9) || (lower >= LOWER_A && lower <= LOWER_F);
 }
 
 /**
@@ -105,12 +98,35 @@ function namesUrl(s: string, i: number, escape: number): boolean {
  * nothing closes it, or -1 when the `(` opens anything else. A browser reads an
  * unquoted url as one token up to the first `)`, so a quote or `/*` inside it opens
  * nothing. `escape` is the index of the last backslash before `i`, or -1.
+ *
+ * A name holding an escape, or `url` straight after `&`, may or may not mean `url`.
+ * It reads as one while a function would end at the same `)`, and as left open once
+ * the two could differ. `&` joins the name only in a selector, where it is replaced.
  */
 export function urlTokenEnd(s: string, i: number, end: number, escape: number): number {
-  if (!namesUrl(s, i, escape)) return -1;
+  let unsure = false;
+  if (escape !== -1) {
+    let start = i - 1;
+    while (extendsName(s.charCodeAt(start))) start--;
+
+    // Whitespace joins the name only as the end of a hex escape. Walking back stays linear.
+    let j = start;
+    while (isWS(s.charCodeAt(j)) || s.charCodeAt(j) === FF) j--;
+    while (isHexDigit(s.charCodeAt(j))) j--;
+    unsure = escape >= start - 1 || j === escape;
+  }
+
+  // `| 32` lowercases an ASCII letter; no other code lands on these three.
+  const spellsUrl =
+    (s.charCodeAt(i - 1) | 32) === 108 &&
+    (s.charCodeAt(i - 2) | 32) === 114 &&
+    (s.charCodeAt(i - 3) | 32) === 117;
+  const before = s.charCodeAt(i - 4);
+  if (spellsUrl && before === AMPERSAND) unsure = true;
+  else if (!unsure && (!spellsUrl || extendsName(before))) return -1;
 
   let j = i + 1;
-  while (isWS(s.charCodeAt(j))) j++;
+  while (isWS(s.charCodeAt(j)) || s.charCodeAt(j) === FF) j++;
   const first = s.charCodeAt(j);
   if (first === DOUBLE_QUOTE || first === SINGLE_QUOTE) return -1;
 
@@ -118,6 +134,19 @@ export function urlTokenEnd(s: string, i: number, end: number, escape: number): 
     const code = s.charCodeAt(j);
     if (code === BACKSLASH) j++;
     else if (code === CLOSE_PAREN) return j;
+    // A backslash after unescaped whitespace makes a bad url, whose end is unsafe to rely on.
+    else if (s.charCodeAt(j + 1) === BACKSLASH && (isWS(code) || code === FF)) return end;
+    else if (
+      unsure &&
+      (code === DOUBLE_QUOTE ||
+        code === SINGLE_QUOTE ||
+        code === OPEN_PAREN ||
+        code === OPEN_BRACKET ||
+        code === OPEN_BRACE ||
+        (code === SLASH && s.charCodeAt(j + 1) === ASTERISK))
+    ) {
+      return end;
+    }
   }
   return end;
 }

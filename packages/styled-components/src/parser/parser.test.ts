@@ -298,6 +298,19 @@ describe('parser', () => {
       expect(parse('a: b}\nc: d;')).toEqual([{ kind: NodeKind.Decl, prop: 'c', value: 'd' }]);
     });
 
+    // CSS Syntax, "Consume a string token": "newline: This is a parse error. Reconsume
+    // the current input code point, create a <bad-string-token>, and return it."
+    it.each([
+      ['a string', 'a: b}"; /* c */\nd: e;'],
+      ['a string after an escaped quote', 'a: b}\\""; /* c */\nd: e;'],
+    ])('reads the `;` in %s after a stray `}` as text, up to the newline', (_label, css) => {
+      expect(parse(css)).toEqual([{ kind: NodeKind.Decl, prop: 'd', value: 'e' }]);
+    });
+
+    it('stops at the `;` after a string closed past a stray `}`', () => {
+      expect(parse('a: b}"c;"; d: e;')).toEqual([{ kind: NodeKind.Decl, prop: 'd', value: 'e' }]);
+    });
+
     // CSS Syntax, "Consume a block's contents": "<EOF-token> <}-token> Return rules."
     // A block still open at the end of input ends there and keeps what it parsed.
     it.each([
@@ -434,16 +447,235 @@ describe('parser', () => {
       ]);
     });
 
+    // CSS Syntax, "Consume a simple block": "Let ending token be the mirror variant
+    // of the next token. (E.g. if it was called with <[-token>, the ending token is
+    // <]-token>.)" and "anything else: Consume a component value from input and append
+    // the result to block's value." Only the mirror closes a block, so a `)` inside
+    // `[` closes nothing, and `;` `{` `}` inside one are part of it. The deviation
+    // at the end of input is the one the unclosed paren table above describes.
+    it.each([
+      ['a selector', 'a: b; &[x { y: z; } d: e;'],
+      ['a value', 'a: b; c: [d 1fr; e: f;'],
+      ['a value before a rule', 'a: b; c: [d; x { y: z; }'],
+      ['an at-rule prelude', 'a: b; @media [x { y: z; } d: e;'],
+      ['a value whose `)` sits inside the `[`', 'a: b; c: [d); e: f;'],
+      ['a selector whose `]` sits inside a `(`', 'a: b; &[x(]) { y: z; } d: e;'],
+      ['a function whose `)` sits inside a `{`', 'a: b; c: f({); d: e;'],
+      ['a bracket whose `]` sits inside a `{`', 'a: b; c: [{]; d: e;'],
+      ['a function holding a `[`', 'a: b; c: f([); d: e;'],
+      ['an at-rule prelude with a `{` in a paren', 'a: b; @media f({) { y: z; } d: e;'],
+    ])('drops the statement holding a block left open in %s', (_label, css) => {
+      expect(parse(css)).toEqual([{ kind: NodeKind.Decl, prop: 'a', value: 'b' }]);
+    });
+
+    it('drops only the statement holding an unclosed bracket inside a block', () => {
+      expect(parse('x { a: b; c: [d; } e: f;')).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: ['x'],
+          children: [{ kind: NodeKind.Decl, prop: 'a', value: 'b' }],
+        },
+      ]);
+    });
+
+    it('drops what follows an unclosed bracket in a block past the nesting limit', () => {
+      const levels = 513;
+      let expected: unknown[] = [];
+      for (let i = 0; i < levels; i++) {
+        expected = [{ kind: NodeKind.Rule, selectors: ['a'], children: expected }];
+      }
+      expect(parse(`${'a{'.repeat(levels)} b: [c; ${'}'.repeat(levels)} f: g;`)).toEqual(expected);
+    });
+
+    it('drops a statement nesting blocks past the nesting limit', () => {
+      expect(parse(`a: b; c: ${'[('.repeat(300)}${')]'.repeat(300)}; d: e;`)).toEqual([
+        { kind: NodeKind.Decl, prop: 'a', value: 'b' },
+      ]);
+    });
+
+    it.each([
+      ['a comment right after a value slash', 'a: b; c: //*; d: e;'],
+      ['a comment a stray `}` hides from a quote', "a: b; } it's; c: /* d; */ e: f;"],
+    ])('drops the statement holding %s', (_label, css) => {
+      expect(parse(css)).toEqual([{ kind: NodeKind.Decl, prop: 'a', value: 'b' }]);
+    });
+
+    // CSS Syntax, "U+0040 COMMERCIAL AT (@)": "If the next 3 input code points would
+    // start an ident sequence, consume an ident sequence, create an <at-keyword-token>
+    // with its value set to the returned value, and return it. Otherwise, return a
+    // <delim-token>". The name ends where the ident does, so what follows it is
+    // tokenized as usual; a delim starts a qualified rule that reads past a `;`.
+    it.each([
+      ['a paren right after the name', 'a: b; @media(c: 1px { d: e; } f: g;'],
+      ['a brace in a paren after the name', 'a: b; @supports(f({) { d: e; } g: h;'],
+      ['a quote in the name', 'a: b; @x" { d: e; } f: g;'],
+      ['a bracket in the name', 'a: b; @x[ { d: e; } f: g;'],
+      ['a paren after the name `url`', 'a: b; @url([) { d: e; } f: g;'],
+    ])('drops an at-rule holding %s', (_label, css) => {
+      expect(parse(css)).toEqual([{ kind: NodeKind.Decl, prop: 'a', value: 'b' }]);
+    });
+
+    it.each([
+      ['no name', '@; a: b;'],
+      ['a paren for a name', '@(x); a: b;'],
+      ['a paren for a name with a block', '@(x) { c: d; } a: b;'],
+      ['a string for a name', '@"x"; a: b;'],
+      ['a digit starting the name', '@1x; a: b;'],
+      ['a backslash before a line feed', '@\\\n; a: b;'],
+      ['a backslash before a form feed', '@\\\f; a: b;'],
+    ])('drops only the at-rule with %s', (_label, css) => {
+      expect(parse(css)).toEqual([{ kind: NodeKind.Decl, prop: 'a', value: 'b' }]);
+    });
+
+    it('ends an at-rule name at a `}`', () => {
+      expect(parse('@media x { @a} b { c: d; }')).toEqual([
+        expect.objectContaining({
+          name: 'media',
+          children: [expect.objectContaining({ name: 'a', children: null })],
+        }),
+        {
+          kind: NodeKind.Rule,
+          selectors: ['b'],
+          children: [{ kind: NodeKind.Decl, prop: 'c', value: 'd' }],
+        },
+      ]);
+    });
+
+    it('reads an escaped `;` as part of an at-rule name', () => {
+      expect(parse('@a\\; b; c: d;')).toEqual([
+        expect.objectContaining({ name: 'a\\;', prelude: 'b', children: null }),
+        { kind: NodeKind.Decl, prop: 'c', value: 'd' },
+      ]);
+    });
+
+    it('keeps an at-rule with a condition right after its name', () => {
+      expect(parse('@media(min-width: 1px) { a: b; }')).toEqual([
+        expect.objectContaining({
+          children: [{ kind: NodeKind.Decl, prop: 'a', value: 'b' }],
+        }),
+      ]);
+    });
+
+    // CSS Syntax, "Consume an escaped code point": "It assumes that the U+005C REVERSE
+    // SOLIDUS (\) has already been consumed and that the next input code point has
+    // already been verified to be part of a valid escape." So a trimmed space that was
+    // escaped would leave a `\` to escape the `;` or `{` emitted after it.
+    it.each([
+      ['a selector', 'a\\ { b: c; }', 'a\\ '],
+      ['a selector before a list item', 'a\\ , d { b: c; }', 'a\\ '],
+    ])('keeps the escaped space ending %s', (_label, css, selector) => {
+      expect(parse(css)).toEqual([
+        expect.objectContaining({
+          selectors: expect.arrayContaining([selector]),
+          children: [{ kind: NodeKind.Decl, prop: 'b', value: 'c' }],
+        }),
+      ]);
+    });
+
+    it('keeps the escaped space ending a value', () => {
+      expect(parse('a: b\\ ; c: d;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'a', value: 'b\\ ' },
+        { kind: NodeKind.Decl, prop: 'c', value: 'd' },
+      ]);
+    });
+
+    it.each([
+      ['a value', 'a: b; c: d\\'],
+      ['a selector', 'a: b; c\\'],
+      ['an at-rule', 'a: b; @media x\\'],
+    ])('drops a statement ending in an unpaired backslash in %s', (_label, css) => {
+      expect(parse(css)).toEqual([{ kind: NodeKind.Decl, prop: 'a', value: 'b' }]);
+    });
+
+    it.each([
+      ['a trimmed part', 'a, (b ', true, ['a', '(b']],
+      ['a raw part', 'a, (b ', false, ['a', ' (b ']],
+    ])('splits text left open into %s', (_label, raw, trim, parts) => {
+      expect(splitTopLevelCommas(raw, trim)).toEqual(parts);
+    });
+
+    it.each([
+      ['a semicolon in a bracket', '--a: [b;c]; d: e;', '--a', '[b;c]'],
+      ['a brace in a bracket', '--a: [{b;c}]; d: e;', '--a', '[{b;c}]'],
+      ['a brace in a function', '--a: f({b;c}); d: e;', '--a', 'f({b;c})'],
+      ['a function in a bracket', '--a: [f(b;c)]; d: e;', '--a', '[f(b;c)]'],
+      ['a stray `]`', 'a: b]; d: e;', 'a', 'b]'],
+      ['a `[` in a string', 'a: "["; d: e;', 'a', '"["'],
+      ['a `[` in an unquoted url', 'a: url(b[1.png); d: e;', 'a', 'url(b[1.png)'],
+      ['an escaped `[`', 'a: b\\[c; d: e;', 'a', 'b\\[c'],
+      ['a closed line name', 'a: [b] 1fr [c]; d: e;', 'a', '[b] 1fr [c]'],
+    ])('keeps the statements around %s', (_label, css, prop, value) => {
+      expect(parse(css)).toEqual([
+        { kind: NodeKind.Decl, prop, value },
+        { kind: NodeKind.Decl, prop: 'd', value: 'e' },
+      ]);
+    });
+
+    it.each([
+      ['a closing bracket in a string', '&[a="]"]', '&[a="]"]'],
+      ['a colon in a bracket', '&[a:b]:hover', '&[a:b]:hover'],
+      ['an escaped bracket', '&.a\\[b', '&.a\\[b'],
+    ])('keeps the rule with %s in its selector', (_label, css, selector) => {
+      expect(parse(`${css} { c: d; }`)).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: [selector],
+          children: [{ kind: NodeKind.Decl, prop: 'c', value: 'd' }],
+        },
+      ]);
+    });
+
+    it.each([
+      ['a closed bracket', 'selector([a])'],
+      ['a closed brace in a paren', 'f({a;b})'],
+    ])('keeps an at-rule with %s in its prelude', (_label, prelude) => {
+      expect(parse(`@supports ${prelude} { b: c; }`)).toEqual([
+        expect.objectContaining({
+          prelude,
+          children: [{ kind: NodeKind.Decl, prop: 'b', value: 'c' }],
+        }),
+      ]);
+    });
+
+    // CSS Syntax, "Consume a string token": "newline: This is a parse error.
+    // Reconsume the current input code point, create a <bad-string-token>, and return
+    // it." and U+005C: "if the next input code point is a newline, consume it."
+    // "Preprocessing the input stream" reads CR, FF and CR LF as that newline.
+    // Deviations: a browser resumes at the newline, but a trimmed value could emit the
+    // string open, so the statement goes as for a string left open. An escaped CR LF
+    // is dropped too; a template literal has none, only an interpolated value can.
+    it.each([
+      ['a line feed', '\n'],
+      ['a carriage return', '\r'],
+      ['a form feed', '\f'],
+    ])('drops the statement holding a string ended by %s', (_label, newline) => {
+      expect(parse(`a: b; c: "d${newline}e;}x{y:z}f{g:"h"i"; j: k;`)).toEqual([
+        { kind: NodeKind.Decl, prop: 'a', value: 'b' },
+      ]);
+    });
+
+    it.each([
+      ['a line feed', '\\\n'],
+      ['a carriage return', '\\\r'],
+      ['a form feed', '\\\f'],
+    ])('keeps a string continued past an escaped %s', (_label, escaped) => {
+      expect(parse(`c: "d${escaped}e"; a: b;`)).toEqual([
+        { kind: NodeKind.Decl, prop: 'c', value: `"d${escaped}e"` },
+        { kind: NodeKind.Decl, prop: 'a', value: 'b' },
+      ]);
+    });
+
     it.each([
       ['a declaration', 'a: b; c: calc(1px; d: e;', 'c: calc(1px; d: e;'],
       ['an at-rule prelude', '@media (min-width: 1px { y: z; }', '(min-width: 1px { y: z; }'],
-    ])('warns in development that %s holding an unclosed paren is dropped', (_label, css, text) => {
+      ['a bracket', 'a: b; c: [d;', 'c: [d;'],
+    ])('warns in development that %s left open is dropped', (_label, css, text) => {
       resetWarnOnce();
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
       parse(css);
       expect(warn.mock.calls).toEqual([
         [
-          `[sc] \`${text}\` holds a \`(\` or a quote that never closes, so it and everything after it in the template are dropped. Close the \`(\` or the quote.`,
+          `[sc] \`${text}\` holds a \`(\`, a \`[\`, or a quote that never closes, so it and everything after it in the template are dropped. Close it, and keep a string on one line.`,
         ],
       ]);
       warn.mockRestore();
@@ -484,6 +716,12 @@ describe('parser', () => {
       ['unclosed parens', 'a:b;'.repeat(80_000) + 'c:' + '('.repeat(80_000), 80_000],
       ['unclosed urls', 'a:b;'.repeat(80_000) + 'c:' + 'url(a '.repeat(80_000), 80_000],
       ['escaped names', 'a:b;'.repeat(80_000) + 'c:' + '\\a b('.repeat(80_000), 80_000],
+      ['unclosed brackets', 'a:b;'.repeat(80_000) + 'c:' + '['.repeat(80_000), 80_000],
+      ['braces in parens', 'a:b;'.repeat(80_000) + 'c:' + '({'.repeat(80_000), 80_000],
+      ['closed brackets', 'a:[b];'.repeat(80_000), 80_000],
+      ['one bracket after many statements', 'a:b;'.repeat(80_000) + 'c:[d];', 80_001],
+      ['closed braces in parens', 'a:f({});'.repeat(80_000), 80_000],
+      ['strings ended by a newline', 'a:b;'.repeat(80_000) + 'c:"\n'.repeat(80_000), 80_000],
     ])('repairs %s in linear time', (_label, css, nodes) => {
       const start = performance.now();
       expect(parse(css)).toHaveLength(nodes);

@@ -771,15 +771,8 @@ describe('parseCSSDeclarations', () => {
       `);
     });
 
-    it('backslash at end of value', () => {
-      expect(parseCSSDeclarations('color: red\\')).toMatchInlineSnapshot(`
-        [
-          [
-            "color",
-            "red\\",
-          ],
-        ]
-      `);
+    it('backslash at end of value (dropped, it would escape what follows)', () => {
+      expect(parseCSSDeclarations('color: red\\')).toEqual([]);
     });
 
     it('backslash at end of quoted string before EOF (dropped, nothing to recover)', () => {

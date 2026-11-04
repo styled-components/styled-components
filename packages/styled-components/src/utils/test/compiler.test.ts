@@ -1600,7 +1600,7 @@ background-color: green;`)
       ]);
     });
 
-    // CSS Syntax, "Consume an ident-like token": "If string's value is an ASCII
+    // CSS Syntax, "Consume an ident-like token": "If string’s value is an ASCII
     // case-insensitive match for "url", and the next input code point is U+0028
     // LEFT PARENTHESIS ((), consume it. [...] If the next one or two input code
     // points are U+0022 QUOTATION MARK ("), U+0027 APOSTROPHE ('), or whitespace
@@ -1611,6 +1611,7 @@ background-color: green;`)
       ['an uppercase name', 'URL(x/*.png)'],
       ['whitespace around the path', 'url(  x/*.png  )'],
       ['an escaped `)` in the path', 'url(x\\)/*.png)'],
+      ['an escape after leading whitespace', 'url( \\41 )'],
     ])('keeps an unquoted url with %s', (_label, url) => {
       expect(runCssCompile(`background: ${url}; color: red;`)).toEqual([
         `.a{background:${url};color:red;}`,
@@ -1623,12 +1624,157 @@ background-color: green;`)
     it.each([
       ['a lowercase name', 'url'],
       ['an uppercase name', 'URL'],
-      ['an escaped letter', 'u\\72l'],
-      ['an escaped last letter', 'ur\\6c'],
-      ['a hex escape ended by a space', '\\75 rl'],
     ])('keeps rules inside the scope past a bad url with %s', (_label, name) => {
-      expect(runCssCompile(`width: ${name}(a'b);}x{color:red;}y{'); top: 0;`)).toEqual([
+      expect(runCssCompile(`width: ${name}(a'b);}x{color:red;}y{');\ntop: 0;`)).toEqual([
         `.a{width:${name}(a'b);top:0;}`,
+      ]);
+    });
+
+    // A browser's cssRules hold `.x` for the first and nothing past `.a` for the
+    // second: a newline ends the string, and an open `[` holds the rest.
+    it.each([
+      ['a string ended by a newline', `content: "b\nc;}x{color:red;}y{content:"d"e"; top: 0;`],
+      ['an open bracket', 'grid-area: [b; top: 0; }x{color:red;}'],
+      ['an open bracket in a selector', '&[b { top: 0; } x { color: red; }'],
+      ['a brace in a function', 'width: f({); top: 0; }x{color:red;}'],
+      ['a comment after a colon', 'top: //*; left: 0;'],
+      ['a function holding a form feed', 'top: url(\f")""; left: 0;'],
+      ['a function with a non-ASCII name', 'top: éurl(a")""; left: 0;'],
+      ['a function after an escape', 'top: \\41 bar(a")""; left: 0;'],
+      ['a url name extended by an escape', 'top: \\61url(a")""; left: 0;'],
+      ['a url name after an escaped character', 'top: \\:url(a")""; left: 0;'],
+      ['a url name after a hex escape', 'top: \\41 url(a")""; left: 0;'],
+      ['a url name a hash extends', 'top: #url(a")""; left: 0;'],
+      ['a url name the scope extends', '&url(a") { top: 0; } y { color: red; }'],
+      ['a paren after an at-rule name', '@media(min-width: 1px { top: 0; } y { color: red; }'],
+      ['a url after `&` in a value', 'top: &url(a"b)c}x{color:red;}d"e); left: 0;'],
+      ['a url after `&` in an at-rule prelude', '@media &url(a"b)c}x{color:red;}d"e) { top: 0; }'],
+      ['a function name after an escape ended by a form feed', 'top: \\41\furl(a")""; left: 0;'],
+      ['a function name after an escape ended by CR LF', 'top: \\41\r\nurl(a")""; left: 0;'],
+    ])('emits nothing for %s, which a browser reads past its statement', (_label, css) => {
+      expect(runCssCompile(css)).toEqual([]);
+    });
+
+    it('drops a keyframe stop holding a url after `&` and keeps nothing from inside it', () => {
+      expect(runCssCompile('@keyframes k { &url(a"b)c}x{color:red;}d"e) { top: 0; } }')).toEqual([
+        '@keyframes k{}',
+      ]);
+    });
+
+    it('keeps a plain url after `&` in a value, which both readings end at the same paren', () => {
+      expect(runCssCompile('top: &url(a); left: 0;')).toEqual(['.a{top:&url(a);left:0;}']);
+    });
+
+    it.each([
+      [
+        'an escaped space in the token before it',
+        'font-family: Font\\ Awesome var(--x, "a"); color: red;',
+        '.a{font-family:Font\\ Awesome var(--x, "a");color:red;}',
+      ],
+      [
+        'an escaped colon in the token before it',
+        '--x: a\\: b var(--y, "f"); color: red;',
+        '.a{--x:a\\: b var(--y, "f");color:red;}',
+      ],
+      [
+        'a hex escape two tokens before it',
+        '--x: \\41 px solid red(a"b"); color: red;',
+        '.a{--x:\\41 px solid red(a"b");color:red;}',
+      ],
+    ])('keeps a function with a quote and %s', (_label, css, expected) => {
+      expect(runCssCompile(css)).toEqual([expected]);
+    });
+
+    // CSS Syntax, "Consume a url token", whitespace: "If the next input code point is
+    // U+0029 RIGHT PARENTHESIS ()) or EOF, consume it and return the <url-token> [...];
+    // otherwise, consume the remnants of a bad url, create a <bad-url-token>, and return
+    // it." So these are invalid, and the remnants read `\)` as an escape.
+    it.each([
+      ['an escaped `)`', 'top: url(a \\)}x{color:red;}); left: 0;'],
+      ['an escaped backslash', 'top: url(a \\\\); left: 0;'],
+      ['a form feed before it', 'top: url(a\f\\)}x{color:red;}); left: 0;'],
+    ])('emits nothing for whitespace and a backslash in a url, with %s', (_label, css) => {
+      expect(runCssCompile(css)).toEqual([]);
+    });
+
+    it('keeps a url whose escaped space comes before a backslash, which is no whitespace', () => {
+      expect(runCssCompile('top: url(a\\ \\)b); left: 0;')).toEqual([
+        '.a{top:url(a\\ \\)b);left:0;}',
+      ]);
+    });
+
+    it('keeps the rules after a url with a space in its path, which only that url loses', () => {
+      expect(runCssCompile('top: url(a b.png); left: 0;')).toEqual([
+        '.a{top:url(a b.png);left:0;}',
+      ]);
+    });
+
+    it.each([
+      ['a closed bracket', 'grid-area: [b;c]; top: 0;', '.a{grid-area:[b;c];top:0;}'],
+      ['an attribute selector', '&[b="]"] { top: 0; }', '.a[b="]"]{top:0;}'],
+      [
+        'selectors split around a bracket',
+        '&[b="c,d"], &[e] { top: 0; }',
+        '.a[b="c,d"],.a[e]{top:0;}',
+      ],
+      [
+        'a url holding a bracket',
+        'background: url(b[1.png), c; top: 0;',
+        '.a{background:url(b[1.png),c;top:0;}',
+      ],
+      ['an escaped space ending a value', 'color: red\\ ; top: 0;', '.a{color:red\\ ;top:0;}'],
+      [
+        'a keyframe stop ending in an escaped space',
+        '@keyframes k { from\\ { top: 0; } to { top: 1px; } }',
+        '@keyframes k{from\\ {top:0;}to{top:1px;}}',
+      ],
+      [
+        'text a closed bracket leaves outside it',
+        'top: [b c]; } x { color: red; } d: e]; left: 0;',
+        '.a{top:[b c];left:0;}',
+      ],
+    ])('emits %s whole', (_label, css, rule) => {
+      expect(runCssCompile(css)).toEqual([rule]);
+    });
+
+    it('keeps the rule after a selector ending in an escaped space', () => {
+      expect(runCssCompile('a\\ { top: 0; } y { color: red; }')).toEqual([
+        '.a a\\ {top:0;}',
+        '.a y{color:red;}',
+      ]);
+    });
+
+    // CSS Syntax, "Consume an ident-like token": "If string’s value is an ASCII
+    // case-insensitive match for "url", and the next input code point is U+0028 LEFT
+    // PARENTHESIS ((), consume it." Decoding an escaped name is not worth its bytes, so
+    // such a name counts as a url only while reading it as a function would agree.
+    it.each([
+      ['a letter', 'u\\72l'],
+      ['a last letter', 'ur\\6c'],
+      ['a letter ended by a space', '\\75 rl'],
+    ])(
+      'drops a url spelled with an escaped %s when a quote makes its reading unclear',
+      (_label, name) => {
+        expect(runCssCompile(`width: ${name}(a'b);}x{color:red;}y{'); top: 0;`)).toEqual([]);
+      }
+    );
+
+    // Deviation: a browser keeps these, reading a function with a comment in it. The
+    // same bytes under an escaped `url` name reach past the statement, so both drop.
+    it.each([
+      ['a hex escape', 'top: \\41 b(a/*);}x{color:red;}*/); left: 0;'],
+      ['an escaped backslash', 'width: \\\\(1 /* ) */ + 2); top: 0;'],
+    ])('drops a function named with %s when a comment sits inside it', (_label, css) => {
+      expect(runCssCompile(css)).toEqual([]);
+    });
+
+    it.each([
+      ['a letter', 'u\\72l'],
+      ['a last letter', 'ur\\6c'],
+      ['a letter ended by a space', '\\75 rl'],
+    ])('keeps a url spelled with an escaped %s when both readings agree', (_label, name) => {
+      expect(runCssCompile(`background: ${name}(a/b.png); top: 0;`)).toEqual([
+        `.a{background:${name}(a/b.png);top:0;}`,
       ]);
     });
 
@@ -1672,7 +1818,7 @@ background-color: green;`)
       ['an escaped quote', 'left: \\"; /* note */ top: 0;', '.a{left:\\";top:0;}'],
       [
         'an escaped backslash before a `(`',
-        'width: \\\\(1 /* ) */ + 2); top: 0;',
+        'width: \\\\(1 + 2); /* ) */ top: 0;',
         '.a{width:\\\\(1 + 2);top:0;}',
       ],
     ])('strips a comment after %s', (_label, css, rule) => {

@@ -527,8 +527,9 @@ describe('bundle size', () => {
 
     // Carries every export, so this is the widest surface: the in-house parser,
     // arity-2 attrs tracing with its runtime fallback, and the server entry
-    // points a consumer bundle would shake away.
-    expect(sizeKB).toBeLessThan(14.5);
+    // points a consumer bundle would shake away. Holds the security fix that keeps
+    // malformed CSS inside its statement.
+    expect(sizeKB).toBeLessThan(14.6);
   });
   it('production bundle size with real bundler tree-shaking', async () => {
     const zlib = require('zlib');
@@ -564,8 +565,9 @@ describe('bundle size', () => {
     // The in-house parser (Source, AST-direct emit, fragment splicing,
     // interpolation-sentinel gating) is reachable from any styled call, so it
     // dominates what survives here and cannot shake away.
-    // v6.4.1 for this same entry is 11.44kB gzip.
-    expect(sizeKB).toBeLessThan(13.3);
+    // v6.4.1 for this same entry is 11.44kB gzip. Holds the security fix that keeps
+    // malformed CSS inside its statement.
+    expect(sizeKB).toBeLessThan(13.4);
   }, 30000);
 });
 

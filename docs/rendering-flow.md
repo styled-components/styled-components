@@ -47,7 +47,7 @@ sequenceDiagram
 
     alt claim won
         WebStyle->>WebStyle: compiler.emit (AST-direct)
-        Note over WebStyle: emit compiles the joined CSS instead when a substituted<br/>value holds a structural character, comment, or unclosed string or paren
+        Note over WebStyle: emit compiles the joined CSS instead when a substituted<br/>value holds a structural character, comment, or unclosed string, paren, or bracket
         WebStyle->>StyleSheet: stash rules for same-turn siblings
     else claim lost
         Note over WebStyle: reuse the winner's stashed rules<br/>without compiling
