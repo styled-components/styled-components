@@ -21,7 +21,7 @@ import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import { normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
 import { DYN, NodeKind, Root, TemplateValue } from './ast';
-import { parse, ParseOptions, scanQP } from './parser';
+import { parse, ParseOptions, scanQPB } from './parser';
 
 /**
  * Pre-classified slot shape so the fast path skips typeof checks. Order
@@ -420,12 +420,12 @@ function warnSwallowedFragment(sourceSoFar: string, prefix: string, interpolatio
         let from = 0;
         let k: number;
         while (
-          (k = scanQP(text, from, textEnd, SEMICOLON, OPEN_BRACE, CLOSE_BRACE, -1)) < textEnd
+          (k = scanQPB(text, from, textEnd, SEMICOLON, OPEN_BRACE, CLOSE_BRACE, -1)) < textEnd
         ) {
           from = k + 1;
         }
         const statement = text.slice(from).trim();
-        const colon = scanQP(statement, 0, statement.length, COLON, -1, -1, -1);
+        const colon = scanQPB(statement, 0, statement.length, COLON, -1, -1, -1);
         const property = statement
           .slice(0, colon)
           .trim()

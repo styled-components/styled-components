@@ -9,6 +9,7 @@ import { fifoSet } from '../utils/fifoMap';
 import { normalize } from '../utils/normalize';
 import { objectToCSS } from '../utils/objectToCSS';
 import { warnOnce } from '../utils/warnOnce';
+import { CLOSE_BRACE, COMMA, OPEN_BRACE, SEMICOLON } from '../utils/charCodes';
 import {
   DYN,
   Node,
@@ -24,7 +25,7 @@ import {
   TemplateValue,
 } from './ast';
 import { emitWeb, EmitOptions } from './emit-web';
-import { isCustomProperty, parse, scanQP, stripCommaSpaces, trimRange } from './parser';
+import { isCustomProperty, parse, scanQPB, stripCommaSpaces, trimRange } from './parser';
 import { CLIENT_REFERENCE, getSource, InterpolationKind, Source } from './source';
 
 /**
@@ -499,7 +500,7 @@ function fillNode(
       const filledSelectors: string[] = [];
       let selectorsChanged = false;
       for (let i = 0; i < node.selectors.length; i++) {
-        const sel = realize(node.selectors[i], filled);
+        const sel = realize(node.selectors[i], filled, COMMA);
         if (sel === null) return null;
         filledSelectors[i] = sel;
         if (typeof node.selectors[i] !== 'string') selectorsChanged = true;
@@ -581,30 +582,30 @@ function fillNode(
 /**
  * Realize a {@link TemplateValue} or pass through a static string.
  * Returns `null`, forcing the caller to bail the fast path to the string-input
- * compile path, when a spliced slot value would inject CSS structural characters
- * (`;` `{` `}`), when the field names a slot past every filled value, and when the
- * filled text holds a comment or an unclosed string or paren, which would otherwise
- * run on through the rules emitted after it. Splices the filled values directly
- * between the field's pre-extracted chunks.
+ * compile path, when the field names a slot past every filled value, when the filled
+ * text holds a `;`, `{`, or `}` outside a string or block, whether from a slot value or
+ * from the template text a slot exposed by closing what held it, when it holds a comment
+ * or an unclosed string, paren, or bracket, which would otherwise run on through the rules
+ * emitted after it, and for a selector holding such a `,`, which only the string path
+ * splits. Splices the filled values directly between the field's pre-extracted chunks.
  */
-function realize(field: string | TemplateValue, filled: ReadonlyArray<string>): string | null {
+function realize(
+  field: string | TemplateValue,
+  filled: ReadonlyArray<string>,
+  stop = -1
+): string | null {
   if (typeof field === 'string') return field;
   const { chunks, slots } = field;
   let out = chunks[0];
   for (let i = 0; i < slots.length; i++) {
     const idx = slots[i];
     if (idx >= filled.length) return null;
-    const value = filled[idx];
-    for (let j = 0; j < value.length; j++) {
-      const c = value.charCodeAt(j);
-      if (c === 59 /* ; */ || c === 123 /* { */ || c === 125 /* } */) return null;
-    }
-    out += value;
+    out += filled[idx];
     out += chunks[i + 1];
   }
-  return scanQP(out, 0, out.length, -1, -1, -1, -1) > out.length || out.indexOf('/*') !== -1
-    ? null
-    : out;
+  return scanQPB(out, 0, out.length, SEMICOLON, OPEN_BRACE, CLOSE_BRACE, stop) === out.length
+    ? out
+    : null;
 }
 
 function trimWhitespace(s: string): string {

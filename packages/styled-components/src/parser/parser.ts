@@ -1,12 +1,14 @@
 import {
+  ASTERISK,
   AT,
   BACKSLASH,
   CLOSE_BRACE,
-  CLOSE_BRACKET,
   CLOSE_PAREN,
   COLON,
   COMMA,
+  CR,
   DOUBLE_QUOTE,
+  FF,
   HYPHEN,
   isWS,
   LF,
@@ -16,6 +18,7 @@ import {
   OPEN_PAREN,
   SEMICOLON,
   SINGLE_QUOTE,
+  SLASH,
   urlTokenEnd,
 } from '../utils/charCodes';
 import { warnOnce } from '../utils/warnOnce';
@@ -33,23 +36,33 @@ import { isKeyframesName } from './atRuleNames';
 import { stampAtClass, stampRuleClass } from './nativePlan';
 
 /**
- * Scan `s[start..end]` tracking quote / paren nesting (and CSS `\X`
- * escape: backslash + next byte are consumed atomically). Return the
- * first index whose top-level byte equals `a`, `b`, `c`, or `d`, or
- * `end` if none match, or `end + 1` if a string or paren is still open
- * there. Pass `-1` for unused stop slots.
- *
- * The state is local; callers that resume scanning past a known top-
- * level boundary (`;` `{` `}` `:` `,`) restart with a fresh state
- * without losing correctness, because those bytes always sit at top
- * level by definition.
- *
- * Shared by every block, prelude, and frame scan. The bracket-aware twin
- * {@link scanQPB} serves the comma splitters and emit-web's combinator
- * stripper; it stays a separate loop because the extra bracket tests slow
- * the declaration scan that runs on every value.
+ * A block nested past this depth is skipped with its contents, so input
+ * carrying runtime values cannot exhaust the call stack. Authored CSS nests
+ * a handful deep.
  */
-export function scanQP(
+const MAX_DEPTH = 512;
+
+/**
+ * The closer each open block of the running {@link scanQPB} waits for; a scan never
+ * reenters. Past its end a write is ignored and a read matches nothing, so deeper
+ * blocks never close and the text counts as left open.
+ */
+const closers = new Uint8Array(MAX_DEPTH);
+
+/**
+ * Scan `s[start..end]` tracking strings, escapes, url tokens, and `(`, `[`, and `{`
+ * as blocks only their own closer ends, so `[attr=",b"]` stays whole and the `)` in
+ * `[)` closes nothing. Return the first index whose top-level byte equals `a`, `b`,
+ * `c`, or `d`, or `end` if none match, or `end + 1` if the text is left open there: a
+ * string or block still open, a newline ending a string, an unpaired backslash at the
+ * end, a `/*` reaching the scan, or blocks nested past {@link MAX_DEPTH}. Pass `-1`
+ * for unused stop slots.
+ *
+ * The state is local; callers that resume scanning past a known top-level boundary
+ * (`;` `{` `}` `:` `,`) restart with a fresh state without losing correctness, because
+ * those bytes always sit at top level by definition.
+ */
+export function scanQPB(
   s: string,
   start: number,
   end: number,
@@ -71,58 +84,29 @@ export function scanQP(
     }
     if (quote !== 0) {
       if (ch === quote) quote = 0;
+      else if (ch === LF || ch === CR || ch === FF) return end + 1;
     } else if (ch === DOUBLE_QUOTE || ch === SINGLE_QUOTE) {
       quote = ch;
     } else if (ch === OPEN_PAREN) {
       // Measured: calling for every `(` costs the declaration scan up to 10%.
       const urlEnd =
         escape === -1 && (s.charCodeAt(i - 1) | 32) !== 108 ? -1 : urlTokenEnd(s, i, end, escape);
-      if (urlEnd === -1) depth++;
+      if (urlEnd === -1) closers[depth++] = CLOSE_PAREN;
       else if (urlEnd === end) return end + 1;
       else i = urlEnd;
-    } else if (ch === CLOSE_PAREN) {
-      if (depth > 0) depth--;
     } else if (depth === 0 && (ch === a || ch === b || ch === c || ch === d)) {
       return i;
+    } else if (ch === OPEN_BRACKET || ch === OPEN_BRACE) {
+      // `[` and `{` each sit two codes below their mirror.
+      closers[depth++] = ch + 2;
+    } else if (depth !== 0 && ch === closers[depth - 1]) {
+      depth--;
+    } else if (ch === SLASH && s.charCodeAt(i + 1) === ASTERISK) {
+      return end + 1;
     }
     i++;
   }
-  return quote !== 0 || depth !== 0 ? end + 1 : end;
-}
-
-/** {@link scanQP} that also keeps `[...]` opaque, so `[attr=",b"]` stays whole; no stop returns `end`. */
-export function scanQPB(
-  s: string,
-  start: number,
-  end: number,
-  a: number,
-  b: number,
-  c: number,
-  d: number
-): number {
-  let i = start;
-  let depth = 0;
-  let quote = 0;
-  while (i < end) {
-    const ch = s.charCodeAt(i);
-    if (ch === BACKSLASH) {
-      i += 2;
-      continue;
-    }
-    if (quote !== 0) {
-      if (ch === quote) quote = 0;
-    } else if (ch === DOUBLE_QUOTE || ch === SINGLE_QUOTE) {
-      quote = ch;
-    } else if (ch === OPEN_PAREN || ch === OPEN_BRACKET) {
-      depth++;
-    } else if (ch === CLOSE_PAREN || ch === CLOSE_BRACKET) {
-      if (depth > 0) depth--;
-    } else if (depth === 0 && (ch === a || ch === b || ch === c || ch === d)) {
-      return i;
-    }
-    i++;
-  }
-  return end;
+  return quote !== 0 || depth !== 0 || i > end ? end + 1 : end;
 }
 
 export interface ParseOptions {
@@ -153,8 +137,8 @@ export interface ParseOptions {
  * already (`normalize` in src/utils/normalize.ts); brace repair happens
  * here, at the root block, so a stray `}` can never close the scope the
  * caller wraps the result in. A block left open at the end of input closes
- * there and keeps its contents; a statement holding a string or paren still
- * open at the end of input is dropped.
+ * there and keeps its contents; a statement holding a string, paren, or
+ * bracket still open at the end of input is dropped.
  */
 export function parse(
   css: string,
@@ -185,13 +169,6 @@ export function parse(css: string, options?: ParseOptions): Root<string | Templa
  */
 const BAIL_FIELD: TemplateValue = { chunks: [], slots: [1e9] };
 
-/**
- * A block nested past this depth is skipped with its contents, so input
- * carrying runtime values cannot exhaust the call stack. Authored CSS nests
- * a handful deep.
- */
-const MAX_DEPTH = 512;
-
 interface ParseContext {
   css: string;
   /** Block nesting of the block being parsed; 0 is the root block. */
@@ -199,7 +176,7 @@ interface ParseContext {
   i: number;
   keepCommaSpaces: boolean;
   len: number;
-  /** A statement holding a sentinel reached the end of input with a string or paren open. */
+  /** A statement holding a sentinel reached the end of input with a string, paren, or bracket open. */
   slotLeftOpen: boolean;
   /**
    * Runtime gate for sentinel detection. Only `parseSource` (templated
@@ -223,13 +200,18 @@ interface ParseContext {
 
 /**
  * Index just past the text a stray `}` at `i` takes with it: everything up
- * to the next `;` (consumed) or newline (kept).
+ * to the next `;` outside a string (consumed) or newline (kept).
  */
 function skipStrayClose(css: string, i: number, len: number): number {
+  let quote = 0;
   while (i < len) {
     const c = css.charCodeAt(i);
-    if (c === SEMICOLON) return i + 1;
     if (c === LF) return i;
+    if (c === BACKSLASH) i++;
+    else if (quote !== 0) {
+      if (c === quote) quote = 0;
+    } else if (c === SEMICOLON) return i + 1;
+    else if (c === DOUBLE_QUOTE || c === SINGLE_QUOTE) quote = c;
     i++;
   }
   return i;
@@ -268,7 +250,7 @@ function skipBlock(ctx: ParseContext): void {
   let open = 1;
   let i = ctx.i;
   while (open > 0) {
-    const j = scanQP(css, i, len, OPEN_BRACE, CLOSE_BRACE, -1, -1);
+    const j = scanQPB(css, i, len, OPEN_BRACE, CLOSE_BRACE, -1, -1);
     if (j >= len) {
       i = len;
       break;
@@ -335,10 +317,10 @@ function parseBlock(ctx: ParseContext): Node[] {
     // `while (true)` (not `while (i < len)`) so that a COLON found at the
     // very last position can still reach the EOF branch on the next scan.
     while (true) {
-      const stop = scanQP(css, i, len, COLON, OPEN_BRACE, SEMICOLON, CLOSE_BRACE);
+      const stop = scanQPB(css, i, len, COLON, OPEN_BRACE, SEMICOLON, CLOSE_BRACE);
       if (stop >= len) {
-        // EOF reached. Treat as terminal declaration if we saw a colon; a
-        // string or paren still open (`stop > len`) drops the statement instead.
+        // EOF reached. Treat as terminal declaration if we saw a colon; a string,
+        // paren, or bracket still open (`stop > len`) drops the statement instead.
         if (stop > len) {
           dropOpenStatement(ctx, start);
         } else if (colon !== -1) {
@@ -443,11 +425,13 @@ function selectorsToTemplate(
 }
 
 // Embedded-sentinel splitter: matches the `\0I<digits>\0` pattern that
-// `interleaveWithSentinels` in source.ts emits for embedded slots. Other
+// `interleaveWithSentinels` in source.ts emits for embedded slots, and the
+// `\0J<digits>\0` block form, which lands inside a field when a `;`, `{`, or
+// `}` that a string or block holds read as a statement end there. Other
 // `\0`-prefixed sequences (e.g. createTheme `\0sc:` tokens) don't match
 // and ride through as opaque chunk text. `lastIndex` is reset at every
 // call site since the regex is shared across `templateOrString` invocations.
-const SENTINEL_RE = /\0I(\d+)\0/g;
+const SENTINEL_RE = /\0[IJ](\d+)\0/g;
 
 /** The `\0J<digits>\0` standalone sentinel `interleaveWithSentinels` emits, read at `lastIndex` only. */
 const BLOCK_SENTINEL_RE = /\0J(\d+)\0/y;
@@ -455,7 +439,7 @@ const BLOCK_SENTINEL_RE = /\0J(\d+)\0/y;
 /**
  * Convert an embedded-sentinel-bearing CSS field (`color: \0I0\0;`-style)
  * into a structural {@link TemplateValue} splice: chunks between sentinels
- * + parallel slot indices. Strings without `\0I` sentinels return as-is
+ * + parallel slot indices. Strings without sentinels return as-is
  * (the fast path; most fields don't carry interpolations).
  *
  * Other `\0`-prefixed sequences (notably the createTheme.native.ts
@@ -525,16 +509,20 @@ export function stripCommaSpaces(s: string): string {
   return out + s.substring(segStart);
 }
 
-/** `css.substring(start, end)` with CSS whitespace trimmed from both ends. */
+/**
+ * `css.substring(start, end)` with CSS whitespace trimmed from both ends. An
+ * escaped space stays: without it the text would end in a bare backslash.
+ */
 export function trimRange(css: string, start: number, end: number): string {
   while (start < end && isWS(css.charCodeAt(start))) start++;
-  while (end > start && isWS(css.charCodeAt(end - 1))) end--;
+  while (end > start && isWS(css.charCodeAt(end - 1)) && css.charCodeAt(end - 2) !== BACKSLASH)
+    end--;
   return start < end ? css.substring(start, end) : '';
 }
 
 /**
- * Leave out a statement whose string or paren is still open at the end of input.
- * A value interpolated into it may close it (`translate(${x}${z ? ', 1px)' : ')'}`),
+ * Leave out a statement whose string, paren, or bracket is still open at the end of
+ * input. A value interpolated into it may close it (`translate(${x}${z ? ', 1px)' : ')'}`),
  * which only the resolved text can show, so that case is decided after resolving.
  */
 function dropOpenStatement(ctx: ParseContext, start: number): void {
@@ -547,41 +535,51 @@ function dropOpenStatement(ctx: ParseContext, start: number): void {
     const text = ctx.css.slice(start, start + 80).trim();
     warnOnce(
       'unclosed-statement',
-      `\`${text}\` holds a \`(\` or a quote that never closes, so it and everything after it in the template are dropped. Close the \`(\` or the quote.`,
+      `\`${text}\` holds a \`(\`, a \`[\`, or a quote that never closes, so it and everything after it in the template are dropped. Close it, and keep a string on one line.`,
       text
     );
   }
 }
 
+/** A name that starts an identifier; `\0` opens a slot, whose value is unknown here. */
+const AT_NAME_RE = /^(?:-?(?:[a-z_\u0080-￿\0]|\\[^\n\r\f])|--)/i;
+
 /**
  * Parse the at-rule at `ctx.i`, or return `null` for one that is not a valid
- * rule: a prelude holding a string or paren still open at the end of input, or, at the
- * root block, a stray `}` (which joins the prelude there instead of ending it).
+ * rule: a name that cannot start an identifier, a prelude holding a string, paren,
+ * or bracket still open at the end of input, or, at the root block, a stray `}`
+ * (which joins the prelude there instead of ending it).
  */
 function parseAtRule(ctx: ParseContext): Node | null {
   const css = ctx.css;
   const len = ctx.len;
   const root = ctx.depth === 0;
-  let j = ctx.i + 1;
+  const nameStart = ctx.i + 1;
+  let j = nameStart;
 
-  // Read the at-rule name up to whitespace, `{`, or `;`.
+  // Read the at-rule name up to whitespace, `{`, `;`, or `}`.
   while (j < len) {
     const c = css.charCodeAt(j);
-    if (isWS(c) || c === OPEN_BRACE || c === SEMICOLON) break;
+    if (c === BACKSLASH) {
+      j += 2;
+      continue;
+    }
+    if (isWS(c) || c === OPEN_BRACE || c === SEMICOLON || c === CLOSE_BRACE) break;
     j++;
   }
-  const name = css.substring(ctx.i + 1, j);
+  const name = css.substring(nameStart, j);
 
   // Skip whitespace before prelude
   while (isWS(css.charCodeAt(j))) j++;
 
-  // Scan prelude until `{`, `;`, `}` (nested blocks only), or EOF
+  // Scan until `{`, `;`, `}` (nested blocks only), or EOF. The scan starts at the name, which
+  // can run into the prelude (`@media(a:"`), and the prelude begins at the first whitespace.
   const preludeStart = j;
-  let strayClose = false;
-  j = scanQP(css, j, len, OPEN_BRACE, SEMICOLON, CLOSE_BRACE, -1);
+  let invalid = !AT_NAME_RE.test(name);
+  j = scanQPB(css, nameStart, len, OPEN_BRACE, SEMICOLON, CLOSE_BRACE, -1);
   while (root && j < len && css.charCodeAt(j) === CLOSE_BRACE) {
-    strayClose = true;
-    j = scanQP(css, j + 1, len, OPEN_BRACE, SEMICOLON, CLOSE_BRACE, -1);
+    invalid = true;
+    j = scanQPB(css, j + 1, len, OPEN_BRACE, SEMICOLON, CLOSE_BRACE, -1);
   }
 
   if (j > len) {
@@ -600,7 +598,7 @@ function parseAtRule(ctx: ParseContext): Node | null {
   ctx.i = hasBody || delim === SEMICOLON ? j + 1 : j;
 
   const children = hasBody ? parseNested(ctx) : null;
-  if (strayClose) return null;
+  if (invalid) return null;
 
   if (children !== null && isKeyframesName(name)) {
     return {
@@ -637,7 +635,8 @@ export function splitTopLevelCommas(raw: string, trim = false): string[] {
   const len = raw.length;
   let start = 0;
   while (start <= len) {
-    const end = scanQPB(raw, start, len, COMMA, -1, -1, -1);
+    const stop = scanQPB(raw, start, len, COMMA, -1, -1, -1);
+    const end = stop > len ? len : stop;
     const part = trim ? trimRange(raw, start, end) : raw.substring(start, end);
     if (part || !trim) out.push(part);
     start = end + 1;

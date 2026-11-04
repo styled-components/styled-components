@@ -655,6 +655,9 @@ describe('compileWeb', () => {
       ['paren', tagged`width: calc(${'1px)'}; top: 0;`],
       ['paren closed by a function value', tagged`width: calc(${() => '1px)'}; top: 0;`],
       ['string', tagged`content: "${'a"'}; top: 0;`],
+      ['bracket', tagged`grid-template-columns: [a ${'b]'} 1fr; top: 0;`],
+      ['bracket in a selector', tagged`&[a=${'b]'} { top: 0; }`],
+      ['string holding a newline', tagged`content: "a\n${'b'}"; top: 0;`],
       ['paren inside a block', tagged`&:hover { width: calc(${'1px)'}; top: 0; }`],
       ['paren in an at-rule prelude', tagged`@media (min-width: ${'1px)'} { top: 0; }`],
       ['paren in a keyframe', tagged`@keyframes k { to { width: calc(${'1px)'}; } }`],
@@ -675,7 +678,37 @@ describe('compileWeb', () => {
       ['a comment split across text and a value', tagged`width: /${'*'} 1px; top: 0;`],
       ['a paren in a selector', tagged`a ${'b:not('} { top: 0; }`],
       ['a paren in an at-rule prelude', tagged`@media ${'(min-width:1px'} { top: 0; }`],
+      ['a bracket', tagged`grid-template-columns: ${'[a'} 1fr; top: 0;`],
+      ['a bracket in a selector', tagged`&${'[a'} { top: 0; }`],
+      ['a bracket split from its paren', tagged`width: f(${'['}${')'}; top: 0;`],
+      ['a string holding a newline', tagged`content: "${'a\nb'}"; top: 0;`],
+      ['a comment after a colon', tagged`top: ${'//*'}; left: 0;`],
+      ['a function a form feed keeps from being a url', tagged`top: ${'url(\f")""'}; left: 0;`],
+      ['a form feed before a quote', tagged`top: url(${'\f"a'}); left: 0;`],
+      ['a function with a non-ASCII name', tagged`top: ${'éurl(a")""'}; left: 0;`],
+      ['a function after an escape', tagged`top: ${'\\41 bar(a")""'}; left: 0;`],
+      ['a url name extended by an escape', tagged`top: ${'\\61url(a")""'}; left: 0;`],
+      ['a final backslash in a value', tagged`color: ${'\\'}; top: 0;`],
+      ['a final backslash in a selector', tagged`&${'\\'} { top: 0; } y { color: red; }`],
+      ['a final backslash in a prelude', tagged`@media ${'x\\'} { top: 0; }`],
     ])('returns null for %s opened by an interpolated value', (_label, src) => {
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toBeNull();
+    });
+
+    it.each([
+      ['a bracket', tagged`top: [b ${'c]'}; } x { color: red; } d: e]; left: 0;`],
+      ['a lone closer', tagged`--a: [${']'}; } x { color: red; } ]; left: 0;`],
+      ['a paren', tagged`top: f(b ${'c)'}; } x { color: red; } d: e); left: 0;`],
+      ['a string', tagged`content: "${'"'}; } x { color: red; } z ${'"'}"; left: 0;`],
+    ])('returns null when %s in a value lifts template text out of its block', (_label, src) => {
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toBeNull();
+    });
+
+    it.each([
+      ['after the scope', tagged`&${', html'} { color: red; }`],
+      ['in a descendant', tagged`& ${'b, html'} { color: red; }`],
+      ['closing a bracket', tagged`&[a=${'b],html,[c'}] { color: red; }`],
+    ])('returns null for a selector value adding a list item %s', (_label, src) => {
       expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toBeNull();
     });
 
@@ -689,6 +722,14 @@ describe('compileWeb', () => {
         '.a{width:calc(1px + 2px);}',
       ],
       ['a value inside a string', tagged`content: "${'a'}";`, '.a{content:"a";}'],
+      ['a closed bracket', tagged`grid-area: ${'[a]'};`, '.a{grid-area:[a];}'],
+      ['a value inside a bracket', tagged`grid-area: [${'a'}] 1;`, '.a{grid-area:[a] 1;}'],
+      ['a value in a selector bracket', tagged`&[a=${'b'}] { top: 0; }`, '.a[a=b]{top:0;}'],
+      ['a comma in a selector function', tagged`&:is(${'a,b'}) { top: 0; }`, '.a:is(a,b){top:0;}'],
+      ['a value after a semicolon in a bracket', tagged`--a: [b; ${'c'}];`, '.a{--a:[b; c];}'],
+      ['a value in a brace in a bracket', tagged`--a: [{${'c'}}];`, '.a{--a:[{c}];}'],
+      ['a value in a brace in a function', tagged`--a: f({${'c'}});`, '.a{--a:f({c});}'],
+      ['a value after a semicolon in a string', tagged`content: "a;${'c'}";`, '.a{content:"a;c";}'],
     ])('emits %s without leaving the fast path', (_label, src, rule) => {
       expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
         rule,
