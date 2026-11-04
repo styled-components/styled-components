@@ -405,9 +405,10 @@ function evalSequence(tokens: Token[], permitNonFinite: boolean): NumericResult 
   }
 
   // Pass 0: fold unary + / -. A `+` / `-` op is unary when it's the
-  // first token or sits between two other ops. `-infinity` /
-  // `-1.5 * 2` / `5 + -3` all reach evalSequence as `[Op, value, …]`
-  // because the tokenizer emits a leading `-` as its own Op token.
+  // first token or sits between two other ops. The tokenizer emits a `-`
+  // as its own Op token only when no number or name is joined to it, so
+  // `- 1.5 * 2` reaches evalSequence as `[Op, value, …]` while `-pi` is a
+  // name of its own.
   for (let i = 0; i < resolved.length; i++) {
     const t = resolved[i];
     if (!('kind' in t)) continue;

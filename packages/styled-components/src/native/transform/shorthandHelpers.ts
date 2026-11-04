@@ -115,7 +115,7 @@ export function cssColorRawToRnStyleValue(raw: string): unknown {
 /**
  * Convert a token to the string value RN expects for that property.
  * For dimension-like tokens this is a number (or `'50%'` / `'auto'` string);
- * for colors / keywords / functions it's the token's `raw` text.
+ * for colors / keywords / functions it's the raw source substring.
  */
 export function tokenToValue(t: Token): number | string {
   if (t.kind === TokenKind.Length) {

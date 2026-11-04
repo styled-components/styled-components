@@ -3,6 +3,7 @@ import { warnOnce } from '../dev';
 import { isGenericFamily, resolveGenericFamily } from '../polyfills/genericFamily';
 import { buildResolver } from '../polyfills/resolvers';
 import { tokenToValue, withoutSlashes } from '../shorthandHelpers';
+import { decodeName } from '../tokenize';
 import { AngleToken, LengthToken, lengthToken, sentinelToken, Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
 import { ABSOLUTE_LENGTH_PX_PER_UNIT } from '../units';
@@ -534,12 +535,13 @@ function readFontFamily(stream: TokenStream): FontFamilyName | null {
   if (!t) return null;
   if (t.kind === TokenKind.String) return { name: t.text, quoted: true };
   if (t.kind === TokenKind.Ident) {
-    const parts = [t.raw];
+    const parts = [decodeName(t.raw)];
     for (let next = stream.peek(); next?.kind === TokenKind.Ident; next = stream.peek()) {
-      parts.push(next.raw);
+      parts.push(decodeName(next.raw));
       stream.consume();
     }
-    return { name: parts.join(' '), quoted: false };
+    const name = parts.join(' ');
+    return name === '' ? null : { name, quoted: false };
   }
   return null;
 }

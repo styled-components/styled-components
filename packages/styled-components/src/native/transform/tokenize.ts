@@ -222,17 +222,10 @@ export function tokenize(value: string): Token[] {
       }
     }
 
-    // Bare minus; op in calc / separator. `--` followed by an ident char
-    // starts a dashed ident (custom-property names, timeline names); let the
-    // ident scanner below consume it.
-    if (
-      c === $.HYPHEN &&
-      !(
-        i + 2 < len &&
-        value.charCodeAt(i + 1) === $.HYPHEN &&
-        (isIdentPart(value.charCodeAt(i + 2)) || startsEscape(value, i + 2))
-      )
-    ) {
+    // Bare minus; op in calc / separator. A hyphen before a name character or
+    // an escape starts an ident (vendor keywords, custom-property names,
+    // timeline names); let the ident scanner below consume it.
+    if (c === $.HYPHEN && !hyphenStartsName(value, i)) {
       tokens.push(opToken('-'));
       i++;
       continue;
@@ -240,27 +233,28 @@ export function tokenize(value: string): Token[] {
 
     // Ident or function
     if (isIdentStart(c) || startsEscape(value, i)) {
-      const identEnd = consumeIdent(value, i);
-      if (startsEscape(value, identEnd)) {
-        i = pushEscapedName(tokens, value, i, identEnd);
-        continue;
-      }
+      const plainEnd = consumeIdent(value, i);
+      const identEnd =
+        plainEnd < len && startsEscape(value, plainEnd)
+          ? consumeEscapes(value, plainEnd)
+          : plainEnd;
+      const source = value.substring(i, identEnd);
+      const decoded = identEnd === plainEnd ? source : decodeName(source);
       // Check for '(' → function
       if (identEnd < len && value.charCodeAt(identEnd) === $.OPEN_PAREN) {
         const argsEnd = findMatchingParen(value, identEnd);
         if (argsEnd !== -1) {
-          // Function names are ASCII case-insensitive; lowercase here so every
-          // downstream consumer compares against literal lowercase names. `raw`
-          // keeps the author casing for round-trip emission paths.
-          const name = toLowerIfMixed(value.substring(i, identEnd));
+          // Function names are ASCII case-insensitive; the token lowercases so
+          // every downstream consumer compares against literal lowercase names.
+          // `raw` keeps the author casing for round-trip emission paths.
           const args = value.substring(identEnd + 1, argsEnd);
-          tokens.push(functionToken(value.substring(i, argsEnd + 1), name, args));
+          tokens.push(functionToken(value.substring(i, argsEnd + 1), decoded, args));
           i = argsEnd + 1;
           continue;
         }
         // Unmatched paren; treat as ident including the '(' and rest
       }
-      tokens.push(identToken(value.substring(i, identEnd)));
+      tokens.push(identToken(source, decoded));
       i = identEnd;
       continue;
     }
@@ -287,11 +281,18 @@ function startsEscape(value: string, i: number): boolean {
   return next !== $.LF && next !== $.CR && next !== FF && next !== $.NUL;
 }
 
-/**
- * Pushes the ident or function whose name holds an escape at `escapeAt`, returning where it ends.
- * The browser reads the source on rn-web; React Native reads only what `raw` hands it.
- */
-function pushEscapedName(tokens: Token[], value: string, start: number, escapeAt: number): number {
+function hyphenStartsName(value: string, i: number): boolean {
+  const next = value.charCodeAt(i + 1);
+
+  if (next === $.HYPHEN) {
+    return isIdentPart(value.charCodeAt(i + 2)) || startsEscape(value, i + 2);
+  }
+
+  return isIdentStart(next) || startsEscape(value, i + 1);
+}
+
+/** Extends a name past the escape at `escapeAt` and everything after it that the name holds. */
+function consumeEscapes(value: string, escapeAt: number): number {
   let end = escapeAt;
 
   while (startsEscape(value, end)) {
@@ -300,21 +301,7 @@ function pushEscapedName(tokens: Token[], value: string, start: number, escapeAt
     end = consumeIdent(value, ESCAPE_RE.lastIndex);
   }
 
-  const source = value.substring(start, end);
-  const decoded = decodeEscapes(source, REPLACEMENT_CHARACTER);
-  const raw = __NATIVE_WEB__ ? source : decoded;
-  const argsEnd = value.charCodeAt(end) === $.OPEN_PAREN ? findMatchingParen(value, end) : -1;
-
-  if (argsEnd === -1) {
-    tokens.push(identToken(raw, decoded));
-    return end;
-  }
-
-  const args = value.substring(end + 1, argsEnd);
-  tokens.push(
-    functionToken(raw + value.substring(end, argsEnd + 1), toLowerIfMixed(decoded), args)
-  );
-  return argsEnd + 1;
+  return end;
 }
 
 function findStringEnd(value: string, start: number, quote: number): number {
@@ -346,6 +333,11 @@ function decodeEscapes(text: string, atEnd: string): string {
       return isValid ? String.fromCodePoint(code) : REPLACEMENT_CHARACTER;
     })
   );
+}
+
+/** The value a name's source spells, for what React Native reads instead of a browser. */
+export function decodeName(source: string): string {
+  return decodeEscapes(source, REPLACEMENT_CHARACTER);
 }
 
 function findMatchingParen(value: string, openIdx: number): number {

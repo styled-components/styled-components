@@ -30,11 +30,7 @@ function lineClampShorthand(tokens: Token[]): Dict<unknown> | null {
       lines = n;
     } else if (cur.kind === TokenKind.String) {
       // <block-ellipsis>; accepted for compliance, dropped on emit.
-    } else if (cur.kind === TokenKind.Op && cur.op === '-') {
-      // Tokenizer splits `-webkit-legacy` as `Op(-) Ident(webkit-legacy)`.
-      const next = stream.consume();
-      if (!next || next.kind !== TokenKind.Ident || next.name !== 'webkit-legacy') return null;
-    } else {
+    } else if (cur.kind !== TokenKind.Ident || cur.name !== '-webkit-legacy') {
       return null;
     }
     cur = stream.consume() ?? null;

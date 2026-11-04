@@ -1,5 +1,4 @@
-import { describeOnRnWeb } from '../describeOnRnWeb';
-import { tokenize, tokenizeFunctionArgs } from '../tokenize';
+import { decodeName, tokenize, tokenizeFunctionArgs } from '../tokenize';
 import { TokenKind } from '../tokens';
 import { isSafeThemePath, sanitizeValue } from '../sanitize';
 import { resetWarningsForTest } from '../dev';
@@ -175,8 +174,10 @@ describe('native transform tokenizer', () => {
   // result. the stream starts with a valid escape: Consume an escaped code point. Append the
   // returned code point to result."
   //
-  // "Check if three code points would start an ident sequence": "U+005C REVERSE SOLIDUS (\):
-  // If the first and second code points are a valid escape, return true."
+  // "Check if three code points would start an ident sequence": "U+002D HYPHEN-MINUS: If the
+  // second code point is an ident-start code point or a U+002D HYPHEN-MINUS, or the second and
+  // third code points are a valid escape, return true. Otherwise, return false." "U+005C
+  // REVERSE SOLIDUS (\): If the first and second code points are a valid escape, return true."
   //
   // "Check if two code points are a valid escape": "If the first code point is not U+005C
   // REVERSE SOLIDUS (\), return false. Otherwise, if the second code point is a newline,
@@ -186,29 +187,52 @@ describe('native transform tokenizer', () => {
   // CHARACTER (�)."
   describe('escapes in an identifier', () => {
     it.each([
-      ['a hex escape inside a name', 'A\\42 B', 'ABB', 'abb'],
-      ['a hex escape starting a name', '\\73 erif', 'serif', 'serif'],
-      ['an escaped space', 'Foo\\ Bar', 'Foo Bar', 'foo bar'],
-      ['an escaped leading digit', '\\31 23', '123', '123'],
-      ['an escaped slash', 'Red\\/Black', 'Red/Black', 'red/black'],
-      ['an escaped comma', 'a\\,b', 'a,b', 'a,b'],
-      ['an escaped open paren, which does not start a function', 'a\\(b', 'a(b', 'a(b'],
-      ['an escaped backslash', 'a\\\\b', 'a\\b', 'a\\b'],
-      ['a hex escape ended by CR LF', 'A\\42\r\nB', 'ABB', 'abb'],
-      ['a hex escape ended by a non-hex letter', 'A\\42g', 'ABg', 'abg'],
-      ['a six digit hex escape with a digit after it', 'a\\0000411', 'aA1', 'aa1'],
-      ['a code point past the 16 bit range', 'a\\1f600', 'a\u{1f600}', 'a\u{1f600}'],
-      ['a zero code point', 'a\\0 b', 'a�b', 'a�b'],
-      ['a surrogate code point', 'a\\d800 b', 'a�b', 'a�b'],
-      ['a code point past the maximum', 'a\\110000 b', 'a�b', 'a�b'],
-      ['a final backslash', 'a\\', 'a�', 'a�'],
-      ['a dashed name', '--\\41 b', '--Ab', '--ab'],
-      ['a control character', 'a\\7 bc', 'abc', 'abc'],
-      ['a bidi override', 'a\\202e bc', 'abc', 'abc'],
-    ])('decodes %s', (_label, source, raw, name) => {
+      ['a hex escape inside a name', 'A\\42 B', 'ABB'],
+      ['a hex escape starting a name', '\\73 erif', 'serif'],
+      ['an escaped space', 'Foo\\ Bar', 'Foo Bar'],
+      ['an escaped leading digit', '\\31 23', '123'],
+      ['an escaped slash', 'Red\\/Black', 'Red/Black'],
+      ['an escaped comma', 'a\\,b', 'a,b'],
+      ['an escaped open paren, which does not start a function', 'a\\(b', 'a(b'],
+      ['an escaped backslash', 'a\\\\b', 'a\\b'],
+      ['a hex escape ended by CR LF', 'A\\42\r\nB', 'ABB'],
+      ['a hex escape ended by a non-hex letter', 'A\\42g', 'ABg'],
+      ['a six digit hex escape with a digit after it', 'a\\0000411', 'aA1'],
+      ['a code point past the 16 bit range', 'a\\1f600', 'a\u{1f600}'],
+      ['a zero code point', 'a\\0 b', 'a�b'],
+      ['a surrogate code point', 'a\\d800 b', 'a�b'],
+      ['a code point past the maximum', 'a\\110000 b', 'a�b'],
+      ['a final backslash', 'a\\', 'a�'],
+      ['a dashed name', '--\\41 b', '--Ab'],
+      ['a name after one hyphen', '-\\41 b', '-Ab'],
+      ['a control character', 'a\\7 bc', 'abc'],
+      ['a bidi override', 'a\\202e bc', 'abc'],
+    ])('reads %s as one name and keeps the source in raw', (_label, source, decoded) => {
       expect(tokenize(source)).toEqual([
-        expect.objectContaining({ kind: TokenKind.Ident, name, raw }),
+        expect.objectContaining({
+          kind: TokenKind.Ident,
+          name: decoded.toLowerCase(),
+          raw: source,
+        }),
       ]);
+      expect(decodeName(source)).toBe(decoded);
+    });
+
+    it.each([
+      ['a vendor keyword', '-apple-system', '-apple-system'],
+      ['a name after one hyphen', '-a', '-a'],
+      ['a name after two hyphens', '--a', '--a'],
+    ])('reads %s as one name', (_label, source, name) => {
+      expect(tokenize(source)).toEqual([
+        expect.objectContaining({ kind: TokenKind.Ident, name, raw: source }),
+      ]);
+    });
+
+    it.each([
+      ['a space follows', 'a - b'],
+      ['nothing follows', 'a -'],
+    ])('keeps a hyphen as an operator when %s', (_label, source) => {
+      expect(tokenize(source).map(token => token.kind)).toContain(TokenKind.Op);
     });
 
     it.each([
@@ -227,13 +251,13 @@ describe('native transform tokenizer', () => {
       ]);
     });
 
-    it('decodes a function name and keeps the author casing in raw', () => {
+    it('decodes a function name and keeps the source in raw', () => {
       expect(tokenize('RG\\42(0, 0, 0)')).toEqual([
         expect.objectContaining({
           args: '0, 0, 0',
           kind: TokenKind.Function,
           name: 'rgb',
-          raw: 'RGB(0, 0, 0)',
+          raw: 'RG\\42(0, 0, 0)',
         }),
       ]);
     });
@@ -242,24 +266,6 @@ describe('native transform tokenizer', () => {
       expect(tokenize('Helvetica')).toEqual([
         expect.objectContaining({ kind: TokenKind.Ident, name: 'helvetica', raw: 'Helvetica' }),
       ]);
-    });
-
-    describeOnRnWeb(() => {
-      it('decodes the name for keyword checks and keeps the source for the browser', () => {
-        expect(tokenize('A\\42 B')).toEqual([
-          expect.objectContaining({ kind: TokenKind.Ident, name: 'abb', raw: 'A\\42 B' }),
-        ]);
-      });
-
-      it('decodes a function name and keeps its source for the browser', () => {
-        expect(tokenize('\\72 gb(0, 0, 0)')).toEqual([
-          expect.objectContaining({
-            kind: TokenKind.Function,
-            name: 'rgb',
-            raw: '\\72 gb(0, 0, 0)',
-          }),
-        ]);
-      });
     });
   });
 

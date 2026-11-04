@@ -57,6 +57,23 @@ describe('animations and transitions (compile pipeline)', () => {
 
   // https://drafts.csswg.org/css-transitions-1/#list-matching
   describe('transition longhands (coordinated lists)', () => {
+    // https://drafts.csswg.org/css-transitions-1/#transition-property-property
+    // "<single-transition-property> = all | <custom-ident>"
+    // "unrecognized properties must be kept in the list to preserve the matching of indices"
+    it.each([
+      [
+        'the longhand',
+        'transition-property: -webkit-transform, opacity; transition-duration: 50ms, 80ms;',
+      ],
+      ['the shorthand', 'transition: -webkit-transform 50ms, opacity 80ms;'],
+    ])('reads a vendor-prefixed name at its index in %s', (_label, css) => {
+      const r = toNativeStyles(css, stubStyleSheet);
+      expect(r.transitions!.map(t => [t.property, t.durationMs])).toEqual([
+        ['transform', 50],
+        ['opacity', 80],
+      ]);
+    });
+
     // Same list-matching prose as `smoke.test.ts`: shorter lists repeat.
     it('pairs transition-timing-function with transition-property then repeats', () => {
       const r = toNativeStyles(
