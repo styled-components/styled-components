@@ -515,6 +515,20 @@ describe('compileWeb', () => {
         expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toBeNull();
       });
 
+      it('names the declaration past a comment holding a paren', () => {
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const block = css`
+          color: red;
+        `;
+        parseSource(['width: calc(1px /* ( */); inset: 0 ', ';'], [block]);
+        expect(warn.mock.calls).toEqual([
+          [
+            "[sc] a css fragment is interpolated inside the `inset` declaration with no `;` before it, so the fragment text becomes part of that declaration's value. Add a `;` before the `${...}` interpolation.",
+          ],
+        ]);
+        warn.mockRestore();
+      });
+
       it('names the declaration across earlier slots and warns once per site, not once per chunk tail', () => {
         const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
         const block = css`
@@ -635,6 +649,69 @@ describe('compileWeb', () => {
       expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toBeNull();
     });
 
+    // Only the resolved text shows whether a value closes what the template left
+    // open, so these compile from it through the string-input path.
+    it.each([
+      ['paren', tagged`width: calc(${'1px)'}; top: 0;`],
+      ['paren closed by a function value', tagged`width: calc(${() => '1px)'}; top: 0;`],
+      ['string', tagged`content: "${'a"'}; top: 0;`],
+      ['paren inside a block', tagged`&:hover { width: calc(${'1px)'}; top: 0; }`],
+      ['paren in an at-rule prelude', tagged`@media (min-width: ${'1px)'} { top: 0; }`],
+      ['paren in a keyframe', tagged`@keyframes k { to { width: calc(${'1px)'}; } }`],
+      [
+        'paren in a keyframes selector',
+        tagged`@keyframes k { from { top: 0; } a(${'1)'} { left: 0; } } right: 0;`,
+      ],
+    ])('returns null for a %s left open in a statement holding a value', (_label, src) => {
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toBeNull();
+    });
+
+    it.each([
+      ['a paren', tagged`width: ${'calc(1px'}; top: 0;`],
+      ['a string', tagged`content: ${'"a'}; top: 0;`],
+      ['a comment', tagged`width: ${'1px /*'}; top: 0;`],
+      ['a closed comment', tagged`width: ${'1px /* c */'}; top: 0;`],
+      ['a comment split across two values', tagged`width: ${'/'}${'*'} 1px; top: 0;`],
+      ['a comment split across text and a value', tagged`width: /${'*'} 1px; top: 0;`],
+      ['a paren in a selector', tagged`a ${'b:not('} { top: 0; }`],
+      ['a paren in an at-rule prelude', tagged`@media ${'(min-width:1px'} { top: 0; }`],
+    ])('returns null for %s opened by an interpolated value', (_label, src) => {
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toBeNull();
+    });
+
+    it.each([
+      ['a closed function', tagged`width: ${'calc(1px + 2px)'};`, '.a{width:calc(1px + 2px);}'],
+      ['a closed string', tagged`content: ${'"a)"'};`, '.a{content:"a)";}'],
+      ['a slash', tagged`aspect-ratio: ${'1 / 2'};`, '.a{aspect-ratio:1 / 2;}'],
+      [
+        'a value inside a function',
+        tagged`width: calc(${'1px'} + 2px);`,
+        '.a{width:calc(1px + 2px);}',
+      ],
+      ['a value inside a string', tagged`content: "${'a'}";`, '.a{content:"a";}'],
+    ])('emits %s without leaving the fast path', (_label, src, rule) => {
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
+        rule,
+      ]);
+    });
+
+    it.each([
+      ['after a value', tagged`color: rgb(${'0'}/**/51/**/255);`],
+      ['before and after a value', tagged`color: rgb(0/**/${'51'}/**/255);`],
+      ['between values', tagged`color: rgb(${'0'}/**/${'51'}/**/${'255'});`],
+    ])('keeps the tokens apart around a comment %s in a function call', (_label, src) => {
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
+        '.a{color:rgb(0 51 255);}',
+      ]);
+    });
+
+    it('drops a statement left open when no value is interpolated into it', () => {
+      const src = tagged`color: ${'red'}; width: calc(1px; top: 0;`;
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
+        '.a{color:red;}',
+      ]);
+    });
+
     it('returns null for array interpolation', () => {
       const src = tagged`color: ${['red', 'blue'] as unknown};`;
       expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toBeNull();
@@ -647,6 +724,20 @@ describe('compileWeb', () => {
       expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual(
         legacy('color: red; &:hover { background: blue; } margin: 0;')
       );
+    });
+
+    it.each([
+      ['beside a declaration', () => `/* don't */ background: blue;`, 'background:blue;'],
+      [
+        'inside a function call',
+        () => `width: calc(1px /* don't */ + 2px);`,
+        'width:calc(1px + 2px);',
+      ],
+    ])('strips a comment %s in a block-level string interpolation', (_label, fragment, decl) => {
+      const src = tagged`color: red; ${fragment} margin: 0;`;
+      expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
+        `.a{color:red;${decl}margin:0;}`,
+      ]);
     });
 
     it('parses block-level string interpolations with @media (Phase D)', () => {

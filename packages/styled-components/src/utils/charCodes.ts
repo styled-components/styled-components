@@ -77,3 +77,47 @@ export function isIdentChar(c: number): boolean {
     c === UNDERSCORE
   );
 }
+
+/**
+ * A name holding an escape may mean `url`, so it counts as one. `ur\l` is the
+ * shortest spelling; a hex escape may end in a space (`\75 rl`).
+ */
+function namesUrl(s: string, i: number, escape: number): boolean {
+  // `| 32` lowercases an ASCII letter; no other code lands on these three.
+  if (
+    (s.charCodeAt(i - 1) | 32) === 108 &&
+    (s.charCodeAt(i - 2) | 32) === 114 &&
+    (s.charCodeAt(i - 3) | 32) === 117 &&
+    !isIdentChar(s.charCodeAt(i - 4))
+  ) {
+    return true;
+  }
+  if (escape === -1) return false;
+
+  let j = i - 1;
+  for (let c = s.charCodeAt(j); isIdentChar(c) || isWS(c) || c === BACKSLASH; )
+    c = s.charCodeAt(--j);
+  return j < escape && i - j > 4;
+}
+
+/**
+ * Index of the `)` ending the unquoted url token whose `(` is at `i`, `end` when
+ * nothing closes it, or -1 when the `(` opens anything else. A browser reads an
+ * unquoted url as one token up to the first `)`, so a quote or `/*` inside it opens
+ * nothing. `escape` is the index of the last backslash before `i`, or -1.
+ */
+export function urlTokenEnd(s: string, i: number, end: number, escape: number): number {
+  if (!namesUrl(s, i, escape)) return -1;
+
+  let j = i + 1;
+  while (isWS(s.charCodeAt(j))) j++;
+  const first = s.charCodeAt(j);
+  if (first === DOUBLE_QUOTE || first === SINGLE_QUOTE) return -1;
+
+  for (; j < end; j++) {
+    const code = s.charCodeAt(j);
+    if (code === BACKSLASH) j++;
+    else if (code === CLOSE_PAREN) return j;
+  }
+  return end;
+}

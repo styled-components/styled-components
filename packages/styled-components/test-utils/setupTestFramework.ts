@@ -25,6 +25,7 @@ const silencedMessageSubstrings = [
   '[sc] unknown prop "',
   '[sc] interpolating a client component',
   '[sc] no ThemeProvider or theme prop in scope',
+  'or a quote that never closes',
   'cannot be used as a React Native dimension',
 ];
 

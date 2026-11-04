@@ -1,4 +1,3 @@
-import { skipParenComment } from '../parser/parser';
 import {
   ASTERISK,
   BACKSLASH,
@@ -6,12 +5,12 @@ import {
   COLON,
   DOUBLE_QUOTE,
   isWS,
-  LF,
   OPEN_PAREN,
   SINGLE_QUOTE,
   SLASH,
   SPACE,
   TAB,
+  urlTokenEnd,
 } from './charCodes';
 
 /**
@@ -40,9 +39,10 @@ function isPrecededByColon(css: string, i: number): boolean {
 }
 
 /**
- * Strip JS-style line comments and CSS block comments in one pass. Brace
- * repair (a stray `}`, an unclosed block or string) is the parser's job at
- * its root block, so comment-free input returns as is.
+ * Strip JS-style line comments and CSS block comments in one pass; the parser
+ * never sees a comment. A `//` inside parens stays, since it is usually part of
+ * a value. Brace repair (a stray `}`, an unclosed block or string) is the
+ * parser's job at its root block, so comment-free input returns as is.
  */
 export function normalize(css: string): string {
   if (css.indexOf('//') === -1 && css.indexOf('/*') === -1) return css;
@@ -53,13 +53,20 @@ export function normalize(css: string): string {
   let i = 0;
   let inString = 0;
   let parenDepth = 0;
+  let escape = -1;
   /** Last char appended to `out`; reading `out` itself would flatten the concat rope per comment. */
   let lastOutCh = 0;
 
   while (i < len) {
     const code = css.charCodeAt(i);
 
-    if ((code === DOUBLE_QUOTE || code === SINGLE_QUOTE) && !isEscaped(css, i)) {
+    if (code === BACKSLASH) {
+      escape = i;
+      i += 2;
+      continue;
+    }
+
+    if (code === DOUBLE_QUOTE || code === SINGLE_QUOTE) {
       if (inString === 0) {
         inString = code;
       } else if (inString === code) {
@@ -75,7 +82,9 @@ export function normalize(css: string): string {
     }
 
     if (code === OPEN_PAREN) {
-      parenDepth++;
+      const urlEnd = urlTokenEnd(css, i, len, escape);
+      if (urlEnd === -1) parenDepth++;
+      else i = urlEnd;
       i++;
       continue;
     }
@@ -86,70 +95,55 @@ export function normalize(css: string): string {
       continue;
     }
 
-    // Inside parentheses (any function call), skip comment detection so that
-    // url(https://...), image-set(), url(.../*.png), etc. are preserved
-    if (parenDepth > 0) {
-      i =
-        code === SLASH && css.charCodeAt(i + 1) === ASTERISK
-          ? skipParenComment(css, i, len)
-          : i + 1;
+    if (code !== SLASH && code !== ASTERISK) {
+      i++;
       continue;
     }
 
-    if (code === SLASH && i + 1 < len && css.charCodeAt(i + 1) === ASTERISK) {
-      // Emit everything up to the comment, then skip the comment entirely.
-      if (i > start) {
-        out += css.substring(start, i);
-        lastOutCh = css.charCodeAt(i - 1);
-      }
-      i += 2;
-      while (i + 1 < len && !(css.charCodeAt(i) === ASTERISK && css.charCodeAt(i + 1) === SLASH)) {
-        i++;
-      }
-      i += 2;
-      // When the comment is bordered by whitespace on both sides, collapse the
-      // pair to a single space so selector templates with annotative comments
-      // (`a /* foo */ b`) hash consistently.
-      if (isWS(lastOutCh) && i < len && isWS(css.charCodeAt(i))) {
-        while (i < len && isWS(css.charCodeAt(i))) i++;
-      }
-      start = i;
+    const next = css.charCodeAt(i + 1);
+    const isBlockComment = code === SLASH && next === ASTERISK;
+    if (!isBlockComment && (parenDepth > 0 || next !== SLASH)) {
+      i++;
       continue;
     }
 
-    if (code === ASTERISK && i + 1 < len && css.charCodeAt(i + 1) === SLASH) {
-      if (i > start) {
-        out += css.substring(start, i);
-        lastOutCh = css.charCodeAt(i - 1);
-      }
-      i += 2;
-      start = i;
-      continue;
-    }
-
-    if (code === SLASH && i + 1 < len && css.charCodeAt(i + 1) === SLASH) {
+    let end = i + 2;
+    if (isBlockComment) {
+      end = css.indexOf('*/', end);
+      end = end === -1 ? len : end + 2;
+    } else if (code === SLASH) {
       // URL guard: `https://` and a protocol-relative `: //host` value are NOT
       // line comments. A `:` before the `//` (past any whitespace) means the
       // sequence belongs to a value, so skip the line-comment strip.
       if (isPrecededByColon(css, i)) {
-        i += 2;
+        i = end;
         continue;
       }
-      if (i > start) {
-        out += css.substring(start, i);
-        lastOutCh = css.charCodeAt(i - 1);
-      }
-      while (i < len && css.charCodeAt(i) !== LF) {
-        i++;
-      }
-      start = i;
-      continue;
+      end = css.indexOf('\n', i);
+      if (end === -1) end = len;
     }
 
-    i++;
+    if (i > start) {
+      out += css.substring(start, i);
+      lastOutCh = css.charCodeAt(i - 1);
+    }
+    i = end;
+
+    if (isBlockComment) {
+      const nextIsWS = isWS(css.charCodeAt(i));
+      // When the comment is bordered by whitespace on both sides, collapse the
+      // pair to a single space so selector templates with annotative comments
+      // (`a /* foo */ b`) hash consistently.
+      if (isWS(lastOutCh)) {
+        if (nextIsWS) while (isWS(css.charCodeAt(i))) i++;
+      } else if (parenDepth > 0 && !nextIsWS) {
+        // A comment ends the token before it, so `rgb(0/**/51)` holds two numbers.
+        out += ' ';
+        lastOutCh = SPACE;
+      }
+    }
+    start = i;
   }
 
-  if (start === 0) return css;
-  if (start < len) out += css.substring(start);
-  return out;
+  return out + css.substring(start);
 }

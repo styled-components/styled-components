@@ -58,27 +58,17 @@ function stripCombinatorSpaces(sel: string): string {
     if (stop >= len) break;
     // Find left boundary of emitted segment (trim trailing whitespace).
     let left = stop;
-    while (left > segStart) {
-      const p = sel.charCodeAt(left - 1);
-      if (isWS(p)) left--;
-      else break;
-    }
+    while (left > segStart && isWS(sel.charCodeAt(left - 1))) left--;
     out += sel.substring(segStart, left);
     out += sel[stop];
     // Skip whitespace after combinator.
     let j = stop + 1;
-    while (j < len) {
-      const n = sel.charCodeAt(j);
-      if (isWS(n)) j++;
-      else break;
-    }
+    while (isWS(sel.charCodeAt(j))) j++;
     segStart = j;
     i = j;
   }
 
-  if (segStart === 0) return sel;
-  if (segStart < len) out += sel.substring(segStart, len);
-  return out;
+  return out + sel.substring(segStart);
 }
 
 function formatDecl(

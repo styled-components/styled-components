@@ -48,6 +48,51 @@ describe('basic', () => {
     `);
   });
 
+  it.each([
+    ['a static value', '1px)'],
+    ['a function value', () => '1px)'],
+  ])('reads the statements after a paren closed by %s', (_label, value) => {
+    const Comp = styled.div`
+      width: calc(${value};
+      top: 0;
+    `;
+    render(<Comp />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        width: calc(1px);
+        top: 0;
+      }"
+    `);
+  });
+
+  it('drops a statement whose interpolated value opens a paren nothing closes', () => {
+    const Comp = styled.div`
+      color: blue;
+      width: ${'calc(1px'};
+      top: 0;
+    `;
+    render(<Comp />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: blue;
+      }"
+    `);
+  });
+
+  it('drops a statement whose interpolated value leaves its paren open', () => {
+    const Comp = styled.div`
+      color: blue;
+      width: calc(${'1px'};
+      top: 0;
+    `;
+    render(<Comp />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: blue;
+      }"
+    `);
+  });
+
   it("should inject only once for a styled component, no matter how often it's mounted", () => {
     const Comp = styled.div`
       color: blue;

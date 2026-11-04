@@ -199,17 +199,17 @@ describe('parseCSSDeclarations', () => {
     expect(parseCSSDeclarations('/* nothing here */')).toEqual([]);
   });
 
-  it('drops broken declaration and recovers subsequent ones', () => {
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
-    expect(parseCSSDeclarations('color: rgb(255, 0, 0; font-size: 12px;')).toMatchInlineSnapshot(`
-      [
-        [
-          "color",
-          "rgb(255, 0, 0; font-size: 12px;",
-        ],
-      ]
-    `);
-    jest.restoreAllMocks();
+  it.each([
+    ['a color function', 'color: rgb(255, 0, 0; font-size: 12px;'],
+    ['several open functions', 'color: rgb(; font-size: calc(; opacity: 1;'],
+    ['a url', 'background: url(broken; color: red; margin: 10px;'],
+    ['a transform function', 'transform: rotate(45deg; color: red; margin: 10px;'],
+  ])('drops a statement holding an unclosed paren in %s, with all that follows', (_label, css) => {
+    expect(parseCSSDeclarations(css)).toEqual([]);
+  });
+
+  it('keeps the declarations before an unclosed paren', () => {
+    expect(parseCSSDeclarations('opacity: 1; color: rgb(255, 0, 0;')).toEqual([['opacity', '1']]);
   });
 
   it('handles stray close paren without going negative', () => {
@@ -635,12 +635,6 @@ describe('parseCSSDeclarations', () => {
       ]);
     });
 
-    it('unclosed parens consume remainder (tokenizer semantics)', () => {
-      expect(parseCSSDeclarations('color: rgb(; font-size: calc(; opacity: 1;')).toEqual([
-        ['color', 'rgb(; font-size: calc(; opacity: 1;'],
-      ]);
-    });
-
     it('handles CRLF line endings', () => {
       expect(parseCSSDeclarations('color: red;\r\nfont-size: 12px;\r\n')).toEqual([
         ['color', 'red'],
@@ -871,19 +865,6 @@ describe('parseCSSDeclarations', () => {
     it('custom property with unquoted /* truncates (correct CSS behavior)', () => {
       const result = parseCSSDeclarations('--code: a /* b; color: red;');
       expect(result).toEqual([['--code', 'a']]);
-    });
-
-    it('unclosed paren drops and recovers remaining declarations', () => {
-      expect(
-        parseCSSDeclarations('background: url(broken; color: red; margin: 10px;')
-      ).toMatchInlineSnapshot(`
-        [
-          [
-            "background",
-            "url(broken; color: red; margin: 10px;",
-          ],
-        ]
-      `);
     });
   });
 
@@ -1276,25 +1257,6 @@ describe('parseCSSDeclarations', () => {
           ],
         ]
       `);
-    });
-
-    it('unclosed paren consumes remainder (tokenizer semantics)', () => {
-      expect(
-        parseCSSDeclarations('transform: rotate(45deg; color: red; margin: 10px;')
-      ).toMatchInlineSnapshot(`
-        [
-          [
-            "transform",
-            "rotate(45deg; color: red; margin: 10px;",
-          ],
-        ]
-      `);
-    });
-
-    it('both unclosed paren and unclosed quote in sequence drop the statement', () => {
-      expect(parseCSSDeclarations('a: url(broken; b: "unterminated; c: valid; d: 10px;')).toEqual(
-        []
-      );
     });
 
     it('empty string value between quotes', () => {

@@ -1,4 +1,5 @@
 import { NodeKind } from './ast';
+import { resetWarnOnce } from '../utils/warnOnce';
 import { parse, splitTopLevelCommas } from './parser';
 
 const splitSelectors = (raw: string) => splitTopLevelCommas(raw, true);
@@ -406,6 +407,63 @@ describe('parser', () => {
       expect(parse('a: b; @import "x')).toEqual([{ kind: NodeKind.Decl, prop: 'a', value: 'b' }]);
     });
 
+    // CSS Syntax, "Consume a function": "<eof-token> <)-token> Discard a token
+    // from input. Return function." Deviation: the spec closes an open function
+    // at the end of input, but the end of a template is not the end of a
+    // stylesheet, and an emitted `(` would consume the rules after it. The
+    // statement is dropped instead, as for a string left open.
+    it.each([
+      ['a function', 'a: b; c: calc(1px + 2px'],
+      ['a function spanning later statements', 'a: b; c: calc(1px; d: e; x { y: z; }'],
+      ['a plain paren block', 'a: b; c: (1px'],
+      ['a nested function', 'a: b; c: calc((1px + 2px) * (3'],
+      ['a url', 'a: b; c: url(x.png; d: e;'],
+      ['a selector', 'a: b; &:not(.x { y: z; } d: e;'],
+      ['an at-rule prelude', 'a: b; @media (min-width: 1px { y: z; } d: e;'],
+    ])('drops the statement holding an unclosed paren in %s', (_label, css) => {
+      expect(parse(css)).toEqual([{ kind: NodeKind.Decl, prop: 'a', value: 'b' }]);
+    });
+
+    it('drops only the statement holding an unclosed paren inside a block', () => {
+      expect(parse('x { a: b; c: calc(1px; } d: e;')).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: ['x'],
+          children: [{ kind: NodeKind.Decl, prop: 'a', value: 'b' }],
+        },
+      ]);
+    });
+
+    it.each([
+      ['a declaration', 'a: b; c: calc(1px; d: e;', 'c: calc(1px; d: e;'],
+      ['an at-rule prelude', '@media (min-width: 1px { y: z; }', '(min-width: 1px { y: z; }'],
+    ])('warns in development that %s holding an unclosed paren is dropped', (_label, css, text) => {
+      resetWarnOnce();
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      parse(css);
+      expect(warn.mock.calls).toEqual([
+        [
+          `[sc] \`${text}\` holds a \`(\` or a quote that never closes, so it and everything after it in the template are dropped. Close the \`(\` or the quote.`,
+        ],
+      ]);
+      warn.mockRestore();
+    });
+
+    it('does not warn about a closed paren', () => {
+      resetWarnOnce();
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      parse('a: calc(1px); b: c;');
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
+
+    it('keeps the statements around a stray `)`, which opens nothing', () => {
+      expect(parse('a: 1px); b: c;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'a', value: '1px)' },
+        { kind: NodeKind.Decl, prop: 'b', value: 'c' },
+      ]);
+    });
+
     // CSS Syntax, "Consume an at-rule", `<}-token>`: "If nested is true: If rule is
     // valid in the current context, return it. Otherwise, return nothing.
     // Otherwise, consume a token and append the result to rule's prelude."
@@ -423,6 +481,9 @@ describe('parser', () => {
       ['stray closers', 'a:b; } c:d;\n'.repeat(80_000), 80_000],
       ['unclosed openers', '{'.repeat(80_000), 1],
       ['unclosed at-rule openers', '@media x{'.repeat(80_000), 1],
+      ['unclosed parens', 'a:b;'.repeat(80_000) + 'c:' + '('.repeat(80_000), 80_000],
+      ['unclosed urls', 'a:b;'.repeat(80_000) + 'c:' + 'url(a '.repeat(80_000), 80_000],
+      ['escaped names', 'a:b;'.repeat(80_000) + 'c:' + '\\a b('.repeat(80_000), 80_000],
     ])('repairs %s in linear time', (_label, css, nodes) => {
       const start = performance.now();
       expect(parse(css)).toHaveLength(nodes);
