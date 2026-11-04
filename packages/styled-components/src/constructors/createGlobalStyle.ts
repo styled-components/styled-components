@@ -5,7 +5,7 @@ import {
   STATIC_EXECUTION_CONTEXT,
 } from '../constants';
 import { IS_RSC } from '../utils/isRsc';
-import WebGlobalStyle from '../models/WebGlobalStyle';
+import WebGlobalStyle, { deleteInstance, getInstance } from '../models/WebGlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
@@ -94,17 +94,8 @@ export default function createGlobalStyle<Props extends object>(
         : [instance, props, ssc.styleSheet, theme, ssc.compiler, globalStyle];
 
       // biome-ignore-start lint/correctness/useHookAtTopLevel: this whole block sits under `if (!__SERVER__ && !IS_RSC)`, both build or load-time constants, so a given bundle always runs all of these hooks or none of them
-      const prevGlobalStyleRef = React.useRef(globalStyle);
-
       React.useInsertionEffect(() => {
         if (!ssc.styleSheet.server) {
-          // HMR creates a new globalStyle instance but the componentId stays stable
-          // (SWC plugin assigns by file location), so stale hasNameForId hits skip injection.
-          if (prevGlobalStyleRef.current !== globalStyle) {
-            ssc.styleSheet.clearRules(styledComponentId);
-            prevGlobalStyleRef.current = globalStyle;
-          }
-
           renderStyles(instance, props, ssc.styleSheet, theme, ssc.compiler);
         }
       }, renderDeps);
@@ -124,12 +115,17 @@ export default function createGlobalStyle<Props extends object>(
 
     // RSC: one plain tag per instance, no `precedence`; see docs/react.md "RSC style emission and Suspense".
     if (IS_RSC) {
-      const entry = !IS_BROWSER ? globalStyle.instanceRules.get(instance) : undefined;
+      const entry = !IS_BROWSER
+        ? getInstance(ssc.styleSheet, styledComponentId, instance)
+        : undefined;
       const css = entry ? joinRules(entry.rules) : '';
 
-      if (css) {
-        globalStyle.instanceRules.delete(instance);
+      // The RSC branch renders into the long-lived default sheet, so its entry is freed here.
+      if (entry) {
+        deleteInstance(ssc.styleSheet, styledComponentId, instance);
+      }
 
+      if (css) {
         const requestState = getRscRequestState ? getRscRequestState() : null;
 
         if (__DEV__ && requestState !== null) {
@@ -166,12 +162,6 @@ export default function createGlobalStyle<Props extends object>(
         // array.
         return [styleElement];
       }
-    }
-
-    // Clean up server instance cache; no effect cleanup runs on the server,
-    // so instanceRules would grow unboundedly across SSR requests.
-    if (__SERVER__ || ssc.styleSheet.server) {
-      globalStyle.instanceRules.delete(instance);
     }
 
     return null;

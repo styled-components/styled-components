@@ -19,7 +19,7 @@ import createGlobalStyle from '../constructors/createGlobalStyle';
 import keyframes from '../constructors/keyframes';
 import ServerStyleSheet from '../models/ServerStyleSheet';
 import { StyleSheetManager, mainCompiler } from '../models/StyleSheetManager';
-import WebGlobalStyle from '../models/WebGlobalStyle';
+import WebGlobalStyle, { liveInstanceCount } from '../models/WebGlobalStyle';
 import StyleSheet from '../sheet';
 
 jest.mock('../utils/nonce', () => {
@@ -1338,7 +1338,7 @@ describe('ssr', () => {
     const executionContext = { theme: {} } as any;
 
     gs.renderStyles('1', executionContext, sheet, mainCompiler);
-    expect(gs.instanceRules.size).toBe(1);
+    expect(liveInstanceCount(sheet, gs.componentId)).toBe(1);
     expect(sheet.toString()).toMatchInlineSnapshot(`
       "body{color:red;}/*!sc*/
       data-styled.g1[id="sc-global-clearTag-test"]{content:"sc-global-clearTag-test1,"}/*!sc*/
