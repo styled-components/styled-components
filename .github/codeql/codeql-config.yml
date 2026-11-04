@@ -1,0 +1,6 @@
+paths-ignore:
+  - '**/test/**'
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
+  - '**/*.test.js'
+  - 'packages/styled-components/src/bench/**'
