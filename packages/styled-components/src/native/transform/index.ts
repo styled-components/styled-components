@@ -347,6 +347,18 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
         return { [camel]: numericResultToRn(numeric) };
       }
     }
+
+    // A sign joined to a name makes a different name, which nothing downstream
+    // can resolve. A browser judges the value on rn-web, and `-infinity` has
+    // its own warning.
+    if (__DEV__ && !__NATIVE_WEB__ && /(?:^|[\s(,*/])-(?!infinity\b)[a-z]/i.test(rawValue)) {
+      warnOnce(
+        'native-math-signed-name',
+        `the value "${rawValue}" for "${camel}" puts a sign on a name, which CSS reads as a different name, so React Native cannot resolve it. ` +
+          'Write `-1 * pi` rather than `-pi`.',
+        camel + ':' + rawValue
+      );
+    }
   }
 
   // Polyfill: static color fn (`oklch` / `oklab` / `lch` / `lab` /

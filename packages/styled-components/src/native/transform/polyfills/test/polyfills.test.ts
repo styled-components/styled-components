@@ -712,6 +712,71 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
     });
   });
 
+  // CSS Syntax, "Check if three code points would start an ident sequence", U+002D HYPHEN-MINUS:
+  // "If the second code point is an ident-start code point [...] return true." So `-pi` and
+  // `-sin(` are names of their own rather than a sign on a constant or a function.
+  describe('a hyphen joined to a name inside math', () => {
+    function warningsFor(value: string) {
+      resetWarningsForTest();
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        const output = transformDecl('width', value);
+        const warnings = warnSpy.mock.calls.map(call => String(call[0]).split('\n')[0]);
+        return { output, warnings };
+      } finally {
+        warnSpy.mockRestore();
+      }
+    }
+
+    it.each([
+      ['calc(-pi * 1px)'],
+      ['calc(-e * 1px)'],
+      ['calc(1px + -pi * 1px)'],
+      ['calc(abs(-pi) * 1px)'],
+      ['calc(-sin(30deg) * 10px)'],
+      ['calc(2 *-pi * 1px)'],
+      ['sin(-pi)'],
+    ])('%s has no number to resolve to, and says so', value => {
+      expect(warningsFor(value)).toEqual({
+        output: { width: value },
+        warnings: [
+          `[sc] the value "${value}" for "width" puts a sign on a name, which CSS reads as a different name, so React Native cannot resolve it. Write \`-1 * pi\` rather than \`-pi\`.`,
+        ],
+      });
+    });
+
+    it('resolves the sign written as multiplication, with no warning', () => {
+      const { output, warnings } = warningsFor('calc(-1 * pi * 1px)');
+      expect(output.width).toBeCloseTo(-Math.PI, 10);
+      expect(warnings).toEqual([]);
+    });
+
+    it.each([
+      ['a hyphen inside a name', 'calc(foo-bar * 1px)'],
+      ['a custom property', 'calc(var(--x) * 2)'],
+      ['a subtraction', 'calc(1px - e * 1px)'],
+      ['a signed number', 'calc(-1px * pi)'],
+      ['an exponent', 'calc(1e-3 * 1px)'],
+    ])('does not warn about a sign on a name for %s', (_label, value) => {
+      expect(warningsFor(value).warnings).toEqual([]);
+    });
+
+    it('gives -infinity only its own warning', () => {
+      expect(warningsFor('calc(-infinity * 1px)').warnings).toEqual([
+        '[sc] `-infinity` cannot be used as a React Native dimension. Use a finite value instead, such as a large px value or a viewport unit.',
+      ]);
+    });
+
+    describeOnRnWeb(() => {
+      it('leaves the value to the browser, with no warning', () => {
+        expect(warningsFor('calc(-pi * 1px)')).toEqual({
+          output: { width: 'calc(-pi * 1px)' },
+          warnings: [],
+        });
+      });
+    });
+  });
+
   describeOnRnWeb(() => {
     // Layout-dependent math reaches the browser unchanged so used-value
     // evaluation matches the spec. Stepped-value over absolute lengths
@@ -4605,6 +4670,78 @@ describe('generic font-family resolution (CSS Fonts 4 §3.1.1)', () => {
     });
   });
 
+  // CSS Fonts: "Font family names other than generic families or system font families must
+  // either be given quoted as <string>s, or unquoted as a sequence of one or more
+  // <custom-ident>." "Note: This means most punctuation characters and digits at the start of
+  // each token must be escaped in unquoted font family names." "If a sequence of identifiers
+  // is given as a <font-family-name>, the computed value is the name converted to a string by
+  // joining all the identifiers in the sequence by single spaces."
+  describe('escapes in an unquoted family', () => {
+    it.each([
+      ['font-family', 'A\\42 B', { fontFamily: 'ABB' }],
+      ['font-family', 'Foo\\ Bar', { fontFamily: 'Foo Bar' }],
+      ['font-family', 'New\\ Century Schoolbook', { fontFamily: 'New Century Schoolbook' }],
+      ['font-family', '\\32 1st', { fontFamily: '21st' }],
+      ['font-family', 'A\\2c B', { fontFamily: 'A,B' }],
+      ['font', '12px A\\42 B', { fontFamily: 'ABB', fontSize: 12 }],
+    ])('%s: %s hands React Native the decoded name', (property, value, expected) => {
+      expect(transformDecl(property, value)).toMatchObject(expected);
+    });
+
+    // CSS Values: "Keywords are identifiers and are interpreted ASCII case-insensitively".
+    // Tokenizing resolves the escape, so this identifier's value is the keyword.
+    it('an unquoted family spelled by an escape is the generic keyword', () => {
+      expect(transformDecl('font-family', '\\73 erif')).toEqual({
+        fontFamily: 'Times New Roman',
+      });
+    });
+  });
+
+  describe('keywords spelled by an escape', () => {
+    it.each([['font', '\\62 old 12px Foo', { fontFamily: 'Foo', fontWeight: 'bold' }]])(
+      '%s: %s reads as the keyword',
+      (property, value, expected) => {
+        expect(transformDecl(property, value)).toMatchObject(expected);
+      }
+    );
+  });
+
+  // CSS Syntax, "Check if two code points are a valid escape" makes each delimiter below part
+  // of a name, so none of these values holds a url(), a second layer, or the color red. A
+  // browser rejects all three.
+  describe('escaped delimiters in a background', () => {
+    it.each([['url\\28 a.png\\29'], ['none\\2c red'], ['\\5c 72 ed']])(
+      'background: %s stays one unknown name',
+      value => {
+        expect(transformDecl('background', value)).toEqual({});
+      }
+    );
+  });
+
+  describe('an animation name holding an escape', () => {
+    it('keeps the spelling its @keyframes prelude holds', () => {
+      expect(transformDecl('animation-name', 'f\\61 de')).toEqual({ animationName: 'f\\61 de' });
+    });
+  });
+
+  describe('a family with nothing left after stripping', () => {
+    it.each([['\\7 '], ['\\202e ']])('font-family: %s is dropped', value => {
+      expect(transformDecl('font-family', value)).toEqual({});
+    });
+  });
+
+  // CSS Syntax, "Check if three code points would start an ident sequence", U+002D HYPHEN-MINUS:
+  // "If the second code point is an ident-start code point [...] return true."
+  describe('a family starting with a hyphen', () => {
+    it.each([
+      ['font-family', '-apple-system', { fontFamily: '-apple-system' }],
+      ['font-family', '-apple-system, sans-serif', { fontFamily: '-apple-system' }],
+      ['font', '12px -apple-system', { fontFamily: '-apple-system', fontSize: 12 }],
+    ])('%s: %s keeps the name whole', (property, value, expected) => {
+      expect(transformDecl(property, value)).toMatchObject(expected);
+    });
+  });
+
   describeOnRnWeb(() => {
     // On rn-web the browser owns generic-family resolution; the native
     // resolver short-circuits via `__NATIVE_WEB__` in font.ts so the
@@ -4615,6 +4752,20 @@ describe('generic font-family resolution (CSS Fonts 4 §3.1.1)', () => {
 
     it('a quoted family keeps its source escapes for the browser to decode', () => {
       expect(transformDecl('font-family', '"A\\"B"')).toEqual({ fontFamily: '"A\\"B"' });
+    });
+
+    it.each([['A\\42 B'], ['Foo\\ Bar'], ['\\73 erif'], ['-apple-system']])(
+      'an unquoted family %s keeps its source for the browser to read',
+      value => {
+        expect(transformDecl('font-family', value)).toEqual({ fontFamily: value });
+      }
+    );
+
+    it('font: 12px -apple-system keeps the name whole', () => {
+      expect(transformDecl('font', '12px -apple-system')).toMatchObject({
+        fontFamily: '-apple-system',
+        fontSize: 12,
+      });
     });
 
     it('comma-separated fallback list survives intact on rn-web', () => {

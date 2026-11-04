@@ -191,13 +191,13 @@ export function tokenize(value: string): Token[] {
       const end = findStringEnd(value, i, c);
       if (end !== -1) {
         const raw = value.substring(i, end + 1);
-        const text = decodeStringEscapes(value.substring(i + 1, end));
+        const text = decodeEscapes(value.substring(i + 1, end), '');
         tokens.push(stringToken(raw, text, c));
         i = end + 1;
         continue;
       }
       // Unterminated string; consume the rest as a single raw token
-      tokens.push(stringToken(value.substring(i), decodeStringEscapes(value.substring(i + 1)), c));
+      tokens.push(stringToken(value.substring(i), decodeEscapes(value.substring(i + 1), ''), c));
       i = len;
       continue;
     }
@@ -222,37 +222,39 @@ export function tokenize(value: string): Token[] {
       }
     }
 
-    // Bare minus; op in calc / separator. `--` followed by an ident char
-    // starts a dashed ident (custom-property names, timeline names); let the
-    // ident scanner below consume it.
-    if (
-      c === $.HYPHEN &&
-      !(i + 2 < len && value.charCodeAt(i + 1) === $.HYPHEN && isIdentPart(value.charCodeAt(i + 2)))
-    ) {
+    // Bare minus; op in calc / separator. A hyphen before a name character or
+    // an escape starts an ident (vendor keywords, custom-property names,
+    // timeline names); let the ident scanner below consume it.
+    if (c === $.HYPHEN && !hyphenStartsName(value, i)) {
       tokens.push(opToken('-'));
       i++;
       continue;
     }
 
     // Ident or function
-    if (isIdentStart(c)) {
-      const identEnd = consumeIdent(value, i);
+    if (isIdentStart(c) || startsEscape(value, i)) {
+      const plainEnd = consumeIdent(value, i);
+      const identEnd =
+        plainEnd < len && startsEscape(value, plainEnd)
+          ? consumeEscapes(value, plainEnd)
+          : plainEnd;
+      const source = value.substring(i, identEnd);
+      const decoded = identEnd === plainEnd ? source : decodeName(source);
       // Check for '(' → function
       if (identEnd < len && value.charCodeAt(identEnd) === $.OPEN_PAREN) {
         const argsEnd = findMatchingParen(value, identEnd);
         if (argsEnd !== -1) {
-          // Function names are ASCII case-insensitive; lowercase here so every
-          // downstream consumer compares against literal lowercase names. `raw`
-          // keeps the author casing for round-trip emission paths.
-          const name = toLowerIfMixed(value.substring(i, identEnd));
+          // Function names are ASCII case-insensitive; the token lowercases so
+          // every downstream consumer compares against literal lowercase names.
+          // `raw` keeps the author casing for round-trip emission paths.
           const args = value.substring(identEnd + 1, argsEnd);
-          tokens.push(functionToken(value.substring(i, argsEnd + 1), name, args));
+          tokens.push(functionToken(value.substring(i, argsEnd + 1), decoded, args));
           i = argsEnd + 1;
           continue;
         }
         // Unmatched paren; treat as ident including the '(' and rest
       }
-      tokens.push(identToken(value.substring(i, identEnd)));
+      tokens.push(identToken(source, decoded));
       i = identEnd;
       continue;
     }
@@ -271,6 +273,37 @@ function consumeIdent(value: string, start: number): number {
   return i;
 }
 
+/** A theme token starts with NUL, so an escape never takes one as its character. */
+function startsEscape(value: string, i: number): boolean {
+  if (value.charCodeAt(i) !== $.BACKSLASH) return false;
+
+  const next = value.charCodeAt(i + 1);
+  return next !== $.LF && next !== $.CR && next !== FF && next !== $.NUL;
+}
+
+function hyphenStartsName(value: string, i: number): boolean {
+  const next = value.charCodeAt(i + 1);
+
+  if (next === $.HYPHEN) {
+    return isIdentPart(value.charCodeAt(i + 2)) || startsEscape(value, i + 2);
+  }
+
+  return isIdentStart(next) || startsEscape(value, i + 1);
+}
+
+/** Extends a name past the escape at `escapeAt` and everything after it that the name holds. */
+function consumeEscapes(value: string, escapeAt: number): number {
+  let end = escapeAt;
+
+  while (startsEscape(value, end)) {
+    ESCAPE_RE.lastIndex = end;
+    ESCAPE_RE.exec(value);
+    end = consumeIdent(value, ESCAPE_RE.lastIndex);
+  }
+
+  return end;
+}
+
 function findStringEnd(value: string, start: number, quote: number): number {
   let i = start + 1;
   while (i < value.length) {
@@ -281,22 +314,30 @@ function findStringEnd(value: string, start: number, quote: number): number {
   return -1;
 }
 
-/** One escape: hex digits with their ending whitespace, a line break, a character, or a final backslash. */
-const STRING_ESCAPE_RE = /\\(?:([\da-f]{1,6})(?:\r\n|[ \t\n\r\f])?|\r\n|[\n\r\f]|([^])|$)/gi;
+const REPLACEMENT_CHARACTER = '�';
 
-function decodeStringEscapes(text: string): string {
+/** One escape: hex digits with their ending whitespace, a line break, a character, or a final backslash. */
+const ESCAPE_RE = /\\(?:([\da-f]{1,6})(?:\r\n|[ \t\n\r\f])?|\r\n|[\n\r\f]|([^])|$)/gi;
+
+/** `atEnd` is what a final backslash spells: nothing in a string, U+FFFD in a name. */
+function decodeEscapes(text: string, atEnd: string): string {
   if (text.indexOf('\\') === -1) return text;
 
   // An escape can spell what the pass over the source strips, so the decoded text gets it too.
   return sanitizeValue(
-    text.replace(STRING_ESCAPE_RE, (_match, hex?: string, char?: string) => {
-      if (!hex) return char ?? '';
+    text.replace(ESCAPE_RE, (match, hex?: string, char?: string) => {
+      if (!hex) return char ?? (match.length === 1 ? atEnd : '');
 
       const code = parseInt(hex, 16);
       const isValid = code > 0 && code <= 0x10ffff && (code < 0xd800 || code > 0xdfff);
-      return isValid ? String.fromCodePoint(code) : '�';
+      return isValid ? String.fromCodePoint(code) : REPLACEMENT_CHARACTER;
     })
   );
+}
+
+/** The value a name's source spells, for what React Native reads instead of a browser. */
+export function decodeName(source: string): string {
+  return decodeEscapes(source, REPLACEMENT_CHARACTER);
 }
 
 function findMatchingParen(value: string, openIdx: number): number {

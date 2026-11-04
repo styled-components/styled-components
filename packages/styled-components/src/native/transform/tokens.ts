@@ -223,13 +223,13 @@ export function toLowerIfMixed(s: string): string {
   return s;
 }
 
-export function identToken(raw: string): IdentToken {
+export function identToken(raw: string, decoded: string = raw): IdentToken {
   return {
     kind: TokenKind.Ident,
     raw,
     value: undefined,
     unit: undefined,
-    name: toLowerIfMixed(raw),
+    name: toLowerIfMixed(decoded),
     args: undefined,
     argTokens: null,
     text: undefined,
