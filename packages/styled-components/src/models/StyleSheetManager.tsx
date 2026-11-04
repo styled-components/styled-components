@@ -1,33 +1,14 @@
 import React from 'react';
+import { SC_VERSION } from '../constants';
 import { IS_RSC } from '../utils/isRsc';
 import StyleSheet from '../sheet';
+import { currentScope, scopeChildren } from './serverScope';
 import { Compiler, InsertionTarget, ShouldForwardProp } from '../types';
 import createCompiler, { SCPlugin } from '../utils/compiler';
 import { warnOnce } from '../utils/warnOnce';
 
 export const mainSheet: StyleSheet = new StyleSheet();
 export const mainCompiler: Compiler = createCompiler();
-
-// RSC has no createContext; the slot below is set in `StyleSheetManager`'s
-// render body and read via `useStyleSheetContext`. Wrapping it in `React.cache`
-// scopes the slot to a single server render so concurrent renders (multiple
-// requests streaming through the same Node process) don't see each other's
-// override.
-type RscRenderSlot = {
-  override: IStyleSheetContext | null;
-  lastPlugins: SCPlugin[] | undefined;
-  cachedCompiler: Compiler;
-};
-
-const getRscSlot: (() => RscRenderSlot) | null = IS_RSC
-  ? React.cache(
-      (): RscRenderSlot => ({
-        override: null,
-        lastPlugins: undefined,
-        cachedCompiler: mainCompiler,
-      })
-    )
-  : null;
 
 // Minimum viable gate: warn only when a plugin can never be invoked. Legacy
 // stylis middleware is a function, and a plugin with neither hook has nothing
@@ -71,20 +52,111 @@ const ensureSheetReset: (() => void) | null = IS_RSC
     })
   : null;
 
+type ServerStylesHolder = { plugins?: unknown };
+
+let serverStylesHolder: ServerStylesHolder | undefined;
+
 /**
- * Reset the RSC override slot. Test-only; production code never reads this.
- * `React.cache` scopes the slot per render in true Flight environments, but
- * regular SSR (`ReactDOMServer.renderToString`) doesn't activate that
- * scoping, so the slot persists across sequential calls. Suites that
- * simulate RSC mode call this in `beforeEach` to start each render from a
- * clean default context.
+ * One holder object per process and major version, found through `globalThis`
+ * once and kept: a framework can load more than one copy of the library into
+ * one process (Next.js bundles each server layer apart), and a lookup on every
+ * styled component would cost more than the render.
  */
-export function __resetRSCOverrideForTesting(): void {
-  if (!getRscSlot) return;
-  const slot = getRscSlot();
-  slot.override = null;
-  slot.lastPlugins = undefined;
-  slot.cachedCompiler = mainCompiler;
+function serverStyles(): ServerStylesHolder {
+  if (serverStylesHolder) return serverStylesHolder;
+
+  const key = Symbol.for(`styled-components.serverStyles.v${SC_VERSION.split('.')[0]}`);
+  const existing: unknown = Reflect.get(globalThis, key);
+  if (typeof existing === 'object' && existing !== null) {
+    serverStylesHolder = existing;
+  } else {
+    serverStylesHolder = {};
+    Reflect.set(globalThis, key, serverStylesHolder);
+  }
+
+  return serverStylesHolder;
+}
+
+/**
+ * Sets the plugins every server component is styled with, for the whole
+ * server process. Call it once, at the top level of a module every server
+ * render loads before any page renders (in Next.js, the root layout file). A
+ * later call replaces an earlier
+ * one and applies to renders that start after it. A `StyleSheetManager` inside
+ * a server component starts from these plugins; `plugins={[]}` drops them.
+ * Client components take their plugins from a client `StyleSheetManager`.
+ */
+export function configureServerStyles(options: { plugins: SCPlugin[] }): void {
+  if (!__SERVER__) {
+    if (__DEV__) {
+      warnOnce(
+        'configure-server-styles-client',
+        'configureServerStyles has no effect in the browser. Call it at the top level of a server component module, such as the root layout in Next.js, never from a client component or code bundled for the browser.'
+      );
+    }
+
+    return;
+  }
+
+  if (__DEV__) warnUnsupportedPlugins(options.plugins);
+
+  serverStyles().plugins = options.plugins;
+}
+
+let lastNamespace: string | undefined;
+let lastPlugins: SCPlugin[] | undefined;
+let lastCompiler: Compiler | undefined;
+
+/** Item by item, so an inline `plugins={[rscPlugin]}` (a new array on every render) still matches the last one. */
+function samePlugins(a: SCPlugin[] | undefined, b: SCPlugin[] | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+
+  return true;
+}
+
+/**
+ * Managers repeated with the same settings (a manager per card, say) share one
+ * compiler and so its compile caches, which a compiler per manager would throw
+ * away on every card.
+ */
+function compilerFor(namespace: string | undefined, plugins: SCPlugin[] | undefined): Compiler {
+  if (lastCompiler && lastNamespace === namespace && samePlugins(lastPlugins, plugins)) {
+    return lastCompiler;
+  }
+
+  lastNamespace = namespace;
+  lastPlugins = plugins;
+  lastCompiler = createCompiler({ options: { namespace }, plugins });
+
+  return lastCompiler;
+}
+
+let derivedFrom: SCPlugin[] | undefined;
+let derivedContext: IStyleSheetContext | undefined;
+
+/** The context a server component sees outside every manager: the configured plugins, or the plain defaults. */
+function serverDefaults(): IStyleSheetContext {
+  const configured = serverStyles().plugins;
+  if (!Array.isArray(configured) || !configured.length) return defaultContextValue;
+
+  const plugins: SCPlugin[] = configured;
+
+  if (derivedContext === undefined || derivedFrom !== plugins) {
+    derivedFrom = plugins;
+    derivedContext = {
+      compiler: createCompiler({ plugins }),
+      plugins,
+      shouldForwardProp: undefined,
+      styleSheet: mainSheet,
+    };
+  }
+
+  return derivedContext;
 }
 
 export type IStyleSheetContext = {
@@ -109,7 +181,7 @@ export const StyleSheetContext = !IS_RSC
       Provider: ({ children }: { children: React.ReactNode; value?: IStyleSheetContext }) =>
         children,
       Consumer: ({ children }: { children: (value: IStyleSheetContext) => React.ReactNode }) =>
-        children(defaultContextValue),
+        children(currentScope() ?? serverDefaults()),
     } as React.Context<IStyleSheetContext>);
 
 export const StyleSheetConsumer = StyleSheetContext.Consumer;
@@ -125,7 +197,7 @@ export function useStyleSheetContext() {
   // it here AND in StyleSheetManager is safe; whichever runs first wins.
   if (ensureSheetReset) ensureSheetReset();
 
-  return (getRscSlot && getRscSlot().override) || defaultContextValue;
+  return currentScope() ?? serverDefaults();
 }
 
 export type IStyleSheetManager = React.PropsWithChildren<{
@@ -172,63 +244,41 @@ export type IStyleSheetManager = React.PropsWithChildren<{
 
 /** Configure style injection for descendant styled components (target element, plugins, prop forwarding). */
 export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element {
-  if (IS_RSC && getRscSlot) {
+  if (IS_RSC) {
     if (ensureSheetReset) ensureSheetReset();
 
-    const slot = getRscSlot();
-
-    const parentResolved = slot.override || defaultContextValue;
-
+    const parent = currentScope() ?? serverDefaults();
     const hasCompilerProps = props.plugins !== undefined || props.namespace !== undefined;
+    const plugins = props.plugins ?? parent.plugins;
+    const shouldForwardProp =
+      'shouldForwardProp' in props ? props.shouldForwardProp : parent.shouldForwardProp;
 
-    if (hasCompilerProps) {
-      warnUnsupportedPlugins(props.plugins);
-      if (props.plugins && props.plugins !== slot.lastPlugins) {
-        slot.lastPlugins = props.plugins;
-        slot.cachedCompiler = createCompiler({
-          options: { namespace: props.namespace },
-          plugins: props.plugins,
-        });
-      } else if (props.namespace !== undefined) {
-        // Namespace changed without new plugins; create fresh instance
-        // using inherited plugins from parent.
-        slot.cachedCompiler = createCompiler({
-          options: { namespace: props.namespace },
-          plugins: props.plugins ?? parentResolved.plugins,
-        });
-      }
+    if (__DEV__ && hasCompilerProps) warnUnsupportedPlugins(props.plugins);
+
+    const compiler = !hasCompilerProps
+      ? parent.compiler
+      : props.namespace === undefined && !plugins?.length
+        ? mainCompiler
+        : compilerFor(props.namespace, plugins);
+
+    if (
+      compiler === parent.compiler &&
+      shouldForwardProp === parent.shouldForwardProp &&
+      plugins === parent.plugins
+    ) {
+      return <>{props.children}</>;
     }
 
-    const resolvedCompiler = hasCompilerProps
-      ? props.plugins !== undefined && !props.plugins.length
-        ? mainCompiler
-        : slot.cachedCompiler
-      : parentResolved.compiler;
-    const resolvedShouldForwardProp =
-      'shouldForwardProp' in props ? props.shouldForwardProp : parentResolved.shouldForwardProp;
-
-    const resolvedPlugins = props.plugins ?? parentResolved.plugins;
-
-    const ownOverride: IStyleSheetContext | null =
-      resolvedCompiler !== mainCompiler || resolvedShouldForwardProp
-        ? {
-            shouldForwardProp: resolvedShouldForwardProp,
-            styleSheet: mainSheet,
-            compiler: resolvedCompiler,
-            plugins: resolvedPlugins,
-          }
-        : null;
-
-    // Mutate the slot directly. React 19 Flight calls all immediate children
-    // of a fragment eagerly before descending, so a Set/Reset child-token
-    // pattern resets the slot before the actual children read it. Setting
-    // here ensures descendants observe the override; the trade-off is that
-    // sibling subtrees of a nested SSM inherit the inner override until the
-    // next SSM resets it. For most apps with one top-level RSC SSM that's
-    // fine.
-    slot.override = ownOverride;
-
-    return <>{props.children}</>;
+    return (
+      <>
+        {scopeChildren(props.children, {
+          compiler,
+          plugins,
+          shouldForwardProp,
+          styleSheet: mainSheet,
+        })}
+      </>
+    );
   }
 
   // biome-ignore-start lint/correctness/useHookAtTopLevel: the early return above is gated on IS_RSC, a load-time constant, so every render in a given bundle either reaches all of these hooks or none of them

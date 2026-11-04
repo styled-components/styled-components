@@ -516,8 +516,9 @@ function useImpl<Props extends BaseObject>(
   const ssc = useStyleSheetContext();
   const shouldForwardProp = forwardedComponent.shouldForwardProp || ssc.shouldForwardProp;
 
-  if (__DEV__ && React.useDebugValue) {
-    // biome-ignore lint/correctness/useHookAtTopLevel: __DEV__ is a build-time constant, and useDebugValue allocates no hook slot in any case
+  // Skipped in server components, where it does nothing and Flight can render with no hook dispatcher (items of an async iterable).
+  if (__DEV__ && !IS_RSC) {
+    // biome-ignore lint/correctness/useHookAtTopLevel: __DEV__ and IS_RSC are build and load-time constants, and useDebugValue allocates no hook slot in any case
     React.useDebugValue(styledComponentId);
   }
 
@@ -609,8 +610,8 @@ function useImpl<Props extends BaseObject>(
 
   // Outside the render-cache branch: a hook skipped on a cache hit is a hook
   // count that changes between renders, which React rejects outright.
-  if (__DEV__ && React.useDebugValue) {
-    // biome-ignore lint/correctness/useHookAtTopLevel: __DEV__ is a build-time constant. What matters here is the placement, outside the data-dependent cache branch above.
+  if (__DEV__ && !IS_RSC) {
+    // biome-ignore lint/correctness/useHookAtTopLevel: __DEV__ and IS_RSC are build and load-time constants. What matters here is the placement, outside the data-dependent cache branch above.
     React.useDebugValue(generatedClassName);
   }
 

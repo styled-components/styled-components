@@ -2,7 +2,7 @@
 'styled-components': patch
 ---
 
-Fixed a styling leak between sibling subtrees when a nested `<StyleSheetManager>` sits beside other children of an outer `<StyleSheetManager>` in a server component tree.
+In server components, a `<StyleSheetManager>`'s settings (`plugins`, `namespace`, `shouldForwardProp`) apply to exactly the components rendered inside it, however large or async the page is.
 
 ```jsx
 <StyleSheetManager plugins={[outerPlugin]}>
@@ -12,6 +12,9 @@ Fixed a styling leak between sibling subtrees when a nested `<StyleSheetManager>
   </StyleSheetManager>
   <ChildC />
 </StyleSheetManager>
+<Sidebar />
 ```
 
-`ChildC` is styled with the outer manager's plugins, not the inner manager's. The inner subtree's configuration stays scoped to `ChildB`.
+`ChildB` is styled with the inner manager's plugins, `ChildA` and `ChildC` with the outer manager's, and `Sidebar` with neither.
+
+Client components are unchanged: they take their settings from the nearest `<StyleSheetManager>` rendered on the client, such as the one in your style registry.

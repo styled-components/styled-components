@@ -25,6 +25,8 @@ Migration:
 +<StyleSheetManager plugins={[prefixPlugin, rtlPlugin, rscPlugin]}>
 ```
 
+In server components, placing this manager in a Next.js layout to style every page has been removed in favor of `configureServerStyles({ plugins: [rscPlugin] })`, called at the top of the root layout file.
+
 `rtlPlugin` replaces `stylis-plugin-rtl` for users coming from v6: it swaps physical side properties (`padding-left` / `padding-right`), flips `left` / `right` keyword values on `float` / `clear` / `text-align` / `caption-side`, and mirrors 4-value shorthand positions. Logical properties like `margin-inline-start` pass through unchanged.
 
 `prefixPlugin` adds vendor prefixes to the CSS you author. It is opt-in per subtree; a `<StyleSheetManager>` without it emits unprefixed CSS. The prefix set is scoped to the browsers that support the JavaScript APIs React requires (Chrome 45, Firefox 36, Safari 9 / iOS 9, Edge 12), and a construct is prefixed only where one of those browsers still needs it: `appearance`, `user-select`, `backdrop-filter`, `position: sticky`, `filter`, `clip-path`, the `mask*` family, `tab-size`, `writing-mode`, `hyphens`, `image-set()` in values, multi-column `column*`, `line-clamp`, `font-feature-settings`, `box-decoration-break`, `text-size-adjust`, `scroll-snap-type`, the inline logical `margin` and `padding` longhands, and the `::placeholder`, `:read-only`, and `:read-write` selectors. Prefixed declarations are emitted ahead of the standard one, so a browser that understands the standard form uses it.

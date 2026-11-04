@@ -96,9 +96,42 @@ Two fixes, in order of preference:
 
 1. Switch to type-filtered pseudos: `:first-of-type`, `:last-of-type`, `:nth-of-type()`. They match by element type, so `<style>` tags (a different type than `div` / `li` / etc.) are not counted. No tooling, works in every browser. Prefer this whenever the intent is "the first button" rather than literally "the first child regardless of type."
 
-2. If real `:nth-child()` counting is needed, rewrite the selector to exclude the library's own style tags with `rscPlugin` from `styled-components/plugins`, passed via the `plugins` prop on `StyleSheetManager`. The rewrite uses CSS Selectors Level 4 `:nth-child(An+B of S)` to count only matching elements.
+2. If real `:nth-child()` counting is needed, rewrite the selector to exclude the library's own style tags with `rscPlugin` from `styled-components/plugins`, passed app-wide through `configureServerStyles({ plugins })` or to one subtree through the `plugins` prop on `StyleSheetManager` (see "StyleSheetManager and configureServerStyles in server components"). The rewrite uses CSS Selectors Level 4 `:nth-child(An+B of S)` to count only matching elements.
 
 Browser-support cliff for fix 2: `:nth-child(... of S)` needs Chrome 111+, Firefox 113+, Safari 9+ (caniuse `css-nth-child-of-s`). An unsupported browser reads the whole rule as an invalid selector and drops it, so the styles vanish silently rather than degrade. Opt into the plugin only when the audience clears those versions; otherwise rewrite to `:nth-of-type()` by hand.
+
+## StyleSheetManager and configureServerStyles in server components
+
+Server components have no context, and Flight does not render in tree order:
+
+- Once a row has serialized past a size threshold, Flight defers its remaining elements to a later task, so they render after their later siblings. The Flight suite's deferral case locks the behavior on the pinned React version.
+- An async server component's output renders in a later task; tasks that resume together render in one batch.
+
+So nothing keyed on time scopes a manager: a per-request slot, restore sentinels after the children, and `AsyncLocalStorage` all reach the wrong components on a real page.
+
+### Scope by position
+
+- A manager returns its children rewritten: each server component element becomes an element of a per-type wrapper carrying the scope; host, symbol (Fragment, Suspense) and client-reference elements are rebuilt around their rewritten contents (children, Suspense `fallback`, every client-reference prop).
+- A wrapper sets the scope for the synchronous call into its component, then rewrites that component's output with the same scope; an async component's output is rewritten when it resolves.
+- An element whose type is already a wrapper is left alone: the nearest manager wins.
+- Outputs are rewritten, function-component props are not, so an element takes the scope of the place it renders, as context does on the client.
+- Every scope reader (`useStyleSheetContext`, the server `StyleSheetContext.Consumer`) runs synchronously inside a wrapper. A read after an `await` in a user component sees the server defaults.
+- Thenables stay thenables in every position (a client component may `use()` a promise prop). The rewrite is memoized per manager render and marks each container as in progress before descending into it, so cyclic props and reused element objects resolve to one result.
+- With no manager in the tree nothing is rewritten.
+
+### Boundaries
+
+- A manager in a Next.js layout styles only the layout's own markup: the layout's `children` is a router placeholder and the page travels as a separate branch of the payload.
+- `"use cache"` output renders in its own Flight render and sees the server defaults.
+- Client components take their settings from a client `StyleSheetManager` (the registry), never from a server one.
+
+### configureServerStyles
+
+- `configureServerStyles({ plugins })` sets the plugins every server component starts from, for the whole process. A manager inherits them like a nested manager inherits its parent's; `plugins={[]}` opts out.
+- Stored on `globalThis` under a `Symbol.for` key that names the major version, and shape-checked on read, so every copy of the library in the process reads one value (Next bundles each server layer apart).
+- Last call wins. A call applies to renders that start after it, so it is a top-level statement in a module every server render loads first: in Next, the root layout file. Next runs `instrumentation.ts` only in the live server, never in the build workers that prerender static pages, so a call there misses every prerendered route.
+- One value per process: an app with several root layouts (route groups) makes one call, or each layout's call replaces the others' for every route.
+- Server components only: a process-wide value would differ between server rendering and the browser for client components.
 
 ## RSC style emission and Suspense
 

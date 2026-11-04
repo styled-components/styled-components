@@ -518,7 +518,8 @@ export default function RSCTestPage() {
           RSC emits inline <Code>&lt;style&gt;</Code> tags as siblings of the styled element. These
           tags are real DOM children, so <Code>:first-child</Code>, <Code>:last-child</Code>, and{' '}
           <Code>:nth-child()</Code> would normally count them and produce wrong results. This page
-          uses <Code>rscPlugin</Code> via <Code>StyleSheetManager</Code> to rewrite these selectors
+          sets <Code>rscPlugin</Code> for every server component with{' '}
+          <Code>configureServerStyles()</Code> in the root layout to rewrite these selectors
           automatically. Both columns should match.
         </SectionDesc>
         <HintText>

@@ -7,9 +7,13 @@ import { rewriteSelectorForRSC } from './rscSelectorRewrite';
  * CSS Selectors Level 4 `of S` syntax.
  *
  * ```jsx
- * import { StyleSheetManager } from 'styled-components';
+ * // app/layout.tsx: every server component
+ * import { configureServerStyles } from 'styled-components';
  * import { rscPlugin } from 'styled-components/plugins';
  *
+ * configureServerStyles({ plugins: [rscPlugin] });
+ *
+ * // or only the server components rendered inside one manager
  * <StyleSheetManager plugins={[rscPlugin]}>...</StyleSheetManager>
  * ```
  */
