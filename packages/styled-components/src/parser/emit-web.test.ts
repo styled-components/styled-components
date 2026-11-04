@@ -143,6 +143,26 @@ describe('web emitter', () => {
     `);
   });
 
+  // CSS Nesting: "A selector is said to contain the nesting selector if, when it was
+  // parsed as any type of selector, a <delim-token> with the value "&" (U+0026
+  // AMPERSAND) was encountered." An escaped `&` or one in a string is no delim-token.
+  it.each([
+    ['an escaped `&` beside a real one', '&.\\[\\&\\>\\*\\]', '.a.\\[\\&\\>\\*\\]'],
+    ['an escaped `&` alone', '.\\[\\&\\>\\*\\]', '.a .\\[\\&\\>\\*\\]'],
+    ['a double-quoted `&`', '&[b="&"]', '.a[b="&"]'],
+    ['a single-quoted `&`', "&[b='&']", ".a[b='&']"],
+    ['a `&` after an escaped quote in a string', '&[b="\\"&"]', '.a[b="\\"&"]'],
+    ['a `&` in a string alone', '[b="&"]', '.a [b="&"]'],
+    ['an escaped `&` inside a function', ':is(&,.\\&b)', ':is(.a,.\\&b)'],
+    ['a real `&` after an escaped backslash', '.b\\\\&', '.b\\\\.a'],
+  ])('replaces only the real `&` with %s', (_label, selector, resolved) => {
+    expect(emit(`${selector} { c: d; }`)).toEqual([`${resolved}{c:d;}`]);
+  });
+
+  it('keeps a parent holding replacement patterns verbatim beside a string', () => {
+    expect(emit('&[b="c"] { d: e; }', '.x$&y')).toEqual(['.x$&y[b="c"]{d:e;}']);
+  });
+
   it('handles nested & + & self-reference (combinator spaces stripped)', () => {
     expect(emit(`& + & { margin-left: 8px; }`)).toMatchInlineSnapshot(`
       [
