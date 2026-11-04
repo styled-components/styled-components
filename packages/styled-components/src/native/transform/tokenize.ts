@@ -191,13 +191,13 @@ export function tokenize(value: string): Token[] {
       const end = findStringEnd(value, i, c);
       if (end !== -1) {
         const raw = value.substring(i, end + 1);
-        const text = value.substring(i + 1, end);
+        const text = decodeStringEscapes(value.substring(i + 1, end));
         tokens.push(stringToken(raw, text, c));
         i = end + 1;
         continue;
       }
       // Unterminated string; consume the rest as a single raw token
-      tokens.push(stringToken(value.substring(i), value.substring(i + 1), c));
+      tokens.push(stringToken(value.substring(i), decodeStringEscapes(value.substring(i + 1)), c));
       i = len;
       continue;
     }
@@ -279,6 +279,24 @@ function findStringEnd(value: string, start: number, quote: number): number {
     i++;
   }
   return -1;
+}
+
+/** One escape: hex digits with their ending whitespace, a line break, a character, or a final backslash. */
+const STRING_ESCAPE_RE = /\\(?:([\da-f]{1,6})(?:\r\n|[ \t\n\r\f])?|\r\n|[\n\r\f]|([^])|$)/gi;
+
+function decodeStringEscapes(text: string): string {
+  if (text.indexOf('\\') === -1) return text;
+
+  // An escape can spell what the pass over the source strips, so the decoded text gets it too.
+  return sanitizeValue(
+    text.replace(STRING_ESCAPE_RE, (_match, hex?: string, char?: string) => {
+      if (!hex) return char ?? '';
+
+      const code = parseInt(hex, 16);
+      const isValid = code > 0 && code <= 0x10ffff && (code < 0xd800 || code > 0xdfff);
+      return isValid ? String.fromCodePoint(code) : '�';
+    })
+  );
 }
 
 function findMatchingParen(value: string, openIdx: number): number {
