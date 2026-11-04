@@ -1,6 +1,6 @@
 import { emitWeb } from '../parser/emit-web';
 import { parse, wrapAst } from '../parser/parser';
-import { buildHashCSS, compileWebFilled } from '../parser/compile';
+import { compileWebFilled } from '../parser/compile';
 import type { Compiler } from '../types';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
@@ -159,14 +159,12 @@ export default function createCompiler({
     }
   }
 
-  // Byte-identical to the v7 web emit path for hash + SSR rehydration stability.
   const compileString = (css: string, selector = '', prefix = '', componentId = '&'): string[] => {
     // The author's CSS parses as the root block, so the parser's brace repair
     // keeps a stray `}` inside it; the wrapper is added as an AST node.
     const wrapSelector = prefix && selector ? prefix + ' ' + selector : prefix || selector;
     const body = parse(normalize(css));
     const ast = wrapSelector ? wrapAst(body, wrapSelector) : body;
-    if (ast.length === 0) return [];
     return emitWeb(ast, '', {
       selfRefSelector: selector,
       componentId,
@@ -194,12 +192,6 @@ export default function createCompiler({
           decl: postProcessDecl,
         },
         fragments
-      ) ??
-      compileString(
-        buildHashCSS(source.strings, filled, fragments),
-        parentSelector,
-        undefined,
-        componentId
       ),
   };
 

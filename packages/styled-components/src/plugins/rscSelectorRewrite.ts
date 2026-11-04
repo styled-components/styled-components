@@ -31,11 +31,15 @@ function rewriteChildPseudos(selector: string): string {
   );
 }
 
+/** Each `+` copies the whole selector twice, so this keeps the output linear in its length. */
+const MAX_SIBLING_EXPANSIONS = 16;
+
 function expandAdjacentSibling(selector: string, out: string[]): void {
   if (selector.indexOf('+') === -1) return;
   let parenDepth = 0;
   let bracketDepth = 0;
-  for (let i = 0; i < selector.length; i++) {
+  let expansions = 0;
+  for (let i = 0; i < selector.length && expansions < MAX_SIBLING_EXPANSIONS; i++) {
     const ch = selector.charCodeAt(i);
     if (ch === $.OPEN_PAREN) parenDepth++;
     else if (ch === $.CLOSE_PAREN) parenDepth--;
@@ -46,6 +50,7 @@ function expandAdjacentSibling(selector: string, out: string[]): void {
       const after = selector.substring(i + 1);
       out.push(before + '+' + STYLE_TAG + '+' + after);
       out.push(before + '+' + STYLE_TAG + '+' + STYLE_TAG + '+' + after);
+      expansions++;
     }
   }
 }

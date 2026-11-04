@@ -28,14 +28,11 @@ export const DIGIT_0 = 48; // 0
 export const DIGIT_9 = 57; // 9
 export const COLON = 58; // :
 export const SEMICOLON = 59; // ;
-export const LT = 60; // <
-export const EQ = 61; // =
 export const GT = 62; // >
 export const AT = 64; // @
 export const UPPER_A = 65; // A
 export const UPPER_E = 69; // E
 export const UPPER_I = 73; // I
-export const UPPER_J = 74; // J
 export const UPPER_S = 83; // S
 export const UPPER_Z = 90; // Z
 export const OPEN_BRACKET = 91; // [
@@ -82,10 +79,11 @@ export function isIdentChar(c: number): boolean {
 
 /**
  * A character that takes the name before a `(` into a longer token: `&` becomes a
- * class name when emitted, and `@` and `#` start an at-keyword and a hash.
+ * class name when emitted, `@` and `#` start an at-keyword and a hash, and a browser
+ * reads NUL as a name character.
  */
 function extendsName(c: number): boolean {
-  return isIdentChar(c) || c > 127 || c === AMPERSAND || c === AT || c === HASH;
+  return isIdentChar(c) || c > 127 || c === 0 || c === AMPERSAND || c === AT || c === HASH;
 }
 
 function isHexDigit(c: number): boolean {

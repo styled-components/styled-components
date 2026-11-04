@@ -8,6 +8,7 @@ import isPropValid from '../utils/isPropValid';
  *  class. */
 const REACT_MEMO_TYPE = Symbol.for('react.memo');
 import { RSC_REDUNDANT_EMIT_WARN_THRESHOLD, SC_ATTR, SC_VERSION } from '../constants';
+import { BACKSLASH, CR, DOUBLE_QUOTE, FF, LF, SINGLE_QUOTE, urlTokenEnd } from '../utils/charCodes';
 import { IS_RSC } from '../utils/isRsc';
 import type StyleSheet from '../sheet';
 import type {
@@ -314,10 +315,54 @@ function getWhereRegExp(name: string): RegExp {
   return re;
 }
 
+/**
+ * A url token ends at its first `)`, so the `(` of `:where(` inside one would end it there and
+ * turn the text after into real rules. Only the text around url tokens is wrapped. A `(` inside a
+ * string is not a url token, so strings are skipped whole.
+ */
 function wrapLevelInWhere(levelCss: string, name: string): string {
   const re = getWhereRegExp(name);
-  re.lastIndex = 0;
-  return levelCss.replace(re, ':where(.' + name + ')');
+  const wrapped = ':where(.' + name + ')';
+  const len = levelCss.length;
+  let out = '';
+  let from = 0;
+  let escape = -1;
+  let nextEscape = levelCss.indexOf('\\');
+  /** Everything before this index is read: outside a string, or skipped as one. */
+  let read = 0;
+  for (let open = levelCss.indexOf('('); open !== -1; open = levelCss.indexOf('(', open + 1)) {
+    while (nextEscape !== -1 && nextEscape < open) {
+      escape = nextEscape;
+      nextEscape = levelCss.indexOf('\\', escape + 1);
+    }
+    if (escape === open - 1) continue;
+
+    while (read < open) {
+      const code = levelCss.charCodeAt(read++);
+      if (code === BACKSLASH) {
+        read++;
+      } else if (code === DOUBLE_QUOTE || code === SINGLE_QUOTE) {
+        // A raw newline ends a string.
+        while (read < len) {
+          const inner = levelCss.charCodeAt(read);
+          if (inner === code) {
+            read++;
+            break;
+          }
+          if (inner === LF || inner === CR || inner === FF) break;
+          read += inner === BACKSLASH ? 2 : 1;
+        }
+      }
+    }
+    if (read > open) continue;
+
+    const urlEnd = urlTokenEnd(levelCss, open, len, escape);
+    if (urlEnd !== -1) {
+      out += levelCss.substring(from, open).replace(re, wrapped) + levelCss.substring(open, urlEnd);
+      from = open = read = urlEnd;
+    }
+  }
+  return out + levelCss.substring(from).replace(re, wrapped);
 }
 
 /**

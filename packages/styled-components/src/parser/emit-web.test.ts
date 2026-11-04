@@ -1,6 +1,8 @@
+import type { EmitOptions } from './emit-web';
 import { emitWeb } from './emit-web';
-import { parse } from './parser';
+import { parse, wrapAst } from './parser';
 import { normalize } from '../utils/compiler';
+import { resetWarnOnce } from '../utils/warnOnce';
 
 function emit(css: string, selector = '.a'): string[] {
   return emitWeb(parse(normalize(css)), selector);
@@ -178,6 +180,44 @@ describe('web emitter', () => {
     ]);
   });
 
+  describe('container auto-name', () => {
+    const options: EmitOptions = { componentId: 'sc-id' };
+
+    it('names the container a root declaration makes', () => {
+      expect(emitWeb(parse('container-type: size;'), '.a', options)).toEqual([
+        '.a{container-type:size;container-name:sc-id;}',
+      ]);
+    });
+
+    it.each([
+      ['a nested rule', '.child { container-type: size; }', '.a .child{container-type:size;}'],
+      [
+        'a nested rule beside a sibling',
+        '.child { container-type: size; } .other { top: 0; }',
+        '.a .child{container-type:size;}',
+      ],
+    ])('leaves %s unnamed', (_label, css, expected) => {
+      expect(emitWeb(parse(css), '.a', options)[0]).toBe(expected);
+    });
+
+    it('leaves a wrapped root unnamed', () => {
+      expect(emitWeb(wrapAst(parse('container-type: size;'), '.a'), '', options)).toEqual([
+        '.a{container-type:size;}',
+      ]);
+    });
+
+    it.each([
+      [
+        'an explicit name',
+        'container-type: size; container-name: x;',
+        '.a{container-type:size;container-name:x;}',
+      ],
+      ['the normal type', 'container-type: normal;', '.a{container-type:normal;}'],
+    ])('adds nothing beside %s', (_label, css, expected) => {
+      expect(emitWeb(parse(css), '.a', options)).toEqual([expected]);
+    });
+  });
+
   describe('parent comma-cross-product respects pseudo-fn parens (#4279)', () => {
     // When the outer selector contains a `,` INSIDE :is()/:where()/:has(),
     // child rules must NOT split that comma as if it were a top-level
@@ -249,6 +289,205 @@ describe('web emitter', () => {
           ".a .nested,.a .b .nested{color:red;}",
         ]
       `);
+    });
+  });
+
+  describe('every rule it returns reads as one rule', () => {
+    // https://drafts.csswg.org/css-syntax/#consume-qualified-rule
+    const rewriteColor = (value: string): EmitOptions => ({
+      decl: (prop, authored) => ({ prop, value: prop === 'color' ? value : authored }),
+    });
+
+    it.each<[string, string, EmitOptions, string[]]>([
+      [
+        'a declaration rewrite that closes its block',
+        'color: red; top: 0;',
+        rewriteColor('x}html{display:none}a{b:y'),
+        ['.a{top:0;}'],
+      ],
+      ['a declaration rewrite that opens a block', 'color: red;', rewriteColor('x{'), []],
+      ['a declaration rewrite that opens a string', 'color: red;', rewriteColor('"x'), []],
+      [
+        'a declaration rewrite that writes a comment',
+        'color: red; top: 0;',
+        rewriteColor('red /* note */'),
+        ['.a{top:0;}'],
+      ],
+      [
+        'a declaration rewrite in an at-rule, keeping its siblings',
+        '@media print { color: red; &:hover { top: 0; } }',
+        rewriteColor('x}html{display:none}a{b:y'),
+        ['@media print{.a:hover{top:0;}}'],
+      ],
+      [
+        'a declaration rewrite in keyframes',
+        '@keyframes k { from { color: red; } }',
+        rewriteColor('x}}html{display:none}@keyframes j{from{b:y'),
+        ['@keyframes k{from{}}'],
+      ],
+      [
+        'a declaration rewrite in a declaration-only at-rule',
+        '@font-face { color: red; }',
+        rewriteColor('x}html{display:none}a{b:y'),
+        [],
+      ],
+      [
+        'a declaration rewrite into several, one of which closes the block',
+        'color: red; top: 0;',
+        {
+          decl: (prop, authored) =>
+            prop === 'color'
+              ? [
+                  { prop: 'a', value: 'b' },
+                  { prop: 'x', value: '}' },
+                ]
+              : { prop, value: authored },
+        },
+        ['.a{top:0;}'],
+      ],
+      ['a selector rewrite', 'color: red;', { rw: selector => selector + '{}html' }, []],
+      [
+        'one selector of a rewrite that returns several',
+        'color: red;',
+        { rw: selector => [selector, selector + '{}html'] },
+        ['.a{color:red;}'],
+      ],
+    ])('drops what %s leaves', (_label, css, options, expected) => {
+      resetWarnOnce();
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      expect(emitWeb(parse(normalize(css)), '.a', options)).toEqual(expected);
+      expect(warn).toHaveBeenCalledTimes(1);
+    });
+
+    it.each<[string, string, string[]]>([
+      [
+        'an unquoted url holding a statement end and quotes',
+        'background: url(data:image/svg+xml;utf8,<svg a="b"/>);',
+        ['.a{background:url(data:image/svg+xml;utf8,<svg a="b"/>);}'],
+      ],
+      ['a brace in a string', 'content: "}";', ['.a{content:"}";}']],
+      ['an escaped brace in a selector', '.b\\{c { top: 0; }', ['.a .b\\{c{top:0;}']],
+      ['a brace in an attribute selector', '[data-x="{"] { top: 0; }', ['.a [data-x="{"]{top:0;}']],
+      [
+        'a nested at-rule',
+        '@media print { @media screen { top: 0; } }',
+        ['@media print{@media screen{.a{top:0;}}}'],
+      ],
+    ])('keeps %s', (_label, css, expected) => {
+      expect(emit(css)).toEqual(expected);
+    });
+
+    it('keeps every rule of a large stylesheet under a selector list', () => {
+      const wrapper = `.${'w'.repeat(42)},.${'x'.repeat(42)}`;
+      const rule = (i: number) => `.${'r'.repeat(56)}${i}{top:0;}`;
+      const rules = Array.from({ length: 1000 }, (_, i) => rule(i)).join('');
+
+      expect(emitWeb(parse(`${wrapper}{${rules}}`), '')).toHaveLength(1000);
+    });
+
+    // A rule per sibling, each under its parent's whole list. Once the parent's text passes the
+    // size limit every later sibling drops, so their cost must not grow with the parent.
+    it('bounds what one emit composes across sibling rules', () => {
+      const list = `.${'a'.repeat(20)},.${'b'.repeat(20)}{`;
+      const css = `color:red;${list.repeat(12)}${'.x{top:0;}'.repeat(400)}${'}'.repeat(12)}`;
+      const ast = parse(css);
+      resetWarnOnce();
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const start = performance.now();
+      const rules = emitWeb(ast, '.a');
+      const elapsedMs = performance.now() - start;
+
+      expect(rules[0]).toBe('.a{color:red;}');
+      expect(rules.join('').length).toBeLessThan(1 << 24);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(elapsedMs).toBeLessThan(500);
+    });
+
+    // An at-rule's children take its parent's selector whole, with nothing composed, so each one
+    // writes the parent's text again. That text counts, and past the limit a sibling costs nothing.
+    const composedList = 'a,a,a,a{'.repeat(8);
+    const composedHead = Array.from({ length: 4 ** 8 }, () => `.a${' a'.repeat(8)}`).join(',');
+    const longHead = `.a ${'x'.repeat(60000)}`;
+
+    it.each<[string, string, string]>([
+      [
+        'at-rule siblings under a selector list',
+        `${composedList}${'@media x{top:0;}'.repeat(2000)}${'}'.repeat(8)}`,
+        `@media x{${composedHead}{top:0;}}`,
+      ],
+      [
+        'nested at-rule siblings under a selector list',
+        `${composedList}${'@media x{@media y{top:0;}}'.repeat(2000)}${'}'.repeat(8)}`,
+        `@media x{@media y{${composedHead}{top:0;}}}`,
+      ],
+      [
+        'at-rule siblings under a long selector',
+        `${'x'.repeat(60000)}{${'@media x{top:0;}'.repeat(20000)}}`,
+        `@media x{${longHead}{top:0;}}`,
+      ],
+      [
+        'empty selector lists under a long selector',
+        `${'x'.repeat(60000)}{${',{top:0;}'.repeat(20000)}}`,
+        `${longHead}{top:0;}`,
+      ],
+    ])('bounds what one emit writes for %s', (_label, css, expectedRule) => {
+      const ast = parse(css);
+      resetWarnOnce();
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const start = performance.now();
+      const rules = emitWeb(ast, '.a');
+      const elapsedMs = performance.now() - start;
+
+      expect(rules.length).toBeGreaterThan(0);
+      expect(rules.every(rule => rule === expectedRule)).toBe(true);
+      expect(rules.reduce((size, rule) => size + rule.length, 0)).toBeLessThan(1 << 24);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(elapsedMs).toBeLessThan(500);
+    });
+
+    // Text a namespace or a plugin adds to a head reaches the output as well as what was composed.
+    it.each<[string, string, EmitOptions]>([
+      [
+        'a namespace',
+        `${'a,'.repeat(30000)}a{${'.y{top:0;}'.repeat(2000)}}`,
+        { namespace: `.${'n'.repeat(100)}` },
+      ],
+      [
+        'a plugin that returns several selectors',
+        `${'x'.repeat(60000)}{${'.y{top:0;}'.repeat(2000)}}`,
+        { rw: selector => Array.from({ length: 10 }, () => selector) },
+      ],
+      [
+        'a plugin that lengthens a selector',
+        `${'x'.repeat(60000)}{${'.y{top:0;}'.repeat(2000)}}`,
+        { rw: selector => selector + ' '.repeat(600000) + '.z' },
+      ],
+    ])('counts the head text %s writes', (_label, css, options) => {
+      const ast = parse(css);
+      resetWarnOnce();
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const start = performance.now();
+      const rules = emitWeb(ast, '.a', options);
+      const elapsedMs = performance.now() - start;
+
+      expect(rules.length).toBeGreaterThan(0);
+      expect(rules.reduce((size, rule) => size + rule.length, 0)).toBeLessThan(1 << 24);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(elapsedMs).toBeLessThan(1_000);
+    });
+
+    it('reads a deep at-rule without reading its children at every level', () => {
+      const depth = 500;
+      const css = '@media a{'.repeat(depth) + '.x{a:b;}'.repeat(60000) + '}'.repeat(depth);
+      const ast = parse(css);
+
+      const start = performance.now();
+      emitWeb(ast, '.a');
+      expect(performance.now() - start).toBeLessThan(1_000);
     });
   });
 });

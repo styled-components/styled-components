@@ -29,6 +29,24 @@ describe('rscPlugin', () => {
       .join('');
   }
 
+  it('drops a rule whose rewritten selector stops reading as one rule', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const Item = styled.li`
+      ${() => 'url(:first-child{}html{display:none})'} {
+        top: 0;
+      }
+    `;
+
+    render(
+      <StyleSheetManager plugins={[rscPlugin]}>
+        <Item />
+      </StyleSheetManager>
+    );
+
+    expect(getInjectedCSS()).toEqual('');
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
   it('should rewrite :first-child', () => {
     const Item = styled.li`
       &:first-child {
@@ -653,6 +671,14 @@ describe('rscPlugin', () => {
       expect(getInjectedCSS()).toMatchInlineSnapshot(
         `".sc-a:has(+ .next)+.sc-a,.sc-a:has(+ .next)+style[data-styled]+.sc-a,.sc-a:has(+ .next)+style[data-styled]+style[data-styled]+.sc-a {color: red;}"`
       );
+    });
+
+    it('stops expanding past a bounded number of sibling combinators in one selector', () => {
+      const selector = 'a+'.repeat(4000) + 'b';
+      const parts = rewriteSelectorForRSC(selector).split(',');
+
+      expect(parts).toHaveLength(1 + 2 * 16);
+      expect(parts[0]).toBe(selector);
     });
 
     it('should not treat CSS-escaped + as a combinator', () => {

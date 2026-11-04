@@ -208,6 +208,23 @@ describe('rtl plugin', () => {
     });
   });
 
+  describe('4-value shorthand tokens', () => {
+    it.each([
+      ['a string holding spaces', '"x }html{display:none} y z"', undefined],
+      ['a url holding spaces', 'url(a b c d)', undefined],
+      ['a string as one of four', '"a b" 1px 2px 3px', undefined],
+      ['a hex escape that swapping could join to another token', '\\75 b c rl(a)', undefined],
+      ['tabs between values', '1px\t2px\t3px\t4px', { prop: 'margin', value: '1px 4px 3px 2px' }],
+      [
+        'line feeds between values',
+        '1px\n2px\n3px\n4px',
+        { prop: 'margin', value: '1px 4px 3px 2px' },
+      ],
+    ])('leaves or swaps %s without changing what a token means', (_label, value, expected) => {
+      expect(rtl.decl?.('margin', value)).toEqual(expected);
+    });
+  });
+
   describe('scoping', () => {
     it('is opt-in per StyleSheetManager subtree', () => {
       const A = styled.div`

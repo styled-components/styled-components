@@ -1651,6 +1651,8 @@ background-color: green;`)
       ['a url after `&` in an at-rule prelude', '@media &url(a"b)c}x{color:red;}d"e) { top: 0; }'],
       ['a function name after an escape ended by a form feed', 'top: \\41\furl(a")""; left: 0;'],
       ['a function name after an escape ended by CR LF', 'top: \\41\r\nurl(a")""; left: 0;'],
+      // https://drafts.csswg.org/css-syntax/#input-preprocessing: NUL becomes U+FFFD, a name character.
+      ['a function name after a NUL', 'top: \0url(a")""; left: 0;'],
     ])('emits nothing for %s, which a browser reads past its statement', (_label, css) => {
       expect(runCssCompile(css)).toEqual([]);
     });
