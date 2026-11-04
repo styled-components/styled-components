@@ -80,6 +80,12 @@ describe('transform stress;cache bounds driven by measurement', () => {
     expect(out.fontFamily).toBe('A'.repeat(250_000));
   });
 
+  it('decodes an unquoted family holding 1M escapes in a linear scan', () => {
+    const out = transformDecl('fontFamily', '\\41 '.repeat(250_000));
+
+    expect(out.fontFamily).toBe('A'.repeat(250_000));
+  });
+
   it('handles 10k distinct shorthand values (margin: Npx)', () => {
     const t0 = Date.now();
     for (let i = 0; i < 10_000; i++) {

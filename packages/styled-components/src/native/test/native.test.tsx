@@ -69,6 +69,21 @@ describe('native', () => {
     expect(view.props.style).toEqual({ color: 'red', textAlign: 'left' });
   });
 
+  it('reads an escape in an unquoted font family from a template or an interpolation', () => {
+    const Literal = styled.Text`
+      font-family: A\\42 B;
+    `;
+    const Interpolated = styled.Text`
+      font-family: ${'Foo\\ Bar'};
+    `;
+
+    const literal = TestRenderer.create(<Literal />).root.findByType(Text);
+    const interpolated = TestRenderer.create(<Interpolated />).root.findByType(Text);
+
+    expect(literal.props.style).toEqual({ fontFamily: 'ABB' });
+    expect(interpolated.props.style).toEqual({ fontFamily: 'Foo Bar' });
+  });
+
   it('propagates attrs across an extended chain', () => {
     const Inner = styled.View.attrs<ViewProps & { testID?: string }>({
       testID: 'inner-default',

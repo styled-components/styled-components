@@ -1,3 +1,4 @@
+import { describeOnRnWeb } from '../describeOnRnWeb';
 import { tokenize, tokenizeFunctionArgs } from '../tokenize';
 import { TokenKind } from '../tokens';
 import { isSafeThemePath, sanitizeValue } from '../sanitize';
@@ -168,6 +169,98 @@ describe('native transform tokenizer', () => {
     const [token] = tokenize(source);
 
     expect(token).toMatchObject({ kind: TokenKind.String, text: 'abc' });
+  });
+
+  // CSS Syntax, "Consume an ident sequence": "ident code point: Append the code point to
+  // result. the stream starts with a valid escape: Consume an escaped code point. Append the
+  // returned code point to result."
+  //
+  // "Check if three code points would start an ident sequence": "U+005C REVERSE SOLIDUS (\):
+  // If the first and second code points are a valid escape, return true."
+  //
+  // "Check if two code points are a valid escape": "If the first code point is not U+005C
+  // REVERSE SOLIDUS (\), return false. Otherwise, if the second code point is a newline,
+  // return false. Otherwise, return true."
+  //
+  // "Consume an escaped code point", "EOF: This is a parse error. Return U+FFFD REPLACEMENT
+  // CHARACTER (�)."
+  describe('escapes in an identifier', () => {
+    it.each([
+      ['a hex escape inside a name', 'A\\42 B', 'ABB', 'abb'],
+      ['a hex escape starting a name', '\\73 erif', 'serif', 'serif'],
+      ['an escaped space', 'Foo\\ Bar', 'Foo Bar', 'foo bar'],
+      ['an escaped leading digit', '\\31 23', '123', '123'],
+      ['an escaped slash', 'Red\\/Black', 'Red/Black', 'red/black'],
+      ['an escaped comma', 'a\\,b', 'a,b', 'a,b'],
+      ['an escaped open paren, which does not start a function', 'a\\(b', 'a(b', 'a(b'],
+      ['an escaped backslash', 'a\\\\b', 'a\\b', 'a\\b'],
+      ['a hex escape ended by CR LF', 'A\\42\r\nB', 'ABB', 'abb'],
+      ['a hex escape ended by a non-hex letter', 'A\\42g', 'ABg', 'abg'],
+      ['a six digit hex escape with a digit after it', 'a\\0000411', 'aA1', 'aa1'],
+      ['a code point past the 16 bit range', 'a\\1f600', 'a\u{1f600}', 'a\u{1f600}'],
+      ['a zero code point', 'a\\0 b', 'a�b', 'a�b'],
+      ['a surrogate code point', 'a\\d800 b', 'a�b', 'a�b'],
+      ['a code point past the maximum', 'a\\110000 b', 'a�b', 'a�b'],
+      ['a final backslash', 'a\\', 'a�', 'a�'],
+      ['a dashed name', '--\\41 b', '--Ab', '--ab'],
+      ['a control character', 'a\\7 bc', 'abc', 'abc'],
+      ['a bidi override', 'a\\202e bc', 'abc', 'abc'],
+    ])('decodes %s', (_label, source, raw, name) => {
+      expect(tokenize(source)).toEqual([
+        expect.objectContaining({ kind: TokenKind.Ident, name, raw }),
+      ]);
+    });
+
+    it.each([
+      ['LF', 'a\\\nb'],
+      ['CR LF', 'a\\\r\nb'],
+      ['CR', 'a\\\rb'],
+      ['a form feed', 'a\\\fb'],
+    ])('ends the name at a backslash before %s, which is not an escape', (_label, source) => {
+      expect(tokenize(source).map(token => token.raw)).toEqual(['a', 'b']);
+    });
+
+    it('keeps a theme token after a backslash whole', () => {
+      expect(tokenize('a\\\0sc:colors.bg')).toEqual([
+        expect.objectContaining({ kind: TokenKind.Ident, raw: 'a' }),
+        expect.objectContaining({ kind: TokenKind.Sentinel, path: 'colors.bg' }),
+      ]);
+    });
+
+    it('decodes a function name and keeps the author casing in raw', () => {
+      expect(tokenize('RG\\42(0, 0, 0)')).toEqual([
+        expect.objectContaining({
+          args: '0, 0, 0',
+          kind: TokenKind.Function,
+          name: 'rgb',
+          raw: 'RGB(0, 0, 0)',
+        }),
+      ]);
+    });
+
+    it('leaves a name with no escape as written', () => {
+      expect(tokenize('Helvetica')).toEqual([
+        expect.objectContaining({ kind: TokenKind.Ident, name: 'helvetica', raw: 'Helvetica' }),
+      ]);
+    });
+
+    describeOnRnWeb(() => {
+      it('decodes the name for keyword checks and keeps the source for the browser', () => {
+        expect(tokenize('A\\42 B')).toEqual([
+          expect.objectContaining({ kind: TokenKind.Ident, name: 'abb', raw: 'A\\42 B' }),
+        ]);
+      });
+
+      it('decodes a function name and keeps its source for the browser', () => {
+        expect(tokenize('\\72 gb(0, 0, 0)')).toEqual([
+          expect.objectContaining({
+            kind: TokenKind.Function,
+            name: 'rgb',
+            raw: '\\72 gb(0, 0, 0)',
+          }),
+        ]);
+      });
+    });
   });
 
   it('handles single-quoted strings', () => {

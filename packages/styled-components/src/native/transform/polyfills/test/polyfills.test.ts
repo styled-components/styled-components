@@ -4605,6 +4605,42 @@ describe('generic font-family resolution (CSS Fonts 4 §3.1.1)', () => {
     });
   });
 
+  // CSS Fonts: "Font family names other than generic families or system font families must
+  // either be given quoted as <string>s, or unquoted as a sequence of one or more
+  // <custom-ident>." "Note: This means most punctuation characters and digits at the start of
+  // each token must be escaped in unquoted font family names." "If a sequence of identifiers
+  // is given as a <font-family-name>, the computed value is the name converted to a string by
+  // joining all the identifiers in the sequence by single spaces."
+  describe('escapes in an unquoted family', () => {
+    it.each([
+      ['font-family', 'A\\42 B', { fontFamily: 'ABB' }],
+      ['font-family', 'Foo\\ Bar', { fontFamily: 'Foo Bar' }],
+      ['font-family', 'New\\ Century Schoolbook', { fontFamily: 'New Century Schoolbook' }],
+      ['font-family', '\\32 1st', { fontFamily: '21st' }],
+      ['font-family', 'A\\2c B', { fontFamily: 'A,B' }],
+      ['font', '12px A\\42 B', { fontFamily: 'ABB', fontSize: 12 }],
+    ])('%s: %s hands React Native the decoded name', (property, value, expected) => {
+      expect(transformDecl(property, value)).toMatchObject(expected);
+    });
+
+    // CSS Values: "Keywords are identifiers and are interpreted ASCII case-insensitively".
+    // Tokenizing resolves the escape, so this identifier's value is the keyword.
+    it('an unquoted family spelled by an escape is the generic keyword', () => {
+      expect(transformDecl('font-family', '\\73 erif')).toEqual({
+        fontFamily: 'Times New Roman',
+      });
+    });
+  });
+
+  describe('keywords spelled by an escape', () => {
+    it.each([
+      ['border', '1px solid r\\65 d', { borderColor: 'red', borderStyle: 'solid', borderWidth: 1 }],
+      ['font', '\\62 old 12px Foo', { fontFamily: 'Foo', fontWeight: 'bold' }],
+    ])('%s: %s reads as the keyword', (property, value, expected) => {
+      expect(transformDecl(property, value)).toMatchObject(expected);
+    });
+  });
+
   describeOnRnWeb(() => {
     // On rn-web the browser owns generic-family resolution; the native
     // resolver short-circuits via `__NATIVE_WEB__` in font.ts so the
@@ -4616,6 +4652,13 @@ describe('generic font-family resolution (CSS Fonts 4 §3.1.1)', () => {
     it('a quoted family keeps its source escapes for the browser to decode', () => {
       expect(transformDecl('font-family', '"A\\"B"')).toEqual({ fontFamily: '"A\\"B"' });
     });
+
+    it.each([['A\\42 B'], ['Foo\\ Bar'], ['\\73 erif']])(
+      'an unquoted family %s keeps its source escapes for the browser to decode',
+      value => {
+        expect(transformDecl('font-family', value)).toEqual({ fontFamily: value });
+      }
+    );
 
     it('comma-separated fallback list survives intact on rn-web', () => {
       expect(transformDecl('font-family', 'serif, Helvetica, sans-serif')).toEqual({

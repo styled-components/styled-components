@@ -191,13 +191,13 @@ export function tokenize(value: string): Token[] {
       const end = findStringEnd(value, i, c);
       if (end !== -1) {
         const raw = value.substring(i, end + 1);
-        const text = decodeStringEscapes(value.substring(i + 1, end));
+        const text = decodeEscapes(value.substring(i + 1, end), '');
         tokens.push(stringToken(raw, text, c));
         i = end + 1;
         continue;
       }
       // Unterminated string; consume the rest as a single raw token
-      tokens.push(stringToken(value.substring(i), decodeStringEscapes(value.substring(i + 1)), c));
+      tokens.push(stringToken(value.substring(i), decodeEscapes(value.substring(i + 1), ''), c));
       i = len;
       continue;
     }
@@ -227,7 +227,11 @@ export function tokenize(value: string): Token[] {
     // ident scanner below consume it.
     if (
       c === $.HYPHEN &&
-      !(i + 2 < len && value.charCodeAt(i + 1) === $.HYPHEN && isIdentPart(value.charCodeAt(i + 2)))
+      !(
+        i + 2 < len &&
+        value.charCodeAt(i + 1) === $.HYPHEN &&
+        (isIdentPart(value.charCodeAt(i + 2)) || startsEscape(value, i + 2))
+      )
     ) {
       tokens.push(opToken('-'));
       i++;
@@ -235,8 +239,12 @@ export function tokenize(value: string): Token[] {
     }
 
     // Ident or function
-    if (isIdentStart(c)) {
+    if (isIdentStart(c) || startsEscape(value, i)) {
       const identEnd = consumeIdent(value, i);
+      if (startsEscape(value, identEnd)) {
+        i = pushEscapedName(tokens, value, i, identEnd);
+        continue;
+      }
       // Check for '(' → function
       if (identEnd < len && value.charCodeAt(identEnd) === $.OPEN_PAREN) {
         const argsEnd = findMatchingParen(value, identEnd);
@@ -271,6 +279,44 @@ function consumeIdent(value: string, start: number): number {
   return i;
 }
 
+/** A theme token starts with NUL, so an escape never takes one as its character. */
+function startsEscape(value: string, i: number): boolean {
+  if (value.charCodeAt(i) !== $.BACKSLASH) return false;
+
+  const next = value.charCodeAt(i + 1);
+  return next !== $.LF && next !== $.CR && next !== FF && next !== $.NUL;
+}
+
+/**
+ * Pushes the ident or function whose name holds an escape at `escapeAt`, returning where it ends.
+ * The browser reads the source on rn-web; React Native reads only what `raw` hands it.
+ */
+function pushEscapedName(tokens: Token[], value: string, start: number, escapeAt: number): number {
+  let end = escapeAt;
+
+  while (startsEscape(value, end)) {
+    ESCAPE_RE.lastIndex = end;
+    ESCAPE_RE.exec(value);
+    end = consumeIdent(value, ESCAPE_RE.lastIndex);
+  }
+
+  const source = value.substring(start, end);
+  const decoded = decodeEscapes(source, REPLACEMENT_CHARACTER);
+  const raw = __NATIVE_WEB__ ? source : decoded;
+  const argsEnd = value.charCodeAt(end) === $.OPEN_PAREN ? findMatchingParen(value, end) : -1;
+
+  if (argsEnd === -1) {
+    tokens.push(identToken(raw, decoded));
+    return end;
+  }
+
+  const args = value.substring(end + 1, argsEnd);
+  tokens.push(
+    functionToken(raw + value.substring(end, argsEnd + 1), toLowerIfMixed(decoded), args)
+  );
+  return argsEnd + 1;
+}
+
 function findStringEnd(value: string, start: number, quote: number): number {
   let i = start + 1;
   while (i < value.length) {
@@ -281,20 +327,23 @@ function findStringEnd(value: string, start: number, quote: number): number {
   return -1;
 }
 
-/** One escape: hex digits with their ending whitespace, a line break, a character, or a final backslash. */
-const STRING_ESCAPE_RE = /\\(?:([\da-f]{1,6})(?:\r\n|[ \t\n\r\f])?|\r\n|[\n\r\f]|([^])|$)/gi;
+const REPLACEMENT_CHARACTER = '�';
 
-function decodeStringEscapes(text: string): string {
+/** One escape: hex digits with their ending whitespace, a line break, a character, or a final backslash. */
+const ESCAPE_RE = /\\(?:([\da-f]{1,6})(?:\r\n|[ \t\n\r\f])?|\r\n|[\n\r\f]|([^])|$)/gi;
+
+/** `atEnd` is what a final backslash spells: nothing in a string, U+FFFD in a name. */
+function decodeEscapes(text: string, atEnd: string): string {
   if (text.indexOf('\\') === -1) return text;
 
   // An escape can spell what the pass over the source strips, so the decoded text gets it too.
   return sanitizeValue(
-    text.replace(STRING_ESCAPE_RE, (_match, hex?: string, char?: string) => {
-      if (!hex) return char ?? '';
+    text.replace(ESCAPE_RE, (match, hex?: string, char?: string) => {
+      if (!hex) return char ?? (match.length === 1 ? atEnd : '');
 
       const code = parseInt(hex, 16);
       const isValid = code > 0 && code <= 0x10ffff && (code < 0xd800 || code > 0xdfff);
-      return isValid ? String.fromCodePoint(code) : '�';
+      return isValid ? String.fromCodePoint(code) : REPLACEMENT_CHARACTER;
     })
   );
 }
