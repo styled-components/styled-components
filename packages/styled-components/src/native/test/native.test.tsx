@@ -477,6 +477,23 @@ describe('native', () => {
       expect(toStyleSheet(cssStyle)).toEqual({ backgroundColor: 'red', borderWidth: 10 });
     });
 
+    it('drops a value that leaves a block open, keeping the declarations after it', () => {
+      const cssStyle = css`
+        border-width: ${'10px; a { top: 1px'};
+        opacity: 1;
+      `;
+
+      expect(toStyleSheet(cssStyle)).toEqual({ borderWidth: 10, opacity: 1 });
+    });
+
+    it.each<[string, () => ReturnType<typeof css>]>([
+      ['authored text', () => css`box-shadow: 0 0 1px red, 0 0 2px blue;`],
+      ['a value', () => css`box-shadow: ${'0 0 1px red, 0 0 2px blue'};`],
+      ['a function value', () => css`box-shadow: ${() => '0 0 1px red, 0 0 2px blue'};`],
+    ])('keeps the space after a comma from %s', (_title, build) => {
+      expect(toStyleSheet(build())).toEqual({ boxShadow: '0 0 1px red, 0 0 2px blue' });
+    });
+
     describe('post-compile (arity-2 ast)', () => {
       it('lifts a declared style value into a prop via ast.pop and removes it from the style', () => {
         const Comp = styled.View.attrs<{ fill?: string }>((_props, ast) => ({
@@ -1061,6 +1078,40 @@ describe('native', () => {
       // The flag is CSS-level only. The factory layer additionally requires
       // empty attrs + no shouldForwardProp before routing to useStaticImpl.
       expect(Comp.nativeStyle.staticEligible).toBe(true);
+    });
+
+    it.each<[string, unknown]>([
+      ['a function with two parameters', (_p: unknown, _unused?: unknown) => 'opacity: 0.5;'],
+      ['an array', ['opacity: 0.5;']],
+      ['a function returning an array', () => ['opacity: 0.5;']],
+    ])('reads %s and keeps the other styles', (_title, value) => {
+      const Comp = styled.View`
+        ${value as string}
+        margin-top: 1px;
+      `;
+      const view = TestRenderer.create(<Comp />).root.findByType(View);
+      expect(view.props.style).toEqual({ marginTop: 1, opacity: 0.5 });
+    });
+
+    it('reads a value with no semicolon of its own before a slot property as a declaration', () => {
+      const Comp = styled.View`
+        ${() => 'margin-top: 1px'}
+        ${'opacity'}: 0.5;
+      `;
+      const view = TestRenderer.create(<Comp />).root.findByType(View);
+      expect(view.props.style).toEqual({ marginTop: 1, opacity: 0.5 });
+    });
+
+    it.each<[string, unknown]>([
+      ['true', true],
+      ['a function returning true', () => true],
+    ])('adds nothing for %s and keeps the other styles', (_title, value) => {
+      const Comp = styled.View`
+        ${value as string}
+        margin-top: 1px;
+      `;
+      const view = TestRenderer.create(<Comp />).root.findByType(View);
+      expect(view.props.style).toEqual({ marginTop: 1 });
     });
 
     it('function-interpolated CSS is not static-eligible (no precomputed compile)', () => {
@@ -2197,5 +2248,50 @@ describe('interpolation evaluation on every render (#5788)', () => {
     expect(mergeStyle(renderer.root.findByType(View).props.style).paddingTop).toBe(20);
 
     TestRenderer.act(() => renderer.unmount());
+  });
+});
+
+describe('interpolation of a value with a text form', () => {
+  it('reads an instance with its own toString and a bigint as their text', () => {
+    class Length {
+      toString() {
+        return '10px';
+      }
+    }
+    const Comp = styled(View)`
+      padding-top: ${new Length()};
+      z-index: ${BigInt(3)};
+    `;
+
+    const renderer = TestRenderer.create(<Comp />);
+
+    expect(mergeStyle(renderer.root.findByType(View).props.style)).toEqual({
+      paddingTop: 10,
+      zIndex: 3,
+    });
+  });
+});
+
+describe('a plain string value stays in its declaration', () => {
+  it.each<[string, string, Record<string, unknown>]>([
+    ['a paren it leaves open', '(', { left: 0 }],
+    ['a string it leaves open', '"', { left: 0 }],
+    ['a brace it never closes', '{', { left: 0 }],
+    ['a brace it did not open', '}', { left: 0 }],
+    ['a comment it leaves open', 'red /*', { color: 'red', left: 0 }],
+  ])('keeps the declarations after %s', (_label, value, expected) => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const Direct = styled(View)`color: ${value}; left: 0;`;
+      const FromFunction = styled(View)`color: ${() => value}; left: 0;`;
+
+      const direct = TestRenderer.create(<Direct />);
+      const fromFunction = TestRenderer.create(<FromFunction />);
+
+      expect(mergeStyle(direct.root.findByType(View).props.style)).toEqual(expected);
+      expect(mergeStyle(fromFunction.root.findByType(View).props.style)).toEqual(expected);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

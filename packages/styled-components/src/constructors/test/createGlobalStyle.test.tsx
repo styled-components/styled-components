@@ -14,6 +14,7 @@ import ThemeProvider from '../../models/ThemeProvider';
 import StyleSheet from '../../sheet';
 import { groupForId } from '../../sheet/GroupIDAllocator';
 import isStaticRules from '../../utils/isStaticRules';
+import { resetWarnOnce } from '../../utils/warnOnce';
 import { getRenderedCSS, rehydrateTestStyles, resetStyled } from '../../test/utils';
 import createGlobalStyle from '../createGlobalStyle';
 import css from '../css';
@@ -35,6 +36,96 @@ describe(`createGlobalStyle`, () => {
     `);
   });
 
+  describe('a slot at the start of a statement', () => {
+    const body = css`
+      body {
+        margin: 0;
+      }
+    `;
+
+    it.each<[string, unknown, string]>([
+      ['a css fragment', body, 'html'],
+      ['a css fragment', body, '.foo'],
+      ['a function returning a css fragment', () => body, 'html'],
+      ['a function returning a css fragment', () => body, '.foo'],
+      ['a function returning a string', () => 'body { margin: 0; }', 'html'],
+      ['a function returning a string', () => 'body { margin: 0; }', '.foo'],
+    ])('keeps %s with no semicolon before `%s`', (_title, mixin, selector) => {
+      const strings = Object.assign(['', `\n${selector} { top: 0; }`], {
+        raw: ['', `\n${selector} { top: 0; }`],
+      });
+      const Component = createGlobalStyle(strings, mixin as string);
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual(`body {\n  margin: 0;\n}\n${selector} {\n  top: 0;\n}`);
+    });
+
+    it('keeps a component before a type selector', () => {
+      const Child = resetStyled().span``;
+      const Component = createGlobalStyle`${Child} h2 { top: 0; }`;
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual(`.${Child.styledComponentId} h2 {\n  top: 0;\n}`);
+    });
+
+    it.each<[string, unknown]>([
+      ['a string', 'body { margin: 0; }'],
+      ['a function returning a string', () => 'body { margin: 0; }'],
+      ['a css fragment', body],
+    ])('keeps a mixin held by %s beside a component selector', (_title, mixin) => {
+      const Child = resetStyled().span``;
+      const Component = createGlobalStyle`${mixin as string} ${Child} h2 { top: 0; }`;
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual(
+        `body {\n  margin: 0;\n}\n.${Child.styledComponentId} h2 {\n  top: 0;\n}`
+      );
+    });
+
+    it.each<[string, unknown]>([
+      ['a string', 'body { margin: 0; }'],
+      ['a css fragment', body],
+    ])('keeps a mixin held by %s beside a selector list', (_title, mixin) => {
+      const Component = createGlobalStyle`${mixin as string} ${'h1, h2'} { top: 0; }`;
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual('body {\n  margin: 0;\n}\nh1, h2 {\n  top: 0;\n}');
+    });
+
+    it('writes keyframes used after a mixin with no semicolon', () => {
+      const spin = keyframes`
+        to {
+          top: 0;
+        }
+      `;
+      const Component = createGlobalStyle`
+        ${body}
+        .foo {
+          animation: ${spin} 1s;
+        }
+      `;
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual(
+        `@keyframes ${spin.id.replace('sc-keyframes-', '')} {\n  to {\n    top: 0;\n  }\n}\nbody {\n  margin: 0;\n}\n.foo {\n  animation: ${spin.id.replace('sc-keyframes-', '')} 1s;\n}`
+      );
+    });
+
+    it('keeps a value with no semicolon of its own as a declaration before a rule', () => {
+      const Component = createGlobalStyle`
+        body {
+          ${() => 'color: red'}
+          h2 {
+            top: 0;
+          }
+        }
+      `;
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual('body {\n  color: red;\n}\nbody h2 {\n  top: 0;\n}');
+    });
+
+    it('drops the first selector of a list when its slot is empty', () => {
+      const Component = createGlobalStyle`${false}, h2 { top: 0; }`;
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual('h2 {\n  top: 0;\n}');
+    });
+  });
+
   it('drops the statement around a stray `}` and keeps the rule on the next line', () => {
     const Component = createGlobalStyle`body { color: red; } }
       html { margin: 0; }`;
@@ -49,18 +140,22 @@ describe(`createGlobalStyle`, () => {
     `);
   });
 
-  it('keeps its rules when an interpolated value closes a paren the template left open', () => {
+  it('drops a statement whose template leaves a paren open for a value to close', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    resetWarnOnce();
     const Component = createGlobalStyle`body { color: red; } a { width: calc(${'1px)'}; top: 0; }`;
     render(<Component />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "body {
         color: red;
-      }
-      a {
-        width: calc(1px);
-        top: 0;
       }"
     `);
+    expect(warn.mock.calls).toEqual([
+      [
+        '[sc] `width: calc(${...}; top: 0; }` holds a `(`, a `[`, or a quote that never closes, so it and everything after it in that text are dropped. Close it, and keep a string on one line.',
+      ],
+    ]);
+    warn.mockRestore();
   });
 
   it('keeps its rules when an interpolated value holds a `;`', () => {
@@ -72,6 +167,325 @@ describe(`createGlobalStyle`, () => {
         top: 0;
       }"
     `);
+  });
+
+  describe('a value holds only declarations and whole rules', () => {
+    const after = 'a {\n  top: 0;\n}';
+    const redBody = 'body {\n  color: red;\n}';
+
+    beforeEach(() => {
+      jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    it.each<[string, string, string]>([
+      ['a `}` after a semicolon', 'red; } html { display: none', redBody + '\n' + after],
+      ['a `}` with no semicolon', 'red } html { display: none }', after],
+      [
+        'a `}` before an @import',
+        'red; } @import url(//x/y.css); .x { top: 0',
+        redBody + '\n' + after,
+      ],
+      ['a bare `}`', 'red; }', redBody + '\n' + after],
+    ])(
+      'drops %s, its statement, and what follows it in a declaration value',
+      (_title, value, expected) => {
+        const Component = createGlobalStyle`body { color: ${value}; } a { top: 0; }`;
+        render(<Component />);
+        expect(getRenderedCSS()).toEqual(expected);
+      }
+    );
+
+    it.each<[string, () => React.ComponentType]>([
+      [
+        'a style object',
+        () => createGlobalStyle({ body: { color: 'red; } html { display: none' } }),
+      ],
+      [
+        'a style object from css',
+        () => createGlobalStyle`${css({ body: { color: 'red; } html { display: none' } })}`,
+      ],
+      [
+        'a style object returned by a function',
+        () => createGlobalStyle`${() => ({ body: { color: 'red; } html { display: none' } })}`,
+      ],
+    ])('keeps a value in %s inside its rule', (_title, build) => {
+      const Component = build();
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual(redBody);
+    });
+
+    it.each<[string, () => React.ComponentType]>([
+      ['a style object', () => createGlobalStyle({ a: { color: '"', top: '"} x"', left: '0' } })],
+      [
+        'a style object returned by a function',
+        () => createGlobalStyle`${() => ({ a: { color: '"', top: '"} x"', left: '0' } })}`,
+      ],
+    ])('does not let two values in %s pair up across their keys', (_title, build) => {
+      const Component = build();
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual('a {\n  top: "} x";\n  left: 0;\n}');
+    });
+
+    it.each<[string, () => React.ComponentType]>([
+      ['a style object', () => createGlobalStyle({ body: { color: 'red; top: 0' } })],
+      [
+        'a style object returned by a function',
+        () => createGlobalStyle`${() => ({ body: { color: 'red; top: 0' } })}`,
+      ],
+    ])('keeps a `;` in a value in %s', (_title, build) => {
+      const Component = build();
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual('body {\n  color: red;\n  top: 0;\n}');
+    });
+
+    it('drops a `}` returned by a function', () => {
+      const Component = createGlobalStyle`body { color: ${() => 'red; } html { display: none'}; }`;
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual(redBody);
+    });
+
+    it('keeps a `}` from leaving a nested block in an at-rule', () => {
+      const Component = createGlobalStyle`@media print { a { top: ${'0; } } html { display: none'}; } b { top: 1; } }`;
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual(
+        '@media print {\n  a {\n    top: 0;\n  }\n  b {\n    top: 1;\n  }\n}'
+      );
+    });
+
+    it('drops a `}` in a value in a block slot', () => {
+      const Component = createGlobalStyle`body { ${'color: red; } html { display: none }'} } a { top: 0; }`;
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual(redBody + '\n' + after);
+    });
+
+    it('drops a `}` in a selector value', () => {
+      const Component = createGlobalStyle`${'a } html'} { top: 0; }`;
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual('');
+    });
+
+    it.each<[string, () => React.ComponentType, string]>([
+      [
+        'a quote the template opened',
+        () =>
+          createGlobalStyle`a { content: "${'"; } html { display: none } b { content: "'}"; top: 0; }`,
+        'a {\n  content: "";\n  top: 0;\n}',
+      ],
+      [
+        'a paren the template opened',
+        () =>
+          createGlobalStyle`a { width: calc(${'1px); } html { display: none } b { width: calc(1px'}); top: 0; }`,
+        'a {\n  width: calc(1px);\n  top: 0;\n}',
+      ],
+      [
+        'a comment the template opened',
+        () => createGlobalStyle`a { /* ${'*/ } html { display: none } /*'} */ top: 0; }`,
+        'a {\n  top: 0;\n}',
+      ],
+      [
+        'a raw newline ending a string the value opened',
+        () => createGlobalStyle`a { color: ${'"\n } html { display: none }'}; top: 0; }`,
+        'a {\n  top: 0;\n}',
+      ],
+      [
+        'an object value',
+        () =>
+          createGlobalStyle`a { ${{ color: 'red; } html { display: none' } as unknown as string} }`,
+        'a {\n  color: red;\n}',
+      ],
+      [
+        'a css fragment',
+        () => createGlobalStyle`a { color: ${css`${'red; } html { display: none'}`}; }`,
+        'a {\n  color: red;\n}',
+      ],
+    ])('drops a `}` past %s', (_title, make, expected) => {
+      const Component = make();
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual(expected);
+    });
+
+    it('drops a `}` past a string the template left open on an earlier line', () => {
+      const Component = createGlobalStyle`a { content: "x
+        ; color: ${'red; } html { display: none }'}; }`;
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual('');
+    });
+
+    it.each<[string, string, string]>([
+      ['at the root', 'body { color: red', ''],
+      ['after whole statements', 'a { top: 0; } body { color: red', after],
+      ['with its block left open in a string', 'a { top: 0; } body { content: "x', after],
+    ])('drops a statement with an unclosed `{` %s', (_title, value, expected) => {
+      const Component = createGlobalStyle`${value}`;
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual(expected);
+    });
+
+    it('drops an unclosed `{` in a block slot without taking the declaration after it', () => {
+      const Component = createGlobalStyle`a { ${'b { top: 1'} top: 0; }`;
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual(after);
+    });
+
+    it('drops an unclosed `{` in a declaration value without changing the template around it', () => {
+      const Component = createGlobalStyle`body { color: ${'red; a { top: 1'}; margin: 0; } html { top: 2; }`;
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual(
+        'body {\n  color: red;\n  margin: 0;\n}\nhtml {\n  top: 2;\n}'
+      );
+    });
+
+    it('drops a value that opens a block for the template to close', () => {
+      const Component = createGlobalStyle`${'body {'} color: red; }
+        a { top: 0; }`;
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual(after);
+    });
+
+    it.each<[string, () => React.ComponentType, string]>([
+      [
+        'declarations',
+        () => createGlobalStyle`body { color: ${'red; top: 0'}; }`,
+        'body {\n  color: red;\n  top: 0;\n}',
+      ],
+      ['a whole rule', () => createGlobalStyle`${'body { color: red }'}`, redBody],
+      [
+        'several whole rules',
+        () => createGlobalStyle`${'a { top: 0 } body { color: red }'}`,
+        after + '\n' + redBody,
+      ],
+      [
+        'a function returning whole rules',
+        () => createGlobalStyle`${() => 'a { top: 0 } body { color: red }'}`,
+        after + '\n' + redBody,
+      ],
+      [
+        'declarations then a nested whole rule in a declaration value',
+        () => createGlobalStyle`body { color: ${'red; a { top: 0 }'}; }`,
+        redBody + '\nbody a {\n  top: 0;\n}',
+      ],
+      [
+        'a `}` in a string the value holds',
+        () => createGlobalStyle`${'a::before { content: "}" }'}`,
+        'a::before {\n  content: "}";\n}',
+      ],
+      [
+        'a `}` in a string the template holds, beside a value that takes the joined text',
+        () => createGlobalStyle`a { content: "${'}'}"; color: ${'red; top: 0'}; }`,
+        'a {\n  content: "}";\n  color: red;\n  top: 0;\n}',
+      ],
+    ])('keeps %s', (_title, make, expected) => {
+      const Component = make();
+      render(<Component />);
+      expect(getRenderedCSS()).toEqual(expected);
+    });
+
+    describe('the template blocks come from authored text alone', () => {
+      const EVIL = 'html { display: none }';
+
+      it.each<[string, () => React.ComponentType, string]>([
+        [
+          'a comment formed across a slot',
+          () => createGlobalStyle`a { font: 12px/${'*x*/} ' + EVIL} serif; }`,
+          '',
+        ],
+        [
+          'a comment formed across a slot from the other side',
+          () => createGlobalStyle`a { *${'/} ' + EVIL + ' /* z'} x: y; }`,
+          '',
+        ],
+        [
+          'a stray comment close in an earlier value',
+          () => createGlobalStyle`a { x: ${'*/'}; y: ${'} ' + EVIL + ' //'}; }`,
+          'a {\n  x: */;\n}',
+        ],
+        [
+          'a comment opened by an earlier value',
+          () => createGlobalStyle`a { x: ${'/*'}; y: ${'{ */ } ' + EVIL + ' /*'}; } b { c: d; }`,
+          'a html {\n  display: none;\n}\nb {\n  c: d;\n}',
+        ],
+        [
+          'a slot inside an authored comment',
+          () => createGlobalStyle`a { /* ${'{ */ } ' + EVIL + ' /*'} */ x: ${'y; z: 1'}; }`,
+          'a {\n  x: y;\n  z: 1;\n}',
+        ],
+        [
+          'a quote opened by an earlier value, read from a fragment',
+          () => createGlobalStyle`a { color: ${'"'}; ${css`b: ${'"; } ' + EVIL + ' x { y: "'};`} }`,
+          // One string value. The formatter behind `getRenderedCSS` collapses spaces inside it.
+          'a {\n  b: "; } html{ display:none } x{ y:";\n}',
+        ],
+      ])('writes nothing outside its block through %s', (_title, make, expected) => {
+        const Component = make();
+        render(<Component />);
+        expect(getRenderedCSS()).toEqual(expected);
+      });
+
+      it('keeps an authored block when two values hold quotes around its brace', () => {
+        const Component = createGlobalStyle`a { x: ${'"'} b { ${'"'} top: 0; } ${EVIL} }`;
+        render(<Component />);
+        expect(getRenderedCSS()).toEqual('a html {\n  display: none;\n}');
+      });
+
+      it('keeps an authored rule inside its at-rule when a value ends in a backslash', () => {
+        const Component = createGlobalStyle`@media print { a${'\\'}{ top: 0; } .secret { color: red; } }`;
+        render(<Component />);
+        expect(getRenderedCSS()).toEqual('@media print {\n  .secret {\n    color: red;\n  }\n}');
+      });
+
+      it.each<[string, () => React.ComponentType]>([
+        ['an at-rule condition', () => createGlobalStyle`@media ${'print } x'} { a { top: 0; } }`],
+        ['a selector', () => createGlobalStyle`.admin ${'b } x'} { display: block; }`],
+      ])('drops the whole rule when a value in %s is dropped', (_title, make) => {
+        const Component = make();
+        render(<Component />);
+        expect(getRenderedCSS()).toEqual('');
+      });
+
+      it('reads a fragment the same with and without a value beside it that holds a `;`', () => {
+        const fragment = css`
+          top: 0;
+          b {
+            left: 0;
+          }
+        `;
+        const Alone = createGlobalStyle`a { ${fragment} }`;
+        const { unmount } = render(<Alone />);
+        expect(getRenderedCSS()).toEqual('a {\n  top: 0;\n}\na b {\n  left: 0;\n}');
+        unmount();
+
+        const Beside = createGlobalStyle`a { x: ${'y; z: 1'}; ${fragment} }`;
+        render(<Beside />);
+        expect(getRenderedCSS()).toEqual(
+          'a {\n  x: y;\n  z: 1;\n  top: 0;\n}\na b {\n  left: 0;\n}'
+        );
+      });
+
+      it('does not warn about a value inside an authored comment', () => {
+        const Component = createGlobalStyle`a { /* ${'}'} */ top: 0; }`;
+        render(<Component />);
+        expect(getRenderedCSS()).toEqual(after);
+        expect(console.warn).not.toHaveBeenCalled();
+      });
+    });
+
+    it('warns in development naming the value it dropped from and how to write it', () => {
+      resetWarnOnce();
+      const warn = console.warn as jest.Mock<Console['warn']>;
+      const Component = createGlobalStyle`body { color: ${'blue; } html { display: none'}; }`;
+      render(<Component />);
+      expect(warn.mock.calls).toEqual([
+        [
+          '[sc] An interpolated value holds an unmatched brace or leaves a string, paren, or bracket open, so "} html { display: none" was dropped. Write a value as `property: value;` declarations or whole `selector { ... }` rules.',
+        ],
+      ]);
+    });
+
+    it('does not warn for a value that holds whole rules', () => {
+      const Component = createGlobalStyle`${'body { color: red }'}`;
+      render(<Component />);
+      expect(console.warn).not.toHaveBeenCalled();
+    });
   });
 
   it(`supports interpolation`, () => {

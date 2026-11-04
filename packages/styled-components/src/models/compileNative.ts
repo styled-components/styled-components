@@ -601,9 +601,8 @@ export function toNativeStyles(rawCSS: string, styleSheet: StyleSheet): NativeSt
 
 /**
  * Translate a pre-parsed AST into the RN runtime style structure. Used by
- * the construction-time Source path in `NativeStyle.compile` to skip the
- * `string -> AST` round-trip when the AST is already in hand from
- * `parseSource()` time.
+ * `NativeStyle.compile` and `toStyleSheet` to skip the `string -> AST`
+ * round-trip when the AST is already in hand from `parseSource()` time.
  */
 export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): NativeStyles {
   // Flat array of DeclNode references. One slot per decl (half of the
@@ -1803,11 +1802,10 @@ function pushHasBucket(
  * direct child of another styled component reference. The matcher
  * reads ParentContext at render time.
  *
- * Phase 3 scope: top-level combinator selectors only. A combinator
+ * Only top-level combinator selectors are supported. A combinator
  * nested inside `@media` / `@container` / `@supports` skips the
- * bucket and falls through to the unsupported warn; landing combos
- * is incremental (rare in practice, and the outer-gate bucket shape
- * needs a separate slot for the ancestorId).
+ * bucket and falls through to the unsupported warn (the outer-gate
+ * bucket shape has no slot for the ancestorId).
  */
 function pushCombinatorBucket(
   conditional: ConditionalStyle[],
@@ -2179,33 +2177,15 @@ let pairCacheSize = 0;
  *
  * WeakMap-keyed by node identity. The Source's AST is per-RuleSet
  * WeakMap-rooted, so cached partials get freed alongside their components.
- * Per `perf_cache_layout.md` the lookup costs ~120ns per static Decl
- * versus ~60ns for a Symbol-keyed field; in production cache-miss renders
- * (~5% of all renders) the delta is below 5µs per render. WeakMap keeps
- * the AST shape unmutated, which dodges hidden-class transitions and
- * keeps native concerns out of the shared parser data structures.
+ * A WeakMap keeps the AST shape unmutated, which dodges hidden-class
+ * transitions and keeps native concerns out of the shared parser data
+ * structures.
  */
 const staticDeclCache = new WeakMap<StaticDeclNode, Dict<unknown>>();
 
 /**
- * Public-helper entry point: backs `toStyleSheet(css\`...\`)` from the
- * native build, which produces a plain RN style object users can pass into
- * any `style=` prop without a styled wrapper. Returns the frozen,
- * StyleSheet-registered `base` only;`conditional` and `keyframes` are
- * dropped since `toStyleSheet` is a pure helper without render context.
- *
- * Production styled-component compilation goes through `toNativeStyles` /
- * `astToNativeStyles` directly; this is a thin slice on top.
- */
-// biome-ignore lint/suspicious/noExplicitAny: the return type becomes the public `toStyleSheet` result, which consumers pass to React Native `style` props; `Dict<unknown>` is not assignable to a style type
-export function cssToStyleObject(flatCSS: string, styleSheet: StyleSheet): Dict<any> {
-  return toNativeStyles(flatCSS, styleSheet).base;
-}
-
-/**
  * Extract raw `[prop, value]` pairs for top-level declarations.
- * Exported for tests; consumers should use `toNativeStyles` or
- * `cssToStyleObject` instead. Preprocessing + parser semantics apply:
+ * Exported for tests; consumers should use `toNativeStyles` instead. Preprocessing + parser semantics apply:
  * comments stripped, malformed blocks skipped, RN_UNSUPPORTED_VALUES warn+drop.
  */
 export function extractBaseDeclPairs(rawCSS: string): Array<[string, string]> {

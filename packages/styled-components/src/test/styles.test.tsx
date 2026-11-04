@@ -34,6 +34,7 @@ describe('with styles', () => {
   });
 
   it('keeps a runtime value with a stray `}` inside the component when the template has a comment', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
     const Comp = styled.div<{ $v: string }>`
       color: ${p => p.$v}; /* note */
     `;
@@ -58,6 +59,7 @@ describe('with styles', () => {
   });
 
   it('keeps a runtime value with a stray `}` inside the component when the template has no comment', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
     const Comp = styled.div<{ $v: string }>`
       color: ${p => p.$v};
     `;
@@ -67,6 +69,59 @@ describe('with styles', () => {
         color: red;
       }"
     `);
+  });
+
+  it('keeps a runtime value from closing a nested block in the template', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const Comp = styled.div<{ $v: string }>`
+      a {
+        color: ${p => p.$v};
+      }
+      b {
+        top: 0;
+      }
+    `;
+    render(<Comp $v="red; } c { top: 1" />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a a {
+        color: red;
+      }
+      .a b {
+        top: 0;
+      }"
+    `);
+  });
+
+  it('drops a runtime value that leaves a block open, keeping the template around it', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const Comp = styled.div<{ $v: string }>`
+      color: ${p => p.$v};
+      margin: 0;
+      b {
+        top: 0;
+      }
+    `;
+    render(<Comp $v="red; a { top: 1" />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a {
+        color: red;
+        margin: 0;
+      }
+      .a b {
+        top: 0;
+      }"
+    `);
+  });
+
+  it('gives two values that differ only in text a dropped value would hold their own classes', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const Comp = styled.div<{ $a: string; $b: string }>`
+      ${p => p.$a} ${p => p.$b}
+    `;
+    const { container, rerender } = render(<Comp $a={'"'} $b={'x { top: 1px } "}'} />);
+    const first = container.firstElementChild?.className;
+    rerender(<Comp $a={'"'} $b={'x { top: 2px } "}'} />);
+    expect(container.firstElementChild?.className).not.toEqual(first);
   });
 
   it('should append multiple styles', () => {
@@ -633,6 +688,7 @@ describe('with styles', () => {
   });
 
   it('should preserve styles after a malformed declaration with unbalanced brace', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
     // Ensures unbalanced braces in interpolated values don't break subsequent styles
     // In v6, a syntax error like an extra `}` in a value would cause all subsequent styles to be ignored
     const Comp = styled.div`
@@ -783,6 +839,583 @@ describe('with styles', () => {
           --custom-prop: some-val;
         }"
       `);
+    });
+  });
+
+  describe('a slot at the start of a statement', () => {
+    let Child: ReturnType<typeof styled.span>;
+    let Other: ReturnType<typeof styled.b>;
+    let child: string;
+    let other: string;
+
+    beforeEach(() => {
+      Child = styled.span``;
+      Other = styled.b``;
+      child = `.${Child.styledComponentId}`;
+      other = `.${Other.styledComponentId}`;
+    });
+
+    it.each<[string, () => React.ComponentType, () => string]>([
+      [
+        'before a type selector',
+        () => styled.div`${Child} h2 { color: red; }`,
+        () => `${child} h2`,
+      ],
+      [
+        'before two type selectors',
+        () => styled.div`${Child} h2 a { color: red; }`,
+        () => `${child} h2 a`,
+      ],
+      [
+        'before a type selector on the next line',
+        () => styled.div`
+          ${Child}
+          h2 {
+            color: red;
+          }
+        `,
+        () => `${child} h2`,
+      ],
+      [
+        'in a selector list',
+        () => styled.div`${Child}, ${Other} { color: red; }`,
+        () => `${child}, .a ${other}`,
+      ],
+      [
+        'before another component',
+        () => styled.div`${Child} ${Other} { color: red; }`,
+        () => `${child} ${other}`,
+      ],
+      ['before a comment', () => styled.div`${Child} /* note */ { color: red; }`, () => child],
+      [
+        'before a comment holding a stop',
+        () => styled.div`${Child} /* a; b { */ h2 { color: red; }`,
+        () => `${child} h2`,
+      ],
+      [
+        'before a line comment holding a stop',
+        () => styled.div`${Child} // a; b
+        h2 { color: red; }`,
+        () => `${child} h2`,
+      ],
+      [
+        'returned by a function',
+        () => styled.div`${() => Child} h2 { color: red; }`,
+        () => `${child} h2`,
+      ],
+      [
+        'returned by a function on the line before',
+        () => styled.div`
+          ${() => Child}
+          h2 {
+            color: red;
+          }
+        `,
+        () => `${child} h2`,
+      ],
+      [
+        'returned by functions in a list',
+        () => styled.div`${() => Child}, ${() => Other} { color: red; }`,
+        () => `${child}, .a ${other}`,
+      ],
+      [
+        'with a quoted attribute holding a slot',
+        () => styled.div`${Child} a[title="${'x'}"] { color: red; }`,
+        () => `${child} a[title="x"]`,
+      ],
+    ])('keeps a component %s', (_title, build, selector) => {
+      const Comp = build();
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(`.a ${selector()} {\n  color: red;\n}`);
+    });
+
+    it('keeps a component after a declaration', () => {
+      const Comp = styled.div`
+        color: green;
+        ${Child} h2 {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(
+        `.a {\n  color: green;\n}\n.a ${child} h2 {\n  color: red;\n}`
+      );
+    });
+
+    it('keeps a component inside a nested rule', () => {
+      const Comp = styled.div`
+        .x {
+          ${Child} h2 {
+            color: red;
+          }
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(`.a .x ${child} h2 {\n  color: red;\n}`);
+    });
+
+    it.each<[string, unknown]>([
+      ['a string', 'h1, h2'],
+      ['a function', () => 'h1, h2'],
+      ['a css fragment', css`h1, h2`],
+      ['an array', ['h1', ', h2']],
+    ])('scopes every selector of a list held by %s', (_title, list) => {
+      const Comp = styled.div`${list as string} { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a h1, .a h2 {\n  color: red;\n}');
+    });
+
+    it('keeps a comma inside a function selector within one selector', () => {
+      const Comp = styled.div`${() => ':is(h1, h2)'} { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a :is(h1, h2) {\n  color: red;\n}');
+    });
+
+    it('reads an at-rule held by a slot with space before it', () => {
+      const Comp = styled.div`${() => ' @media (min-width: 1px)'} { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('@media (min-width:1px) {\n  .a {\n    color: red;\n  }\n}');
+    });
+
+    const margin = css`
+      margin: 0;
+    `;
+
+    it.each<[string, unknown]>([
+      ['a css fragment', margin],
+      ['a string', 'margin: 0;'],
+      ['a function returning a string', () => 'margin: 0;'],
+      ['a function returning a css fragment', () => margin],
+      ['a style object', { margin: 0 }],
+      ['a function returning a style object', () => ({ margin: 0 })],
+    ])('reads %s with no semicolon before a rule as declarations', (_title, mixin) => {
+      const expected = '.a {\n  margin: 0;\n}\n.a h2 {\n  color: red;\n}';
+      const NextLine = styled.div`
+        ${mixin as string}
+        h2 {
+          color: red;
+        }
+      `;
+      // The babel plugin's minifier joins the lines, so a newline carries no meaning.
+      const SameLine = styled.div`${mixin as string} h2{color:red;}`;
+
+      const { unmount } = render(<NextLine />);
+      expect(getRenderedCSS()).toEqual(expected);
+      unmount();
+      resetStyled();
+
+      render(<SameLine />);
+      expect(getRenderedCSS()).toEqual(expected);
+    });
+
+    it.each<[string, unknown]>([
+      ['a string', 'margin: 0'],
+      ['a function returning a string', () => 'margin: 0'],
+      ['a css fragment', css`margin: 0`],
+      ['a function returning a css fragment', () => css`margin: 0`],
+    ])('reads %s with no semicolon of its own before a rule as declarations', (_title, mixin) => {
+      const Comp = styled.div`${mixin as string} h2{color:red;}`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a {\n  margin: 0;\n}\n.a h2 {\n  color: red;\n}');
+    });
+
+    it('keeps a comma in a value with no semicolon of its own before a rule', () => {
+      const Comp = styled.div`${() => 'transition: a 1s, b 1s'} h2{color:red;}`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(
+        '.a {\n  transition: a 1s, b 1s;\n}\n.a h2 {\n  color: red;\n}'
+      );
+    });
+
+    it('reads a value with no semicolon of its own before a component rule as declarations', () => {
+      const Comp = styled.div`${() => 'margin: 0'} ${Child} { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(`.a {\n  margin: 0;\n}\n.a ${child} {\n  color: red;\n}`);
+    });
+
+    it('reads a value with no semicolon of its own before a slot property as a declaration', () => {
+      const Comp = styled.div`${() => 'margin: 0'} ${'color'}: red;`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a {\n  margin: 0;\n  color: red;\n}');
+    });
+
+    it('reads a mixin separated from a class selector as declarations', () => {
+      const Comp = styled.div`${() => 'margin: 0'} .x{color:red;}`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a {\n  margin: 0;\n}\n.a .x {\n  color: red;\n}');
+    });
+
+    it('joins a component to a class selector written against it', () => {
+      const Comp = styled.div`${Child}.x { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(`.a ${child}.x {\n  color: red;\n}`);
+    });
+
+    it('keeps a component before a separate class selector', () => {
+      const Comp = styled.div`${Child} .x { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(`.a ${child} .x {\n  color: red;\n}`);
+    });
+
+    it.each<[string, unknown, string]>([
+      ['a type selector', 'h2', 'h2'],
+      ['an id selector', '#y', '#y'],
+      ['an attribute selector', '[data-x]', '[data-x]'],
+      ['the universal selector', '*', '*'],
+      ['a class with a pseudo-class', '.y:hover', '.y:hover'],
+      ['a function returning a type selector', () => 'h2', 'h2'],
+      ['a css fragment holding a type selector', css`h2`, 'h2'],
+      ['a function returning a css fragment holding a type selector', () => css`h2`, 'h2'],
+    ])('keeps %s before a separate selector', (_title, slot, selector) => {
+      const Comp = styled.div`${slot as string} .x { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(`.a ${selector} .x {\n  color: red;\n}`);
+    });
+
+    it('reads a pseudo-class selector value before a separate selector as a selector', () => {
+      const Comp = styled.div`${'a:hover'} .x { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a a:hover .x {\n  color: red;\n}');
+    });
+
+    it('keeps a pseudo-class selector value written with `&`', () => {
+      const Comp = styled.div`${'& a:hover'} .x { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a a:hover .x {\n  color: red;\n}');
+    });
+
+    it('keeps a selector value before a type selector', () => {
+      const Comp = styled.div`${'h2'} h3 { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a h2 h3 {\n  color: red;\n}');
+    });
+
+    it('keeps a selector value inside a nested rule', () => {
+      const Comp = styled.div`.p { ${'h2'} .x { color: red; } }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a .p h2 .x {\n  color: red;\n}');
+    });
+
+    it('keeps a selector value after a declaration', () => {
+      const Comp = styled.div`margin: 0; ${'h2'} .x { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a {\n  margin: 0;\n}\n.a h2 .x {\n  color: red;\n}');
+    });
+
+    it.each<[string, unknown]>([
+      ['a type selector', 'h2'],
+      ['a class selector', '.y'],
+      ['a css fragment holding a type selector', css`h2`],
+    ])('adds nothing for %s before an at-rule', (_title, slot) => {
+      const Comp = styled.div`${slot as string}
+        @media (min-width: 1px) {
+          color: red;
+        }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('@media (min-width:1px) {\n  .a {\n    color: red;\n  }\n}');
+    });
+
+    it('adds nothing for a value in a statement of its own before a rule', () => {
+      const Comp = styled.div`${'h2'}; .x { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a .x {\n  color: red;\n}');
+    });
+
+    it('joins every value before a rule into its selector', () => {
+      const Comp = styled.div`${'h2'} ${''} ${'.y'} .x { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a h2 .y .x {\n  color: red;\n}');
+    });
+
+    it('stops joining values at one holding declarations', () => {
+      const Comp = styled.div`${'h2'} ${'margin: 0;'} .x { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a {\n  margin: 0;\n}\n.a .x {\n  color: red;\n}');
+    });
+
+    it('keeps a whole rule a value writes before a block with no selector of its own', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const Comp = styled.div`${'h2 { top: 0; }'} { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a h2 {\n  top: 0;\n}');
+      expect(warn).toHaveBeenCalledTimes(1);
+    });
+
+    it.each<[string, string]>([
+      ['a block comment', 'h2 /* note'],
+      ['a line comment', 'h2 // note'],
+      ['a stray `}`', 'h2 } evil { top: 0'],
+    ])('keeps the rule after a value that opens %s', (_title, value) => {
+      jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const Comp = styled.div`${value} .x { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a .x {\n  color: red;\n}');
+    });
+
+    it.each<[string, unknown]>([
+      ['false', false],
+      ['a function returning false', () => false],
+    ])('drops the first selector of a list when it is %s', (_title, slot) => {
+      const Comp = styled.div`${slot as string}, h2 { color: red; }`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a h2 {\n  color: red;\n}');
+    });
+
+    it.each<[string, unknown]>([
+      ['a css fragment holding a line comment', css`// note`],
+      ['a css fragment holding a block comment', css`/* note */`],
+      ['a function returning a line comment', () => '// note'],
+    ])('adds nothing for %s before a rule', (_title, mixin) => {
+      const Comp = styled.div`${mixin as string} h2{color:red;}`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a h2 {\n  color: red;\n}');
+    });
+
+    it('keeps a rule on the same line as a value ending in a line comment', () => {
+      const Comp = styled.div`${() => 'margin: 0; // note'} h2{color:red;}`;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a {\n  margin: 0;\n}\n.a h2 {\n  color: red;\n}');
+    });
+
+    it('reads the slots after an escaped character at the slot', () => {
+      const Comp = styled.div`
+        ${false}
+        .x\\${'y'} {
+          top: 0;
+        }
+        ${() => '.z { left: 0; }'}
+        ${() => 'margin: 0'}
+        color: red;
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(
+        '.a {\n  margin: 0;\n  color: red;\n}\n.a .x\\y {\n  top: 0;\n}\n.a .z {\n  left: 0;\n}'
+      );
+    });
+
+    it.each<[string, unknown]>([
+      ['false', false],
+      ['undefined', undefined],
+      ['an empty string', ''],
+      ['a function returning false', () => false],
+    ])('adds nothing for %s before a rule', (_title, mixin) => {
+      const Comp = styled.div`
+        ${mixin as string}
+        h2 {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a h2 {\n  color: red;\n}');
+    });
+
+    it.each<[string, unknown, string]>([
+      ['false', false, '@media print {\n  .a {\n    color: red;\n  }\n}'],
+      [
+        'a string',
+        'margin: 0;',
+        '.a {\n  margin: 0;\n}\n@media print {\n  .a {\n    color: red;\n  }\n}',
+      ],
+    ])('keeps an at-rule after two mixins holding %s', (_title, mixin, expected) => {
+      const Comp = styled.div`
+        ${mixin as string}
+        ${mixin as string}
+        @media print {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(expected);
+    });
+
+    it('reads a mixin before a declaration, and two mixins, as declarations', () => {
+      const BeforeDeclaration = styled.div`${() => 'margin: 0;'} color: red;`;
+      const TwoMixins = styled.div`${() => 'margin: 0;'} ${() => 'color: red;'}`;
+      const expected = '.a {\n  margin: 0;\n  color: red;\n}';
+
+      const { unmount } = render(<BeforeDeclaration />);
+      expect(getRenderedCSS()).toEqual(expected);
+      unmount();
+      resetStyled();
+
+      render(<TwoMixins />);
+      expect(getRenderedCSS()).toEqual(expected);
+    });
+
+    it.each<[string, () => React.ComponentType]>([
+      [
+        'a block comment',
+        () => styled.div`
+          color: red;
+          /* note */
+          ${margin}
+        `,
+      ],
+      [
+        'a block comment on the same line',
+        () => styled.div`
+          color: red;
+          /* note */ ${margin}
+        `,
+      ],
+      [
+        'a line comment',
+        () => styled.div`
+          color: red;
+          // note
+          ${margin}
+        `,
+      ],
+      [
+        'a comment holding a quote',
+        () => styled.div`
+          color: red; /* don't */
+          ${margin}
+        `,
+      ],
+    ])('applies a mixin that follows %s', (_title, build) => {
+      const Comp = build();
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a {\n  color: red;\n  margin: 0;\n}');
+    });
+
+    it.each<[string, () => React.ComponentType, string]>([
+      [
+        'a static string',
+        () => styled.div`
+          ${'@media (min-width: 900px)'} {
+            color: red;
+          }
+        `,
+        '',
+      ],
+      [
+        'a function',
+        () => styled.div`
+          ${() => '@media (min-width: 900px)'} {
+            color: red;
+          }
+        `,
+        '',
+      ],
+      [
+        'a function, after a declaration',
+        () => styled.div`
+          color: blue;
+          ${() => '@media (min-width: 900px)'} {
+            color: red;
+          }
+        `,
+        '.a {\n  color: blue;\n}\n',
+      ],
+    ])('reads an at-rule held by %s before a block', (_title, build, before) => {
+      const Comp = build();
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(
+        `${before}@media (min-width:900px) {\n  .a {\n    color: red;\n  }\n}`
+      );
+    });
+
+    it.each<[string, () => React.ComponentType, string]>([
+      ['a string after `;`', () => styled.div`content: "a;${'x'}";`, 'content: "a;x";'],
+      // The test formatter leaves a declaration alone when its string holds a brace.
+      ['a string after `{`', () => styled.div`content: "a{${'x'}";`, 'content:"a{x";'],
+      ['a string after `}`', () => styled.div`content: "a}${'x'}";`, 'content: "a}x";'],
+      ['a string across slots', () => styled.div`content: "${'a'};${'b'}";`, 'content: "a;b";'],
+      [
+        'a string past an escaped quote',
+        () => styled.div`content: "a\\";${'b'}";`,
+        'content: "a\\";b";',
+      ],
+      [
+        'url() after `;`',
+        () => styled.div`background: url(data:image/png;${'base64,x'});`,
+        'background: url(data:image/png;base64,x);',
+      ],
+    ])('substitutes a slot inside %s', (_title, build, declaration) => {
+      const Comp = build();
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(`.a {\n  ${declaration}\n}`);
+    });
+
+    it('does not warn about a css fragment with no semicolon before a rule', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const Comp = styled.div`
+        ${margin}
+        &:hover {
+          color: red;
+        }
+      `;
+      render(<Comp />);
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
+  });
+
+  describe('array and boolean interpolations', () => {
+    const margin = css`
+      margin: 0;
+    `;
+    const expected = '.a {\n  margin: 0;\n  color: red;\n}';
+
+    it.each<[string, unknown]>([
+      ['strings', ['margin: 0;', 'color: red;']],
+      ['nested arrays', [['margin: 0;'], ['color: red;']]],
+      ['a css fragment', [margin, 'color: red;']],
+      ['a function', [() => 'margin: 0;', 'color: red;']],
+      ['a style object', [{ margin: 0 }, 'color: red;']],
+      ['false and null', ['margin: 0;', false, null, 'color: red;']],
+    ])('reads an array holding %s', (_title, value) => {
+      const Direct = styled.div`
+        ${value as string}
+      `;
+      const FromFunction = styled.div`
+        ${() => value as string}
+      `;
+
+      const { unmount } = render(<Direct />);
+      expect(getRenderedCSS()).toEqual(expected);
+      unmount();
+      resetStyled();
+
+      render(<FromFunction />);
+      expect(getRenderedCSS()).toEqual(expected);
+    });
+
+    it('joins an array in a declaration value', () => {
+      const Comp = styled.div`
+        margin: ${[1, 'px'] as unknown as string};
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual('.a {\n  margin: 1px;\n}');
+    });
+
+    it.each<[string, unknown]>([
+      ['true', true],
+      ['a function returning true', () => true],
+    ])('adds nothing for %s and keeps the other styles', (_title, value) => {
+      const Comp = styled.div`
+        ${value as string}
+        margin: 0;
+        color: red;
+      `;
+      render(<Comp />);
+      expect(getRenderedCSS()).toEqual(expected);
+    });
+  });
+
+  describe('function interpolation parameters', () => {
+    it.each<[string, (p: { $c: string }, unused?: unknown) => string]>([
+      ['one parameter', p => p.$c],
+      ['two parameters', (p, _unused) => p.$c],
+      ['a rest parameter', (...args) => args[0].$c],
+    ])('calls a function with %s and keeps the other styles', (_title, fn) => {
+      const Comp = styled.div<{ $c: string }>`
+        color: ${fn};
+        margin: 0;
+      `;
+      render(<Comp $c="red" />);
+      expect(getRenderedCSS()).toEqual('.a {\n  color: red;\n  margin: 0;\n}');
     });
   });
 

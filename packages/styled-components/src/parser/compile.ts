@@ -6,27 +6,34 @@ import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import getComponentName from '../utils/getComponentName';
 import isPlainObject from '../utils/isPlainObject';
 import { fifoSet } from '../utils/fifoMap';
-import { normalize } from '../utils/normalize';
 import { objectToCSS } from '../utils/objectToCSS';
+import { normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
-import { CLOSE_BRACE, COMMA, OPEN_BRACE, SEMICOLON } from '../utils/charCodes';
+import { AT, COMMA } from '../utils/charCodes';
 import {
+  DeclNode,
   DYN,
   Node,
   NodeKind,
   Root,
-  StaticAtRuleNode,
   StaticDeclNode,
   StaticKeyframeFrame,
   StaticKeyframesNode,
   StaticNode,
   StaticRoot,
-  StaticRuleNode,
   TemplateValue,
 } from './ast';
 import { emitWeb, EmitOptions } from './emit-web';
-import { isCustomProperty, parse, scanQPB, stripCommaSpaces, trimRange } from './parser';
-import { CLIENT_REFERENCE, getSource, InterpolationKind, Source } from './source';
+import {
+  isCustomProperty,
+  parse,
+  rulesToFrames,
+  staysOneField,
+  stripCommaSpaces,
+  trimRange,
+  wholeStatements,
+} from './parser';
+import { CLIENT_REFERENCE, getSource, InterpolationKind, isCssProduct, Source } from './source';
 
 /**
  * Resolved `${mixin}` fragment. Carried via a parallel side table so
@@ -60,18 +67,17 @@ export function hasAnyFragment(fragments: (FastPathFragment | null)[]): boolean 
  * `compiler` + `outKeyframes` are both required to resolve `${kf}` slots ;
  * the parser is pure, callers consume the buffer through their own
  * generate→inject pipeline. Absence of either bails on kf interpolation.
- * `outFragments`, when supplied, receives `${mixin}` slot resolutions for
- * AST splicing; absence forces bail on fragment slots.
+ * `outFragments` receives `${mixin}` slot resolutions for AST splicing.
  *
- * Returns `null` on any shape the fast path doesn't cover; the caller then
- * falls back to recompiling the joined CSS string via `compiler.compile`.
+ * Returns `null` on any shape that has no text form; the caller renders no
+ * styles for it.
  */
 export function evaluateForFastPath(
   source: Source,
   fillContext: unknown,
-  outBuffer?: string[],
-  compiler?: Compiler,
-  outFragments?: (FastPathFragment | null)[],
+  outBuffer: string[] | undefined,
+  compiler: Compiler | undefined,
+  outFragments: (FastPathFragment | null)[],
   outKeyframes?: CompiledKeyframes[]
 ): string[] | null {
   const interps = source.interpolations;
@@ -81,72 +87,52 @@ export function evaluateForFastPath(
   const statics = source.staticValues;
   const filled = outBuffer || new Array<string>(n);
   if (filled.length !== n) filled.length = n;
-  if (outFragments !== undefined && outFragments.length !== n) outFragments.length = n;
+  if (outFragments.length !== n) outFragments.length = n;
   for (let i = 0; i < n; i++) {
-    if (outFragments !== undefined) outFragments[i] = null;
+    outFragments[i] = null;
     const kind = kinds[i];
-    const standalone = source.slotIsStandalone[i];
-    const embedded = !standalone;
     if (kind === InterpolationKind.Static) {
       filled[i] = statics[i];
-    } else if (kind === InterpolationKind.StatelessFn || kind === InterpolationKind.General) {
-      const stateless = kind === InterpolationKind.StatelessFn;
-      const slot = stateless ? (interps[i] as (ctx: unknown) => unknown)(fillContext) : interps[i];
-      const resolved =
-        typeof slot === 'string'
-          ? slot
-          : resolveInterpolation(
-              slot,
-              fillContext,
-              compiler,
-              outFragments,
-              i,
-              embedded,
-              outKeyframes
-            );
-      if (resolved === null) {
-        // Likely a non-styled component used as a selector ref.
-        if (
-          __DEV__ &&
-          stateless &&
-          typeof slot === 'object' &&
-          slot !== null &&
-          !Array.isArray(slot) &&
-          !isPlainObject(slot)
-        ) {
-          const name = getComponentName(interps[i] as never);
-          warnOnce(
-            'non-styled-selector',
-            `${name} is not a styled component and cannot be referred to via component selector. Wrap it with styled() first. See https://styled-components.com/docs/advanced#referring-to-other-components for more details.`,
-            name
-          );
-        }
-        return null;
+      continue;
+    }
+
+    const stateless = kind === InterpolationKind.StatelessFn;
+    const slot = stateless ? (interps[i] as (ctx: unknown) => unknown)(fillContext) : interps[i];
+    const resolved =
+      typeof slot === 'string'
+        ? slot
+        : kind === InterpolationKind.Fragment
+          ? resolveFragment(slot as ReadonlyArray<unknown>, fillContext, compiler, outKeyframes)
+          : resolveInterpolation(slot, fillContext, compiler, outKeyframes);
+    if (resolved === null) {
+      // Likely a non-styled component used as a selector ref.
+      if (
+        __DEV__ &&
+        stateless &&
+        typeof slot === 'object' &&
+        slot !== null &&
+        !Array.isArray(slot) &&
+        !isPlainObject(slot)
+      ) {
+        const name = getComponentName(interps[i] as never);
+        warnOnce(
+          'non-styled-selector',
+          `${name} is not a styled component and cannot be referred to via component selector. Wrap it with styled() first. See https://styled-components.com/docs/advanced#referring-to-other-components for more details.`,
+          name
+        );
       }
+      return null;
+    }
+
+    if (typeof resolved === 'string') {
       filled[i] = resolved;
-    } else if (kind === InterpolationKind.Keyframes) {
-      if (compiler === undefined || outKeyframes === undefined) return null;
-      const kf = interps[i] as KeyframesClass;
-      const compiled = kf.compile(compiler);
-      filled[i] = compiled.name;
-      outKeyframes.push(compiled);
-    } else if (kind === InterpolationKind.Fragment) {
-      const frag = resolveFragment(
-        interps[i] as RuleSet<never>,
-        fillContext,
-        compiler,
-        outKeyframes
-      );
-      if (frag === null) return null;
-      if (standalone) {
-        // Block-position: splice the child's AST as parent siblings via the
-        // fragments side table. Bail when caller didn't allocate one.
-        if (outFragments === undefined) return null;
-        outFragments[i] = frag;
-        filled[i] = '';
-      } else {
-        filled[i] = stringifyEmbeddedFragment(frag);
-      }
+    } else if (source.slotIsStandalone[i]) {
+      // Block-position: splice the child's AST as parent siblings via the
+      // fragments side table.
+      outFragments[i] = resolved;
+      filled[i] = '';
+    } else {
+      filled[i] = stringifyEmbeddedFragment(resolved);
     }
   }
   return filled;
@@ -161,12 +147,12 @@ const EMPTY_FILLED: string[] = [];
  * Source or any nested slot bails.
  */
 function resolveFragment(
-  rules: RuleSet<never>,
+  rules: ReadonlyArray<unknown>,
   fillContext: unknown,
   compiler?: Compiler,
   outKeyframes?: CompiledKeyframes[]
 ): FastPathFragment | null {
-  const childSource = getSource(rules);
+  const childSource = getSource(rules as RuleSet<never>);
   if (childSource === undefined) return null;
   const childFragments: (FastPathFragment | null)[] = [];
   const childFilled = evaluateForFastPath(
@@ -189,8 +175,8 @@ function resolveFragment(
 
 /**
  * Reconstruct the joined CSS string from `Source.strings` and resolved
- * interpolation values. Output bytes are identical to the v6 string-input
- * pipeline so SSR class hashes stay stable. Fragment slots expand recursively.
+ * interpolation values, the text class names hash so they stay stable across
+ * server and client. Fragment slots expand recursively.
  */
 export function buildHashCSS(
   strings: ReadonlyArray<string>,
@@ -200,7 +186,7 @@ export function buildHashCSS(
   let out = strings[0] || '';
   for (let i = 0; i < filled.length; i++) {
     const frag = fragments ? fragments[i] : null;
-    if (frag !== null && frag !== undefined) {
+    if (frag) {
       out += buildHashCSS(frag.source.strings, frag.filled, frag.fragments);
     } else {
       out += filled[i];
@@ -214,7 +200,7 @@ export function buildHashCSS(
  * Stringify a fragment for embedded substitution. Trims outer whitespace
  * so multi-line fragment templates flow correctly in mid-value position
  * (e.g. `animation: ${frag} linear`); whole-value position already trims
- * in `fillNode`. Internal whitespace is preserved; users may write
+ * in `fillDecl`. Internal whitespace is preserved; users may write
  * meaningful runs inside fragments.
  */
 function stringifyEmbeddedFragment(frag: FastPathFragment): string {
@@ -246,7 +232,7 @@ export function buildInterpKey(
   let key = prefix;
   for (let i = 0; i < filled.length; i++) {
     const frag = fragments ? fragments[i] : null;
-    if (frag !== null && frag !== undefined) {
+    if (frag) {
       key += '\0F';
       for (let j = 0; j < frag.source.strings.length; j++) {
         key += '\0' + frag.source.strings[j];
@@ -261,8 +247,6 @@ export function buildInterpKey(
 
 /**
  * Fill the construction-time AST with `filled` values and emit web CSS.
- * Output bytes match `compiler.compile(css, ...)` on the same logical input.
- * Returns `null` when {@link realize} refuses a field.
  */
 export function compileWebFilled(
   source: Source,
@@ -270,14 +254,12 @@ export function compileWebFilled(
   parentSelector: string,
   options?: EmitOptions,
   fragments?: ReadonlyArray<FastPathFragment | null> | null
-): string[] | null {
+): string[] {
   // `fillAst` is identity-preserving: when `filled.length === 0` (no
   // interpolations), it returns `source.ast` by reference and types it
   // as `StaticRoot`. So the no-interpolation fast path costs one extra
   // function call but avoids a duplicate `as StaticRoot` cast here.
-  const filledAst = fillAst(source.ast, filled, fragments);
-  if (filledAst === null) return null;
-  return emitWeb(filledAst, parentSelector, options);
+  return emitWeb(fillAst(source.ast, filled, fragments), parentSelector, options);
 }
 
 /**
@@ -324,118 +306,90 @@ export function compileWeb(
 }
 
 /**
- * Coerce a runtime value to its substituted text. Handles
- * function-returns-X cases (the directly-typed slot shapes are pre-classified
+ * Coerce a runtime value to its substituted text, or to a fragment the caller places.
+ * Handles function-returns-X cases (the directly-typed slot shapes are pre-classified
  * in `parseSource` and never reach here). Returns `null` to bail.
  *
- * Client reference proxies are bailed before invocation; the string-input
- * compile path issues the canonical dev warning.
+ * Client reference proxies are bailed before invocation.
  */
 function resolveInterpolation(
   slot: unknown,
   fillContext: unknown,
   compiler?: Compiler,
-  fragmentsOut?: (FastPathFragment | null)[],
-  slotIndex?: number,
-  embedded?: boolean,
   outKeyframes?: CompiledKeyframes[]
-): string | null {
+): string | FastPathFragment | null {
   if (typeof slot === 'string') return slot;
-  if (typeof slot === 'number') return String(slot);
-  if (slot === null || slot === undefined || slot === false) return '';
+  if (typeof slot === 'number' || typeof slot === 'bigint') return String(slot);
+  if (slot === null || slot === undefined || typeof slot === 'boolean') return '';
   const t = typeof slot;
-  if (t === 'function' || t === 'object') {
-    // Styled-component reference (`function` in React 19, `object` for
-    // forwardRef-based components from older callers).
-    if ((slot as { styledComponentId?: string }).styledComponentId !== undefined) {
-      return '.' + (slot as { styledComponentId: string }).styledComponentId;
-    }
-    // Keyframes reference. Caller's `outKeyframes` carries the compiled
-    // payload through their own generate→inject pipeline; bail when missing.
-    if (t === 'object' && KEYFRAMES_SYMBOL in (slot as object)) {
-      if (compiler === undefined || outKeyframes === undefined) return null;
-      const kf = slot as KeyframesClass;
-      const compiled = kf.compile(compiler);
-      outKeyframes.push(compiled);
-      return compiled.name;
-    }
-    // css`` fragment ref returned from a function. Embedded slots
-    // stringify the fragment as text (block sibling-splice would corrupt
-    // the surrounding value/selector). Standalone slots populate the
-    // fragments side table for AST splicing in fillAst.
-    if (Array.isArray(slot)) {
-      const frag = resolveFragment(slot as RuleSet<never>, fillContext, compiler, outKeyframes);
-      if (frag === null) return null;
-      if (embedded) return stringifyEmbeddedFragment(frag);
-      if (fragmentsOut === undefined || slotIndex === undefined) return null;
-      fragmentsOut[slotIndex] = frag;
-      return '';
-    }
-    // Plain-object style block returned from a function (`css(p => ({...}))`).
-    // `objectToCSS` resolves nested function values against `fillContext`
-    // and stringifies the rest. Returns `null` for a `css\`...\`` fragment
-    // inside an object value (needs Source-aware splicing) and for a function
-    // value met with no `fillContext` (always set here); the caller bails on null.
-    if (t === 'object' && isPlainObject(slot)) {
-      // Design-token shape; an own `toString` on the object means the
-      // author wants a stringified value, not iteration of every key as a
-      // CSS declaration. Honor the explicit override before iterating.
-      if (Object.prototype.hasOwnProperty.call(slot, 'toString')) {
-        return String(slot);
-      }
-      return objectToCSS(slot as Record<string, unknown>, fillContext);
-    }
-    if (t === 'function') {
-      if ((slot as { $$typeof?: symbol }).$$typeof === CLIENT_REFERENCE) return null;
-      const fn = slot as (ctx: unknown) => unknown;
-      if (fn.length > 1) return null; // multi-arg functions only resolve via the string-input compile path
-      return resolveInterpolation(
-        fn(fillContext),
-        fillContext,
-        compiler,
-        fragmentsOut,
-        slotIndex,
-        embedded,
-        outKeyframes
-      );
-    }
-    return null;
-  }
-  return null;
-}
+  if (t !== 'function' && t !== 'object') return null;
 
-/**
- * Read the parse-time `[DYN]` flag set by `markDynamic` in `source.ts`.
- * `true` means the node, or any descendant, depends on a runtime
- * interpolation slot, so `fillNode` must walk it. Falsy means the subtree
- * is structurally fixed across renders, so `fillNode` returns the existing
- * node by reference. InterpolationNodes are always dynamic by definition.
- *
- * Single hidden-class slot read per call; the early-v7 lazy `WeakMap` is
- * gone (`perf_cache_layout.md`).
- */
-function dynamic(node: Node): boolean {
-  return node.kind === NodeKind.Interpolation
-    ? true
-    : (node as Exclude<Node, { kind: NodeKind.Interpolation }>)[DYN] === true;
+  // Styled-component reference (`function` in React 19, `object` for
+  // forwardRef-based components from older callers).
+  if ((slot as { styledComponentId?: string }).styledComponentId !== undefined) {
+    return '.' + (slot as { styledComponentId: string }).styledComponentId;
+  }
+  // Keyframes reference. Caller's `outKeyframes` carries the compiled
+  // payload through their own generate→inject pipeline; bail when missing.
+  if (t === 'object' && KEYFRAMES_SYMBOL in (slot as object)) {
+    if (compiler === undefined || outKeyframes === undefined) return null;
+    const kf = slot as KeyframesClass;
+    const compiled = kf.compile(compiler);
+    outKeyframes.push(compiled);
+    return compiled.name;
+  }
+  // css`` fragment ref returned from a function; the caller splices it as
+  // siblings in block position and stringifies it inside a value or selector.
+  if (isCssProduct(slot)) return resolveFragment(slot, fillContext, compiler, outKeyframes);
+
+  // A plain array, not a css`` product: its items join as text.
+  if (Array.isArray(slot)) {
+    let text = '';
+    for (let i = 0; i < slot.length; i++) {
+      const item = resolveInterpolation(slot[i], fillContext, compiler, outKeyframes);
+      if (item === null) return null;
+      text += typeof item === 'string' ? item : stringifyEmbeddedFragment(item);
+    }
+    return text;
+  }
+  if (t === 'function') {
+    if ((slot as { $$typeof?: symbol }).$$typeof === CLIENT_REFERENCE) return null;
+    const fn = slot as (ctx: unknown) => unknown;
+    return resolveInterpolation(fn(fillContext), fillContext, compiler, outKeyframes);
+  }
+  // An object with a `toString` of its own (a design token, a color class, a `Date`) reads as
+  // that text, not as a block of declarations. A React element and a class with the default
+  // `toString` have no text form.
+  if ((slot as object).toString !== Object.prototype.toString) return String(slot);
+
+  // Plain-object style block returned from a function (`css(p => ({...}))`).
+  // `objectToCSS` resolves nested function values against `fillContext`
+  // and stringifies the rest. Returns `null` for a `css\`...\`` fragment
+  // inside an object value (needs Source-aware splicing) and for a function
+  // value met with no `fillContext` (always set here); the caller bails on null.
+  return isPlainObject(slot) ? objectToCSS(slot, fillContext) : null;
 }
 
 /**
  * Replace structural splices in node fields ({@link TemplateValue})
  * with their resolved string forms; lift `InterpolationNode` slots into
  * spliced siblings (string fragments or pre-parsed `${mixin}` ASTs).
- * Returns `null` to bail when {@link realize} refuses a field.
+ * The blocks come from the template alone: a value is read on its own, so it
+ * cannot open or close one of them.
  *
  * Identity-preserving: when no descendant of any input node depends on
- * `filled`, returns `nodes` itself; per-node identity is preserved
- * through `fillNode` (Phase A's static-subtree fast path).
+ * `filled`, returns `nodes` itself; `fillNode` returns a static subtree
+ * by reference.
  */
 export function fillAst(
   nodes: Root,
   filled: ReadonlyArray<string>,
   fragments?: ReadonlyArray<FastPathFragment | null> | null
-): StaticRoot | null {
+): StaticRoot {
   let out: StaticNode[] | null = null;
+  /** Selector text from block-position slots, waiting for a rule to start (`${Child} h2 {`). */
+  let head = '';
+  let headStart = 0;
   // When `out` stays null we know every node serialized as identity (no
   // TemplateValue realized). The input `nodes` therefore already had
   // string-only fields and we can return it as a `StaticRoot`. The cast
@@ -443,11 +397,37 @@ export function fillAst(
   // type witness differs.
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
-    const filledNode = fillNode(node, filled, fragments);
-    if (filledNode === null) return null;
-    if (out === null && (filledNode as Node) === node) continue;
+    if (out !== null && head !== '' && node.kind === NodeKind.Rule) {
+      out.length = headStart;
+      const rule = fillHead(
+        head + joinSelectors(node.selectors, filled),
+        fillAst(node.children, filled, fragments)
+      );
+      for (let j = 0; j < rule.length; j++) out.push(rule[j]);
+      head = '';
+      continue;
+    }
 
+    const filledNode = fillNode(node, filled, fragments);
+    if (out === null && (filledNode as Node) === node) continue;
     if (out === null) out = nodes.slice(0, i) as StaticNode[];
+
+    if (node.kind !== NodeKind.Interpolation || node.ended) {
+      head = '';
+    } else if (i + 1 < nodes.length && nodes[i + 1].kind !== NodeKind.Decl) {
+      const fragment = fragments?.[node.index];
+      const text = slotHeadText(
+        fragment ? stringifyEmbeddedFragment(fragment) : filled[node.index],
+        nodes[i + 1]
+      );
+      if (text === null) {
+        head = '';
+      } else if (text !== '') {
+        if (head === '') headStart = out.length;
+        head += text + ' ';
+      }
+    }
+
     if (Array.isArray(filledNode)) {
       for (let j = 0; j < filledNode.length; j++) out.push(filledNode[j]);
     } else if (filledNode !== undefined) {
@@ -457,103 +437,96 @@ export function fillAst(
   return out === null ? (nodes as StaticRoot) : out;
 }
 
+/**
+ * The text a block-position slot adds to a rule starting after it, empty when it holds
+ * nothing and `null` when it holds statements. A value spaced as `name: value` is a
+ * declaration. Unspaced, `a:hover` and a minified `top:0` read alike, so what follows
+ * decides: a class, id, attribute, or `*` keeps it a selector, anything else a declaration.
+ */
+function slotHeadText(value: string, next: Node): string | null {
+  const text = trimWhitespace(value);
+  const first = next.kind === NodeKind.Rule ? next.selectors[0] : '';
+  const named = /^[\w-]+\s*:(\s?)/.exec(text);
+  return !staysOneField(text) ||
+    normalize(text) !== text ||
+    (named &&
+      (named[1] || !'*.#['.includes((typeof first === 'string' ? first : first.chunks[0])[0])))
+    ? null
+    : text;
+}
+
 function fillNode(
   node: Node,
   filled: ReadonlyArray<string>,
   fragments: ReadonlyArray<FastPathFragment | null> | null | undefined
-): StaticNode | StaticNode[] | undefined | null {
+): StaticNode | StaticNode[] | undefined {
   // Static subtree: no descendant reads `filled`, no TemplateValue fields
-  // anywhere in this subtree (`markDynamic` guarantees this), so the
-  // existing node serves unchanged. Phase A's identity-preservation
-  // optimization for cache-miss render. The widening cast is sound: the
-  // `dynamic` predicate's invariant is exactly `Root<string>` shape.
-  if (!dynamic(node)) return node as StaticNode;
+  // anywhere in this subtree (`markDynamic` sets `DYN` on every other node,
+  // including every interpolation), so the existing node serves unchanged. The
+  // widening cast is sound: an unmarked node is exactly `Root<string>` shape.
+  if (!node[DYN]) return node as StaticNode;
 
   switch (node.kind) {
-    case NodeKind.Decl: {
-      // Both prop and value can be TemplateValue for templates like
-      // `${theme.vars.colors.bg}: #111;` (createTheme.vars overrides).
-      const propRaw = realize(node.prop, filled);
-      if (propRaw === null) return null;
-      const prop = typeof node.prop !== 'string' ? trimWhitespace(propRaw) : propRaw;
-      if (prop === '') return undefined;
-      const valueRaw = realize(node.value, filled);
-      if (valueRaw === null) return null;
-      // Re-normalize substituted values to match the parser's normalizeValue
-      // (trim, then strip spaces after top-level commas) so output bytes match
-      // the string-input path; skip it on the static-decl warm path. Custom
-      // properties preserve empty values (`--x: ;` is spec-legal).
-      const final =
-        typeof node.value !== 'string' ? stripCommaSpaces(trimWhitespace(valueRaw)) : valueRaw;
-      if (final === '' && !isCustomProperty(prop)) return undefined;
-      const decl: StaticDeclNode = { kind: NodeKind.Decl, prop, value: final };
-      return decl;
-    }
+    case NodeKind.Decl:
+      return fillDecl(node, filled);
     case NodeKind.Rule: {
-      // Realize every selector. If the input was already string-only and
-      // children identity is preserved, we return the input node by
-      // reference (Phase A fast path). The cast widens the field-type
-      // witness to `string`: justified because (a) every selector tested
-      // as a string and (b) `children` reference-equals the realized
-      // StaticNode[], so the input node was already a `StaticRuleNode`
-      // shape at runtime.
-      const filledSelectors: string[] = [];
-      let selectorsChanged = false;
-      for (let i = 0; i < node.selectors.length; i++) {
-        const sel = realize(node.selectors[i], filled, COMMA);
-        if (sel === null) return null;
-        filledSelectors[i] = sel;
-        if (typeof node.selectors[i] !== 'string') selectorsChanged = true;
-      }
       const children = fillAst(node.children, filled, fragments);
-      if (children === null) return null;
-      if (!selectorsChanged && (children as unknown) === node.children) {
-        return node as unknown as StaticRuleNode;
+      const filledSelectors: string[] = [];
+      for (let i = 0; i < node.selectors.length; i++) {
+        const field = node.selectors[i];
+        const sel = realize(field, filled, COMMA);
+        // The parser picks the rule kind before a slot has a value, so a slot holding an
+        // at-rule (`${media.md} {`) is read on its own too, like one that leaves its
+        // list with an empty item (`${false}, h2 {`).
+        const bare = sel === null || typeof field === 'string' ? null : trimWhitespace(sel);
+        if (
+          sel === null ||
+          (bare !== null &&
+            (bare.charCodeAt(0) === AT || (node.selectors.length > 1 && bare === '')))
+        ) {
+          // A value opening the head and ending a statement reads ahead of it, leaving only
+          // authored text in the head: `${mixin} &:hover {`.
+          const first = node.selectors[0];
+          const opening =
+            typeof first !== 'string' && first.chunks[0] === '' ? filled[first.slots[0]] : '';
+          const lead = /[;}]\s*$/.test(normalize(opening)) ? opening : '';
+          return parseValue(lead).concat(
+            fillHead(joinSelectors(node.selectors, filled).slice(lead.length), children)
+          );
+        }
+        filledSelectors[i] = sel;
       }
       return { kind: NodeKind.Rule, selectors: filledSelectors, children };
     }
     case NodeKind.AtRule: {
-      // At-rule name with an interpolation: bail to the string-input path so
-      // `parse()` can reclassify (e.g. `@${'-webkit-'}keyframes` → Keyframes
-      // node, not AtRule). Fast path can't safely substitute the name without
-      // re-parsing the substituted text.
-      if (typeof node.name !== 'string') return null;
-      const prelude = realize(node.prelude, filled);
-      if (prelude === null) return null;
       const children = node.children === null ? null : fillAst(node.children, filled, fragments);
-      if (children === null && node.children !== null) return null;
-      if (typeof node.prelude === 'string' && (children as unknown) === node.children) {
-        return node as unknown as StaticAtRuleNode;
+      const prelude = realize(node.prelude, filled);
+      // A name holding a value can change what the at-rule is (`@${'-webkit-'}keyframes`).
+      if (typeof node.name !== 'string' || prelude === null) {
+        const head = atRuleHead(node.name, node.prelude, filled);
+        return children === null ? parseValue(head + ';') : fillHead(head, children);
       }
       return { kind: NodeKind.AtRule, name: node.name, prelude, children };
     }
     case NodeKind.Keyframes: {
-      if (typeof node.name !== 'string') return null;
-      const prelude = realize(node.prelude, filled);
-      if (prelude === null) return null;
       const frames: StaticKeyframeFrame[] = [];
       for (let i = 0; i < node.frames.length; i++) {
         const frame = node.frames[i];
-        const decls: StaticDeclNode[] = [];
-        for (let j = 0; j < frame.children.length; j++) {
-          const decl = frame.children[j];
-          const value = realize(decl.value, filled);
-          if (value === null) return null;
-          // decl.prop in keyframe frames is preserved as-authored; if it
-          // happened to be a TemplateValue we'd realize it too, but the
-          // grammar (`50% { color: red }`) doesn't admit prop interpolation
-          // here in practice. Treat it identically for safety.
-          const propRaw = realize(decl.prop, filled);
-          if (propRaw === null) return null;
-          decls[j] = { kind: NodeKind.Decl, prop: propRaw, value };
+        const decls = frame.children
+          .flatMap(child => fillDecl(child, filled) ?? [])
+          .filter((child): child is StaticDeclNode => child.kind === NodeKind.Decl);
+        const stops = frame.stops.map(stop => fieldText(stop, filled));
+        const stopText = stops.join(',');
+        if (staysOneField(stopText)) {
+          frames.push({ stops, children: decls });
+        } else {
+          const read = rulesToFrames(fillHead(stopText, decls));
+          for (let k = 0; k < read.length; k++) frames.push(read[k]);
         }
-        const stops: string[] = [];
-        for (let k = 0; k < frame.stops.length; k++) {
-          const stop = realize(frame.stops[k], filled);
-          if (stop === null) return null;
-          stops[k] = stop;
-        }
-        frames[i] = { stops, children: decls };
+      }
+      const prelude = realize(node.prelude, filled);
+      if (typeof node.name !== 'string' || prelude === null) {
+        return fillHead(atRuleHead(node.name, node.prelude, filled), [], frames);
       }
       const kf: StaticKeyframesNode = {
         kind: NodeKind.Keyframes,
@@ -567,45 +540,124 @@ function fillNode(
       // Fragment slot: splice the child's filled AST as siblings. The child's
       // splices resolve in its own index space.
       const frag = fragments ? fragments[node.index] : null;
-      if (frag !== null && frag !== undefined) {
+      if (frag) {
         return fillAst(frag.source.ast, frag.filled, frag.fragments);
       }
       const fragment = filled[node.index];
       if (!fragment) return undefined;
       // String fragment: parse the substituted text and splice. The cache
       // amortizes the round-trip across repeated dynamic strings.
-      return parseStringFragment(fragment);
+      return parseValue(fragment);
     }
   }
 }
 
+function fillDecl(
+  node: DeclNode,
+  filled: ReadonlyArray<string>
+): StaticDeclNode | StaticNode[] | undefined {
+  // Both prop and value can be TemplateValue for templates like
+  // `${theme.vars.colors.bg}: #111;` (createTheme.vars overrides).
+  const propRaw = realize(node.prop, filled);
+  const valueRaw = realize(node.value, filled);
+  if (propRaw === null || valueRaw === null) {
+    return parseValue(fieldText(node.prop, filled) + ':' + fieldText(node.value, filled));
+  }
+
+  const prop = typeof node.prop !== 'string' ? trimWhitespace(propRaw) : propRaw;
+  if (prop === '') return undefined;
+  // Re-normalize substituted values to match the parser's normalizeValue
+  // (trim, then strip spaces after top-level commas) so output bytes match
+  // authored text; skip it on the static-decl warm path. Custom
+  // properties preserve empty values (`--x: ;` is spec-legal).
+  const value =
+    typeof node.value === 'string'
+      ? valueRaw
+      : __NATIVE__
+        ? trimWhitespace(valueRaw)
+        : stripCommaSpaces(trimWhitespace(valueRaw));
+  if (value === '' && !isCustomProperty(prop)) return undefined;
+  return { kind: NodeKind.Decl, prop, value };
+}
+
 /**
- * Realize a {@link TemplateValue} or pass through a static string.
- * Returns `null`, forcing the caller to bail the fast path to the string-input
- * compile path, when the field names a slot past every filled value, when the filled
- * text holds a `;`, `{`, or `}` outside a string or block, whether from a slot value or
- * from the template text a slot exposed by closing what held it, when it holds a comment
- * or an unclosed string, paren, or bracket, which would otherwise run on through the rules
- * emitted after it, and for a selector holding such a `,`, which only the string path
- * splits. Splices the filled values directly between the field's pre-extracted chunks.
+ * Read a rule head holding a value on its own and give the block it opens the template's
+ * `children`, so a value can neither move them nor name the rule from text outside the head.
+ * A head that does not read as one statement, or that opens no named block, leaves the rule
+ * and its children out; rules the value wrote whole ahead of the head stay.
  */
-function realize(
-  field: string | TemplateValue,
-  filled: ReadonlyArray<string>,
-  stop = -1
-): string | null {
+function fillHead(
+  head: string,
+  children: StaticRoot,
+  frames?: StaticKeyframeFrame[]
+): StaticNode[] {
+  const nodes = parseValue(head + '{}');
+  const block = staysOneField(normalize(head)) ? nodes[nodes.length - 1] : undefined;
+  const opened: StaticNode | null =
+    block === undefined
+      ? null
+      : block.kind === NodeKind.Rule &&
+          block.children.length === 0 &&
+          block.selectors.join('') !== ''
+        ? { ...block, children }
+        : block.kind === NodeKind.AtRule && block.children?.length === 0
+          ? { ...block, children }
+          : block.kind === NodeKind.Keyframes && block.frames.length === 0
+            ? { ...block, frames: frames ?? rulesToFrames(children) }
+            : null;
+  if (opened !== null) return nodes.slice(0, -1).concat(opened);
+
+  if (__DEV__) {
+    const shown = head.slice(0, 80);
+    warnOnce(
+      'value-ended-head',
+      `An interpolated value leaves "${shown}" with no selector or condition for the block after it, so that block was dropped. Write the selector or condition whole, with no \`;\`, before the \`{\`.`,
+      shown
+    );
+  }
+  return nodes.filter(node => node.kind !== NodeKind.AtRule || node.children !== null);
+}
+
+function atRuleHead(
+  name: string | TemplateValue,
+  prelude: string | TemplateValue,
+  filled: ReadonlyArray<string>
+): string {
+  return '@' + fieldText(name, filled) + ' ' + fieldText(prelude, filled);
+}
+
+function joinSelectors(
+  selectors: ReadonlyArray<string | TemplateValue>,
+  filled: ReadonlyArray<string>
+): string {
+  let out = '';
+  for (let i = 0; i < selectors.length; i++) {
+    out += (i > 0 ? ',' : '') + fieldText(selectors[i], filled);
+  }
+  return out;
+}
+
+/** Splice the filled values between a field's pre-extracted chunks. */
+export function fieldText(field: string | TemplateValue, filled: ReadonlyArray<string>): string {
   if (typeof field === 'string') return field;
   const { chunks, slots } = field;
   let out = chunks[0];
   for (let i = 0; i < slots.length; i++) {
-    const idx = slots[i];
-    if (idx >= filled.length) return null;
-    out += filled[idx];
+    out += filled[slots[i]];
     out += chunks[i + 1];
   }
-  return scanQPB(out, 0, out.length, SEMICOLON, OPEN_BRACE, CLOSE_BRACE, stop) === out.length
-    ? out
-    : null;
+  return out;
+}
+
+/** The filled text of a field, or `null` when the caller must read it on its own. */
+function realize(
+  field: string | TemplateValue,
+  filled: ReadonlyArray<string>,
+  stop?: number
+): string | null {
+  if (typeof field === 'string') return field;
+  const out = fieldText(field, filled);
+  return staysOneField(out, stop) ? out : null;
 }
 
 function trimWhitespace(s: string): string {
@@ -613,20 +665,21 @@ function trimWhitespace(s: string): string {
 }
 
 /**
- * Per-string AST cache for block-level fragments returned as raw CSS text.
+ * Per-string AST cache for text a value reads on its own.
  * Bounded so streaming unique strings can't leak.
  *
- * The fragment string `s` is a runtime-resolved value (filled[node.index]
- * for an InterpolationNode), so it carries no `\0I` interpolation
- * sentinels;the parser produces a fully-static AST.
+ * `parse` runs without `templates`, so a `\0I` inside the text stays plain text and the
+ * AST is fully static; a value cannot read another value through a sentinel.
  */
-const stringFragmentCache = new Map<string, StaticRoot>();
-const STRING_FRAGMENT_CACHE_LIMIT = 200;
+const valueCache = new Map<string, StaticRoot>();
+const VALUE_CACHE_LIMIT = 200;
 
-function parseStringFragment(s: string): StaticRoot {
-  const cached = stringFragmentCache.get(s);
+/** Parse a value on its own, so all it can hold is declarations and whole rules. */
+function parseValue(s: string): StaticRoot {
+  const cached = valueCache.get(s);
   if (cached !== undefined) return cached;
-  const parsed = parse(normalize(s));
-  fifoSet(stringFragmentCache, s, parsed, STRING_FRAGMENT_CACHE_LIMIT);
+
+  const parsed = parse(wholeStatements(s), { keepCommaSpaces: __NATIVE__ });
+  fifoSet(valueCache, s, parsed, VALUE_CACHE_LIMIT);
   return parsed;
 }
