@@ -25,7 +25,13 @@ import React from 'react';
 import { View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { SafeAreaInsetsProvider } from '../';
+import {
+  getAnimationAdapter,
+  setAnimationAdapter,
+  type AnimationAdapter,
+} from '../animation/types';
 import { resetSafeAreaPeerForTest } from '../safeArea';
+import { applyResolvers } from '../transform/polyfills/resolvers';
 import { resetWarnOnce } from '../../utils/warnOnce';
 
 type Insets = { top: number; right: number; bottom: number; left: number };
@@ -114,6 +120,39 @@ describe('env(safe-area-inset-*) SafeAreaProvider wiring', () => {
       </SafeAreaProvider>
     );
     expect(tree.root.findByType(View).props.style).toEqual({ paddingTop: 60 });
+  });
+
+  it('hands an animation adapter base values that track changed insets', () => {
+    const adapterPaddings: unknown[] = [];
+    const capture: AnimationAdapter = {
+      id: 'capture',
+      useAnimatedStyle: input => {
+        const { baseValues, resolvers } = input.compiled;
+        if (baseValues !== undefined && resolvers !== undefined) {
+          adapterPaddings.push(applyResolvers(baseValues, resolvers, input.env).paddingTop);
+        }
+        return { style: input.resolved, elementType: input.target };
+      },
+    };
+    const Pad = styled.View`
+      padding-top: env(safe-area-inset-top);
+      transition: padding-top 200ms;
+    `;
+    const prior = getAnimationAdapter();
+    setAnimationAdapter(capture);
+    try {
+      const tree = renderWithInsets(<Pad />, { top: 47, right: 0, bottom: 34, left: 0 });
+      expect(adapterPaddings[adapterPaddings.length - 1]).toBe(47);
+
+      tree.update(
+        <SafeAreaProvider insets={{ top: 60, right: 0, bottom: 34, left: 0 }}>
+          <Pad />
+        </SafeAreaProvider>
+      );
+      expect(adapterPaddings[adapterPaddings.length - 1]).toBe(60);
+    } finally {
+      setAnimationAdapter(prior);
+    }
   });
 
   it('composes env() inside calc()', () => {
@@ -206,9 +245,9 @@ describe('SafeAreaInsetsProvider', () => {
     TestRenderer.act(() => {
       renderer = TestRenderer.create(<Wrapper tick={0} />);
     });
-    // The resolved style object is referentially reused only on a full render-cache
-    // hit; a slot-14 (safe-area) miss rebuilds it. Capturing its identity across
-    // updates is the sensor for "kept hitting the cache."
+    // Each render that reaches the component body rebuilds the resolved style
+    // object, so its identity across updates is the sensor for "the leaf did not
+    // re-render."
     const styleAfterMount = renderer.root.findByType(View).props.style;
     expect(styleAfterMount).toEqual({ paddingTop: 20 });
 
@@ -217,10 +256,10 @@ describe('SafeAreaInsetsProvider', () => {
     TestRenderer.act(() => renderer.update(<Wrapper tick={3} />));
 
     // The memoized context value keeps its reference across those re-renders,
-    // so the safe-area cache slot never changes and the resolved style object
-    // stays identical. Drop the useMemo (or its scalar dep array) in
-    // SafeAreaInsetsProvider and each fresh inline object flows through as a new
-    // context value, missing the cache and rebuilding the style every tick.
+    // so the leaf stays bailed out and the resolved style object stays identical.
+    // Drop the useMemo (or its scalar dep array) in SafeAreaInsetsProvider and
+    // each fresh inline object flows through as a new context value, re-rendering
+    // the leaf and rebuilding the style every tick.
     expect(renderer.root.findByType(View).props.style).toBe(styleAfterMount);
   });
 });
