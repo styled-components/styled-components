@@ -4592,12 +4592,29 @@ describe('generic font-family resolution (CSS Fonts 4 §3.1.1)', () => {
     });
   });
 
+  describe('escapes in a quoted family', () => {
+    it.each([
+      ['font-family', '"A\\"B\\\nC\\44 "', { fontFamily: 'A"BCD' }],
+      ['font', '12px "A\\"B"', { fontFamily: 'A"B', fontSize: 12 }],
+    ])('%s hands React Native the decoded name', (property, value, expected) => {
+      expect(transformDecl(property, value)).toMatchObject(expected);
+    });
+
+    it('a family spelled by an escape stays a face name, not a generic keyword', () => {
+      expect(transformDecl('font-family', '"\\73 erif"')).toEqual({ fontFamily: 'serif' });
+    });
+  });
+
   describeOnRnWeb(() => {
     // On rn-web the browser owns generic-family resolution; the native
     // resolver short-circuits via `__NATIVE_WEB__` in font.ts so the
     // keyword reaches the browser unchanged.
     it('font-family: serif passes the keyword through to the browser', () => {
       expect(transformDecl('font-family', 'serif')).toEqual({ fontFamily: 'serif' });
+    });
+
+    it('a quoted family keeps its source escapes for the browser to decode', () => {
+      expect(transformDecl('font-family', '"A\\"B"')).toEqual({ fontFamily: '"A\\"B"' });
     });
 
     it('comma-separated fallback list survives intact on rn-web', () => {

@@ -114,7 +114,60 @@ describe('native transform tokenizer', () => {
       kind: TokenKind.String,
       quote: 34, // "
     });
-    expect(tokens[0].text).toBe('hello \\"world\\"');
+    expect(tokens[0].text).toBe('hello "world"');
+    expect(tokens[0].raw).toBe('"hello \\"world\\""');
+  });
+
+  // CSS Syntax, "Consume a string token", U+005C: "If the next input code point is EOF,
+  // do nothing. Otherwise, if the next input code point is a newline, consume it.
+  // Otherwise, (the stream starts with a valid escape) consume an escaped code point and
+  // append the returned code point to the <string-token>'s value."
+  //
+  // "Consume an escaped code point", hex digit: "Consume as many hex digits as possible,
+  // but no more than 5. Note that this means 1-6 hex digits have been consumed in total.
+  // If the next input code point is whitespace, consume it as well. Interpret the hex
+  // digits as a hexadecimal number. If this number is zero, or is for a surrogate, or is
+  // greater than the maximum allowed code point, return U+FFFD REPLACEMENT CHARACTER (\uFFFD).
+  // Otherwise, return the code point with that value." Anything else: "Return the current
+  // input code point."
+  //
+  // "Preprocessing the input stream": "Replace any U+000D CARRIAGE RETURN (CR) code points,
+  // U+000C FORM FEED (FF) code points, or pairs of U+000D CARRIAGE RETURN (CR) followed by
+  // U+000A LINE FEED (LF) in input by a single U+000A LINE FEED (LF) code point." So each
+  // of those spellings is a newline to the clauses above.
+  it.each([
+    ['a line continuation with LF', '"a\\\nb"', 'ab'],
+    ['a line continuation with CR LF', '"a\\\r\nb"', 'ab'],
+    ['a line continuation with CR', '"a\\\rb"', 'ab'],
+    ['a line continuation with a form feed', '"a\\\fb"', 'ab'],
+    ['an escaped quote', '"a\\"b"', 'a"b'],
+    ['an escaped backslash', '"a\\\\b"', 'a\\b'],
+    ['an escaped letter past hex', '"\\gh"', 'gh'],
+    ['a hex escape ended by a space', '"\\41 b"', 'Ab'],
+    ['a hex escape ended by CR LF', '"\\41\r\nb"', 'Ab'],
+    ['a hex escape ended by a non-hex letter', '"\\41g"', 'Ag'],
+    ['a six digit hex escape with a digit after it', '"\\0000411"', 'A1'],
+    ['a code point past the 16 bit range', '"\\1f600"', '\u{1f600}'],
+    ['a zero code point', '"\\0"', '\uFFFD'],
+    ['a surrogate code point', '"\\d800"', '\uFFFD'],
+    ['a code point past the maximum', '"\\110000"', '\uFFFD'],
+    ['an unterminated string ending in a backslash', '"a\\', 'a'],
+  ])('decodes %s in string text and keeps the source in raw', (_label, source, text) => {
+    const [token] = tokenize(source);
+
+    expect(token).toMatchObject({ kind: TokenKind.String, raw: source, text });
+  });
+
+  it.each([
+    ['a control character', '"\\7 abc"'],
+    ['a bidi override', '"\\202e abc"'],
+    ['a bidi isolate', '"\\2066 abc"'],
+    ['an annotation character', '"\\fff9 abc"'],
+    ['a delete character', '"\\7f abc"'],
+  ])('strips %s spelled by an escape, the same as one written literally', (_label, source) => {
+    const [token] = tokenize(source);
+
+    expect(token).toMatchObject({ kind: TokenKind.String, text: 'abc' });
   });
 
   it('handles single-quoted strings', () => {
