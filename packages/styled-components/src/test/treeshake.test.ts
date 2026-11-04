@@ -11,6 +11,7 @@ import path from 'path';
 import errorMap from '../utils/errors';
 
 const { buildConsumerBundle } = require('../../scripts/consumerBundle');
+const { version } = require('../../package.json');
 
 const distDir = path.resolve(__dirname, '../../dist');
 const nativeDistDir = path.resolve(__dirname, '../../native/dist');
@@ -517,13 +518,17 @@ describe('bundle size', () => {
   // Ceilings sit just above the current figures so any regression trips here.
   // `pnpm --filter styled-components test:build` prints each live number.
   // v7 release targets to ratchet toward: standalone 12.0kB, webpack 10.5kB.
+  // A prerelease stamps a much longer version than a PR build, so each ceiling measures
+  // with a fixed-length version: a PR that passes here also passes when it publishes.
   it('standalone minified bundle stays under its gzip ceiling', () => {
     const zlib = require('zlib');
-    const minified = fs.readFileSync(path.join(distDir, 'styled-components.min.js'));
-    const gzipped = zlib.gzipSync(minified);
+    const minified = read('styled-components.min.js');
+    const gzipped = zlib.gzipSync(minified.replaceAll(version, '0.0.0'));
     const sizeKB = gzipped.length / 1024;
 
     console.log(`  styled-components.min.js: ${sizeKB.toFixed(2)}kB gzip`);
+
+    expect(minified).toContain(version);
 
     // Carries every export, so this is the widest surface: the in-house parser,
     // arity-2 attrs tracing with its runtime fallback, and the server entry
@@ -535,10 +540,12 @@ describe('bundle size', () => {
     const zlib = require('zlib');
 
     const { bundle } = await buildConsumerBundle({ distDir });
-    const gzipped = zlib.gzipSync(bundle);
+    const gzipped = zlib.gzipSync(bundle.replaceAll(version, '0.0.0'));
     const sizeKB = gzipped.length / 1024;
 
     console.log(`  production bundle (webpack): ${sizeKB.toFixed(2)}kB gzip`);
+
+    expect(bundle).toContain(version);
 
     // Verify unused exports are tree-shaken
     expect(bundle).not.toContain('WithTheme');
