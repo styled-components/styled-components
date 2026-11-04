@@ -61,7 +61,6 @@ const INTERNAL_PROPERTY_NAMES = [
   'provisionalRules',
   // global style + post-attrs plans
   'computeRules',
-  'instanceRules',
   'isStatic',
   'lookup',
   'merge',

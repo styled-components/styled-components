@@ -1,14 +1,24 @@
 import { act, render } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import React from 'react';
-import WebGlobalStyle from '../../models/WebGlobalStyle';
-import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager';
+import { hydrateRoot } from 'react-dom/client';
+import { renderToString } from 'react-dom/server';
+import ServerStyleSheet from '../../models/ServerStyleSheet';
+import WebGlobalStyle, {
+  deleteInstance,
+  getInstance,
+  liveInstanceCount,
+} from '../../models/WebGlobalStyle';
+import { mainCompiler, mainSheet, StyleSheetManager } from '../../models/StyleSheetManager';
 import ThemeProvider from '../../models/ThemeProvider';
 import StyleSheet from '../../sheet';
-import { getRenderedCSS, resetStyled } from '../../test/utils';
+import { groupForId } from '../../sheet/GroupIDAllocator';
+import isStaticRules from '../../utils/isStaticRules';
+import { getRenderedCSS, rehydrateTestStyles, resetStyled } from '../../test/utils';
 import createGlobalStyle from '../createGlobalStyle';
 import css from '../css';
 import keyframes from '../keyframes';
+import styled from '../styled';
 
 describe(`createGlobalStyle`, () => {
   beforeEach(() => {
@@ -1022,9 +1032,9 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
     const gs = new WebGlobalStyle(rules, 'sc-global-eq-test');
     const ctx = { theme: { color: 'red' } } as any;
 
-    // First render;populates instanceRules
+    // First render;populates the instance entry
     gs.renderStyles('1', ctx, sheet, mainCompiler);
-    expect(gs.instanceRules.has('1')).toBe(true);
+    expect(getInstance(sheet, gs.componentId, '1')).toBeDefined();
 
     const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
 
@@ -1098,6 +1108,29 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
     expect(clearRulesSpy).toHaveBeenCalled();
   });
 
+  it('replaces an instance rendered repeatedly into one server collection', () => {
+    const serverSheet = new StyleSheet({ isServer: true });
+    const gs = new WebGlobalStyle(
+      css`
+        body {
+          color: ${(p: { theme: { color: string } }) => p.theme.color};
+        }
+      `,
+      'sc-global-repeat-test'
+    );
+
+    const render = (instance: string, color: string) =>
+      gs.renderStyles(instance, { theme: { color } } as any, serverSheet, mainCompiler);
+
+    render('1', 'a');
+    render('2', 'b');
+    render('1', 'c');
+
+    expect(serverSheet.getTag().getGroup(groupForId(gs.componentId))).toBe(
+      'body {color: c;}/*!sc*/\nbody {color: b;}/*!sc*/\n'
+    );
+  });
+
   it('static global style skips re-render entirely when name is already registered', () => {
     const rules = css`
       body {
@@ -1122,7 +1155,7 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
     expect(insertSpy).not.toHaveBeenCalled();
   });
 
-  it('static rehydrated style populates instanceRules cache for rebuild', () => {
+  it('static rehydrated style populates the instance entry for rebuild', () => {
     const rules = css`
       body {
         background: teal;
@@ -1133,21 +1166,20 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
 
     // First render;inserts rules and populates cache
     gs.renderStyles('1', ctx, sheet, mainCompiler);
-    expect(gs.instanceRules.has('1')).toBe(true);
-    const entry1 = gs.instanceRules.get('1')!;
+    const entry1 = getInstance(sheet, gs.componentId, '1');
+    expect(entry1).toBeDefined();
 
-    // Simulate rehydration: name is registered but instanceRules is cleared
-    gs.instanceRules.clear();
-    expect(gs.instanceRules.has('1')).toBe(false);
+    // Simulate rehydration: name is registered but the instance entry is gone
+    deleteInstance(sheet, gs.componentId, '1');
+    expect(getInstance(sheet, gs.componentId, '1')).toBeUndefined();
 
     // Re-render;should repopulate cache from computation (not re-insert)
     const insertSpy = jest.spyOn(sheet, 'insertRules');
     gs.renderStyles('1', ctx, sheet, mainCompiler);
-    expect(gs.instanceRules.has('1')).toBe(true);
     expect(insertSpy).not.toHaveBeenCalled();
 
     // Cache should match original
-    expect(gs.instanceRules.get('1')!.rules).toEqual(entry1.rules);
+    expect(getInstance(sheet, gs.componentId, '1')?.rules).toEqual(entry1?.rules);
   });
 
   it('removeStyles triggers rebuildGroup with surviving instances', () => {
@@ -1161,7 +1193,7 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
     // Mount two instances
     gs.renderStyles('1', { theme: { color: 'red' } } as any, sheet, mainCompiler);
     gs.renderStyles('2', { theme: { color: 'blue' } } as any, sheet, mainCompiler);
-    expect(gs.instanceRules.size).toBe(2);
+    expect(liveInstanceCount(sheet, gs.componentId)).toBe(2);
     expect(sheet.toString()).toMatchInlineSnapshot(`
       "body {color: red;}/*!sc*/
       body {color: blue;}/*!sc*/
@@ -1171,7 +1203,7 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
 
     // Remove instance 1;instance 2 should survive
     gs.removeStyles('1', sheet);
-    expect(gs.instanceRules.size).toBe(1);
+    expect(liveInstanceCount(sheet, gs.componentId)).toBe(1);
     expect(sheet.toString()).toMatchInlineSnapshot(`
       "body {color: blue;}/*!sc*/
       data-styled.g1[id="sc-global-remove-test"]{content:"sc-global-remove-test2,"}/*!sc*/
@@ -1180,7 +1212,7 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
 
     // Remove instance 2;all gone
     gs.removeStyles('2', sheet);
-    expect(gs.instanceRules.size).toBe(0);
+    expect(liveInstanceCount(sheet, gs.componentId)).toBe(0);
     expect(sheet.toString()).toBe('');
   });
 
@@ -1204,7 +1236,7 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
 
     // After 10 render/remove cycles, all rules should be cleaned up.
     // The bug: renderStyles without removeStyles accumulated rules unboundedly.
-    expect(gs.instanceRules.size).toBe(0);
+    expect(liveInstanceCount(sheet, gs.componentId)).toBe(0);
     expect(sheet.toString()).toBe('');
   });
 });
@@ -1366,5 +1398,651 @@ describe('createGlobalStyle rebuildGroup on cleanup (#5730)', () => {
         --token: 1;
       }"
     `);
+  });
+});
+
+/**
+ * `JSON.stringify` drops functions, so two global styles can hash to one id.
+ * Global styles that share an id must keep each other's CSS when one of them
+ * mounts, updates, or unmounts.
+ */
+describe('createGlobalStyle sharing an id', () => {
+  type GlobalComponent = React.ComponentType<Record<string, never>> & {
+    styledComponentId: string;
+  };
+
+  interface Shape {
+    make: () => readonly [GlobalComponent, GlobalComponent];
+    name: string;
+    tokens: readonly [string, string];
+  }
+
+  const shapes: readonly Shape[] = [
+    {
+      name: 'static text that differs',
+      tokens: ['--a', '--b'],
+      make: () => [createGlobalStyle`html { --a: 1; }`, createGlobalStyle`html { --b: 1; }`],
+    },
+    {
+      name: 'a single function interpolation',
+      tokens: ['--a', '--b'],
+      make: () => [
+        createGlobalStyle`${() => 'html { --a: 1; }'}`,
+        createGlobalStyle`${() => 'html { --b: 1; }'}`,
+      ],
+    },
+    {
+      name: 'several functions and different static text',
+      tokens: ['--a', '--b'],
+      make: () => [
+        createGlobalStyle`html { --a: ${() => '1'}; --c: ${() => '2'}; }`,
+        createGlobalStyle`html { --b: ${() => '3'}; --d: ${() => '4'}; }`,
+      ],
+    },
+    {
+      name: 'several functions and the same static text',
+      tokens: ['red', 'black'],
+      make: () => [
+        createGlobalStyle`html { color: ${() => 'red'}; background: ${() => 'blue'}; }`,
+        createGlobalStyle`html { color: ${() => 'black'}; background: ${() => 'white'}; }`,
+      ],
+    },
+    {
+      name: 'a function inside different static text',
+      tokens: ['--a', '--b'],
+      make: () => [
+        createGlobalStyle`html { --a: ${() => 1}; }`,
+        createGlobalStyle`html { --b: ${() => 1}; }`,
+      ],
+    },
+    {
+      name: 'a function inside the same static text',
+      tokens: ['red', 'blue'],
+      make: () => [
+        createGlobalStyle`html { color: ${() => 'red'}; }`,
+        createGlobalStyle`html { color: ${() => 'blue'}; }`,
+      ],
+    },
+    {
+      name: 'a nested css helper that is only a function',
+      tokens: ['--a', '--b'],
+      make: () => [
+        createGlobalStyle`${css`${() => 'html { --a: 1; }'}`}`,
+        createGlobalStyle`${css`${() => 'html { --b: 1; }'}`}`,
+      ],
+    },
+    {
+      name: 'a nested css helper with different static text',
+      tokens: ['--a', '--b'],
+      make: () => [
+        createGlobalStyle`${css`html { --a: 1; }`}`,
+        createGlobalStyle`${css`html { --b: 1; }`}`,
+      ],
+    },
+    {
+      name: 'a nested css helper with the same static text',
+      tokens: ['red', 'blue'],
+      make: () => [
+        createGlobalStyle`${css`html { color: ${() => 'red'}; }`}`,
+        createGlobalStyle`${css`html { color: ${() => 'blue'}; }`}`,
+      ],
+    },
+    {
+      name: 'the function argument form',
+      tokens: ['--a', '--b'],
+      make: () => [
+        createGlobalStyle(() => 'html { --a: 1; }'),
+        createGlobalStyle(() => 'html { --b: 1; }'),
+      ],
+    },
+    {
+      name: 'object styles with different custom properties',
+      tokens: ['--a', '--b'],
+      make: () => [
+        createGlobalStyle({ html: { '--a': () => '1' } }),
+        createGlobalStyle({ html: { '--b': () => '1' } }),
+      ],
+    },
+    {
+      name: 'object styles with the same static text',
+      tokens: ['red', 'blue'],
+      make: () => [
+        createGlobalStyle({ html: { color: () => 'red' } }),
+        createGlobalStyle({ html: { color: () => 'blue' } }),
+      ],
+    },
+    {
+      name: 'the same function passed to two calls',
+      tokens: ['--shared', '--shared'],
+      make: () => {
+        const fn = () => 'html { --shared: 1; }';
+        return [createGlobalStyle`${fn}`, createGlobalStyle`${fn}`];
+      },
+    },
+    {
+      name: 'a factory that closes over different values',
+      tokens: ['--fact-a', '--fact-b'],
+      make: () => {
+        const make = (token: string) => createGlobalStyle`${() => `html { ${token}: 1; }`}`;
+        return [make('--fact-a'), make('--fact-b')];
+      },
+    },
+    {
+      name: 'styled component selectors',
+      tokens: ['--a', '--b'],
+      make: () => {
+        const Button = styled.button`color: red;`;
+        const Link = styled.a`color: blue;`;
+        return [createGlobalStyle`${Button} { --a: 1; }`, createGlobalStyle`${Link} { --b: 1; }`];
+      },
+    },
+    {
+      name: 'keyframes interpolations',
+      tokens: ['--a', '--b'],
+      make: () => {
+        const fade = keyframes`from { opacity: 0; }`;
+        const rise = keyframes`from { opacity: 1; }`;
+        return [
+          createGlobalStyle`html { animation-name: ${fade}; --a: 1; }`,
+          createGlobalStyle`html { animation-name: ${rise}; --b: 1; }`,
+        ];
+      },
+    },
+  ];
+
+  beforeEach(() => {
+    resetStyled();
+  });
+
+  it.each(shapes)('$name keeps both rules on the client', ({ make, tokens }) => {
+    const [First, Second] = make();
+
+    function App({ showFirst, showSecond }: { showFirst: boolean; showSecond: boolean }) {
+      return (
+        <>
+          {showFirst ? <First /> : null}
+          {showSecond ? <Second /> : null}
+        </>
+      );
+    }
+
+    const view = render(<App showFirst showSecond />);
+    expect(getRenderedCSS()).toContain(tokens[0]);
+    expect(getRenderedCSS()).toContain(tokens[1]);
+
+    view.rerender(<App showFirst showSecond={false} />);
+    expect(getRenderedCSS()).toContain(tokens[0]);
+    if (tokens[0] !== tokens[1]) {
+      expect(getRenderedCSS()).not.toContain(tokens[1]);
+    }
+
+    view.rerender(<App showFirst={false} showSecond />);
+    expect(getRenderedCSS()).toContain(tokens[1]);
+    if (tokens[0] !== tokens[1]) {
+      expect(getRenderedCSS()).not.toContain(tokens[0]);
+    }
+
+    view.unmount();
+    expect(getRenderedCSS()).not.toContain(tokens[0]);
+    expect(getRenderedCSS()).not.toContain(tokens[1]);
+  });
+
+  it.each(shapes)('$name keeps both rules in SSR', ({ make, tokens }) => {
+    const [First, Second] = make();
+    const sheet = new ServerStyleSheet();
+    renderToString(
+      sheet.collectStyles(
+        <>
+          <First />
+          <Second />
+        </>
+      )
+    );
+    const tags = sheet.getStyleTags();
+
+    expect(tags).toContain(tokens[0]);
+    expect(tags).toContain(tokens[1]);
+  });
+
+  it('dedupes two calls that have the same static text, and dedupes two mounts of one component', () => {
+    const First = createGlobalStyle`html { --a: 1; }`;
+    const Second = createGlobalStyle`html { --a: 1; }`;
+    expect(First.styledComponentId).toBe(Second.styledComponentId);
+
+    const { rerender, unmount } = render(
+      <>
+        <First />
+        <Second />
+      </>
+    );
+    expect(getRenderedCSS().match(/--a/g)).toHaveLength(1);
+
+    const One = createGlobalStyle`html { --once: 1; }`;
+    function Mounts({ count }: { count: number }) {
+      return (
+        <>
+          {count > 0 ? <One /> : null}
+          {count > 1 ? <One /> : null}
+        </>
+      );
+    }
+    rerender(<Mounts count={2} />);
+    expect(getRenderedCSS()).toContain('--once');
+    expect(getRenderedCSS().match(/--once/g)).toHaveLength(1);
+    rerender(<Mounts count={1} />);
+    expect(getRenderedCSS()).toContain('--once');
+    rerender(<Mounts count={0} />);
+    expect(getRenderedCSS()).not.toContain('--once');
+    unmount();
+  });
+
+  it('keeps each mount of one dynamic global style when the other unmounts', () => {
+    const GlobalStyle = createGlobalStyle<{ token: string }>`
+      html { ${props => props.token}: 1; }
+    `;
+
+    function App({ showFirst, showSecond }: { showFirst: boolean; showSecond: boolean }) {
+      return (
+        <>
+          {showFirst ? <GlobalStyle token="--dyn-a" /> : null}
+          {showSecond ? <GlobalStyle token="--dyn-b" /> : null}
+        </>
+      );
+    }
+
+    const view = render(<App showFirst showSecond />);
+    expect(getRenderedCSS()).toContain('--dyn-a');
+    expect(getRenderedCSS()).toContain('--dyn-b');
+    view.rerender(<App showFirst showSecond={false} />);
+    expect(getRenderedCSS()).toContain('--dyn-a');
+    expect(getRenderedCSS()).not.toContain('--dyn-b');
+    view.rerender(<App showFirst={false} showSecond />);
+    expect(getRenderedCSS()).toContain('--dyn-b');
+    expect(getRenderedCSS()).not.toContain('--dyn-a');
+    view.unmount();
+    expect(getRenderedCSS()).not.toContain('--dyn-a');
+  });
+
+  it('dedupes two calls that interpolate the same styled component', () => {
+    const Button = styled.button`color: red;`;
+    const First = createGlobalStyle`${Button} { --btn: 1; }`;
+    const Second = createGlobalStyle`${Button} { --btn: 1; }`;
+
+    expect(First.styledComponentId).toBe(Second.styledComponentId);
+
+    render(
+      <>
+        <First />
+        <Second />
+      </>
+    );
+    expect(getRenderedCSS().match(/--btn/g)).toHaveLength(1);
+  });
+
+  it('dedupes two calls that interpolate the same keyframes value', () => {
+    const fade = keyframes`from { opacity: 0; }`;
+    const First = createGlobalStyle`html { animation-name: ${fade}; --k: 1; }`;
+    const Second = createGlobalStyle`html { animation-name: ${fade}; --k: 1; }`;
+
+    expect(First.styledComponentId).toBe(Second.styledComponentId);
+
+    render(
+      <>
+        <First />
+        <Second />
+      </>
+    );
+    expect(getRenderedCSS().match(/--k/g)).toHaveLength(1);
+  });
+
+  it.each(['Infinity', 'NaN'] as const)(
+    'keeps a static %s slot when a function body stringifies the same way',
+    slotName => {
+      const slot = slotName === 'Infinity' ? Infinity : NaN;
+      const Static = createGlobalStyle`html { color: red; z-index: ${slot}; }`;
+      const Dynamic = createGlobalStyle`html { color: red; z-index: ${() => 1}; }`;
+
+      function App({ showDynamic }: { showDynamic: boolean }) {
+        return (
+          <>
+            <Static />
+            {showDynamic ? <Dynamic /> : null}
+          </>
+        );
+      }
+
+      const view = render(<App showDynamic />);
+      expect(getRenderedCSS()).toContain('red');
+
+      view.rerender(<App showDynamic={false} />);
+      expect(getRenderedCSS()).toContain('red');
+
+      view.unmount();
+      expect(getRenderedCSS()).not.toContain('red');
+    }
+  );
+
+  it('paints the later mounted global style on top', () => {
+    const Red = createGlobalStyle`${() => 'html { color: red; }'}`;
+    const Blue = createGlobalStyle`${() => 'html { color: blue; }'}`;
+    const view = render(
+      <>
+        <Red />
+        <Blue />
+      </>
+    );
+    const redThenBlue = getRenderedCSS();
+    expect(redThenBlue.indexOf('red')).toBeLessThan(redThenBlue.indexOf('blue'));
+    view.unmount();
+
+    render(
+      <>
+        <Blue />
+        <Red />
+      </>
+    );
+    const blueThenRed = getRenderedCSS();
+    expect(blueThenRed.indexOf('blue')).toBeLessThan(blueThenRed.indexOf('red'));
+  });
+
+  it('the most recently mounted same-id global wins after a remount', () => {
+    const First = createGlobalStyle<{ v: string }>(p => `body { color: ${p.v}; }`);
+    const Second = createGlobalStyle<{ v: string }>(p => `body { color: ${p.v}x; }`);
+    expect(First.styledComponentId).toBe(Second.styledComponentId);
+
+    function App({ show }: { show: boolean }) {
+      return (
+        <>
+          {show && <First v="first" />}
+          <Second v="second" />
+        </>
+      );
+    }
+
+    const view = render(<App show />);
+    const before = getRenderedCSS();
+    expect(before.indexOf('first')).toBeGreaterThanOrEqual(0);
+    expect(before.indexOf('first')).toBeLessThan(before.indexOf('second'));
+
+    view.rerender(<App show={false} />);
+    view.rerender(<App show />);
+
+    const after = getRenderedCSS();
+    expect(after.indexOf('second')).toBeGreaterThanOrEqual(0);
+    expect(after.indexOf('second')).toBeLessThan(after.indexOf('first'));
+  });
+
+  it('keeps a same-id global in place when its props change', () => {
+    const First = createGlobalStyle<{ v: string }>(p => `body { color: ${p.v}; }`);
+    const Second = createGlobalStyle<{ v: string }>(p => `body { color: ${p.v}x; }`);
+
+    function App({ v }: { v: string }) {
+      return (
+        <>
+          <First v={v} />
+          <Second v="second" />
+        </>
+      );
+    }
+
+    const view = render(<App v="first" />);
+    view.rerender(<App v="updated" />);
+
+    const css = getRenderedCSS();
+    expect(css).not.toContain('first');
+    expect(css.indexOf('updated')).toBeGreaterThanOrEqual(0);
+    expect(css.indexOf('updated')).toBeLessThan(css.indexOf('second'));
+  });
+
+  it('collects every mount of one dynamic global through a ServerStyleSheet', () => {
+    const GlobalStyle = createGlobalStyle<{ token: string }>`
+      html { ${props => props.token}: 1; }
+    `;
+    const sheet = new ServerStyleSheet();
+    renderToString(
+      sheet.collectStyles(
+        <>
+          <GlobalStyle token="--mount-a" />
+          <GlobalStyle token="--mount-b" />
+        </>
+      )
+    );
+    const tags = sheet.getStyleTags();
+    sheet.seal();
+
+    expect(tags).toContain('--mount-a');
+    expect(tags).toContain('--mount-b');
+  });
+
+  it('keeps the unchanged mount when one mount re-renders against a server sheet', () => {
+    const GlobalStyle = createGlobalStyle<{ token: string }>`
+      html { ${props => props.token}: 1; }
+    `;
+    const serverSheet = new ServerStyleSheet().instance;
+
+    function App({ first }: { first: string }) {
+      return (
+        <StyleSheetManager sheet={serverSheet}>
+          <GlobalStyle token={first} />
+          <GlobalStyle token="--second" />
+        </StyleSheetManager>
+      );
+    }
+
+    const view = render(<App first="--old" />);
+    view.rerender(<App first="--new" />);
+
+    expect(serverSheet.getTag().getGroup(groupForId(GlobalStyle.styledComponentId))).toBe(
+      'html {--new: 1;}/*!sc*/\nhtml {--second: 1;}/*!sc*/\n'
+    );
+  });
+
+  it('keeps the shared static rule when one of two identical static calls unmounts', () => {
+    const First = createGlobalStyle`html { --keep: 1; }`;
+    const Second = createGlobalStyle`html { --keep: 1; }`;
+    expect(First.styledComponentId).toBe(Second.styledComponentId);
+
+    function App({ showFirst, showSecond }: { showFirst: boolean; showSecond: boolean }) {
+      return (
+        <>
+          {showFirst ? <First /> : null}
+          {showSecond ? <Second /> : null}
+        </>
+      );
+    }
+
+    const view = render(<App showFirst showSecond />);
+    expect(getRenderedCSS()).toContain('--keep');
+
+    view.rerender(<App showFirst={false} showSecond />);
+    expect(getRenderedCSS()).toContain('--keep');
+
+    view.rerender(<App showFirst={false} showSecond={false} />);
+    expect(getRenderedCSS()).not.toContain('--keep');
+  });
+
+  it('injects once per mounted instance of one function-bodied global', () => {
+    const GlobalStyle = createGlobalStyle`html { --dup: ${() => 1}; }`;
+
+    render(
+      <>
+        <GlobalStyle />
+        <GlobalStyle />
+      </>
+    );
+
+    expect(getRenderedCSS().match(/--dup/g)).toHaveLength(2);
+  });
+
+  it('releases the shared entries once the last instance unmounts', () => {
+    const First = createGlobalStyle`${() => 'html { --a: 1; }'}`;
+    const Second = createGlobalStyle`${() => 'html { --b: 1; }'}`;
+    expect(First.styledComponentId).toBe(Second.styledComponentId);
+
+    const view = render(
+      <>
+        <First />
+        <Second />
+      </>
+    );
+    expect(liveInstanceCount(mainSheet, First.styledComponentId)).toBe(2);
+
+    view.unmount();
+    expect(liveInstanceCount(mainSheet, First.styledComponentId)).toBe(0);
+  });
+
+  it('keeps same-id globals on different sheets out of each other', () => {
+    const one = new WebGlobalStyle(css`${() => 'html { --one: 1; }'}`, 'sc-global-two-sheets');
+    const two = new WebGlobalStyle(
+      css`${(p: { v: string }) => `html { --two: ${p.v}; }`}`,
+      'sc-global-two-sheets'
+    );
+    const sheetA = new StyleSheet({ isServer: false });
+    const sheetB = new StyleSheet({ isServer: false });
+    const group = groupForId('sc-global-two-sheets');
+    const ctx = (v: string) => ({ theme: {}, v }) as any;
+
+    // Both globals mount instance '1', each on its own sheet.
+    one.renderStyles('1', ctx('a'), sheetA, mainCompiler);
+    two.renderStyles('1', ctx('a'), sheetB, mainCompiler);
+    expect(sheetA.getTag().getGroup(group)).toBe('html {--one: 1;}/*!sc*/\n');
+    expect(sheetB.getTag().getGroup(group)).toBe('html {--two: a;}/*!sc*/\n');
+
+    // Removing A's instance '1' leaves B's instance '1' registered, so the
+    // rebuild that a second instance on B triggers restores both.
+    one.removeStyles('1', sheetA);
+    expect(sheetA.getTag().getGroup(group)).toBe('');
+    expect(sheetB.getTag().getGroup(group)).toBe('html {--two: a;}/*!sc*/\n');
+
+    two.renderStyles('2', ctx('b'), sheetB, mainCompiler);
+    expect(sheetB.getTag().getGroup(group)).toBe(
+      'html {--two: a;}/*!sc*/\nhtml {--two: b;}/*!sc*/\n'
+    );
+
+    two.removeStyles('1', sheetB);
+    two.removeStyles('2', sheetB);
+    expect(sheetB.getTag().getGroup(group)).toBe('');
+  });
+
+  it('updates a global whose only function sits in a nested css helper when its props change', () => {
+    const GlobalStyle = createGlobalStyle<{ $c: string }>`${css`body { color: ${p => p.$c}; }`}`;
+
+    const view = render(<GlobalStyle $c="red" />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        color: red;
+      }"
+    `);
+
+    view.rerender(<GlobalStyle $c="blue" />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        color: blue;
+      }"
+    `);
+  });
+
+  it('applies two nested-helper globals that share an id and read their own props', () => {
+    const First = createGlobalStyle<{ $a: string }>`${css`body { color: ${p => p.$a}; }`}`;
+    const Second = createGlobalStyle<{ $b: string }>`${css`body { color: ${p => p.$b}; }`}`;
+    expect(First.styledComponentId).toBe(Second.styledComponentId);
+
+    const view = render(
+      <>
+        <First $a="red" />
+        <Second $b="blue" />
+      </>
+    );
+    expect(getRenderedCSS()).toContain('red');
+    expect(getRenderedCSS()).toContain('blue');
+
+    view.rerender(
+      <>
+        <First $a="green" />
+        <Second $b="blue" />
+      </>
+    );
+    expect(getRenderedCSS()).toContain('green');
+    expect(getRenderedCSS()).toContain('blue');
+    expect(getRenderedCSS()).not.toContain('red');
+  });
+
+  it('hydrates server markup without duplicating rules when globals are created in the opposite order', () => {
+    const body = (name: string) => () => `html { --${name}: 1; }`;
+
+    // Server module evaluation order: alpha, then beta.
+    const serverAlpha = createGlobalStyle`${body('alpha')}`;
+    const serverBeta = createGlobalStyle`${body('beta')}`;
+    const sheet = new ServerStyleSheet();
+    renderToString(
+      sheet.collectStyles(
+        <>
+          {React.createElement(serverAlpha)}
+          {React.createElement(serverBeta)}
+        </>
+      )
+    );
+    const serverTags = sheet.getStyleTags();
+    expect(serverTags).toContain('--alpha');
+    expect(serverTags).toContain('--beta');
+    const [serverStyle] = sheet.getStyleElement();
+    sheet.seal();
+
+    resetStyled();
+    const { dangerouslySetInnerHTML, ...serverAttributes } = serverStyle.props;
+    const serverTag = document.createElement('style');
+    Object.entries<string>(serverAttributes).forEach(([name, value]) => {
+      serverTag.setAttribute(name, value);
+    });
+    serverTag.textContent = dangerouslySetInnerHTML.__html;
+    document.head.appendChild(serverTag);
+    rehydrateTestStyles();
+
+    // Client module evaluation order is reversed.
+    const clientBeta = createGlobalStyle`${body('beta')}`;
+    const clientAlpha = createGlobalStyle`${body('alpha')}`;
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    act(() => {
+      root = hydrateRoot(
+        container,
+        <>
+          {React.createElement(clientAlpha)}
+          {React.createElement(clientBeta)}
+        </>
+      );
+    });
+
+    const rendered = getRenderedCSS();
+    expect(rendered.match(/--alpha/g)).toHaveLength(1);
+    expect(rendered.match(/--beta/g)).toHaveLength(1);
+    expect(rendered.indexOf('--alpha')).toBeLessThan(rendered.indexOf('--beta'));
+
+    act(() => root?.unmount());
+    container.remove();
+  });
+});
+
+describe('isStaticRules', () => {
+  const Button = styled.button`color: red;`;
+  const fade = keyframes`from { opacity: 0; }`;
+
+  it.each([
+    ['plain text', css`html { color: red; }`, true],
+    ['a top-level function', css`html { color: ${() => 'red'}; }`, false],
+    ['a function in a nested css helper', css`${css`html { color: ${() => 'red'}; }`}`, false],
+    [
+      'a function in a doubly nested css helper',
+      css`${css`${css`html { color: ${() => 'red'}; }`}`}`,
+      false,
+    ],
+    ['a nested css helper with only text', css`${css`html { color: red; }`}`, true],
+    ['a styled component interpolation', css`${Button} { color: red; }`, true],
+    ['a styled component in a nested css helper', css`${css`${Button} { color: red; }`}`, true],
+    ['a keyframes interpolation', css`html { animation-name: ${fade}; }`, true],
+  ])('classifies %s', (_name, rules, expected) => {
+    expect(isStaticRules(rules)).toBe(expected);
   });
 });

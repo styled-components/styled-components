@@ -155,5 +155,6 @@ The `packages/native-showcase` app is the visual QA surface for v7 native polyfi
 - Animation adapters + spec coverage (Hermes / reanimated; rn-web hands CSS animation to the browser): [docs/animation-adapters.md](docs/animation-adapters.md)
 - Native CSS polyfill procedure and rn-web parity: [docs/css-polyfills.md](docs/css-polyfills.md)
 - `attrs` precedence and its escape hatches: [docs/attrs.md](docs/attrs.md)
+- `createGlobalStyle`'s shared group: the instance registry, rebuild order, and server append rule: [docs/global-styles.md](docs/global-styles.md)
 - Microbenchmark-validated hot-path patterns and V8 gotchas: [docs/performance.md](docs/performance.md)
 - Bun CPU profiling and on-device animation debugging: [docs/profiling.md](docs/profiling.md)
