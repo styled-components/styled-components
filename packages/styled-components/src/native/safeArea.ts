@@ -113,7 +113,7 @@ export function SafeAreaInsetsProvider({
 }: SafeAreaInsetsProviderProps): React.ReactElement {
   // Memoize by value so a caller passing an inline `insets={{...}}` object
   // does not hand every safe-area descendant a fresh context reference each
-  // render, which would miss the slot-14 cache and force a full re-resolve.
+  // render, which would re-render them all.
   const value = React.useMemo(() => insets, [insets.top, insets.right, insets.bottom, insets.left]);
   return React.createElement(EXPLICIT_INSETS_CONTEXT.Provider, { value }, children);
 }

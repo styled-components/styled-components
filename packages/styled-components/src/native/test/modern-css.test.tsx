@@ -1498,7 +1498,7 @@ describe('modern CSS on React Native', () => {
         container-name: card;
       `;
       const tree = TestRenderer.create(<Card onLayout={userOnLayout} />);
-      // Re-render a few times with stable props; the render cache will hit.
+      // Re-render a few times with stable props; React.memo bails each one.
       TestRenderer.act(() => {
         tree.update(<Card onLayout={userOnLayout} />);
         tree.update(<Card onLayout={userOnLayout} />);
@@ -2358,8 +2358,8 @@ describe('modern CSS on React Native', () => {
       // Selectors 4: :nth-child matches the CURRENT tree position. When a
       // sibling is inserted before an element whose props are unchanged
       // (same element reference), the position-dependent match must
-      // re-evaluate; a render cache keyed only on props/env must not
-      // serve the stale match.
+      // re-evaluate and not serve the stale match, even though the
+      // element's own props did not change.
       const Parent = styled.View.withConfig({ displayName: 'ShiftParent' })`
         flex: 1;
       `;

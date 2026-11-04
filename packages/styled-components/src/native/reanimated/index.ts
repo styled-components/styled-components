@@ -128,7 +128,6 @@ const reanimatedAdapter: AnimationAdapter = {
     return {
       style: merged,
       elementType: wrapTarget(target),
-      invalidateCache: mergeStartingOverlay,
     };
   },
 };

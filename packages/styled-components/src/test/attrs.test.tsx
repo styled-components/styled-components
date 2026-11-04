@@ -674,7 +674,7 @@ describe('attrs', () => {
     expect(withoutProp.container.querySelector('a')!.getAttribute('rel')).toBe('noopener');
   });
 
-  it('keeps forwarding and clearing decisions across a re-render that hits the render cache', () => {
+  it('keeps forwarding and clearing decisions across a re-render with equal props', () => {
     const Inner = (props: { gone?: string; role?: string; children?: React.ReactNode }) => (
       <div data-has-gone={String('gone' in props)} data-has-role={String('role' in props)} />
     );

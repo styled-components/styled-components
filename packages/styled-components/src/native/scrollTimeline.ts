@@ -599,8 +599,8 @@ export function useScrollTimelinePublisher(
   );
   const name = namedDecl?.name;
   // Identity changes only when extents bump `version` (or scope inputs
-  // move), so descendants' context subscriptions and render caches stay
-  // stable across unrelated scroller re-renders.
+  // move), so descendants' context subscriptions stay stable across
+  // unrelated scroller re-renders.
   const contextValue = React.useMemo<ScrollTimelineContextValue | null>(
     () =>
       entry === null
@@ -1044,9 +1044,6 @@ interface StickyLayout {
 }
 
 export interface StickyPosition {
-  /** True when the layer identity changed since the previous render;
-   *  the render path must invalidate its element-props cache. */
-  changed: boolean;
   /** Compose the layout listener (and stuck-state accessibility flag)
    *  onto the in-flow element props. */
   compose: (props: Dict<unknown>) => Dict<unknown>;
@@ -1062,7 +1059,6 @@ export interface StickyPosition {
 function noopRegister(): void {}
 
 const INACTIVE_STICKY: StickyPosition = {
-  changed: false,
   compose: identityProps,
   layer: null,
   register: noopRegister,
@@ -1094,7 +1090,6 @@ export function useStickyPosition(active: boolean): StickyPosition {
   const [layout, setLayout] = React.useState<StickyLayout | null>(null);
   const layoutRef = React.useRef<StickyLayout | null>(null);
   layoutRef.current = layout;
-  const prevLayerRef = React.useRef<StickyPosition['layer']>(null);
   const idRef = React.useRef(0);
   if (idRef.current === 0) idRef.current = ++stickyIdCounter;
   const cloneRef = React.useRef<React.ReactElement | null>(null);
@@ -1129,8 +1124,6 @@ export function useStickyPosition(active: boolean): StickyPosition {
     () => (fades === null ? null : { opacity: fades.inFlowOpacity }),
     [fades]
   );
-  const changed = layer !== prevLayerRef.current;
-  prevLayerRef.current = layer;
 
   // Stuck flag for touch routing and accessibility. JS-paced on purpose:
   // it changes only at the crossover, and pointerEvents / accessibility
@@ -1240,5 +1233,5 @@ export function useStickyPosition(active: boolean): StickyPosition {
     });
   };
 
-  return { changed, compose, layer, register };
+  return { compose, layer, register };
 }

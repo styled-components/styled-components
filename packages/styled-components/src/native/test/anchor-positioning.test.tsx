@@ -43,7 +43,12 @@ import { resetAnchorsForTest, setAnchorRect } from '../anchorRegistry';
 import { resetResponsiveCache } from '../responsive';
 import { resetNativeStyleCache, toNativeStyles } from '../../models/compileNative';
 import { resetWarningsForTest } from '../transform/dev';
-import { buildResolver } from '../transform/polyfills/resolvers';
+import {
+  getAnimationAdapter,
+  setAnimationAdapter,
+  type AnimationAdapter,
+} from '../animation/types';
+import { applyResolvers, buildResolver } from '../transform/polyfills/resolvers';
 import { describeOnRnWeb } from '../transform/describeOnRnWeb';
 
 const stubStyleSheet = {
@@ -232,6 +237,57 @@ describe('anchor positioning end-to-end (sibling tooltip)', () => {
     });
     s = styleOf(tree, 'tip');
     expect(s.top).toBe(240);
+  });
+
+  it('hands an animation adapter keyframe values that track a moved anchor', () => {
+    // A keyframe's resolvers are applied only through the adapter's env, so a
+    // reused env replays the rect it first resolved against.
+    const adapterTops: unknown[] = [];
+    const capture: AnimationAdapter = {
+      id: 'capture',
+      useAnimatedStyle: input => {
+        const frame = input.compiled.keyframes[0]?.frames[0];
+        if (frame !== undefined) {
+          adapterTops.push(applyResolvers(frame.decls, frame.resolvers ?? [], input.env).top);
+        }
+        return { style: input.resolved, elementType: input.target };
+      },
+    };
+    const SlidingTip = styled.View.withConfig({ displayName: 'AnchorSlidingTip' })`
+      @keyframes slide {
+        to {
+          top: anchor(--save bottom);
+        }
+      }
+      position: absolute;
+      top: anchor(--save bottom);
+      animation: slide 200ms;
+    `;
+    const prior = getAnimationAdapter();
+    setAnimationAdapter(capture);
+    try {
+      const tree = track(
+        TestRenderer.create(
+          <Wrap>
+            <Button testID="btn" />
+            <SlidingTip testID="tip" />
+          </Wrap>
+        )
+      );
+      const btnNodes = tree.root.findAllByProps({ testID: 'btn' });
+      const btnHost = btnNodes[btnNodes.length - 1];
+      act(() => {
+        btnHost.props.onLayout(layout(16, 80, 120, 40));
+      });
+      expect(adapterTops[adapterTops.length - 1]).toBe(120);
+
+      act(() => {
+        btnHost.props.onLayout(layout(16, 200, 120, 40));
+      });
+      expect(adapterTops[adapterTops.length - 1]).toBe(240);
+    } finally {
+      setAnimationAdapter(prior);
+    }
   });
 
   it('an unresolved anchor drops the inset declarations (behaves as auto)', () => {

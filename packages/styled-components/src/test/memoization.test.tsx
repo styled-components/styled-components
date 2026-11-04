@@ -1,9 +1,13 @@
 /**
- * Tests for the render cache.
+ * Render-path correctness under repeated renders.
  *
- * Verifies that the useRef-based shallow context comparison correctly caches
- * and invalidates under various scenarios, and that the cache's hit/miss branch
- * does not change the component's hook sequence.
+ * A styled component re-renders to a stable class name when its inputs are
+ * unchanged and a fresh one when they change, across prop, theme, sibling, and
+ * extension scenarios. Interpolations and attrs run every render (they are the
+ * component's own render-body code), so a hook called inside one keeps a stable
+ * hook sequence and a value read inside one always reflects its current state
+ * (#5788); the class name stays stable across renders through `webStyle`'s
+ * content-addressed caches, not by skipping evaluation.
  */
 import { act, fireEvent, render } from '@testing-library/react';
 import React, { useState } from 'react';
@@ -373,24 +377,18 @@ describe('memoization correctness', () => {
   });
 
   /**
-   * The render cache splits the render path in two, and only one side runs the
-   * style work. A hook on the miss side is called when props changed and skipped
-   * when they did not, so the component would emit a different hook sequence
-   * depending on data, which is the shape React rejects outright.
+   * An interpolation may call a hook (MUI X DataGrid reads a grid selector via
+   * `useContext` inside one). That hook is one of the component's hooks and must
+   * run on every render; skipping evaluation on any render drops it, the hook
+   * count diverges, and React crashes with "Rendered fewer hooks than expected"
+   * (#5788).
    *
-   * StrictMode is the instrument because it is the one place the cache-hit path
-   * is reachable through the public API: React invokes the render body twice
-   * back to back, refs survive between the two passes, so pass 2 finds the cache
-   * populated by pass 1 and takes the hit branch. `React.memo` blocks an
-   * ordinary re-render with equal props before it can reach the component at
-   * all, and any re-render memo does let through fails the same shallow
-   * comparison the cache uses.
-   *
-   * Both halves measured, by counting render passes and interpolation runs
-   * separately (counting interpolations alone cannot tell "memo bailed" from
-   * "rendered and hit the cache", since both run zero): an ordinary re-render
-   * with equal props runs ZERO render passes, and a StrictMode mount runs two
-   * render passes with exactly one interpolation.
+   * StrictMode is the instrument: React invokes the render body twice back to
+   * back, so a mount runs two full render passes. The recorded hook sequence of
+   * the two passes must be identical, including the `useContext` the
+   * interpolation calls. A render path that skipped evaluation on the second
+   * pass would drop that hook and the two halves would differ (in practice React
+   * throws first).
    *
    * Asserting the sequence rather than a count: a swap of two hooks keeps the
    * count identical and still breaks React's ordering rule. The recording wraps
@@ -398,7 +396,7 @@ describe('memoization correctness', () => {
    * picked up without this test being told about it, as long as it is called as
    * `React.useX`; a named `import { useX } from 'react'` is invisible here.
    */
-  it('calls the same hooks on the cache-hit pass as on the cache-miss pass', () => {
+  it('runs a hook called inside an interpolation on every render pass (#5788)', () => {
     // React's module namespace, typed as what it is here: a bag of hook
     // functions keyed by name. Spelling it once keeps the casts out of the body.
     const reactHooks = React as unknown as Record<string, (...args: unknown[]) => unknown>;
@@ -458,21 +456,26 @@ describe('memoization correctness', () => {
         };
       }
 
-      const Comp = styled.div<{ $color: string }>`
-        color: ${p => p.$color};
+      const ColorContext = React.createContext('red');
+      const Comp = styled.div`
+        color: ${() => React.useContext(ColorContext)};
       `;
 
       const [{ rerender, unmount }, mountSeq] = record(() =>
         render(
           <React.StrictMode>
-            <Comp $color="red" />
+            <ColorContext.Provider value="red">
+              <Comp />
+            </ColorContext.Provider>
           </React.StrictMode>
         )
       );
       const [, updateSeq] = record(() =>
         rerender(
           <React.StrictMode>
-            <Comp $color="blue" />
+            <ColorContext.Provider value="blue">
+              <Comp />
+            </ColorContext.Provider>
           </React.StrictMode>
         )
       );
@@ -488,5 +491,65 @@ describe('memoization correctness', () => {
     } finally {
       for (const [name, original] of originals) reactHooks[name] = original;
     }
+  });
+
+  /**
+   * An interpolation may read a value the props and theme do not capture (here a
+   * React context). When that value changes, the component re-renders with
+   * unchanged props; the class name must follow the new value rather than a
+   * stale one carried over from the previous render (#5788).
+   */
+  it('updates the class name when an interpolation reads changed external state (#5788)', () => {
+    const ColorContext = React.createContext('red');
+    const Comp = styled.div`
+      color: ${() => React.useContext(ColorContext)};
+    `;
+
+    function App({ color }: { color: string }) {
+      return (
+        <ColorContext.Provider value={color}>
+          <Comp />
+        </ColorContext.Provider>
+      );
+    }
+
+    const { container, rerender, unmount } = render(<App color="red" />);
+    const redClass = getDivClass(container);
+    expect(getCSS(document)).toContain('color:red;');
+
+    rerender(<App color="blue" />);
+    expect(getDivClass(container)).not.toBe(redClass);
+    expect(getCSS(document)).toContain('color:blue;');
+
+    unmount();
+  });
+
+  /**
+   * `attrs` functions run in the same render body as interpolations, so the same
+   * rule holds: a hook called inside one runs every render, and a value it reads
+   * outside props and theme is reflected on every render rather than served
+   * stale (#5788).
+   */
+  it('runs a hook called inside an attrs function on every render (#5788)', () => {
+    const RoleContext = React.createContext('button');
+    const Comp = styled.div.attrs(() => ({ role: React.useContext(RoleContext) }))`
+      color: red;
+    `;
+
+    function App({ role }: { role: string }) {
+      return (
+        <RoleContext.Provider value={role}>
+          <Comp />
+        </RoleContext.Provider>
+      );
+    }
+
+    const { container, rerender, unmount } = render(<App role="button" />);
+    expect(container.querySelector('div')!.getAttribute('role')).toBe('button');
+
+    rerender(<App role="listbox" />);
+    expect(container.querySelector('div')!.getAttribute('role')).toBe('listbox');
+
+    unmount();
   });
 });
