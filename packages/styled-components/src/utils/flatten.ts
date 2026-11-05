@@ -94,6 +94,12 @@ export default function flatten<Props extends object>(
       return result;
     }
 
+    // Preact's forwardRef returns a function, so a styled component can arrive on this path.
+    if (isStyledComponent(chunk)) {
+      result.push(`.${(chunk as unknown as IStyledComponent<'web', any>).styledComponentId}`);
+      return result;
+    }
+
     if (isStatelessFunction(chunk) && executionContext) {
       const fnResult = (chunk as Function)(executionContext);
 
@@ -126,8 +132,9 @@ export default function flatten<Props extends object>(
     return result;
   }
 
-  if (isStyledComponent(chunk)) {
-    result.push(`.${(chunk as unknown as IStyledComponent<'web', any>).styledComponentId}`);
+  // The brand alone, not `isStyledComponent`: a `memo` HOC hoists it and still renders the class.
+  if (typeof chunk === 'object' && 'styledComponentId' in chunk) {
+    result.push(`.${chunk.styledComponentId}`);
     return result;
   }
 

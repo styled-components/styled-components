@@ -147,8 +147,10 @@ The override carries exactly four things: `shouldForwardProp`, `styleSheet`, `st
 `stylisPlugins`. A nested manager inherits `stylisPlugins` and `shouldForwardProp` from its parent
 when it omits them, which is what lets an inner manager set `namespace` or `enableVendorPrefixes`
 while keeping the outer plugins. Passing `stylisPlugins={[]}` explicitly opts out and falls back to
-the default stylis instance. When neither a custom stylis instance nor a `shouldForwardProp` survives
-resolution, the override is cleared to `null` rather than set to a redundant object.
+the default stylis instance, or to a plugin-free instance that keeps a `namespace` or
+`enableVendorPrefixes` passed with it. When neither a custom stylis instance nor a
+`shouldForwardProp` survives resolution, the override is cleared to `null` rather than set to a
+redundant object.
 
 The compiled stylis instance is memoized at module level, because the manager reads and writes it in
 one synchronous call. A memoized instance is reused only by a manager with the same plugins array

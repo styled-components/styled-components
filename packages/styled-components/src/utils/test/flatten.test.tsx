@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import React from 'react';
 import styled from '../../constructors/styled';
 import flatten from '../flatten';
+import hoist from '../hoist';
 
 describe('flatten', () => {
   it('doesnt merge strings', () => {
@@ -99,6 +100,28 @@ describe('flatten', () => {
     // @ts-expect-error design-token-style value object not in Interpolation
     expect(flatten([token])).toEqual(['#000000']);
   });
+
+  it('emits a selector for a memo HOC that hoists the styled component brand', () => {
+    const Inner = styled.div``;
+    const MemoHoc = hoist(React.memo(Inner), Inner);
+
+    expect(flatten([MemoHoc])).toEqual([`.${Inner.styledComponentId}`]);
+  });
+
+  it.each([
+    ['without', undefined],
+    ['with', { theme: {} }],
+  ])(
+    "emits a selector for a function carrier (Preact's forwardRef shape) %s an execution context",
+    (_label, executionContext) => {
+      const carrier = Object.assign(() => null, {
+        $$typeof: Symbol.for('react.forward_ref'),
+        styledComponentId: 'sc-test',
+      });
+
+      expect(flatten([carrier], executionContext)).toEqual(['.sc-test']);
+    }
+  );
 
   it('flattens subarrays', () => {
     expect(flatten([1, 2, [3, 4, 5], 'come:on;', 'lets:ride;'])).toEqual([

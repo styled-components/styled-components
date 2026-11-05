@@ -7,10 +7,9 @@ const REACT_FORWARD_REF_TYPE = Symbol.for('react.forward_ref');
  *
  * Accepts both `object` and `function` carriers because Preact's react-compat
  * `forwardRef` returns a function while React's returns an object (#5736).
- * `$$typeof` is checked alongside the `styledComponentId` brand so that HOCs
- * which hoist non-React statics from a styled component (and therefore inherit
- * `styledComponentId`) are not mistaken for real styled components - those
- * HOCs do not carry the forward-ref `$$typeof`.
+ * `$$typeof` is checked alongside the `styledComponentId` brand so that function
+ * and `memo` HOCs which hoist the brand from a styled component are not folded
+ * into its chain. A `forwardRef` HOC carries both and still passes.
  */
 export default function isStyledComponent(target: any): target is StyledComponentBrand {
   return (

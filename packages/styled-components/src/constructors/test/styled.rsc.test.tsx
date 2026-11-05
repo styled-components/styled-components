@@ -1714,6 +1714,29 @@ describe('styled RSC mode', () => {
       expect(allCSS).toMatchInlineSnapshot(`".dnGtrT:first-child{color:red;}"`);
       expect(allCSS).not.toContain(':not(style');
     });
+
+    it.each<[string, Record<string, unknown>, string]>([
+      ['nothing else', {}, '.CLASS{user-select:none;}'],
+      ['a namespace', { namespace: '#ns' }, '#ns .CLASS{user-select:none;}'],
+      [
+        'enableVendorPrefixes',
+        { enableVendorPrefixes: true },
+        '.CLASS{-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;}',
+      ],
+    ])('applies an empty stylisPlugins list together with %s', (_label, props, expected) => {
+      mockUseRequest(new Map());
+      const Item = styled.li`
+        user-select: none;
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <StyleSheetManager stylisPlugins={[]} {...props}>
+          <Item />
+        </StyleSheetManager>
+      );
+
+      expect(extractStyleContents(html).replace(/\.[a-zA-Z0-9]+/g, '.CLASS')).toBe(expected);
+    });
   });
 
   describe('StyleSheetManager settings are scoped per request', () => {

@@ -420,6 +420,35 @@ describe('basic', () => {
       }
     });
 
+    it("uses a component as a selector when forwardRef returns a function (Preact's react-compat shape)", () => {
+      const originalForwardRef = React.forwardRef;
+      // @ts-expect-error monkey-patching for the test
+      React.forwardRef = (renderFn: any) => {
+        const fn = (props: any) => renderFn(props, null);
+        fn.$$typeof = Symbol.for('react.forward_ref');
+        fn.render = renderFn;
+        return fn;
+      };
+      try {
+        const Box = styled.div``;
+        const Parent = styled.div`
+          ${Box}:hover {
+            color: blue;
+          }
+        `;
+
+        const { container } = render(<Parent />);
+        const generatedClass = (container.firstChild as HTMLElement).classList[1];
+
+        expect(getRenderedCSS()).toBe(
+          `.${generatedClass} .${Box.styledComponentId}:hover {\n  color: blue;\n}`
+        );
+      } finally {
+        // @ts-expect-error restore
+        React.forwardRef = originalForwardRef;
+      }
+    });
+
     it('should not fold components if there is an interim HOC', () => {
       function withSomething(WrappedComponent: AnyComponent) {
         const WithSomething: React.FC<any> = props => {

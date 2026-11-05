@@ -166,8 +166,13 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
       }
     }
 
+    const onlyDropsPlugins =
+      props.stylisPlugins !== undefined &&
+      !props.stylisPlugins.length &&
+      props.namespace === undefined &&
+      props.enableVendorPrefixes === undefined;
     const resolvedStylis = hasStylisProps
-      ? props.stylisPlugins !== undefined && !props.stylisPlugins.length
+      ? onlyDropsPlugins
         ? mainStylis
         : rscCachedStylis
       : parentOverride.stylis;
