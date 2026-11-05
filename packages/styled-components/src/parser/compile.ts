@@ -70,7 +70,7 @@ export function hasAnyFragment(fragments: (FastPathFragment | null)[]): boolean 
  * `outFragments` receives `${mixin}` slot resolutions for AST splicing.
  *
  * Returns `null` on any shape that has no text form; the caller renders no
- * styles for it.
+ * styles for it. The slots after one still run, since each may call hooks.
  */
 export function evaluateForFastPath(
   source: Source,
@@ -88,6 +88,7 @@ export function evaluateForFastPath(
   const filled = outBuffer || new Array<string>(n);
   if (filled.length !== n) filled.length = n;
   if (outFragments.length !== n) outFragments.length = n;
+  let hasText = true;
   for (let i = 0; i < n; i++) {
     outFragments[i] = null;
     const kind = kinds[i];
@@ -121,10 +122,8 @@ export function evaluateForFastPath(
           name
         );
       }
-      return null;
-    }
-
-    if (typeof resolved === 'string') {
+      hasText = false;
+    } else if (typeof resolved === 'string') {
       filled[i] = resolved;
     } else if (source.slotIsStandalone[i]) {
       // Block-position: splice the child's AST as parent siblings via the
@@ -135,10 +134,13 @@ export function evaluateForFastPath(
       filled[i] = stringifyEmbeddedFragment(resolved);
     }
   }
-  return filled;
+  return hasText ? filled : null;
 }
 
 const EMPTY_FILLED: string[] = [];
+
+/** A slot's text with nothing to add to a selector: empty, or a falsy number from `${count && mixin}`. */
+const holdsNothing = (text: string): boolean => text === '' || text === '0' || text === 'NaN';
 
 /**
  * Resolve a `css\`...\`` fragment slot into a `FastPathFragment`. The child's
@@ -360,7 +362,8 @@ function resolveInterpolation(
   // An object with a `toString` of its own (a design token, a color class, a `Date`) reads as
   // that text, not as a block of declarations. A React element and a class with the default
   // `toString` have no text form.
-  if ((slot as object).toString !== Object.prototype.toString) return String(slot);
+  const toText = (slot as object).toString;
+  if (toText && toText !== Object.prototype.toString) return String(slot);
 
   // Plain-object style block returned from a function (`css(p => ({...}))`).
   // `objectToCSS` resolves nested function values against `fillContext`
@@ -398,14 +401,14 @@ export function fillAst(
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
     if (out !== null && head !== '' && node.kind === NodeKind.Rule) {
-      out.length = headStart;
-      const rule = fillHead(
-        head + joinSelectors(node.selectors, filled),
-        fillAst(node.children, filled, fragments)
-      );
-      for (let j = 0; j < rule.length; j++) out.push(rule[j]);
-      head = '';
-      continue;
+      const selectors = joinSelectors(node.selectors, filled);
+      if (!atRuleEnds(head, selectors)) {
+        out.length = headStart;
+        const rule = fillHead(head + selectors, fillAst(node.children, filled, fragments));
+        for (let j = 0; j < rule.length; j++) out.push(rule[j]);
+        head = '';
+        continue;
+      }
     }
 
     const filledNode = fillNode(node, filled, fragments);
@@ -439,12 +442,15 @@ export function fillAst(
 
 /**
  * The text a block-position slot adds to a rule starting after it, empty when it holds
- * nothing and `null` when it holds statements. A value spaced as `name: value` is a
- * declaration. Unspaced, `a:hover` and a minified `top:0` read alike, so what follows
- * decides: a class, id, attribute, or `*` keeps it a selector, anything else a declaration.
+ * nothing (a falsy number counts, from `${count && mixin}`) and `null` when it holds
+ * statements. A value spaced as `name: value` is a declaration. Unspaced, `a:hover` and a
+ * minified `top:0` read alike, so what follows decides: a class, id, attribute, or `*` keeps
+ * it a selector, anything else a declaration.
  */
 function slotHeadText(value: string, next: Node): string | null {
   const text = trimWhitespace(value);
+  if (holdsNothing(text)) return '';
+
   const first = next.kind === NodeKind.Rule ? next.selectors[0] : '';
   const named = /^[\w-]+\s*:(\s?)/.exec(text);
   return !staysOneField(text) ||
@@ -453,6 +459,14 @@ function slotHeadText(value: string, next: Node): string | null {
       (named[1] || !'*.#['.includes((typeof first === 'string' ? first : first.chunks[0])[0])))
     ? null
     : text;
+}
+
+/**
+ * Whether an at-rule with a prelude ends at `value`, leaving `after` as a rule of its own.
+ * A query goes on through a list, or words up to a `(`: `${'@media screen'} and (color) {`.
+ */
+function atRuleEnds(value: string, after: string): boolean {
+  return /^@\S+\s+\S/.test(value) && !/^\s*(?:,|$)|^[\w\s-]*\(/.test(after);
 }
 
 function fillNode(
@@ -476,26 +490,28 @@ function fillNode(
         const field = node.selectors[i];
         const sel = realize(field, filled, COMMA);
         // The parser picks the rule kind before a slot has a value, so a slot holding an
-        // at-rule (`${media.md} {`) is read on its own too, like one that leaves its
-        // list with an empty item (`${false}, h2 {`).
+        // at-rule (`${media.md} {`) is read on its own too.
         const bare = sel === null || typeof field === 'string' ? null : trimWhitespace(sel);
-        if (
-          sel === null ||
-          (bare !== null &&
-            (bare.charCodeAt(0) === AT || (node.selectors.length > 1 && bare === '')))
-        ) {
+        if (sel === null || bare?.charCodeAt(0) === AT) {
           // A value opening the head and ending a statement reads ahead of it, leaving only
           // authored text in the head: `${mixin} &:hover {`.
           const first = node.selectors[0];
           const opening =
             typeof first !== 'string' && first.chunks[0] === '' ? filled[first.slots[0]] : '';
-          const lead = /[;}]\s*$/.test(normalize(opening)) ? opening : '';
-          return parseValue(lead).concat(
-            fillHead(joinSelectors(node.selectors, filled).slice(lead.length), children)
-          );
+          const headText = joinSelectors(node.selectors, filled);
+          const lead =
+            /[;}]\s*$/.test(normalize(opening)) ||
+            atRuleEnds(opening, headText.slice(opening.length))
+              ? opening
+              : '';
+          return parseValue(lead).concat(fillHead(headText.slice(lead.length), children));
         }
-        filledSelectors[i] = sel;
+        if (bare === null || node.selectors.length === 1 || !holdsNothing(bare)) {
+          // Trimmed: a self-reference is recognized by the selector starting and ending with it.
+          filledSelectors.push(bare ?? sel);
+        }
       }
+      if (filledSelectors.length === 0) return fillHead('', children);
       return { kind: NodeKind.Rule, selectors: filledSelectors, children };
     }
     case NodeKind.AtRule: {

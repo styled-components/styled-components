@@ -189,6 +189,76 @@ describe('web emitter', () => {
       ]);
     });
 
+    // Each of these writes to the component's own element, the one `${Component}` names.
+    it.each([
+      [
+        '`&`',
+        '& { container-type: size; }',
+        ['.a{container-name:sc-id;}', '.a{container-type:size;}'],
+      ],
+      [
+        '`&&`',
+        '&& { container-type: size; }',
+        ['.a{container-name:sc-id;}', '.a.a{container-type:size;}'],
+      ],
+      [
+        '`&, &`',
+        '&, & { container-type: size; }',
+        ['.a{container-name:sc-id;}', '.a,.a{container-type:size;}'],
+      ],
+      [
+        '`&` inside `&`',
+        '& { & { container-type: size; } }',
+        ['.a{container-name:sc-id;}', '.a{container-type:size;}'],
+      ],
+      [
+        '`&` beside a root declaration',
+        'color: red; & { container-type: size; }',
+        ['.a{color:red;container-name:sc-id;}', '.a{container-type:size;}'],
+      ],
+      [
+        '`&` beside another rule',
+        '& { container-type: size; } h1 { top: 0; }',
+        ['.a{container-name:sc-id;}', '.a{container-type:size;}', '.a h1{top:0;}'],
+      ],
+    ])('names the container a rule on %s makes', (_label, css, rules) => {
+      expect(emitWeb(parse(css), '.a', options)).toEqual(rules);
+    });
+
+    it.each([
+      ['a pseudo-class', '&:hover { container-type: size; }', '.a:hover{container-type:size;}'],
+      ['a descendant', '& .x { container-type: size; }', '.a .x{container-type:size;}'],
+      ['`& &`', '& & { container-type: size; }', '.a .a{container-type:size;}'],
+      [
+        'a list with another element',
+        '&, .x { container-type: size; }',
+        '.a,.a .x{container-type:size;}',
+      ],
+      [
+        'an at-rule',
+        '@media print { & { container-type: size; } }',
+        '@media print{.a{container-type:size;}}',
+      ],
+    ])('leaves a rule on %s unnamed', (_label, css, expected) => {
+      expect(emitWeb(parse(css), '.a', options)).toEqual([expected]);
+    });
+
+    it.each([
+      [
+        'its own name on `&`',
+        '& { container-type: size; container-name: x; }',
+        ['.a{container-type:size;container-name:x;}'],
+      ],
+      [
+        'a name on `&` beside a root type',
+        'container-type: size; & { container-name: x; }',
+        ['.a{container-type:size;}', '.a{container-name:x;}'],
+      ],
+      ['the normal type on `&`', '& { container-type: normal; }', ['.a{container-type:normal;}']],
+    ])('adds no name for %s', (_label, css, expected) => {
+      expect(emitWeb(parse(css), '.a', options)).toEqual(expected);
+    });
+
     it.each([
       ['a nested rule', '.child { container-type: size; }', '.a .child{container-type:size;}'],
       [
@@ -211,6 +281,11 @@ describe('web emitter', () => {
         'an explicit name',
         'container-type: size; container-name: x;',
         '.a{container-type:size;container-name:x;}',
+      ],
+      [
+        'a name spelled like the normal type',
+        'container-type: size; container-name: normal;',
+        '.a{container-type:size;container-name:normal;}',
       ],
       ['the normal type', 'container-type: normal;', '.a{container-type:normal;}'],
     ])('adds nothing beside %s', (_label, css, expected) => {

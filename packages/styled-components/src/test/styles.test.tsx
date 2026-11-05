@@ -1019,6 +1019,22 @@ describe('with styles', () => {
       expect(getRenderedCSS()).toEqual('.a {\n  margin: 0;\n}\n.a h2 {\n  color: red;\n}');
     });
 
+    // Two instances of a component can have different generated classes, so `& + &` has to
+    // use the class they share to match across them.
+    it.each(['before', 'after'])(
+      'keeps `& + &` shared by every instance with a false value %s it',
+      where => {
+        const off = () => false;
+        const Comp =
+          where === 'before'
+            ? styled.div`${off} & + & { margin: 0; }`
+            : styled.div`& + & ${off} { margin: 0; }`;
+        render(<Comp />);
+        const shared = `.${Comp.styledComponentId}`;
+        expect(getRenderedCSS()).toEqual(`${shared} + ${shared} {\n  margin: 0;\n}`);
+      }
+    );
+
     it('keeps a comma in a value with no semicolon of its own before a rule', () => {
       const Comp = styled.div`${() => 'transition: a 1s, b 1s'} h2{color:red;}`;
       render(<Comp />);
