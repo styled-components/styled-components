@@ -6,6 +6,21 @@ it('returns true for an object literal', () => {
   expect(isPlainObject({})).toEqual(true);
 });
 
+it.each([
+  ['no prototype', Object.create(null)],
+  ['a `constructor` key set to undefined', { constructor: undefined }],
+  ['a `constructor` key set to null', { constructor: null }],
+])('returns true for an object with %s', (_label, value) => {
+  expect(isPlainObject(value)).toEqual(true);
+});
+
+it.each([
+  ['a string', { constructor: 'x' }],
+  ['a named object', { constructor: { name: 'Foo' } }],
+])('returns false for an object with a `constructor` key set to %s', (_label, value) => {
+  expect(isPlainObject(value)).toEqual(false);
+});
+
 it('returns false for an instance of a class with its own toString method', () => {
   class SomeClass {
     toString() {

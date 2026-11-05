@@ -7,12 +7,11 @@ import {
 import { IS_RSC } from '../utils/isRsc';
 import WebGlobalStyle, { deleteInstance, getInstance } from '../models/WebGlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
-import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
-import StyleSheet from '../sheet';
-import { Compiler, ExecutionContext, ExecutionProps, Interpolation, Styles } from '../types';
+import { ThemeContext } from '../models/ThemeProvider';
+import { ExecutionContext, ExecutionProps, Interpolation, Styles } from '../types';
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
-import { joinRules, stripSplitter } from '../utils/joinStrings';
+import { joinKeyframes, joinRules, stripSplitter } from '../utils/joinStrings';
 import { getRscRequestState, noteRscEmit } from '../utils/rscCache';
 import { warnOnce } from '../utils/warnOnce';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
@@ -67,21 +66,36 @@ export default function createGlobalStyle<Props extends object>(
       );
     }
 
-    // Gate on IS_RSC or `styleSheet.server` rather than `__SERVER__`: the
-    // server build elides the injection effect below, so rendering here
-    // without cleanup produced an O(n²) jsdom regression. A sheet forced into
+    // Not `__SERVER__`: the server build has no insertion effects below, so a
+    // write here under jsdom would pile up with no cleanup. A sheet forced into
     // server mode under a build where `__SERVER__` is false needs the runtime
     // flag too.
-    if (IS_RSC || ssc.styleSheet.server) {
-      renderStyles(instance, props, ssc.styleSheet, theme, ssc.compiler);
+    const writesInRender = IS_RSC || ssc.styleSheet.server;
+
+    // A server render with no sheet to collect the result has no use for it.
+    if (__SERVER__ && !writesInRender) return null;
+
+    // Interpolations are this component's render body and may call hooks, so
+    // they run on every render that writes. Only the sheet write waits. A
+    // static global has none, so it keeps the entry it registered.
+    const entry =
+      (globalStyle.isStatic && getInstance(ssc.styleSheet, styledComponentId, instance)) ||
+      globalStyle.computeRules(
+        instance,
+        (globalStyle.isStatic
+          ? STATIC_EXECUTION_CONTEXT
+          : { ...props, theme: determineTheme(props, theme) }) as ExecutionContext & Props,
+        ssc.compiler
+      );
+
+    if (writesInRender) {
+      globalStyle.renderStyles(instance, entry, ssc.styleSheet);
     }
 
     if (!__SERVER__ && !IS_RSC) {
       // Two insertion effects: cleanup (removeStyles → rebuildGroup) only
       // fires on unmount/sheet/globalStyle swap, not every render; dynamic
       // globals would otherwise rebuild twice per render (issue #5730).
-      // Including globalStyle in deps lets HMR-replaced instances trigger
-      // re-injection.
       //
       // useInsertionEffect rather than useLayoutEffect because both halves
       // only write to the stylesheet, which is the one job the hook exists
@@ -89,16 +103,13 @@ export default function createGlobalStyle<Props extends object>(
       // layout effect instead of beside them. Neither half may start
       // reading a ref or setting state: React attaches refs after insertion
       // effects run, and scheduling an update from one is a runtime error.
-      const renderDeps = globalStyle.isStatic
-        ? [instance, ssc.styleSheet, globalStyle]
-        : [instance, props, ssc.styleSheet, theme, ssc.compiler, globalStyle];
 
       // biome-ignore-start lint/correctness/useHookAtTopLevel: this whole block sits under `if (!__SERVER__ && !IS_RSC)`, both build or load-time constants, so a given bundle always runs all of these hooks or none of them
       React.useInsertionEffect(() => {
         if (!ssc.styleSheet.server) {
-          renderStyles(instance, props, ssc.styleSheet, theme, ssc.compiler);
+          globalStyle.renderStyles(instance, entry, ssc.styleSheet);
         }
-      }, renderDeps);
+      }, [instance, entry, ssc.styleSheet, globalStyle]);
 
       // Cleanup-only effect: fires on unmount, sheet swap, or HMR globalStyle swap.
       // Closure captures the specific globalStyle/sheet that owned this instance's
@@ -115,13 +126,11 @@ export default function createGlobalStyle<Props extends object>(
 
     // RSC: one plain tag per instance, no `precedence`; see docs/react.md "RSC style emission and Suspense".
     if (IS_RSC) {
-      const entry = !IS_BROWSER
-        ? getInstance(ssc.styleSheet, styledComponentId, instance)
-        : undefined;
-      const css = entry ? joinRules(entry.rules) : '';
+      // Keyframes last: `@import` and `@namespace` only count ahead of every other rule in a tag.
+      const css = !IS_BROWSER ? joinRules(entry.rules) + joinKeyframes(entry.keyframes) : '';
 
       // The RSC branch renders into the long-lived default sheet, so its entry is freed here.
-      if (entry) {
+      if (!IS_BROWSER) {
         deleteInstance(ssc.styleSheet, styledComponentId, instance);
       }
 
@@ -166,30 +175,6 @@ export default function createGlobalStyle<Props extends object>(
 
     return null;
   };
-
-  function renderStyles(
-    instance: string,
-    props: ExecutionProps,
-    styleSheet: StyleSheet,
-    theme: DefaultTheme | undefined,
-    compiler: Compiler
-  ) {
-    if (globalStyle.isStatic) {
-      globalStyle.renderStyles(
-        instance,
-        STATIC_EXECUTION_CONTEXT as unknown as ExecutionContext & Props,
-        styleSheet,
-        compiler
-      );
-    } else {
-      const context = {
-        ...props,
-        theme: determineTheme(props, theme),
-      } as ExecutionContext & Props;
-
-      globalStyle.renderStyles(instance, context, styleSheet, compiler);
-    }
-  }
 
   const memoized = React.memo(GlobalStyleComponent) as React.NamedExoticComponent<
     ExecutionProps & Props

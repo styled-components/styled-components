@@ -168,25 +168,35 @@ export function emitWeb(root: StaticRoot, parentSelector: string, options?: Emit
 }
 
 /**
- * When the root declares `container-type` with a non-`normal` value but no `container-name`,
- * the name comes from the component's stable id, so `${Component}` in an `@container <name>`
- * query matches without anyone writing a `container-name`. Only root declarations count; a
- * nested rule is the author's own and gets no name.
+ * When the component's own element gets a `container-type` with a non-`normal` value but no
+ * `container-name`, the name comes from the component's stable id, so `${Component}` in an
+ * `@container <name>` query matches without anyone writing a `container-name`.
  */
 function maybeAugmentWithAutoName(root: StaticRoot, componentId: string): StaticRoot {
-  let hasType = false;
-  for (let i = 0; i < root.length; i++) {
-    const node = root[i];
-    if (node.kind !== NodeKind.Decl) continue;
-    if (node.prop === 'container-name') return root;
-    if (node.prop === 'container-type' && node.value !== 'normal') hasType = true;
+  return writesToOwnElement(root, 'container-type') && !writesToOwnElement(root, 'container-name')
+    ? root.concat({
+        kind: NodeKind.Decl,
+        prop: 'container-name',
+        value: componentId,
+      })
+    : root;
+}
+
+/** Root declarations and rules on `&` alone count; any other rule targets another element or state. */
+function writesToOwnElement(nodes: StaticRoot, prop: string): boolean {
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (
+      node.kind === NodeKind.Decl
+        ? node.prop === prop && (prop === 'container-name' || node.value !== 'normal')
+        : node.kind === NodeKind.Rule &&
+          writesToOwnElement(node.children, prop) &&
+          /^&+$/.test(node.selectors.join(''))
+    ) {
+      return true;
+    }
   }
-  if (!hasType) return root;
-  return root.concat({
-    kind: NodeKind.Decl,
-    prop: 'container-name',
-    value: componentId,
-  });
+  return false;
 }
 
 /**

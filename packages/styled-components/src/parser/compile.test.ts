@@ -252,6 +252,15 @@ describe('compileWeb', () => {
         legacy('h2 { color: red; }')
       );
     });
+
+    it.each<[string, () => ReturnType<typeof tagged>]>([
+      ['before it', () => tagged`${false} & + & { color: red; }`],
+      ['before it, from a function', () => tagged`${() => false} & + & { color: red; }`],
+      ['after it', () => tagged`& + & ${false} { color: red; }`],
+      ['after it, from a function', () => tagged`& + & ${() => false} { color: red; }`],
+    ])('leaves no space around a selector with an empty value %s', (_title, build) => {
+      expect(compileWeb(build(), {}, '.a')).toEqual(['.a+.a{color:red;}']);
+    });
   });
 
   describe('keyframes refs in value position', () => {
@@ -732,6 +741,29 @@ describe('compileWeb', () => {
         ['a React element', () => tagged`color: ${element}; top: 0;`],
       ])('renders no styles for %s', (_label, build) => {
         expect(compileWeb(build(), {}, '.a')).toBeNull();
+      });
+
+      describe('an object with no prototype', () => {
+        const noPrototype = (styles: object) => Object.assign(Object.create(null), styles);
+
+        it.each<[string, unknown]>([
+          ['directly', noPrototype({})],
+          ['from a function', () => noPrototype({})],
+        ])('holds nothing in a value, %s', (_label, value) => {
+          expect(compileWeb(tagged`color: ${value}; top: 0;`, {}, '.a')).toEqual(['.a{top:0;}']);
+        });
+
+        it.each<[string, unknown]>([
+          ['directly', noPrototype({ color: 'red' })],
+          ['from a function', () => noPrototype({ color: 'red' })],
+        ])('reads as a style object at the start of a statement, %s', (_label, value) => {
+          expect(compileWeb(tagged`${value} top: 0;`, {}, '.a')).toEqual(['.a{color:red;top:0;}']);
+        });
+
+        it('reads as a style object when passed to css()', () => {
+          const src = getSource(css(noPrototype({ color: 'red' }) as never));
+          expect(src && compileWeb(src, {}, '.a')).toEqual(['.a{color:red;}']);
+        });
       });
 
       it.each<[string, unknown]>([
@@ -1223,6 +1255,167 @@ describe('compileWeb', () => {
           '.a .x{top:0;}',
         ]);
       });
+
+      // `${count && mixin} h1` leaves a falsy number in the slot, the only numbers `&&` can
+      // leave. Neither is a selector: an identifier cannot start with a digit
+      // (https://drafts.csswg.org/css-syntax-3/#would-start-an-identifier), and `NaN` is what
+      // the number prints as, not an element name anyone writes.
+      describe.each([
+        ['0', 0],
+        ['NaN', Number.NaN],
+      ])('the number %s before a rule', (_label, value) => {
+        it.each([
+          ['a type selector', 'h1', '.a h1{top:0;}'],
+          ['a class', '.x', '.a .x{top:0;}'],
+        ])('leaves %s alone', (_before, selector, rule) => {
+          const strings = ['', ` ${selector} { top: 0; }`];
+          expect(compileWeb(parseSource(strings, [value]), {}, '.a')).toEqual([rule]);
+          expect(compileWeb(parseSource(strings, [() => value]), {}, '.a')).toEqual([rule]);
+        });
+
+        it('keeps the selector value before it, the same as `false`', () => {
+          const strings = ['', ' ', ' .x { top: 0; }'];
+          const expected = ['.a .y .x{top:0;}'];
+          expect(compileWeb(parseSource(strings, ['.y', false]), {}, '.a')).toEqual(expected);
+          expect(compileWeb(parseSource(strings, ['.y', value]), {}, '.a')).toEqual(expected);
+        });
+      });
+
+      it('keeps a number `&&` cannot leave as written', () => {
+        const strings = ['', ' h1 { top: 0; }'];
+        expect(compileWeb(parseSource(strings, [3]), {}, '.a')).toEqual(['.a 3 h1{top:0;}']);
+      });
+
+      it.each([
+        ['before another selector', ['', ', h2 { top: 0; }'], [0], ['.a h2{top:0;}']],
+        ['after another selector', ['h2, ', ' { top: 0; }'], [0], ['.a h2{top:0;}']],
+        ['from a function', ['', ', h2 { top: 0; }'], [() => 0], ['.a h2{top:0;}']],
+        ['before an empty value', ['', ', ', ', h2 { top: 0; }'], [0, false], ['.a h2{top:0;}']],
+        ['after an empty value', ['', ', ', ', h2 { top: 0; }'], [false, 0], ['.a h2{top:0;}']],
+      ])('leaves a number out of a selector list, %s', (_label, strings, values, rules) => {
+        expect(compileWeb(parseSource(strings, values), {}, '.a')).toEqual(rules);
+      });
+
+      it.each([
+        ['numbers', [0, Number.NaN]],
+        ['empty values', [false, null]],
+        ['a number and an empty value', [0, false]],
+      ])('writes a list of only %s quietly, as nothing', (_label, values) => {
+        const strings = ['', ', ', ' { top: 0; }'];
+        expect(compileWeb(parseSource(strings, values), {}, '.a')).toEqual([]);
+        expect(warn.mock.calls).toEqual([]);
+      });
+
+      it.each([
+        ['a class', ['.col-', ' { top: 0; }'], '.a .col-3{top:0;}'],
+        ['a pseudo-class argument', ['&:nth-child(', ') { top: 0; }'], '.a:nth-child(3){top:0;}'],
+        ['an attribute value', ['&[data-n="', '"] { top: 0; }'], '.a[data-n="3"]{top:0;}'],
+      ])('keeps a number that is part of %s', (_label, strings, rule) => {
+        expect(compileWeb(parseSource(strings, [3]), {}, '.a')).toEqual([rule]);
+      });
+
+      it.each([
+        ['a media query with `and`', '@media screen', ' and (min-width: 1px)'],
+        ['a supports query with `and`', '@supports (display: grid)', ' and (color: red)'],
+        ['a supports query with `or`', '@supports (display: grid)', ' or (color: red)'],
+        ['a container query with a condition', '@container sidebar', ' (min-width: 1px)'],
+        ['a bare `@media`', '@media', ' print'],
+        ['a bare `@media` before a condition', '@media', ' (min-width: 1px)'],
+        ['a bare `@container`', '@container', ' sidebar (min-width: 1px)'],
+        ['a bare `@layer`', '@layer', ' a'],
+        ['a media query with `and not`', '@media screen', ' and not (color)'],
+        ['a value ending in `and`', '@media screen and', ' not (color)'],
+        ['a supports query with a function', '@supports not', ' selector(:has(a))'],
+        ['a scope limit', '@scope (.a)', ' to (.b)'],
+        ['a container style query', '@container side', ' style(--x: 1)'],
+        ['a container scroll-state query', '@container side', ' scroll-state(stuck: top)'],
+        ['a container query with `not`', '@container side', ' not (min-width: 1px)'],
+      ])('keeps %s split across a value and its template', (_label, value, rest) => {
+        const strings = ['', `${rest} { top: 0; }`];
+        const rule = [`${value}${rest}{.a{top:0;}}`];
+        expect(compileWeb(parseSource(strings, [value]), {}, '.a')).toEqual(rule);
+        expect(compileWeb(parseSource(strings, [() => value]), {}, '.a')).toEqual(rule);
+        expect(
+          compileWeb(parseSource(['.x { ', `${rest} { top: 0; } }`], [value]), {}, '.a')
+        ).toEqual([`${value}${rest}{.a .x{top:0;}}`]);
+      });
+
+      it('keeps a media query split across two values', () => {
+        const src = parseSource(
+          ['', ' ', ' { top: 0; }'],
+          ['@media screen', 'and (min-width: 1px)']
+        );
+        expect(compileWeb(src, {}, '.a')).toEqual([
+          '@media screen and (min-width: 1px){.a{top:0;}}',
+        ]);
+      });
+
+      it('keeps a media query before a value that comes out empty', () => {
+        const src = parseSource(['', ' ', ' { top: 0; }'], ['@media screen', false]);
+        expect(compileWeb(src, {}, '.a')).toEqual(['@media screen{.a{top:0;}}']);
+      });
+
+      it.each([
+        ['an empty value and a type selector', ['', ' ', ' body { top: 0; }'], [false], '.a body'],
+        ['an empty value and a class', ['', ' ', ' .x { top: 0; }'], [false], '.a .x'],
+        ['a falsy number and a type selector', ['', ' ', ' body { top: 0; }'], [0], '.a body'],
+        ['a pseudo-class', ['', ' :root { top: 0; }'], [], '.a :root'],
+        ['a nested pseudo-class', ['', ' &:hover { top: 0; }'], [], '.a:hover'],
+        ['a child combinator', ['', ' > b { top: 0; }'], [], '.a>b'],
+      ])('reads an at-rule with a prelude before %s on its own', (_label, strings, rest, head) => {
+        const rule = `${head}{top:0;}`;
+        expect(compileWeb(parseSource(strings, ['@layer a', ...rest]), {}, '.a')).toEqual([
+          '@layer a;',
+          rule,
+        ]);
+        expect(
+          compileWeb(parseSource(strings, ["@import url('x.css')", ...rest]), {}, '.a')
+        ).toEqual(["@import url('x.css');", rule]);
+      });
+
+      it('keeps every rule after an at-rule before a pseudo-class in a global style', () => {
+        expect(
+          compileWeb(tagged`${'@layer a'} :root { top: 0; } body { top: 1px; }`, {}, '')
+        ).toEqual(['@layer a;', ':root{top:0;}', 'body{top:1px;}']);
+      });
+
+      it('reads an `@import` before a component value on its own', () => {
+        const src = parseSource(['', ' ', ' { top: 0; }'], ["@import url('x.css')", '.c']);
+        expect(compileWeb(src, {}, '.a')).toEqual(["@import url('x.css');", '.a .c{top:0;}']);
+      });
+
+      it('keeps a media query list split across a value and its template', () => {
+        const src = parseSource(['', ', print { top: 0; }'], [() => '@media screen']);
+        expect(compileWeb(src, {}, '.a')).toEqual(['@media screen,print{.a{top:0;}}']);
+      });
+
+      it('reads a selector holding a function after an at-rule on its own', () => {
+        const src = parseSource(['', ' h1:not(.x) { top: 0; }'], ['@layer a']);
+        expect(compileWeb(src, {}, '.a')).toEqual(['@layer a;', '.a h1:not(.x){top:0;}']);
+      });
+
+      // An at-rule with a prelude starts its own statement, so it does not join a selector.
+      describe.each(['@layer a', '@media print', "@import url('x.css')"])(
+        'the at-rule `%s` with no `;` before a rule',
+        value => {
+          it.each([
+            ['a type selector', 'h1', '.a h1{top:0;}'],
+            ['a class', '.x', '.a .x{top:0;}'],
+          ])('reads on its own and leaves %s alone', (_before, selector, rule) => {
+            const strings = ['', ` ${selector} { top: 0; }`];
+            const expected = [`${value};`, rule];
+            expect(compileWeb(parseSource(strings, [value]), {}, '.a')).toEqual(expected);
+            expect(compileWeb(parseSource(strings, [() => value]), {}, '.a')).toEqual(expected);
+          });
+
+          it('keeps the rule after it in a global style', () => {
+            expect(compileWeb(tagged`${value} body { top: 0; }`, {}, '')).toEqual([
+              `${value};`,
+              'body{top:0;}',
+            ]);
+          });
+        }
+      );
 
       it.each([
         ['a custom property value', { '--cdn': '//cdn.example.com/x.png', color: 'red' }],

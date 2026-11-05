@@ -32,6 +32,7 @@ import {
 } from '../../test/rscStream';
 import createGlobalStyle from '../createGlobalStyle';
 import css from '../css';
+import keyframes from '../keyframes';
 
 describe('createGlobalStyle RSC mode', () => {
   beforeEach(() => {
@@ -52,6 +53,23 @@ describe('createGlobalStyle RSC mode', () => {
         body{background:red;}
       </style>
     `);
+  });
+
+  it.each<[string, string | (() => string)]>([
+    ['a static global style', 'red'],
+    ['a dynamic global style', () => 'red'],
+  ])('renders the keyframes %s references in its own tag, once each', (_label, color) => {
+    const fade = keyframes`from { opacity: 0; }`;
+    const GlobalStyle = createGlobalStyle`
+      body { animation: ${fade} 1s; color: ${color}; }
+      h1 { animation: ${fade} 2s; }
+    `;
+
+    const html = ReactDOMServer.renderToString(<GlobalStyle />);
+    const name = fade.getName();
+    expect(html).toEqual(
+      `<style data-styled-global="${GlobalStyle.styledComponentId}">body{animation:${name} 1s;color:red;}h1{animation:${name} 2s;}@keyframes ${name}{from{opacity:0;}}</style>`
+    );
   });
 
   it('renders dynamic global styles without precedence', () => {

@@ -65,7 +65,7 @@ export default class Keyframes implements KeyframesType {
 
 /**
  * Write a batch of compiled keyframes to the sheet. Idempotent via
- * `hasNameForId`. Shared by `WebStyle.inject` and `WebGlobalStyle.computeRules`
+ * `hasNameForId`. Shared by `WebStyle.inject` and `WebGlobalStyle.renderStyles`
  * so both callers route through one bytecode path.
  */
 export function flushKeyframes(styleSheet: StyleSheet, compiled: CompiledKeyframes[]): void {

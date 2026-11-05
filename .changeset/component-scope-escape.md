@@ -8,8 +8,6 @@ A statement holding a `}` the value did not open, a `{` it never closes, or a st
 
 At-rules that state something for the whole page, such as `@font-face`, still apply at the top level when a value holds them.
 
-Splitting a block across a value and its template has been removed in favor of writing the whole block in one place. A template that leaves `calc(`, a string, or a bracket open for a value to close is dropped from that point, and development builds warn about it. A paren, string, or bracket that a value opens can close later in the same statement, as in `width: ${'calc('}1px${')'};`.
-
 A rule whose selector or condition does not read as one once it is joined to its parent or rewritten by a plugin is dropped, and development builds warn about it. So is a rule holding text the library reserves for server rendering. A nested selector that would compose to an extremely long selector is dropped too, since a value nesting many selector lists could otherwise use it to stall rendering.
 
 A plugin that rewrites a declaration into one holding a brace or a comment, or leaving a string, paren, or bracket open, loses that declaration, and development builds warn about it. With the `rtl` plugin, a four-value shorthand holding a string or an escape keeps its order, and one written across several lines flips the same as one written on a single line.

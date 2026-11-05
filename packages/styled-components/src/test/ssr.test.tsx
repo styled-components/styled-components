@@ -1337,7 +1337,7 @@ describe('ssr', () => {
     const sheet = new StyleSheet({ isServer: true });
     const executionContext = { theme: {} } as any;
 
-    gs.renderStyles('1', executionContext, sheet, mainCompiler);
+    gs.renderStyles('1', gs.computeRules('1', executionContext, mainCompiler), sheet);
     expect(liveInstanceCount(sheet, gs.componentId)).toBe(1);
     expect(sheet.toString()).toMatchInlineSnapshot(`
       "body{color:red;}/*!sc*/
@@ -1347,7 +1347,7 @@ describe('ssr', () => {
 
     sheet.clearTag();
 
-    gs.renderStyles('1', executionContext, sheet, mainCompiler);
+    gs.renderStyles('1', gs.computeRules('1', executionContext, mainCompiler), sheet);
     expect(sheet.toString()).toMatchInlineSnapshot(`
       "body{color:red;}/*!sc*/
       data-styled.g1[id="sc-global-clearTag-test"]{content:"sc-global-clearTag-test1,"}/*!sc*/

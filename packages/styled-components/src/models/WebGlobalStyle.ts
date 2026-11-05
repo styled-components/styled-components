@@ -5,7 +5,7 @@ import { Compiler, ExecutionContext, RuleSet } from '../types';
 import isStaticRules from '../utils/isStaticRules';
 import { flushKeyframes, type CompiledKeyframes } from './Keyframes';
 
-type InstanceEntry = { name: string; rules: string[] };
+type InstanceEntry = { keyframes: CompiledKeyframes[]; name: string; rules: string[] };
 
 type InstanceMap = Map<string, InstanceEntry>;
 
@@ -83,46 +83,44 @@ export default class WebGlobalStyle<Props extends object> {
     this.rebuildGroup(styleSheet, registry.get(styleSheet)?.get(this.componentId));
   }
 
-  renderStyles(
-    instance: string,
-    executionContext: ExecutionContext & Props,
-    styleSheet: StyleSheet,
-    compiler: Compiler
-  ): void {
+  /** Write what `computeRules` returned to the sheet. */
+  renderStyles(instance: string, entry: InstanceEntry, styleSheet: StyleSheet): void {
     const id = this.componentId;
     const instances = instancesFor(styleSheet, id);
+    const prev = instances.get(instance);
+
+    // Static globals share identical CSS across mounts, so the registered name
+    // is `componentId` alone; dedups multi-mount and decouples rehydration
+    // from React's useId format.
+    const known = this.isStatic && styleSheet.hasNameForId(id, id);
+    if (known && prev) return;
+
+    // Keyframes sort ahead of the global rules in the sheet (group IDs were
+    // claimed at construction time).
+    flushKeyframes(styleSheet, entry.keyframes);
+    instances.set(instance, entry);
 
     if (this.isStatic) {
-      // Static globals share identical CSS across mounts, so the registered name
-      // is `componentId` alone; dedups multi-mount and decouples rehydration
-      // from React's useId format.
-      const known = styleSheet.hasNameForId(id, id);
-      if (known && instances.has(instance)) return;
-
-      // Rehydrated or sibling-mounted style: computing populates the cache so
+      // A rehydrated or sibling-mounted style only records its entry, so
       // rebuildGroup can restore survivors if another instance unmounts.
-      const entry = this.computeRules(instances, instance, executionContext, styleSheet, compiler);
       if (!known) styleSheet.insertRules(id, entry.name, entry.rules);
       return;
     }
-
-    // Skip the rebuild when the CSS is unchanged, on the client only: a server
-    // sheet's tag can be cleared (clearTag) while its entries survive.
-    const prev = instances.get(instance);
-    const next = this.computeRules(instances, instance, executionContext, styleSheet, compiler);
 
     // A server sheet's first render appends: a rebuild would re-emit siblings' rules a stream
     // already flushed. Its entries live as long as the sheet, so a repeat render can rebuild.
     const appendsToCollection = styleSheet.server && prev === undefined;
 
     if (appendsToCollection) {
-      styleSheet.insertRules(id, next.name, next.rules);
+      styleSheet.insertRules(id, entry.name, entry.rules);
       return;
     }
 
+    // Skip the rebuild when the CSS is unchanged, on the client only: a server
+    // sheet's tag can be cleared (clearTag) while its entries survive.
     if (!styleSheet.server && prev) {
       const a = prev.rules;
-      const b = next.rules;
+      const b = entry.rules;
       let same = a.length === b.length;
       for (let i = 0; same && i < a.length; i++) same = a[i] === b[i];
       if (same) return;
@@ -131,12 +129,13 @@ export default class WebGlobalStyle<Props extends object> {
     this.rebuildGroup(styleSheet, instances);
   }
 
-  /** @internal */
-  private computeRules(
-    instances: InstanceMap,
+  /**
+   * Run the interpolations and emit the rules, writing nothing, so it is safe during render.
+   * @internal
+   */
+  computeRules(
     instance: string,
     executionContext: ExecutionContext & Props,
-    styleSheet: StyleSheet,
     compiler: Compiler
   ): InstanceEntry {
     // Source-driven AST emit: feed the construction-time AST + filled
@@ -145,22 +144,21 @@ export default class WebGlobalStyle<Props extends object> {
     // No string round-trip: the AST that came out of `parseSource` is the
     // one that goes into `emit-web`.
     let rules: string[] = [];
+    let keyframes: CompiledKeyframes[] = [];
     const source = getSource(this.rules);
     if (source !== undefined) {
       const fragments: (FastPathFragment | null)[] = [];
-      const keyframes: CompiledKeyframes[] = [];
+      const referenced: CompiledKeyframes[] = [];
       const filled = evaluateForFastPath(
         source,
         executionContext,
         undefined,
         compiler,
         fragments,
-        keyframes
+        referenced
       );
       if (filled !== null) {
-        // Write referenced keyframes before the global rules so they sort
-        // ahead in the sheet (group IDs were claimed at construction time).
-        flushKeyframes(styleSheet, keyframes);
+        keyframes = referenced;
         rules = compiler.emit(
           source,
           filled,
@@ -170,12 +168,11 @@ export default class WebGlobalStyle<Props extends object> {
         );
       }
     }
-    const entry: InstanceEntry = {
+    return {
+      keyframes,
       name: this.isStatic ? this.componentId : this.componentId + instance,
       rules,
     };
-    instances.set(instance, entry);
-    return entry;
   }
 
   /**
