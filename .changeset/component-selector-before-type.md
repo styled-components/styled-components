@@ -14,7 +14,7 @@ An interpolation at the start of a statement is read the way the CSS around it r
 - A value holding a comment before a rule applies as statements, so write a selector value with no comment in it.
 - A mixin that follows a comment applies its styles.
 - A selector written against a component stays part of it, as in `${Child}.x { ... }`.
-- A selector list whose values all come out empty, as in `${false}, ${false} { ... }`, writes nothing and warns in development.
+- A selector list whose values all come out empty, as in `${a && '&:hover'}, ${b && '&:focus'} { ... }` with both falsy, writes nothing.
 
 An interpolation inside a string or `url()` is substituted as text, as in `content: "a;${x}"`.
 

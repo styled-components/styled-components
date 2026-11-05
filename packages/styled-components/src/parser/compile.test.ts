@@ -1297,6 +1297,16 @@ describe('compileWeb', () => {
       });
 
       it.each([
+        ['numbers', [0, Number.NaN]],
+        ['empty values', [false, null]],
+        ['a number and an empty value', [0, false]],
+      ])('writes a list of only %s quietly, as nothing', (_label, values) => {
+        const strings = ['', ', ', ' { top: 0; }'];
+        expect(compileWeb(parseSource(strings, values), {}, '.a')).toEqual([]);
+        expect(warn.mock.calls).toEqual([]);
+      });
+
+      it.each([
         ['a class', ['.col-', ' { top: 0; }'], '.a .col-3{top:0;}'],
         ['a pseudo-class argument', ['&:nth-child(', ') { top: 0; }'], '.a:nth-child(3){top:0;}'],
         ['an attribute value', ['&[data-n="', '"] { top: 0; }'], '.a[data-n="3"]{top:0;}'],

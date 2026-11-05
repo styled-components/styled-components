@@ -511,7 +511,7 @@ function fillNode(
           filledSelectors.push(bare ?? sel);
         }
       }
-      if (filledSelectors.length === 0) return fillHead('', children);
+      if (filledSelectors.length === 0) return undefined;
       return { kind: NodeKind.Rule, selectors: filledSelectors, children };
     }
     case NodeKind.AtRule: {
