@@ -72,20 +72,24 @@ function tokenizeShorthand(value: string): string[] {
     const c = value.charCodeAt(i);
     if (c === $.OPEN_PAREN) depth++;
     else if (c === $.CLOSE_PAREN) depth--;
-    else if (depth === 0 && (c === $.SPACE || c === $.TAB)) {
+    else if (depth === 0 && $.isWS(c)) {
       if (i > start) tokens.push(value.substring(start, i));
       start = i + 1;
     }
   }
   if (start < value.length) tokens.push(value.substring(start));
-  return tokens.filter(t => t.length > 0);
+  return tokens;
 }
 
 /**
  * Swap positions 1 and 3 (right and left) of a 4-value shorthand.
- * Leaves 1/2/3-value forms untouched; they're directionally symmetric.
+ * Leaves 1/2/3-value forms untouched; they're directionally symmetric. So too a value
+ * holding a quote or an escape: none of these shorthands takes one, and moving its
+ * pieces could change what a browser reads.
  */
 function swapFourValue(value: string): string {
+  if (/["'\\]/.test(value)) return value;
+
   const tokens = tokenizeShorthand(value);
   if (tokens.length !== 4) return value;
   return tokens[0] + ' ' + tokens[3] + ' ' + tokens[2] + ' ' + tokens[1];

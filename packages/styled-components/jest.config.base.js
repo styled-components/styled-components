@@ -4,6 +4,7 @@ module.exports = {
   fakeTimers: {
     legacyFakeTimers: true,
   },
+  restoreMocks: true,
   rootDir: '.',
   snapshotSerializers: ['jest-serializer-html'],
   testEnvironmentOptions: {

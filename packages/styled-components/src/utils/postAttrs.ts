@@ -11,7 +11,8 @@
  * invocation (a `null` plan) when the callback throws, reads any prop, reads
  * a theme path or a templated declaration, or returns a non-object.
  */
-import { NodeKind, type Root, type TemplateValue } from '../parser/ast';
+import { NodeKind, type Root } from '../parser/ast';
+import { fieldText } from '../parser/compile';
 import { isCustomProperty } from '../parser/parser';
 import type { CompiledAst, Dict } from '../types';
 
@@ -87,15 +88,6 @@ export function camelizeProp(prop: string): string {
   return out;
 }
 
-/** `chunks[0] + filled[slots[0]] + chunks[1] + ...` without an intermediate array. */
-function resolveTemplateValue(tv: TemplateValue, filled: ReadonlyArray<string>): string {
-  let s = tv.chunks[0];
-  for (let i = 0; i < tv.slots.length; i++) {
-    s += filled[tv.slots[i]] + tv.chunks[i + 1];
-  }
-  return s;
-}
-
 /**
  * Value of the last top-level declaration matching `prop` (the cascade
  * winner). `undefined`: no such declaration. `null`: the value is not
@@ -118,7 +110,7 @@ export function findBaseDecl(
       continue;
     }
     const v = node.value;
-    found = typeof v === 'string' ? v : filled === null ? null : resolveTemplateValue(v, filled);
+    found = typeof v === 'string' ? v : filled === null ? null : fieldText(v, filled);
   }
   return found;
 }

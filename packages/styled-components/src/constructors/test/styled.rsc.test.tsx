@@ -82,6 +82,95 @@ describe('styled RSC mode', () => {
       expect(allCSS).toMatchInlineSnapshot(`":where(.jYQgFj){display:flex;}.inzFhn{color:red;}"`);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
     });
+
+    // A url token ends at its first `)`: https://drafts.csswg.org/css-syntax/#consume-url-token
+    // A `(` written into one would end it there and turn the text after into real rules.
+    it('leaves the text of a url token in a base component out of the :where() wrap', () => {
+      const Base = styled.div`
+        ${() => 'url(&{}html{display:none})'} {
+          top: 0;
+        }
+      `;
+      const Extended = styled(Base)`
+        color: red;
+      `;
+
+      const allCSS = extractStyleContents(ReactDOMServer.renderToString(<Extended />));
+
+      expect(allCSS.replace(/\.[a-zA-Z]{5,7}\b/g, '.X')).toBe(
+        'url(.X{}html{display:none}){top:0;}.X{color:red;}'
+      );
+    });
+
+    it.each([
+      [
+        'url(x',
+        '"url(x"',
+        styled.div`
+          content: "url(x";
+          &:hover { top: 1px; }
+          &:focus { background: rgb(0,0,0); }
+          &:active { top: 2px; }
+        `,
+      ],
+      [
+        'url(x from a value',
+        '"url(x"',
+        styled.div`
+          content: "${'url(x'}";
+          &:hover { top: 1px; }
+          &:focus { background: rgb(0,0,0); }
+          &:active { top: 2px; }
+        `,
+      ],
+      [
+        'url( x',
+        '"url( x"',
+        styled.div`
+          content: "url( x";
+          &:hover { top: 1px; }
+          &:focus { background: rgb(0,0,0); }
+          &:active { top: 2px; }
+        `,
+      ],
+      [
+        'an escaped quote before url(x',
+        '"\\"url(x"',
+        styled.div`
+          content: "\\"url(x";
+          &:hover { top: 1px; }
+          &:focus { background: rgb(0,0,0); }
+          &:active { top: 2px; }
+        `,
+      ],
+    ])('wraps every base class next to a string holding %s', (_label, content, Base) => {
+      const Extended = styled(Base)`
+        color: red;
+      `;
+
+      const allCSS = extractStyleContents(ReactDOMServer.renderToString(<Extended />));
+
+      expect(allCSS.replace(/\.[a-zA-Z]{5,7}\b/g, '.X')).toBe(
+        `:where(.X){content:${content};}:where(.X):hover{top:1px;}:where(.X):focus{background:rgb(0,0,0);}:where(.X):active{top:2px;}.X{color:red;}`
+      );
+    });
+
+    it('wraps a base class next to a function and an escaped paren', () => {
+      const Base = styled.div`
+        &:not(.b) { top: 0; }
+        &.c\\(d { left: 0; }
+        background: url(x.png);
+      `;
+      const Extended = styled(Base)`
+        color: red;
+      `;
+
+      const allCSS = extractStyleContents(ReactDOMServer.renderToString(<Extended />));
+
+      expect(allCSS.replace(/\.[a-zA-Z]{5,7}\b/g, '.X')).toBe(
+        ':where(.X){background:url(x.png);}:where(.X):not(.b){top:0;}:where(.X).c\\(d{left:0;}.X{color:red;}'
+      );
+    });
   });
 
   describe('extending a ruleless component (#5727)', () => {
@@ -762,11 +851,10 @@ describe('styled RSC mode', () => {
       );
     });
 
-    // Regression: hoistNonReactStatics used to copy React's internal type
-    // discriminators ($$typeof, $$id, $$async, $$bound) from a client- or
-    // server-reference target onto the wrapping styled component. React then
-    // saw the wrapper itself as a reference and skipped calling its body, so
-    // every styled(ClientComponent) extension silently produced no CSS. See
+    // hoistNonReactStatics must not copy React's internal type discriminators ($$typeof,
+    // $$id, $$async, $$bound) from a client- or server-reference target onto the wrapping
+    // styled component. React would see the wrapper itself as a reference and skip calling
+    // its body, so every styled(ClientComponent) extension would produce no CSS. See
     // hoist.ts KNOWN_STATICS for the protection list.
     it('does not inherit React reference discriminators from a client-reference target', () => {
       const ClientButton = Object.assign(

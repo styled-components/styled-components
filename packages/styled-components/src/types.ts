@@ -171,9 +171,8 @@ export interface Keyframes {
 export interface Compiler {
   hash: string;
   /**
-   * String-input emit path. Used by callers that have a freshly-built CSS
-   * string and a parent selector (keyframes, global styles, and the rare
-   * fallback when a `RuleSet` has no construction-time `Source` attached).
+   * String-input emit path, for a freshly-built CSS string such as the text
+   * of a `keyframes` helper. Everything in the string reads as authored CSS.
    *
    * Wraps the input in `prefix + selector { css }`, runs `normalize +
    * parser + emit-web` with the active plugin set + namespace, and returns
@@ -194,14 +193,13 @@ export interface Compiler {
   /**
    * Source-input fast emit path. Walks the construction-time AST + filled
    * interpolation values, skipping the per-render `normalize + parse`
-   * work `compile` performs against a freshly joined CSS string, which it
-   * falls back to for the values the AST walk refuses.
+   * work `compile` performs against a freshly joined CSS string. A value
+   * that cannot stay in its field is parsed on its own and spliced in.
    *
    * `fragments` is the parallel side table populated by
    * `evaluateForFastPath` for slots that resolved to a `css\`...\`` fragment.
-   * Same plugin set, namespace, and decl/selector transforms feed through;
-   * output is byte-equal to `compile` by construction (same parser, same
-   * emitter).
+   * Same parser, emitter, plugin set, namespace, and decl/selector transforms
+   * as `compile`.
    */
   emit: (
     source: import('./parser/source').Source,

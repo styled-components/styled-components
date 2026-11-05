@@ -5,10 +5,9 @@ import { parseSource } from './source';
 const tagged = (strings: ReadonlyArray<string>, ...interps: unknown[]) =>
   parseSource(strings, interps);
 
-// Convert the readable `\0I<n>\0` sentinel form (matching the v7-pre-Phase-C
-// internal wire format) into the TemplateValue chunks+slots structure the
-// parser now produces. Lets test fixtures stay legible while asserting the
-// post-Phase-C AST shape directly.
+// Convert the readable `\0I<n>\0` sentinel form into the TemplateValue chunks+slots
+// structure the parser produces. Lets test fixtures stay legible while asserting the
+// AST shape directly.
 function tv(s: string): TemplateValue {
   const re = /\0I(\d+)\0/g;
   const chunks: string[] = [];
@@ -25,6 +24,28 @@ function tv(s: string): TemplateValue {
 }
 
 describe('parseSource', () => {
+  describe('slot classification cost', () => {
+    it.each<[string, string]>([
+      ['declarations', ';\n  top: 0;\n'],
+      ['commented declarations', ';\n  top: 0; /* note */\n'],
+      ['a value slot in each statement', ';\n  top: 0px '],
+    ])('reads a template of many slots between %s in linear time', (_title, gap) => {
+      const slots = 20_000;
+      const strings = ['', ...Array.from({ length: slots }, () => gap)];
+      const start = performance.now();
+      parseSource(
+        strings,
+        Array.from({ length: slots }, () => () => '')
+      );
+      expect(performance.now() - start).toBeLessThan(1_000);
+    });
+
+    it('finishes reading a template with an unquoted NUL character', () => {
+      const src = parseSource(['top: 0 \0 1px;\n', ';\nleft: 0;'], [() => '']);
+      expect(src.interpolations).toHaveLength(1);
+    });
+  });
+
   describe('static templates (no interpolations)', () => {
     it('parses an empty template', () => {
       const src = parseSource([''], []);
@@ -59,12 +80,9 @@ describe('parseSource', () => {
     });
   });
 
-  // Shorthand patterns that previously misclassified the trailing slot as a
-  // standalone block-level interpolation. The classifier shipped with v7
-  // returned `standalone` whenever a slot's prefix was whitespace-only AND
-  // the suffix's first non-whitespace was `;`/`,`/etc., which collapsed
-  // values like `${a} ${b};` to a half-filled decl. These guard against
-  // regressing across the common multi-value CSS shorthand surface area.
+  // Shorthand patterns whose trailing slot must stay embedded in the value, not
+  // read as a standalone block-level interpolation (`${a} ${b};` is one decl).
+  // These cover the common multi-value CSS shorthand surface area.
   describe('multi-slot decl values stay embedded', () => {
     it('padding 4-value shorthand', () => {
       const src = tagged`padding: ${'1px'} ${'2px'} ${'3px'} ${'4px'};`;
@@ -264,12 +282,10 @@ describe('parseSource', () => {
     });
 
     it('embeds sentinel when slot prefix terminates a statement and suffix starts a selector', () => {
-      // Regression lock for the component-selector case: a slot whose prefix
-      // ends in `;` (statement terminator) but whose suffix starts with a
-      // selector-continuation char must still be embedded, because the slot
-      // is a selector prefix (`${Foo} & { ... }`), not a block-level
-      // interpolation. Without this disambiguation the rule's selector
-      // collapses to `&` and the descendant prefix evaporates.
+      // A slot whose prefix ends in `;` (statement terminator) but whose suffix starts
+      // with a selector-continuation char is embedded, because the slot is a selector
+      // prefix (`${Foo} & { ... }`), not a block-level interpolation. Otherwise the rule's
+      // selector collapses to `&` and the descendant prefix evaporates.
       const otherComponent = { sentinel: true };
       const src = tagged`color: green; ${otherComponent} & { color: red; }`;
       expect(src.ast).toEqual([

@@ -1,23 +1,15 @@
 import {
-  AMPERSAND,
-  ASTERISK,
   CLOSE_BRACE,
   COLON,
   COMMA,
-  DOT,
-  GT,
-  HASH,
   isWS,
+  NUL,
   OPEN_BRACE,
-  OPEN_BRACKET,
   OPEN_PAREN,
-  PLUS,
   SEMICOLON,
   SLASH,
-  TILDE,
 } from '../utils/charCodes';
 import type { BaseObject, RuleSet } from '../types';
-import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import { normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
 import { DYN, NodeKind, Root, TemplateValue } from './ast';
@@ -30,18 +22,16 @@ import { parse, ParseOptions, scanQPB } from './parser';
  * - `StatelessFn`: `(p) => …`; call and coerce.
  * - `Static`: primitive baked at construction (`${10}px`); also styled-
  *   component refs (pre-stringified to `.${styledComponentId}`).
- * - `General`: arrays, plain objects, complex functions; full walk,
- *   bail on shapes the fast emitter doesn't cover.
- * - `Keyframes`: `${kf}` ref; resolved at fill time against the active
- *   sheet/compiler since the hashed name varies per StyleSheetManager.
+ * - `General`: arrays, plain objects, and `${kf}` refs; full walk, bail on
+ *   shapes the fast emitter doesn't cover. A keyframes ref resolves here at
+ *   fill time since its hashed name varies per StyleSheetManager.
  * - `Fragment`: `${mixin}` ref; resolved recursively into FastPathFragment.
  */
 export const enum InterpolationKind {
   StatelessFn = 1,
   Static = 2,
   General = 3,
-  Keyframes = 4,
-  Fragment = 5,
+  Fragment = 4,
 }
 
 /**
@@ -110,7 +100,7 @@ export function parseSource(
   // have emitted `\0I` slots that `templateOrString` will turn into
   // TemplateValue fields. The runtime parser behavior is unchanged; the
   // flag is a type-system witness.
-  const ast = parse(preprocessed, { ...options, templates: true });
+  const ast = parse(preprocessed, { keepCommaSpaces: __NATIVE__, ...options, templates: true });
   const n = interpolations.length;
   const kinds: InterpolationKind[] = [];
   const staticValues: string[] = [];
@@ -130,9 +120,6 @@ export function parseSource(
     } else if (ref && (slot as { styledComponentId?: string }).styledComponentId !== undefined) {
       // Styled-component ref: pre-stringify the class selector and dispatch as Static.
       value = '.' + (slot as { styledComponentId: string }).styledComponentId;
-    } else if (t === 'object' && KEYFRAMES_SYMBOL in (slot as object)) {
-      // Keyframes ref: hash + sheet registration deferred to fill time.
-      kind = InterpolationKind.Keyframes;
     } else if (isCssProduct(slot)) {
       // `css\`...\`` fragment ref; the child's Source is lazy-parsed at fill time.
       kind = InterpolationKind.Fragment;
@@ -141,10 +128,7 @@ export function parseSource(
       // Classify as Static-empty + dev warn so the rest of the template renders.
       if (__DEV__) warnClientReference(slot);
     } else {
-      kind =
-        t === 'function' && (slot as Function).length <= 1
-          ? InterpolationKind.StatelessFn
-          : InterpolationKind.General;
+      kind = t === 'function' ? InterpolationKind.StatelessFn : InterpolationKind.General;
     }
     kinds[i] = kind;
     staticValues[i] = value;
@@ -154,7 +138,6 @@ export function parseSource(
   // (`\0I` embedded in any string field, or an InterpolationNode descendant).
   // The flag rides on the node as a Symbol-keyed property so consumers do a
   // single hidden-class slot read per render-miss instead of a WeakMap probe.
-  // Replaces the early-v7 lazy `interpolatedCache`. See `perf_cache_layout.md`.
   // Native classifications for Rule / AtRule nodes (`[NATIVE_RULE_CLASS]` /
   // `[NATIVE_AT_CLASS]`) are stamped by the parser at construction time
   // and ride through here untouched.
@@ -173,7 +156,7 @@ export function parseSource(
  * sentinel-bearing strings to TemplateValue at construction time so this
  * walk is the subtree-aggregating pass only.
  *
- * `dynamic(node)` in `compile.ts` reads the flag via a single property
+ * `fillNode` in `compile.ts` reads the flag via a single property
  * access; descendants don't need to be re-walked because the flag bubbles
  * up here. The same walk records each block-position slot in `standalone`.
  */
@@ -378,20 +361,73 @@ function interleaveWithSentinels(
   interpolations: ReadonlyArray<unknown>
 ): string {
   const count = interpolations.length;
-  let prevWasStandalone = true; // start of input is a statement boundary
+  if (count === 0) return strings[0] || '';
+
+  const standalone = readStandaloneSlots(strings, count);
   let out = strings[0] || '';
   for (let i = 0; i < count; i++) {
     const prefix = strings[i] || '';
     const suffix = strings[i + 1] || '';
-    const standalone = isStandaloneSlot(prefix, suffix, prevWasStandalone);
-    if (__DEV__ && !standalone) warnSwallowedFragment(out, prefix, interpolations[i]);
-    out += standalone ? '\0J' : '\0I';
-    out += i;
-    out += '\0';
-    out += suffix;
-    prevWasStandalone = standalone;
+    if (__DEV__ && !standalone[i]) warnSwallowedFragment(out, prefix, interpolations[i]);
+    out += (standalone[i] ? '\0J' : '\0I') + i + '\0' + suffix;
   }
   return out;
+}
+
+/**
+ * Mark the slots that are whole statements (sentinel `\0J`, lifted to a sibling
+ * node), in one pass over the comment-free template. Every other slot is
+ * embedded (`\0I`) in a value, selector, or prelude. That includes any slot
+ * inside a string or parentheses, which the top-level scan never stops on.
+ *
+ * The last slot with only whitespace or other slots before it in its statement is
+ * embedded when the text after it can only continue that slot, or when the
+ * statement opens a block with no other text
+ * (`${Child} {`). Anything else is standalone, so a mixin keeps its place without
+ * a `;` (a newline carries no meaning, since a CSS minifier removes it). A
+ * standalone slot holding a selector (`${Child} h2 {`) is only known at fill time,
+ * where `fillAst` reads it with the head of the rule after it.
+ */
+function readStandaloneSlots(strings: ReadonlyArray<string>, count: number): boolean[] {
+  // The marker ends in a space: if a `\` escapes its NUL, the markers after it still read.
+  let marked = strings[0] || '';
+  for (let i = 0; i < count; i++) marked += '\0' + i + ' ' + (strings[i + 1] || '');
+  const css = normalize(marked);
+  const len = css.length;
+
+  const standalone: boolean[] = [];
+  let waiting: number[] = [];
+  let continues: boolean | undefined; // Undefined until the statement has text after its slots.
+  let i = 0;
+  for (;;) {
+    const stop = scanQPB(css, i, len, SEMICOLON, OPEN_BRACE, CLOSE_BRACE, NUL);
+    if (continues === undefined) {
+      let j = i;
+      while (j < stop && isWS(css.charCodeAt(j))) j++;
+      // A class, id, attribute, or `*` joins a slot only when written against it (`${Child}.x`);
+      // with whitespace (`${mixin} .x {`) it starts its own rule.
+      if (j < stop) continues = (j === i ? '&:>+~,*.#[' : '&:>+~,').includes(css[j]);
+    }
+
+    const stopCode = css.charCodeAt(stop);
+    if (stopCode === NUL) {
+      const end = css.indexOf(' ', stop + 1);
+      if (continues === undefined) waiting.push(+css.slice(stop + 1, end));
+      // An authored NUL can leave no space to find.
+      i = end < 0 ? len : end + 1;
+      continue;
+    }
+
+    // Only the last slot can run into what follows. Past the end of the template, `stopCode`
+    // is NaN and the statement counts as closed.
+    const standaloneCount = waiting.length - ((continues ?? stopCode === OPEN_BRACE) ? 1 : 0);
+    for (let k = 0; k < standaloneCount; k++) standalone[waiting[k]] = true;
+    if (stop >= len) return standalone;
+
+    waiting = [];
+    continues = undefined;
+    i = stop + 1;
+  }
 }
 
 /**
@@ -402,7 +438,8 @@ function interleaveWithSentinels(
  * intended embedded use and stay silent.
  */
 function warnSwallowedFragment(sourceSoFar: string, prefix: string, interpolation: unknown): void {
-  const last = nonWsCharCode(prefix, prefix.length - 1, -1);
+  const trimmed = prefix.trimEnd();
+  const last = trimmed.charCodeAt(trimmed.length - 1);
   if (last === COLON || last === COMMA || last === OPEN_PAREN || last === SLASH) return;
   if (!isCssProduct(interpolation)) return;
   const slot = interpolation[SOURCE_SLOT];
@@ -426,6 +463,8 @@ function warnSwallowedFragment(sourceSoFar: string, prefix: string, interpolatio
         }
         const statement = text.slice(from).trim();
         const colon = scanQPB(statement, 0, statement.length, COLON, -1, -1, -1);
+        // No colon means the slot starts a selector, where a fragment's statements are fine.
+        if (colon >= statement.length) return;
         const property = statement
           .slice(0, colon)
           .trim()
@@ -439,80 +478,4 @@ function warnSwallowedFragment(sourceSoFar: string, prefix: string, interpolatio
       }
     }
   }
-}
-
-/**
- * Decide whether a `${...}` slot is at a CSS statement boundary. Returns
- * `true` for standalone (block-position; the parser lifts to an
- * `InterpolationNode` sibling of Decl/Rule/AtRule, sentinel `\0J`) and
- * `false` for embedded (sentinel `\0I` rides inside a value/selector/
- * prelude string).
- *
- * - The immediate prefix's last non-whitespace character is the primary
- *   signal: `;` `{` `}` end a statement and put the next position at a
- *   boundary. Override: when the prefix ends in `{` but the suffix starts
- *   with `:`, the slot is at a property-name spot inside a Decl
- *   (`${vars.bg}: value;`); stay embedded.
- * - When the prefix is empty or whitespace-only, the previous slot's
- *   classification carries through. This is what makes `${a} ${b}` produce
- *   two standalone Interpolation nodes (the space between them is whitespace
- *   only, so context is inherited from `${a}`'s standalone classification).
- * - The suffix is consulted only when both the prefix is empty/whitespace
- *   AND the previous slot was embedded; the suffix's first non-whitespace
- *   then breaks the inherited context if it's a statement terminator.
- */
-function isStandaloneSlot(prefix: string, suffix: string, prevWasStandalone: boolean): boolean {
-  const last = nonWsCharCode(prefix, prefix.length - 1, -1);
-  if (last === SEMICOLON || last === OPEN_BRACE || last === CLOSE_BRACE) {
-    // Block-position by prefix (`;` `{` `}`). Two suffix overrides flip the
-    // slot to embedded: a leading `:` puts the slot at a property-name spot
-    // inside a Decl (`${vars.bg}: value;`); a leading selector-continuation
-    // char or `{` puts the slot at the start of a selector
-    // (`${Foo} & { ... }`, `${Foo} > & { ... }`, `${Foo} { ... }`).
-    const nextAfterPrefixBoundary = nonWsCharCode(suffix, 0, 1);
-    if (nextAfterPrefixBoundary === -1) return true;
-    if (isSelectorContinuationChar(nextAfterPrefixBoundary)) return false;
-    if (nextAfterPrefixBoundary === OPEN_BRACE) return false;
-    return true;
-  }
-  if (last !== -1) return false;
-  // Prefix is empty/whitespace; the slot inherits its parent context from
-  // the previous slot. An embedded inheritance never flips: a `;` after the
-  // slot terminates the surrounding decl, not this slot's value position
-  // (e.g. `padding: ${a} ${b};` keeps `${b}` embedded in the value). A
-  // standalone inheritance can be flipped to embedded when the suffix
-  // starts a selector continuation (`&`, `.`, etc.) or `{`.
-  if (!prevWasStandalone) return false;
-  const next = nonWsCharCode(suffix, 0, 1);
-  if (next === -1) return prevWasStandalone;
-  if (isSelectorContinuationChar(next) || next === OPEN_BRACE) return false;
-  return true;
-}
-
-function isSelectorContinuationChar(code: number): boolean {
-  return (
-    code === AMPERSAND ||
-    code === DOT ||
-    code === HASH ||
-    code === OPEN_BRACKET ||
-    code === GT ||
-    code === PLUS ||
-    code === TILDE ||
-    code === ASTERISK ||
-    code === COLON
-  );
-}
-
-/**
- * Find the first non-whitespace char code walking from `start` by `step`
- * (+1 = forward scan from index 0; -1 = reverse scan from `s.length - 1`).
- * Returns -1 if the string is empty or only whitespace.
- */
-function nonWsCharCode(s: string, start: number, step: number): number {
-  const len = s.length;
-  for (let i = start; i >= 0 && i < len; i += step) {
-    const c = s.charCodeAt(i);
-    if (!isWS(c)) return c;
-  }
-  return -1;
 }

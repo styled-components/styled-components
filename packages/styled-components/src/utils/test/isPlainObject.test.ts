@@ -37,6 +37,14 @@ it('returns false for a React element', () => {
   expect(isPlainObject(React.createElement('div'))).toEqual(false);
 });
 
+it.each([
+  ['forwardRef', React.forwardRef(() => null)],
+  ['memo', React.memo(() => null)],
+  ['lazy', React.lazy(() => new Promise<never>(() => {}))],
+])('returns false for a React %s component', (_name, component) => {
+  expect(isPlainObject(component)).toEqual(false);
+});
+
 it('returns true for an object literal created in a different context', () => {
   const context = vm.createContext({});
   vm.runInContext('object = {};', context);

@@ -35,7 +35,7 @@ export type {
  * - V8 still inline-caches the property as a hidden-class slot read.
  *
  * The classification is computed once per AST and survives across every
- * cache-miss render. Phase A's `fillAst` returns static subtrees by
+ * cache-miss render. `fillAst` returns static subtrees by
  * reference, so static Rule / AtRule nodes carry the same classification
  * through to `astToNativeStyles`. Dynamic-selector nodes (those whose
  * selectors carry `\0I` interpolation sentinels) skip classification at
@@ -155,7 +155,7 @@ export function classifyRuleNow(selectors: string[]): NativeRuleClass {
   const nth = detectNthChild(selectors);
   if (nth !== null) return nth;
   // `&:has(<simple>)`. Inner restricted to a single class selector
-  // (`${Component}`) or a single attribute selector for the v7 scope.
+  // (`${Component}`) or a single attribute selector; anything else is unsupported.
   const has = detectHas(selectors);
   if (has !== null) return has;
   return { kind: 'unsupported' };
@@ -195,9 +195,9 @@ function parseSimpleInner(inner: string): NthOfBranch | null {
 
 /**
  * `&:has(<inner>)`: match when the element has a descendant matching
- * the inner simple selector. v7 scope: a styled-component reference
- * (post-fillAst class selector `.sc-FooId`) or a single attribute
- * selector. Compound / complex inner forms fall through.
+ * the inner simple selector. Supported inner forms: a styled-component
+ * reference (post-fillAst class selector `.sc-FooId`) or a single
+ * attribute selector. Compound / complex inner forms fall through.
  */
 function detectHas(selectors: string[]): NativeRuleClass | null {
   if (selectors.length !== 1) return null;
@@ -274,10 +274,10 @@ function splitNthInner(inner: string): { formula: string; ofRaw: string } | null
     }
     if (depth !== 0) continue;
     if (
-      c === 0x20 /* space */ &&
+      $.isWS(c) &&
       (inner.charCodeAt(i + 1) === 0x6f /* o */ || inner.charCodeAt(i + 1) === 0x4f) /* O */ &&
       (inner.charCodeAt(i + 2) === 0x66 /* f */ || inner.charCodeAt(i + 2) === 0x46) /* F */ &&
-      inner.charCodeAt(i + 3) === 0x20 /* space */
+      $.isWS(inner.charCodeAt(i + 3))
     ) {
       return { formula: inner.substring(0, i), ofRaw: inner.substring(i + 4) };
     }
@@ -453,7 +453,7 @@ function detectNot(selectors: string[]): NativeRuleClass | null {
 }
 
 function detectPseudoSelector(sel: string): PseudoState | null {
-  // Match `&:<pseudo>`; the only native-supported selector shape in v7.0.
+  // Match `&:<pseudo>`; the only supported pseudo-state selector shape.
   if (sel.length < 3 || sel.charCodeAt(0) !== $.AMPERSAND || sel.charCodeAt(1) !== $.COLON) {
     return null;
   }
@@ -490,7 +490,7 @@ function detectCombinator(selectors: string[]): NativeRuleClass | null {
   // Whitespace mandatory before the combinator or descendant suffix.
   let j = i;
   let sawSpace = false;
-  while (j < sel.length && sel.charCodeAt(j) === 0x20) {
+  while (j < sel.length && $.isWS(sel.charCodeAt(j))) {
     sawSpace = true;
     j++;
   }
@@ -502,18 +502,18 @@ function detectCombinator(selectors: string[]): NativeRuleClass | null {
   if (ch === 0x3e /* > */) {
     combinator = 'child';
     j++;
-    while (j < sel.length && sel.charCodeAt(j) === 0x20) j++;
+    while (j < sel.length && $.isWS(sel.charCodeAt(j))) j++;
   } else if (ch === 0x2b /* + */) {
     combinator = 'adjacent-sibling';
     j++;
-    while (j < sel.length && sel.charCodeAt(j) === 0x20) j++;
+    while (j < sel.length && $.isWS(sel.charCodeAt(j))) j++;
   } else if (ch === 0x7e /* ~ */) {
     combinator = 'general-sibling';
     j++;
-    while (j < sel.length && sel.charCodeAt(j) === 0x20) j++;
+    while (j < sel.length && $.isWS(sel.charCodeAt(j))) j++;
   }
   // Must end with `&` optionally followed by a `:pseudo`. Compound
-  // forms (e.g. `&[attr]`, `&.cls`) are out of Phase 3 scope.
+  // forms (e.g. `&[attr]`, `&.cls`) are unsupported here.
   if (sel.charCodeAt(j) !== $.AMPERSAND) return null;
   j++;
   let pseudo: PseudoState | undefined;
@@ -707,7 +707,7 @@ function parseAttrInner(inner: string): ConditionalAttr | null {
   // comparison ASCII case-insensitive; `s` is the (default) sensitive
   // form and is dropped.
   let caseFlag: 'i' | undefined;
-  if (raw.length >= 2 && raw.charCodeAt(raw.length - 2) === $.SPACE) {
+  if (raw.length >= 2 && $.isWS(raw.charCodeAt(raw.length - 2))) {
     const flag = raw.charCodeAt(raw.length - 1);
     if (flag === $.LOWER_I || flag === $.UPPER_I) {
       caseFlag = 'i';
@@ -759,7 +759,7 @@ function extractContainerName(prelude: string): string | undefined {
   let i = 0;
   while (i < prelude.length) {
     const c = prelude.charCodeAt(i);
-    if (c === $.SPACE || c === $.TAB || c === $.OPEN_PAREN) break;
+    if ($.isWS(c) || c === $.OPEN_PAREN) break;
     i++;
   }
   return prelude.substring(0, i);

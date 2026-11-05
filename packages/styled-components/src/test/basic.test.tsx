@@ -51,21 +51,24 @@ describe('basic', () => {
   it.each([
     ['a static value', '1px)'],
     ['a function value', () => '1px)'],
-  ])('reads the statements after a paren closed by %s', (_label, value) => {
+  ])('drops a statement whose template leaves a paren open for %s to close', (_label, value) => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const Comp = styled.div`
+      color: blue;
       width: calc(${value};
       top: 0;
     `;
     render(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
-        width: calc(1px);
-        top: 0;
+        color: blue;
       }"
     `);
+    warn.mockRestore();
   });
 
-  it('drops a statement whose interpolated value opens a paren nothing closes', () => {
+  it('drops only the declaration whose interpolated value opens a paren nothing closes', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const Comp = styled.div`
       color: blue;
       width: ${'calc(1px'};
@@ -75,11 +78,14 @@ describe('basic', () => {
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: blue;
+        top: 0;
       }"
     `);
+    warn.mockRestore();
   });
 
-  it('drops a statement whose interpolated value leaves its paren open', () => {
+  it('drops a statement whose template leaves its paren open around a value', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const Comp = styled.div`
       color: blue;
       width: calc(${'1px'};
@@ -91,6 +97,7 @@ describe('basic', () => {
         color: blue;
       }"
     `);
+    warn.mockRestore();
   });
 
   it("should inject only once for a styled component, no matter how often it's mounted", () => {

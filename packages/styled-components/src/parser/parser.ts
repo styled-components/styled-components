@@ -21,10 +21,12 @@ import {
   SLASH,
   urlTokenEnd,
 } from '../utils/charCodes';
+import { normalize } from '../utils/normalize';
 import { warnOnce } from '../utils/warnOnce';
 import {
   AtRuleNode,
   DeclNode,
+  InterpolationNode,
   KeyframeFrame,
   Node,
   NodeKind,
@@ -109,6 +111,20 @@ export function scanQPB(
   return quote !== 0 || depth !== 0 || i > end ? end + 1 : end;
 }
 
+/**
+ * False when the text holds a `;`, `{`, or `}` outside a string or block, a comment, or an
+ * unclosed string, paren, or bracket, or a top-level `stop` such as a selector's `,`.
+ */
+export function staysOneField(text: string, stop = -1): boolean {
+  return scanQPB(text, 0, text.length, SEMICOLON, OPEN_BRACE, CLOSE_BRACE, stop) === text.length;
+}
+
+/**
+ * Text this does not match stays one field and holds no `/`, so it holds no comment or
+ * server-rendering separator. Measured: on a selector, this test is cheaper than the scan.
+ */
+export const NEEDS_FIELD_SCAN = /[\\"'([{};/]/;
+
 export interface ParseOptions {
   /**
    * When `true`, skips comma-space stripping inside declaration values (e.g.
@@ -126,7 +142,7 @@ export interface ParseOptions {
    * from {@link parseSource}). Default `false`: no sentinels expected,
    * AST is `Root<string>`. `templateOrString` returns plain strings when
    * no sentinels are present, so input without them parses the same either
-   * way. A statement left open around a sentinel adds a bail marker to the root.
+   * way.
    * @internal
    */
   templates?: boolean;
@@ -155,19 +171,10 @@ export function parse(css: string, options?: ParseOptions): Root<string | Templa
     i: 0,
     keepCommaSpaces: !!options?.keepCommaSpaces,
     len: css.length,
-    slotLeftOpen: false,
     templates: !!options?.templates,
   };
-  const root = parseBlock(ctx);
-  if (ctx.slotLeftOpen) root.push({ kind: NodeKind.Decl, prop: BAIL_FIELD, value: '' });
-  return root;
+  return parseBlock(ctx);
 }
-
-/**
- * A field naming a slot past every filled value, so `realize` bails to the
- * string-input compile path.
- */
-const BAIL_FIELD: TemplateValue = { chunks: [], slots: [1e9] };
 
 interface ParseContext {
   css: string;
@@ -176,12 +183,10 @@ interface ParseContext {
   i: number;
   keepCommaSpaces: boolean;
   len: number;
-  /** A statement holding a sentinel reached the end of input with a string, paren, or bracket open. */
-  slotLeftOpen: boolean;
   /**
    * Runtime gate for sentinel detection. Only `parseSource` (templated
    * tagged-template input) sets this `true`; static-string callers
-   * (`toNativeStyles`, `extractBaseDeclPairs`, `parseStringFragment`,
+   * (`toNativeStyles`, `extractBaseDeclPairs`, `parseValue`,
    * any test) leave it `false`. When `false`:
    *
    * - `\0J<n>\0` standalone-sentinel detection in `parseBlock` is
@@ -190,8 +195,7 @@ interface ParseContext {
    *   `\0I<n>\0` patterns stay as plain string content.
    *
    * Closes the attack surface where untrusted user-supplied
-   * interpolation values reach `parse()` via the fallback re-parse path
-   * (`buildHashCSS` → `toNativeStyles`) and could be misclassified as
+   * interpolation values reach `parse()` through `parseValue` and could be misclassified as
    * sentinels, producing a `TemplateValue` field where the type system
    * promised a `string` and crashing downstream consumers.
    */
@@ -306,8 +310,11 @@ function parseBlock(ctx: ParseContext): Node[] {
       BLOCK_SENTINEL_RE.lastIndex = i;
       const sentinel = BLOCK_SENTINEL_RE.exec(css);
       if (sentinel !== null) {
-        out.push({ kind: NodeKind.Interpolation, index: +sentinel[1] });
-        ctx.i = BLOCK_SENTINEL_RE.lastIndex;
+        const node: InterpolationNode = { kind: NodeKind.Interpolation, index: +sentinel[1] };
+        i = ctx.i = BLOCK_SENTINEL_RE.lastIndex;
+        while (isWS(css.charCodeAt(i))) i++;
+        if (css.charCodeAt(i) === SEMICOLON) node.ended = true;
+        out.push(node);
         continue;
       }
     }
@@ -322,7 +329,7 @@ function parseBlock(ctx: ParseContext): Node[] {
         // EOF reached. Treat as terminal declaration if we saw a colon; a string,
         // paren, or bracket still open (`stop > len`) drops the statement instead.
         if (stop > len) {
-          dropOpenStatement(ctx, start);
+          if (__DEV__) warnOpenStatement(ctx, start);
         } else if (colon !== -1) {
           pushDecl(ctx, out, start, colon, stop);
         }
@@ -387,7 +394,7 @@ export function wrapAst(ast: Root<string>, wrapSelector: string): Root<string> {
  * else the block parser admits (a bare declaration, a nested rule, a block
  * interpolation) has no meaning in a keyframes body and is dropped.
  */
-function rulesToFrames<F>(nodes: Node<F>[]): KeyframeFrame<F>[] {
+export function rulesToFrames<F>(nodes: Node<F>[]): KeyframeFrame<F>[] {
   const frames: KeyframeFrame<F>[] = [];
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
@@ -416,7 +423,7 @@ function pushDecl(ctx: ParseContext, out: Node[], start: number, colon: number, 
   });
 }
 
-/** Apply {@link templateOrString} to each entry; allocate fresh array only if any entry converts. */
+/** Apply {@link templateOrString} to each entry when templates are on; otherwise return `selectors` itself. */
 function selectorsToTemplate(
   ctx: ParseContext,
   selectors: string[]
@@ -521,24 +528,55 @@ export function trimRange(css: string, start: number, end: number): string {
 }
 
 /**
- * Leave out a statement whose string, paren, or bracket is still open at the end of
- * input. A value interpolated into it may close it (`translate(${x}${z ? ', 1px)' : ')'}`),
- * which only the resolved text can show, so that case is decided after resolving.
+ * A runtime value up to the end of its whole statements, comments gone: it stops before a `}`
+ * the value did not open, a `{` it never closes, or a statement left open, so it can hold
+ * declarations and whole rules and nothing that reaches past itself.
  */
-function dropOpenStatement(ctx: ParseContext, start: number): void {
-  if (ctx.templates && ctx.css.indexOf('\0', start) !== -1) {
-    ctx.slotLeftOpen = true;
-    return;
+export function wholeStatements(value: string): string {
+  const text = normalize(value);
+  const len = text.length;
+  let depth = 0;
+  let i = 0;
+  let whole = 0;
+  while (true) {
+    const stop = scanQPB(text, i, len, SEMICOLON, OPEN_BRACE, CLOSE_BRACE, -1);
+    if (stop === len && depth === 0) return text;
+    if (stop >= len) break;
+
+    i = stop + 1;
+    const code = text.charCodeAt(stop);
+    if (code === OPEN_BRACE) {
+      depth++;
+    } else if (code === CLOSE_BRACE && depth-- === 0) {
+      break;
+    } else if (depth === 0) {
+      whole = i;
+    }
   }
 
   if (__DEV__) {
-    const text = ctx.css.slice(start, start + 80).trim();
+    const dropped = text.slice(whole, whole + 80).trim();
     warnOnce(
-      'unclosed-statement',
-      `\`${text}\` holds a \`(\`, a \`[\`, or a quote that never closes, so it and everything after it in the template are dropped. Close it, and keep a string on one line.`,
-      text
+      'value-left-open',
+      `An interpolated value holds an unmatched brace or leaves a string, paren, or bracket open, so "${dropped}" was dropped. Write a value as \`property: value;\` declarations or whole \`selector { ... }\` rules.`,
+      dropped
     );
   }
+
+  return text.slice(0, whole);
+}
+
+/** Name a statement left out for a string, paren, or bracket still open at the end of input. */
+function warnOpenStatement(ctx: ParseContext, start: number): void {
+  const text = ctx.css
+    .slice(start, start + 80)
+    .trim()
+    .replace(SENTINEL_RE, '${...}');
+  warnOnce(
+    'unclosed-statement',
+    `\`${text}\` holds a \`(\`, a \`[\`, or a quote that never closes, so it and everything after it in that text are dropped. Close it, and keep a string on one line.`,
+    text
+  );
 }
 
 /** A name that starts an identifier; `\0` opens a slot, whose value is unknown here. */
@@ -583,7 +621,7 @@ function parseAtRule(ctx: ParseContext): Node | null {
   }
 
   if (j > len) {
-    dropOpenStatement(ctx, preludeStart);
+    if (__DEV__) warnOpenStatement(ctx, preludeStart);
     ctx.i = len;
     return null;
   }

@@ -1,10 +1,28 @@
+import { SPLITTER } from '../constants';
 import { NodeKind } from './ast';
 import { resetWarnOnce } from '../utils/warnOnce';
-import { parse, splitTopLevelCommas } from './parser';
+import { NEEDS_FIELD_SCAN, parse, splitTopLevelCommas, staysOneField } from './parser';
 
 const splitSelectors = (raw: string) => splitTopLevelCommas(raw, true);
 
 describe('parser', () => {
+  describe('NEEDS_FIELD_SCAN', () => {
+    const asciiBytes = Array.from({ length: 128 }, (_, code) => String.fromCharCode(code));
+
+    it.each(asciiBytes.flatMap(byte => [byte, `a${byte}b`]))(
+      'never passes %j as a field the scan would refuse',
+      text => {
+        const passedWithoutScan = !NEEDS_FIELD_SCAN.test(text);
+
+        expect(passedWithoutScan && !staysOneField(text)).toBe(false);
+      }
+    );
+
+    it('sends the server-rendering separator to the scan', () => {
+      expect(NEEDS_FIELD_SCAN.test(SPLITTER)).toBe(true);
+    });
+  });
+
   it('parses a single declaration', () => {
     expect(parse('color: red;')).toEqual([{ kind: NodeKind.Decl, prop: 'color', value: 'red' }]);
   });
@@ -675,7 +693,7 @@ describe('parser', () => {
       parse(css);
       expect(warn.mock.calls).toEqual([
         [
-          `[sc] \`${text}\` holds a \`(\`, a \`[\`, or a quote that never closes, so it and everything after it in the template are dropped. Close it, and keep a string on one line.`,
+          `[sc] \`${text}\` holds a \`(\`, a \`[\`, or a quote that never closes, so it and everything after it in that text are dropped. Close it, and keep a string on one line.`,
         ],
       ]);
       warn.mockRestore();
@@ -797,9 +815,8 @@ describe('parser', () => {
     // `\0I<index>\0` = embedded interpolation (stays opaque inside value/selector strings).
     // Both kinds are emitted by `parseSource` based on surrounding template-literal
     // context. Sentinel detection is gated on `options.templates` so untrusted
-    // CSS routed through the static-input parse path (e.g. via the
-    // `buildHashCSS` fallback after a fast-path bail) cannot fabricate
-    // sentinel-looking content into structural Interpolation / TemplateValue
+    // CSS routed through the static-input parse path (e.g. a value read on
+    // its own) cannot fabricate sentinel-looking content into structural Interpolation / TemplateValue
     // nodes.
 
     it('emits Interpolation node for a standalone sentinel (templates: true)', () => {
@@ -869,12 +886,10 @@ describe('parser', () => {
     });
 
     // The static-input gate. Untrusted CSS routed through `parse()` without
-    // `{ templates: true }` (e.g. the `buildHashCSS` → `toNativeStyles`
-    // fallback) must NEVER fabricate sentinel structure. These guard the
-    // attack surface where a user-supplied interpolation value contains
-    // sentinel-shaped bytes plus structural CSS chars (`;`/`{`/`}`);the
-    // primary fast-path bails on the structural chars, and the fallback
-    // re-parse must treat the sentinel bytes as opaque content.
+    // `{ templates: true }` (a value read on its own) must NEVER fabricate
+    // sentinel structure. These guard the attack surface where a user-supplied
+    // interpolation value contains sentinel-shaped bytes plus structural CSS
+    // chars (`;`/`{`/`}`); the sentinel bytes must stay opaque content.
 
     it('default mode: standalone-sentinel bytes do NOT emit Interpolation node', () => {
       // Without `{ templates: true }`, `\0J0\0` is opaque CSS content.

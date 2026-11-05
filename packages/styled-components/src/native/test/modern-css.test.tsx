@@ -409,6 +409,38 @@ describe('modern CSS on React Native', () => {
       `);
     });
 
+    // https://drafts.csswg.org/css-conditional-5/#container-rule
+    // "<container-condition> = [ <container-name>? <container-query>? ]!"
+    // The name and the query are separated by whitespace, and "A newline,
+    // U+0009 CHARACTER TABULATION, or U+0020 SPACE" is whitespace
+    // (https://drafts.csswg.org/css-syntax-3/#whitespace).
+    it.each<[string, () => ReturnType<typeof styled.View>]>([
+      [
+        'a newline',
+        () => styled.View`color: red; @container card
+(min-width: 300px) { color: blue; }`,
+      ],
+      [
+        'a tab',
+        () => styled.View`color: red; @container card\t(min-width: 300px) { color: blue; }`,
+      ],
+    ])('reads %s between the container name and its condition', (_title, build) => {
+      const Comp = build();
+      const containerValue = {
+        nearest: { name: 'card', width: 400, height: 200 },
+        named: { card: { name: 'card', width: 400, height: 200 } },
+      };
+
+      const tree = TestRenderer.create(
+        <NativeStyleContext.Provider
+          value={{ container: containerValue, cascade: DEFAULT_CASCADE }}
+        >
+          <Comp />
+        </NativeStyleContext.Provider>
+      );
+      expect(tree.root.findByType(View).props.style).toEqual([{ color: 'red' }, { color: 'blue' }]);
+    });
+
     it('silently drops container queries when no matching container is registered', () => {
       const Comp = styled.View`
         color: red;
@@ -1387,6 +1419,48 @@ describe('modern CSS on React Native', () => {
           { color: 'white' },
         ]);
       });
+
+      // https://drafts.csswg.org/selectors-4/#attribute-selectors
+      // "<attribute-selector> = '[' <wq-name> ']' |
+      //     '[' <wq-name> <attr-matcher> [ <string-token> | <ident-token> ] <attr-modifier>? ']'"
+      // "<attr-modifier> = i | s"
+      // https://drafts.csswg.org/css-syntax-3/#whitespace
+      // "A newline, U+0009 CHARACTER TABULATION, or U+0020 SPACE."
+      it.each<[string, () => ReturnType<typeof styled.View>, string, boolean]>([
+        [
+          'i flag after a newline',
+          () => styled.View`color: black; &[data-status=active
+i] { color: white; }`,
+          'ACTIVE',
+          true,
+        ],
+        [
+          'i flag after a tab',
+          () => styled.View`color: black; &[data-status=active\ti] { color: white; }`,
+          'ACTIVE',
+          true,
+        ],
+        [
+          's flag after a newline',
+          () => styled.View`color: black; &[data-status=active
+s] { color: white; }`,
+          'active',
+          true,
+        ],
+        [
+          's flag after a newline stays case-sensitive',
+          () => styled.View`color: black; &[data-status=active
+s] { color: white; }`,
+          'ACTIVE',
+          false,
+        ],
+      ])('reads %s in an attribute selector', (_title, build, value, matches) => {
+        const Btn = build();
+        const tree = TestRenderer.create(<Btn data-status={value} />);
+        expect(tree.root.findByType(View).props.style).toEqual(
+          matches ? [{ color: 'black' }, { color: 'white' }] : { color: 'black' }
+        );
+      });
     });
   });
 
@@ -1901,6 +1975,65 @@ describe('modern CSS on React Native', () => {
   // (in real apps the babel plugin distinguishes via file position;
   // tests have no babel pass).
   describe('combinator selectors spec compliance (CSS Selectors 4: combinators)', () => {
+    // https://drafts.csswg.org/selectors-4/#descendant-combinators
+    // "A descendant combinator is whitespace that separates two compound selectors."
+    // https://drafts.csswg.org/css-syntax-3/#whitespace
+    // "A newline, U+0009 CHARACTER TABULATION, or U+0020 SPACE."
+    type StyledView = ReturnType<typeof styled.View>;
+    it.each<[string, (Foo: StyledView) => StyledView, 'ancestor' | 'sibling']>([
+      [
+        'a newline',
+        Foo => styled.View`
+          color: green;
+          ${Foo}
+          & {
+            color: red;
+          }
+        `,
+        'ancestor',
+      ],
+      ['a tab', Foo => styled.View`color: green; ${Foo}\t& { color: red; }`, 'ancestor'],
+      [
+        'a newline around a child combinator',
+        Foo => styled.View`color: green; ${Foo}\n>\n& { color: red; }`,
+        'ancestor',
+      ],
+      [
+        'a tab around a sibling combinator',
+        Foo => styled.View`color: green; ${Foo}\t~\t& { color: red; }`,
+        'sibling',
+      ],
+      [
+        'a newline around an adjacent sibling combinator',
+        Foo => styled.View`color: green; ${Foo}\n+\n& { color: red; }`,
+        'sibling',
+      ],
+    ])('reads %s in a combinator selector as a space', (_title, build, relation) => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        const Foo = styled.View``;
+        const Bar = build(Foo);
+        const Parent = styled.View``;
+        const tree = TestRenderer.create(
+          relation === 'ancestor' ? (
+            <Foo>
+              <Bar />
+            </Foo>
+          ) : (
+            <Parent>
+              <Foo />
+              <Bar />
+            </Parent>
+          )
+        );
+        const bar = tree.root.findByType(Bar);
+        expect(bar.findByType(View).props.style).toEqual([{ color: 'green' }, { color: 'red' }]);
+        expect(warn).not.toHaveBeenCalled();
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
     it('descendant combinator: `${Foo} &` matches when Foo is an ancestor', () => {
       const Foo = styled.View.withConfig({ displayName: 'CombDescFoo' })`
         background: blue;
@@ -1918,6 +2051,25 @@ describe('modern CSS on React Native', () => {
       );
       const inner = tree.root.findAllByType(View)[1];
       expect(inner.props.style).toEqual([{ color: 'green' }, { color: 'red' }]);
+    });
+
+    it('descendant combinator keeps a value before it with no semicolon of its own', () => {
+      const Foo = styled.View.withConfig({ displayName: 'CombMixinFoo' })`
+        background: blue;
+      `;
+      const Bar = styled.View.withConfig({ displayName: 'CombMixinBar' })`
+        ${() => 'margin-top: 1px'}
+        ${Foo} & {
+          color: red;
+        }
+      `;
+      const tree = TestRenderer.create(
+        <Foo>
+          <Bar />
+        </Foo>
+      );
+      const inner = tree.root.findAllByType(View)[1];
+      expect(inner.props.style).toEqual([{ marginTop: 1 }, { color: 'red' }]);
     });
 
     it('descendant combinator does not match when Foo is not an ancestor', () => {
@@ -3020,6 +3172,43 @@ describe('modern CSS on React Native', () => {
         expect(items[2].props.style).toEqual(matched);
         expect(items[3].props.style).toEqual({ color: 'black' });
         expect(items[4].props.style).toEqual({ color: 'black' });
+      });
+
+      // ":nth-child(An+B [of S]? )" (same section); the `of` keyword is delimited by
+      // whitespace, and "A newline, U+0009 CHARACTER TABULATION, or U+0020 SPACE" is
+      // whitespace (https://drafts.csswg.org/css-syntax-3/#whitespace).
+      it.each<[string, () => ReturnType<typeof styled.View>]>([
+        [
+          'newlines',
+          () => styled.View.withConfig({ displayName: 'NthOfNlItem' })`color: black; &:nth-child(1
+of
+[data-active]) { color: red; }`,
+        ],
+        [
+          'tabs',
+          () =>
+            styled.View.withConfig({
+              displayName: 'NthOfTabItem',
+            })`color: black; &:nth-child(1\tof\t[data-active]) { color: red; }`,
+        ],
+      ])('splits the formula from the selector at `of` between %s', (_title, build) => {
+        const Item = build();
+        const Parent = styled.View.withConfig({ displayName: 'NthOfSplitParent' })`
+          flex: 1;
+        `;
+        const tree = TestRenderer.create(
+          <Parent>
+            <Item />
+            <Item data-active />
+            <Item data-active />
+          </Parent>
+        );
+        const items = tree.root.findAllByType(Item);
+        expect(items.map(item => item.findByType(View).props.style)).toEqual([
+          { color: 'black' },
+          [{ color: 'black' }, { color: 'red' }],
+          { color: 'black' },
+        ]);
       });
 
       it(':nth-child(2n+1 of [data-active]) picks every odd sibling within the active filter', () => {

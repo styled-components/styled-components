@@ -50,7 +50,6 @@ const INTERNAL_PROPERTY_NAMES = [
   'keyframesBuffer',
   'levels',
   'resolvedSource',
-  'shareRules',
   // sheet internals
   '_cGroup',
   '_cIndex',

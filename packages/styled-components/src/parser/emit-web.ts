@@ -1,5 +1,5 @@
+import { SC_ATTR, SPLITTER } from '../constants';
 import * as $ from '../utils/charCodes';
-import { isWS } from '../utils/charCodes';
 import {
   NodeKind,
   StaticAtRuleNode,
@@ -8,7 +8,27 @@ import {
   StaticNode,
   StaticRoot,
 } from './ast';
-import { scanQPB, splitTopLevelCommas, stripCommaSpaces } from './parser';
+import { warnOnce } from '../utils/warnOnce';
+import {
+  NEEDS_FIELD_SCAN,
+  scanQPB,
+  splitTopLevelCommas,
+  staysOneField,
+  stripCommaSpaces,
+  trimRange,
+} from './parser';
+
+/**
+ * Most selector text one emit composes. A `,` or `&` at each nesting level multiplies the
+ * text under it, so a short value could otherwise build gigabytes.
+ */
+const MAX_COMPOSED_SIZE = 1 << 22;
+let composedSize = 0;
+
+const GROUP_MARKER = SC_ATTR + '.g';
+
+/** An HTML parser turns a CR after this into the line feed that ends the separator. */
+const SEPARATOR = SPLITTER.trim();
 
 /**
  * At-rule names whose bodies are direct declarations (no nested selector wrap).
@@ -27,12 +47,6 @@ const DECL_BODY_AT_RULES = new Set([
 ]);
 
 /**
- * At-rules that are ignored at the template root (no emitted effect in this
- * pipeline). Dropping them keeps emitted CSS and class hashes stable.
- */
-const DROPPED_AT_RULES = new Set(['charset']);
-
-/**
  * Strip whitespace around selector combinators (`>`, `+`, `~`) outside
  * parens/brackets/strings. Substring-based writes (cheaper than per-char).
  *
@@ -40,6 +54,9 @@ const DROPPED_AT_RULES = new Set(['charset']);
  * `:is(& + .x)`       → `:is(& + .x)`  (preserved inside :is parens)
  */
 function stripCombinatorSpaces(sel: string): string {
+  // Measured: on short text this test beats the scan, and most selectors hold no combinator.
+  if (!/[>+~]/.test(sel)) return sel;
+
   const len = sel.length;
   let out = '';
   let segStart = 0;
@@ -48,11 +65,11 @@ function stripCombinatorSpaces(sel: string): string {
     if (stop >= len) break;
 
     let left = stop;
-    while (left > segStart && isWS(sel.charCodeAt(left - 1))) left--;
+    while (left > segStart && $.isWS(sel.charCodeAt(left - 1))) left--;
     out += sel.substring(segStart, left) + sel[stop];
 
     segStart = stop + 1;
-    while (isWS(sel.charCodeAt(segStart))) segStart++;
+    while ($.isWS(sel.charCodeAt(segStart))) segStart++;
   }
 
   return out + sel.substring(segStart);
@@ -68,18 +85,30 @@ function formatDecl(
       ) => { prop: string; value: string } | { prop: string; value: string }[] | undefined | void)
     | undefined
 ): string {
-  if (transform) {
-    const t = transform(prop, value);
-    if (t) {
-      if (Array.isArray(t)) {
-        let out = t[0].prop + ':' + t[0].value;
-        for (let i = 1; i < t.length; i++) out += ';' + t[i].prop + ':' + t[i].value;
-        return out;
-      }
-      return t.prop + ':' + t.value;
-    }
+  const t = transform && transform(prop, value);
+  if (!t) return prop + ':' + value + ';';
+
+  let out: string;
+  if (Array.isArray(t)) {
+    out = t[0].prop + ':' + t[0].value;
+    for (let i = 1; i < t.length; i++) out += ';' + t[i].prop + ':' + t[i].value;
+  } else {
+    out = t.prop + ':' + t.value;
   }
-  return prop + ':' + value;
+
+  // A parsed declaration stays in its block; a plugin's rewrite has not been read.
+  const end = out.length;
+  if (scanQPB(out, 0, end, $.OPEN_BRACE, $.CLOSE_BRACE, -1, -1) === end) return out + ';';
+
+  if (__DEV__) {
+    const text = out.slice(0, 80);
+    warnOnce(
+      'plugin-declaration-not-whole',
+      `A plugin rewrote "${prop}" to "${text}", which holds a brace or a comment, or leaves a string, paren, or bracket open, so the declaration was dropped. Have the plugin return a complete value.`,
+      text
+    );
+  }
+  return '';
 }
 
 export interface EmitOptions {
@@ -129,42 +158,62 @@ export interface EmitOptions {
  * @param parentSelector  Pre-composed parent selector (namespace + prefix + selector).
  */
 export function emitWeb(root: StaticRoot, parentSelector: string, options?: EmitOptions): string[] {
-  // Auto-name: when the styled-component's top-level rule declares
-  // `container-type` with a non-`normal` value but no explicit
-  // `container-name`, derive the name from the component's stable id.
-  // Lets `${Component}` interpolation in `@container <name>` queries
-  // match without anyone writing a `container-name` declaration.
-  // Two AST shapes to support: AST-direct emit hands us a flat root
-  // of decls + nested rules; the compileString fallback pre-wraps the
-  // user's CSS in `.name{…}` so the user's decls live inside a single
-  // top-level Rule. Detect both and clone-augment in either case.
+  composedSize = 0;
   const componentId = options && options.componentId;
-  if (componentId) {
-    const augmented = maybeAugmentWithAutoName(root, componentId);
-    if (augmented !== root) return emitNodes(augmented, parentSelector, options);
-  }
-  return emitNodes(root, parentSelector, options);
+  return emitNodes(
+    componentId ? maybeAugmentWithAutoName(root, componentId) : root,
+    parentSelector,
+    options
+  );
 }
 
+/**
+ * When the root declares `container-type` with a non-`normal` value but no `container-name`,
+ * the name comes from the component's stable id, so `${Component}` in an `@container <name>`
+ * query matches without anyone writing a `container-name`. Only root declarations count; a
+ * nested rule is the author's own and gets no name.
+ */
 function maybeAugmentWithAutoName(root: StaticRoot, componentId: string): StaticRoot {
-  // compileString wrap: a single top-level Rule contains the user's decls;
-  // the AST-direct path keeps them at the root.
-  const wrapper = root.length === 1 && root[0].kind === NodeKind.Rule ? root[0] : null;
-  const decls = wrapper ? wrapper.children : root;
   let hasType = false;
-  for (let i = 0; i < decls.length; i++) {
-    const node = decls[i];
+  for (let i = 0; i < root.length; i++) {
+    const node = root[i];
     if (node.kind !== NodeKind.Decl) continue;
     if (node.prop === 'container-name') return root;
     if (node.prop === 'container-type' && node.value !== 'normal') hasType = true;
   }
   if (!hasType) return root;
-  const augmented = decls.concat({
+  return root.concat({
     kind: NodeKind.Decl,
     prop: 'container-name',
     value: componentId,
   });
-  return wrapper ? [{ ...wrapper, children: augmented }] : augmented;
+}
+
+/**
+ * `head + block`, or '' when `head` would not read as one rule's selector or condition. Joining
+ * and plugins write a head after its parts were read, so it is read again here; a block's
+ * declarations were read as they were written. Server-rendered text splits on the separator and
+ * reads a trimmed part starting with a group marker as bookkeeping, so neither may be rule text.
+ * `unread` is the part of the block no nested call has looked at.
+ */
+function wholeRule(head: string, block: string, unread = block): string {
+  if (
+    (!NEEDS_FIELD_SCAN.test(head) || (staysOneField(head) && head.indexOf(SEPARATOR) === -1)) &&
+    unread.indexOf(SEPARATOR) === -1 &&
+    !head.trimStart().startsWith(GROUP_MARKER)
+  ) {
+    return head + block;
+  }
+
+  if (__DEV__) {
+    const text = head.slice(0, 80);
+    warnOnce(
+      'rule-not-whole',
+      `The rule "${text}" holds an unmatched brace, leaves a comment, string, paren, or bracket open, or holds text reserved for server rendering, so it was dropped. Check the interpolated values and plugins that write it.`,
+      text
+    );
+  }
+  return '';
 }
 
 function emitNodes(
@@ -181,13 +230,15 @@ function emitNodes(
     switch (node.kind) {
       case NodeKind.Decl:
         // Post-fillAst invariant: `prop` and `value` are strings (any
-        // TemplateValue was realized by `realize` in `fillNode`). The
+        // TemplateValue was realized by `fillDecl`). The
         // `string | TemplateValue` AST type covers the parse-time form;
         // emit-web is only called on filled (or never-templated) ASTs.
-        body += formatDecl(node.prop, node.value, declTransform) + ';';
+        body += formatDecl(node.prop, node.value, declTransform);
         break;
       case NodeKind.Rule: {
         let resolved = resolveRuleSelectors(node.selectors, currentSelector);
+        if (resolved === null) break;
+
         if (options && options.selfRefSelector && options.componentId) {
           resolved = applySelfReferenceRewrite(
             resolved,
@@ -200,14 +251,17 @@ function emitNodes(
         break;
       }
       case NodeKind.AtRule:
-        if (!DROPPED_AT_RULES.has(node.name)) {
+        // `@charset` has no effect in this pipeline; dropping it keeps emitted CSS stable.
+        if (node.name !== 'charset') {
           const emitted = emitAtRule(node, currentSelector, options);
           if (emitted) other.push(emitted);
         }
         break;
-      case NodeKind.Keyframes:
-        other.push(emitKeyframes(node, options));
+      case NodeKind.Keyframes: {
+        const emitted = emitKeyframes(node, options);
+        if (emitted) other.push(emitted);
         break;
+      }
     }
   }
 
@@ -218,16 +272,16 @@ function emitNodes(
         ? prependNamespace(currentSelector, options.namespace)
         : currentSelector;
     const block = '{' + body + '}';
-    if (options && options.rw) {
-      const rewritten = options.rw(wrappingSelector);
-      if (Array.isArray(rewritten)) {
-        for (let i = 0; i < rewritten.length; i++) result.push(rewritten[i] + block);
-      } else {
-        result.push(rewritten + block);
-      }
-    } else {
-      result.push(wrappingSelector + block);
+    const rewritten = options && options.rw ? options.rw(wrappingSelector) : wrappingSelector;
+    const heads = Array.isArray(rewritten) ? rewritten : [rewritten];
+    let written = 0;
+    for (let i = 0; i < heads.length; i++) {
+      written += heads[i].length;
+      const rule = wholeRule(heads[i], block);
+      if (rule) result.push(rule);
     }
+    // `currentSelector` is already counted; what a namespace or plugin added is not.
+    composedSize += Math.max(written - currentSelector.length, 0);
   }
   for (let i = 0; i < other.length; i++) result.push(other[i]);
   return result;
@@ -252,30 +306,36 @@ function emitAtRule(
   options: EmitOptions | undefined
 ): string {
   // Post-fillAst invariant: prelude / name are strings.
-  let prelude = node.prelude ? stripCommaSpaces(node.prelude) : '';
+  let prelude = stripCommaSpaces(node.prelude);
   // `${Component}` interpolation pre-stringifies to a class selector
   // (`.sc-aBcDeF`) for normal selector contexts. In the `@container
   // <name>` slot a bare ident is required by the CSS parser; strip a
   // leading dot from the prelude so cross-component container queries
   // emit valid CSS the browser can match.
-  if (node.name === 'container' && prelude.length > 0 && prelude.charCodeAt(0) === 0x2e) {
+  if (node.name === 'container' && prelude.charCodeAt(0) === $.DOT) {
     prelude = prelude.substring(1);
   }
   const header = '@' + node.name + (prelude ? ' ' + prelude : '');
   if (node.children === null) {
-    return header + ';';
+    return wholeRule(header, ';');
   }
 
   if (DECL_BODY_AT_RULES.has(node.name)) {
     // Body is bare declarations; emit inline, no selector wrap.
     const body = declBody(node.children, options);
-    return body ? header + '{' + body + '}' : '';
+    return body ? wholeRule(header, '{' + body + '}') : '';
   }
 
   // Body contains rules and/or declarations; inherit the parent selector.
+  composedSize += currentSelector.length;
+  if (composedSize > MAX_COMPOSED_SIZE) {
+    if (__DEV__) warnTooLarge(currentSelector);
+    return '';
+  }
+
   const childStrings = emitNodes(node.children, currentSelector, options);
   if (childStrings.length === 0) return '';
-  return header + '{' + childStrings.join('') + '}';
+  return wholeRule(header, '{' + childStrings.join('') + '}', '');
 }
 
 function emitKeyframes(node: StaticKeyframesNode, options: EmitOptions | undefined): string {
@@ -288,11 +348,11 @@ function emitKeyframes(node: StaticKeyframesNode, options: EmitOptions | undefin
   }
   // Post-fillAst invariant: name / prelude are strings.
   const header = '@' + node.name + (node.prelude ? ' ' + node.prelude : '');
-  return header + '{' + frames.join('') + '}';
+  return wholeRule(header, '{' + frames.join('') + '}');
 }
 
 function emitFrame(frame: StaticKeyframeFrame, options: EmitOptions | undefined): string {
-  // emitKeyframes skips empty frames, so the body is never empty here.
+  // The body is empty when a plugin rewrite dropped every declaration of the frame.
   return frame.stops.join(',') + '{' + declBody(frame.children, options) + '}';
 }
 
@@ -303,7 +363,7 @@ function declBody(children: ReadonlyArray<StaticNode>, options: EmitOptions | un
   for (let i = 0; i < children.length; i++) {
     const child = children[i];
     if (child.kind === NodeKind.Decl) {
-      body += formatDecl(child.prop, child.value, declTransform) + ';';
+      body += formatDecl(child.prop, child.value, declTransform);
     }
   }
   return body;
@@ -319,18 +379,38 @@ function declBody(children: ReadonlyArray<StaticNode>, options: EmitOptions | un
  *   - comma-separated PARENT: cross-product (each parent × each child)
  *     e.g., parent="div, span", child="h1 span" → "div h1 span, span h1 span"
  */
-function resolveRuleSelectors(selectors: string[], parent: string): string {
-  if (selectors.length === 0) return parent;
+function resolveRuleSelectors(selectors: string[], parent: string): string | null {
+  // The limit spans the whole emit, so a sibling after the one that passed it drops unread.
+  if (composedSize > MAX_COMPOSED_SIZE) {
+    if (__DEV__) warnTooLarge(parent);
+    return null;
+  }
+
+  if (selectors.length === 0) {
+    composedSize += parent.length;
+    return parent;
+  }
+
   const parents = parent ? splitTopLevelCommas(parent) : [parent];
   const resolved: string[] = [];
   for (let ci = 0; ci < selectors.length; ci++) {
-    const child = selectors[ci];
     for (let pi = 0; pi < parents.length; pi++) {
-      const p = parents[pi].trim();
-      resolved.push(resolveSingle(child, p));
+      resolved.push(resolveSingle(selectors[ci], trimRange(parents[pi], 0, parents[pi].length)));
+      if (composedSize > MAX_COMPOSED_SIZE) {
+        if (__DEV__) warnTooLarge(parent);
+        return null;
+      }
     }
   }
+
   return resolved.join(',');
+}
+
+function warnTooLarge(parent: string): void {
+  warnOnce(
+    'selector-too-large',
+    `A nested selector under "${parent.slice(0, 80)}" composes past the size limit, so the rule was dropped. Nest fewer selector lists or fewer \`&\` references.`
+  );
 }
 
 /** An escaped `&` or one in a string is text, so only the rest take the parent. */
@@ -345,13 +425,20 @@ function resolveSingle(selector: string, parent: string): string {
       if (c === quote) quote = 0;
     } else if (c === $.DOUBLE_QUOTE || c === $.SINGLE_QUOTE) quote = c;
     else if (c === $.AMPERSAND) {
+      composedSize += parent.length;
+      if (composedSize > MAX_COMPOSED_SIZE) return '';
+
       expanded += selector.substring(from, i) + parent;
       from = i + 1;
     }
   }
 
+  composedSize += selector.length;
   if (from) expanded += selector.substring(from);
-  else expanded = parent ? parent + ' ' + selector : selector;
+  else {
+    composedSize += parent.length;
+    expanded = parent ? parent + ' ' + selector : selector;
+  }
   return stripCombinatorSpaces(expanded);
 }
 
@@ -378,26 +465,18 @@ function applySelfReferenceRewrite(
 ): string {
   if (
     !compiledSelector.startsWith(selfRefSelector) ||
-    !compiledSelector.endsWith(selfRefSelector) ||
-    compiledSelector.split(selfRefSelector).join('') === ''
+    !compiledSelector.endsWith(selfRefSelector)
   ) {
     return compiledSelector;
   }
+
+  const parts = compiledSelector.split(selfRefSelector);
+  if (parts.join('') === '') return compiledSelector;
+
   const replacement = '.' + componentId;
-  const len = compiledSelector.length;
-  const selLen = selfRefSelector.length;
-  let out = '';
-  let i = 0;
-  while (i < len) {
-    const idx = compiledSelector.indexOf(selfRefSelector, i);
-    if (idx === -1) {
-      out += compiledSelector.substring(i);
-      break;
-    }
-    const after = idx + selLen;
-    const isBoundary = after >= len || !$.isIdentChar(compiledSelector.charCodeAt(after));
-    out += compiledSelector.substring(i, idx) + (isBoundary ? replacement : selfRefSelector);
-    i = after;
+  let out = parts[0];
+  for (let i = 1; i < parts.length; i++) {
+    out += ($.isIdentChar(parts[i].charCodeAt(0)) ? selfRefSelector : replacement) + parts[i];
   }
   return out;
 }

@@ -92,7 +92,7 @@ export default class WebStyle {
    */
   private filledBuffer: string[] | undefined;
   /**
-   * Parallel fragment side-table; allocated lazily on first fragment-bearing render.
+   * Parallel fragment side-table; allocated with `filledBuffer` on the first render.
    * @internal
    */
   private fragmentsBuffer: (FastPathFragment | null)[] | undefined;
@@ -190,8 +190,8 @@ export default class WebStyle {
     }
 
     if (name === undefined && fastFilled === null) {
-      // Defensive: every constructor input path attaches a Source. A miss
-      // here means a hand-built styles input bypassed `css()`; render no CSS.
+      // No Source (a hand-built styles input that bypassed `css()`) or no text
+      // form for a value (evaluation returned null); render no CSS.
       if (__DEV__) {
         warnOnce(
           'no-styles',
@@ -209,7 +209,7 @@ export default class WebStyle {
         ? EMPTY_KEYFRAMES
         : baseKf.concat(localKf);
 
-    if (name === undefined && !css) {
+    if (source === null || fastFilled === null || (name === undefined && !css)) {
       // Fresh levels array so siblings don't share a mutable reference.
       return {
         className: baseGenerated ? baseGenerated.className : '',
@@ -252,12 +252,11 @@ export default class WebStyle {
       rules = IS_RSC
         ? EMPTY_RULES
         : (styleSheet.getProvisionalRules(this.componentId, name) ?? EMPTY_RULES);
-    } else if (source !== null && fastFilled !== null) {
-      rules = compiler.emit(source, fastFilled, '.' + name, this.componentId, fastFragments);
-      this.shareRules(styleSheet, name, rules);
     } else {
-      rules = compiler.compile(css, '.' + name, undefined, this.componentId);
-      this.shareRules(styleSheet, name, rules);
+      rules = compiler.emit(source, fastFilled, '.' + name, this.componentId, fastFragments);
+      // Whoever renders this name next reuses the rules: later requests on the server, same-turn siblings elsewhere.
+      if (IS_RSC) rememberRscRules(this, name, rules);
+      else styleSheet.stashProvisionalRules(this.componentId, name, rules);
     }
 
     const levels = baseGenerated ? baseGenerated.levels.slice() : [];
@@ -268,15 +267,6 @@ export default class WebStyle {
       levels,
       keyframes,
     };
-  }
-
-  /**
-   * Hand a freshly compiled name's rules to whoever renders it next: later requests on the server, same-turn siblings elsewhere.
-   * @internal
-   */
-  private shareRules(styleSheet: StyleSheet, name: string, rules: string[]): void {
-    if (IS_RSC) rememberRscRules(this, name, rules);
-    else styleSheet.stashProvisionalRules(this.componentId, name, rules);
   }
 
   inject(styleSheet: StyleSheet, generated: GeneratedStyle): string {

@@ -534,7 +534,7 @@ describe('bundle size', () => {
     // arity-2 attrs tracing with its runtime fallback, and the server entry
     // points a consumer bundle would shake away. Holds the security fix that keeps
     // malformed CSS inside its statement.
-    expect(sizeKB).toBeLessThan(14.65);
+    expect(sizeKB).toBeLessThan(14.95);
   });
   it('production bundle size with real bundler tree-shaking', async () => {
     const zlib = require('zlib');
@@ -575,7 +575,7 @@ describe('bundle size', () => {
     // the global-style instance registry shared across colliding ids.
     // v6.4.1 for this same entry is 11.44kB gzip. Holds the security fix that keeps
     // malformed CSS inside its statement.
-    expect(sizeKB).toBeLessThan(13.5);
+    expect(sizeKB).toBeLessThan(13.8);
   }, 30000);
 });
 

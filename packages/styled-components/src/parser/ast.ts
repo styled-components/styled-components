@@ -186,7 +186,7 @@ export type NativeAtClass =
  *   from non-templated `parse(rawCss)` calls. Every string field is a
  *   plain string. emit-web and compileNative consume this.
  *
- * `fillAst` is the bridge: input `Root`, output `StaticRoot | null`.
+ * `fillAst` is the bridge: input `Root`, output `StaticRoot`.
  */
 export interface DeclNode<F = string | TemplateValue> {
   kind: NodeKind.Decl;
@@ -249,8 +249,11 @@ export interface KeyframesNode<F = string | TemplateValue> {
  * inside decls become {@link TemplateValue} on the parent's `value` field.
  */
 export interface InterpolationNode {
-  kind: NodeKind.Interpolation;
+  /** A `;` follows the slot in the template, so it cannot start the rule after it. */
+  ended?: true;
   index: number;
+  kind: NodeKind.Interpolation;
+  [DYN]?: boolean;
 }
 
 export type Node<F = string | TemplateValue> =
