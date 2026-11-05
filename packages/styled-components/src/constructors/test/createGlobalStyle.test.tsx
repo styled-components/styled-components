@@ -2,10 +2,15 @@ import { act, render } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import React from 'react';
 import * as constants from '../../constants';
-import GlobalStyle from '../../models/GlobalStyle';
-import { mainStylis, StyleSheetManager } from '../../models/StyleSheetManager';
+import GlobalStyle, {
+  deleteInstance,
+  getInstance,
+  liveInstanceCount,
+} from '../../models/GlobalStyle';
+import { mainSheet, mainStylis, StyleSheetManager } from '../../models/StyleSheetManager';
 import ThemeProvider from '../../models/ThemeProvider';
 import StyleSheet from '../../sheet';
+import { getGroupForId } from '../../sheet/GroupIDAllocator';
 import { getRenderedCSS, resetStyled } from '../../test/utils';
 import createGlobalStyle from '../createGlobalStyle';
 import css from '../css';
@@ -980,9 +985,9 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     const gs = new GlobalStyle(rules, 'sc-global-eq-test');
     const ctx = { theme: { color: 'red' } } as any;
 
-    // First render - populates instanceRules
+    // First render - populates the instance entry
     gs.renderStyles(1, ctx, sheet, mainStylis);
-    expect(gs.instanceRules.has(1)).toBe(true);
+    expect(getInstance(sheet, gs.componentId, 1)).toBeDefined();
 
     const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
 
@@ -1056,6 +1061,26 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     expect(clearRulesSpy).toHaveBeenCalled();
   });
 
+  it('replaces an instance rendered repeatedly into one server collection', () => {
+    const serverSheet = new StyleSheet({ isServer: true, useCSSOMInjection: false });
+    const gs = new GlobalStyle(
+      css`
+        body {
+          color: ${(p: { theme: { color: string } }) => p.theme.color};
+        }
+      `,
+      'sc-global-repeat-test'
+    );
+
+    gs.renderStyles(1, { theme: { color: 'a' } } as any, serverSheet, mainStylis);
+    gs.renderStyles(2, { theme: { color: 'b' } } as any, serverSheet, mainStylis);
+    gs.renderStyles(1, { theme: { color: 'c' } } as any, serverSheet, mainStylis);
+
+    expect(serverSheet.getTag().getGroup(getGroupForId(gs.componentId))).toBe(
+      'body{color:c;}/*!sc*/\nbody{color:b;}/*!sc*/\n'
+    );
+  });
+
   it('static global style skips re-render entirely when name is already registered', () => {
     const rules = css`
       body {
@@ -1080,7 +1105,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     expect(insertSpy).not.toHaveBeenCalled();
   });
 
-  it('static rehydrated style populates instanceRules cache for rebuild', () => {
+  it('static rehydrated style populates the instance entry for rebuild', () => {
     const rules = css`
       body {
         background: teal;
@@ -1091,21 +1116,20 @@ describe('GlobalStyle.renderStyles (unit)', () => {
 
     // First render - inserts rules and populates cache
     gs.renderStyles(1, ctx, sheet, mainStylis);
-    expect(gs.instanceRules.has(1)).toBe(true);
-    const entry1 = gs.instanceRules.get(1)!;
+    const entry1 = getInstance(sheet, gs.componentId, 1);
+    expect(entry1).toBeDefined();
 
-    // Simulate rehydration: name is registered but instanceRules is cleared
-    gs.instanceRules.clear();
-    expect(gs.instanceRules.has(1)).toBe(false);
+    // Simulate rehydration: name is registered but the instance entry is gone
+    deleteInstance(sheet, gs.componentId, 1);
+    expect(getInstance(sheet, gs.componentId, 1)).toBeUndefined();
 
     // Re-render - should repopulate cache from computation (not re-insert)
     const insertSpy = jest.spyOn(sheet, 'insertRules');
     gs.renderStyles(1, ctx, sheet, mainStylis);
-    expect(gs.instanceRules.has(1)).toBe(true);
     expect(insertSpy).not.toHaveBeenCalled();
 
     // Cache should match original
-    expect(gs.instanceRules.get(1)!.rules).toEqual(entry1.rules);
+    expect(getInstance(sheet, gs.componentId, 1)?.rules).toEqual(entry1?.rules);
   });
 
   it('removeStyles triggers rebuildGroup with surviving instances', () => {
@@ -1119,7 +1143,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     // Mount two instances
     gs.renderStyles(1, { theme: { color: 'red' } } as any, sheet, mainStylis);
     gs.renderStyles(2, { theme: { color: 'blue' } } as any, sheet, mainStylis);
-    expect(gs.instanceRules.size).toBe(2);
+    expect(liveInstanceCount(sheet, gs.componentId)).toBe(2);
     expect(sheet.toString()).toMatchInlineSnapshot(`
       "body{color:red;}/*!sc*/
       body{color:blue;}/*!sc*/
@@ -1129,7 +1153,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
 
     // Remove instance 1 - instance 2 should survive
     gs.removeStyles(1, sheet);
-    expect(gs.instanceRules.size).toBe(1);
+    expect(liveInstanceCount(sheet, gs.componentId)).toBe(1);
     expect(sheet.toString()).toMatchInlineSnapshot(`
       "body{color:blue;}/*!sc*/
       data-styled.g1[id="sc-global-remove-test"]{content:"sc-global-remove-test2,"}/*!sc*/
@@ -1138,7 +1162,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
 
     // Remove instance 2 - all gone
     gs.removeStyles(2, sheet);
-    expect(gs.instanceRules.size).toBe(0);
+    expect(liveInstanceCount(sheet, gs.componentId)).toBe(0);
     expect(sheet.toString()).toBe('');
   });
 
@@ -1161,7 +1185,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
 
     // After 10 render/remove cycles, all rules should be cleaned up.
     // The bug: renderStyles without removeStyles accumulated rules unboundedly.
-    expect(gs.instanceRules.size).toBe(0);
+    expect(liveInstanceCount(sheet, gs.componentId)).toBe(0);
     expect(sheet.toString()).toBe('');
   });
 });
@@ -1257,5 +1281,231 @@ describe('createGlobalStyle useLayoutEffect rebuildGroup (#5730)', () => {
     await Promise.resolve();
 
     expect(getRenderedCSS()).not.toContain('[data-5730-cleanup]');
+  });
+});
+
+describe('createGlobalStyle with the same id', () => {
+  beforeEach(() => {
+    resetStyled();
+  });
+
+  function pair() {
+    const First = createGlobalStyle<{ v: string }>`${p => `html { --a: ${p.v}; }`}`;
+    const Second = createGlobalStyle<{ v: string }>`${p => `html { --b: ${p.v}; }`}`;
+    return { First, Second };
+  }
+
+  it('keeps same-id globals on different sheets out of each other', () => {
+    const one = new GlobalStyle(
+      css`
+        ${() => 'html { --one: 1; }'}
+      `,
+      'sc-global-two-sheets'
+    );
+    const two = new GlobalStyle(
+      css`
+        ${(p: { theme: { v: string } }) => `html { --two: ${p.theme.v}; }`}
+      `,
+      'sc-global-two-sheets'
+    );
+    const sheetA = new StyleSheet({ isServer: false });
+    const sheetB = new StyleSheet({ isServer: false });
+    const group = getGroupForId('sc-global-two-sheets');
+
+    // Independent sheets each count instances from 1, so both globals use instance 1.
+    // Removing A's instance 1 must leave B's instance 1 in the registry for B's next rebuild.
+    one.renderStyles(1, { theme: {} } as any, sheetA, mainStylis);
+    two.renderStyles(1, { theme: { v: 'a' } } as any, sheetB, mainStylis);
+    expect(sheetA.getTag().getGroup(group)).toBe('html{--one:1;}/*!sc*/\n');
+    expect(sheetB.getTag().getGroup(group)).toBe('html{--two:a;}/*!sc*/\n');
+
+    one.removeStyles(1, sheetA);
+    expect(sheetA.getTag().getGroup(group)).toBe('');
+    expect(sheetB.getTag().getGroup(group)).toBe('html{--two:a;}/*!sc*/\n');
+
+    // A second instance with different rules makes B rebuild from the registry.
+    two.renderStyles(2, { theme: { v: 'b' } } as any, sheetB, mainStylis);
+    expect(sheetB.getTag().getGroup(group)).toBe('html{--two:a;}/*!sc*/\nhtml{--two:b;}/*!sc*/\n');
+  });
+
+  it('the most recently mounted same-id global wins after a remount', () => {
+    const First = createGlobalStyle<{ v: string }>`${p => `body { color: ${p.v}; }`}`;
+    const Second = createGlobalStyle<{ v: string }>`${p => `body { color: ${p.v}x; }`}`;
+    const idsBefore = Object.keys(mainSheet.gs);
+    const App = ({ show }: { show: boolean }) => (
+      <>
+        {show && <First v="first" />}
+        <Second v="second" />
+      </>
+    );
+
+    const { rerender } = render(<App show />);
+    expect(Object.keys(mainSheet.gs).filter(id => !idsBefore.includes(id))).toHaveLength(1);
+    expect(getRenderedCSS()).toBe('body {\n  color: first;\n}\nbody {\n  color: secondx;\n}');
+
+    rerender(<App show={false} />);
+    rerender(<App show />);
+    expect(getRenderedCSS()).toBe('body {\n  color: secondx;\n}\nbody {\n  color: first;\n}');
+  });
+
+  it('keeps a same-id global in place when its props change', () => {
+    const First = createGlobalStyle<{ v: string }>`${p => `body { color: ${p.v}; }`}`;
+    const Second = createGlobalStyle<{ v: string }>`${p => `body { color: ${p.v}x; }`}`;
+    const App = ({ v }: { v: string }) => (
+      <>
+        <First v={v} />
+        <Second v="second" />
+      </>
+    );
+
+    const { rerender } = render(<App v="first" />);
+    rerender(<App v="updated" />);
+
+    expect(getRenderedCSS()).toBe('body {\n  color: updated;\n}\nbody {\n  color: secondx;\n}');
+  });
+
+  it('keeps sibling mounts when one mount re-renders into a server sheet', () => {
+    const Global = createGlobalStyle<{ v: string }>`body { color: ${p => p.v}; }`;
+    const serverSheet = new StyleSheet({ isServer: true, useCSSOMInjection: false });
+    const app = (first: string) => (
+      <StyleSheetManager sheet={serverSheet}>
+        <Global v={first} />
+        <Global v="second" />
+      </StyleSheetManager>
+    );
+
+    const { rerender } = render(app('first'));
+    rerender(app('updated'));
+
+    const group = getGroupForId(Object.keys(serverSheet.gs).join());
+    expect(serverSheet.getTag().getGroup(group)).toBe(
+      'body{color:updated;}/*!sc*/\nbody{color:second;}/*!sc*/\n'
+    );
+  });
+
+  it('allocates a fresh instance when the StyleSheetManager sheet changes', () => {
+    const A = createGlobalStyle<{ v: string }>`${p => `html { --swap-a: ${p.v}; }`}`;
+    const B = createGlobalStyle<{ v: string }>`${p => `html { --swap-b: ${p.v}; }`}`;
+    const sheetX = new StyleSheet({ isServer: false });
+    const sheetY = new StyleSheet({ isServer: false });
+    const app = (sheet: StyleSheet, showB: boolean) => (
+      <StyleSheetManager sheet={sheet}>
+        <A v="1" />
+        {showB && <B v="1" />}
+      </StyleSheetManager>
+    );
+
+    const { rerender } = render(app(sheetX, false));
+
+    // B allocates its instance on sheetY; A must not still hold the number it had on sheetX.
+    rerender(app(sheetY, true));
+    rerender(app(sheetY, false));
+
+    const group = getGroupForId(Object.keys(sheetY.gs).join());
+    expect(sheetY.getTag().getGroup(group)).toBe('html{--swap-a:1;}/*!sc*/\n');
+  });
+
+  it('keeps both stylesheets after a rerender of one', () => {
+    const { First, Second } = pair();
+    const App = ({ a }: { a: string }) => (
+      <>
+        <First v={a} />
+        <Second v="two" />
+      </>
+    );
+
+    const { rerender } = render(<App a="one" />);
+    rerender(<App a="three" />);
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "html {
+        --a: three;
+      }
+      html {
+        --b: two;
+      }"
+    `);
+  });
+
+  it('keeps the remaining stylesheet after the other unmounts', () => {
+    const { First, Second } = pair();
+    const App = ({ showFirst }: { showFirst: boolean }) => (
+      <>
+        {showFirst ? <First v="one" /> : null}
+        <Second v="two" />
+      </>
+    );
+
+    const { rerender } = render(<App showFirst />);
+    rerender(<App showFirst={false} />);
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "html {
+        --b: two;
+      }"
+    `);
+  });
+
+  it('keeps both stylesheets when the second mounts after the first', () => {
+    const { First, Second } = pair();
+    const App = ({ showSecond }: { showSecond: boolean }) => (
+      <>
+        <First v="one" />
+        {showSecond ? <Second v="two" /> : null}
+      </>
+    );
+
+    const { rerender } = render(<App showSecond={false} />);
+    rerender(<App showSecond />);
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "html {
+        --a: one;
+      }
+      html {
+        --b: two;
+      }"
+    `);
+  });
+
+  it('applies the CSS of a lone global whose only function sits in a nested css helper', () => {
+    const Lone = createGlobalStyle`${css`
+      html {
+        --solo: ${() => '1'};
+      }
+    `}`;
+
+    render(<Lone />);
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "html {
+        --solo: 1;
+      }"
+    `);
+  });
+
+  it('applies the CSS of a function inside a nested css helper', () => {
+    const First = createGlobalStyle`${css`
+      ${() => 'html { --nest-a: 1; }'}
+    `}`;
+    const Second = createGlobalStyle`${css`
+      ${() => 'html { --nest-b: 1; }'}
+    `}`;
+
+    render(
+      <>
+        <First />
+        <Second />
+      </>
+    );
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "html {
+        --nest-a: 1;
+      }
+      html {
+        --nest-b: 1;
+      }"
+    `);
   });
 });
