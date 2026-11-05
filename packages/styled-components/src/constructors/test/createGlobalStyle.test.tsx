@@ -21,6 +21,10 @@ import css from '../css';
 import keyframes from '../keyframes';
 import styled from '../styled';
 
+/** A render pass and its commit, on the model alone. */
+const renderInto = (gs: WebGlobalStyle<any>, instance: string, ctx: any, sheet: StyleSheet) =>
+  gs.renderStyles(instance, gs.computeRules(instance, ctx, mainCompiler), sheet);
+
 describe(`createGlobalStyle`, () => {
   beforeEach(() => {
     resetStyled();
@@ -1304,6 +1308,385 @@ describe(`createGlobalStyle`, () => {
   });
 });
 
+describe('createGlobalStyle interpolations run during render', () => {
+  beforeEach(() => {
+    resetStyled();
+  });
+
+  const rendered = (color: string) => `body {\n  color: ${color};\n}`;
+
+  it('reads a context with a hook and follows it with no prop change', () => {
+    const ColorContext = React.createContext('red');
+    const GlobalStyle = createGlobalStyle`
+      body { color: ${() => React.useContext(ColorContext)}; }
+    `;
+    const App = ({ color }: { color: string }) => (
+      <ColorContext.Provider value={color}>
+        <GlobalStyle />
+      </ColorContext.Provider>
+    );
+
+    const { rerender } = render(<App color="red" />);
+    expect(getRenderedCSS()).toEqual(rendered('red'));
+
+    rerender(<App color="blue" />);
+    expect(getRenderedCSS()).toEqual(rendered('blue'));
+  });
+
+  it('holds state with a hook and follows its updates', () => {
+    let setColor: (color: string) => void = () => {};
+    const GlobalStyle = createGlobalStyle`
+      body {
+        color: ${() => {
+          const [color, set] = React.useState('red');
+          setColor = set;
+          return color;
+        }};
+      }
+    `;
+
+    render(<GlobalStyle />);
+    expect(getRenderedCSS()).toEqual(rendered('red'));
+
+    act(() => setColor('blue'));
+    expect(getRenderedCSS()).toEqual(rendered('blue'));
+  });
+
+  it('follows an outside store read with a hook', () => {
+    let color = 'red';
+    const listeners = new Set<() => void>();
+    const subscribe = (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    };
+    const GlobalStyle = createGlobalStyle`
+      body { color: ${() => React.useSyncExternalStore(subscribe, () => color)}; }
+    `;
+
+    render(<GlobalStyle />);
+    expect(getRenderedCSS()).toEqual(rendered('red'));
+
+    act(() => {
+      color = 'blue';
+      for (const listener of listeners) listener();
+    });
+    expect(getRenderedCSS()).toEqual(rendered('blue'));
+  });
+
+  it('reads a hook inside a nested css helper', () => {
+    const ColorContext = React.createContext('red');
+    const nested = css`
+      color: ${() => React.useContext(ColorContext)};
+    `;
+    const GlobalStyle = createGlobalStyle`
+      body { ${nested} }
+    `;
+
+    render(<GlobalStyle />);
+    expect(getRenderedCSS()).toEqual(rendered('red'));
+  });
+
+  it('waits under Suspense for a promise read with `use`', async () => {
+    const color = Promise.resolve('red');
+    const GlobalStyle = createGlobalStyle`
+      body { color: ${() => React.use(color)}; }
+    `;
+
+    await act(async () => {
+      render(
+        <React.Suspense fallback={null}>
+          <GlobalStyle />
+        </React.Suspense>
+      );
+    });
+    expect(getRenderedCSS()).toEqual(rendered('red'));
+  });
+
+  it('runs every interpolation on a render where one has no text form', () => {
+    const GlobalStyle = createGlobalStyle<{ bad: boolean }>`
+      ${p => (p.bad ? Symbol('no text form') : '')}
+      body { color: ${() => React.useState('red')[0]}; }
+    `;
+
+    const { rerender } = render(<GlobalStyle bad={false} />);
+    expect(getRenderedCSS()).toEqual(rendered('red'));
+
+    rerender(<GlobalStyle bad />);
+    expect(getRenderedCSS()).toEqual('');
+
+    rerender(<GlobalStyle bad={false} />);
+    expect(getRenderedCSS()).toEqual(rendered('red'));
+  });
+
+  it('runs a hook in a style object function on every render', () => {
+    const GlobalStyle = createGlobalStyle<{ n: number }>`
+      ${{
+        body: {
+          color: () => {
+            const [color] = React.useState('red');
+            return color;
+          },
+        },
+      }}
+    `;
+
+    const { rerender } = render(<GlobalStyle n={1} />);
+    expect(getRenderedCSS()).toEqual(rendered('red'));
+
+    rerender(<GlobalStyle n={2} />);
+    expect(getRenderedCSS()).toEqual(rendered('red'));
+  });
+
+  it('reads the theme in a style object function, and follows it', () => {
+    const GlobalStyle = createGlobalStyle`
+      ${{ body: { color: (p: { theme: { color: string } }) => p.theme.color } }}
+    `;
+    const App = ({ color }: { color: string }) => (
+      <ThemeProvider theme={{ color }}>
+        <GlobalStyle />
+      </ThemeProvider>
+    );
+
+    const { rerender } = render(<App color="red" />);
+    expect(getRenderedCSS()).toEqual(rendered('red'));
+
+    rerender(<App color="blue" />);
+    expect(getRenderedCSS()).toEqual(rendered('blue'));
+  });
+
+  describe('in the server build', () => {
+    const globals = globalThis as unknown as { __SERVER__: boolean };
+
+    beforeEach(() => {
+      globals.__SERVER__ = true;
+    });
+
+    afterEach(() => {
+      globals.__SERVER__ = false;
+    });
+
+    it('skips the interpolations when no sheet collects what they return', () => {
+      const interpolation = jest.fn(() => 'red');
+      const GlobalStyle = createGlobalStyle`
+        body { color: ${interpolation}; }
+      `;
+
+      expect(renderToString(<GlobalStyle />)).toEqual('');
+      expect(interpolation).not.toHaveBeenCalled();
+    });
+
+    it('runs them when a sheet collects what they return', () => {
+      const interpolation = jest.fn(() => 'red');
+      const GlobalStyle = createGlobalStyle`
+        body { color: ${interpolation}; }
+      `;
+
+      const sheet = new ServerStyleSheet();
+      renderToString(sheet.collectStyles(<GlobalStyle />));
+      sheet.seal();
+      expect(interpolation).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('runs once per render on the client, and picks up a value read outside props', () => {
+    let outside = 'red';
+    const interpolation = jest.fn(() => outside);
+    const GlobalStyle = createGlobalStyle<{ count: number }>`
+      body { color: ${interpolation}; }
+    `;
+
+    const { rerender } = render(<GlobalStyle count={0} />);
+    expect(interpolation).toHaveBeenCalledTimes(1);
+
+    outside = 'blue';
+    rerender(<GlobalStyle count={1} />);
+    expect(interpolation).toHaveBeenCalledTimes(2);
+    expect(getRenderedCSS()).toEqual(rendered('blue'));
+  });
+
+  it('runs once per render into a server sheet, and collects what a hook returned', () => {
+    const ColorContext = React.createContext('red');
+    const interpolation = jest.fn(() => React.useContext(ColorContext));
+    const GlobalStyle = createGlobalStyle`
+      body { color: ${interpolation}; }
+    `;
+
+    const sheet = new ServerStyleSheet();
+    renderToString(sheet.collectStyles(<GlobalStyle />));
+    expect(interpolation).toHaveBeenCalledTimes(1);
+    expect(sheet.getStyleTags()).toEqual(
+      '<style data-styled="true" data-styled-version="JEST_MOCK_VERSION">body {color: red;}/*!sc*/\ndata-styled.g1[id="sc-global-a"]{content:"sc-global-a_R_0_,"}/*!sc*/\n</style>'
+    );
+    sheet.seal();
+  });
+
+  /**
+   * StrictMode runs the render body twice back to back, so a mount records two passes. The two
+   * must call the same hooks, with the interpolation's among them, and so must an update.
+   */
+  it('keeps the hook sequence identical across render passes', () => {
+    const reactHooks = React as unknown as Record<string, (...args: unknown[]) => unknown>;
+    const hookNames = Object.keys(React).filter(
+      key => key.startsWith('use') && typeof reactHooks[key] === 'function'
+    );
+    const originals = new Map<string, (...args: unknown[]) => unknown>();
+    const calls: string[] = [];
+
+    try {
+      for (const name of hookNames) {
+        const original = reactHooks[name];
+        originals.set(name, original);
+        reactHooks[name] = (...args) => {
+          calls.push(name);
+          return original(...args);
+        };
+      }
+
+      const ColorContext = React.createContext('red');
+      const GlobalStyle = createGlobalStyle`
+        body {
+          color: ${() => {
+            React.useId();
+            return React.useContext(ColorContext);
+          }};
+        }
+      `;
+      const App = ({ color }: { color: string }) => (
+        <React.StrictMode>
+          <ColorContext.Provider value={color}>
+            <GlobalStyle />
+          </ColorContext.Provider>
+        </React.StrictMode>
+      );
+
+      const { rerender, unmount } = render(<App color="red" />);
+      const mount = calls.splice(0);
+      rerender(<App color="blue" />);
+      const update = calls.splice(0);
+      unmount();
+
+      // The sheet and theme contexts, then the instance id, then the interpolation's two hooks,
+      // then the two effects. Anything before the first context is not the component's.
+      const pass = [
+        'useContext',
+        'useContext',
+        'useId',
+        'useId',
+        'useContext',
+        'useInsertionEffect',
+        'useInsertionEffect',
+      ];
+      expect(mount.slice(mount.indexOf('useContext'))).toEqual([...pass, ...pass]);
+      expect(update.slice(update.indexOf('useContext'))).toEqual([...pass, ...pass]);
+    } finally {
+      for (const [name, original] of originals) reactHooks[name] = original;
+    }
+  });
+
+  it('skips the interpolations when a parent re-render passes equal props', () => {
+    const interpolation = jest.fn(() => 'red');
+    const GlobalStyle = createGlobalStyle`
+      body { color: ${interpolation}; }
+    `;
+    const Parent = ({ count }: { count: number }) => (
+      <>
+        <span>{count}</span>
+        <GlobalStyle />
+      </>
+    );
+
+    const { rerender } = render(<Parent count={0} />);
+    rerender(<Parent count={1} />);
+    expect(interpolation).toHaveBeenCalledTimes(1);
+  });
+
+  it('writes nothing from a render React throws away', () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const fade = keyframes`
+      from { opacity: 0; }
+    `;
+    const GlobalStyle = createGlobalStyle`
+      body { animation: ${fade} 1s; color: ${() => 'red'}; }
+    `;
+    const Throws = (): React.ReactNode => {
+      throw new Error('discarded');
+    };
+    class Boundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
+      state = { failed: false };
+
+      static getDerivedStateFromError() {
+        return { failed: true };
+      }
+
+      render() {
+        return this.state.failed ? null : this.props.children;
+      }
+    }
+
+    const insertRules = jest.spyOn(StyleSheet.prototype, 'insertRules');
+    render(
+      <Boundary>
+        <GlobalStyle />
+        <Throws />
+      </Boundary>
+    );
+
+    expect(insertRules).not.toHaveBeenCalled();
+    expect(getRenderedCSS()).toEqual('');
+
+    insertRules.mockRestore();
+    consoleError.mockRestore();
+  });
+
+  it('neither recomputes nor writes when a theme change re-renders a static global', () => {
+    const GlobalStyle = createGlobalStyle`
+      body { color: red; }
+    `;
+    const App = ({ mode }: { mode: string }) => (
+      <ThemeProvider theme={{ mode }}>
+        <GlobalStyle />
+      </ThemeProvider>
+    );
+
+    const { rerender } = render(<App mode="light" />);
+    const computeRules = jest.spyOn(WebGlobalStyle.prototype, 'computeRules');
+    const insertRules = jest.spyOn(StyleSheet.prototype, 'insertRules');
+    const clearRules = jest.spyOn(StyleSheet.prototype, 'clearRules');
+
+    rerender(<App mode="dark" />);
+    expect(computeRules).not.toHaveBeenCalled();
+    expect(insertRules).not.toHaveBeenCalled();
+    expect(clearRules).not.toHaveBeenCalled();
+    expect(getRenderedCSS()).toEqual(rendered('red'));
+
+    computeRules.mockRestore();
+    insertRules.mockRestore();
+    clearRules.mockRestore();
+  });
+
+  it('writes a static global to a new sheet when a manager swaps the sheet', () => {
+    const GlobalStyle = createGlobalStyle`
+      body { color: red; }
+    `;
+    const first = new StyleSheet({ isServer: false });
+    const second = new StyleSheet({ isServer: false });
+    const App = ({ sheet }: { sheet: StyleSheet }) => (
+      <StyleSheetManager sheet={sheet}>
+        <GlobalStyle />
+      </StyleSheetManager>
+    );
+
+    const { rerender } = render(<App sheet={first} />);
+    rerender(<App sheet={second} />);
+
+    expect(second.hasNameForId(GlobalStyle.styledComponentId, GlobalStyle.styledComponentId)).toBe(
+      true
+    );
+    expect(liveInstanceCount(first, GlobalStyle.styledComponentId)).toBe(0);
+    expect(liveInstanceCount(second, GlobalStyle.styledComponentId)).toBe(1);
+  });
+});
+
 describe('createGlobalStyle HMR', () => {
   /**
    * Simulate React Fast Refresh "hot patching": the module re-evaluates,
@@ -1315,9 +1698,8 @@ describe('createGlobalStyle HMR', () => {
    * the wrapper's fiber.  Swapping the render function mimics Fast Refresh
    * replacing the closure without unmounting.
    *
-   * The fix: including `globalStyle` in the injection effect's deps so
-   * that the new object reference from the re-evaluated module triggers
-   * effect cleanup + re-run.
+   * `globalStyle` in the cleanup effect's deps makes the new object reference
+   * from the re-evaluated module run the cleanup before the next write.
    */
 
   beforeEach(() => {
@@ -1338,7 +1720,7 @@ describe('createGlobalStyle HMR', () => {
     const V2 = createGlobalStyle`[data-hmr]{color:blue;}`;
 
     // Extract the inner GlobalStyleComponent from the React.memo wrapper.
-    // This is the function whose closure holds `globalStyle` and `renderStyles`.
+    // This is the function whose closure holds `globalStyle`.
     const innerV1 = (V1 as any).type;
     const innerV2 = (V2 as any).type;
 
@@ -1353,8 +1735,7 @@ describe('createGlobalStyle HMR', () => {
     // "HMR patch";swap to V2's render function on the SAME fiber.
     // DynamicRenderer's fiber stays mounted; hooks are preserved.
     // The insertion effect's callback now captures V2's globalStyle.
-    // With fix: deps include globalStyle (new ref) → effect re-runs.
-    // Without fix: deps are [instance, styleSheet] (unchanged) → effect skipped.
+    // Both effects key on `globalStyle`, so a new object runs the cleanup, then the write.
     rerender(<DynamicRenderer renderFn={innerV2} />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -1447,13 +1828,13 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
     const ctx = { theme: { color: 'red' } } as any;
 
     // First render;populates the instance entry
-    gs.renderStyles('1', ctx, sheet, mainCompiler);
+    renderInto(gs, '1', ctx, sheet);
     expect(getInstance(sheet, gs.componentId, '1')).toBeDefined();
 
     const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
 
     // Second render with same CSS;should hit fast-path and skip rebuildGroup
-    gs.renderStyles('1', ctx, sheet, mainCompiler);
+    renderInto(gs, '1', ctx, sheet);
     expect(clearRulesSpy).not.toHaveBeenCalled();
   });
 
@@ -1466,11 +1847,11 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
     const gs = new WebGlobalStyle(rules, 'sc-global-diff-test');
 
     // First render
-    gs.renderStyles('1', { theme: { color: 'red' } } as any, sheet, mainCompiler);
+    renderInto(gs, '1', { theme: { color: 'red' } }, sheet);
     const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
 
     // Second render with different CSS;should NOT hit fast-path
-    gs.renderStyles('1', { theme: { color: 'blue' } } as any, sheet, mainCompiler);
+    renderInto(gs, '1', { theme: { color: 'blue' } }, sheet);
     expect(clearRulesSpy).toHaveBeenCalled();
 
     // Verify the new CSS is present
@@ -1494,12 +1875,12 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
     const ctx = { theme: {} } as any;
 
     // First render;one rule
-    gs.renderStyles('1', ctx, sheet, mainCompiler);
+    renderInto(gs, '1', ctx, sheet);
     const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
 
     // Add extra rule content and re-render
     extraRule = 'div { background: green; }';
-    gs.renderStyles('1', ctx, sheet, mainCompiler);
+    renderInto(gs, '1', ctx, sheet);
     expect(clearRulesSpy).toHaveBeenCalled();
   });
 
@@ -1514,11 +1895,11 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
     const ctx = { theme: { color: 'red' } } as any;
 
     // First render
-    gs.renderStyles('1', ctx, serverSheet, mainCompiler);
+    renderInto(gs, '1', ctx, serverSheet);
     const clearRulesSpy = jest.spyOn(serverSheet, 'clearRules');
 
     // Same CSS;server must always rebuild (clearTag invalidates DOM)
-    gs.renderStyles('1', ctx, serverSheet, mainCompiler);
+    renderInto(gs, '1', ctx, serverSheet);
     expect(clearRulesSpy).toHaveBeenCalled();
   });
 
@@ -1534,7 +1915,7 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
     );
 
     const render = (instance: string, color: string) =>
-      gs.renderStyles(instance, { theme: { color } } as any, serverSheet, mainCompiler);
+      renderInto(gs, instance, { theme: { color } }, serverSheet);
 
     render('1', 'a');
     render('2', 'b');
@@ -1555,7 +1936,7 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
     const ctx = { theme: {} } as any;
 
     // First render;inserts rules
-    gs.renderStyles('1', ctx, sheet, mainCompiler);
+    renderInto(gs, '1', ctx, sheet);
     expect(sheet.toString()).toMatchInlineSnapshot(`
       "body {background: pink;}/*!sc*/
       data-styled.g1[id="sc-global-static-test"]{content:"sc-global-static-test,"}/*!sc*/
@@ -1565,7 +1946,7 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
     const insertSpy = jest.spyOn(sheet, 'insertRules');
 
     // Second render;name already registered, should skip
-    gs.renderStyles('1', ctx, sheet, mainCompiler);
+    renderInto(gs, '1', ctx, sheet);
     expect(insertSpy).not.toHaveBeenCalled();
   });
 
@@ -1579,7 +1960,7 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
     const ctx = { theme: {} } as any;
 
     // First render;inserts rules and populates cache
-    gs.renderStyles('1', ctx, sheet, mainCompiler);
+    renderInto(gs, '1', ctx, sheet);
     const entry1 = getInstance(sheet, gs.componentId, '1');
     expect(entry1).toBeDefined();
 
@@ -1589,7 +1970,7 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
 
     // Re-render;should repopulate cache from computation (not re-insert)
     const insertSpy = jest.spyOn(sheet, 'insertRules');
-    gs.renderStyles('1', ctx, sheet, mainCompiler);
+    renderInto(gs, '1', ctx, sheet);
     expect(insertSpy).not.toHaveBeenCalled();
 
     // Cache should match original
@@ -1605,8 +1986,8 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
     const gs = new WebGlobalStyle(rules, 'sc-global-remove-test');
 
     // Mount two instances
-    gs.renderStyles('1', { theme: { color: 'red' } } as any, sheet, mainCompiler);
-    gs.renderStyles('2', { theme: { color: 'blue' } } as any, sheet, mainCompiler);
+    renderInto(gs, '1', { theme: { color: 'red' } }, sheet);
+    renderInto(gs, '2', { theme: { color: 'blue' } }, sheet);
     expect(liveInstanceCount(sheet, gs.componentId)).toBe(2);
     expect(sheet.toString()).toMatchInlineSnapshot(`
       "body {color: red;}/*!sc*/
@@ -1644,7 +2025,7 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
 
     for (let i = 1; i <= 10; i++) {
       const id = String(i);
-      gs.renderStyles(id, ctx, sheet, mainCompiler);
+      renderInto(gs, id, ctx, sheet);
       gs.removeStyles(id, sheet);
     }
 
@@ -2317,8 +2698,8 @@ describe('createGlobalStyle sharing an id', () => {
     const ctx = (v: string) => ({ theme: {}, v }) as any;
 
     // Both globals mount instance '1', each on its own sheet.
-    one.renderStyles('1', ctx('a'), sheetA, mainCompiler);
-    two.renderStyles('1', ctx('a'), sheetB, mainCompiler);
+    renderInto(one, '1', ctx('a'), sheetA);
+    renderInto(two, '1', ctx('a'), sheetB);
     expect(sheetA.getTag().getGroup(group)).toBe('html {--one: 1;}/*!sc*/\n');
     expect(sheetB.getTag().getGroup(group)).toBe('html {--two: a;}/*!sc*/\n');
 
@@ -2328,7 +2709,7 @@ describe('createGlobalStyle sharing an id', () => {
     expect(sheetA.getTag().getGroup(group)).toBe('');
     expect(sheetB.getTag().getGroup(group)).toBe('html {--two: a;}/*!sc*/\n');
 
-    two.renderStyles('2', ctx('b'), sheetB, mainCompiler);
+    renderInto(two, '2', ctx('b'), sheetB);
     expect(sheetB.getTag().getGroup(group)).toBe(
       'html {--two: a;}/*!sc*/\nhtml {--two: b;}/*!sc*/\n'
     );
@@ -2456,6 +2837,9 @@ describe('isStaticRules', () => {
     ['a styled component interpolation', css`${Button} { color: red; }`, true],
     ['a styled component in a nested css helper', css`${css`${Button} { color: red; }`}`, true],
     ['a keyframes interpolation', css`html { animation-name: ${fade}; }`, true],
+    ['a style object with only text', css`${{ html: { color: 'red' } }}`, true],
+    ['a function in a style object', css`${{ color: () => 'red' }}`, false],
+    ['a function deep in a style object', css`${{ html: { color: () => 'red' } }}`, false],
   ])('classifies %s', (_name, rules, expected) => {
     expect(isStaticRules(rules)).toBe(expected);
   });

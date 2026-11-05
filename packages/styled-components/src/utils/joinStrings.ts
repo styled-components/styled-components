@@ -16,6 +16,18 @@ export function joinRules(rules: string[]): string {
   return css;
 }
 
+/** The rules of each keyframes in `list`, one copy per name. */
+export function joinKeyframes(list: ReadonlyArray<{ name: string; rules: string[] }>): string {
+  let css = '';
+  outer: for (let i = 0; i < list.length; i++) {
+    for (let j = 0; j < i; j++) {
+      if (list[j].name === list[i].name) continue outer;
+    }
+    css += joinRules(list[i].rules);
+  }
+  return css;
+}
+
 export function stripSplitter(css: string): string {
   if (!css) return css;
   return css.replaceAll(SPLITTER, '');

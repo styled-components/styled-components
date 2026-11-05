@@ -53,7 +53,7 @@ import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
-import { joinRules, joinStrings, stripSplitter } from '../utils/joinStrings';
+import { joinKeyframes, joinRules, joinStrings, stripSplitter } from '../utils/joinStrings';
 import {
   getRscRequestState,
   noteRscEmit,
@@ -251,16 +251,7 @@ function buildRscStyleCss(
     css += levelCss;
   }
 
-  let kfCss = '';
-  const kfList = generatedStyle.keyframes;
-  outer: for (let i = 0; i < kfList.length; i++) {
-    for (let j = 0; j < i; j++) {
-      if (kfList[j].name === kfList[i].name) continue outer;
-    }
-    kfCss += joinRules(kfList[i].rules);
-  }
-
-  return stripSplitter(kfCss + css);
+  return stripSplitter(joinKeyframes(generatedStyle.keyframes) + css);
 }
 
 function resolveContext<Props extends BaseObject>(
