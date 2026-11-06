@@ -37,7 +37,13 @@ import type { Middleware } from 'stylis';
 import { mainSheet } from '../../models/StyleSheetManager';
 import { resetGroupIds } from '../../sheet/GroupIDAllocator';
 import { resetIdentifiers } from '../../models/StyledComponent';
-import styled, { css, keyframes } from '../../index';
+import styled, {
+  StyleSheetConsumer,
+  configureServerStyles,
+  createGlobalStyle,
+  css,
+  keyframes,
+} from '../../index';
 import {
   mainStylis,
   StyleSheetManager,
@@ -1882,6 +1888,162 @@ describe('styled RSC mode', () => {
       expect(allCSS).toMatchInlineSnapshot(
         `".qMKal:nth-child(1 of :not(style[data-styled])){color:red;}"`
       );
+    });
+  });
+
+  describe('configureServerStyles', () => {
+    const REWRITTEN_FIRST_CHILD = ':nth-child(1 of :not(style[data-styled]))';
+    const configured = [stylisPluginRSC];
+
+    const makeItem = () => styled.li`
+      &:first-child {
+        color: red;
+      }
+    `;
+
+    const paintBlue: Middleware = Object.defineProperty(
+      (element => {
+        if (element.type === 'decl') element.return = 'color:blue;';
+      }) satisfies Middleware,
+      'name',
+      { value: 'paint-blue' }
+    );
+
+    /** Render in a fresh request, with the generated class name (which hashes the plugins) replaced. */
+    const renderRequest = (element: React.ReactElement): string => {
+      mockUseRequest(new Map());
+      return extractStyleContents(ReactDOMServer.renderToString(element)).replace(
+        /\.[a-zA-Z0-9]+/g,
+        '.CLASS'
+      );
+    };
+
+    afterEach(() => {
+      configureServerStyles({ stylisPlugins: [] });
+    });
+
+    it('styles a request with no manager in it, as when a client navigation skips the layout', () => {
+      configureServerStyles({ stylisPlugins: configured });
+      const Item = makeItem();
+
+      expect(renderRequest(<Item />)).toBe(`.CLASS${REWRITTEN_FIRST_CHILD}{color:red;}`);
+    });
+
+    it('styles a global style', () => {
+      configureServerStyles({ stylisPlugins: configured });
+      const Global = createGlobalStyle`
+        li:first-child {
+          color: red;
+        }
+      `;
+
+      expect(renderRequest(<Global />)).toBe(`li${REWRITTEN_FIRST_CHILD}{color:red;}`);
+    });
+
+    it.each<[string, Record<string, unknown>, string]>([
+      ['no props', {}, `.CLASS${REWRITTEN_FIRST_CHILD}{color:red;}`],
+      ['only a namespace', { namespace: '#ns' }, `#ns .CLASS${REWRITTEN_FIRST_CHILD}{color:red;}`],
+      [
+        'only enableVendorPrefixes',
+        { enableVendorPrefixes: true },
+        `.CLASS${REWRITTEN_FIRST_CHILD}{color:red;}`,
+      ],
+      [
+        'only shouldForwardProp',
+        { shouldForwardProp: () => true },
+        `.CLASS${REWRITTEN_FIRST_CHILD}{color:red;}`,
+      ],
+    ])('keeps the configured plugins under a manager with %s', (_label, props, expected) => {
+      configureServerStyles({ stylisPlugins: configured });
+      const Item = makeItem();
+
+      expect(renderRequest(<StyleSheetManager {...props}>{<Item />}</StyleSheetManager>)).toBe(
+        expected
+      );
+    });
+
+    it('lets a manager replace the configured plugins', () => {
+      configureServerStyles({ stylisPlugins: configured });
+      const Item = makeItem();
+
+      expect(
+        renderRequest(
+          <StyleSheetManager stylisPlugins={[paintBlue]}>
+            <Item />
+          </StyleSheetManager>
+        )
+      ).toBe('.CLASS:first-child{color:blue;}');
+    });
+
+    it('lets a manager drop the configured plugins with an empty list, for that request only', () => {
+      configureServerStyles({ stylisPlugins: configured });
+      const Item = makeItem();
+
+      expect(
+        renderRequest(
+          <StyleSheetManager stylisPlugins={[]}>
+            <Item />
+          </StyleSheetManager>
+        )
+      ).toBe('.CLASS:first-child{color:red;}');
+      expect(renderRequest(<Item />)).toBe(`.CLASS${REWRITTEN_FIRST_CHILD}{color:red;}`);
+    });
+
+    it('reaches a request from a separate copy of the library, loaded into the same process', () => {
+      jest.isolateModules(() => {
+        const separateCopy: typeof import('../../index') = require('../../index');
+
+        expect(separateCopy.configureServerStyles).not.toBe(configureServerStyles);
+        separateCopy.configureServerStyles({ stylisPlugins: configured });
+      });
+      const Item = makeItem();
+
+      expect(renderRequest(<Item />)).toBe(`.CLASS${REWRITTEN_FIRST_CHILD}{color:red;}`);
+    });
+
+    it('uses the last call', () => {
+      configureServerStyles({ stylisPlugins: configured });
+      configureServerStyles({ stylisPlugins: [paintBlue] });
+      const Item = makeItem();
+
+      expect(renderRequest(<Item />)).toBe('.CLASS:first-child{color:blue;}');
+    });
+
+    it('styles later requests with a changed configuration', () => {
+      const Item = makeItem();
+
+      configureServerStyles({ stylisPlugins: configured });
+      expect(renderRequest(<Item />)).toBe(`.CLASS${REWRITTEN_FIRST_CHILD}{color:red;}`);
+
+      configureServerStyles({ stylisPlugins: [] });
+      expect(renderRequest(<Item />)).toBe('.CLASS:first-child{color:red;}');
+    });
+
+    it('rejects a plugin with no name on every request, never falling back to the earlier plugins', () => {
+      const Item = makeItem();
+
+      configureServerStyles({ stylisPlugins: configured });
+      expect(renderRequest(<Item />)).toBe(`.CLASS${REWRITTEN_FIRST_CHILD}{color:red;}`);
+
+      configureServerStyles({ stylisPlugins: [() => {}] });
+      expect(() => renderRequest(<Item />)).toThrow();
+      expect(() => renderRequest(<Item />)).toThrow();
+    });
+
+    it('gives StyleSheetConsumer the configured plugins', () => {
+      configureServerStyles({ stylisPlugins: configured });
+      let seen: unknown;
+
+      renderRequest(
+        <StyleSheetConsumer>
+          {context => {
+            seen = context.stylisPlugins;
+            return null;
+          }}
+        </StyleSheetConsumer>
+      );
+
+      expect(seen).toBe(configured);
     });
   });
 

@@ -4,8 +4,9 @@ import React from 'react';
 import Frame, { FrameContextConsumer } from 'react-frame-component';
 import stylisRTLPlugin from 'stylis-plugin-rtl';
 import StyleSheet from '../../sheet';
-import { resetStyled } from '../../test/utils';
-import { StyleSheetManager } from '../StyleSheetManager';
+import { getRenderedCSS, resetStyled } from '../../test/utils';
+import stylisPluginRSC from '../../utils/stylisPluginRSC';
+import { StyleSheetManager, configureServerStyles } from '../StyleSheetManager';
 
 let styled: ReturnType<typeof resetStyled>;
 
@@ -18,6 +19,32 @@ describe('StyleSheetManager', () => {
 
     jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  it('warns once that configureServerStyles does nothing in the browser build, and leaves client styling alone', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    configureServerStyles({ stylisPlugins: [stylisPluginRSC] });
+    configureServerStyles({ stylisPlugins: [stylisPluginRSC] });
+
+    expect(warn.mock.calls).toEqual([
+      [
+        'configureServerStyles has no effect in the browser. Call it at the top level of a server component module, such as the root layout in Next.js, never from a client component or code bundled for the browser.',
+      ],
+    ]);
+
+    const Item = styled.li`
+      &:first-child {
+        color: red;
+      }
+    `;
+    render(<Item />);
+
+    expect(
+      getRenderedCSS()
+        .replace(/\s+/g, '')
+        .replace(/\.[a-zA-Z0-9]+/, '.CLASS')
+    ).toBe('.CLASS:first-child{color:red;}');
   });
 
   it('should render its child', () => {

@@ -1,10 +1,12 @@
 import React from 'react';
 import type stylis from 'stylis';
-import { IS_RSC } from '../constants';
+import { IS_RSC, SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
 import { InsertionTarget, ShouldForwardProp, Stringifier } from '../types';
 import createStylisInstance from '../utils/stylis';
 import { createRSCCache } from '../utils/rscCache';
+
+declare const __SERVER__: boolean;
 
 export const mainSheet: StyleSheet = new StyleSheet();
 export const mainStylis: Stringifier = createStylisInstance();
@@ -42,6 +44,82 @@ const defaultContextValue: IStyleSheetContext = {
   stylisPlugins: undefined,
 };
 
+type ServerStylesHolder = { stylisPlugins?: unknown };
+
+let serverStylesHolder: ServerStylesHolder | undefined;
+
+/**
+ * One holder object per process and major version, found through `globalThis`
+ * once and kept: a framework can load more than one copy of the library into
+ * one process (Next.js bundles each server layer apart), and a lookup on every
+ * styled component would cost more than the render.
+ */
+function serverStyles(): ServerStylesHolder {
+  if (serverStylesHolder) return serverStylesHolder;
+
+  const key = Symbol.for(`styled-components.serverStyles.v${SC_VERSION.split('.')[0]}`);
+  const existing: unknown = Reflect.get(globalThis, key);
+  if (typeof existing === 'object' && existing !== null) {
+    serverStylesHolder = existing;
+  } else {
+    serverStylesHolder = {};
+    Reflect.set(globalThis, key, serverStylesHolder);
+  }
+
+  return serverStylesHolder;
+}
+
+let warnedInBrowser = false;
+
+/**
+ * Sets the stylis plugins every server component is styled with, for the whole
+ * server process. Call it once, at the top level of a module every server
+ * render loads before any page renders (in Next.js, the root layout file). A
+ * later call replaces an earlier one and applies to renders that start after
+ * it. A `StyleSheetManager` in a server component starts from these plugins;
+ * `stylisPlugins={[]}` drops them. Client components take their plugins from a
+ * client `StyleSheetManager`.
+ */
+export function configureServerStyles(options: { stylisPlugins: stylis.Middleware[] }): void {
+  if (!__SERVER__) {
+    if (process.env.NODE_ENV !== 'production' && !warnedInBrowser) {
+      warnedInBrowser = true;
+      console.warn(
+        'configureServerStyles has no effect in the browser. Call it at the top level of a server component module, such as the root layout in Next.js, never from a client component or code bundled for the browser.'
+      );
+    }
+
+    return;
+  }
+
+  serverStyles().stylisPlugins = options.stylisPlugins;
+}
+
+let derivedFrom: stylis.Middleware[] | undefined;
+let derivedContext: IStyleSheetContext | undefined;
+
+/** The context a server component sees with no manager's settings in the slot: the configured plugins, or the plain defaults. */
+function serverDefaults(): IStyleSheetContext {
+  if (!__SERVER__) return defaultContextValue;
+
+  const configured = serverStyles().stylisPlugins;
+
+  // Runs per styled component: a server with nothing configured stops at the truthiness check.
+  if (!configured || !Array.isArray(configured) || !configured.length) return defaultContextValue;
+
+  if (derivedContext === undefined || derivedFrom !== configured) {
+    derivedContext = {
+      shouldForwardProp: undefined,
+      styleSheet: mainSheet,
+      stylis: createStylisInstance({ plugins: configured }),
+      stylisPlugins: configured,
+    };
+    derivedFrom = configured; // Last: a plugin that fails to build must fail again on the next request.
+  }
+
+  return derivedContext;
+}
+
 // Create context only if createContext is available, otherwise create a fallback
 export const StyleSheetContext = !IS_RSC
   ? React.createContext<IStyleSheetContext>(defaultContextValue)
@@ -49,7 +127,7 @@ export const StyleSheetContext = !IS_RSC
       Provider: ({ children }: { children: React.ReactNode; value?: IStyleSheetContext }) =>
         children,
       Consumer: ({ children }: { children: (value: IStyleSheetContext) => React.ReactNode }) =>
-        children(defaultContextValue),
+        children(rscSlot().override || serverDefaults()),
     } as React.Context<IStyleSheetContext>);
 
 export const StyleSheetConsumer = StyleSheetContext.Consumer;
@@ -59,7 +137,7 @@ export type IStylisContext = Stringifier | void;
 export function useStyleSheetContext() {
   if (!IS_RSC) return React.useContext(StyleSheetContext);
 
-  return rscSlot().override || defaultContextValue;
+  return rscSlot().override || serverDefaults();
 }
 
 export type IStyleSheetManager = React.PropsWithChildren<{
@@ -128,9 +206,10 @@ export type IStyleSheetManager = React.PropsWithChildren<{
 export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element {
   if (IS_RSC) {
     const slot = rscSlot();
+    const defaults = serverDefaults();
 
     // Merge with existing override: inherit parent values when props are omitted.
-    const parentOverride = slot.override || defaultContextValue;
+    const parentOverride = slot.override || defaults;
 
     const hasStylisOptions =
       props.namespace !== undefined || props.enableVendorPrefixes !== undefined;
@@ -172,7 +251,9 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
 
     const resolvedPlugins = props.stylisPlugins ?? parentOverride.stylisPlugins;
 
-    if (resolvedStylis !== mainStylis || resolvedShouldForwardProp) {
+    // Against the server default, not `mainStylis`: an empty slot reads the
+    // default, so clearing it would undo `stylisPlugins={[]}` under configured plugins.
+    if (resolvedStylis !== defaults.stylis || resolvedShouldForwardProp) {
       slot.override = {
         shouldForwardProp: resolvedShouldForwardProp,
         styleSheet: mainSheet,
