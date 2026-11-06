@@ -19,6 +19,7 @@ import {
   recordRscWrapper,
   retarget,
   rscAbsorbed,
+  rscChainName,
   rscFlush,
   rscFoldedName,
 } from '../rscStyle';
@@ -31,10 +32,10 @@ const level = (name: string, group: number, order: number, body = 'x:y;'): RscLe
 });
 
 const requestState = (): RscRequestState => ({
-  absorbed: new Map(),
+  absorbed: null,
   emitCounts: null,
   styleElements: new Map(),
-  wrappers: new Map(),
+  wrappers: null,
 });
 
 describe('absorbRscWrappers', () => {
@@ -99,6 +100,68 @@ describe('rscFoldedName', () => {
   });
 });
 
+describe('rscChainName', () => {
+  const flushed = (Component: typeof styled.div) =>
+    rscFlush(Component.webStyle, { theme: {} }, mainSheet, mainCompiler);
+
+  it('keeps the one generated class of a component with no base', () => {
+    const Box = styled.div`
+      color: red;
+    `;
+    const generated = flushed(Box);
+
+    expect(rscChainName(generated)).toBe(generated.className);
+  });
+
+  it('names each extension by a hash of its generated class, however renders of two alternate', () => {
+    const Base = styled.div`
+      display: flex;
+    `;
+    const First = styled(Base)`
+      color: red;
+    `;
+    const Second = styled(Base)`
+      color: blue;
+    `;
+    const first = flushed(First);
+    const second = flushed(Second);
+    const expected = (generated: typeof first) => generateComponentId(generated.className);
+
+    expect(first.className).not.toBe(second.className);
+    expect([first, second, first, first, second].map(rscChainName)).toEqual(
+      [first, second, first, first, second].map(expected)
+    );
+  });
+});
+
+describe('request state without a wrapper', () => {
+  it('leaves the wrapper maps unallocated until a wrapper is recorded', () => {
+    const Box = styled.div`
+      color: red;
+    `;
+    const context = { theme: {} };
+    const state = requestState();
+
+    expect(rscAbsorbed(state, 'x y')).toBeNull();
+    expect(state.wrappers).toBeNull();
+    expect(state.absorbed).toBeNull();
+
+    recordRscWrapper(
+      {
+        chain: 'w',
+        context,
+        generated: rscFlush(Box.webStyle, context, mainSheet, mainCompiler),
+        ssc: { compiler: mainCompiler, styleSheet: mainSheet },
+        webStyle: Box.webStyle,
+      },
+      state
+    );
+
+    expect([...(state.wrappers?.keys() ?? [])]).toEqual(['w']);
+    expect(state.absorbed?.size).toBe(0);
+  });
+});
+
 describe('rscAbsorbed', () => {
   it('finds a wrapper recorded after the same class list was first seen without one', () => {
     const Box = styled.div`
@@ -125,7 +188,8 @@ describe('rscAbsorbed', () => {
 
   it('remembers the answer for a class list until a wrapper is recorded', () => {
     const state = requestState();
-    state.wrappers.set('w', [level('a', 0, 0)]);
+    state.wrappers = new Map([['w', [level('a', 0, 0)]]]);
+    state.absorbed = new Map();
 
     expect(rscAbsorbed(state, 'w x')).toBe(rscAbsorbed(state, 'w x'));
   });
@@ -213,7 +277,7 @@ describe('recordRscWrapper', () => {
     );
 
     expect(generate).toHaveBeenCalledTimes(1);
-    expect(state.wrappers.get('chain')?.map(l => stripSplitter(l.css))).toEqual([
+    expect(state.wrappers?.get('chain')?.map(l => stripSplitter(l.css))).toEqual([
       `.${flushed.levels[0].name}{display:flex;}`,
       `.${flushed.levels[1].name}{color:red;}`,
     ]);
@@ -238,7 +302,7 @@ describe('recordRscWrapper', () => {
     const state = requestState();
     recordRscWrapper(options, state);
 
-    expect(buildRscStyleCss(options, state.wrappers.get('chain'))).toBe(
+    expect(buildRscStyleCss(options, state.wrappers?.get('chain'))).toBe(
       `.chain{display:flex;}.chain{color:red;}`
     );
     expect(buildRscStyleCss(options)).toBe(`.chain{display:flex;}.chain{color:red;}`);

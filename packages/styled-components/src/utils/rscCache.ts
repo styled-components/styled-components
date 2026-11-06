@@ -41,14 +41,14 @@ export type RscLevel = {
 
 /** What the server-component emission path remembers for one request. */
 export type RscRequestState = {
-  /** Wrapper classes found in each class list seen, until the next wrapper is recorded. */
-  absorbed: Map<string, RscAbsorbed | null>;
+  /** Wrapper classes found in each class list seen, until the next wrapper is recorded. Null until the first wrapper. */
+  absorbed: Map<string, RscAbsorbed | null> | null;
   /** Development only: `<style>` tags emitted per component or global style ID. */
   emitCounts: Map<string, number> | null;
   /** Shared `<style>` elements; see docs/react.md "RSC style emission and Suspense". */
   styleElements: Map<string, React.ReactElement>;
-  /** Levels of each wrapper's element class, folded into the styled elements that receive the class; see docs/react.md "Order-proof extensions and wrappers". */
-  wrappers: Map<string, RscLevel[]>;
+  /** Levels of each wrapper's element class, folded into the styled elements that receive the class; see docs/react.md "Order-proof extensions and wrappers". Null until the first wrapper, so a page without wrappers allocates none. */
+  wrappers: Map<string, RscLevel[]> | null;
 };
 
 /** One request-scoped record behind a single `React.cache` lookup; null outside a server bundle. */
@@ -56,10 +56,10 @@ export const getRscRequestState: (() => RscRequestState) | null =
   IS_RSC && React.cache
     ? React.cache(
         (): RscRequestState => ({
-          absorbed: new Map(),
+          absorbed: null,
           emitCounts: __DEV__ ? new Map() : null,
           styleElements: new Map(),
-          wrappers: new Map(),
+          wrappers: null,
         })
       )
     : null;

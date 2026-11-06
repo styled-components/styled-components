@@ -77,6 +77,10 @@ export function rscFlush(
   return generated;
 }
 
+/** The last extension chain named, so a repeat render of it skips the hash. A one-entry memo costs no allocation or map lookup, and a miss costs two stores. */
+let lastChainClass = '';
+let lastChainName = '';
+
 /**
  * The class an RSC element carries for its styles: its one generated class, or
  * for an extension a hash of the whole chain, so no base class is on the
@@ -85,9 +89,14 @@ export function rscFlush(
  * @internal
  */
 export function rscChainName(generated: GeneratedStyle): string {
-  if (generated.levels.length < 2) return generated.className;
+  const { className } = generated;
+  if (generated.levels.length < 2) return className;
+  if (className === lastChainClass) return lastChainName;
 
-  return generateComponentId(generated.className);
+  lastChainClass = className;
+  lastChainName = generateComponentId(className);
+
+  return lastChainName;
 }
 
 /**
@@ -162,12 +171,14 @@ function rscLevels(options: RscChainOptions, order: number): RscLevel[] {
  */
 export function recordRscWrapper(options: RscChainOptions, state: RscRequestState): void {
   const { chain } = options;
-  if (state.wrappers.has(chain)) return;
+  const wrappers = state.wrappers ?? new Map<string, RscLevel[]>();
+  if (wrappers.has(chain)) return;
 
-  const levels = rscLevels(options, state.wrappers.size);
+  const levels = rscLevels(options, wrappers.size);
   if (levels.length > 0) {
-    state.wrappers.set(chain, levels);
-    state.absorbed.clear();
+    wrappers.set(chain, levels);
+    state.wrappers = wrappers;
+    state.absorbed = new Map();
   }
 }
 
@@ -221,11 +232,14 @@ export function absorbRscWrappers(
 
 /** `absorbRscWrappers` for the request's recorded wrappers, remembered per class list until a wrapper is recorded. */
 export function rscAbsorbed(state: RscRequestState, className: string): RscAbsorbed | null {
-  const known = state.absorbed.get(className);
+  const { absorbed: seen, wrappers } = state;
+  if (wrappers === null || seen === null) return null;
+
+  const known = seen.get(className);
   if (known !== undefined) return known;
 
-  const absorbed = absorbRscWrappers(state.wrappers, className);
-  state.absorbed.set(className, absorbed);
+  const absorbed = absorbRscWrappers(wrappers, className);
+  seen.set(className, absorbed);
 
   return absorbed;
 }

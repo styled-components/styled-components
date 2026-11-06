@@ -448,7 +448,7 @@ function useImpl<Props extends BaseObject>(
   let absorbed: RscAbsorbed | null = null;
   if (IS_RSC && rscState !== null) {
     if (isDOMTarget) {
-      if (context.className && rscState.wrappers.size > 0) {
+      if (context.className && rscState.wrappers !== null) {
         absorbed = rscAbsorbed(rscState, context.className);
       }
     } else if (!isClientReference(elementToBeCreated)) {
@@ -540,7 +540,7 @@ function useImpl<Props extends BaseObject>(
       };
       // A wrapper recorded its levels this render (or an earlier one with the same class).
       const recorded =
-        absorbed === null && !isDOMTarget && rscState !== null
+        absorbed === null && !isDOMTarget && rscState !== null && rscState.wrappers !== null
           ? rscState.wrappers.get(generatedClassName)
           : undefined;
       const combined =
