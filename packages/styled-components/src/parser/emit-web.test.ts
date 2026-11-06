@@ -126,8 +126,13 @@ describe('web emitter', () => {
 
     it('emits @view-transition nested in @media in a global style', () => {
       expect(
-        emit(`@media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }`, '')
-      ).toEqual(['@media (prefers-reduced-motion: no-preference){@view-transition{navigation:auto;}}']);
+        emit(
+          `@media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }`,
+          ''
+        )
+      ).toEqual([
+        '@media (prefers-reduced-motion: no-preference){@view-transition{navigation:auto;}}',
+      ]);
     });
   });
 
