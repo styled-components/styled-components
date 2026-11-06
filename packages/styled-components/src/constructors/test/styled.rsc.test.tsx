@@ -38,7 +38,11 @@ import { mainSheet } from '../../models/StyleSheetManager';
 import { resetGroupIds } from '../../sheet/GroupIDAllocator';
 import { resetIdentifiers } from '../../models/StyledComponent';
 import styled, { css, keyframes } from '../../index';
-import { StyleSheetManager, useStyleSheetContext } from '../../models/StyleSheetManager';
+import {
+  mainStylis,
+  StyleSheetManager,
+  useStyleSheetContext,
+} from '../../models/StyleSheetManager';
 import stylisPluginRSC from '../../utils/stylisPluginRSC';
 
 /** Extract all CSS rule text from <style> tags in rendered HTML */
@@ -1759,6 +1763,7 @@ describe('styled RSC mode', () => {
       }
 
       expect(seen).toHaveLength(3);
+      expect(seen[0]).not.toBe(mainStylis);
       expect(new Set(seen).size).toBe(1);
     });
   });
