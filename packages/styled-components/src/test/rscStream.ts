@@ -3,12 +3,53 @@ import { renderToPipeableStream } from 'react-dom/server';
 import { Writable } from 'stream';
 import { RSC_REDUNDANT_EMIT_WARN_THRESHOLD } from '../constants';
 
+/** The text of every `<style>` tag in rendered HTML, in document order. */
+export const styleTags = (html: string): string[] =>
+  [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(match => match[1]);
+
 /** Every `<style>` tag's rule text in rendered HTML, joined. */
-export const extractStyleContents = (html: string): string =>
-  [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]).join('');
+export const extractStyleContents = (html: string): string => styleTags(html).join('');
 
 /** The number of `<style>` tags in rendered HTML. */
-export const countStyleTags = (html: string): number => (html.match(/<style[^>]*>/g) || []).length;
+export const countStyleTags = (html: string): number => styleTags(html).length;
+
+/** The classes of the element with `id`, or of the first element that is not a `<style>` when `id` is omitted. */
+export function classesOf(html: string, id?: string): string[] {
+  const element =
+    id === undefined
+      ? /<(?!style)[a-z][^>]*? class="[^"]*"[^>]*>/.exec(html)
+      : new RegExp(`<(?!style)[a-z]+(?=[^>]* id="${id}")[^>]*>`).exec(html);
+  const classes = element === null ? null : /class="([^"]*)"/.exec(element[0]);
+  if (classes === null) throw new Error(`no element ${id ?? 'with a class'} in ${html}`);
+
+  return classes[1].split(' ');
+}
+
+/** Whether a class carries an element's styles, as opposed to a component id (`sc-xxxx`, or `Name-sc-xxxx` with a build plugin). */
+export const isGeneratedClass = (name: string): boolean => !name.includes('sc-');
+
+/** The class an element's styles hang on: the last one, after its component ids. */
+export function generatedClass(html: string, id?: string): string {
+  const classes = classesOf(html, id);
+
+  return classes[classes.length - 1];
+}
+
+/** The class a style tag's first rule (`.name{...}`) targets: a wrapper's class, when the tag is the wrapper's own. */
+export function firstRuleClass(tag: string): string {
+  const match = /^\.(\w+)\{/.exec(tag);
+  if (match === null) throw new Error(`no class at the start of ${tag}`);
+
+  return match[1];
+}
+
+/** Marks `target` the way a bundler marks a reference to client code, so React treats it as one. */
+export function fakeClientReference<Target extends object>(
+  target: Target,
+  fields: Record<string, unknown> = {}
+): Target {
+  return Object.assign(target, { $$typeof: Symbol.for('react.client.reference'), ...fields });
+}
 
 /** What a styled component's render function returns when it emits a tag: the tag, then the element. */
 type RenderedWithTag = ReactElement<{ children: ReactElement[] }>;

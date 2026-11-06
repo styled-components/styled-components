@@ -22,7 +22,7 @@ jest.mock('../../utils/isRsc', () => ({ IS_RSC: true }));
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
 import { resetGroupIds } from '../../sheet/GroupIDAllocator';
-import { extractStyleContents } from '../../test/rscStream';
+import { extractStyleContents, generatedClass } from '../../test/rscStream';
 import styled, { createGlobalStyle, createTheme } from '../../index';
 import { StyleSheetManager } from '../../models/StyleSheetManager';
 import rscPlugin from '../../plugins/rsc';
@@ -93,7 +93,7 @@ describe('createTheme RSC integration', () => {
   });
 
   describe('createTheme + inheritance chain in RSC', () => {
-    it('should wrap base CSS in :where() when extended with theme tokens', () => {
+    it('should emit base and extension CSS on one class when extended with theme tokens', () => {
       const theme = createTheme({
         colors: { primary: '#0070f3', text: '#111' },
         radii: { md: '8px' },
@@ -112,13 +112,12 @@ describe('createTheme RSC integration', () => {
       const html = ReactDOMServer.renderToString(React.createElement(PrimaryCard));
       const allCSS = extractStyleContents(html);
 
-      // Base CSS wrapped in :where() for zero specificity
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*border-radius:var\(--sc-radii-md, 8px\)/);
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*color:var\(--sc-colors-text, #111\)/);
+      const chain = generatedClass(html);
 
-      // Extension CSS uses normal selector (no :where)
-      expect(allCSS).toMatch(/\.\w+\{[^}]*background:var\(--sc-colors-primary, #0070f3\)/);
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*background:var\(--sc-colors-primary/);
+      // Base level first, then the extension's, both on the element's one class
+      expect(allCSS).toBe(
+        `.${chain}{border-radius:var(--sc-radii-md, 8px);color:var(--sc-colors-text, #111);}.${chain}{background:var(--sc-colors-primary, #0070f3);padding:16px;}`
+      );
     });
 
     it('should propagate var() tokens through three-level inheritance', () => {

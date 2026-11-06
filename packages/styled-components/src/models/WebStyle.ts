@@ -33,7 +33,7 @@ const EMPTY_KEYFRAMES: CompiledKeyframes[] = [];
 const MAX_DYNAMIC_NAME_CACHE = TOO_MANY_CLASSES_LIMIT;
 
 /** Per-level output of `generate()`; one entry per link in the inheritance chain. */
-type GeneratedLevel = {
+export type GeneratedLevel = {
   componentId: string;
   name: string;
   rules: string[];
