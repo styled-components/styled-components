@@ -38,7 +38,11 @@ import { mainSheet } from '../../models/StyleSheetManager';
 import { resetGroupIds } from '../../sheet/GroupIDAllocator';
 import { resetIdentifiers } from '../../models/StyledComponent';
 import styled, { css, keyframes } from '../../index';
-import { StyleSheetManager } from '../../models/StyleSheetManager';
+import {
+  mainStylis,
+  StyleSheetManager,
+  useStyleSheetContext,
+} from '../../models/StyleSheetManager';
 import stylisPluginRSC from '../../utils/stylisPluginRSC';
 
 /** Extract all CSS rule text from <style> tags in rendered HTML */
@@ -1713,6 +1717,54 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
       expect(allCSS).toMatchInlineSnapshot(`".dnGtrT:first-child{color:red;}"`);
       expect(allCSS).not.toContain(':not(style');
+    });
+
+    it.each<[string, Record<string, unknown>, string]>([
+      ['nothing else', {}, '.CLASS{user-select:none;}'],
+      ['a namespace', { namespace: '#ns' }, '#ns .CLASS{user-select:none;}'],
+      [
+        'enableVendorPrefixes',
+        { enableVendorPrefixes: true },
+        '.CLASS{-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;}',
+      ],
+    ])('applies an empty stylisPlugins list together with %s', (_label, props, expected) => {
+      mockUseRequest(new Map());
+      const Item = styled.li`
+        user-select: none;
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <StyleSheetManager stylisPlugins={[]} {...props}>
+          <Item />
+        </StyleSheetManager>
+      );
+
+      expect(extractStyleContents(html).replace(/\.[a-zA-Z0-9]+/g, '.CLASS')).toBe(expected);
+    });
+
+    it.each<[string, Record<string, unknown>]>([
+      ['a namespace', { namespace: '#ns' }],
+      ['enableVendorPrefixes', { enableVendorPrefixes: true }],
+    ])('reuses one stylis instance across requests for stable plugins with %s', (_label, props) => {
+      const plugins = [stylisPluginRSC];
+      const seen: unknown[] = [];
+      const ReadStylis = () => {
+        seen.push(useStyleSheetContext().stylis);
+        return null;
+      };
+
+      for (let request = 0; request < 3; request++) {
+        mockUseRequest(new Map());
+        ReactDOMServer.renderToString(
+          <StyleSheetManager stylisPlugins={plugins} {...props}>
+            <ReadStylis />
+          </StyleSheetManager>
+        );
+      }
+
+      expect(seen).toHaveLength(3);
+      expect(seen[0]).not.toBe(mainStylis);
+      expect(new Set(seen).size).toBe(1);
     });
   });
 

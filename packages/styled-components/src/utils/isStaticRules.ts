@@ -1,16 +1,10 @@
 import { RuleSet } from '../types';
 import isFunction from './isFunction';
-import isStyledComponent from './isStyledComponent';
 
+/** A function left in the rules is an interpolation: `css()` has already turned styled components into selectors. */
 export default function isStaticRules<Props extends object>(rules: RuleSet<Props>) {
   for (let i = 0; i < rules.length; i += 1) {
-    const rule = rules[i];
-
-    if (isFunction(rule) && !isStyledComponent(rule)) {
-      // functions are allowed to be static if they're just being
-      // used to get the classname of a nested styled component
-      return false;
-    }
+    if (isFunction(rules[i])) return false;
   }
 
   return true;

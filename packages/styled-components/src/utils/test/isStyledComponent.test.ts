@@ -8,7 +8,7 @@ describe('isStyledComponent(something)', () => {
     expect(isStyledComponent(styled(styled.div``)``)).toBe(true);
   });
 
-  it("returns true for a function carrier (Preact's react-compat forwardRef shape, #5736)", () => {
+  it("returns true for a function carrier (preact/compat's forwardRef shape, #5736)", () => {
     const preactStyle = Object.assign(() => null, {
       styledComponentId: 'sc-test',
       $$typeof: Symbol.for('react.forward_ref'),
@@ -17,8 +17,8 @@ describe('isStyledComponent(something)', () => {
   });
 
   it('returns false for HOCs that hoist styledComponentId but not $$typeof (#5736)', () => {
-    // hoist-non-react-statics excludes $$typeof on forwardRef sources, so an
-    // HOC over a styled component ends up with the brand but no $$typeof.
+    // hoist-non-react-statics excludes $$typeof on forwardRef sources, so a
+    // function HOC over a styled component ends up with the brand but no $$typeof.
     const HOC = Object.assign(() => null, { styledComponentId: 'sc-test' });
     expect(isStyledComponent(HOC)).toBe(false);
   });

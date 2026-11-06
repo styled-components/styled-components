@@ -25,6 +25,8 @@
   "packageManager": "pnpm@12.11.1",
   "devDependencies": {
     "@changesets/cli": "^2.27.7",
-    "husky": "9.1.7"
+    "@changesets/read": "0.6.7",
+    "husky": "9.1.7",
+    "semver": "7.7.4"
   }
 }
