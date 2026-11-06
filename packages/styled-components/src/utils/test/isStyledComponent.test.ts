@@ -17,8 +17,8 @@ describe('isStyledComponent(something)', () => {
   });
 
   it('returns false for HOCs that hoist styledComponentId but not $$typeof (#5736)', () => {
-    // hoist-non-react-statics excludes $$typeof on forwardRef sources, so an
-    // HOC over a styled component ends up with the brand but no $$typeof.
+    // hoist-non-react-statics excludes $$typeof on forwardRef sources, so a
+    // function HOC over a styled component ends up with the brand but no $$typeof.
     const HOC = Object.assign(() => null, { styledComponentId: 'sc-test' });
     expect(isStyledComponent(HOC)).toBe(false);
   });

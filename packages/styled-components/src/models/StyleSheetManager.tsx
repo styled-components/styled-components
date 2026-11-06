@@ -132,19 +132,18 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     // Merge with existing override: inherit parent values when props are omitted.
     const parentOverride = slot.override || defaultContextValue;
 
-    // Build a stylis instance when any stylis-related prop is provided.
-    // Cache it when the plugins array ref is stable.
-    const hasStylisProps =
-      props.stylisPlugins !== undefined ||
-      props.namespace !== undefined ||
-      props.enableVendorPrefixes !== undefined;
+    const hasStylisOptions =
+      props.namespace !== undefined || props.enableVendorPrefixes !== undefined;
+    let resolvedStylis = parentOverride.stylis;
 
-    if (hasStylisProps) {
+    if (props.stylisPlugins && !props.stylisPlugins.length && !hasStylisOptions) {
+      resolvedStylis = mainStylis;
+    } else if (props.stylisPlugins) {
+      // Memoized while the plugins array ref and options stay the same.
       if (
-        props.stylisPlugins &&
-        (props.stylisPlugins !== rscLastPlugins ||
-          props.namespace !== rscLastNamespace ||
-          props.enableVendorPrefixes !== rscLastPrefix)
+        props.stylisPlugins !== rscLastPlugins ||
+        props.namespace !== rscLastNamespace ||
+        props.enableVendorPrefixes !== rscLastPrefix
       ) {
         rscLastPlugins = props.stylisPlugins;
         rscLastNamespace = props.namespace;
@@ -153,31 +152,21 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
           options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
           plugins: props.stylisPlugins,
         });
-      } else if (
-        !props.stylisPlugins &&
-        (props.namespace !== undefined || props.enableVendorPrefixes !== undefined)
-      ) {
-        // Namespace or prefix without plugins of its own: build on the parent's plugins.
-        rscCachedStylis = createStylisInstance({
-          options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
-          plugins: parentOverride.stylisPlugins,
-        });
-        rscLastPlugins = undefined;
-        rscLastNamespace = undefined;
-        rscLastPrefix = undefined;
       }
+
+      resolvedStylis = rscCachedStylis;
+    } else if (hasStylisOptions) {
+      // Options without plugins of its own: build on the parent's plugins.
+      rscCachedStylis = createStylisInstance({
+        options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
+        plugins: parentOverride.stylisPlugins,
+      });
+      rscLastPlugins = undefined;
+      rscLastNamespace = undefined;
+      rscLastPrefix = undefined;
+      resolvedStylis = rscCachedStylis;
     }
 
-    const onlyDropsPlugins =
-      props.stylisPlugins !== undefined &&
-      !props.stylisPlugins.length &&
-      props.namespace === undefined &&
-      props.enableVendorPrefixes === undefined;
-    const resolvedStylis = hasStylisProps
-      ? onlyDropsPlugins
-        ? mainStylis
-        : rscCachedStylis
-      : parentOverride.stylis;
     const resolvedShouldForwardProp =
       'shouldForwardProp' in props ? props.shouldForwardProp : parentOverride.shouldForwardProp;
 

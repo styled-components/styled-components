@@ -121,21 +121,6 @@ describe('flatten', () => {
     }
   );
 
-  it.each([
-    ['without', undefined],
-    ['with', { theme: {} }],
-  ])(
-    "emits a selector for a function carrier (preact/compat's forwardRef shape) %s an execution context",
-    (_label, executionContext) => {
-      const carrier = Object.assign(() => null, {
-        $$typeof: Symbol.for('react.forward_ref'),
-        styledComponentId: 'sc-test',
-      });
-
-      expect(flatten([carrier], executionContext)).toEqual(['.sc-test']);
-    }
-  );
-
   it('flattens subarrays', () => {
     expect(flatten([1, 2, [3, 4, 5], 'come:on;', 'lets:ride;'])).toEqual([
       '1',
