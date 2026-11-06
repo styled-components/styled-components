@@ -8,7 +8,7 @@ describe('isStyledComponent(something)', () => {
     expect(isStyledComponent(styled(styled.div``)``)).toBe(true);
   });
 
-  it("returns true for a function carrier (Preact's react-compat forwardRef shape, #5736)", () => {
+  it("returns true for a function carrier (preact/compat's forwardRef shape, #5736)", () => {
     const preactStyle = Object.assign(() => null, {
       styledComponentId: 'sc-test',
       $$typeof: Symbol.for('react.forward_ref'),

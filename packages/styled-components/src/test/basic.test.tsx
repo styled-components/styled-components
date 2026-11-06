@@ -1,11 +1,28 @@
 import '@testing-library/jest-dom';
 import { render } from '@testing-library/react';
 import React, { Component, CSSProperties, StrictMode } from 'react';
-import { AnyComponent } from '../types';
+import { AnyComponent, IStyledComponent } from '../types';
 import hoist from '../utils/hoist';
 import { getRenderedCSS, resetStyled } from './utils';
 
 let styled: ReturnType<typeof resetStyled>;
+
+/** Runs `fn` with `React.forwardRef` returning a function, the shape preact/compat gives it. */
+const withFunctionForwardRef = (fn: () => void) => {
+  const spy = jest.spyOn(React, 'forwardRef').mockImplementation(
+    (renderFn =>
+      Object.assign((props: object) => renderFn(props, null), {
+        $$typeof: Symbol.for('react.forward_ref'),
+        render: renderFn,
+      })) as typeof React.forwardRef
+  );
+
+  try {
+    fn();
+  } finally {
+    spy.mockRestore();
+  }
+};
 
 describe('basic', () => {
   beforeEach(() => {
@@ -384,21 +401,11 @@ describe('basic', () => {
       expect(Outer.componentStyle).not.toEqual(Inner.componentStyle);
     });
 
-    it("folds chains when forwardRef returns a function (Preact's react-compat shape, #5736)", () => {
-      // Preact's react-compat shims React.forwardRef to return a function with
-      // $$typeof = Symbol.for('react.forward_ref'), where React returns an
-      // object. styled-components must accept both as styled-component carriers
-      // so extended-chain folding still happens (and intermediate styles
-      // continue to apply when `as` overrides the rendered tag).
-      const originalForwardRef = React.forwardRef;
-      // @ts-expect-error monkey-patching for the test
-      React.forwardRef = (renderFn: any) => {
-        const fn = (props: any) => renderFn(props, null);
-        fn.$$typeof = Symbol.for('react.forward_ref');
-        fn.render = renderFn;
-        return fn;
-      };
-      try {
+    it("folds chains when forwardRef returns a function (preact/compat's shape, #5736)", () => {
+      // styled-components must accept both carriers so extended-chain folding
+      // still happens (and intermediate styles continue to apply when `as`
+      // overrides the rendered tag).
+      withFunctionForwardRef(() => {
         const Box = styled.div`
           color: red;
         `;
@@ -414,25 +421,17 @@ describe('basic', () => {
         expect(Box2.foldedComponentIds).toBe(Box.styledComponentId + ' ' + Box1.styledComponentId);
         expect(Box2.target).toBe('div');
         expect(Box2.componentStyle.baseStyle).toBeDefined();
-      } finally {
-        // @ts-expect-error restore
-        React.forwardRef = originalForwardRef;
-      }
+      });
     });
 
-    it("uses a component as a selector when forwardRef returns a function (Preact's react-compat shape)", () => {
-      const originalForwardRef = React.forwardRef;
-      // @ts-expect-error monkey-patching for the test
-      React.forwardRef = (renderFn: any) => {
-        const fn = (props: any) => renderFn(props, null);
-        fn.$$typeof = Symbol.for('react.forward_ref');
-        fn.render = renderFn;
-        return fn;
-      };
-      try {
+    it.each<[string, (fn: () => void) => void, (Box: IStyledComponent<'web'>) => object]>([
+      ['the styled component under preact/compat', withFunctionForwardRef, Box => Box],
+      ['a memo HOC that hoists its statics', fn => fn(), Box => hoist(React.memo(Box), Box)],
+    ])('uses %s as a selector', (_label, run, wrap) => {
+      run(() => {
         const Box = styled.div``;
         const Parent = styled.div`
-          ${Box}:hover {
+          ${wrap(Box)}:hover {
             color: blue;
           }
         `;
@@ -443,10 +442,7 @@ describe('basic', () => {
         expect(getRenderedCSS()).toBe(
           `.${generatedClass} .${Box.styledComponentId}:hover {\n  color: blue;\n}`
         );
-      } finally {
-        // @ts-expect-error restore
-        React.forwardRef = originalForwardRef;
-      }
+      });
     });
 
     it('should not fold components if there is an interim HOC', () => {

@@ -112,7 +112,20 @@ describe('flatten', () => {
     ['without', undefined],
     ['with', { theme: {} }],
   ])(
-    "emits a selector for a function carrier (Preact's forwardRef shape) %s an execution context",
+    'emits a selector for a function HOC that hoists the styled component brand %s an execution context',
+    (_label, executionContext) => {
+      const Inner = styled.div``;
+      const FunctionHoc = hoist((props: object) => <Inner {...props} />, Inner);
+
+      expect(flatten([FunctionHoc], executionContext)).toEqual([`.${Inner.styledComponentId}`]);
+    }
+  );
+
+  it.each([
+    ['without', undefined],
+    ['with', { theme: {} }],
+  ])(
+    "emits a selector for a function carrier (preact/compat's forwardRef shape) %s an execution context",
     (_label, executionContext) => {
       const carrier = Object.assign(() => null, {
         $$typeof: Symbol.for('react.forward_ref'),

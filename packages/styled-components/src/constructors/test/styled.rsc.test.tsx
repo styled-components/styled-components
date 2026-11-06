@@ -38,7 +38,7 @@ import { mainSheet } from '../../models/StyleSheetManager';
 import { resetGroupIds } from '../../sheet/GroupIDAllocator';
 import { resetIdentifiers } from '../../models/StyledComponent';
 import styled, { css, keyframes } from '../../index';
-import { StyleSheetManager } from '../../models/StyleSheetManager';
+import { StyleSheetManager, useStyleSheetContext } from '../../models/StyleSheetManager';
 import stylisPluginRSC from '../../utils/stylisPluginRSC';
 
 /** Extract all CSS rule text from <style> tags in rendered HTML */
@@ -1736,6 +1736,30 @@ describe('styled RSC mode', () => {
       );
 
       expect(extractStyleContents(html).replace(/\.[a-zA-Z0-9]+/g, '.CLASS')).toBe(expected);
+    });
+
+    it.each<[string, Record<string, unknown>]>([
+      ['a namespace', { namespace: '#ns' }],
+      ['enableVendorPrefixes', { enableVendorPrefixes: true }],
+    ])('reuses one stylis instance across requests for stable plugins with %s', (_label, props) => {
+      const plugins = [stylisPluginRSC];
+      const seen: unknown[] = [];
+      const ReadStylis = () => {
+        seen.push(useStyleSheetContext().stylis);
+        return null;
+      };
+
+      for (let request = 0; request < 3; request++) {
+        mockUseRequest(new Map());
+        ReactDOMServer.renderToString(
+          <StyleSheetManager stylisPlugins={plugins} {...props}>
+            <ReadStylis />
+          </StyleSheetManager>
+        );
+      }
+
+      expect(seen).toHaveLength(3);
+      expect(new Set(seen).size).toBe(1);
     });
   });
 

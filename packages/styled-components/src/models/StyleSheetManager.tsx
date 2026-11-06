@@ -153,12 +153,14 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
           options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
           plugins: props.stylisPlugins,
         });
-      } else if (props.namespace !== undefined || props.enableVendorPrefixes !== undefined) {
-        // Namespace or prefix changed without new plugins - create fresh instance
-        // using inherited plugins from parent.
+      } else if (
+        !props.stylisPlugins &&
+        (props.namespace !== undefined || props.enableVendorPrefixes !== undefined)
+      ) {
+        // Namespace or prefix without plugins of its own: build on the parent's plugins.
         rscCachedStylis = createStylisInstance({
           options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
-          plugins: props.stylisPlugins ?? parentOverride.stylisPlugins,
+          plugins: parentOverride.stylisPlugins,
         });
         rscLastPlugins = undefined;
         rscLastNamespace = undefined;

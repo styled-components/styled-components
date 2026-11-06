@@ -4,7 +4,6 @@ import {
   Dict,
   ExecutionContext,
   Interpolation,
-  IStyledComponent,
   RuleSet,
   Stringifier,
 } from '../types';
@@ -16,7 +15,7 @@ import isFunction from './isFunction';
 import isKeyframes from './isKeyframes';
 import isPlainObject from './isPlainObject';
 import isStatelessFunction from './isStatelessFunction';
-import isStyledComponent from './isStyledComponent';
+import { hasStyledComponentBrand } from './isStyledComponent';
 
 /**
  * It's falsish not falsy because 0 is allowed.
@@ -81,22 +80,20 @@ export default function flatten<Props extends object>(
     return result;
   }
 
-  const t = typeof chunk;
-
-  if (t === 'string') {
-    result.push(chunk as string);
+  if (typeof chunk === 'string') {
+    result.push(chunk);
     return result;
   }
 
-  if (t === 'function') {
+  if (typeof chunk === 'function') {
     if (isClientReference(chunk)) {
       if (process.env.NODE_ENV !== 'production') warnClientReference(chunk);
       return result;
     }
 
-    // Preact's forwardRef returns a function, so a styled component can arrive on this path.
-    if (isStyledComponent(chunk)) {
-      result.push(`.${(chunk as unknown as IStyledComponent<'web', any>).styledComponentId}`);
+    // preact/compat's forwardRef and function HOCs both carry the brand on a function.
+    if (hasStyledComponentBrand(chunk)) {
+      result.push(`.${chunk.styledComponentId}`);
       return result;
     }
 
@@ -120,7 +117,7 @@ export default function flatten<Props extends object>(
 
       return flatten<Props>(fnResult, executionContext, styleSheet, stylisInstance, result);
     } else {
-      result.push(chunk as unknown as IStyledComponent<'web'>);
+      result.push(chunk);
       return result;
     }
   }
@@ -132,8 +129,7 @@ export default function flatten<Props extends object>(
     return result;
   }
 
-  // The brand alone, not `isStyledComponent`: a `memo` HOC hoists it and still renders the class.
-  if (typeof chunk === 'object' && 'styledComponentId' in chunk) {
+  if (typeof chunk === 'object' && hasStyledComponentBrand(chunk)) {
     result.push(`.${chunk.styledComponentId}`);
     return result;
   }
