@@ -17,6 +17,8 @@ import styled, {
   type IStyleSheetContext,
 } from '../../index';
 import {
+  FILLER_PARAGRAPHS,
+  Filler,
   clientComponent,
   renderFlight,
   temporaryReference,
@@ -87,15 +89,6 @@ const tick = () => new Promise<void>(resolve => setTimeout(resolve, 0));
 
 /** A node React accepts but the types do not list (a lazy child). */
 const asNode = (value: unknown): ReactNode => value as ReactNode;
-
-/** Renders far more than the 3200 bytes after which Flight defers the remaining elements of a row. */
-const Filler = () => (
-  <div>
-    {Array.from({ length: 150 }, (_, index) => (
-      <p key={index}>Filler paragraph number {index} of lorem ipsum dolor sit amet</p>
-    ))}
-  </div>
-);
 
 const Frame = clientComponent<{ children?: ReactNode; data?: unknown; slot?: ReactNode }>('Frame');
 
@@ -224,8 +217,9 @@ describe('StyleSheetManager scope by position', () => {
     );
 
     expectScopes(result, { after: { tag: 'outer' }, before: { tag: 'outer' }, outside: {} });
-    // The case only means something when Flight really moved the later probe to its own row.
-    expect(result.probes.after.row).not.toBe(result.probes.before.row);
+    // The case only means something when Flight deferred the filler's paragraphs, each into its own
+    // row, so the later probe's row is numbered past them (rows are hex ids).
+    expect(parseInt(result.probes.after.row, 16)).toBeGreaterThan(FILLER_PARAGRAPHS);
   });
 
   it('scopes the output of an async component that resumes in a later task', async () => {

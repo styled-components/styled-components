@@ -8,7 +8,6 @@ import isPropValid from '../utils/isPropValid';
  *  class. */
 const REACT_MEMO_TYPE = Symbol.for('react.memo');
 import { RSC_REDUNDANT_EMIT_WARN_THRESHOLD, SC_ATTR, SC_VERSION } from '../constants';
-import { BACKSLASH, CR, DOUBLE_QUOTE, FF, LF, SINGLE_QUOTE, urlTokenEnd } from '../utils/charCodes';
 import { IS_RSC } from '../utils/isRsc';
 import type StyleSheet from '../sheet';
 import type {
@@ -19,7 +18,6 @@ import type {
   ExecutionContext,
   ExecutionProps,
   IStyledComponent,
-  Compiler,
   IStyledComponentFactory,
   IStyledStatics,
   OmitNever,
@@ -40,10 +38,7 @@ import {
   type PostAttrsPlan,
 } from '../utils/postAttrs';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
-import createWarnTooManyClasses, {
-  LIMIT as TOO_MANY_CLASSES_LIMIT,
-} from '../utils/createWarnTooManyClasses';
-import { fifoSet } from '../utils/fifoMap';
+import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import escape from '../utils/escape';
@@ -53,21 +48,31 @@ import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
-import { joinKeyframes, joinRules, joinStrings, stripSplitter } from '../utils/joinStrings';
-import {
-  getRscRequestState,
-  noteRscEmit,
-  recallRscRules,
-  type RscRequestState,
-} from '../utils/rscCache';
+import { joinStrings } from '../utils/joinStrings';
+import { getRscRequestState, noteRscEmit, type RscRequestState } from '../utils/rscCache';
 import { warnOnce } from '../utils/warnOnce';
+import {
+  buildRscFoldedCss,
+  buildRscStyleCss,
+  recordRscWrapper,
+  rscAbsorbed,
+  rscChainName,
+  rscFlush,
+  rscFoldedName,
+  type RscAbsorbed,
+  type RscChainOptions,
+} from './rscStyle';
+import { isClientReference } from './serverScope';
 import WebStyle, { GeneratedStyle } from './WebStyle';
-import { type IStyleSheetContext, useStyleSheetContext } from './StyleSheetManager';
+import { useStyleSheetContext } from './StyleSheetManager';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
 declare const __SERVER__: boolean;
 
 const identifiers: { [key: string]: number } = {};
+
+/** What `generatedStyle` holds outside a server component, where nothing reads it. */
+const NO_GENERATED_STYLE: GeneratedStyle = { className: '', keyframes: [], levels: [] };
 
 const subscribeNoop = (): (() => void) => () => {};
 const getFalse = (): boolean => false;
@@ -173,87 +178,6 @@ function generateId(
   return parentComponentId ? parentComponentId + '-' + componentId : componentId;
 }
 
-/**
- * RSC counterpart to `webStyle.flush`. Runs `generate()` to produce the
- * inheritance chain's compiled CSS without writing to the tag; registers
- * each new class name so repeat renders of the same component/props skip
- * compilation. Returns both the class name (for the element) and the
- * generated levels (consumed by the inline <style> emission).
- */
-function rscFlush<T extends ExecutionContext>(
-  webStyle: WebStyle,
-  resolvedAttrs: T,
-  styleSheet: StyleSheet,
-  compiler: Compiler
-): GeneratedStyle {
-  const generated = webStyle.generate(resolvedAttrs, styleSheet, compiler);
-  for (let i = 0; i < generated.levels.length; i++) {
-    const level = generated.levels[i];
-    if (level.isNew) styleSheet.registerName(level.componentId, level.name);
-  }
-  return generated;
-}
-
-/**
- * A level whose name another instance registered first arrives empty; its rules
- * come from the process-wide cache (docs/react.md "RSC style emission and
- * Suspense"), or are compiled again when the cache has evicted them.
- */
-function rscLevelRules(
-  webStyle: WebStyle,
-  level: GeneratedStyle['levels'][number],
-  context: ExecutionContext,
-  ssc: IStyleSheetContext
-): string[] {
-  if (level.rules.length > 0) return level.rules;
-
-  for (let w: WebStyle | null | undefined = webStyle; w; w = w.baseStyle) {
-    if (w.componentId !== level.componentId) continue;
-
-    const recalled = recallRscRules(w, level.name);
-    if (recalled !== undefined) return recalled;
-
-    const regenerated = webStyle.generate(context, ssc.styleSheet, ssc.compiler, {
-      recompile: true,
-    }).levels;
-    for (let i = 0; i < regenerated.length; i++) {
-      if (regenerated[i].componentId === level.componentId && regenerated[i].name === level.name) {
-        return regenerated[i].rules;
-      }
-    }
-    break;
-  }
-  return level.rules;
-}
-
-/**
- * The CSS one RSC instance emits: referenced keyframes, then each level of its
- * chain with every base level wrapped in :where() for zero specificity, so any
- * extension overrides it without !important.
- */
-function buildRscStyleCss(
-  webStyle: WebStyle,
-  generatedStyle: GeneratedStyle,
-  context: ExecutionContext,
-  ssc: IStyleSheetContext
-): string {
-  const levels = generatedStyle.levels;
-  const lastIdx = levels.length - 1;
-  let css = '';
-
-  for (let i = 0; i < levels.length; i++) {
-    const level = levels[i];
-    const rules = rscLevelRules(webStyle, level, context, ssc);
-    if (rules.length === 0) continue;
-
-    let levelCss = joinRules(rules);
-    if (i !== lastIdx) levelCss = wrapLevelInWhere(levelCss, level.name);
-    css += levelCss;
-  }
-
-  return stripSplitter(joinKeyframes(generatedStyle.keyframes) + css);
-}
-
 function resolveContext<Props extends BaseObject>(
   attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
   props: ExecutionProps & Props,
@@ -289,72 +213,6 @@ function resolveContext<Props extends BaseObject>(
 }
 
 let seenUnknownProps: Set<string> | undefined;
-
-/**
- * Cache RegExp objects for :where() wrapping to avoid recompilation per
- * render. Bounded with FIFO eviction at the same threshold the
- * warn-too-many-classes machinery uses; without the cap, RSC SSR with
- * unbounded class-name variation would leak a regex per unique class.
- */
-const whereRegExpCache = new Map<string, RegExp>();
-function getWhereRegExp(name: string): RegExp {
-  let re = whereRegExpCache.get(name);
-  if (!re) {
-    re = new RegExp('\\.' + name + '(?![a-zA-Z0-9_-])', 'g');
-    fifoSet(whereRegExpCache, name, re, TOO_MANY_CLASSES_LIMIT);
-  }
-  return re;
-}
-
-/**
- * A url token ends at its first `)`, so the `(` of `:where(` inside one would end it there and
- * turn the text after into real rules. Only the text around url tokens is wrapped. A `(` inside a
- * string is not a url token, so strings are skipped whole.
- */
-function wrapLevelInWhere(levelCss: string, name: string): string {
-  const re = getWhereRegExp(name);
-  const wrapped = ':where(.' + name + ')';
-  const len = levelCss.length;
-  let out = '';
-  let from = 0;
-  let escape = -1;
-  let nextEscape = levelCss.indexOf('\\');
-  /** Everything before this index is read: outside a string, or skipped as one. */
-  let read = 0;
-  for (let open = levelCss.indexOf('('); open !== -1; open = levelCss.indexOf('(', open + 1)) {
-    while (nextEscape !== -1 && nextEscape < open) {
-      escape = nextEscape;
-      nextEscape = levelCss.indexOf('\\', escape + 1);
-    }
-    if (escape === open - 1) continue;
-
-    while (read < open) {
-      const code = levelCss.charCodeAt(read++);
-      if (code === BACKSLASH) {
-        read++;
-      } else if (code === DOUBLE_QUOTE || code === SINGLE_QUOTE) {
-        // A raw newline ends a string.
-        while (read < len) {
-          const inner = levelCss.charCodeAt(read);
-          if (inner === code) {
-            read++;
-            break;
-          }
-          if (inner === LF || inner === CR || inner === FF) break;
-          read += inner === BACKSLASH ? 2 : 1;
-        }
-      }
-    }
-    if (read > open) continue;
-
-    const urlEnd = urlTokenEnd(levelCss, open, len, escape);
-    if (urlEnd !== -1) {
-      out += levelCss.substring(from, open).replace(re, wrapped) + levelCss.substring(open, urlEnd);
-      from = open = read = urlEnd;
-    }
-  }
-  return out + levelCss.substring(from).replace(re, wrapped);
-}
 
 /**
  * Merge an attrs-resolved dict into the execution context: `className` joins,
@@ -542,7 +400,7 @@ function useImpl<Props extends BaseObject>(
   const theme = determineTheme(props, contextTheme) || (IS_RSC ? undefined : EMPTY_OBJECT);
 
   let generatedClassName: string;
-  let generatedStyle: GeneratedStyle | null = null;
+  let generatedStyle = NO_GENERATED_STYLE;
   let rscState: RscRequestState | null = null;
   let popOverrides: Dict<string> | null = null;
   const postAttrsPlans = forwardedComponent.postAttrsPlans;
@@ -563,7 +421,7 @@ function useImpl<Props extends BaseObject>(
   if (IS_RSC) {
     rscState = getRscRequestState ? getRscRequestState() : null;
     generatedStyle = rscFlush(webStyle, context, ssc.styleSheet, ssc.compiler);
-    generatedClassName = generatedStyle.className;
+    generatedClassName = rscChainName(generatedStyle);
   } else if (__SERVER__ || ssc.styleSheet.server) {
     // ServerStyleSheet SSR (in either a server or a browser build) never runs
     // insertion effects, so the CSSOM write must stay synchronous.
@@ -586,6 +444,30 @@ function useImpl<Props extends BaseObject>(
 
   const elementToBeCreated: WebTarget = context.as || target;
   const isDOMTarget = isTag(elementToBeCreated);
+
+  let absorbed: RscAbsorbed | null = null;
+  if (IS_RSC && rscState !== null) {
+    if (isDOMTarget) {
+      if (context.className && rscState.wrappers.size > 0) {
+        absorbed = rscAbsorbed(rscState, context.className);
+      }
+    } else if (!isClientReference(elementToBeCreated)) {
+      recordRscWrapper(
+        {
+          chain: generatedClassName,
+          context,
+          generated: generatedStyle,
+          ssc,
+          webStyle,
+        },
+        rscState
+      );
+    }
+  }
+  if (absorbed !== null) generatedClassName = rscFoldedName(generatedClassName, absorbed);
+
+  const incomingClassName = absorbed === null ? context.className : absorbed.rest;
+
   const elementProps = buildPropsForElement(
     context,
     elementToBeCreated,
@@ -604,8 +486,8 @@ function useImpl<Props extends BaseObject>(
   if (generatedClassName) {
     classString += ' ' + generatedClassName;
   }
-  if (context.className) {
-    classString += ' ' + context.className;
+  if (incomingClassName) {
+    classString += ' ' + incomingClassName;
   }
 
   elementProps[isDOMTarget && elementToBeCreated.includes('-') ? 'class' : 'className'] =
@@ -643,13 +525,28 @@ function useImpl<Props extends BaseObject>(
   }
 
   // RSC: one plain tag per instance, shared element objects; see docs/react.md "RSC style emission and Suspense".
-  if (IS_RSC && generatedStyle) {
+  if (IS_RSC) {
     const sharedElements = rscState !== null ? rscState.styleElements : null;
     const sharedKey = webStyle.componentId + ' ' + generatedClassName;
     let styleElement = sharedElements ? sharedElements.get(sharedKey) : undefined;
 
     if (styleElement === undefined) {
-      const combined = buildRscStyleCss(webStyle, generatedStyle, context, ssc);
+      const chainOptions: RscChainOptions = {
+        chain: generatedClassName,
+        context,
+        generated: generatedStyle,
+        ssc,
+        webStyle,
+      };
+      // A wrapper recorded its levels this render (or an earlier one with the same class).
+      const recorded =
+        absorbed === null && !isDOMTarget && rscState !== null
+          ? rscState.wrappers.get(generatedClassName)
+          : undefined;
+      const combined =
+        absorbed === null
+          ? buildRscStyleCss(chainOptions, recorded)
+          : buildRscFoldedCss(chainOptions, absorbed);
       if (combined) {
         styleElement = React.createElement('style', {
           [SC_ATTR]: '',

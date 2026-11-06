@@ -6,7 +6,7 @@
  *   @jest-environment node
  *   @jest-environment-options {"customExportConditions": ["react-server", "node", "node-addons"]}
  */
-import type { ReactNode } from 'react';
+import { createElement, type ReactNode } from 'react';
 import { Writable } from 'stream';
 
 type FlightServer = {
@@ -34,6 +34,26 @@ export function clientComponent<Props extends object>(name: string): (props: Pro
 
   return flight.registerClientReference(proxy, `client/${name}`, 'default');
 }
+
+/** How many paragraphs {@link Filler} renders. */
+export const FILLER_PARAGRAPHS = 150;
+
+/**
+ * Renders far more than the 3200 bytes after which Flight defers the remaining elements of a row,
+ * so an element placed after it lands in a later row.
+ */
+export const Filler = (): ReactNode =>
+  createElement(
+    'div',
+    null,
+    Array.from({ length: FILLER_PARAGRAPHS }, (_, index) =>
+      createElement(
+        'p',
+        { key: index },
+        `Filler paragraph number ${index} of lorem ipsum dolor sit amet`
+      )
+    )
+  );
 
 /** A temporary reference as a server-action reply delivers one: a value from the client that the server can only pass back. */
 export async function temporaryReference(): Promise<unknown> {

@@ -78,7 +78,7 @@ function copyValidation(from: object, to: unknown): void {
 }
 
 /** A client reference, or a temporary reference (a value a server action received from the client); neither runs on the server. */
-function isClientReference(type: unknown): boolean {
+export function isClientReference(type: unknown): boolean {
   if (typeof type !== 'function') return false;
 
   const tag = Reflect.get(type, '$$typeof');
