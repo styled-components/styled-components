@@ -44,6 +44,8 @@ const DECL_BODY_AT_RULES = new Set([
   'viewport',
   'font-feature-values',
   'font-palette-values',
+  'position-try',
+  'view-transition',
 ]);
 
 /**

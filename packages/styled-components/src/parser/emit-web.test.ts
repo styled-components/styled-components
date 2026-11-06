@@ -94,6 +94,43 @@ describe('web emitter', () => {
     `);
   });
 
+  /**
+   * CSS View Transitions 2 §8.3.1 (https://drafts.csswg.org/css-view-transitions-2/#view-transition-rule):
+   * "@view-transition { <declaration-list> }" ... "The @view-transition rule accepts the navigation
+   * and types descriptors." ... "the @view-transition rule can be nested inside a conditional group
+   * rule such as @media or @supports."
+   *
+   * CSS Anchor Positioning 1 §6.4 (https://drafts.csswg.org/css-anchor-position-1/#fallback-rule):
+   * "@position-try <dashed-ident> { <declaration-list> }" ... "The @position-try rule only accepts
+   * the following accepted @position-try properties".
+   *
+   * Neither body holds a style rule, so it is emitted as written, never wrapped in the parent
+   * selector, and kept when there is no parent selector (a global style).
+   */
+  describe('at-rules whose body is a declaration list', () => {
+    test.each([
+      ['a component', '.a'],
+      ['a global style', ''],
+    ])('emits @view-transition and @position-try as written in %s', (_, selector) => {
+      expect(
+        emit(
+          `@view-transition { navigation: auto; types: slide forwards; }
+           @position-try --below { top: anchor(bottom); position-area: bottom; }`,
+          selector
+        )
+      ).toEqual([
+        '@view-transition{navigation:auto;types:slide forwards;}',
+        '@position-try --below{top:anchor(bottom);position-area:bottom;}',
+      ]);
+    });
+
+    it('emits @view-transition nested in @media in a global style', () => {
+      expect(
+        emit(`@media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }`, '')
+      ).toEqual(['@media (prefers-reduced-motion: no-preference){@view-transition{navigation:auto;}}']);
+    });
+  });
+
   it('drops empty nested rules but keeps base decls', () => {
     expect(emit(`color: red; &:hover { } font-size: 16px;`)).toMatchInlineSnapshot(`
       [
