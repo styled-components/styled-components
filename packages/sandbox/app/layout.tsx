@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from 'next';
-import styled from 'styled-components';
+import styled, { configureServerStyles, stylisPluginRSC } from 'styled-components';
 import StyledComponentsRegistry from './lib/registry';
 import { CustomThemeProvider } from './components/theme-provider';
 import { Sidebar } from './components/sidebar';
 import theme from './lib/theme';
+
+configureServerStyles({ stylisPlugins: [stylisPluginRSC] });
 
 export const metadata: Metadata = {
   title: 'styled-components RSC Test',

@@ -21,11 +21,10 @@ import { isEscaped } from './stylis';
  *    - Each `+` adds 2 fallback selectors, increasing CSS output size.
  *
  * ```jsx
- * import { StyleSheetManager, stylisPluginRSC } from 'styled-components';
+ * // In the root layout file, or any module every server render loads first.
+ * import { configureServerStyles, stylisPluginRSC } from 'styled-components';
  *
- * <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
- *   ...
- * </StyleSheetManager>
+ * configureServerStyles({ stylisPlugins: [stylisPluginRSC] });
  * ```
  *
  * Requires browser support for CSS Selectors Level 4 `of S` syntax
@@ -89,21 +88,25 @@ function expandAdjacentSibling(selector: string, out: string[]): void {
   }
 }
 
-function stylisPluginRSC(element: Parameters<Middleware>[0]) {
-  if (element.type === RULESET) {
-    // New array - stylis caches AST objects, in-place mutation corrupts the cache
-    const props = element.props as string[];
-    const newProps: string[] = [];
-    for (let i = 0; i < props.length; i++) {
-      const rewritten = rewriteSelector(props[i]);
-      newProps.push(rewritten);
-      expandAdjacentSibling(rewritten, newProps);
+// Minifiers mangle or drop function names, and createStylisInstance throws on a plugin with none.
+// The annotation sits on the initializer: on a bare statement it lets a bundler delete the call
+// and leave the plugin unnamed, while here it only goes when the plugin itself is unused.
+const stylisPluginRSC = /*#__PURE__*/ Object.defineProperty(
+  (element: Parameters<Middleware>[0]) => {
+    if (element.type === RULESET) {
+      // New array - stylis caches AST objects, in-place mutation corrupts the cache
+      const props = element.props as string[];
+      const newProps: string[] = [];
+      for (let i = 0; i < props.length; i++) {
+        const rewritten = rewriteSelector(props[i]);
+        newProps.push(rewritten);
+        expandAdjacentSibling(rewritten, newProps);
+      }
+      element.props = newProps;
     }
-    element.props = newProps;
-  }
-}
-
-// Minifiers mangle function names; stylis hash needs a stable .name for cache keying
-/*#__PURE__*/ Object.defineProperty(stylisPluginRSC, 'name', { value: 'stylisPluginRSC' });
+  },
+  'name',
+  { value: 'stylisPluginRSC' }
+);
 
 export default stylisPluginRSC;

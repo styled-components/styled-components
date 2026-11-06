@@ -140,17 +140,18 @@ module-level slot with no reset, so a manager's settings carry into later reques
 The slot is not a scope. A manager's settings take effect when its body runs and apply to everything
 rendered after it in the same request, siblings outside the manager included. Next.js does not render
 shared layouts or templates on a client navigation, so a manager placed there does not reach the page
-in that request. A manager that must reach a page renders in that page, or in a component every page
-renders, before any await.
+in that request. Plugins for every page go in `configureServerStyles` (below). Any other setting that
+must reach a page goes in a manager that renders in that page, or in a component every page renders,
+before any await.
 
 The override carries exactly four things: `shouldForwardProp`, `styleSheet`, `stylis` and
 `stylisPlugins`. A nested manager inherits `stylisPlugins` and `shouldForwardProp` from its parent
 when it omits them, which is what lets an inner manager set `namespace` or `enableVendorPrefixes`
 while keeping the outer plugins. Passing `stylisPlugins={[]}` explicitly opts out and falls back to
-the default stylis instance, or to a plugin-free instance that keeps a `namespace` or
-`enableVendorPrefixes` passed with it. When neither a custom stylis instance nor a
-`shouldForwardProp` survives resolution, the override is cleared to `null` rather than set to a
-redundant object.
+the default stylis instance, configured plugins included, or to a plugin-free instance that keeps a
+`namespace` or `enableVendorPrefixes` passed with it. When the resolved stylis instance is the server
+default and no `shouldForwardProp` survives resolution, the override is cleared to `null` rather
+than set to a redundant object.
 
 The compiled stylis instance is memoized at module level, because the manager reads and writes it in
 one synchronous call. A memoized instance is reused only by a manager with the same plugins array
@@ -162,6 +163,24 @@ it only through the DOM property), then `<meta name="sc-nonce">` (the styled-com
 value in `content`), then the legacy `__webpack_nonce__` global. Header-based nonces, as used by
 Next.js and Remix, are not auto-detectable and must be passed explicitly to `StyleSheetManager` or
 `ServerStyleSheet`.
+
+### configureServerStyles
+
+- `configureServerStyles({ stylisPlugins })` sets the plugins every server component starts from,
+  for the whole process, so they reach a page whose layout did not render in that request. With no
+  override in the slot a read gets these defaults, and a manager inherits them like a nested manager
+  inherits its parent's.
+- Stored on `globalThis` under a `Symbol.for` key that names the major version, and shape-checked on
+  read, so every copy of the library in the process reads one value (Next bundles each server layer
+  apart).
+- Last call wins. A call applies to renders that start after it, so it is a top-level statement in a
+  module every server render loads first: in Next, the root layout file. Next runs
+  `instrumentation.ts` only in the live server, never in the build workers that prerender static
+  pages, so a call there misses every prerendered route.
+- One value per process: an app with several root layouts (route groups) makes one call, or each
+  layout's call replaces the others' for every route.
+- Server components only: a process-wide value would differ between server rendering and the browser
+  for client components. In the browser build the call does nothing and warns in development.
 
 ## Selectors broken by inline style tags
 

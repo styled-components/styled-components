@@ -237,6 +237,57 @@ describe('stylisPluginRSC tree-shaking', () => {
     expect(serverESM).toContain('stylisPluginRSC');
   });
 
+  // A plugin with no name throws error 15 at first render, so losing it breaks every production build using the plugin.
+  it.each(['styled-components.esm.js', 'styled-components.browser.esm.js'])(
+    'keeps its name through a production bundle of %s',
+    async file => {
+      const webpack = require('webpack');
+      const os = require('os');
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sc-plugin-name-'));
+      const entryFile = path.join(tmpDir, 'entry.js');
+
+      try {
+        fs.writeFileSync(
+          entryFile,
+          [
+            `import { stylisPluginRSC } from '${distDir}/${file}';`,
+            'const plugins = [stylisPluginRSC];',
+            'globalThis.__scPluginName = plugins[0].name;',
+          ].join('\n')
+        );
+
+        const stats: any = await new Promise((resolve, reject) => {
+          webpack(
+            {
+              mode: 'production',
+              entry: entryFile,
+              target: 'node',
+              output: { path: tmpDir, filename: 'bundle.js' },
+              externals: {
+                react: 'commonjs react',
+                'react-dom': 'commonjs react-dom',
+                '@emotion/is-prop-valid': 'commonjs @emotion/is-prop-valid',
+                stylis: 'commonjs stylis',
+              },
+            },
+            (err: any, stats: any) => (err ? reject(err) : resolve(stats))
+          );
+        });
+
+        if (stats.hasErrors()) {
+          throw new Error(stats.compilation.errors.map((e: any) => e.message).join('\n'));
+        }
+
+        new Function('require', fs.readFileSync(path.join(tmpDir, 'bundle.js'), 'utf8'))(require);
+
+        expect(Reflect.get(globalThis, '__scPluginName')).toBe('stylisPluginRSC');
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    },
+    30000
+  );
+
   it('is eliminated by webpack when unused', async () => {
     const webpack = require('webpack');
     const os = require('os');

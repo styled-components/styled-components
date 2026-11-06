@@ -188,6 +188,23 @@ const Card = styled.div`
 </ThemeProvider>
 ```
 
+### Plugins in server components
+
+A `StyleSheetManager` in a server component applies to what renders after it in the same request, and Next.js does not re-render a shared layout on a client-side navigation. To give every server component the same plugins, call `configureServerStyles` once, at the top level of the root layout file:
+
+```tsx
+// app/layout.tsx
+import { configureServerStyles, stylisPluginRSC } from 'styled-components';
+
+configureServerStyles({ stylisPlugins: [stylisPluginRSC] });
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // ...
+}
+```
+
+The call is a plain statement, not a component, so it reaches every page, nested layout, and client-side navigation, including pages prerendered at build time. Make one call per app. A `StyleSheetManager` in a server component starts from these plugins; `stylisPlugins={[]}` drops them. Client components take their plugins from a `StyleSheetManager` rendered on the client.
+
 ### Shared styles with `css`
 
 Extract reusable style blocks to share across components or apply conditionally.
