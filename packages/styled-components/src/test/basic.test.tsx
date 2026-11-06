@@ -9,13 +9,11 @@ let styled: ReturnType<typeof resetStyled>;
 
 /** Runs `fn` with `React.forwardRef` returning a function, the shape preact/compat gives it. */
 const withFunctionForwardRef = (fn: () => void) => {
-  const spy = jest.spyOn(React, 'forwardRef').mockImplementation(
-    (renderFn =>
-      Object.assign((props: object) => renderFn(props, null), {
-        $$typeof: Symbol.for('react.forward_ref'),
-        render: renderFn,
-      })) as typeof React.forwardRef
-  );
+  const spy = jest.spyOn(React, 'forwardRef').mockImplementation((renderFn =>
+    Object.assign((props: object) => renderFn(props, null), {
+      $$typeof: Symbol.for('react.forward_ref'),
+      render: renderFn,
+    })) as typeof React.forwardRef);
 
   try {
     fn();
