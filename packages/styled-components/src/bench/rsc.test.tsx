@@ -4,8 +4,8 @@
  * Run: pnpm --filter styled-components bench:rsc
  *
  * Measures server-side renderToString performance with IS_RSC=true,
- * including per-instance inline style tag emission, :where() wrapping,
- * and keyframe handling.
+ * including per-instance inline style tag emission, extension chains,
+ * wrapped components, and keyframe handling.
  */
 
 // Mock React.cache ; scoped per render via manual clear
@@ -164,6 +164,81 @@ describe('RSC benchmarks', () => {
         )
       );
     });
+  });
+
+  it('pages of 4000 elements (chains, user classes, wrappers)', () => {
+    console.log('\n--- Pages of 4000 elements (20 iterations, median of 5) ---');
+
+    // 2000 instances per component trips the redundant-emit warning once per component.
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const A = styled.div<{ $i: number }>`
+      color: blue;
+      padding: ${p => p.$i % 50}px;
+      &:hover {
+        background: url(x.png);
+      }
+    `;
+    const B = styled(A)`
+      color: green;
+      @media (min-width: 10px) {
+        margin: 1px;
+      }
+    `;
+    const C = styled(B)`
+      color: red;
+    `;
+    const Root = styled.span<{ $i: number }>`
+      width: ${p => p.$i % 50}px;
+    `;
+    const Wrap = (props: object) => <A $i={0} {...props} />;
+    const Wrapper = styled(Wrap)<{ $i: number }>`
+      margin: ${p => p.$i % 50}px;
+    `;
+    const ClientRef = Object.assign((props: object) => <div {...props} />, {
+      $$typeof: Symbol.for('react.client.reference'),
+    });
+    const FromClientRef = styled(ClientRef)`
+      color: teal;
+    `;
+
+    const page = (pair: (i: number) => React.ReactNode[], lead?: React.ReactNode) => () =>
+      ReactDOMServer.renderToString(
+        <main>
+          {lead}
+          {Array.from({ length: 2000 }, (_, i) => pair(i)).flat()}
+        </main>
+      );
+    const withClassName = (i: number) => [
+      <C key={'c' + i} $i={i} className="card x" />,
+      <Root key={'r' + i} $i={i} className="row" />,
+    ];
+
+    bench(
+      'chain: 2000 three-level extensions + 2000 roots',
+      20,
+      page(i => [<C key={'c' + i} $i={i} />, <Root key={'r' + i} $i={i} />])
+    );
+
+    bench(
+      'classname: the same with a user className, one wrapper on the page',
+      20,
+      page(withClassName, <Wrapper key="wrapper" $i={1} />)
+    );
+
+    bench(
+      'wrapped: 2000 wrappers of a styled element + 2000 roots with a className',
+      20,
+      page(i => [<Wrapper key={'o' + i} $i={i} />, <Root key={'r' + i} $i={i} className="row" />])
+    );
+
+    bench(
+      'client reference: one styled client reference + 4000 elements with a className',
+      20,
+      page(withClassName, <FromClientRef key="client" />)
+    );
+
+    warn.mockRestore();
   });
 
   it('repeated instances (per-instance emission)', () => {
