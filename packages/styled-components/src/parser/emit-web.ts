@@ -44,6 +44,8 @@ const DECL_BODY_AT_RULES = new Set([
   'viewport',
   'font-feature-values',
   'font-palette-values',
+  'position-try',
+  'view-transition',
 ]);
 
 /**
@@ -366,7 +368,11 @@ function emitFrame(frame: StaticKeyframeFrame, options: EmitOptions | undefined)
   return frame.stops.join(',') + '{' + declBody(frame.children, options) + '}';
 }
 
-/** `prop:value;` per declaration child, joined; '' when there are none. */
+/**
+ * `prop:value;` per declaration child, joined; '' when there are none. An at-rule nested in a
+ * declaration body is a declaration block itself (`@page` margin boxes, `@font-feature-values`
+ * blocks), so it is kept with its own declarations.
+ */
 function declBody(children: ReadonlyArray<StaticNode>, options: EmitOptions | undefined): string {
   const declTransform = options && options.decl;
   let body = '';
@@ -374,6 +380,14 @@ function declBody(children: ReadonlyArray<StaticNode>, options: EmitOptions | un
     const child = children[i];
     if (child.kind === NodeKind.Decl) {
       body += formatDecl(child.prop, child.value, declTransform);
+    } else if (child.kind === NodeKind.AtRule && child.children !== null) {
+      const inner = declBody(child.children, options);
+      if (inner) {
+        body += wholeRule(
+          '@' + child.name + (child.prelude ? ' ' + child.prelude : ''),
+          '{' + inner + '}'
+        );
+      }
     }
   }
   return body;
