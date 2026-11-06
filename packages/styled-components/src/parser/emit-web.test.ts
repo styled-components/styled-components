@@ -134,6 +134,37 @@ describe('web emitter', () => {
         '@media (prefers-reduced-motion: no-preference){@view-transition{navigation:auto;}}',
       ]);
     });
+
+    /**
+     * CSS Paged Media 3 §3 (https://drafts.csswg.org/css-page-3/#syntax-page-selector):
+     * "@page = @page <page-selector-list>? { <declaration-rule-list> }" ...
+     * "@top-left = @top-left { <declaration-list> };" ... "The @page rule can only contain page
+     * properties and margin at-rules."
+     *
+     * CSS Fonts 4 (https://drafts.csswg.org/css-fonts-4/#font-feature-values):
+     * "@font-feature-values = @font-feature-values <font-family-name># { <declaration-rule-list> }"
+     * ... "@styleset = @styleset { <declaration-list> }" ... "The @font-feature-values block
+     * accepts <declaration-rule-list> as its contents; these list items are either: at-rules named
+     * by one of the <font-feature-value-type> at-keyword tokens or the font-display descriptor."
+     */
+    test.each([
+      ['a component', '.a'],
+      ['a global style', ''],
+    ])(
+      'keeps the declaration blocks nested in @page and @font-feature-values in %s',
+      (_, selector) => {
+        expect(
+          emit(
+            `@page :first { margin: 1cm; @top-left { content: "Title"; } }
+           @font-feature-values Font One { font-display: swap; @styleset { nice-style: 12; } }`,
+            selector
+          )
+        ).toEqual([
+          '@page :first{margin:1cm;@top-left{content:"Title";}}',
+          '@font-feature-values Font One{font-display:swap;@styleset{nice-style:12;}}',
+        ]);
+      }
+    );
   });
 
   it('drops empty nested rules but keeps base decls', () => {

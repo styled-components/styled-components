@@ -334,7 +334,7 @@ function emitAtRule(
 
   if (DECL_BODY_AT_RULES.has(node.name)) {
     // Body is bare declarations; emit inline, no selector wrap.
-    const body = declBody(node.children, options);
+    const body = declBlockBody(node.children, options);
     return body ? wholeRule(header, '{' + body + '}') : '';
   }
 
@@ -376,6 +376,30 @@ function declBody(children: ReadonlyArray<StaticNode>, options: EmitOptions | un
     const child = children[i];
     if (child.kind === NodeKind.Decl) {
       body += formatDecl(child.prop, child.value, declTransform);
+    }
+  }
+  return body;
+}
+
+/**
+ * Body of an at-rule that holds no style rules: its declarations, plus the at-rules nested in
+ * it, which are declaration blocks too (`@page` margin boxes, `@font-feature-values` blocks).
+ */
+function declBlockBody(
+  children: ReadonlyArray<StaticNode>,
+  options: EmitOptions | undefined
+): string {
+  const declTransform = options && options.decl;
+  let body = '';
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    if (child.kind === NodeKind.Decl) {
+      body += formatDecl(child.prop, child.value, declTransform);
+    } else if (child.kind === NodeKind.AtRule && child.children !== null) {
+      const inner = declBlockBody(child.children, options);
+      if (!inner) continue;
+      const prelude = stripCommaSpaces(child.prelude);
+      body += wholeRule('@' + child.name + (prelude ? ' ' + prelude : ''), '{' + inner + '}');
     }
   }
   return body;
