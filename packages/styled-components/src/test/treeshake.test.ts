@@ -534,8 +534,11 @@ describe('bundle size', () => {
     // arity-2 attrs tracing with its runtime fallback, and the server entry
     // points a consumer bundle would shake away. Holds the security fix that keeps
     // malformed CSS inside its statement, `createGlobalStyle` interpolations in render,
-    // and at-rules whose bodies are declaration blocks (`@view-transition`, `@page` margin boxes).
-    expect(sizeKB).toBeLessThan(15.15);
+    // at-rules whose bodies are declaration blocks (`@view-transition`, `@page` margin boxes),
+    // the automatic `view-transition-class` and chain-wide `container-name`, a namespace
+    // joined onto root-anchored selectors, and `keyframes` reading fragments and style objects the
+    // way a styled template does.
+    expect(sizeKB).toBeLessThan(16.1);
   });
   it('production bundle size with real bundler tree-shaking', async () => {
     const zlib = require('zlib');
@@ -576,8 +579,11 @@ describe('bundle size', () => {
     // the global-style instance registry shared across colliding ids.
     // v6.4.1 for this same entry is 11.44kB gzip. Holds the security fix that keeps
     // malformed CSS inside its statement, `createGlobalStyle` interpolations in render,
-    // and at-rules whose bodies are declaration blocks (`@view-transition`, `@page` margin boxes).
-    expect(sizeKB).toBeLessThan(14);
+    // at-rules whose bodies are declaration blocks (`@view-transition`, `@page` margin boxes),
+    // the automatic `view-transition-class` and chain-wide `container-name`, a namespace
+    // joined onto root-anchored selectors, and `keyframes` reading fragments and style objects the
+    // way a styled template does.
+    expect(sizeKB).toBeLessThan(14.9);
   }, 30000);
 });
 
