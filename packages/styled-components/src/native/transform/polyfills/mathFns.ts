@@ -551,6 +551,109 @@ export function scaleUnit(op: '*' | '/', a: NumericResult, b: NumericResult): st
 }
 
 /**
+ * The numbers a property accepts. A math result outside it clamps to the nearest bound,
+ * and an `integer` property rounds the result; the declaration stays valid.
+ */
+export interface MathRange {
+  integer: boolean;
+  max: number;
+  min: number;
+}
+
+const NON_NEGATIVE: MathRange = { integer: false, max: Infinity, min: 0 };
+const UNIT_INTERVAL: MathRange = { integer: false, max: 1, min: 0 };
+const FONT_WEIGHT: MathRange = { integer: false, max: 1000, min: 1 };
+const INTEGER: MathRange = { integer: true, max: Infinity, min: -Infinity };
+
+/**
+ * Native style keys whose property restricts the numbers it accepts. A key outside the table
+ * has no range. The keys are the ones a declaration produces, so a shorthand's longhands,
+ * React Native's own names (`paddingHorizontal`, `borderTopStartRadius`), and the logical
+ * names each have their own entry.
+ */
+const MATH_RANGES = {
+  blockSize: NON_NEGATIVE,
+  borderBottomEndRadius: NON_NEGATIVE,
+  borderBottomLeftRadius: NON_NEGATIVE,
+  borderBottomRightRadius: NON_NEGATIVE,
+  borderBottomStartRadius: NON_NEGATIVE,
+  borderBottomWidth: NON_NEGATIVE,
+  borderEndEndRadius: NON_NEGATIVE,
+  borderEndStartRadius: NON_NEGATIVE,
+  borderEndWidth: NON_NEGATIVE,
+  borderLeftWidth: NON_NEGATIVE,
+  borderRadius: NON_NEGATIVE,
+  borderRightWidth: NON_NEGATIVE,
+  borderStartEndRadius: NON_NEGATIVE,
+  borderStartStartRadius: NON_NEGATIVE,
+  borderStartWidth: NON_NEGATIVE,
+  borderTopEndRadius: NON_NEGATIVE,
+  borderTopLeftRadius: NON_NEGATIVE,
+  borderTopRightRadius: NON_NEGATIVE,
+  borderTopStartRadius: NON_NEGATIVE,
+  borderTopWidth: NON_NEGATIVE,
+  borderWidth: NON_NEGATIVE,
+  columnGap: NON_NEGATIVE,
+  flexBasis: NON_NEGATIVE,
+  flexGrow: NON_NEGATIVE,
+  flexShrink: NON_NEGATIVE,
+  fontSize: NON_NEGATIVE,
+  fontWeight: FONT_WEIGHT,
+  gap: NON_NEGATIVE,
+  height: NON_NEGATIVE,
+  inlineSize: NON_NEGATIVE,
+  lineHeight: NON_NEGATIVE,
+  maxBlockSize: NON_NEGATIVE,
+  maxHeight: NON_NEGATIVE,
+  maxInlineSize: NON_NEGATIVE,
+  maxWidth: NON_NEGATIVE,
+  minBlockSize: NON_NEGATIVE,
+  minHeight: NON_NEGATIVE,
+  minInlineSize: NON_NEGATIVE,
+  minWidth: NON_NEGATIVE,
+  opacity: UNIT_INTERVAL,
+  outlineWidth: NON_NEGATIVE,
+  padding: NON_NEGATIVE,
+  paddingBlock: NON_NEGATIVE,
+  paddingBlockEnd: NON_NEGATIVE,
+  paddingBlockStart: NON_NEGATIVE,
+  paddingBottom: NON_NEGATIVE,
+  paddingEnd: NON_NEGATIVE,
+  paddingHorizontal: NON_NEGATIVE,
+  paddingInline: NON_NEGATIVE,
+  paddingInlineEnd: NON_NEGATIVE,
+  paddingInlineStart: NON_NEGATIVE,
+  paddingLeft: NON_NEGATIVE,
+  paddingRight: NON_NEGATIVE,
+  paddingStart: NON_NEGATIVE,
+  paddingTop: NON_NEGATIVE,
+  paddingVertical: NON_NEGATIVE,
+  rowGap: NON_NEGATIVE,
+  width: NON_NEGATIVE,
+  zIndex: INTEGER,
+} satisfies Record<string, MathRange>;
+
+/** The range of a native style key, or `undefined` when the key accepts any number. Call it once per declaration, at build time. */
+export function mathRangeOf(key: string): MathRange | undefined {
+  // An own-property check keeps a key such as `constructor` from reading Object.prototype.
+  return Object.prototype.hasOwnProperty.call(MATH_RANGES, key)
+    ? MATH_RANGES[key as keyof typeof MATH_RANGES]
+    : undefined;
+}
+
+/** `value` rounded when the range is integer, then held between its bounds. */
+export function clampToRange(value: number, range: MathRange): number {
+  const n = range.integer ? Math.round(value) : value;
+  return n < range.min ? range.min : n > range.max ? range.max : n;
+}
+
+/** `r` held to the range when it is a number, a length, or a percentage; other units (angles, durations) pass through. */
+export function clampNumericResult(r: NumericResult, range: MathRange): NumericResult {
+  if (r.unit !== '' && r.unit !== 'px' && r.unit !== '%') return r;
+  return { unit: r.unit, value: clampToRange(r.value, range) };
+}
+
+/**
  * Emit a NumericResult as a value the RN style layer accepts. Bare
  * numbers and px values become `number`; percentages become `"N%"`.
  */

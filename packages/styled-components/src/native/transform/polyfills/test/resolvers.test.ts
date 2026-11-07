@@ -2502,5 +2502,173 @@ describe('attr() spec compliance (CSS Values 5 §8.7)', () => {
       expect(buildResolver('calc(attr(data-size px, 40px) + 5px)')!(withProps({}))).toBe(45);
       expect(buildResolver('calc(attr(data-size px, 4) + 5px)')!(withProps({}))).toBeNull();
     });
+
+    // The same rule types a fallback that is itself an expression: the type of
+    // the expression it builds ("<number> <integer> the type is «[ ]»",
+    // "<length> the type is «[ "length" → 1 ]»", and the type of a * or /
+    // sub-expression from its two sides).
+    it.each([
+      // <number> + <length> is a type failure
+      ['calc(attr(data-size number, sibling-index()) + 5px)', { siblingIndex: 3 }, null],
+      ['calc(attr(data-size px, calc(2 * 3)) + 5px)', {}, null],
+      ['calc(attr(data-size px, 1 + 2) + 5px)', {}, null],
+      // a <length>
+      ['calc(attr(data-size px, calc(2px * 3)) + 5px)', {}, 11],
+      ['calc(attr(data-size px, 2em) + 5px)', {}, 37],
+      ['calc(attr(data-size px, 20px / 4) + 5px)', {}, 10],
+      // a <number> times a <length> is a <length>
+      ['calc(attr(data-size number, sibling-index()) * 5px)', { siblingIndex: 3 }, 15],
+      ['calc(attr(data-size number, sibling-index()) * 5px + 1px)', { siblingIndex: 3 }, 16],
+      // a present, valid attribute is typed by the attr() type, not the fallback
+      ['calc(attr(data-size px, 4) + 5px)', { props: { 'data-size': 10 } }, 15],
+    ])('types the fallback of %s by its own expression', (value, extra, expected) => {
+      const env: ResolveEnv = { ...baseEnv, props: {}, ...extra };
+      expect(buildResolver(value)!(env)).toBe(expected);
+    });
+  });
+});
+
+// https://drafts.csswg.org/css-values-4/#calc-range (editor's draft, 10.12 Range Checking)
+//
+// "As the value of a numeric function can’t, generally, be known at parse time when range
+// restrictions are enforced, numeric functions returning out-of-range values never cause a
+// declaration to become invalid. Instead, the value of a numeric function is clamped to the
+// range allowed in the context it is used at computed value time if possible, and at used
+// value time otherwise. Similarly, if a numeric function returns a non-integer value, but is
+// used in a position that expects an <integer>, the computed value and used value are rounded
+// to the nearest integer."
+//
+// The Value lines that give each range are quoted above the rows in polyfills.test.ts,
+// "§10.12 range checking"; these rows run the render-time resolver the declaration builds
+// when an operand (em, viewport units) is only known at render time, or when a shorthand
+// keeps its math text for the resolver.
+describe('math results at render time are clamped to the range of the property (CSS Values 4 §10.12)', () => {
+  // 1em is 20, so every calc below is -10 before range checking.
+  const env: ResolveEnv = { ...baseEnv, fontSize: 20 };
+  const resolve = (value: string, prop?: string) => buildResolver(value, prop)!(env);
+
+  it.each([
+    'width',
+    'height',
+    'minWidth',
+    'minHeight',
+    'maxWidth',
+    'maxHeight',
+    'inlineSize',
+    'blockSize',
+    'minInlineSize',
+    'minBlockSize',
+    'maxInlineSize',
+    'maxBlockSize',
+    'padding',
+    'paddingTop',
+    'paddingRight',
+    'paddingBottom',
+    'paddingLeft',
+    'paddingStart',
+    'paddingEnd',
+    'paddingHorizontal',
+    'paddingVertical',
+    'paddingBlock',
+    'paddingBlockStart',
+    'paddingBlockEnd',
+    'paddingInline',
+    'paddingInlineStart',
+    'paddingInlineEnd',
+    'gap',
+    'rowGap',
+    'columnGap',
+    'borderWidth',
+    'borderTopWidth',
+    'borderRightWidth',
+    'borderBottomWidth',
+    'borderLeftWidth',
+    'borderStartWidth',
+    'borderEndWidth',
+    'borderRadius',
+    'borderTopLeftRadius',
+    'borderTopRightRadius',
+    'borderBottomLeftRadius',
+    'borderBottomRightRadius',
+    'borderStartStartRadius',
+    'borderStartEndRadius',
+    'borderEndStartRadius',
+    'borderEndEndRadius',
+    'borderTopStartRadius',
+    'borderTopEndRadius',
+    'borderBottomStartRadius',
+    'borderBottomEndRadius',
+    'outlineWidth',
+    'flexGrow',
+    'flexShrink',
+    'flexBasis',
+    'fontSize',
+    'lineHeight',
+  ])('%s: a result below zero clamps to 0', prop => {
+    expect(resolve('calc(1em - 30px)', prop)).toBe(0);
+    expect(resolve('max(1em - 30px, -50px)', prop)).toBe(0);
+  });
+
+  it('a result inside the range is untouched', () => {
+    expect(resolve('calc(1em + 30px)', 'width')).toBe(50);
+    expect(resolve('calc(1em + 30px)', 'paddingTop')).toBe(50);
+  });
+
+  it('a pure-percentage result below zero clamps to 0%', () => {
+    expect(resolve('calc(10% - 30%)', 'width')).toBe('0%');
+    expect(resolve('calc(50% - 10%)', 'width')).toBe('40%');
+  });
+
+  it('opacity clamps to [0,1]', () => {
+    expect(resolve('calc(1em / 10px)', 'opacity')).toBe(1);
+    expect(resolve('calc(1em - 30px)', 'opacity')).toBe(0);
+    expect(resolve('calc(1em / 40px)', 'opacity')).toBe(0.5);
+  });
+
+  it('font-weight clamps to [1,1000]', () => {
+    expect(resolve('calc(1em * 100)', 'fontWeight')).toBe(1000);
+    expect(resolve('calc(1em - 30px)', 'fontWeight')).toBe(1);
+    expect(resolve('calc(1em * 20)', 'fontWeight')).toBe(400);
+  });
+
+  it('z-index rounds to the nearest integer and has no bound', () => {
+    expect(resolve('calc(1em / 3px)', 'zIndex')).toBe(7);
+    expect(resolve('calc(1em / 6px)', 'zIndex')).toBe(3);
+    expect(resolve('calc(1em - 30px)', 'zIndex')).toBe(-10);
+  });
+
+  it.each(['marginTop', 'top', 'letterSpacing', 'outlineOffset'])(
+    '%s has no range and keeps a negative result',
+    prop => {
+      expect(resolve('calc(1em - 30px)', prop)).toBe(-10);
+    }
+  );
+
+  it('a declaration whose property is not known keeps a negative result', () => {
+    expect(resolve('calc(1em - 30px)')).toBe(-10);
+  });
+
+  // The clamp applies to the root of the calculation only: "the value of a numeric function is
+  // clamped to the range allowed in the context it is used", so an inner calc() that is
+  // negative still contributes its negative value to the sum.
+  it('clamps the root and not a nested function: calc(calc(1em - 30px) + 15px)', () => {
+    expect(resolve('calc(calc(1em - 30px) + 15px)', 'width')).toBe(5);
+    expect(resolve('calc(min(1em - 30px, 0px) + 15px)', 'width')).toBe(5);
+  });
+
+  // Each of these re-enters value resolution for the property they stand in.
+  it.each([
+    'light-dark(calc(1em - 30px), 5px)',
+    'env(not-a-name, calc(1em - 30px))',
+    'attr(data-size px, calc(1em - 30px))',
+  ])('clamps a math result inside %s', value => {
+    expect(resolve(value, 'width')).toBe(0);
+  });
+
+  describeOnRnWeb(() => {
+    // The browser clamps the text it receives.
+    it('passes a static-mixed-unit calc through for the browser to clamp', () => {
+      expect(resolve('calc(10% - 30px)', 'width')).toBe('calc(10% - 30px)');
+    });
   });
 });

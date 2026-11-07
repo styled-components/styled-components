@@ -15,6 +15,23 @@ import {
 } from '../genericFamily';
 import { Platform } from 'react-native';
 
+/** The declaration `transformDecl` returns and the first line of each warning it printed, with the warning dedupe reset first. */
+function transformWithWarnings(prop: string, value: string) {
+  resetWarningsForTest();
+  const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  try {
+    const output = transformDecl(prop, value);
+    const warnings = warnSpy.mock.calls.map(call => String(call[0]).split('\n')[0]);
+    return { output, warnings };
+  } finally {
+    warnSpy.mockRestore();
+  }
+}
+
+/** The warning for a math function no resolver can build. */
+const unresolvableMathWarning = (prop: string, value: string) =>
+  `[sc] the value "${value}" for "${prop}" is a math function React Native cannot resolve, so the declaration was ignored. Give every operand the same type, and put font-relative or viewport operands in calc(), min(), max() or clamp().`;
+
 describe('logical properties spec compliance (CSS Logical Properties Level 1 §4)', () => {
   // Spec source: https://drafts.csswg.org/css-logical-1/
   // Polyfill scope on RN: shorthand expansion for margin-inline /
@@ -348,57 +365,46 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
       expect(transformDecl('width', 'round(nearest, 10.4px, 1px)')).toEqual({ width: 10 });
     });
 
+    // A negative result has no range to clamp to on margin-top, so these rows read the rounding itself.
     it('rounds up regardless of magnitude with strategy `up`', () => {
       expect(transformDecl('width', 'round(up, 10.1px, 1px)')).toEqual({ width: 11 });
-      expect(transformDecl('width', 'round(up, -10.9px, 1px)')).toEqual({ width: -10 });
+      expect(transformDecl('margin-top', 'round(up, -10.9px, 1px)')).toEqual({ marginTop: -10 });
     });
 
     it('rounds down regardless of magnitude with strategy `down`', () => {
       expect(transformDecl('width', 'round(down, 10.9px, 1px)')).toEqual({ width: 10 });
-      expect(transformDecl('width', 'round(down, -10.1px, 1px)')).toEqual({ width: -11 });
+      expect(transformDecl('margin-top', 'round(down, -10.1px, 1px)')).toEqual({ marginTop: -11 });
     });
 
     it('rounds toward zero with strategy `to-zero`', () => {
       expect(transformDecl('width', 'round(to-zero, 10.9px, 1px)')).toEqual({ width: 10 });
-      expect(transformDecl('width', 'round(to-zero, -10.9px, 1px)')).toEqual({ width: -10 });
+      expect(transformDecl('margin-top', 'round(to-zero, -10.9px, 1px)')).toEqual({
+        marginTop: -10,
+      });
     });
 
-    it('defers (string passthrough) on unknown strategy keyword', () => {
-      const out = transformDecl('width', 'round(banana, 10px, 1px)');
-      expect(typeof out.width).toBe('string');
-      expect(out.width).toContain('round(');
-    });
-
-    it('defers (string passthrough) on mismatched units', () => {
-      const out = transformDecl('width', 'round(10px, 1deg)');
-      expect(typeof out.width).toBe('string');
-    });
-
-    // "otherwise, omitting B is a syntax error."
-    it('defers (string passthrough) when A is a <length> and B is omitted', () => {
-      const out = transformDecl('width', 'round(7.3px)');
-      expect(typeof out.width).toBe('string');
-      expect(out.width).toContain('round(');
-    });
-
-    // "All math functions perform type checking on their arguments." A
-    // number A combined with a typed B yields a type mismatch.
-    it('defers (string passthrough) when A is a <number> and B is a <length>', () => {
-      const out = transformDecl('width', 'round(7, 1px)');
-      expect(typeof out.width).toBe('string');
-    });
-
-    it('defers (string passthrough) when A is a <length> and B is a <number>', () => {
-      const out = transformDecl('width', 'round(7px, 1)');
-      expect(typeof out.width).toBe('string');
+    // A value the fold rejects and no resolver can build drops with a warning.
+    it.each([
+      ['an unknown strategy keyword', 'round(banana, 10px, 1px)'],
+      ['mismatched units', 'round(10px, 1deg)'],
+      // "otherwise, omitting B is a syntax error."
+      ['a <length> A with B omitted', 'round(7.3px)'],
+      // "All math functions perform type checking on their arguments." A
+      // number A combined with a typed B yields a type mismatch.
+      ['a <number> A and a <length> B', 'round(7, 1px)'],
+      ['a <length> A and a <number> B', 'round(7px, 1)'],
+    ])('drops the declaration on %s: %s', (_label, value) => {
+      expect(transformWithWarnings('width', value)).toEqual({
+        output: {},
+        warnings: [unresolvableMathWarning('width', value)],
+      });
     });
 
     // Section 10.3 strategy keyword for `line-width`: A is "snapped as a
     // line width" using the device pixel ratio. The no-B form is
     // polyfilled via a runtime resolver that reads
     // env.media.pixelRatio. The with-B form (round-to-nearest then snap)
-    // is not implemented; it falls through to string passthrough so the
-    // value is observable as authored, without a misleading dev warn.
+    // is not implemented and no resolver builds it, so it drops with a warning.
     it('round(line-width, A): no warn, emits a value buildResolver can fold (snap-as-line-width)', () => {
       resetWarningsForTest();
       const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
@@ -413,10 +419,11 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
       }
     });
 
-    it('round(line-width, A, B): with-B form is not implemented; falls through as string', () => {
-      const out = transformDecl('width', 'round(line-width, 1.5px, 1px)');
-      expect(typeof out.width).toBe('string');
-      expect(out.width).toContain('round(');
+    it('round(line-width, A, B): with-B form is not implemented; drops with a warning', () => {
+      expect(transformWithWarnings('width', 'round(line-width, 1.5px, 1px)')).toEqual({
+        output: {},
+        warnings: [unresolvableMathWarning('width', 'round(line-width, 1.5px, 1px)')],
+      });
     });
   });
 
@@ -426,14 +433,15 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
       expect(transformDecl('width', 'mod(7px, 3px)')).toEqual({ width: 1 });
       // -7 mod 3 = 2 (sign of B)
       expect(transformDecl('width', 'mod(-7px, 3px)')).toEqual({ width: 2 });
-      // 7 mod -3 = -2 (sign of B)
-      expect(transformDecl('width', 'mod(7px, -3px)')).toEqual({ width: -2 });
+      // 7 mod -3 = -2 (sign of B); margin-top has no range to clamp it to
+      expect(transformDecl('margin-top', 'mod(7px, -3px)')).toEqual({ marginTop: -2 });
     });
 
-    it('defers (string passthrough) when B is zero', () => {
-      const out = transformDecl('width', 'mod(7px, 0px)');
-      expect(typeof out.width).toBe('string');
-      expect(out.width).toContain('mod(');
+    it('drops the declaration with a warning when B is zero', () => {
+      expect(transformWithWarnings('width', 'mod(7px, 0px)')).toEqual({
+        output: {},
+        warnings: [unresolvableMathWarning('width', 'mod(7px, 0px)')],
+      });
     });
   });
 
@@ -441,16 +449,17 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
     // "rem(A, B) ... result has the sign of A"
     it('returns a result with the sign of A (JS remainder)', () => {
       expect(transformDecl('width', 'rem(7px, 3px)')).toEqual({ width: 1 });
-      // -7 rem 3 = -1 (sign of A)
-      expect(transformDecl('width', 'rem(-7px, 3px)')).toEqual({ width: -1 });
+      // -7 rem 3 = -1 (sign of A); margin-top has no range to clamp it to
+      expect(transformDecl('margin-top', 'rem(-7px, 3px)')).toEqual({ marginTop: -1 });
       // 7 rem -3 = 1 (sign of A)
       expect(transformDecl('width', 'rem(7px, -3px)')).toEqual({ width: 1 });
     });
 
-    it('defers (string passthrough) when B is zero', () => {
-      const out = transformDecl('width', 'rem(7px, 0px)');
-      expect(typeof out.width).toBe('string');
-      expect(out.width).toContain('rem(');
+    it('drops the declaration with a warning when B is zero', () => {
+      expect(transformWithWarnings('width', 'rem(7px, 0px)')).toEqual({
+        output: {},
+        warnings: [unresolvableMathWarning('width', 'rem(7px, 0px)')],
+      });
     });
   });
 
@@ -538,18 +547,24 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
     });
 
     // "Negative or zero values in arguments that don't support them result in NaN"
-    it('pow defers (string passthrough) on negative base with non-integer exponent', () => {
-      const out = transformDecl('width', 'calc(pow(-2, 0.5) * 1px)');
-      expect(typeof out.width).toBe('string');
+    it('pow drops the declaration with a warning on a negative base with a non-integer exponent', () => {
+      const value = 'calc(pow(-2, 0.5) * 1px)';
+      expect(transformWithWarnings('width', value)).toEqual({
+        output: {},
+        warnings: [unresolvableMathWarning('width', value)],
+      });
     });
 
     it('sqrt(A) returns √A', () => {
       expect(transformDecl('width', 'calc(sqrt(81) * 1px)')).toEqual({ width: 9 });
     });
 
-    it('sqrt defers (string passthrough) on negative argument', () => {
-      const out = transformDecl('width', 'calc(sqrt(-4) * 1px)');
-      expect(typeof out.width).toBe('string');
+    it('sqrt drops the declaration with a warning on a negative argument', () => {
+      const value = 'calc(sqrt(-4) * 1px)';
+      expect(transformWithWarnings('width', value)).toEqual({
+        output: {},
+        warnings: [unresolvableMathWarning('width', value)],
+      });
     });
 
     it('hypot preserves unit', () => {
@@ -557,9 +572,11 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
       expect(transformDecl('width', 'hypot(3px, 4px)')).toEqual({ width: 5 });
     });
 
-    it('hypot defers (string passthrough) when arms disagree on unit', () => {
-      const out = transformDecl('width', 'hypot(3px, 4deg)');
-      expect(typeof out.width).toBe('string');
+    it('hypot drops the declaration with a warning when arms disagree on unit', () => {
+      expect(transformWithWarnings('width', 'hypot(3px, 4deg)')).toEqual({
+        output: {},
+        warnings: [unresolvableMathWarning('width', 'hypot(3px, 4deg)')],
+      });
     });
 
     it('log defaults to natural log', () => {
@@ -572,12 +589,15 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
       expect(transformDecl('width', 'calc(log(8, 2) * 1px)')).toEqual({ width: 3 });
     });
 
-    it('log defers (string passthrough) on non-positive argument', () => {
-      const zero = transformDecl('width', 'calc(log(0) * 1px)');
-      expect(typeof zero.width).toBe('string');
-      const neg = transformDecl('width', 'calc(log(-1) * 1px)');
-      expect(typeof neg.width).toBe('string');
-    });
+    it.each(['calc(log(0) * 1px)', 'calc(log(-1) * 1px)'])(
+      'log drops the declaration with a warning on a non-positive argument: %s',
+      value => {
+        expect(transformWithWarnings('width', value)).toEqual({
+          output: {},
+          warnings: [unresolvableMathWarning('width', value)],
+        });
+      }
+    );
 
     it('exp returns e^A', () => {
       const out = transformDecl('width', 'calc(exp(1) * 100px)');
@@ -599,8 +619,9 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
       expect(transformDecl('opacity', 'sign(5)')).toEqual({ opacity: 1 });
     });
 
+    // z-index has no lower bound, so the -1 survives range checking.
     it('sign returns -1 for negative', () => {
-      expect(transformDecl('opacity', 'sign(-5)')).toEqual({ opacity: -1 });
+      expect(transformDecl('z-index', 'sign(-5)')).toEqual({ zIndex: -1 });
     });
 
     it('sign returns 0 for zero', () => {
@@ -617,15 +638,15 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
   describe('§10.9 type checking', () => {
     // "All math functions perform type checking on their arguments before
     //  evaluation. An argument with incompatible units produces an invalid expression."
-    it('defers (string passthrough) on mixed length + angle in stepped-value', () => {
-      const out = transformDecl('width', 'mod(10px, 4deg)');
-      expect(typeof out.width).toBe('string');
-    });
-
-    it('defers (string passthrough) on mixed length + angle in hypot', () => {
-      const out = transformDecl('width', 'hypot(3px, 4deg)');
-      expect(typeof out.width).toBe('string');
-    });
+    it.each(['mod(10px, 4deg)', 'hypot(3px, 4deg)'])(
+      'drops the declaration with a warning on mixed length + angle: %s',
+      value => {
+        expect(transformWithWarnings('width', value)).toEqual({
+          output: {},
+          warnings: [unresolvableMathWarning('width', value)],
+        });
+      }
+    );
   });
 
   // Edge-case coverage for §10.4 / §10.5 corners. Each test quotes the
@@ -639,12 +660,104 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
     // §10.2: "the argument calculations can resolve to any <number>,
     // <dimension>, or <percentage>, but must have a consistent type or else
     // the function is invalid". A literal number and length are inconsistent.
-    it.each(['min(1, 5px)', 'max(5px, 1)', 'clamp(1, 3, 5px)', 'min(5px, 10%)'])(
+    it.each(['min(1, 5px)', 'max(5px, 1)', 'clamp(1, 3, 5px)'])(
       'rejects min()/max()/clamp() arguments of inconsistent type: %s',
       src => {
         expect(mathOf(src)).toBeNull();
       }
     );
+
+    // §10.9, the <percentage> terminal: "If, in the context in which the math
+    // function containing this calculation is placed, <percentage>s are
+    // resolved relative to another type of value (such as in width, where
+    // <percentage> is resolved against a <length>), and that other type is not
+    // <number>, the type is determined as the other type, but with a percent
+    // hint set to that other type." So min(5px, 10%) is a valid <length> in
+    // `width`. Deviation: the static fold has no percentage basis and yields
+    // no value; the declaration keeps its text and the render-time resolver
+    // resolves the percentage against the container width.
+    it('yields no static value for min() of a <length> and a <percentage>, and defers to the resolver: min(5px, 10%)', () => {
+      expect(mathOf('min(5px, 10%)')).toBeNull();
+      expect(transformDecl('width', 'min(5px, 10%)')).toEqual({ width: 'min(5px, 10%)' });
+      expect(buildResolver('min(5px, 10%)', 'width')).not.toBeNull();
+    });
+
+    // A function that carries a type error never reaches the resolver; the
+    // declaration drops with a warning.
+    it.each(['mod(7, 3px)', 'mod(7px, 3)', 'rem(7, 3px)', 'rem(7px, 3)'])(
+      'drops the declaration of mod()/rem() arguments of different types: %s',
+      value => {
+        expect(transformWithWarnings('width', value)).toEqual({
+          output: {},
+          warnings: [unresolvableMathWarning('width', value)],
+        });
+      }
+    );
+
+    // A type error in min() and max() reaches the resolver, which drops the
+    // declaration at render time.
+    it.each(['min(1, 5px)', 'max(5px, 1)', 'clamp(1, 3, 5px)'])(
+      'keeps %s as text for the resolver, which drops it at render time',
+      value => {
+        expect(transformDecl('width', value)).toEqual({ width: value });
+        expect(buildResolver(value, 'width')).not.toBeNull();
+      }
+    );
+
+    // Operands that only the render environment can supply keep the declaration's text for
+    // the resolver; the drop applies only when no resolver builds the function.
+    it.each([
+      ['top', 'calc(anchor(bottom) + 2px)'],
+      ['width', 'calc(anchor-size(width) + 2px)'],
+      ['width', 'calc(sibling-index() * 10px)'],
+      ['width', 'calc(sibling-count() * 10px)'],
+      ['width', 'round(line-width, 1.5px)'],
+      ['width', 'calc(env(safe-area-inset-top) + 2px)'],
+      ['width', 'calc(env(safe-area-inset-top, 4px) + 2px)'],
+      ['width', 'calc(attr(data-w px, 4px) + 2px)'],
+      ['width', 'calc(50vw - 2px)'],
+      ['width', 'calc(10cqw + 2px)'],
+      ['width', 'calc(1rem + 2px)'],
+      ['width', 'min(1em, 5px)'],
+    ])('keeps %s: %s as text for the resolver', (prop, value) => {
+      expect(transformWithWarnings(prop, value)).toEqual({
+        output: { [prop]: value },
+        warnings: [],
+      });
+      expect(buildResolver(value, prop)).not.toBeNull();
+    });
+
+    // createTheme placeholders read as their default text before the math folds.
+    it('folds math around a createTheme placeholder using its default text', () => {
+      const { output, warnings } = transformWithWarnings(
+        'width',
+        'calc(\0theme:space.sm:4px + 2px)'
+      );
+      expect(output).toEqual({ width: 6 });
+      expect(warnings).toEqual([
+        '[sc] The theme value at `space.sm` is not text, so `width` uses its default, "4px". A theme value that is not text (a platform color, for example) works only as a whole color value, such as `color` or `border-color`. Give `width` a text value, or set the platform color on a color property of its own.',
+      ]);
+    });
+
+    // A math function nothing can evaluate at render time: a font-relative
+    // operand in a function the resolver does not build, or an operand count
+    // the function does not take.
+    it.each([
+      'abs(1em)',
+      'sign(1em)',
+      'round(1em, 2px)',
+      'pow(2, 1em)',
+      'sin(1em)',
+      'atan2(1em, 1em)',
+      'hypot(1em, 2px)',
+      'calc(1 + 5px)',
+      'calc(1em + )',
+    ])('drops the declaration of a function no resolver can build: %s', value => {
+      expect(transformWithWarnings('width', value)).toEqual({
+        output: {},
+        warnings: [unresolvableMathWarning('width', value)],
+      });
+    });
 
     // §10.9: "At a * sub-expression, multiply the types of the left and right
     // arguments. The sub-expression's type is the returned result." A
@@ -699,10 +812,16 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
     );
 
     // Deviation: where a percentage resolves against a length (`width`), a
-    // <length> and a <percentage> have a consistent type and mod(7px, 3%) is
-    // valid. The static fold has no percentage basis, so it yields no value.
-    it('yields no value for mod() of a <length> and a <percentage>: mod(7px, 3%)', () => {
+    // <length> and a <percentage> have a consistent type (the percent hint
+    // quoted above) and mod(7px, 3%) is valid. The static fold has no
+    // percentage basis and yields no value, and the render-time resolver does
+    // not build mod(), so the declaration drops with a warning.
+    it('drops the declaration of mod() of a <length> and a <percentage>: mod(7px, 3%)', () => {
       expect(mathOf('mod(7px, 3%)')).toBeNull();
+      expect(transformWithWarnings('width', 'mod(7px, 3%)')).toEqual({
+        output: {},
+        warnings: [unresolvableMathWarning('width', 'mod(7px, 3%)')],
+      });
     });
 
     it('keeps mod()/rem() of one type: mod(7, 3) and rem(7px, 3px)', () => {
@@ -869,6 +988,218 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
     });
   });
 
+  // https://drafts.csswg.org/css-values-4/#calc-range (editor's draft, 10.12 Range Checking)
+  //
+  // "As the value of a numeric function can’t, generally, be known at parse time when range
+  // restrictions are enforced, numeric functions returning out-of-range values never cause a
+  // declaration to become invalid. Instead, the value of a numeric function is clamped to the
+  // range allowed in the context it is used at computed value time if possible, and at used
+  // value time otherwise. Similarly, if a numeric function returns a non-integer value, but is
+  // used in a position that expects an <integer>, the computed value and used value are rounded
+  // to the nearest integer."
+  //
+  // "Since widths smaller than 0px are not allowed, these three declarations are equivalent:
+  // width: calc(5px - 10px); width: calc(-5px); width: 0px; Note however that width: -5px is not
+  // equivalent to width: calc(-5px)! Out-of-range values specified literally are invalid at
+  // parse-time, and cause the entire declaration to be dropped."
+  //
+  // Each group below pairs a property's Value line (editor's draft) with the native style key
+  // its declaration produces. The rows are the longhands whose math result folds at compile
+  // time; the render-time paths (shorthands, em and viewport operands) are in resolvers.test.ts.
+  describe('§10.12 range checking', () => {
+    const fold = (property: string, value: string) => transformDecl(property, value);
+
+    // https://drafts.csswg.org/css-sizing-3/#propdef-width
+    //   "Name: width, height, inline-size, block-size" "Value: auto | <box-size>"
+    // https://drafts.csswg.org/css-sizing-3/#propdef-min-width
+    //   "Name: min-width, min-height, min-inline-size, min-block-size" "Value: auto | <box-size>"
+    // https://drafts.csswg.org/css-sizing-3/#propdef-max-width
+    //   "Name: max-width, max-height, max-inline-size, max-block-size" "Value: none | <box-size>"
+    // "<box-size> = <length-percentage [0,∞]> | stretch | min-content | max-content | fit-content"
+    it.each([
+      ['width', 'width'],
+      ['height', 'height'],
+      ['inline-size', 'inlineSize'],
+      ['block-size', 'blockSize'],
+      ['min-width', 'minWidth'],
+      ['min-height', 'minHeight'],
+      ['min-inline-size', 'minInlineSize'],
+      ['min-block-size', 'minBlockSize'],
+      ['max-width', 'maxWidth'],
+      ['max-height', 'maxHeight'],
+      ['max-inline-size', 'maxInlineSize'],
+      ['max-block-size', 'maxBlockSize'],
+    ])('%s: a result below zero clamps to 0 on %s', (property, key) => {
+      expect(fold(property, 'calc(2px - 10px)')).toEqual({ [key]: 0 });
+    });
+
+    // https://drafts.csswg.org/css-box-4/#propdef-padding-top
+    //   "Name: padding-top, padding-right, padding-bottom, padding-left"
+    //   "Value: <length-percentage [0,∞]>"
+    // https://drafts.csswg.org/css-logical-1/#propdef-padding-block-start
+    //   "Name: padding-block-start, padding-block-end, padding-inline-start, padding-inline-end"
+    //   "Value: <'padding-top'>"
+    // paddingHorizontal and paddingVertical are React Native's names for the inline and block pair.
+    it.each([
+      ['padding-top', 'paddingTop'],
+      ['padding-right', 'paddingRight'],
+      ['padding-bottom', 'paddingBottom'],
+      ['padding-left', 'paddingLeft'],
+      ['padding-block-start', 'paddingBlockStart'],
+      ['padding-block-end', 'paddingBlockEnd'],
+      ['padding-inline-start', 'paddingInlineStart'],
+      ['padding-inline-end', 'paddingInlineEnd'],
+      ['padding-horizontal', 'paddingHorizontal'],
+      ['padding-vertical', 'paddingVertical'],
+    ])('%s: a result below zero clamps to 0 on %s', (property, key) => {
+      expect(fold(property, 'calc(2px - 10px)')).toEqual({ [key]: 0 });
+    });
+
+    // https://drafts.csswg.org/css-gaps-1/#propdef-row-gap
+    //   "Name: row-gap, column-gap"
+    //   "Value: normal | <length-percentage [0,∞]> | <line-width>"
+    it.each([
+      ['row-gap', 'rowGap'],
+      ['column-gap', 'columnGap'],
+    ])('%s: a result below zero clamps to 0 on %s', (property, key) => {
+      expect(fold(property, 'calc(2px - 10px)')).toEqual({ [key]: 0 });
+    });
+
+    // https://drafts.csswg.org/css-backgrounds-3/#propdef-border-top-width
+    //   "Name: border-top-width, border-right-width, border-bottom-width, border-left-width"
+    //   "Value: <line-width>"
+    // https://drafts.csswg.org/css-backgrounds-3/#typedef-line-width
+    //   "<line-width> = <length [0,∞]> | thin | medium | thick" "Negative values are invalid."
+    // https://drafts.csswg.org/css-ui-4/#propdef-outline-width
+    //   "Name: outline-width" "Value: <line-width>"
+    it.each([
+      ['border-top-width', 'borderTopWidth'],
+      ['border-right-width', 'borderRightWidth'],
+      ['border-bottom-width', 'borderBottomWidth'],
+      ['border-left-width', 'borderLeftWidth'],
+      ['outline-width', 'outlineWidth'],
+    ])('%s: a result below zero clamps to 0 on %s', (property, key) => {
+      expect(fold(property, 'calc(2px - 10px)')).toEqual({ [key]: 0 });
+    });
+
+    // https://drafts.csswg.org/css-backgrounds-3/#propdef-border-top-left-radius
+    //   "Name: border-top-left-radius, border-top-right-radius, border-bottom-right-radius, border-bottom-left-radius"
+    //   "Value: <length-percentage [0,∞]> {1,2}"
+    // https://drafts.csswg.org/css-logical-1/#propdef-border-start-start-radius
+    //   "Name: border-start-start-radius, border-start-end-radius, border-end-start-radius, border-end-end-radius"
+    //   "Value: <'border-top-left-radius'>"
+    // The Top/Bottom Start/End keys are React Native's names for the logical corners.
+    it.each([
+      ['border-top-left-radius', 'borderTopLeftRadius'],
+      ['border-top-right-radius', 'borderTopRightRadius'],
+      ['border-bottom-right-radius', 'borderBottomRightRadius'],
+      ['border-bottom-left-radius', 'borderBottomLeftRadius'],
+      ['border-start-start-radius', 'borderStartStartRadius'],
+      ['border-start-end-radius', 'borderStartEndRadius'],
+      ['border-end-start-radius', 'borderEndStartRadius'],
+      ['border-end-end-radius', 'borderEndEndRadius'],
+      ['border-top-start-radius', 'borderTopStartRadius'],
+      ['border-top-end-radius', 'borderTopEndRadius'],
+      ['border-bottom-start-radius', 'borderBottomStartRadius'],
+      ['border-bottom-end-radius', 'borderBottomEndRadius'],
+    ])('%s: a result below zero clamps to 0 on %s', (property, key) => {
+      expect(fold(property, 'calc(2px - 10px)')).toEqual({ [key]: 0 });
+    });
+
+    // https://drafts.csswg.org/css-flexbox-1/#propdef-flex-grow "Value: <number [0,∞]>"
+    // https://drafts.csswg.org/css-flexbox-1/#propdef-flex-shrink "Value: <number [0,∞]>"
+    // https://drafts.csswg.org/css-flexbox-1/#propdef-flex-basis "Value: content | <'width'>"
+    it.each([
+      ['flex-grow', 'flexGrow'],
+      ['flex-shrink', 'flexShrink'],
+      ['flex-basis', 'flexBasis'],
+    ])('%s: a result below zero clamps to 0 on %s', (property, key) => {
+      expect(fold(property, 'calc(2px - 10px)')).toEqual({ [key]: 0 });
+    });
+
+    // https://drafts.csswg.org/css-fonts-4/#propdef-font-size
+    //   "Value: <absolute-size> | <relative-size> | <length-percentage [0,∞]> | math"
+    // https://drafts.csswg.org/css-inline-3/#propdef-line-height
+    //   "Value: normal | <number [0,∞]> | <length-percentage [0,∞]>"
+    it.each([
+      ['font-size', 'fontSize'],
+      ['line-height', 'lineHeight'],
+    ])('%s: a result below zero clamps to 0 on %s', (property, key) => {
+      expect(fold(property, 'calc(2px - 10px)')).toEqual({ [key]: 0 });
+    });
+
+    // A percentage result keeps its unit and clamps the same way.
+    it.each([
+      ['calc(10% - 30%)', '0%'],
+      ['calc(50% - 10%)', '40%'],
+    ])('width: %s folds to %s', (value, expected) => {
+      expect(fold('width', value)).toEqual({ width: expected });
+    });
+
+    // https://drafts.csswg.org/css-color-4/#propdef-opacity "Value: <opacity-value>"
+    // https://drafts.csswg.org/css-color-4/#typedef-opacity-value
+    //   "Opacity values outside the range [0,1] are not invalid, and are preserved in specified
+    //   values, but are clamped to the range [0, 1] in computed values."
+    // Deviation: the range is in this sentence, not in the Value line.
+    it.each([
+      ['calc(2 - 10)', 0],
+      ['calc(5 - 3)', 1],
+      ['calc(0.25 + 0.25)', 0.5],
+      ['calc(150%)', 1],
+    ])('opacity: %s folds to %s', (value, expected) => {
+      expect(fold('opacity', value)).toEqual({ opacity: expected });
+    });
+
+    // https://drafts.csswg.org/css-fonts-4/#propdef-font-weight
+    //   "Value: <font-weight-absolute> | bolder | lighter"
+    // https://drafts.csswg.org/css-fonts-4/#font-weight-absolute-values
+    //   "<font-weight-absolute> = [ normal | bold | <number [1,1000]> ]"
+    it.each([
+      ['calc(2 - 10)', 1],
+      ['calc(2000 - 1)', 1000],
+      ['calc(300 + 100)', 400],
+    ])('font-weight: %s folds to %s', (value, expected) => {
+      expect(fold('font-weight', value)).toEqual({ fontWeight: expected });
+    });
+
+    // https://drafts.csswg.org/css2/#propdef-z-index (editor's draft)
+    //   "Name: z-index" "Value: auto | <integer> | inherit"
+    // The CSS Values clause above rounds a non-integer result to the nearest integer.
+    it.each([
+      ['calc(7 / 3)', 2],
+      ['calc(8 / 3)', 3],
+      ['calc(2 - 10)', -8],
+    ])('z-index: %s folds to %s', (value, expected) => {
+      expect(fold('z-index', value)).toEqual({ zIndex: expected });
+    });
+
+    // A property with no range keeps a negative result.
+    it.each([
+      ['margin-top', 'marginTop'],
+      ['top', 'top'],
+      ['left', 'left'],
+      ['letter-spacing', 'letterSpacing'],
+    ])('%s: a result below zero stays on %s', (property, key) => {
+      expect(fold(property, 'calc(2px - 10px)')).toEqual({ [key]: -8 });
+    });
+
+    // A property name that is also an Object.prototype member is not a ranged property.
+    it('constructor: a name from Object.prototype has no range', () => {
+      expect(fold('constructor', 'calc(2px - 10px)')).toEqual({ constructor: -8 });
+    });
+
+    describeOnRnWeb(() => {
+      // A unitless result folds on rn-web too, and is checked against the same range.
+      it('width: a unitless result below zero clamps to 0', () => {
+        expect(fold('width', 'calc(2 - 10)')).toEqual({ width: 0 });
+      });
+
+      it('z-index: a non-integer result rounds', () => {
+        expect(fold('z-index', 'calc(7 / 3)')).toEqual({ zIndex: 2 });
+      });
+    });
+  });
+
   // CSS Syntax, "Check if three code points would start an ident sequence", U+002D HYPHEN-MINUS:
   // "If the second code point is an ident-start code point [...] return true." So `-pi` and
   // `-sin(` are names of their own rather than a sign on a constant or a function.
@@ -893,29 +1224,39 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
       ['calc(-sin(30deg) * 10px)'],
       ['calc(2 *-pi * 1px)'],
       ['sin(-pi)'],
-    ])('%s has no number to resolve to, and says so', value => {
+    ])('%s has no number to resolve to, says so, and drops the declaration', value => {
       expect(warningsFor(value)).toEqual({
-        output: { width: value },
+        output: {},
         warnings: [
           `[sc] the value "${value}" for "width" puts a sign on a name, which CSS reads as a different name, so React Native cannot resolve it. Write \`-1 * pi\` rather than \`-pi\`.`,
         ],
       });
     });
 
+    // margin-top has no range, so the negative result is kept.
     it('resolves the sign written as multiplication, with no warning', () => {
-      const { output, warnings } = warningsFor('calc(-1 * pi * 1px)');
-      expect(output.width).toBeCloseTo(-Math.PI, 10);
+      const { output, warnings } = transformWithWarnings('margin-top', 'calc(-1 * pi * 1px)');
+      expect(output.marginTop).toBeCloseTo(-Math.PI, 10);
       expect(warnings).toEqual([]);
     });
 
     it.each([
-      ['a hyphen inside a name', 'calc(foo-bar * 1px)'],
-      ['a custom property', 'calc(var(--x) * 2)'],
       ['a subtraction', 'calc(1px - e * 1px)'],
       ['a signed number', 'calc(-1px * pi)'],
       ['an exponent', 'calc(1e-3 * 1px)'],
     ])('does not warn about a sign on a name for %s', (_label, value) => {
       expect(warningsFor(value).warnings).toEqual([]);
+    });
+
+    // A name the resolver does not know is no sign problem; the general warning covers it.
+    it.each([
+      ['a hyphen inside a name', 'calc(foo-bar * 1px)'],
+      ['a custom property', 'calc(var(--x) * 2)'],
+    ])('names the unresolvable math, not a sign, for %s', (_label, value) => {
+      expect(warningsFor(value)).toEqual({
+        output: {},
+        warnings: [unresolvableMathWarning('width', value)],
+      });
     });
 
     it('gives -infinity only its own warning', () => {
@@ -947,6 +1288,18 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
 
     it('passes mod over lengths through unchanged', () => {
       expect(transformDecl('width', 'mod(7px, 3px)')).toEqual({ width: 'mod(7px, 3px)' });
+    });
+
+    // The browser judges the type, and a <length> with a <percentage> is valid in width.
+    it('passes a function no resolver builds through for the browser to judge', () => {
+      expect(transformWithWarnings('width', 'mod(7px, 3%)')).toEqual({
+        output: { width: 'mod(7px, 3%)' },
+        warnings: [],
+      });
+      expect(transformWithWarnings('width', 'abs(1em)')).toEqual({
+        output: { width: 'abs(1em)' },
+        warnings: [],
+      });
     });
 
     it('folds unitless round() so the browser receives a renderable value', () => {

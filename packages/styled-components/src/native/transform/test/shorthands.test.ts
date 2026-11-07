@@ -1208,8 +1208,11 @@ describe('CSS Values 4 §10.3-10.6 (Math L4 functions)', () => {
       expect(transformDecl('width', 'round(down, 15.9px, 5px)')).toEqual({ width: 15 });
     });
 
+    // margin-top has no range, so a negative result survives range checking.
     it('to-zero strategy (truncate)', () => {
-      expect(transformDecl('width', 'round(to-zero, -15.9px, 5px)')).toEqual({ width: -15 });
+      expect(transformDecl('margin-top', 'round(to-zero, -15.9px, 5px)')).toEqual({
+        marginTop: -15,
+      });
     });
 
     it('B defaults to 1 when omitted', () => {
@@ -1232,7 +1235,7 @@ describe('CSS Values 4 §10.3-10.6 (Math L4 functions)', () => {
     });
 
     it('rem(-7, 3) = -1 (sign of dividend)', () => {
-      expect(transformDecl('width', 'rem(-7, 3)')).toEqual({ width: -1 });
+      expect(transformDecl('margin-top', 'rem(-7, 3)')).toEqual({ marginTop: -1 });
     });
   });
 
@@ -1272,10 +1275,17 @@ describe('CSS Values 4 §10.3-10.6 (Math L4 functions)', () => {
       expect(transformDecl('width', 'atan2(1, 1)')).toEqual({ width: '45deg' });
     });
 
-    it('asin(2) (out of domain) declines the fold', () => {
-      // Out-of-domain values would produce NaN; the fold bails so the
-      // value passes through to the runtime layer (which on RN drops).
-      expect(transformDecl('width', 'asin(2)')).toEqual({ width: 'asin(2)' });
+    it('asin(2) (out of domain) declines the fold and drops with a warning', () => {
+      // Out-of-domain values would produce NaN; the fold bails and no
+      // render-time resolver builds asin(), so the declaration drops.
+      resetWarningsForTest();
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        expect(transformDecl('width', 'asin(2)')).toEqual({});
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+      } finally {
+        warnSpy.mockRestore();
+      }
     });
   });
 
@@ -1299,8 +1309,9 @@ describe('CSS Values 4 §10.3-10.6 (Math L4 functions)', () => {
     });
 
     it('log(100, 10) = 2', () => {
-      const out = transformDecl('opacity', 'log(100, 10)') as { opacity: number };
-      expect(out.opacity).toBeCloseTo(2, 5);
+      // opacity clamps to [0,1], so the value 2 is read on margin-top.
+      const out = transformDecl('margin-top', 'log(100, 10)') as { marginTop: number };
+      expect(out.marginTop).toBeCloseTo(2, 5);
     });
 
     it('exp(0) = 1', () => {
@@ -1314,8 +1325,9 @@ describe('CSS Values 4 §10.3-10.6 (Math L4 functions)', () => {
       expect(transformDecl('width', 'abs(-12px)')).toEqual({ width: 12 });
     });
 
+    // opacity clamps to [0,1], so the value -1 is read on z-index, which has no lower bound.
     it('sign(-5) = -1', () => {
-      expect(transformDecl('opacity', 'sign(-5)')).toEqual({ opacity: -1 });
+      expect(transformDecl('z-index', 'sign(-5)')).toEqual({ zIndex: -1 });
     });
 
     it('sign(0) = 0', () => {
@@ -1974,6 +1986,18 @@ describe('math functions in font-size, line-height, and letter-spacing', () => {
       fontVariant: [],
       fontWeight: 'normal',
       lineHeight: 'calc(1em + 4px)',
+    });
+  });
+
+  // The size and line-height slots take the ranges quoted above ([0,∞] for both).
+  it('font: a static math size and line-height below zero clamp to 0', () => {
+    expect(transformDecl('font', 'calc(2px - 10px)/calc(1px - 5px) serif')).toEqual({
+      fontFamily: 'Times New Roman',
+      fontSize: 0,
+      fontStyle: 'normal',
+      fontVariant: [],
+      fontWeight: 'normal',
+      lineHeight: 0,
     });
   });
 

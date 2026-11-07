@@ -10,7 +10,10 @@ import { getCssPropertyRegistration } from '../../propertyRegistry';
 import { buildAnchorResolver } from './anchorFns';
 import { hasRelativeFromPrefix, staticColorFunctionToHex } from './colorMath';
 import {
+  clampToRange,
   identToNumeric,
+  MathRange,
+  mathRangeOf,
   NumericResult,
   resolveStaticMathFunction,
   scaleUnit,
@@ -271,11 +274,11 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
       // Pure-static light-dark survives as authored text on rn-web so the
       // CSS indirection path (`--sc-ld-*` + `var()`) reaches the browser.
       if (__NATIVE_WEB__) return null;
-      return lightDarkResolver(value);
+      return lightDarkResolver(value, prop);
     }
     if (value.startsWith('lch(') || value.startsWith('lab(')) return colorFnResolver(value);
   }
-  if (c0 === 0x65 /* e */ && value.startsWith('env(')) return envResolver(value);
+  if (c0 === 0x65 /* e */ && value.startsWith('env(')) return envResolver(value, prop);
 
   // round(line-width, A) defers to a runtime resolver because the device
   // pixel ratio isn't known at compile time. The relative from-forms of
@@ -306,7 +309,7 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
 
   if (c0 === 0x61 /* a */) {
     if (value.startsWith('attr(')) {
-      const r = attrResolver(value);
+      const r = attrResolver(value, prop);
       if (r !== null) return r.resolve;
     }
     // anchor() / anchor-size() need the destination property for the
@@ -341,6 +344,11 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
  * substrings like `infinityPlanet` or `infinity-mode` don't trigger.
  */
 const UNSUPPORTED_MATH_KEYWORD_RE = /(?:^|[^a-z0-9_-])(-?infinity|nan)(?![a-z0-9_-])/i;
+
+/** True when the value names `infinity`, `-infinity` or `NaN`, which the math resolver warns about on its own. */
+export function mentionsUnsupportedMathKeyword(value: string): boolean {
+  return UNSUPPORTED_MATH_KEYWORD_RE.test(value);
+}
 
 function bailOnUnsupportedKeyword(value: string): boolean {
   const m = UNSUPPORTED_MATH_KEYWORD_RE.exec(value);
@@ -377,17 +385,20 @@ function resolveMathFn(value: string, prop?: string): Resolver | null {
   if (__NATIVE_WEB__ && !rnWebMathNeedsJsResolution(value)) {
     return () => value;
   }
-  if (prop !== undefined && NON_NEGATIVE_MATH_PROPS.has(prop)) {
-    return env => {
-      const v = r(env);
-      return typeof v === 'number' && v < 0 ? 0 : v;
-    };
-  }
-  return r;
+  // The range lookup runs once here, so a property without one adds nothing per render.
+  const range = prop === undefined ? undefined : mathRangeOf(prop);
+  if (range === undefined) return r;
+  return env => clampMathResult(r(env), range);
 }
 
-/** Properties whose allowed range starts at zero; a negative math result clamps to 0. */
-const NON_NEGATIVE_MATH_PROPS: ReadonlySet<string> = new Set(['fontSize', 'lineHeight']);
+/** A resolved math value held to the property's range; a percentage string holds to the lower bound, the only bound a length-percentage property has. */
+function clampMathResult(v: number | string | null, range: MathRange): number | string | null {
+  if (typeof v === 'number') return clampToRange(v, range);
+  if (v !== null && v.charCodeAt(v.length - 1) === $.PERCENT && parseFloat(v) < range.min) {
+    return range.min + '%';
+  }
+  return v;
+}
 
 /** True when a math expression contains an operand only our JS runtime can
  *  substitute (rn-web passthrough must not strand these in CSS text). */
@@ -690,7 +701,7 @@ function containerResolver(n: number, unit: string): Resolver {
  * render-time-resolvable expression. Argument-count and empty-
  * branch validation reject 0 / 1 / 3+ args and empty branches.
  */
-function lightDarkResolver(value: string): Resolver | null {
+function lightDarkResolver(value: string, prop?: string): Resolver | null {
   const inner = value.slice('light-dark('.length, -1).trim();
   const commaIdx = singleTopLevelCommaIdx(inner);
   if (commaIdx === -1) return null;
@@ -699,8 +710,8 @@ function lightDarkResolver(value: string): Resolver | null {
   if (light.length === 0 || dark.length === 0) return null;
   // Mixing image + color forms is a parse-time error.
   if (isImageBranch(light) !== isImageBranch(dark)) return null;
-  const lightR = buildResolver(light);
-  const darkR = buildResolver(dark);
+  const lightR = buildResolver(light, prop);
+  const darkR = buildResolver(dark, prop);
   // Dynamic branches (env(), viewport units, nested resolvers) evaluate
   // at render time; the OS color-scheme change re-renders via the
   // Appearance listener.
@@ -811,7 +822,7 @@ function embeddedLightDarkResolver(value: string): Resolver | null {
  * family. Falls back to the literal fallback (if provided) or null for
  * everything else, which the caller interprets as "drop".
  */
-function envResolver(value: string): Resolver | null {
+function envResolver(value: string, prop?: string): Resolver | null {
   const inner = value.slice('env('.length, -1).trim();
   const commaIdx = topLevelCommaIdx(inner);
   const name = (commaIdx === -1 ? inner : inner.slice(0, commaIdx)).trim();
@@ -825,7 +836,7 @@ function envResolver(value: string): Resolver | null {
   // The fallback may itself be another env(), light-dark(),
   // viewport unit, or static literal. Build a resolver if it's dynamic;
   // otherwise pre-parse the static literal.
-  const fallbackR = fallback === null ? null : buildResolver(fallback);
+  const fallbackR = fallback === null ? null : buildResolver(fallback, prop);
   const fallbackValue: number | string | null =
     fallbackR !== null ? null : fallback === null ? null : parseLengthLiteral(fallback);
 
@@ -1195,15 +1206,18 @@ function normalizeAttrValue(s: string): number | string {
  * attribute-selector matcher. Returns `null` for malformed heads
  * (namespaced names, empty args); type/value mismatches resolve to the
  * fallback per spec, and a missing fallback on a typed attr() drops the
- * declaration (guaranteed-invalid). `operandUnit` is the unit a number
- * result carries as a math operand (`px` for a <length> type, empty for a
- * <number> or untyped one), and `fallbackUnit` the one a number from the
- * fallback carries; `onFallback` fires when the fallback supplied the result.
+ * declaration (guaranteed-invalid). `prop` is the destination property
+ * of the whole declaration, which a fallback expression's range check reads.
+ * `operand` is the value as a math operand: a number result carries `px`
+ * for a <length> type and no unit for a <number> or untyped one, and a
+ * fallback is typed by its own text, like any other operand.
  */
-function attrResolver(value: string): {
-  fallbackUnit: string;
-  operandUnit: string;
-  resolve: (env: ResolveEnv, onFallback?: () => void) => number | string | null;
+function attrResolver(
+  value: string,
+  prop?: string
+): {
+  operand: (env: ResolveEnv) => NumericResult | null;
+  resolve: (env: ResolveEnv) => number | string | null;
 } | null {
   const toks = tokenize(value);
   if (toks.length !== 1 || toks[0].kind !== TokenKind.Function || toks[0].name !== 'attr') {
@@ -1256,7 +1270,7 @@ function attrResolver(value: string): {
   // fallback (light-dark(), viewport units, math fns) gets its own
   // nested resolver, built once here.
   const fallbackResolver =
-    fallbackRaw !== null && fallbackRaw !== '' ? buildResolver(fallbackRaw) : null;
+    fallbackRaw !== null && fallbackRaw !== '' ? buildResolver(fallbackRaw, prop) : null;
   const staticFallback: number | string | null =
     fallbackRaw !== null
       ? fallbackRaw === ''
@@ -1271,19 +1285,15 @@ function attrResolver(value: string): {
     (type.kind === 'syntax' && type.syntax === 'length')
       ? 'px'
       : '';
-  // A fallback number is unitless only when its text is a bare number; a px
-  // length and a dynamic fallback's resolved length both arrive as px numbers.
-  const fallbackMatch = fallbackRaw === null ? null : NUMERIC_RE.exec(fallbackRaw);
-  const fallbackUnit = fallbackMatch !== null && fallbackMatch[2] === '' ? '' : 'px';
+  // A fallback substitutes its own tokens, so as a math operand it has the type
+  // of the expression those tokens build (an empty or absent fallback has none).
+  const fallbackOperand =
+    fallbackRaw !== null && fallbackRaw !== '' ? buildExpression(tokenize(fallbackRaw)) : null;
 
-  const resolve = (env: ResolveEnv, onFallback?: () => void) => {
-    // Fallback construction is a pure env read (no subscription side
-    // effects), so it's deferred to only the paths that actually need
-    // it; the common present-and-valid-prop cases never touch it.
-    const getFallback = () => {
-      if (onFallback !== undefined) onFallback();
-      return fallbackResolver !== null ? fallbackResolver(env) : staticFallback;
-    };
+  // Fallback construction is a pure env read (no subscription side effects), so
+  // `getFallback` runs only on the paths that need it; the common
+  // present-and-valid-prop cases never touch it.
+  const resolveWith = (env: ResolveEnv, getFallback: () => number | string | null) => {
     const props = env.props;
     const raw = props == null ? undefined : props[name];
     if (raw === undefined || raw === null) return getFallback();
@@ -1307,7 +1317,20 @@ function attrResolver(value: string): {
     }
   };
 
-  return { fallbackUnit, operandUnit, resolve };
+  const resolve = (env: ResolveEnv) =>
+    resolveWith(env, () => (fallbackResolver !== null ? fallbackResolver(env) : staticFallback));
+
+  const operand = (env: ResolveEnv): NumericResult | null => {
+    let fellBack = false;
+    const v = resolveWith(env, () => {
+      fellBack = true;
+      return null;
+    });
+    if (!fellBack) return valueToNumeric(v, operandUnit);
+    return fallbackOperand === null ? null : fallbackOperand(env);
+  };
+
+  return { operand, resolve };
 }
 
 function resolveAttrSyntax(
@@ -1762,15 +1785,7 @@ function buildOperand(
     }
     if (inner === 'attr') {
       const r = attrResolver(t.raw);
-      if (r === null) return null;
-      // A fallback is typed by its own text, not by the attr type.
-      return env => {
-        let fellBack = false;
-        const v = r.resolve(env, () => {
-          fellBack = true;
-        });
-        return valueToNumeric(v, fellBack ? r.fallbackUnit : r.operandUnit);
-      };
+      return r === null ? null : r.operand;
     }
     if ((inner === 'anchor' || inner === 'anchor-size') && opts?.prop !== undefined) {
       const r = buildAnchorResolver(t.raw, opts.prop, inner === 'anchor-size');

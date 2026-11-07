@@ -17,8 +17,17 @@ import {
   substituteBackgroundSizeKeywordsForNative,
 } from './passthrough';
 import { hasRelativeFromPrefix, staticColorFunctionToHex } from './polyfills/colorMath';
-import { numericResultToRn, resolveStaticMathFunction } from './polyfills/mathFns';
-import { buildResolver, findThemePlaceholders } from './polyfills/resolvers';
+import {
+  clampNumericResult,
+  mathRangeOf,
+  numericResultToRn,
+  resolveStaticMathFunction,
+} from './polyfills/mathFns';
+import {
+  buildResolver,
+  findThemePlaceholders,
+  mentionsUnsupportedMathKeyword,
+} from './polyfills/resolvers';
 import { getSystemColorPlatformColor } from './polyfills/systemColors';
 import { getShorthand } from './shorthands';
 import { tokenize } from './tokenize';
@@ -394,21 +403,53 @@ function transformValue(prop: string, rawValue: string): Dict<unknown> {
       const numeric = resolveStaticMathFunction(tokens[0]);
       if (numeric !== null) {
         if (__NATIVE_WEB__ && numeric.unit !== '') return { [camel]: rawValue };
-        if (camel === 'opacity' && numeric.unit === '%') return { opacity: numeric.value / 100 };
-        return { [camel]: numericResultToRn(numeric) };
+        const result =
+          camel === 'opacity' && numeric.unit === '%'
+            ? { unit: '', value: numeric.value / 100 }
+            : numeric;
+        const range = mathRangeOf(camel);
+        return {
+          [camel]: numericResultToRn(
+            range === undefined ? result : clampNumericResult(result, range)
+          ),
+        };
       }
     }
 
     // A sign joined to a name makes a different name, which nothing downstream
     // can resolve. A browser judges the value on rn-web, and `-infinity` has
     // its own warning.
-    if (__DEV__ && !__NATIVE_WEB__ && /(?:^|[\s(,*/])-(?!infinity\b)[a-z]/i.test(rawValue)) {
+    const signedName =
+      __DEV__ && !__NATIVE_WEB__ && /(?:^|[\s(,*/])-(?!infinity\b)[a-z]/i.test(rawValue);
+    if (signedName) {
       warnOnce(
         'native-math-signed-name',
         `the value "${rawValue}" for "${camel}" puts a sign on a name, which CSS reads as a different name, so React Native cannot resolve it. ` +
           'Write `-1 * pi` rather than `-pi`.',
         camel + ':' + rawValue
       );
+    }
+
+    // The fold rejected the function and no render-time resolver can build it
+    // (mixed types, an operand only a fold can read), so the declaration drops
+    // and no text React Native cannot parse reaches it. A browser judges the
+    // value on rn-web.
+    if (
+      !__NATIVE_WEB__ &&
+      tokens.length === 1 &&
+      tokens[0].kind === TokenKind.Function &&
+      buildResolver(rawValue, camel) === null
+    ) {
+      // A sign on a name and `infinity` / `NaN` have warned already.
+      if (__DEV__ && !signedName && !mentionsUnsupportedMathKeyword(rawValue)) {
+        warnOnce(
+          'native-math-unresolvable',
+          `the value "${rawValue}" for "${camel}" is a math function React Native cannot resolve, so the declaration was ignored. ` +
+            'Give every operand the same type, and put font-relative or viewport operands in calc(), min(), max() or clamp().',
+          camel + ':' + rawValue
+        );
+      }
+      return {};
     }
   }
 

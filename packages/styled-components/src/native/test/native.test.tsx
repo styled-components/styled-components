@@ -4,6 +4,7 @@ import { Animated, Image, Pressable, Switch, Text, TextInput, View, ViewProps } 
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider, css, toStyleSheet } from '../';
 import { resetStyleCache, RN_UNSUPPORTED_VALUES } from '../../models/NativeStyle';
+import { resetWarningsForTest } from '../transform/dev';
 
 // NOTE: These tests are like the ones for Web but a "light-version" of them
 // This is mostly due to the similar logic
@@ -1689,6 +1690,130 @@ describe('native', () => {
       const style = renderUnder20px(Child);
       expect(style.fontSize).toBe(22);
       expect(style.lineHeight).toBe(24);
+    });
+  });
+
+  // https://drafts.csswg.org/css-values-4/#calc-range (editor's draft, 10.12 Range Checking)
+  //
+  // "numeric functions returning out-of-range values never cause a declaration to become
+  // invalid. Instead, the value of a numeric function is clamped to the range allowed in the
+  // context it is used at computed value time if possible, and at used value time otherwise.
+  // Similarly, if a numeric function returns a non-integer value, but is used in a position
+  // that expects an <integer>, the computed value and used value are rounded to the nearest
+  // integer."
+  //
+  // "Since widths smaller than 0px are not allowed, these three declarations are equivalent:
+  // width: calc(5px - 10px); width: calc(-5px); width: 0px;"
+  describe('a math result is clamped to the range of its property in the rendered style', () => {
+    const renderStyle = (Child: React.ComponentType<PropsWithChildren>) => {
+      const Parent = styled.View`
+        font-size: 20px;
+      `;
+      const tree = TestRenderer.create(
+        <Parent>
+          <Child>hi</Child>
+        </Parent>
+      );
+      return mergeStyle(tree.root.findByType(Text).props.style);
+    };
+
+    // 1em is 20px under the parent, so each value is -10px before range checking.
+    it('width, padding, border-width, and border-radius clamp to 0', () => {
+      const Child = styled.Text`
+        width: calc(1em - 30px);
+        padding: calc(1em - 30px);
+        padding-block: calc(1em - 30px);
+        border-width: calc(1em - 30px);
+        border-block-width: calc(1em - 30px);
+        border-radius: calc(1em - 30px);
+        row-gap: calc(1em - 30px);
+      `;
+      const style = renderStyle(Child);
+      expect({
+        borderBottomWidth: style.borderBottomWidth,
+        borderRadius: style.borderRadius,
+        borderTopWidth: style.borderTopWidth,
+        borderWidth: style.borderWidth,
+        padding: style.padding,
+        paddingBottom: style.paddingBottom,
+        paddingTop: style.paddingTop,
+        rowGap: style.rowGap,
+        width: style.width,
+      }).toEqual({
+        borderBottomWidth: 0,
+        borderRadius: 0,
+        borderTopWidth: 0,
+        borderWidth: 0,
+        padding: 0,
+        paddingBottom: 0,
+        paddingTop: 0,
+        rowGap: 0,
+        width: 0,
+      });
+    });
+
+    it('a static result clamps at compile time', () => {
+      const Child = styled.Text`
+        width: calc(2px - 10px);
+        opacity: calc(5 - 3);
+        z-index: calc(7 / 3);
+      `;
+      const style = renderStyle(Child);
+      expect({ opacity: style.opacity, width: style.width, zIndex: style.zIndex }).toEqual({
+        opacity: 1,
+        width: 0,
+        zIndex: 2,
+      });
+    });
+
+    it('a property with no range keeps a negative result', () => {
+      const Child = styled.Text`
+        margin-top: calc(1em - 30px);
+      `;
+      expect(renderStyle(Child).marginTop).toBe(-10);
+    });
+
+    // A var() is substituted before the declaration is transformed, so the drop for an
+    // unbuildable function never sees one.
+    it('math around var() resolves after substitution, and clamps', () => {
+      const Parent = styled.View`
+        --gap: 10px;
+      `;
+      const Child = styled.Text`
+        width: calc(var(--gap) + 2px);
+        height: min(var(--gap), 5px);
+        padding-top: calc(var(--gap) - 30px);
+      `;
+      const tree = TestRenderer.create(
+        <Parent>
+          <Child>hi</Child>
+        </Parent>
+      );
+      const style = mergeStyle(tree.root.findByType(Text).props.style);
+      expect({ height: style.height, paddingTop: style.paddingTop, width: style.width }).toEqual({
+        height: 5,
+        paddingTop: 0,
+        width: 12,
+      });
+    });
+
+    it('a math function no resolver builds drops the declaration with a warning', () => {
+      resetWarningsForTest();
+      const Child = styled.Text`
+        width: mod(7, 3px);
+        height: abs(1em);
+        margin-top: 4px;
+      `;
+      const style = renderStyle(Child);
+      expect({ height: style.height, marginTop: style.marginTop, width: style.width }).toEqual({
+        height: undefined,
+        marginTop: 4,
+        width: undefined,
+      });
+      expect(warnSpy.mock.calls.map(call => String(call[0]).split('\n')[0])).toEqual([
+        '[sc] the value "mod(7, 3px)" for "width" is a math function React Native cannot resolve, so the declaration was ignored. Give every operand the same type, and put font-relative or viewport operands in calc(), min(), max() or clamp().',
+        '[sc] the value "abs(1em)" for "height" is a math function React Native cannot resolve, so the declaration was ignored. Give every operand the same type, and put font-relative or viewport operands in calc(), min(), max() or clamp().',
+      ]);
     });
   });
 
