@@ -1097,33 +1097,6 @@ function appendStyle(composed: unknown, extra: object): object {
   return Array.isArray(composed) ? [...composed, extra] : [composed, extra];
 }
 
-/**
- * Inject `container-name: <styledComponentId>` into the rendered
- * style when a component declares `container-type` without an
- * explicit `container-name`. Lets rn-web emit the matching CSS so
- * `@container <id> (...)` queries written via `${Component}`
- * interpolation match against the source on the browser side; on
- * native this prop is ignored by the view manager (the runtime
- * publisher carries the same name through `ContainerContext`).
- */
-function injectAutoContainerName(
-  composed: object,
-  info: NativeStyles['containerInfo'] | undefined,
-  styledComponentId: string
-): object {
-  if (!info || info.explicitName !== undefined) return composed;
-  return appendStyle(composed, { containerName: styledComponentId });
-}
-
-function composeStaticStyle(
-  compiled: NativeStyles,
-  userStyle: unknown,
-  styledComponentId: string
-): object {
-  const composed = composeBase(compiled.base, userStyle);
-  return injectAutoContainerName(composed, compiled.containerInfo, styledComponentId);
-}
-
 function createFastElement(
   elementToBeCreated: NativeTarget,
   elementProps: Dict<unknown>,
@@ -1187,7 +1160,7 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
       props,
       elementToBeCreated,
       undefined,
-      composeStaticStyle(compiled, props.style, styledComponentId),
+      composeBase(compiled.base, props.style),
       compiled.specialCases,
       forwardedRef,
       forwardedComponent
@@ -1202,7 +1175,7 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   // biome-ignore-start lint/correctness/useHookAtTopLevel: this static render path is reached only past an `if (IS_RSC)` early return above, and IS_RSC is a load-time constant, so a given bundle always runs all of these hooks or none of them
   const nativeStyleCtx = React.useContext(NativeStyleContext);
   const parentCtx = React.useContext(ParentContext);
-  let composedStyle = composeStaticStyle(compiled, props.style, styledComponentId);
+  let composedStyle = composeBase(compiled.base, props.style);
   const grid = nativeStyleCtx.cascade.grid;
   if (grid !== undefined && parentCtx.parentId === grid.ownerId) {
     // A `grid-column: span N` item is never static-eligible (the
@@ -1504,11 +1477,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
           safeAreaInsets
         )
       : composeBase(effectiveBase, context.style);
-  let composedStyle = injectAutoContainerName(
-    baseComposed,
-    compiled.containerInfo,
-    forwardedComponent.styledComponentId
-  );
+  let composedStyle = baseComposed;
   // Grid item sizing: a direct child of a `display: grid` container reads the
   // published grid entry and applies a computed width. The owner check
   // (`parentId === grid.ownerId`) enforces the spec's direct-children rule;

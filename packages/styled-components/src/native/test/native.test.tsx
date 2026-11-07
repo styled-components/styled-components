@@ -1958,14 +1958,15 @@ describe('native', () => {
         expect(view.props.style).toEqual({ paddingTop: 10 });
       });
 
-      it('auto-injects containerName when container-type is declared without container-name', () => {
+      // The implicit container name travels to descendants through context;
+      // React Native's view manager ignores a `containerName` style key.
+      it('adds no containerName style key for a container without container-name', () => {
         const Card = styled.View.withConfig({ displayName: 'AutoNameCard' })`
           container-type: size;
         `;
         const wrapper = TestRenderer.create(<Card />);
         const view = wrapper.root.findByType(View);
-        const merged = mergeStyle(view.props.style);
-        expect(merged.containerName).toBe(Card.styledComponentId);
+        expect(mergeStyle(view.props.style)).not.toHaveProperty('containerName');
       });
 
       it('does NOT auto-inject containerName when container-name was supplied explicitly', () => {
@@ -1981,7 +1982,7 @@ describe('native', () => {
         expect(merged.containerName).toBe('explicit');
       });
 
-      it('auto-injects containerName alongside an object user style', () => {
+      it('composes a container with an object user style', () => {
         const Card = styled.View.withConfig({ displayName: 'AutoNameUserCard' })`
           container-type: size;
         `;
@@ -1989,7 +1990,7 @@ describe('native', () => {
         const view = wrapper.root.findByType(View);
         const merged = mergeStyle(view.props.style);
         expect(merged.opacity).toBe(0.7);
-        expect(merged.containerName).toBe(Card.styledComponentId);
+        expect(merged).not.toHaveProperty('containerName');
       });
 
       it('layers function-form user style as a state callback returning [base, callbackResult]', () => {
@@ -2016,7 +2017,7 @@ describe('native', () => {
         expect(view.props.style({})).toEqual([{ paddingTop: 10 }, { opacity: 0.5 }, { margin: 4 }]);
       });
 
-      it('layers auto-containerName ON TOP OF a function-form user style', () => {
+      it('keeps a function-form user style on a container', () => {
         const Card = styled.View.withConfig({ displayName: 'AutoNameFnCard' })`
           container-type: size;
         `;
@@ -2024,13 +2025,10 @@ describe('native', () => {
           state.pressed ? { opacity: 0.5 } : { opacity: 1 };
         const wrapper = TestRenderer.create(<Card style={userStyle} />);
         const view = wrapper.root.findByType(View);
-        // Function form preserved; container name appended as a static layer
-        // after the callback result.
         expect(typeof view.props.style).toBe('function');
-        const result = view.props.style({ pressed: true });
-        const merged = mergeStyle(result);
+        const merged = mergeStyle(view.props.style({ pressed: true }));
         expect(merged.opacity).toBe(0.5);
-        expect(merged.containerName).toBe(Card.styledComponentId);
+        expect(merged).not.toHaveProperty('containerName');
       });
     });
 
@@ -2055,7 +2053,7 @@ describe('native', () => {
         expect(merged.opacity).toBe(0.5);
       });
 
-      it('auto-injects containerName on the dynamic path', () => {
+      it('adds no containerName style key for a container on the dynamic path', () => {
         const Card = styled.View.withConfig({ displayName: 'DynAutoNameCard' })<{ $w: number }>`
           width: ${p => p.$w}px;
           container-type: size;
@@ -2064,11 +2062,11 @@ describe('native', () => {
         const wrapper = TestRenderer.create(<Card $w={200} />);
         const view = wrapper.root.findByType(View);
         const merged = mergeStyle(view.props.style);
-        expect(merged.containerName).toBe(Card.styledComponentId);
+        expect(merged).not.toHaveProperty('containerName');
         expect(merged.width).toBe(200);
       });
 
-      it('layers function-form user style with auto-container-name on the dynamic path', () => {
+      it('keeps a function-form user style on a container on the dynamic path', () => {
         const Card = styled.View.withConfig({ displayName: 'DynAutoNameFnCard' })<{ $w: number }>`
           width: ${p => p.$w}px;
           container-type: size;
@@ -2081,7 +2079,7 @@ describe('native', () => {
         const result = view.props.style({ pressed: true });
         const merged = mergeStyle(result);
         expect(merged.opacity).toBe(0.5);
-        expect(merged.containerName).toBe(Card.styledComponentId);
+        expect(merged).not.toHaveProperty('containerName');
         expect(merged.width).toBe(200);
       });
     });
