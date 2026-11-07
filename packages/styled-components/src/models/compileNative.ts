@@ -331,6 +331,13 @@ export interface NativeStyles {
    */
   scrollerFlexPin?: true;
   /**
+   * Set when `background-blend-mode` appears in the base, a resolver, or any
+   * conditional bucket (a color-scheme `@media` included). The render path
+   * then keeps the component's children behind a layer slot from the first
+   * render, so the blend layers appearing later never moves them.
+   */
+  blendLayerSlot?: true;
+  /**
    * `true` when this compile output COULD publish a cascade value
    * (font-size / line-height / direction) to descendants. Set when any
    * of base, resolvers, conditional buckets, starting-style, transitions,
@@ -705,7 +712,34 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   if (fieldSizing !== null) out.fieldSizing = fieldSizing;
   out.publishesCascade = computePublishesCascade(out);
   if (computeScrollerFlexPin(out)) out.scrollerFlexPin = true;
+  if (declaresBackgroundBlendMode(out, resolvedBase)) out.blendLayerSlot = true;
   return out;
+}
+
+const BACKGROUND_BLEND_MODE_KEY = 'backgroundBlendMode';
+
+/**
+ * `background-blend-mode` in the base, a render-time resolver, a `var()`
+ * deferral, or any conditional bucket. `base` itself may be a registered
+ * StyleSheet id, so the pre-registration object is scanned.
+ */
+function declaresBackgroundBlendMode(out: NativeStyles, resolvedBase: Dict<unknown>): boolean {
+  if (resolvedBase[BACKGROUND_BLEND_MODE_KEY] !== undefined) return true;
+  if (out.important?.[BACKGROUND_BLEND_MODE_KEY] !== undefined) return true;
+  const keyLists = [out.resolvers, out.importantResolvers, out.varDeferred];
+  for (let i = 0; i < out.conditional.length; i++) {
+    const bucket = out.conditional[i];
+    if (bucket.styles[BACKGROUND_BLEND_MODE_KEY] !== undefined) return true;
+    keyLists.push(bucket.resolvers);
+  }
+  for (let i = 0; i < keyLists.length; i++) {
+    const list = keyLists[i];
+    if (list === undefined) continue;
+    for (let j = 0; j < list.length; j++) {
+      if (list[j][0] === BACKGROUND_BLEND_MODE_KEY) return true;
+    }
+  }
+  return false;
 }
 
 /**

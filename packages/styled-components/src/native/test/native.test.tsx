@@ -2661,3 +2661,212 @@ describe('a plain string value stays in its declaration', () => {
     }
   });
 });
+
+// A mount count above the expected one means the library moved the user's elements to a new
+// place in the tree (React unmounts and remounts anything whose place changed).
+describe('tree shape stability', () => {
+  /** Counts mounts of its instances: a state initializer runs once per mount. */
+  function mountCounter() {
+    const counter = { mounts: 0 };
+    function Leaf() {
+      React.useState(() => {
+        counter.mounts++;
+        return 0;
+      });
+      return <View />;
+    }
+    return { counter, Leaf };
+  }
+
+  /** React's own dev warning for a lone generator child, raised once by React and by no walk of ours. */
+  function expectOnlyReactIteratorWarning(spy: jest.SpyInstance) {
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(String(spy.mock.calls[0][0])).toContain('Using Iterators as children is unsupported');
+  }
+
+  let errorSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    errorSpy.mockRestore();
+  });
+
+  it('keeps a plain sibling mounted while a styled sibling appears and leaves before it', () => {
+    const { counter, Leaf } = mountCounter();
+    const Form = styled.View``;
+    const ErrorText = styled.Text``;
+    const render = (error: boolean) => (
+      <Form>
+        {error && <ErrorText>invalid</ErrorText>}
+        <Leaf />
+      </Form>
+    );
+
+    const tree = TestRenderer.create(render(false));
+    tree.update(render(true));
+    tree.update(render(false));
+
+    expect(counter.mounts).toBe(1);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps a keyed list mounted while a styled sibling appears before it', () => {
+    const { counter, Leaf } = mountCounter();
+    const Form = styled.View``;
+    const Header = styled.Text``;
+    const render = (header: boolean) => (
+      <Form>
+        {header && <Header>title</Header>}
+        {['a', 'b', 'c'].map(id => (
+          <Leaf key={id} />
+        ))}
+      </Form>
+    );
+
+    const tree = TestRenderer.create(render(false));
+    tree.update(render(true));
+
+    expect(counter.mounts).toBe(3);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps a plain sibling and the kept rows mounted while a mapped list of styled rows grows and shrinks', () => {
+    const lead = mountCounter();
+    const row = mountCounter();
+    const Form = styled.View``;
+    const Row = styled.View``;
+    const render = (ids: string[]) => (
+      <Form>
+        <lead.Leaf />
+        {ids.map(id => (
+          <Row key={id}>
+            <row.Leaf />
+          </Row>
+        ))}
+      </Form>
+    );
+
+    const tree = TestRenderer.create(render([]));
+    tree.update(render(['a', 'b']));
+    tree.update(render(['a']));
+
+    expect(lead.counter.mounts).toBe(1);
+    expect(row.counter.mounts).toBe(2);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps keyed styled rows mounted when they reorder', () => {
+    const row = mountCounter();
+    const Form = styled.View``;
+    const Row = styled.View``;
+    const render = (ids: string[]) => (
+      <Form>
+        {ids.map(id => (
+          <Row key={id}>
+            <row.Leaf />
+          </Row>
+        ))}
+      </Form>
+    );
+
+    const tree = TestRenderer.create(render(['a', 'b']));
+    tree.update(render(['b', 'a']));
+
+    expect(row.counter.mounts).toBe(2);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps an unkeyed styled child at its position while the siblings before it come and go', () => {
+    const last = mountCounter();
+    const Form = styled.View``;
+    const Row = styled.View``;
+    const render = (middle: boolean) => (
+      <Form>
+        <Row />
+        {middle && <Row />}
+        <Row>
+          <last.Leaf />
+        </Row>
+      </Form>
+    );
+
+    const tree = TestRenderer.create(render(false));
+    tree.update(render(true));
+    tree.update(render(false));
+
+    expect(last.counter.mounts).toBe(1);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('raises no missing-key warning for two or more static children', () => {
+    const Form = styled.View``;
+    const Row = styled.View``;
+    const Plain = () => <View />;
+    const render = (testID: string) => (
+      <Form testID={testID}>
+        <Row />
+        <Plain />
+        <Row />
+        text
+      </Form>
+    );
+
+    const tree = TestRenderer.create(render('one'));
+    tree.update(render('two'));
+
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('renders the elements of a generator child as React renders them', () => {
+    const { counter, Leaf } = mountCounter();
+    const Form = styled.View``;
+    function* items() {
+      yield <Leaf key="g" />;
+    }
+
+    TestRenderer.create(<Form>{items()}</Form>);
+
+    expect(counter.mounts).toBe(1);
+    expectOnlyReactIteratorWarning(errorSpy);
+  });
+
+  it('renders the elements of a generator child under a :has() parent', () => {
+    const { counter, Leaf } = mountCounter();
+    const Marker = styled.View``;
+    const Form = styled.View`
+      padding-top: 1px;
+      &:has(${Marker}) {
+        padding-top: 2px;
+      }
+    `;
+    function* items() {
+      yield <Leaf key="g" />;
+    }
+
+    const tree = TestRenderer.create(
+      <Form>
+        <Marker />
+        {items()}
+      </Form>
+    );
+
+    expect(counter.mounts).toBe(1);
+    expect(mergeStyle(tree.root.findAllByType(View)[0].props.style)).toEqual({ paddingTop: 2 });
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('renders function children of a styled Pressable once and keeps them mounted', () => {
+    const { counter, Leaf } = mountCounter();
+    const Press = styled(Pressable)``;
+    const render = (testID: string) => <Press testID={testID}>{() => <Leaf />}</Press>;
+
+    const tree = TestRenderer.create(render('one'));
+    tree.update(render('two'));
+
+    expect(counter.mounts).toBe(1);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+});

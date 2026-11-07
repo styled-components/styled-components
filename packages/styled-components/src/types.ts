@@ -628,6 +628,8 @@ interface CompileOutput {
   gridInfo?: { columns: number };
   /** Set for a grid item declaring `grid-column: span N`. */
   gridSpan?: number;
+  /** Set when `background-blend-mode` appears in the base or any conditional bucket; the render path then keeps the children behind a stable layer slot. */
+  blendLayerSlot?: true;
   /** `true` when this compile output could publish a cascade value (font-size / line-height / direction) to descendants. */
   publishesCascade: boolean;
   /** Authored width/height with no authored flex factor; scrollable targets pin `flexGrow: 0` at render so the declared size holds. */

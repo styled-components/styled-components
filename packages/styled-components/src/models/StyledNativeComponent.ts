@@ -657,24 +657,24 @@ function hasMatches(entry: ConditionalStyle, children: React.ReactNode): boolean
   return walkForHas(children, inner);
 }
 
+/**
+ * Arrays and elements only: an iterable such as a generator is never iterated,
+ * since reading it here would consume it before React renders it.
+ */
 function walkForHas(
   children: React.ReactNode,
   inner: { kind: 'component'; id: string } | { kind: 'attr'; attr: ConditionalAttr }
 ): boolean {
-  let found = false;
-  React.Children.forEach(children, child => {
-    if (found) return;
-    if (!React.isValidElement(child)) return;
-    if (matchesHasInner(child, inner)) {
-      found = true;
-      return;
+  if (Array.isArray(children)) {
+    for (let i = 0; i < children.length; i++) {
+      if (walkForHas(children[i], inner)) return true;
     }
-    const grand = (child.props as { children?: React.ReactNode }).children;
-    if (grand !== undefined && grand !== null && walkForHas(grand, inner)) {
-      found = true;
-    }
-  });
-  return found;
+    return false;
+  }
+  if (!React.isValidElement(children)) return false;
+  if (matchesHasInner(children, inner)) return true;
+  const grand = (children.props as { children?: React.ReactNode }).children;
+  return grand !== undefined && grand !== null && walkForHas(grand, inner);
 }
 
 function matchesHasInner(
@@ -1210,17 +1210,14 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
     styledComponentId,
     elementToBeCreated
   );
-  let effectiveProps =
-    publishedValue !== null
-      ? withIndexedChildren(
-          elementProps,
-          indexStyledChildren(
-            publishCacheRef.current,
-            elementProps.children as React.ReactNode,
-            publishedValue
-          )
-        )
-      : elementProps;
+  let effectiveProps = withIndexedChildren(
+    elementProps,
+    indexStyledChildren(
+      publishCacheRef.current,
+      elementProps.children as React.ReactNode,
+      publishedValue
+    )
+  );
   // Static-eligible scroll containers still publish their timeline so
   // descendants' `animation-timeline: scroll()` resolves, and lift
   // sticky children onto stickyHeaderIndices.
@@ -1239,11 +1236,31 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   );
   // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the IS_RSC-gated static render path
   const inner = wrapScrollTimeline(
-    createFastElement(elementToBeCreated, applyStylePolyfills(effectiveProps), containerName)
+    createFastElement(
+      elementToBeCreated,
+      applyPolyfillsWithLayerSlot(publishCacheRef.current, compiled, effectiveProps),
+      containerName
+    )
   );
-  return publishedValue !== null
-    ? createElement(ParentContext.Provider, { value: publishedValue }, inner)
-    : inner;
+  return createElement(ParentContext.Provider, { value: publishedValue }, inner);
+}
+
+/**
+ * {@link applyStylePolyfills} for a component that keeps its children behind a
+ * layer slot once it has rendered, or could render, blend layers. A blend mode
+ * only the caller's style supplies (known at first render only by its
+ * presence) latches the slot when the layers first appear: one remount of the
+ * children, then none.
+ */
+function applyPolyfillsWithLayerSlot(
+  cache: ParentPublishCache,
+  compiled: NativeStyles,
+  elementProps: Dict<unknown>
+): Dict<unknown> {
+  const layerSlot = cache.blendLayerSlot || compiled.blendLayerSlot === true;
+  const out = applyStylePolyfills(elementProps, layerSlot);
+  cache.blendLayerSlot = layerSlot || out !== elementProps;
+  return out;
 }
 
 /**
@@ -1530,15 +1547,34 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     renderType = getAnimatedComponentCached(renderType) ?? renderType;
   }
 
-  const elementProps = applyStylePolyfills(
-    finalizeElementProps(
-      context,
-      renderType,
-      shouldForwardProp,
-      renderStyle,
-      compiled.specialCases,
-      forwardedRef,
-      forwardedComponent
+  // Publish this component's identity to descendants so Tier 2
+  // combinator selectors (`${Foo} &`, `${Foo} > &`) can match. Index
+  // child sibling position BEFORE the polyfills (which add blend layers
+  // among the children) and before layering any cascade / container /
+  // isolate-3d Provider wrap, otherwise the per-child Providers would
+  // count the layers or attach to the wrapper rather than the host's
+  // user JSX.
+  const publishedValue = buildPublishedParentValue(
+    publishCache,
+    parentCtx,
+    forwardedComponent.styledComponentId,
+    animOut.elementType
+  );
+  const finalizedProps = finalizeElementProps(
+    context,
+    renderType,
+    shouldForwardProp,
+    renderStyle,
+    compiled.specialCases,
+    forwardedRef,
+    forwardedComponent
+  );
+  const elementProps = applyPolyfillsWithLayerSlot(
+    publishCache,
+    compiled,
+    withIndexedChildren(
+      finalizedProps,
+      indexStyledChildren(publishCache, finalizedProps.children as React.ReactNode, publishedValue)
     )
   );
 
@@ -1570,28 +1606,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
       : renderCascade;
   const cascadeChanged = publishedCascade !== nativeStyleCtx.cascade;
 
-  // Publish this component's identity to descendants so Tier 2
-  // combinator selectors (`${Foo} &`, `${Foo} > &`) can match. Index
-  // child sibling position BEFORE layering any cascade / container /
-  // isolate-3d Provider wrap, otherwise the per-child Providers would
-  // attach to the wrapper rather than the host's user JSX.
-  const publishedValue = buildPublishedParentValue(
-    publishCache,
-    parentCtx,
-    forwardedComponent.styledComponentId,
-    animOut.elementType
-  );
-  let effectiveProps =
-    publishedValue !== null
-      ? withIndexedChildren(
-          elementProps,
-          indexStyledChildren(
-            publishCache,
-            elementProps.children as React.ReactNode,
-            publishedValue
-          )
-        )
-      : elementProps;
+  let effectiveProps = elementProps;
 
   // Scroll progress timelines: styled scroll containers publish their
   // offset/extent so descendants' `animation-timeline: scroll()` /
@@ -1662,9 +1677,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
 
   inner = wrapScrollTimeline(inner);
 
-  return publishedValue !== null
-    ? createElement(ParentContext.Provider, { value: publishedValue }, inner)
-    : inner;
+  return createElement(ParentContext.Provider, { value: publishedValue }, inner);
 }
 
 /** Prepended below the composed style: anything in props.style beats

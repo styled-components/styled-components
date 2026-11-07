@@ -14,10 +14,11 @@ import {
  * ancestor chain accumulates the parent's so descendant combinators
  * can match an ancestor anywhere up the tree.
  *
- * Returns `null` when the inherited `parentId` already equals this
- * component's id (defensive; would accumulate duplicates on
- * re-render). The caller should fall through to the inherited context
- * without re-wrapping in a Provider.
+ * Every instance publishes, including one nested in its own kind: its
+ * children must read their own position under it, never the position this
+ * component has under its parent. A recursive tree reuses the parent's
+ * `ancestors` array while the parent's id is already its last entry, so it
+ * costs nothing per level (descendant matching is membership only).
  *
  * Result is memoized per-component in `ParentPublishCache` so the
  * `value` handed to `ParentContext.Provider` stays reference-stable
@@ -31,35 +32,37 @@ export function buildPublishedParentValue(
   parent: ParentContextValue,
   styledComponentId: string,
   elementType: NativeTarget
-): ParentContextValue | null {
-  if (cache.publishedKeyParentCtx === parent && cache.publishedKeyElementType === elementType) {
-    return cache.publishedValue;
+): ParentContextValue {
+  const cached = cache.publishedValue;
+  if (
+    cached !== null &&
+    cache.publishedKeyParentCtx === parent &&
+    cache.publishedKeyElementType === elementType
+  ) {
+    return cached;
   }
-  let value: ParentContextValue | null;
-  if (parent.parentId === styledComponentId) {
-    value = null;
-  } else {
-    const ancestors =
-      parent.parentId === null
-        ? parent.ancestors
-        : parent.ancestors.length === 0
-          ? [parent.parentId]
-          : parent.ancestors.concat(parent.parentId);
-    value = {
-      parentId: styledComponentId,
-      parentTarget: elementType,
-      ancestors,
-      siblingIndex: -1,
-      totalSiblings: 0,
-      prevSiblingId: null,
-      prevSiblingTarget: null,
-      prevSiblings: EMPTY_PREV_SIBLINGS,
-      prevSiblingsCount: 0,
-      siblingIndexOfType: -1,
-      totalSiblingsOfType: 0,
-      siblings: EMPTY_SIBLINGS,
-    };
-  }
+  const inherited = parent.ancestors;
+  const parentId = parent.parentId;
+  const ancestors =
+    parentId === null || inherited[inherited.length - 1] === parentId
+      ? inherited
+      : inherited.length === 0
+        ? [parentId]
+        : inherited.concat(parentId);
+  const value: ParentContextValue = {
+    parentId: styledComponentId,
+    parentTarget: elementType,
+    ancestors,
+    siblingIndex: -1,
+    totalSiblings: 0,
+    prevSiblingId: null,
+    prevSiblingTarget: null,
+    prevSiblings: EMPTY_PREV_SIBLINGS,
+    prevSiblingsCount: 0,
+    siblingIndexOfType: -1,
+    totalSiblingsOfType: 0,
+    siblings: EMPTY_SIBLINGS,
+  };
   cache.publishedKeyParentCtx = parent;
   cache.publishedKeyElementType = elementType;
   cache.publishedValue = value;
@@ -85,6 +88,12 @@ interface PerChildCacheEntry {
 }
 
 export interface ParentPublishCache {
+  /**
+   * Latched once the component rendered, or could render, `background-blend-mode`
+   * layers: its children then always sit behind a layer slot, so a layer
+   * appearing or leaving never moves them.
+   */
+  blendLayerSlot: boolean;
   publishedKeyParentCtx: ParentContextValue | null;
   publishedKeyElementType: NativeTarget | null;
   publishedValue: ParentContextValue | null;
@@ -95,6 +104,7 @@ export interface ParentPublishCache {
 
 export function createParentPublishCache(): ParentPublishCache {
   return {
+    blendLayerSlot: false,
     publishedKeyParentCtx: null,
     publishedKeyElementType: null,
     publishedValue: null,
@@ -105,25 +115,238 @@ export function createParentPublishCache(): ParentPublishCache {
 
 const EMPTY_PREV_SIBLINGS: ReadonlyArray<string> = Object.freeze([]);
 
+/** The statics a styled component carries on its element type. */
+interface StyledStatics {
+  styledComponentId?: string;
+  target?: NativeTarget;
+}
+
+interface ChildTally {
+  /** Elements counted so far, in JSX order. */
+  count: number;
+  siblings: SiblingInfo[];
+  /** Elements per type, styled or plain, so `:nth-of-type` counts a plain sibling of the same type. */
+  totalsByType: Map<unknown, number>;
+}
+
+interface IndexRun {
+  cache: ParentPublishCache;
+  /** Element index of the next element. */
+  index: number;
+  parentValue: ParentContextValue;
+  prevId: string | null;
+  prevSiblings: string[];
+  /** NUL-joined fingerprint of `prevSiblings`, appended to as each styled sibling passes. */
+  prevSiblingsKey: string;
+  prevTarget: NativeTarget | null;
+  seenByType: Map<unknown, number>;
+  siblings: SiblingsList;
+  total: number;
+  totalsByType: Map<unknown, number>;
+}
+
+function styledIdOf(element: React.ReactElement): string | undefined {
+  const type = element.type as StyledStatics | string;
+  return typeof type === 'string' ? undefined : type.styledComponentId;
+}
+
+function childrenOf(element: React.ReactElement): React.ReactNode {
+  return (element.props as { children?: React.ReactNode }).children;
+}
+
+/**
+ * Stops at the first styled element, so a parent with no styled child costs a
+ * scan and nothing else, and a parent whose first child is styled costs one check.
+ */
+function hasStyledChild(node: React.ReactNode): boolean {
+  if (Array.isArray(node)) {
+    for (let i = 0; i < node.length; i++) {
+      if (hasStyledChild(node[i])) return true;
+    }
+    return false;
+  }
+  if (!React.isValidElement(node)) return false;
+  if (styledIdOf(node) !== undefined) return true;
+  return node.type === React.Fragment && hasStyledChild(childrenOf(node));
+}
+
+/**
+ * Count the elements among `node` in JSX order. Arrays and Fragments are counted
+ * through; text, null, booleans, undefined and function children are skipped; any
+ * other object (an iterable such as a generator, a portal, a thenable) is one
+ * opaque element, never iterated, so React still receives it untouched.
+ */
+function tallyChildren(node: React.ReactNode, tally: ChildTally): void {
+  if (Array.isArray(node)) {
+    for (let i = 0; i < node.length; i++) tallyChildren(node[i], tally);
+    return;
+  }
+  if (typeof node !== 'object' || node === null) return;
+  if (!React.isValidElement(node)) {
+    tally.count++;
+    return;
+  }
+  if (node.type === React.Fragment) {
+    tallyChildren(childrenOf(node), tally);
+    return;
+  }
+  const id = styledIdOf(node);
+  const index = tally.count++;
+  let type: unknown = node.type;
+  if (id !== undefined) {
+    const target = (node.type as StyledStatics).target ?? null;
+    tally.siblings.push({
+      id,
+      index,
+      props: node.props as Readonly<Record<string, unknown>>,
+      target,
+    });
+    type = target;
+  }
+  if (type !== null) {
+    tally.totalsByType.set(type, (tally.totalsByType.get(type) ?? 0) + 1);
+  }
+}
+
+/**
+ * Rebuild `node` with each styled element wrapped in its own Provider, copying
+ * an array or Fragment only when something inside changed. `slot` is the raw
+ * position among the siblings (null and false slots keep theirs), and keys a
+ * wrapped element that has no key of its own, so a slot keeps its fiber when
+ * the siblings around it come and go.
+ */
+function reindexChildren(node: React.ReactNode, slot: number, run: IndexRun): React.ReactNode {
+  if (Array.isArray(node)) {
+    let out: React.ReactNode[] | null = null;
+    for (let i = 0; i < node.length; i++) {
+      const child: React.ReactNode = node[i];
+      const next = reindexChildren(child, i, run);
+      if (next === child) continue;
+      if (out === null) out = node.slice();
+      out[i] = next;
+    }
+    return out ?? node;
+  }
+  if (typeof node !== 'object' || node === null) return node;
+  if (!React.isValidElement(node)) {
+    run.index++;
+    run.prevId = null;
+    run.prevTarget = null;
+    return node;
+  }
+  if (node.type === React.Fragment) {
+    const inner = childrenOf(node);
+    const next = reindexChildren(inner, 0, run);
+    return next === inner ? node : React.cloneElement(node, undefined, next);
+  }
+  return reindexElement(node, slot, run);
+}
+
+function reindexElement(element: React.ReactElement, slot: number, run: IndexRun): React.ReactNode {
+  const index = run.index++;
+  const { cache, seenByType, totalsByType } = run;
+  const id = styledIdOf(element);
+  const prevId = run.prevId;
+  const prevTarget = run.prevTarget;
+  if (id === undefined) {
+    seenByType.set(element.type, (seenByType.get(element.type) ?? 0) + 1);
+    cache.perChild[index] = null;
+    run.prevId = null;
+    run.prevTarget = null;
+    return element;
+  }
+
+  const target = (element.type as StyledStatics).target ?? null;
+  const idxOfType = target !== null ? (seenByType.get(target) ?? 0) : -1;
+  const totalOfType = target !== null ? (totalsByType.get(target) ?? 0) : 0;
+  const prevSiblingsKey = run.prevSiblingsKey;
+  const { parentValue, siblings, total } = run;
+  const cached = cache.perChild[index];
+  let perChildValue: ParentContextValue;
+  if (
+    cached !== null &&
+    cached !== undefined &&
+    cached.id === id &&
+    cached.target === target &&
+    cached.total === total &&
+    cached.prevId === prevId &&
+    cached.prevTarget === prevTarget &&
+    cached.prevSiblingsKey === prevSiblingsKey &&
+    cached.idxOfType === idxOfType &&
+    cached.totalOfType === totalOfType &&
+    cached.parentValue === parentValue &&
+    cached.siblings === siblings
+  ) {
+    perChildValue = cached.perChildValue;
+  } else {
+    // Publish the shared running array directly. Each child's
+    // `prevSiblingsCount` caps the valid prefix; later siblings will
+    // append to the same backing array as the parent walk continues,
+    // but consumers (e.g. general-sibling combinator matcher) iterate
+    // up to the count, not the array's length. Avoids the O(N²) slice
+    // cost of per-child copies on first parent render.
+    perChildValue = {
+      parentId: parentValue.parentId,
+      parentTarget: parentValue.parentTarget,
+      ancestors: parentValue.ancestors,
+      siblingIndex: index,
+      totalSiblings: total,
+      prevSiblingId: prevId,
+      prevSiblingTarget: prevTarget,
+      prevSiblings: run.prevSiblings.length === 0 ? EMPTY_PREV_SIBLINGS : run.prevSiblings,
+      prevSiblingsCount: run.prevSiblings.length,
+      siblingIndexOfType: idxOfType,
+      totalSiblingsOfType: totalOfType,
+      siblings,
+    };
+    cache.perChild[index] = {
+      id,
+      target,
+      total,
+      prevId,
+      prevTarget,
+      prevSiblingsKey,
+      idxOfType,
+      totalOfType,
+      parentValue,
+      siblings,
+      perChildValue,
+    };
+  }
+  run.prevSiblings.push(id);
+  // Appended incrementally so a parent with N styled children costs O(N), not O(N²).
+  run.prevSiblingsKey = prevSiblingsKey === '' ? id : prevSiblingsKey + '\0' + id;
+  run.prevId = id;
+  run.prevTarget = target;
+  if (target !== null) seenByType.set(target, idxOfType + 1);
+
+  return createElement(
+    ParentContext.Provider,
+    { value: perChildValue, key: element.key ?? `__sc_sib_${slot}` },
+    element
+  );
+}
+
 /**
  * Walk `children`, identifying styled descendants (those carrying a
  * `styledComponentId` static) and wrapping each one in a per-child
  * `ParentContext.Provider` that publishes its sibling position.
- * Non-styled children pass through untouched.
+ * Plain elements, text, and everything else pass through in place, so
+ * their position and fiber never depend on whether a styled sibling exists.
  *
  * Returns the original `children` when no styled children are present
  * so callers can reuse the original `elementProps` reference, keeping it
  * reference-stable for React.
  *
- * Sibling info reflects literal JSX position among the parent's direct
- * children. Combinator selectors only see immediate styled-child
- * relationships of a styled parent; a non-styled wrapper between them
- * means a deeper styled descendant sees no sibling info (its inherited
- * Provider holds the default values).
+ * Sibling info is the element's index among the parent's JSX elements
+ * (see `tallyChildren` for what counts). Combinator selectors only see
+ * immediate styled-child relationships of a styled parent; a non-styled
+ * wrapper between them means a deeper styled descendant sees no sibling
+ * info (its inherited Provider holds the default values).
  *
  * Each per-child Provider's `value` is cached structurally by position:
  * when the next render produces the same (id, target, total, prev*,
- * idx-of-type, total-of-type, parentValue ref) at slot i, the same
+ * idx-of-type, total-of-type, parentValue ref) at index i, the same
  * `ParentContextValue` reference is reused. JSX re-creation in the
  * caller produces fresh React elements each render, but the per-child
  * Provider `value` stays reference-stable, which lets `React.memo` on
@@ -134,148 +357,37 @@ export function indexStyledChildren(
   children: React.ReactNode,
   parentValue: ParentContextValue
 ): React.ReactNode {
-  if (children === undefined || children === null) return children;
-  if (typeof children === 'string' || typeof children === 'number') return children;
+  if (!hasStyledChild(children)) return children;
 
-  const arr = React.Children.toArray(children);
-  if (arr.length === 0) return children;
+  const tally: ChildTally = { count: 0, siblings: [], totalsByType: new Map() };
+  tallyChildren(children, tally);
 
-  // First pass: identify styled children, total per target, and collect
-  // the `SiblingInfo` array used by `:nth-child(<formula> of <selector>)`
-  // matchers. Skipping non-styled entries keeps the array aligned with
-  // the parent walk's view of "styled children" used elsewhere.
-  const total = arr.length;
-  const childIds: Array<string | null> = new Array(total);
-  const childTargets: Array<NativeTarget | null> = new Array(total);
-  const totalsByTarget = new Map<NativeTarget, number>();
-  const siblingsMut: SiblingInfo[] = [];
-  let hasAnyStyled = false;
-  for (let i = 0; i < total; i++) {
-    const c = arr[i];
-    if (React.isValidElement(c)) {
-      const tp = c.type as { styledComponentId?: string; target?: NativeTarget } | string;
-      if (typeof tp !== 'string' && tp.styledComponentId !== undefined) {
-        const id = tp.styledComponentId;
-        childIds[i] = id;
-        const target = tp.target ?? null;
-        childTargets[i] = target;
-        hasAnyStyled = true;
-        if (target !== null) {
-          totalsByTarget.set(target, (totalsByTarget.get(target) ?? 0) + 1);
-        }
-        siblingsMut.push({
-          id,
-          target,
-          props: c.props as Readonly<Record<string, unknown>>,
-          index: i,
-        });
-        continue;
-      }
-    }
-    childIds[i] = null;
-    childTargets[i] = null;
-  }
-  if (!hasAnyStyled) return children;
   // Reuse the cache's SiblingsList wrapper across renders; just swap
   // `.entries`. This keeps perChildValue identity stable when sibling
   // shape is unchanged while still giving of-selector matchers a fresh
   // array reference (so their entry-keyed plan caches invalidate).
   let siblings = cache.siblingsList;
   if (siblings === null) {
-    siblings = { entries: siblingsMut };
+    siblings = { entries: tally.siblings };
     cache.siblingsList = siblings;
   } else {
-    siblings.entries = siblingsMut;
+    siblings.entries = tally.siblings;
   }
+  if (cache.perChild.length !== tally.count) cache.perChild.length = tally.count;
 
-  const prevSiblingsRunning: string[] = [];
-  // Running NUL-joined fingerprint of `prevSiblingsRunning`. Maintained
-  // incrementally so each iteration appends one id (O(1) amortized) instead
-  // of re-joining the whole array (O(i) per iteration, O(n²) total). For a
-  // parent with N styled children this drops the total work from quadratic
-  // to linear.
-  let prevSiblingsKeyRunning = '';
-  const sameTypeCount = new Map<NativeTarget, number>();
-  const nextChildren: React.ReactNode[] = new Array(total);
-  const perChildCache = cache.perChild;
-  if (perChildCache.length !== total) perChildCache.length = total;
-  for (let i = 0; i < total; i++) {
-    const child = arr[i];
-    const id = childIds[i];
-    if (id === null) {
-      nextChildren[i] = child;
-      perChildCache[i] = null;
-      continue;
-    }
-    const target = childTargets[i];
-    const prevId = i > 0 ? childIds[i - 1] : null;
-    const prevTarget = i > 0 ? childTargets[i - 1] : null;
-    const idxOfType = target !== null ? (sameTypeCount.get(target) ?? 0) : -1;
-    const totalOfType = target !== null ? (totalsByTarget.get(target) ?? 0) : 0;
-    const prevSiblingsKey = prevSiblingsKeyRunning;
-    const cached = perChildCache[i];
-    let perChildValue: ParentContextValue;
-    if (
-      cached !== null &&
-      cached !== undefined &&
-      cached.id === id &&
-      cached.target === target &&
-      cached.total === total &&
-      cached.prevId === prevId &&
-      cached.prevTarget === prevTarget &&
-      cached.prevSiblingsKey === prevSiblingsKey &&
-      cached.idxOfType === idxOfType &&
-      cached.totalOfType === totalOfType &&
-      cached.parentValue === parentValue &&
-      cached.siblings === siblings
-    ) {
-      perChildValue = cached.perChildValue;
-    } else {
-      // Publish the shared running array directly. Each child's
-      // `prevSiblingsCount` caps the valid prefix; later siblings will
-      // append to the same backing array as the parent walk continues,
-      // but consumers (e.g. general-sibling combinator matcher) iterate
-      // up to the count, not the array's length. Avoids the O(N²) slice
-      // cost of per-child copies on first parent render.
-      perChildValue = {
-        parentId: parentValue.parentId,
-        parentTarget: parentValue.parentTarget,
-        ancestors: parentValue.ancestors,
-        siblingIndex: i,
-        totalSiblings: total,
-        prevSiblingId: prevId,
-        prevSiblingTarget: prevTarget,
-        prevSiblings: prevSiblingsRunning.length === 0 ? EMPTY_PREV_SIBLINGS : prevSiblingsRunning,
-        prevSiblingsCount: prevSiblingsRunning.length,
-        siblingIndexOfType: idxOfType,
-        totalSiblingsOfType: totalOfType,
-        siblings,
-      };
-      perChildCache[i] = {
-        id,
-        target,
-        total,
-        prevId,
-        prevTarget,
-        prevSiblingsKey,
-        idxOfType,
-        totalOfType,
-        parentValue,
-        siblings,
-        perChildValue,
-      };
-    }
-    nextChildren[i] = createElement(
-      ParentContext.Provider,
-      { value: perChildValue, key: (child as React.ReactElement).key ?? `__sc_sib_${i}` },
-      child
-    );
-    prevSiblingsRunning.push(id);
-    prevSiblingsKeyRunning =
-      prevSiblingsKeyRunning === '' ? id : prevSiblingsKeyRunning + '\0' + id;
-    if (target !== null) sameTypeCount.set(target, idxOfType + 1);
-  }
-  return nextChildren;
+  return reindexChildren(children, 0, {
+    cache,
+    index: 0,
+    parentValue,
+    prevId: null,
+    prevSiblings: [],
+    prevSiblingsKey: '',
+    prevTarget: null,
+    seenByType: new Map(),
+    siblings,
+    total: tally.count,
+    totalsByType: tally.totalsByType,
+  });
 }
 
 /**

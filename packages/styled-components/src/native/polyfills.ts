@@ -65,11 +65,16 @@ function getRNComponents(): RNComponentRefs {
  * Run all native-side polyfills against the resolved element props
  * just before `React.createElement`. Each polyfill returns the input
  * reference unchanged on miss, so the chain is cheap on the hot path.
+ *
+ * `layerSlot` marks a component that renders, or may later render, blend layers:
+ * its children then always sit in the slot after them, whether or not a layer
+ * is present, so the layers appearing never moves the children.
  */
 export function applyStylePolyfills(
-  elementProps: Record<string, unknown>
+  elementProps: Record<string, unknown>,
+  layerSlot = false
 ): Record<string, unknown> {
-  return applyBackgroundBlendModePolyfill(elementProps);
+  return applyBackgroundBlendModePolyfill(elementProps, layerSlot);
 }
 
 // ── background-blend-mode ─────────────────────────────────────────
@@ -121,24 +126,25 @@ export function applyStylePolyfills(
  * buffer fills with bgColor before drawChild runs the per-child blend.
  */
 export function applyBackgroundBlendModePolyfill(
-  elementProps: Record<string, unknown>
+  elementProps: Record<string, unknown>,
+  layerSlot = false
 ): Record<string, unknown> {
-  if (!hasBackgroundBlendMode(elementProps.style)) return elementProps;
+  if (!hasBackgroundBlendMode(elementProps.style)) return unlayered(elementProps, layerSlot);
 
   const flat: Record<string, unknown> = {};
   flatten(elementProps.style, flat);
   const blendMode = flat.backgroundBlendMode;
-  if (typeof blendMode !== 'string') return elementProps;
+  if (typeof blendMode !== 'string') return unlayered(elementProps, layerSlot);
   const bgImage =
     typeof flat.experimental_backgroundImage === 'string'
       ? flat.experimental_backgroundImage
       : typeof flat.backgroundImage === 'string'
         ? flat.backgroundImage
         : null;
-  if (bgImage === null) return elementProps;
+  if (bgImage === null) return unlayered(elementProps, layerSlot);
 
   const { View, Image } = getRNComponents();
-  if (View === null) return elementProps;
+  if (View === null) return unlayered(elementProps, layerSlot);
 
   const images = splitTopLevelCommas(bgImage, true);
   const modes = splitTopLevelCommas(blendMode, true);
@@ -198,7 +204,7 @@ export function applyBackgroundBlendModePolyfill(
     applyLayered(layerStyle, repeats, i, 'experimental_backgroundRepeat', 'backgroundRepeat');
     layers.push(createBlendLayer(View, key, blend, layerStyle));
   }
-  if (layers.length === 0) return elementProps;
+  if (layers.length === 0) return unlayered(elementProps, layerSlot);
 
   const wrapperStyle: Record<string, unknown> = {};
   for (const k in flat) {
@@ -214,14 +220,29 @@ export function applyBackgroundBlendModePolyfill(
     );
   }
 
-  const origChildren = elementProps.children;
-  const newChildren: React.ReactNode = !Array.isArray(origChildren)
-    ? origChildren == null
-      ? layers
-      : [...layers, origChildren as React.ReactNode]
-    : [...layers, ...(origChildren as React.ReactNode[])];
+  return { ...elementProps, style: wrapperStyle, children: [layers, keyedChildren(elementProps)] };
+}
 
-  return { ...elementProps, style: wrapperStyle, children: newChildren };
+/**
+ * The props of a component with no layer to render. Asking for a layer slot gives
+ * the children the position they hold when layers are present.
+ */
+function unlayered(
+  elementProps: Record<string, unknown>,
+  layerSlot: boolean
+): Record<string, unknown> {
+  return layerSlot
+    ? { ...elementProps, children: [null, keyedChildren(elementProps)] }
+    : elementProps;
+}
+
+/** A keyed Fragment, since an unkeyed element inside the `[layers, children]` array draws React's missing-key warning. */
+function keyedChildren(elementProps: Record<string, unknown>): React.ReactElement {
+  return React.createElement(
+    React.Fragment,
+    { key: '__sc_bg_children' },
+    elementProps.children as React.ReactNode
+  );
 }
 
 const BG_BLEND_STRIP_KEYS: ReadonlySet<string> = new Set([
