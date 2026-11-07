@@ -1,6 +1,12 @@
 import { Dict } from '../../types';
 import * as $ from '../../utils/charCodes';
-import { warnIfAndroidSkew, warnIfIosGatedFilter, warnIfIosVerticalAlign, warnOnce } from './dev';
+import {
+  runWithWarningsSuppressed,
+  warnIfAndroidSkew,
+  warnIfIosGatedFilter,
+  warnIfIosVerticalAlign,
+  warnOnce,
+} from './dev';
 import {
   collapseIdenticalCommas,
   getPassthroughKeys,
@@ -12,7 +18,7 @@ import {
 } from './passthrough';
 import { hasRelativeFromPrefix, staticColorFunctionToHex } from './polyfills/colorMath';
 import { numericResultToRn, resolveStaticMathFunction } from './polyfills/mathFns';
-import { buildResolver } from './polyfills/resolvers';
+import { buildResolver, findThemePlaceholders } from './polyfills/resolvers';
 import { getSystemColorPlatformColor } from './polyfills/systemColors';
 import { getShorthand } from './shorthands';
 import { tokenize } from './tokenize';
@@ -128,15 +134,83 @@ const SINGLE_PASSTHROUGH_HANDLERS: Record<string, SinglePassthroughHandler> = {
  *    a `'N%'` string.
  * 5. Otherwise → coerce the value (`10px` → `10`, keep percent strings,
  *    etc.) and emit `{ [prop]: coerced }`.
+ *
+ * A createTheme placeholder whose theme value is not text may remain only as
+ * the whole value of a color key; anywhere else the declaration reads as if
+ * the placeholder held its default text, with a dev warning.
  */
 export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
+  if (rawValue.indexOf('\0') === -1) return transformValue(prop, rawValue);
+  return transformWithPlaceholders(prop, rawValue);
+}
+
+const isColorKey = (key: string): boolean => key === 'color' || key.endsWith('Color');
+
+function isEmpty(dict: Dict<unknown>): boolean {
+  for (const _key in dict) return false;
+  return true;
+}
+
+/** The value with each createTheme placeholder shown as its theme path, for messages. */
+function showThemePaths(value: string): string {
+  const parts = findThemePlaceholders(value);
+  let out = '';
+  let copied = 0;
+  for (let i = 0; i < parts.length; i++) {
+    out += value.slice(copied, parts[i].start) + parts[i].keys.join('.');
+    copied = parts[i].end;
+  }
+  return copied === 0 ? value : out + value.slice(copied);
+}
+
+/**
+ * Settles the createTheme placeholders in `rawValue`. A probe transform finds
+ * which ones end up as the whole value of a color key; each other one is
+ * replaced by its default text before the declaration is transformed for real.
+ * The probe runs silent, so a warning never shows placeholder bytes.
+ */
+function transformWithPlaceholders(prop: string, rawValue: string): Dict<unknown> {
+  const parts = findThemePlaceholders(rawValue);
+  if (parts.length === 0) return transformValue(prop, rawValue);
+
+  const probe = runWithWarningsSuppressed(() => transformValue(prop, rawValue));
+  // A dropped declaration leaks nothing; the real run reports why it dropped.
+  if (isEmpty(probe)) return __DEV__ ? transformValue(prop, rawValue) : probe;
+
+  let text = '';
+  let copied = 0;
+  for (let i = 0; i < parts.length; i++) {
+    const { end, fallback, keys, start } = parts[i];
+    const placeholder = rawValue.slice(start, end);
+    let wholeColor = false;
+    for (const key in probe) {
+      if (isColorKey(key) && probe[key] === placeholder) wholeColor = true;
+    }
+    if (wholeColor) continue;
+
+    if (__DEV__) {
+      const path = keys.join('.');
+      warnOnce(
+        'native-theme-value-not-text',
+        `The theme value at \`${path}\` is not text, so \`${prop}\` uses its default, "${fallback}". A theme value that is not text (a platform color, for example) works only as a whole color value, such as \`color\` or \`border-color\`. Give \`${prop}\` a text value, or set the platform color on a color property of its own.`,
+        path + ':' + prop
+      );
+    }
+    text += rawValue.slice(copied, start) + fallback;
+    copied = end;
+  }
+  if (copied === 0) return __DEV__ ? transformValue(prop, rawValue) : probe;
+  return transformValue(prop, text + rawValue.slice(copied));
+}
+
+function transformValue(prop: string, rawValue: string): Dict<unknown> {
   const camel = camelize(prop);
 
   // System color keywords. Route through PlatformColor so iOS / Android
   // use semantic colors. `accentColor` skips here so its handler can
   // lift `trackColor.true` from the original keyword.
   if (
-    (camel === 'color' || camel.endsWith('Color')) &&
+    isColorKey(camel) &&
     camel !== 'accentColor' &&
     rawValue.length > 0 &&
     rawValue.indexOf(' ') === -1 &&
@@ -250,7 +324,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
       if (__DEV__) {
         warnOnce(
           'native-shorthand-parse',
-          `the value "${rawValue}" could not be parsed for property "${prop}". The declaration was ignored. Rewrite the value in standard CSS syntax.`,
+          `the value "${showThemePaths(rawValue)}" could not be parsed for property "${prop}". The declaration was ignored. Rewrite the value in standard CSS syntax.`,
           camel + ':' + rawValue
         );
       }
@@ -313,7 +387,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
     if (__DEV__) {
       warnOnce(
         'native-shorthand-parse',
-        `the value "${rawValue}" could not be parsed for property "${camel}". The declaration was ignored. Rewrite the value in standard CSS syntax.`,
+        `the value "${showThemePaths(rawValue)}" could not be parsed for property "${camel}". The declaration was ignored. Rewrite the value in standard CSS syntax.`,
         camel + ':' + rawValue
       );
     }
@@ -364,14 +438,14 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
       if (hex !== null) return { [camel]: hex };
     }
     // Static fold bailed, but the value may still resolve at render
-    // time: theme-token sentinels, tree-counting functions
-    // (`sibling-index()`), and env-dependent channel math all get a
-    // resolver from `buildResolver` and fold to hex per render. Warn
+    // time: tree-counting functions (`sibling-index()`) and
+    // env-dependent channel math get a resolver from `buildResolver`
+    // and fold to hex per render. Warn
     // only when nothing downstream can render the value (unknown
     // colorspace, an interpolation space RN can't reach), so it doesn't
     // silently paint transparent. The dedupeSuffix is the value itself
     // so repeat declarations don't spam.
-    if (__DEV__ && rawValue.indexOf('\0') === -1 && buildResolver(rawValue, camel) === null) {
+    if (__DEV__ && buildResolver(rawValue, camel) === null) {
       warnOnce(
         'native-modern-color-cant-fold',
         `the value "${rawValue}" for "${camel}" uses a modern color form React Native cannot render directly. ` +

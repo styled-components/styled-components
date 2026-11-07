@@ -489,9 +489,9 @@ describe('toNativeStyles', () => {
   });
 
   describe('@keyframes with dynamic values', () => {
-    it('extracts theme sentinels from @keyframes frame decls into per-frame resolvers', () => {
+    it('extracts theme color placeholders from @keyframes frame decls into per-frame resolvers', () => {
       const r = compile(
-        '@keyframes fade { 0% { opacity: 0; } 100% { opacity: \0sc:opacity.end:1; } }'
+        '@keyframes fade { 0% { color: red; } 100% { color: \0sc:colors.end:blue; } }'
       );
       expect(r.keyframes.length).toBe(1);
       const kf = r.keyframes[0];
@@ -499,14 +499,14 @@ describe('toNativeStyles', () => {
       expect(kf.frames.length).toBe(2);
       // 0% frame is fully static
       expect(kf.frames[0].stops).toEqual(['0%']);
-      expect(kf.frames[0].decls).toEqual({ opacity: 0 });
+      expect(kf.frames[0].decls).toEqual({ color: 'red' });
       expect(kf.frames[0].resolvers).toBeUndefined();
       // 100% frame has a sentinel that landed in resolvers
       expect(kf.frames[1].stops).toEqual(['100%']);
       expect(kf.frames[1].decls).toEqual({});
       expect(kf.frames[1].resolvers).toBeDefined();
       expect(kf.frames[1].resolvers!.length).toBe(1);
-      expect(kf.frames[1].resolvers![0][0]).toBe('opacity');
+      expect(kf.frames[1].resolvers![0][0]).toBe('color');
     });
 
     it('extracts viewport-unit values from @keyframes frame decls into resolvers', () => {
@@ -577,14 +577,14 @@ describe('toNativeStyles', () => {
   });
 
   describe('@starting-style with dynamic values', () => {
-    it('extracts theme sentinels from @starting-style into resolvers', () => {
-      const r = compile('@starting-style { opacity: \0sc:opacity.start:0; }');
+    it('extracts theme color placeholders from @starting-style into resolvers', () => {
+      const r = compile('@starting-style { color: \0sc:colors.start:red; }');
       // The static portion of starting-style strips out resolver-bearing
       // values; the resolvers go into startingStyleResolvers.
       expect(r.startingStyle).toEqual({});
       expect(r.startingStyleResolvers).toBeDefined();
       expect(r.startingStyleResolvers!.length).toBe(1);
-      expect(r.startingStyleResolvers![0][0]).toBe('opacity');
+      expect(r.startingStyleResolvers![0][0]).toBe('color');
     });
 
     it('keeps fully-static @starting-style declarations on the static side', () => {

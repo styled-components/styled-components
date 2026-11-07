@@ -229,30 +229,47 @@ describe('margin / padding / border-* directional shorthands', () => {
     `);
   });
 
-  it('margin: theme sentinel passes through (resolved at render time)', () => {
-    expect(transformDecl('margin', '\0sc:space.md:16px')).toEqual({
-      margin: '\0sc:space.md:16px',
-    });
+  it('margin: a theme placeholder reads as its default text, with a warning', () => {
+    resetWarningsForTest();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(transformDecl('margin', '\0sc:space.md:16px')).toEqual({ margin: 16 });
+    expect(warn.mock.calls.map(call => String(call[0]).split('\n')[0])).toEqual([
+      '[sc] The theme value at `space.md` is not text, so `margin` uses its default, "16px". A theme value that is not text (a platform color, for example) works only as a whole color value, such as `color` or `border-color`. Give `margin` a text value, or set the platform color on a color property of its own.',
+    ]);
+    warn.mockRestore();
   });
 
   it('padding: math-fn arms pass through to the resolver', () => {
+    expect(transformDecl('padding', 'calc(16px + 5vw) min(20px, 5vw) 8px max(24px, 5vh)')).toEqual({
+      paddingBottom: 8,
+      paddingLeft: 'max(24px, 5vh)',
+      paddingRight: 'min(20px, 5vw)',
+      paddingTop: 'calc(16px + 5vw)',
+    });
+  });
+
+  it('padding: theme placeholders in math-fn arms read as their default text', () => {
+    resetWarningsForTest();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
     expect(
       transformDecl(
         'padding',
         'calc(\0sc:space.md:16px + 4px) min(20px, 5vw) 8px max(\0sc:space.lg:24px, 16px)'
       )
-    ).toEqual({
-      paddingBottom: 8,
-      paddingLeft: 'max(\0sc:space.lg:24px, 16px)',
-      paddingRight: 'min(20px, 5vw)',
-      paddingTop: 'calc(\0sc:space.md:16px + 4px)',
-    });
+    ).toEqual(transformDecl('padding', 'calc(16px + 4px) min(20px, 5vw) 8px max(24px, 16px)'));
+    warn.mockRestore();
   });
 
-  it('margin: clamp() with theme sentinel arm survives shorthand expansion', () => {
-    expect(transformDecl('margin', 'clamp(8px, \0sc:space.md:16px, 32px)')).toEqual({
-      margin: 'clamp(8px, \0sc:space.md:16px, 32px)',
-    });
+  it('margin: clamp() with a theme placeholder arm reads as its default text', () => {
+    resetWarningsForTest();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(transformDecl('margin', 'clamp(8px, \0sc:space.md:16px, 32px)')).toEqual(
+      transformDecl('margin', 'clamp(8px, 16px, 32px)')
+    );
+    warn.mockRestore();
   });
 
   it('borderWidth: 4 values → per-side', () => {

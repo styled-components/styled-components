@@ -987,7 +987,8 @@ export function substituteThemeText(
   return result;
 }
 
-interface ThemeTextPart {
+/** One createTheme placeholder found in a text: its span, its default text, and its theme path. */
+export interface ThemeTextPart {
   end: number;
   fallback: string;
   keys: string[];
@@ -1012,6 +1013,14 @@ const themeTextReads = new Map<string, ThemeTextRead | null>();
 const THEME_TEXT_CACHE_LIMIT = 200;
 
 function parseThemeText(text: string): ThemeTextRead | null {
+  const parts = findThemePlaceholders(text);
+  return parts.length === 0
+    ? null
+    : { lastJoined: false, lastText: text, lastTheme: NO_THEME_SEEN, parts };
+}
+
+/** The createTheme placeholders in `text`, in order. Other NUL markers (`\0+`, `\0-`, a server reference) are skipped. */
+export function findThemePlaceholders(text: string): ThemeTextPart[] {
   const parts: ThemeTextPart[] = [];
   let at = text.indexOf('\0');
   while (at !== -1) {
@@ -1029,9 +1038,7 @@ function parseThemeText(text: string): ThemeTextRead | null {
     parts.push({ end, fallback, keys: path.split('.'), start: at, unit: fallbackUnit(fallback) });
     at = text.indexOf('\0', end);
   }
-  return parts.length === 0
-    ? null
-    : { lastJoined: false, lastText: text, lastTheme: NO_THEME_SEEN, parts };
+  return parts;
 }
 
 /**

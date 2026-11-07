@@ -200,15 +200,14 @@ describe('passthrough mapping', () => {
       });
     });
 
-    it('preserves dual-emit through theme-token resolution path', () => {
-      // A multi-token gradient with sentinels reaches transformDecl as a
-      // raw string; resolvers run downstream. The passthrough boundary
-      // still emits both keys so each platform can drive its renderer.
-      const sentinelValue =
-        'linear-gradient(90deg, \0sc:colors.fail:#c8243a, \0sc:colors.ink:#000)';
-      const out = transformDecl('background-image', sentinelValue);
-      expect(out.experimental_backgroundImage).toBe(sentinelValue);
-      expect(out.backgroundImage).toBe(sentinelValue);
+    it('reads theme placeholders in a gradient as their default text and keeps dual-emit', () => {
+      const placeholders = 'linear-gradient(90deg, \0sc:colors.fail:#c8243a, \0sc:colors.ink:#000)';
+      const literal = 'linear-gradient(90deg, #c8243a, #000)';
+
+      expect(transformDecl('background-image', placeholders)).toEqual({
+        backgroundImage: literal,
+        experimental_backgroundImage: literal,
+      });
     });
 
     // react-native-web's StyleSheet validator rejects multi-value
@@ -479,9 +478,10 @@ describe('passthrough mapping', () => {
       expect(out.boxShadow![1].color).toBe('rgba(0,0,0,0.5)');
     });
 
-    it('does not rewrite values containing theme sentinels', () => {
-      const v = '1px 2px \0sc:colors.shadow:#000';
-      expect(transformDecl('box-shadow', v)).toEqual({ boxShadow: v });
+    it('reads a theme placeholder as its default text', () => {
+      expect(transformDecl('box-shadow', '1px 2px \0sc:colors.shadow:#000')).toEqual(
+        transformDecl('box-shadow', '1px 2px #000')
+      );
     });
 
     it('normalizes newlines like RN before parsing', () => {
@@ -545,9 +545,10 @@ describe('passthrough mapping', () => {
       );
     });
 
-    it('does not rewrite filter values containing theme sentinels', () => {
-      const v = 'drop-shadow(1px 2px \0sc:colors.shadow:#000)';
-      expect(transformDecl('filter', v)).toEqual({ filter: v });
+    it('reads a theme placeholder as its default text', () => {
+      expect(transformDecl('filter', 'drop-shadow(1px 2px \0sc:colors.shadow:#000)')).toEqual(
+        transformDecl('filter', 'drop-shadow(1px 2px #000)')
+      );
     });
   });
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
-import { Animated, View } from 'react-native';
+import { Animated, Platform, View } from 'react-native';
 
 import createTheme from '../../constructors/createTheme';
 import ThemeProvider, { ThemeContext } from '../../models/ThemeProvider';
@@ -964,6 +964,7 @@ describe('createTheme;native theme values read as authored CSS', () => {
     });
 
     it('expands a shorthand read after an object value of the same text', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
       const spacing = createTheme({ space: '4px' });
       const Spaced = styled(View)`
         margin: ${() => spacing.space};
@@ -972,10 +973,13 @@ describe('createTheme;native theme values read as authored CSS', () => {
         styleOf(Spaced, theme)
       );
 
-      expect(seen.slice(1)).toEqual([
+      expect(seen).toEqual([
+        { margin: 4 },
         { marginBottom: 8, marginLeft: 2, marginRight: 2, marginTop: 8 },
         { margin: 4 },
       ]);
+      expect(warn).toHaveBeenCalledTimes(1);
+      warn.mockRestore();
     });
 
     it('reads a new theme object that holds the same values as the old one', () => {
@@ -1088,8 +1092,14 @@ describe('createTheme;native theme values read as authored CSS', () => {
       });
     });
 
-    it('passes a boolean through to the style', () => {
-      expect(styleOf(Box, { pad: true })).toEqual({ backgroundColor: 'tomato', paddingTop: true });
+    it('reads the default for a boolean, and warns', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      expect(styleOf(Box, { pad: true })).toEqual({ backgroundColor: 'tomato', paddingTop: 4 });
+      expect(warn.mock.calls.map(call => String(call[0]).split('\n')[0])).toEqual([
+        '[sc] The theme value at `pad` is not text, so `padding-top` uses its default, "4". A theme value that is not text (a platform color, for example) works only as a whole color value, such as `color` or `border-color`. Give `padding-top` a text value, or set the platform color on a color property of its own.',
+      ]);
+      warn.mockRestore();
     });
 
     it('passes an array through to the style', () => {
@@ -1198,6 +1208,112 @@ describe('createTheme;native theme values read as authored CSS', () => {
         borderStyle: 'solid',
         borderWidth: 1,
       });
+    });
+  });
+
+  describe('a provider object value where React Native takes no object', () => {
+    const platformColor = { semantic: ['systemBackground'] };
+    const palette = createTheme({ gap: '4px', ink: 'tomato', size: 8 });
+    const warnings = (warn: jest.SpyInstance) =>
+      warn.mock.calls.map(call => String(call[0]).split('\n')[0]);
+    const notText = (path: string, prop: string, fallback: string) =>
+      `[sc] The theme value at \`${path}\` is not text, so \`${prop}\` uses its default, "${fallback}". A theme value that is not text (a platform color, for example) works only as a whole color value, such as \`color\` or \`border-color\`. Give \`${prop}\` a text value, or set the platform color on a color property of its own.`;
+
+    it.each([
+      {
+        authoredCss: 'box-shadow: 0 1px 2px tomato;',
+        message: notText('ink', 'box-shadow', 'tomato'),
+        name: 'box-shadow',
+        themed: styled(View)`
+          box-shadow: 0 1px 2px ${palette.ink};
+        `,
+      },
+      {
+        authoredCss: 'filter: drop-shadow(0 1px 2px tomato);',
+        message: notText('ink', 'filter', 'tomato'),
+        name: 'filter',
+        themed: styled(View)`
+          filter: drop-shadow(0 1px 2px ${palette.ink});
+        `,
+      },
+      {
+        authoredCss: 'transform: translateX(8px);',
+        message: notText('size', 'transform', '8px'),
+        name: 'transform',
+        themed: styled(View)`
+          transform: translateX(${palette.size}px);
+        `,
+      },
+      {
+        authoredCss: 'margin: 4px;',
+        message: notText('gap', 'margin', '4px'),
+        name: 'margin',
+        themed: styled(View)`
+          margin: ${palette.gap};
+        `,
+      },
+    ])('reads the default and warns once in $name', ({ authoredCss, message, themed }) => {
+      const platform = jest.replaceProperty(Platform, 'OS', 'android');
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const expected = styleOf(authored(authoredCss));
+      warn.mockClear();
+
+      expect(
+        styleOf(themed, { gap: platformColor, ink: platformColor, size: platformColor })
+      ).toEqual(expected);
+      expect(warnings(warn)).toEqual([message]);
+
+      warn.mockRestore();
+      platform.restore();
+    });
+
+    it('names the default, not the placeholder, in the iOS filter warning', () => {
+      const platform = jest.replaceProperty(Platform, 'OS', 'ios');
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const Shadowed = styled(View)`
+        filter: drop-shadow(0 1px 2px ${palette.ink});
+      `;
+
+      styleOf(Shadowed, { ink: platformColor });
+
+      expect(warnings(warn)).toEqual([
+        notText('ink', 'filter', 'tomato'),
+        "[sc] `filter: drop-shadow(0 1px 2px tomato)` includes effects iOS does not render in React Native 0.85 unless the app opts into the experimental release level; only `brightness()` and `opacity()` render by default. While the filter is present, iOS also stops blending descendants' `mix-blend-mode` against the backdrop. Bake the effect into the source colors, or keep blended descendants outside the filtered element.",
+      ]);
+
+      warn.mockRestore();
+      platform.restore();
+    });
+
+    it('names the path, not the placeholder, in a parse failure', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const Broken = styled(View)`
+        border: 1px nonsense solid ${palette.ink};
+      `;
+
+      expect(styleOf(Broken, { ink: platformColor })).toEqual({});
+      expect(warnings(warn)).toEqual([
+        '[sc] the value "1px nonsense solid ink" could not be parsed for property "border". The declaration was ignored. Rewrite the value in standard CSS syntax.',
+      ]);
+
+      warn.mockRestore();
+    });
+
+    it.each([
+      ['color', 'color: ${ink};'],
+      ['a border shorthand', 'border: 1px solid ${ink};'],
+      ['border-color', 'border-color: ${ink};'],
+      ['a text-shadow', 'text-shadow: 1px 2px 3px ${ink};'],
+      ['an important color', 'color: ${ink} !important;'],
+    ])('does not warn for an object as the whole color of %s', (_name, template) => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const strings = [template.split('${ink}')[0], template.split('${ink}')[1]];
+      const Colored = styled(View)(Object.assign(strings, { raw: strings }), palette.ink);
+
+      styleOf(Colored, { ink: platformColor });
+
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
     });
   });
 

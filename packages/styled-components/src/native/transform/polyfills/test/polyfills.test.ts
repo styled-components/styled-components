@@ -1235,9 +1235,13 @@ describe('color() spec compliance: predefined spaces (CSS Color Module Level 4 �
       expect(warnSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('theme hue sentinel oklch(… brandHue …) skips warn (resolver)', () => {
-      transformDecl('color', 'oklch(0.7 0.15 \0sc:colors.brandHue:200)');
-      expect(warnSpy).not.toHaveBeenCalled();
+    it('theme hue placeholder oklch(… brandHue …) folds its default text and warns only about the theme value', () => {
+      expect(transformDecl('color', 'oklch(0.7 0.15 \0sc:colors.brandHue:200)')).toEqual(
+        transformDecl('color', 'oklch(0.7 0.15 200)')
+      );
+      expect(warnSpy.mock.calls.map(call => String(call[0]).split('\n')[0])).toEqual([
+        '[sc] The theme value at `colors.brandHue` is not text, so `color` uses its default, "200". A theme value that is not text (a platform color, for example) works only as a whole color value, such as `color` or `border-color`. Give `color` a text value, or set the platform color on a color property of its own.',
+      ]);
     });
 
     // Tree-counting and bare math in a color channel resolve at render
