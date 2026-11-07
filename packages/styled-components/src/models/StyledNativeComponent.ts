@@ -175,18 +175,18 @@ function layerStyle(under: unknown, over: unknown): unknown {
 /**
  * Merge an attrs result bag into context so attrs always wins (docs/attrs.md).
  * A `style` layers over the one context holds (the caller's, or an inner
- * attrs') instead of replacing it.
- * An `undefined` value removes the key when context held a defined value; a
- * context that already holds the caller's explicit `undefined` (echoed back by
- * an identity-spread attrs function) keeps it, and a key never present stays
- * absent.
+ * attrs'), so an empty one leaves it as is, as on web.
+ * Any other `undefined` value removes the key when context held a defined
+ * value; a context that already holds the caller's explicit `undefined`
+ * (echoed back by an identity-spread attrs function) keeps it, and a key never
+ * present stays absent.
  */
 function mergeAttrsResult(context: object, resolved: Dict<unknown>): void {
   const target = context as Dict<unknown>;
 
   for (const key in resolved) {
-    if (key === 'style' && resolved.style != null) {
-      target.style = layerStyle(target.style, resolved.style);
+    if (key === 'style') {
+      if (resolved.style != null) target.style = layerStyle(target.style, resolved.style);
     } else if (resolved[key] !== undefined) {
       target[key] = resolved[key];
     } else if (target[key] !== undefined) {

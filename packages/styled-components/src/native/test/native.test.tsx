@@ -587,6 +587,18 @@ describe('native', () => {
         const view = TestRenderer.create(<Outer />).root.findByType(View);
         expect(mergeStyle(view.props.style)).toEqual({ color: 'green', margin: 1, paddingTop: 10 });
       });
+
+      it.each([undefined, null])(
+        'keeps the caller style under an attrs style of %s',
+        attrsStyle => {
+          const Comp = styled.View.attrs({ style: attrsStyle })`
+          padding-top: 10px;
+        `;
+
+          const view = TestRenderer.create(<Comp style={{ opacity: 0.5 }} />).root.findByType(View);
+          expect(mergeStyle(view.props.style)).toEqual({ opacity: 0.5, paddingTop: 10 });
+        }
+      );
     });
 
     it('theme prop works', () => {

@@ -6,10 +6,9 @@
 //   - Within a single styled component (base + matched conditional
 //     buckets), `!important` declarations beat normal ones regardless
 //     of source order or which bucket they originated in.
-//   - The `style={{}}` prop is still applied last and wins over
-//     `!important` from the styled component itself; that surface is
-//     the runtime escape hatch and is documented as a deliberate
-//     deviation from strict spec cascade origins.
+//   - The `style={{}}` prop and an attrs `style` beat the component's
+//     normal declarations and lose to its `!important` ones, as an
+//     inline style does on web.
 //   - Cross-component cascade of `!important` (a parent's `!important
 //     font-size` defeating a child's normal one) is out of v1 scope.
 
