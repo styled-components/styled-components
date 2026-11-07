@@ -117,9 +117,9 @@ export function tokenize(value: string): Token[] {
       continue;
     }
 
-    // Sentinel token: \0<prefix>:<path>:<fallback>
-    // createTheme produces these for native. The prefix is user-configurable,
-    // so we match on the leading $.NUL plus first `:` separator.
+    // Sentinel token: \0<prefix>:<path>:<fallback>. createTheme emits these;
+    // a whole color value is the only place one reaches a handler. The prefix
+    // is user-configurable, so match on the leading $.NUL plus first `:`.
     if (c === $.NUL) {
       const end = findSentinelEnd(value, i);
       const raw = value.substring(i, end);

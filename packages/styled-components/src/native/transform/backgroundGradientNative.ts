@@ -197,7 +197,6 @@ export function maybeExpandBackgroundImageSystemColors(rawValue: string): string
   // The browser parses system keywords inside gradient stops natively; the
   // structured-object rewrite is a native-only workaround.
   if (__NATIVE_WEB__) return rawValue;
-  if (rawValue.indexOf('\0') !== -1) return rawValue;
 
   const normalized = rawValue.replace(/\n/g, ' ');
   if (normalized.toLowerCase().includes('radial-gradient')) return rawValue;

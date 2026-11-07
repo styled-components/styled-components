@@ -3077,7 +3077,6 @@ describe('text-decoration platform skew (Android underline color)', () => {
 // https://drafts.csswg.org/css-color-5/#relative-colors
 describe('relative-color spec compliance (CSS Color Module Level 5 §4)', () => {
   // The literal-base path folds at compile time via staticColorFunctionToHex.
-  // Sentinel-base form (var() / theme tokens) bails with the warn.
 
   beforeEach(() => {
     resetWarningsForTest();
@@ -3336,26 +3335,6 @@ describe('relative-color spec compliance (CSS Color Module Level 5 §4)', () => 
         const hex = staticColorFunctionToHex(tok);
         expect(hex).toBeNull();
         expect(warnSpy).toHaveBeenCalledTimes(1);
-      } finally {
-        warnSpy.mockRestore();
-      }
-    });
-  });
-
-  describe('§4.1 sentinel-base (theme-token) defers to runtime resolver', () => {
-    // The static fold bails (returns null) without a warning.
-    it('staticColorFunctionToHex returns null for sentinel-base values', () => {
-      const tok = tokenize('oklch(from \0sc:colors.brand:#f00 l c h)')[0];
-      const hex = staticColorFunctionToHex(tok);
-      expect(hex).toBeNull();
-    });
-
-    it('no warning fires; the runtime resolver handles substitution', () => {
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-      try {
-        const tok = tokenize('oklch(from \0sc:colors.brand:#f00 l c h)')[0];
-        staticColorFunctionToHex(tok);
-        expect(warnSpy).not.toHaveBeenCalled();
       } finally {
         warnSpy.mockRestore();
       }
@@ -3634,25 +3613,7 @@ describe('relative-color spec compliance (CSS Color Module Level 5 §4)', () => 
     });
   });
 
-  describe('§4.1 sentinel-base from-forms defer to runtime resolver', () => {
-    // Mirrors the oklch sentinel-base path: the static fold bails.
-    it('static fold returns null for rgb(from <sentinel> r g b)', () => {
-      const tok = tokenize('rgb(from \0sc:colors.brand:#3399ff r g b)')[0];
-      expect(staticColorFunctionToHex(tok)).toBeNull();
-    });
-
-    it('no warning fires for the sentinel-base form', () => {
-      resetWarningsForTest();
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-      try {
-        const tok = tokenize('rgb(from \0sc:colors.brand:#3399ff r g b)')[0];
-        staticColorFunctionToHex(tok);
-        expect(warnSpy).not.toHaveBeenCalled();
-      } finally {
-        warnSpy.mockRestore();
-      }
-    });
-
+  describe('§4.1 absolute rgb needs no resolver', () => {
     it('buildResolver leaves absolute rgb(255 0 0) un-resolved (RN handles it)', () => {
       // Absolute forms are RN-native; no resolver is produced.
       expect(buildResolver('rgb(255 0 0)')).toBeNull();

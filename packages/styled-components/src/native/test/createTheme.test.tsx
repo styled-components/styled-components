@@ -1252,6 +1252,22 @@ describe('createTheme;native theme values read as authored CSS', () => {
           margin: ${palette.gap};
         `,
       },
+      {
+        authoredCss: 'color: oklch(from tomato l c h);',
+        message: notText('ink', 'color', 'tomato'),
+        name: 'a relative color base',
+        themed: styled(View)`
+          color: oklch(from ${palette.ink} l c h);
+        `,
+      },
+      {
+        authoredCss: 'background-color: color-mix(in srgb, tomato 50%, red);',
+        message: notText('ink', 'background-color', 'tomato'),
+        name: 'a color-mix operand',
+        themed: styled(View)`
+          background-color: color-mix(in srgb, ${palette.ink} 50%, red);
+        `,
+      },
     ])('reads the default and warns once in $name', ({ authoredCss, message, themed }) => {
       const platform = jest.replaceProperty(Platform, 'OS', 'android');
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});

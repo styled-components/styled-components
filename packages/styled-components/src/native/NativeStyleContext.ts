@@ -8,8 +8,7 @@
  *     `container-type`.
  *   - `cascade`: the per-tree-position style values downstream
  *     resolvers need to interpret cascade-dependent units and
- *     keywords (`em`, `lh`, `rlh`, `text-align: start | end`,
- *     sentinel-base relative color).
+ *     keywords (`em`, `lh`, `rlh`, `text-align: start | end`).
  *
  * Why one consolidated context (rather than one per concern):
  *   - All fields update from in-tree Providers, not external
