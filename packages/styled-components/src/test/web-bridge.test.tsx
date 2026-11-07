@@ -1296,7 +1296,7 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
       expect(trackMatch).not.toBeNull();
     });
 
-    it('resolves accent-color: auto to the browser AccentColor system color', () => {
+    it('resolves accent-color: auto to a fixed accent fallback on Switch', () => {
       const Toggle = styled.Switch`
         accent-color: auto;
       `;

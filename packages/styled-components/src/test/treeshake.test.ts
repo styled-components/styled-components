@@ -224,10 +224,9 @@ describe('native build isolation', () => {
   });
 
   it('drops the rn-web matrix3d transport rewrite from the Hermes bundle', () => {
-    // `normalizeStyleForWeb` gates on `__NATIVE_WEB__` so
-    // `rewriteStyleForWebTransport` and `fixTransformMatrix3d` only
-    // ship on rn-web. The literal `matrix3d` only appears via that
-    // rewrite, so its absence is a tight proof of tree-shake.
+    // The matrix3d rewrite lives only in the rn-web bridge, and the
+    // literal `matrix3d` appears nowhere else in shipped code, so its
+    // absence proves the bridge stays out of the Hermes bundle.
     expect(nativeCJS).not.toContain('matrix3d');
     expect(nativeESM).not.toContain('matrix3d');
   });
