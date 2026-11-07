@@ -231,8 +231,11 @@ describe('native !important spec compliance (CSS Cascade L4 §3 + §6.2)', () =>
     expect(flat.fontSize).toBe(20);
   });
 
-  // CSS Custom Properties L1: a `var()` substitutes into the declaration that holds
-  // it, so the declaration keeps its own importance.
+  // css-cascade-5 §6.3: "A declaration is important if it has a !important
+  // annotation as defined by [css-syntax-3], i.e. if the last two
+  // (non-whitespace, non-comment) tokens in its value are the delimiter token !
+  // followed by the identifier token important." A `var()` in the value does
+  // not change which declaration carries the annotation.
   describe('an !important declaration whose value is a var()', () => {
     it('applies the substituted value', () => {
       const Box = styled(View)`
