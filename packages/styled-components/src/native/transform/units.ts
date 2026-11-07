@@ -51,7 +51,8 @@ export function coerceRawValue(prop: string, value: string): number | string | n
   if (UNITLESS_NUMERIC_PROPS.has(prop)) {
     // RN's `opacity` takes only a number; the browser reads the percentage itself on rn-web.
     if (!__NATIVE_WEB__ && prop === 'opacity' && value.charCodeAt(value.length - 1) === $.PERCENT) {
-      const percent = Number(value.slice(0, -1));
+      // `Number('')` is 0, so a bare `%` would otherwise read as fully transparent.
+      const percent = value.length > 1 ? Number(value.slice(0, -1)) : Number.NaN;
       return Number.isFinite(percent) ? percent / 100 : value;
     }
     const n = Number(value);

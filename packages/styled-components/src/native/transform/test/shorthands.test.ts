@@ -91,6 +91,10 @@ describe('transformDecl: pass-through + coercion', () => {
       expect(transformDecl('opacity', value)).toEqual({ opacity: expected });
     });
 
+    it('leaves a percent sign with no number as authored', () => {
+      expect(transformDecl('opacity', '%')).toEqual({ opacity: '%' });
+    });
+
     it('leaves the other number-only keys untouched', () => {
       expect(transformDecl('flexGrow', '50%')).toEqual({ flexGrow: '50%' });
     });
