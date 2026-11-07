@@ -1510,6 +1510,47 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
       expect(r({ ...baseEnv, siblingIndex: 3 })).toBe(15);
     });
 
+    // "At a * sub-expression, multiply the types of the left and right
+    // arguments. The sub-expression's type is the returned result." A
+    // <length> times a <length> is «[ "length" → 2 ]», a type no property
+    // accepts: "the width property accepts <length> values, so a math
+    // function that resolves to a <length>, such as calc(5px + 1em), can be
+    // used in width." Deviation: the draft also allows length² as an
+    // intermediate (calc(5px * 5px / 1px) is a <length>); the polyfill tracks
+    // one unit per operand, so any <length> * <length> is invalid.
+    it.each(['calc(5px * 5px)', 'calc(5px * sibling-index() * 5px)'])(
+      'rejects a <length> times a <length>: %s',
+      value => {
+        const r = buildResolver(value);
+        expect(r === null ? null : r({ ...baseEnv, siblingIndex: 3 })).toBeNull();
+      }
+    );
+
+    // "At a / sub-expression, let left type be the result of finding the
+    // types of its left argument, and right type be the result of finding
+    // the types of its right argument and then inverting it. The
+    // sub-expression's type is the result of multiplying the left type and
+    // right type." «[ "length" → 1 ]» times the inverse of «[ "length" → 1 ]»
+    // is «[ ]», a <number>; a <number> over a <length> is «[ "length" → -1 ]»,
+    // which no property accepts; a <length> over a <number> stays a <length>.
+    it.each([
+      ['calc(10px / 2px)', 5],
+      ['calc(10px / 2px * 3px)', 15],
+      ['calc(sibling-index() * 10px / 2px)', 15],
+      ['calc(10px / 4)', 2.5],
+    ])('divides by the divisor type: %s = %d', (value, expected) => {
+      const r = buildResolver(value)!;
+      expect(r({ ...baseEnv, siblingIndex: 3 })).toBe(expected);
+    });
+
+    it.each(['calc(10 / 2px)', 'calc(sibling-index() / 2px)', 'calc(10px / 2px / 2px)'])(
+      'rejects a <number> divided by a <length>: %s',
+      value => {
+        const r = buildResolver(value);
+        expect(r === null ? null : r({ ...baseEnv, siblingIndex: 3 })).toBeNull();
+      }
+    );
+
     it('accepts 0px + 5px (both <length>): calc(0px + 5px) = 5px', () => {
       const r = buildResolver('calc(0px + 5px)')!;
       expect(r(baseEnv)).toBe(5);
@@ -2377,6 +2418,55 @@ describe('attr() spec compliance (CSS Values 5 §8.7)', () => {
     it('a viewport-unit fallback resolves', () => {
       const r = buildResolver('attr(data-size px, 50vw)')!;
       expect(r({ ...baseEnv, props: {} })).toBe(200);
+    });
+  });
+
+  describe('math operand types', () => {
+    // css-values-5: "If given as an <attr-unit> value, the value is first
+    // parsed as if number keyword was specified; if this fails to parse, it
+    // triggers fallback. Then, if the <attr-unit> value matches a known CSS
+    // unit name or is %, the number is turned into a dimension or
+    // percentage with that value and the given unit."
+    // css-values-4: "<length> the type is «[ "length" → 1 ]»"; "<number>
+    // <integer> the type is «[ ]» (empty map)". So px and type(<length>)
+    // operands are <length>s that add to a <length>.
+    it.each([
+      ['calc(attr(data-size px) + 5px)', '10'],
+      ['calc(attr(data-size type(<length>)) + 5px)', '10px'],
+    ])('a <length> attr() adds to a <length>: %s', (value, text) => {
+      const r = buildResolver(value)!;
+      expect(r(withProps({ 'data-size': 10 }))).toBe(15);
+      expect(r(withProps({ 'data-size': text }))).toBe(15);
+    });
+
+    // css-values-5: "If given as the number keyword, it causes the
+    // attribute's literal value, after stripping leading and trailing
+    // whitespace, to be parsed as a <number-token>." A <number> plus a
+    // <length> is a type failure ("add the types of the left and right
+    // arguments. If this returns failure, the entire calculation's type is
+    // failure").
+    it.each(['calc(attr(data-size number) + 5px)', 'calc(attr(data-size type(<number>)) + 5px)'])(
+      'a <number> attr() does not add to a <length>: %s',
+      value => {
+        const r = buildResolver(value)!;
+        expect(r(withProps({ 'data-size': 10 }))).toBeNull();
+      }
+    );
+
+    it('a <length> attr() times a <length> is invalid: calc(attr(data-size px) * 5px)', () => {
+      const r = buildResolver('calc(attr(data-size px) * 5px)')!;
+      expect(r(withProps({ 'data-size': 10 }))).toBeNull();
+    });
+
+    it('a <number> attr() times a <length> is a <length>: calc(attr(data-size number) * 5px)', () => {
+      const r = buildResolver('calc(attr(data-size number) * 5px)')!;
+      expect(r(withProps({ 'data-size': 10 }))).toBe(50);
+    });
+
+    // A <length> over a <length> is a <number>, which adds to a <number>.
+    it('a <length> attr() over a <length> is a <number>: calc(1 + attr(data-size px) / 5px)', () => {
+      const r = buildResolver('calc(1 + attr(data-size px) / 5px)')!;
+      expect(r(withProps({ 'data-size': 10 }))).toBe(3);
     });
   });
 

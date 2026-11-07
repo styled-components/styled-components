@@ -646,6 +646,40 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
       }
     );
 
+    // §10.9: "At a * sub-expression, multiply the types of the left and right
+    // arguments. The sub-expression's type is the returned result." A
+    // <length> times a <length> is «[ "length" → 2 ]», which no property
+    // accepts. Deviation: the draft allows length² as an intermediate, the
+    // fold tracks one unit per operand and rejects it.
+    it.each(['calc(5px * 5px)', 'calc(2px * 3px * 4)'])(
+      'rejects a <length> times a <length>: %s',
+      src => {
+        expect(mathOf(src)).toBeNull();
+      }
+    );
+
+    // §10.9: "At a / sub-expression, let left type be the result of finding
+    // the types of its left argument, and right type be the result of finding
+    // the types of its right argument and then inverting it. The
+    // sub-expression's type is the result of multiplying the left type and
+    // right type." A <length> over a <length> is «[ ]», a <number>; a
+    // <number> over a <length> is «[ "length" → -1 ]», which no property
+    // accepts; a <length> over a <number> stays a <length>.
+    it.each([
+      ['calc(10px / 2px)', { unit: '', value: 5 }],
+      ['calc(10px / 2px * 3px)', { unit: 'px', value: 15 }],
+      ['calc(20px / 4)', { unit: 'px', value: 5 }],
+    ])('divides by the divisor type: %s', (src, expected) => {
+      expect(mathOf(src)).toEqual(expected);
+    });
+
+    it.each(['calc(10 / 2px)', 'calc(10px / 2px / 2px)'])(
+      'rejects a <number> divided by a <length>: %s',
+      src => {
+        expect(mathOf(src)).toBeNull();
+      }
+    );
+
     it('keeps min() of numbers and of lengths: min(1, 4) and min(10px, 50px)', () => {
       expect(mathOf('min(1, 4)')).toEqual({ unit: '', value: 1 });
       expect(mathOf('min(10px, 50px)')).toEqual({ unit: 'px', value: 10 });

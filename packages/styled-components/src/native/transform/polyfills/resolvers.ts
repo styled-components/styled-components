@@ -9,7 +9,13 @@ import { fifoSet } from '../../../utils/fifoMap';
 import { getCssPropertyRegistration } from '../../propertyRegistry';
 import { buildAnchorResolver } from './anchorFns';
 import { hasRelativeFromPrefix, staticColorFunctionToHex } from './colorMath';
-import { identToNumeric, NumericResult, resolveStaticMathFunction, unifyUnits } from './mathFns';
+import {
+  identToNumeric,
+  NumericResult,
+  resolveStaticMathFunction,
+  scaleUnit,
+  unifyUnits,
+} from './mathFns';
 
 /**
  * Environment passed to each {@link Resolver} at render time. Composes
@@ -301,7 +307,7 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
   if (c0 === 0x61 /* a */) {
     if (value.startsWith('attr(')) {
       const r = attrResolver(value);
-      if (r !== null) return r;
+      if (r !== null) return r.resolve;
     }
     // anchor() / anchor-size() need the destination property for the
     // spec's axis rules, so they only resolve when the caller knows it.
@@ -1180,9 +1186,15 @@ function normalizeAttrValue(s: string): number | string {
  * attribute-selector matcher. Returns `null` for malformed heads
  * (namespaced names, empty args); type/value mismatches resolve to the
  * fallback per spec, and a missing fallback on a typed attr() drops the
- * declaration (guaranteed-invalid).
+ * declaration (guaranteed-invalid). `operandUnit` is the unit a number
+ * result carries as a math operand (`px` for a <length> type, empty for a
+ * <number> or untyped one); `onFallback` fires when the fallback supplied
+ * the result.
  */
-function attrResolver(value: string): Resolver | null {
+function attrResolver(value: string): {
+  operandUnit: string;
+  resolve: (env: ResolveEnv, onFallback?: () => void) => number | string | null;
+} | null {
   const toks = tokenize(value);
   if (toks.length !== 1 || toks[0].kind !== TokenKind.Function || toks[0].name !== 'attr') {
     return null;
@@ -1244,11 +1256,20 @@ function attrResolver(value: string): Resolver | null {
         ? ''
         : null;
 
-  return env => {
+  const operandUnit =
+    (type.kind === 'unit' && type.unit === 'px') ||
+    (type.kind === 'syntax' && type.syntax === 'length')
+      ? 'px'
+      : '';
+
+  const resolve = (env: ResolveEnv, onFallback?: () => void) => {
     // Fallback construction is a pure env read (no subscription side
     // effects), so it's deferred to only the paths that actually need
     // it; the common present-and-valid-prop cases never touch it.
-    const getFallback = () => (fallbackResolver !== null ? fallbackResolver(env) : staticFallback);
+    const getFallback = () => {
+      if (onFallback !== undefined) onFallback();
+      return fallbackResolver !== null ? fallbackResolver(env) : staticFallback;
+    };
     const props = env.props;
     const raw = props == null ? undefined : props[name];
     if (raw === undefined || raw === null) return getFallback();
@@ -1271,6 +1292,8 @@ function attrResolver(value: string): Resolver | null {
         return resolveAttrSyntax(type.syntax, raw, getFallback);
     }
   };
+
+  return { operandUnit, resolve };
 }
 
 function resolveAttrSyntax(
@@ -1722,7 +1745,14 @@ function buildOperand(
     if (inner === 'attr') {
       const r = attrResolver(t.raw);
       if (r === null) return null;
-      return env => valueToNumeric(r(env), '');
+      // A fallback keeps parsing on its own text, so only the attribute's own value takes the type's unit.
+      return env => {
+        let fellBack = false;
+        const v = r.resolve(env, () => {
+          fellBack = true;
+        });
+        return valueToNumeric(v, fellBack ? '' : r.operandUnit);
+      };
     }
     if ((inner === 'anchor' || inner === 'anchor-size') && opts?.prop !== undefined) {
       const r = buildAnchorResolver(t.raw, opts.prop, inner === 'anchor-size');
@@ -1772,7 +1802,8 @@ function reduceMath(items: Array<NumericResult | string>): NumericResult | null 
     if (op === '*' || op === '/') {
       const a = items[i - 1] as NumericResult;
       const b = items[i + 1] as NumericResult;
-      const unit = op === '*' ? a.unit || b.unit : a.unit;
+      const unit = scaleUnit(op, a, b);
+      if (unit === null) return null;
       const v = op === '*' ? a.value * b.value : a.value / b.value;
       if (!Number.isFinite(v)) return null;
       items.splice(i - 1, 3, { value: v, unit });

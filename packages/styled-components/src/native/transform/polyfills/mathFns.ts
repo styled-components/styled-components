@@ -434,7 +434,8 @@ function evalSequence(tokens: Token[], permitNonFinite: boolean): NumericResult 
       const a = toNumeric(resolved[i - 1], permitNonFinite);
       const b = toNumeric(resolved[i + 1], permitNonFinite);
       if (a === null || b === null) return null;
-      const unit = opTok.op === '*' ? a.unit || b.unit : a.unit;
+      const unit = scaleUnit(opTok.op, a, b);
+      if (unit === null) return null;
       const v = opTok.op === '*' ? a.value * b.value : a.value / b.value;
       if (!permitNonFinite && !Number.isFinite(v)) return null;
       resolved.splice(i - 1, 3, { value: v, unit });
@@ -533,6 +534,20 @@ export function unifyUnits(operands: NumericResult[]): string | null {
     if (operands[i].unit !== unit) return null;
   }
   return unit;
+}
+
+/**
+ * The unit of `a * b` or `a / b`, or null when the result type is not one
+ * a property accepts. One side of `*` must be a <number>; dividing by a
+ * dimension needs the same unit on both sides (a <number>), because a
+ * <number> over a dimension is an inverted type. Each operand carries one
+ * unit, so a product of two dimensions is invalid even where a later
+ * division would cancel it.
+ */
+export function scaleUnit(op: '*' | '/', a: NumericResult, b: NumericResult): string | null {
+  if (op === '*') return a.unit !== '' && b.unit !== '' ? null : a.unit || b.unit;
+  if (b.unit === '') return a.unit;
+  return a.unit === b.unit ? '' : null;
 }
 
 /**
