@@ -4,6 +4,8 @@ module.exports = {
   fakeTimers: {
     legacyFakeTimers: true,
   },
+  /** Null skips prettier when writing inline snapshots; the repo formats with Biome. */
+  prettierPath: null,
   restoreMocks: true,
   rootDir: '.',
   snapshotSerializers: ['jest-serializer-html'],
