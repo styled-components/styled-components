@@ -149,6 +149,7 @@ The `packages/native-showcase` app is the visual QA surface for v7 native polyfi
 
 - TypeScript type-instantiation budget, measured type constraints, and type-surface testing: [docs/typescript-performance.md](docs/typescript-performance.md)
 - React 19 behaviors that hit the render hot path and SSR/RSC output: [docs/react.md](docs/react.md)
+- `StyleSheetManager` namespace placement, inheritance, and the server default: [docs/namespace.md](docs/namespace.md)
 - React Native substrate: CSS capability by RN version, Yoga divergences, the in-house declaration transform: [docs/react-native.md](docs/react-native.md)
 - Jest + jsdom: jsdom's modern-CSS ceiling and how the web suite reads injected CSS: [docs/jest.md](docs/jest.md)
 - Bundling: per-bundle build-constant substitution, terser DCE traps, testing tree-shaking, bundle size and property mangling, dts/TS2742, edge runtime, published files: [docs/bundling.md](docs/bundling.md)
