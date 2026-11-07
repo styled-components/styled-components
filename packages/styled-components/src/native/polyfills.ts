@@ -220,7 +220,7 @@ export function applyBackgroundBlendModePolyfill(
     );
   }
 
-  return { ...elementProps, style: wrapperStyle, children: [layers, keyedChildren(elementProps)] };
+  return { ...elementProps, style: wrapperStyle, children: slotChildren(layers, elementProps) };
 }
 
 /**
@@ -231,18 +231,24 @@ function unlayered(
   elementProps: Record<string, unknown>,
   layerSlot: boolean
 ): Record<string, unknown> {
-  return layerSlot
-    ? { ...elementProps, children: [null, keyedChildren(elementProps)] }
-    : elementProps;
+  return layerSlot ? { ...elementProps, children: slotChildren(null, elementProps) } : elementProps;
+}
+
+/**
+ * The `[layers, children]` pair. A function child (Pressable's render prop) stays a
+ * function so its target still calls it; the pair wraps what it returns.
+ */
+function slotChildren(layers: React.ReactNode, elementProps: Record<string, unknown>): unknown {
+  const { children } = elementProps;
+  if (typeof children === 'function') {
+    return (state: unknown) => [layers, keyedChildren(children(state) as React.ReactNode)];
+  }
+  return [layers, keyedChildren(children as React.ReactNode)];
 }
 
 /** A keyed Fragment, since an unkeyed element inside the `[layers, children]` array draws React's missing-key warning. */
-function keyedChildren(elementProps: Record<string, unknown>): React.ReactElement {
-  return React.createElement(
-    React.Fragment,
-    { key: '__sc_bg_children' },
-    elementProps.children as React.ReactNode
-  );
+function keyedChildren(children: React.ReactNode): React.ReactElement {
+  return React.createElement(React.Fragment, { key: '__sc_bg_children' }, children);
 }
 
 const BG_BLEND_STRIP_KEYS: ReadonlySet<string> = new Set([
