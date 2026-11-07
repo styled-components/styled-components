@@ -21,6 +21,24 @@ import { hasResponsiveOutput, type NativeStyles } from '../models/compileNative'
 import type { MediaQueryEnv } from '../native/responsive';
 import { passthroughOutput } from '../native/animation/types';
 
+// The render benches below load the native entry, which reads react-native.
+jest.mock('react-native', () => ({
+  AccessibilityInfo: {
+    addEventListener: () => ({ remove() {} }),
+    isReduceMotionEnabled: () => Promise.resolve(false),
+  },
+  Appearance: { addChangeListener: () => ({ remove() {} }), getColorScheme: () => 'light' },
+  Dimensions: {
+    addEventListener: () => ({ remove() {} }),
+    get: () => ({ fontScale: 1, height: 667, scale: 2, width: 375 }),
+  },
+  PixelRatio: { get: () => 2 },
+  Platform: { OS: 'ios', select: (spec: Record<string, unknown>) => spec.ios ?? spec.default },
+  StyleSheet: { create: (styles: unknown) => styles, flatten: (style: unknown) => style },
+  Text: 'Text',
+  View: 'View',
+}));
+
 const env: MediaQueryEnv = {
   width: 375,
   height: 667,
@@ -51,6 +69,7 @@ const flatCompiled: NativeStyles = {
   pseudoEntries: [],
   hasPseudo: false,
   keyframes: [],
+  publishesCascade: false,
 };
 
 const mediaBucket: NativeStyles['nonPseudoEntries'][number] = {
@@ -69,6 +88,7 @@ const responsiveCompiled: NativeStyles = {
   pseudoEntries: [],
   hasPseudo: false,
   keyframes: [],
+  publishesCascade: false,
 };
 
 describe('useDynamicImpl render-path work delta', () => {
@@ -137,5 +157,84 @@ describe('useDynamicImpl render-path work delta', () => {
         env: resolveEnv,
       });
     });
+  });
+});
+
+/**
+ * Parent re-render with children, through the public `styled` API. The child
+ * elements are built once and reused, so every child bails out and an update
+ * costs the parent's own work: walking its children and wrapping each styled
+ * child with its sibling position. Only the public API is used, so the same file
+ * runs against any checkout.
+ */
+describe('styled parent re-render with children', () => {
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  let TestRenderer: any;
+  let React: any;
+  let styled: any;
+
+  const priorNodeEnv = process.env.NODE_ENV;
+
+  beforeAll(() => {
+    // The test renderer flushes an update synchronously only inside `act`, which
+    // React ships in its development build alone, so load that build here.
+    process.env.NODE_ENV = 'development';
+    jest.resetModules();
+    (globalThis as any).__NATIVE__ = true;
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    React = require('react');
+    TestRenderer = require('react-test-renderer');
+    styled = require('../native').default;
+  });
+
+  afterAll(() => {
+    process.env.NODE_ENV = priorNodeEnv;
+    (globalThis as any).__NATIVE__ = false;
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = false;
+  });
+
+  function benchRerender(name: string, iterations: number, build: () => any) {
+    const Parent = styled.View`
+      padding: 1px;
+    `;
+    const children = build();
+    let tree: any;
+    TestRenderer.act(() => {
+      tree = TestRenderer.create(React.createElement(Parent, { testID: 'a' }, children));
+    });
+    bench(name, iterations, i => {
+      TestRenderer.act(() => {
+        tree.update(React.createElement(Parent, { testID: i % 2 === 0 ? 'b' : 'a' }, children));
+      });
+    });
+    TestRenderer.act(() => tree.unmount());
+  }
+
+  test('5 plain children', () => {
+    benchRerender('5 plain children', 20_000, () =>
+      Array.from({ length: 5 }, (_, i) => React.createElement('View', { key: i }))
+    );
+  });
+
+  test('5 styled children', () => {
+    const Item = styled.View`
+      margin: 1px;
+    `;
+    benchRerender('5 styled children', 20_000, () =>
+      Array.from({ length: 5 }, (_, i) => React.createElement(Item, { key: i }))
+    );
+  });
+
+  test('3 + 2 styled children and a nested map of 20', () => {
+    const Item = styled.View`
+      margin: 1px;
+    `;
+    benchRerender('3 + 2 styled children and a nested map of 20', 5_000, () => [
+      React.createElement(Item, { key: 'a' }),
+      React.createElement(Item, { key: 'b' }),
+      React.createElement(Item, { key: 'c' }),
+      [React.createElement(Item, { key: 'd' }), React.createElement(Item, { key: 'e' })],
+      Array.from({ length: 20 }, (_, i) => React.createElement(Item, { key: `m${i}` })),
+    ]);
   });
 });
