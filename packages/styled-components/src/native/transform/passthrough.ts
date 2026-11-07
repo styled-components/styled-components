@@ -275,7 +275,8 @@ export function getPrimaryPassthroughKey(camel: string): string | undefined {
  * `applyBackgroundBlendModePolyfill` rebuilds url() layers as
  * `<Image resizeMode>` (cover / contain handled there directly).
  *
- * The standard `backgroundSize` key still ships the authored keyword.
+ * The standard `backgroundSize` key still ships the authored keyword,
+ * which the blend polyfill maps to a url() layer's `resizeMode`.
  *
  * Once RN's native parser handles String tokens for cover / contain
  * directly, drop this substitution.

@@ -141,7 +141,9 @@ export function applyBackgroundBlendModePolyfill(
 
   const images = splitTopLevelCommas(bgImage, true);
   const modes = splitTopLevelCommas(blendMode, true);
-  const sizes = readLayered(flat, 'experimental_backgroundSize', 'backgroundSize');
+  // The standard key carries the authored `cover` / `contain`; the
+  // experimental key holds them folded to `auto`.
+  const sizes = readLayered(flat, 'backgroundSize', 'experimental_backgroundSize');
   const positions = readLayered(flat, 'experimental_backgroundPosition', 'backgroundPosition');
   const repeats = readLayered(flat, 'experimental_backgroundRepeat', 'backgroundRepeat');
 
@@ -326,16 +328,16 @@ function hasBackgroundBlendMode(style: unknown): boolean {
 }
 
 /**
- * Read a `background-*` value (preferring the `experimental_*` form
- * when both are present) and split it on top-level commas. Returns
- * `null` when the value isn't a string the polyfill can consume.
+ * Read a `background-*` value (`preferredKey` when both keys are present)
+ * and split it on top-level commas. Returns `null` when the value isn't a
+ * string the polyfill can consume.
  */
 function readLayered(
   flat: Record<string, unknown>,
-  experimentalKey: string,
-  standardKey: string
+  preferredKey: string,
+  fallbackKey: string
 ): string[] | null {
-  const v = flat[experimentalKey] ?? flat[standardKey];
+  const v = flat[preferredKey] ?? flat[fallbackKey];
   return typeof v === 'string' ? splitTopLevelCommas(v, true) : null;
 }
 
