@@ -16,7 +16,7 @@ import {
 } from '../parser/ast';
 import { classifyAtRuleNow, classifyRuleNow } from '../parser/nativePlan';
 import { camelize, transformDecl } from '../native/transform';
-import { warnIfNativeCssVar, warnIfSentinelLeak, warnOnce } from '../native/transform/dev';
+import { warnIfNativeCssVar, warnOnce } from '../native/transform/dev';
 import { getPrimaryPassthroughKey } from '../native/transform/passthrough';
 import {
   buildResolver,
@@ -1378,7 +1378,6 @@ function processDecls(decls: StaticDeclNode[]): {
           if (importantResolvers === null) importantResolvers = [];
           importantResolvers.push([k, r]);
         } else {
-          if (__DEV__) warnIfSentinelLeak(k, v);
           important[k] = v;
         }
         continue;
@@ -1386,9 +1385,6 @@ function processDecls(decls: StaticDeclNode[]): {
       if (r !== null) {
         resolvers.push([k, r]);
       } else {
-        if (__DEV__) {
-          warnIfSentinelLeak(k, v);
-        }
         base[k] = v;
       }
     }

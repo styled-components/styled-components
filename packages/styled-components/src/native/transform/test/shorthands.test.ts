@@ -241,14 +241,12 @@ describe('margin / padding / border-* directional shorthands', () => {
         'padding',
         'calc(\0sc:space.md:16px + 4px) min(20px, 5vw) 8px max(\0sc:space.lg:24px, 16px)'
       )
-    ).toMatchInlineSnapshot(`
-      {
-        "paddingBottom": 8,
-        "paddingLeft": "max(\0sc:space.lg:24px, 16px)",
-        "paddingRight": "min(20px, 5vw)",
-        "paddingTop": "calc(\0sc:space.md:16px + 4px)",
-      }
-    `);
+    ).toEqual({
+      paddingBottom: 8,
+      paddingLeft: 'max(\0sc:space.lg:24px, 16px)',
+      paddingRight: 'min(20px, 5vw)',
+      paddingTop: 'calc(\0sc:space.md:16px + 4px)',
+    });
   });
 
   it('margin: clamp() with theme sentinel arm survives shorthand expansion', () => {
@@ -450,13 +448,11 @@ describe('border shorthand spec compliance (CSS Backgrounds 3 §3.4)', () => {
   });
 
   it('preserves theme sentinel <color> tokens for runtime resolution', () => {
-    expect(transformDecl('border', '1px solid \0sc:colors.border:#e3e3e8')).toMatchInlineSnapshot(`
-      {
-        "borderColor": "\0sc:colors.border:#e3e3e8",
-        "borderStyle": "solid",
-        "borderWidth": 1,
-      }
-    `);
+    expect(transformDecl('border', '1px solid \0sc:colors.border:#e3e3e8')).toEqual({
+      borderColor: '\0sc:colors.border:#e3e3e8',
+      borderStyle: 'solid',
+      borderWidth: 1,
+    });
   });
 });
 

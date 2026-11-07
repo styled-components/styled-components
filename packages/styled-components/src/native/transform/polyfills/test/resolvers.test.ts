@@ -1073,13 +1073,6 @@ describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
       expect(buildResolver('light-dark(#fafafa, #1a1a1a)')).toBeNull();
     });
 
-    it('dynamic light-dark (sentinel branches) still resolves at render time', () => {
-      const r = buildResolver('light-dark(\0sc:colors.bg:#fff, #111)')!;
-      const env = { ...baseEnv, theme: { colors: { bg: '#fafafa' } } };
-      expect(r(env)).toBe('#fafafa');
-      expect(r({ ...env, media: { ...env.media, colorScheme: 'dark' } })).toBe('#111');
-    });
-
     it('rejects mixed image + color forms regardless of host', () => {
       expect(buildResolver('light-dark(red, linear-gradient(black, white))')).toBeNull();
     });
@@ -1138,38 +1131,7 @@ describe('cross-feature integrations', () => {
     expect(r(env(800, { min: 100, max: 300 }))).toBe(300); // clamped high
   });
 
-  it('boxShadow with embedded sentinel resolves to assembled string', () => {
-    const r = buildResolver('0 1px 2px \0sc:colors.shadow:#000')!;
-    expect(r({ ...baseEnv, theme: { colors: { shadow: 'rgba(0,0,0,0.4)' } } })).toBe(
-      '0 1px 2px rgba(0,0,0,0.4)'
-    );
-  });
-
-  it('boxShadow falls back to fallback when sentinel path is missing', () => {
-    const r = buildResolver('0 1px 2px \0sc:colors.shadow:#000')!;
-    expect(r({ ...baseEnv, theme: {} })).toBe('0 1px 2px #000');
-  });
-
-  it('transform with sentinel inside translateY()', () => {
-    const r = buildResolver('translateY(\0sc:space.xl:55px)')!;
-    expect(r({ ...baseEnv, theme: { space: { xl: 55 } } })).toBe('translateY(55px)');
-  });
-
-  it('multi-sentinel value (transform with two arms)', () => {
-    const r = buildResolver('translateY(\0sc:y:10px) rotate(\0sc:angle:45deg)')!;
-    expect(r({ ...baseEnv, theme: { y: '20px', angle: '90deg' } })).toBe(
-      'translateY(20px) rotate(90deg)'
-    );
-  });
-
-  it('backgroundImage linear-gradient with sentinel color stops', () => {
-    const r = buildResolver('linear-gradient(\0sc:from:red, \0sc:to:blue)')!;
-    expect(r({ ...baseEnv, theme: { from: '#fafafa', to: '#111111' } })).toBe(
-      'linear-gradient(#fafafa, #111111)'
-    );
-  });
-
-  it('templateResolver bails on JS-concat leak (47\\0sc:...) so warn fires downstream', () => {
+  it('leaves a placeholder glued to other text unresolved', () => {
     expect(buildResolver('47\0sc:space.xl:55')).toBeNull();
   });
 
@@ -1180,15 +1142,6 @@ describe('cross-feature integrations', () => {
     // typeof check confirms native type preservation
     const v = r({ ...baseEnv, theme: { space: { xl: 55 } } });
     expect(typeof v).toBe('number');
-  });
-
-  it('multi-token starting with sentinel routes to templateResolver', () => {
-    // border shorthand normally splits these into 3 props, but if a
-    // pass-through-like value lands here, templateResolver assembles it.
-    const r = buildResolver('\0sc:borderWidth:1px solid \0sc:colors.ink:#000')!;
-    expect(r({ ...baseEnv, theme: { borderWidth: '2px', colors: { ink: '#222' } } })).toBe(
-      '2px solid #222'
-    );
   });
 
   describe('color functions with sentinel channel arms', () => {
@@ -1239,20 +1192,19 @@ describe('cross-feature integrations', () => {
     });
 
     it('static-only color fns are NOT routed through the runtime path', () => {
-      // Without sentinels, templateResolver returns null because there are
-      // no segments to substitute, and colorFnResolver bails accordingly.
-      // The static fold in transformDecl handles this case.
+      // With no segments to substitute, colorFnResolver bails; the static
+      // fold in transformDecl handles this case.
       expect(buildResolver('oklch(0.5 0.1 200)')).toBeNull();
     });
 
     it('color fn with malformed sentinel position still bails (defends against leaks)', () => {
-      // Concatenated sentinel;same leak guard as templateResolver.
+      // A sentinel glued to other text is not a clean token boundary.
       expect(buildResolver('oklch(0.5\0sc:bad:0.1 200)')).toBeNull();
     });
 
     it('oklch with calc() arm containing a sentinel resolves end-to-end', () => {
       // `oklch(calc(${t.l} + 0.1) 0.2 240)` after fill becomes
-      // `oklch(calc(\0sc:l:0.5 + 0.1) 0.2 240)`. templateResolver
+      // `oklch(calc(\0sc:l:0.5 + 0.1) 0.2 240)`. colorFnResolver
       // substitutes the sentinel inside the calc(); readChannels then
       // folds the calc() statically.
       const r = buildResolver('oklch(calc(\0sc:l:0.5 + 0.1) 0.2 240)')!;
@@ -1704,11 +1656,6 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
     it('passes through static-mixed-unit calc/clamp/min/max expressions raw', () => {
       expect(buildResolver('calc(33% - 5px)')!(baseEnv)).toBe('calc(33% - 5px)');
       expect(buildResolver('clamp(10px, 50%, 100px)')!(baseEnv)).toBe('clamp(10px, 50%, 100px)');
-    });
-
-    it('still substitutes sentinels in calc arms that need runtime values', () => {
-      const r = buildResolver('calc(\0sc:gap:10 + 5px)')!;
-      expect(r({ ...baseEnv, theme: { gap: 12 } })).toBe(17);
     });
 
     it('rejects malformed calc so nothing invalid reaches CSS', () => {

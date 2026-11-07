@@ -601,28 +601,6 @@ describe('toNativeStyles', () => {
     });
   });
 
-  describe('sentinel-leak detection (dev-time)', () => {
-    it('warns when a sentinel is concatenated with a leading number', () => {
-      // Simulates `${p => 47 + t.space.xl}px` after JS evaluation: the
-      // sentinel `\0sc:space.xl:55` got coerced to a string and glued to
-      // the `47` literal.
-      compile('padding-top: 47\0sc:space.xl:55px;');
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('createTheme token was concatenated')
-      );
-    });
-
-    it('does NOT warn for clean single-sentinel values', () => {
-      compile('color: \0sc:colors.fg:#000;');
-      expect(warnSpy).not.toHaveBeenCalled();
-    });
-
-    it('does NOT warn for properly-separated multi-sentinel values', () => {
-      compile('border: \0sc:borderWidth.hairline:1px solid \0sc:colors.ink:#000;');
-      expect(warnSpy).not.toHaveBeenCalled();
-    });
-  });
-
   describe('rawCSS parse hardening (interpolation-sentinel gate)', () => {
     // `toNativeStyles(rawCSS)` is the static-input parse path; it's reachable
     // from the `NativeStyle.compile` fallback after a fast-path bail, where

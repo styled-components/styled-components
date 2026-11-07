@@ -225,10 +225,8 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
   // the browser resolves both branches natively. The custom key is
   // pre-hyphenated because rn-web runs hyphenateStyleName over every style
   // key and would mangle a camelCase custom property. `color-scheme: light
-  // dark` is the opt-in the UA needs to honor the dark branch. Values
-  // carrying theme sentinels stay on the render-time resolver path instead;
-  // an inline custom property never passes through sentinel substitution.
-  if (__NATIVE_WEB__ && rawValue.indexOf('\0') === -1 && isWholeLightDark(rawValue)) {
+  // dark` is the opt-in the UA needs to honor the dark branch.
+  if (__NATIVE_WEB__ && isWholeLightDark(rawValue)) {
     const kebab = hyphenate(camel);
     return {
       ['--sc-ld-' + kebab]: rawValue,
@@ -301,17 +299,6 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
           : value;
     }
     return out;
-  }
-
-  // Single-token sentinel values (e.g. `color: ${t.colors.fg}` produces
-  // exactly one `\0sc:…` atom) bypass shorthand expansion; they're atomic
-  // placeholders that the render-time resolver replaces with the concrete
-  // theme value. Multi-token values containing a sentinel as one component
-  // (e.g. `border: ${t.borderWidth.hairline}px solid ${t.colors.ink}`)
-  // must NOT bypass;they need shorthand expansion so each part lands on
-  // the right RN prop.
-  if (rawValue.length > 0 && rawValue.charCodeAt(0) === 0 && isSingleSentinel(rawValue)) {
-    return { [camel]: rawValue };
   }
 
   // Tokens are needed for shorthand expansion AND for the static math /
@@ -396,22 +383,6 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
 
   // Hot path for the common case (single color / numeric / ident).
   return { [camel]: coerceRawValue(camel, rawValue) };
-}
-
-/**
- * True when the value is exactly one createTheme sentinel atom (no
- * additional tokens). Sentinels terminate at whitespace, comma, or slash
- * (per `findSentinelEnd` in the tokenizer); so a single-token sentinel
- * has none of those characters.
- */
-function isSingleSentinel(v: string): boolean {
-  for (let i = 1; i < v.length; i++) {
-    const c = v.charCodeAt(i);
-    if (c === 0x20 || c === 0x09 || c === 0x0a || c === 0x0d || c === 0x2c || c === 0x2f) {
-      return false;
-    }
-  }
-  return true;
 }
 
 /**

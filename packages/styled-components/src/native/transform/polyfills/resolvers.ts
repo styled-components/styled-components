@@ -197,11 +197,8 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
     if (c1 === 0x2d /* - */) return env => relativeSize(env.fontSize, -1);
   }
 
-  // createTheme sentinel; `\0<prefix>:<path>:<fallback>`. Full-value single
-  // sentinel goes to themeResolver (preserves native return type). A
-  // sentinel followed by more tokens (e.g. shorthand-like `\0sc:width:1px
-  // solid \0sc:color:#000` if it ever lands undivided) falls through to
-  // the post-dispatch templateResolver below.
+  // createTheme placeholder; `\0<prefix>:<path>:<fallback>`. A whole-value
+  // placeholder reaches here only when its theme value is not text.
   if (c0 === 0 && findSentinelTerminator(value, 0) === value.length) {
     return themeResolver(value);
   }
@@ -224,8 +221,6 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
     if (rem !== null) {
       return fontRelativeResolver(parseFloat(rem[1]), rem[2].toLowerCase());
     }
-    // Numeric-prefixed values fall through to templateResolver if they
-    // contain a sentinel (e.g. `0 1px 2px \0sc:colors.shadow:#000`).
   }
 
   // Math functions (`calc`, `clamp`, `min`, `max`);when arms are entirely
@@ -269,9 +264,8 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
   if (c0 === 0x6c /* l */) {
     if (value.startsWith('light-dark(')) {
       // Pure-static light-dark survives as authored text on rn-web so the
-      // CSS indirection path (`--sc-ld-*` + `var()`) reaches the browser;
-      // sentinel-bearing branches still need render-time substitution.
-      if (__NATIVE_WEB__ && value.indexOf('\0') === -1) return null;
+      // CSS indirection path (`--sc-ld-*` + `var()`) reaches the browser.
+      if (__NATIVE_WEB__) return null;
       return lightDarkResolver(value);
     }
     if (value.startsWith('lch(') || value.startsWith('lab(')) return colorFnResolver(value);
@@ -320,14 +314,6 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
       if (r !== null) return r;
     }
   }
-
-  // Multi-token values containing one or more clean sentinels: assemble
-  // the resolved string at render time. Catches pass-through props with
-  // theme tokens embedded mid-value (`box-shadow: 0 1px 2px ${t.colors.x}`,
-  // `transform: translateY(${t.space.x}px)`, gradient stops, etc.). Bails
-  // when a sentinel is glued to a non-boundary character, which is the
-  // JS-concat-leak case that `warnIfSentinelLeak` flags downstream.
-  if (value.indexOf('\0') !== -1) return templateResolver(value);
 
   // Multi-token values containing an embedded `light-dark(...)` call
   // (e.g. `box-shadow: 0 4px 8px light-dark(rgba(0,0,0,.2), rgba(255,255,255,.1))`).
@@ -393,7 +379,6 @@ function resolveMathFn(value: string, prop?: string): Resolver | null {
  *  substitute (rn-web passthrough must not strand these in CSS text). */
 function rnWebMathNeedsJsResolution(value: string): boolean {
   return (
-    value.indexOf('\0') !== -1 ||
     value.indexOf('attr(') !== -1 ||
     value.indexOf('anchor') !== -1 ||
     value.indexOf('sibling-') !== -1 ||
@@ -1065,23 +1050,6 @@ function findSentinelTerminator(value: string, start: number): number {
 }
 
 /**
- * Substitute sentinel atoms inside a multi-token CSS value at render time.
- * Used for pass-through props (`boxShadow`, `transform`, `filter`,
- * `backgroundImage`, …) where the value reaches RN as a CSS string and a
- * theme token sits in the middle of it.
- *
- * Each sentinel must sit at a CSS-token boundary;start of the value, or
- * preceded by whitespace, comma, paren, or slash. A sentinel preceded by a
- * non-boundary char is the JS concat-leak case (`'47\0sc:…'`) and we
- * deliberately bail to null so `warnIfSentinelLeak` can fire downstream.
- *
- * Paren depth is tracked so a sentinel inside `translateY(\0sc:x:Npx)` is
- * correctly bounded by the enclosing function's closing paren;the
- * tokenizer relies on function-aware paren-matching for the same reason,
- * but we don't run the full tokenizer here (raw-string scan is enough and
- * keeps the path allocation-free for the common case).
- */
-/**
  * Extract the unit suffix from a sentinel fallback like `'55px'` so we
  * can re-attach it when the theme provides the unit-less numeric form.
  * Returns `''` for fallbacks that don't end in an alpha-or-percent unit
@@ -1090,93 +1058,6 @@ function findSentinelTerminator(value: string, start: number): number {
 function fallbackUnit(fallback: string): string {
   const m = FALLBACK_UNIT_RE.exec(fallback);
   return m === null ? '' : m[1];
-}
-
-function templateResolver(value: string): Resolver | null {
-  const segments: Array<{ start: number; end: number; resolver: Resolver; unit: string }> = [];
-  let i = 0;
-  let depth = 0;
-  while (i < value.length) {
-    const c = value.charCodeAt(i);
-    if (c === 0x28 /* ( */) {
-      depth++;
-      i++;
-      continue;
-    }
-    if (c === 0x29 /* ) */) {
-      depth--;
-      i++;
-      continue;
-    }
-    if (c !== 0) {
-      i++;
-      continue;
-    }
-    if (i > 0) {
-      const prev = value.charCodeAt(i - 1);
-      const isBoundary =
-        prev === 0x20 || // space
-        prev === 0x09 || // tab
-        prev === 0x0a || // \n
-        prev === 0x0d || // \r
-        prev === 0x2c || // ,
-        prev === 0x28 || // (
-        prev === 0x29 || // )
-        prev === 0x2f; // /
-      if (!isBoundary) return null;
-    }
-    // Scan for the sentinel terminator. Mirrors the tokenizer's
-    // `findSentinelEnd` (whitespace, comma, slash, end-of-string) and adds
-    // `)` when it would close the paren level we entered the sentinel at ;
-    // i.e. the function whose args carry this sentinel.
-    const startDepth = depth;
-    let end = i + 1;
-    let scanDepth = depth;
-    while (end < value.length) {
-      const ec = value.charCodeAt(end);
-      if (ec === 0x20 || ec === 0x09 || ec === 0x0a || ec === 0x0d || ec === 0x2c || ec === 0x2f) {
-        break;
-      }
-      if (ec === 0x28) {
-        scanDepth++;
-      } else if (ec === 0x29) {
-        if (scanDepth === startDepth) break;
-        scanDepth--;
-      }
-      end++;
-    }
-    const segment = value.substring(i, end);
-    const r = themeResolver(segment);
-    if (r === null) return null;
-    // Fallback often carries the original unit (e.g. `${t.x}px` is
-    // serialized as `\0sc:x:55px`). When the theme provides the bare
-    // numeric form we re-attach the unit so the assembled string still
-    // means what the user wrote.
-    const lastColon = segment.lastIndexOf(':');
-    const fb = lastColon === -1 ? '' : segment.slice(lastColon + 1);
-    segments.push({ start: i, end, resolver: r, unit: fallbackUnit(fb) });
-    depth = scanDepth;
-    i = end;
-  }
-  if (segments.length === 0) return null;
-  return env => {
-    let out = '';
-    let pos = 0;
-    for (let i = 0; i < segments.length; i++) {
-      const s = segments[i];
-      if (pos < s.start) out += value.substring(pos, s.start);
-      const v = s.resolver(env);
-      if (v === null) return null;
-      if (typeof v === 'number') {
-        out += s.unit === '' ? String(v) : String(v) + s.unit;
-      } else {
-        out += String(v);
-      }
-      pos = s.end;
-    }
-    if (pos < value.length) out += value.substring(pos);
-    return out;
-  };
 }
 
 const siblingIndexResolver: Resolver = env => env.siblingIndex ?? 1;
@@ -1961,8 +1842,7 @@ function isIdentChar(c: number): boolean {
  * substitution the raw function string reached React Native, whose color
  * parser rejects it and paints transparent.
  *
- * Like {@link templateResolver}, but for color-function strings: splices
- * BOTH theme sentinels and env-dependent math segments. Math segments may
+ * Splices BOTH theme sentinels and env-dependent math segments. Math segments may
  * themselves carry sentinels (the math operand machinery resolves them).
  * Returns null when the string has no dynamic segment this recognizes.
  */
@@ -1990,7 +1870,7 @@ function colorFnResolver(value: string): Resolver | null {
       continue;
     }
     if (c === 0) {
-      // Sentinel atom; same boundary + terminator rules as templateResolver.
+      // Sentinel atom: must start at a token boundary and ends at whitespace, comma, slash, or the enclosing paren.
       if (i > 0) {
         const prev = value.charCodeAt(i - 1);
         const isBoundary =

@@ -1104,6 +1104,103 @@ describe('createTheme;native theme values read as authored CSS', () => {
     });
   });
 
+  describe('a provider object value (a platform color) in each declaration shape', () => {
+    const platformColor = { semantic: ['systemBackground'] };
+    const palette = createTheme({ ink: 'tomato' });
+
+    it('is the whole value of color', () => {
+      const Box = styled(View)`
+        color: ${palette.ink};
+      `;
+
+      expect(styleOf(Box, { ink: platformColor })).toEqual({ color: platformColor });
+    });
+
+    it('is the color of a border shorthand', () => {
+      const Box = styled(View)`
+        border: 1px solid ${palette.ink};
+      `;
+
+      expect(styleOf(Box, { ink: platformColor })).toEqual({
+        borderColor: platformColor,
+        borderStyle: 'solid',
+        borderWidth: 1,
+      });
+    });
+
+    it('is the whole value of border-color', () => {
+      const Box = styled(View)`
+        border-color: ${palette.ink};
+      `;
+
+      expect(styleOf(Box, { ink: platformColor })).toEqual({ borderColor: platformColor });
+    });
+
+    it('is the color of a text-shadow', () => {
+      const Box = styled(View)`
+        text-shadow: 1px 2px 3px ${palette.ink};
+      `;
+
+      expect(styleOf(Box, { ink: platformColor })).toEqual({
+        textShadowColor: platformColor,
+        textShadowOffset: { height: 2, width: 1 },
+        textShadowRadius: 3,
+      });
+    });
+
+    it('is the whole value inside a media query block', () => {
+      const Box = styled(View)`
+        color: red;
+        @media (min-width: 100px) {
+          color: ${palette.ink};
+        }
+      `;
+
+      expect(styleOf(Box, { ink: platformColor })).toEqual([
+        { color: 'red' },
+        { color: platformColor },
+      ]);
+    });
+
+    it('is the whole value with !important', () => {
+      const Box = styled(View)`
+        color: ${palette.ink} !important;
+      `;
+
+      expect(styleOf(Box, { ink: platformColor })).toEqual([{}, { color: platformColor }]);
+    });
+
+    it('follows a provider switch from an object to text and back', () => {
+      const Box = styled(View)`
+        border: 1px solid ${palette.ink};
+      `;
+      const withTheme = (ink: unknown) => (
+        <ThemeProvider theme={{ ink }}>
+          <Box />
+        </ThemeProvider>
+      );
+      const tree = TestRenderer.create(withTheme(platformColor));
+      const styleNow = () => tree.root.findByType(View).props.style;
+      const update = (ink: unknown) => TestRenderer.act(() => tree.update(withTheme(ink)));
+
+      expect(styleNow()).toEqual({
+        borderColor: platformColor,
+        borderStyle: 'solid',
+        borderWidth: 1,
+      });
+
+      update('red');
+      expect(styleNow()).toEqual({ borderColor: 'red', borderStyle: 'solid', borderWidth: 1 });
+
+      update(platformColor);
+      expect(styleNow()).toEqual({
+        borderColor: platformColor,
+        borderStyle: 'solid',
+        borderWidth: 1,
+      });
+    });
+  });
+
   describe('outside a component', () => {
     it('toStyleSheet reads the default values', () => {
       const s = createTheme({ space: '4px 8px', ink: 'tomato' });
