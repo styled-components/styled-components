@@ -636,6 +636,21 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
       return resolveStaticMathFunction(fn);
     }
 
+    // §10.2: "the argument calculations can resolve to any <number>,
+    // <dimension>, or <percentage>, but must have a consistent type or else
+    // the function is invalid". A literal number and length are inconsistent.
+    it.each(['min(1, 5px)', 'max(5px, 1)', 'clamp(1, 3, 5px)', 'min(5px, 10%)'])(
+      'rejects min()/max()/clamp() arguments of inconsistent type: %s',
+      src => {
+        expect(mathOf(src)).toBeNull();
+      }
+    );
+
+    it('keeps min() of numbers and of lengths: min(1, 4) and min(10px, 50px)', () => {
+      expect(mathOf('min(1, 4)')).toEqual({ unit: '', value: 1 });
+      expect(mathOf('min(10px, 50px)')).toEqual({ unit: 'px', value: 10 });
+    });
+
     // §10.4: "atan2(A, B) ... is equivalent to atan(A / B), except that
     // it handles the case where A and B have value 0 and where B is 0
     // gracefully." Both zero → 0.

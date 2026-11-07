@@ -526,13 +526,11 @@ export function identToNumeric(
   return null;
 }
 
+/** The shared unit of every operand, or null when their types are inconsistent (a number is not a length). */
 export function unifyUnits(operands: NumericResult[]): string | null {
-  let unit = '';
-  for (let i = 0; i < operands.length; i++) {
-    const u = operands[i].unit;
-    if (u === '') continue;
-    if (unit === '') unit = u;
-    else if (unit !== u) return null;
+  const unit = operands[0].unit;
+  for (let i = 1; i < operands.length; i++) {
+    if (operands[i].unit !== unit) return null;
   }
   return unit;
 }

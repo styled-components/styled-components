@@ -1471,6 +1471,32 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
       expect(r({ ...baseEnv, siblingIndex: 3 })).toBe(11);
     });
 
+    // Spec §10.2: "For all three functions, the argument calculations can
+    // resolve to any <number>, <dimension>, or <percentage>, but must have a
+    // consistent type or else the function is invalid; the result's type will
+    // be the consistent type." A <number> and a <length> have no consistent
+    // type, so the declaration yields no value.
+    it.each([
+      'min(sibling-index(), 5px)',
+      'max(5px, sibling-index())',
+      'clamp(1, sibling-index(), 5px)',
+      'clamp(none, sibling-index(), 5px)',
+      'min(1, 5px)',
+    ])('rejects min()/max()/clamp() arguments of inconsistent type: %s', value => {
+      const r = buildResolver(value);
+      if (r !== null) expect(r({ ...baseEnv, siblingIndex: 3 })).toBeNull();
+    });
+
+    it.each([
+      ['min(sibling-index(), 4)', 3],
+      ['clamp(1, sibling-index(), 5)', 3],
+      ['min(10px, 50px)', 10],
+      ['clamp(10px, 10vw, 100px)', 40],
+    ])('accepts min()/max()/clamp() arguments of consistent type: %s = %d', (value, expected) => {
+      const r = buildResolver(value)!;
+      expect(r({ ...baseEnv, siblingIndex: 3 })).toBe(expected);
+    });
+
     // Spec §10.9: "At a * sub-expression, multiply the types of the left and
     // right arguments. The sub-expression's type is the returned result."
     it('accepts a runtime <number> times a <length>: calc(sibling-index() * 5px) = 15px', () => {
