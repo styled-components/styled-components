@@ -1,6 +1,6 @@
 import { resetWarningsForTest } from '../../dev';
 import { describeOnRnWeb } from '../../describeOnRnWeb';
-import { transformDecl } from '../../index';
+import { camelize, transformDecl } from '../../index';
 import { tokenize } from '../../tokenize';
 import { TokenKind } from '../../tokens';
 import { staticColorFunctionToHex } from '../colorMath';
@@ -694,15 +694,58 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
       }
     );
 
-    // A type error in min() and max() reaches the resolver, which drops the
-    // declaration at render time.
-    it.each(['min(1, 5px)', 'max(5px, 1)', 'clamp(1, 3, 5px)'])(
-      'keeps %s as text for the resolver, which drops it at render time',
-      value => {
-        expect(transformDecl('width', value)).toEqual({ width: value });
-        expect(buildResolver(value, 'width')).not.toBeNull();
-      }
-    );
+    // "For each of the above, if the type is failure, the math function is invalid."
+    // Adding the types of operands that differ (a <number> and a <length>) is failure,
+    // however deep in the expression it sits, so no resolver is built and the declaration
+    // drops with a warning at compile time.
+    it.each([
+      'min(1, 5px)',
+      'max(5px, 1)',
+      'clamp(1, 3, 5px)',
+      'clamp(none, 3, 5px)',
+      'calc(1px + min(1, 5px))',
+      'calc(2px * max(1, 5px))',
+      'calc(1px + calc(1 + 2px))',
+      'min(5px, calc(3 + 1px))',
+      'calc(1px + sibling-index())',
+      'calc(1px + asin(1))',
+      'calc(5px * 5px)',
+      'calc(10 / 2px)',
+      'calc(10px / 2px / 2px)',
+    ])('drops the declaration of operands with inconsistent types: %s', value => {
+      expect(transformWithWarnings('width', value)).toEqual({
+        output: {},
+        warnings: [unresolvableMathWarning('width', value)],
+      });
+      expect(buildResolver(value, 'width')).toBeNull();
+    });
+
+    // One invalid component invalidates the whole shorthand, so no text of the function
+    // reaches React Native.
+    it.each([
+      ['margin', 'calc(1 + 5px)'],
+      ['margin', '2px min(1, 5px)'],
+      ['padding', '2px 3px calc(1px + (1 + 2px))'],
+      ['border-radius', 'max(5px, 1)'],
+      ['gap', 'clamp(1, 3, 5px) 2px'],
+    ])('drops the whole %s declaration when %s has inconsistent types', (prop, value) => {
+      expect(transformWithWarnings(prop, value)).toEqual({
+        output: {},
+        warnings: [unresolvableMathWarning(camelize(prop), value)],
+      });
+    });
+
+    it('keeps a shorthand whose math has consistent types', () => {
+      expect(transformWithWarnings('margin', '2px calc(1px + 3px)')).toEqual({
+        output: {
+          marginBottom: 2,
+          marginLeft: 'calc(1px + 3px)',
+          marginRight: 'calc(1px + 3px)',
+          marginTop: 2,
+        },
+        warnings: [],
+      });
+    });
 
     // Operands that only the render environment can supply keep the declaration's text for
     // the resolver; the drop applies only when no resolver builds the function.

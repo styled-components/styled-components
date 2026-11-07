@@ -1797,6 +1797,28 @@ describe('native', () => {
       });
     });
 
+    // "if the type is failure, the math function is invalid": a shorthand drops whole, so no
+    // function text reaches the host.
+    it('a math function with inconsistent types drops the declaration, shorthand or not', () => {
+      resetWarningsForTest();
+      const Child = styled.Text`
+        margin: calc(1 + 5px);
+        width: min(1, 5px);
+        height: 3px;
+      `;
+      const style = renderStyle(Child);
+      expect({
+        height: style.height,
+        marginTop: style.marginTop,
+        marginLeft: style.marginLeft,
+        width: style.width,
+      }).toEqual({ height: 3, marginLeft: undefined, marginTop: undefined, width: undefined });
+      expect(warnSpy.mock.calls.map(call => String(call[0]).split('\n')[0])).toEqual([
+        '[sc] the value "calc(1 + 5px)" for "margin" is a math function React Native cannot resolve, so the declaration was ignored. Give every operand the same type, and put font-relative or viewport operands in calc(), min(), max() or clamp().',
+        '[sc] the value "min(1, 5px)" for "width" is a math function React Native cannot resolve, so the declaration was ignored. Give every operand the same type, and put font-relative or viewport operands in calc(), min(), max() or clamp().',
+      ]);
+    });
+
     it('a math function no resolver builds drops the declaration with a warning', () => {
       resetWarningsForTest();
       const Child = styled.Text`

@@ -381,7 +381,17 @@ function transformValue(prop: string, rawValue: string): Dict<unknown> {
   if (shorthand !== undefined) {
     tokens = tokenize(rawValue);
     const out = shorthand(tokens, rawValue);
-    if (out !== null) return out;
+    if (out !== null) {
+      // One invalid component invalidates the whole shorthand. A longhand left as math
+      // text that no resolver builds would otherwise reach React Native as that text.
+      if (!__NATIVE_WEB__ && rawValue.indexOf('(') !== -1 && hasUnbuildableMathText(out)) {
+        if (__DEV__ && !mentionsUnsupportedMathKeyword(rawValue)) {
+          warnMathUnresolvable(camel, rawValue);
+        }
+        return {};
+      }
+      return out;
+    }
     if (__DEV__) {
       warnOnce(
         'native-shorthand-parse',
@@ -403,16 +413,20 @@ function transformValue(prop: string, rawValue: string): Dict<unknown> {
       const numeric = resolveStaticMathFunction(tokens[0]);
       if (numeric !== null) {
         if (__NATIVE_WEB__ && numeric.unit !== '') return { [camel]: rawValue };
-        const result =
-          camel === 'opacity' && numeric.unit === '%'
-            ? { unit: '', value: numeric.value / 100 }
-            : numeric;
-        const range = mathRangeOf(camel);
-        return {
-          [camel]: numericResultToRn(
-            range === undefined ? result : clampNumericResult(result, range)
-          ),
-        };
+        // Every key this fold serves takes a number, a length or a percentage; an angle
+        // result falls through to the drop below.
+        if (numeric.unit === '' || numeric.unit === 'px' || numeric.unit === '%') {
+          const result =
+            camel === 'opacity' && numeric.unit === '%'
+              ? { unit: '', value: numeric.value / 100 }
+              : numeric;
+          const range = mathRangeOf(camel);
+          return {
+            [camel]: numericResultToRn(
+              range === undefined ? result : clampNumericResult(result, range)
+            ),
+          };
+        }
       }
     }
 
@@ -442,12 +456,7 @@ function transformValue(prop: string, rawValue: string): Dict<unknown> {
     ) {
       // A sign on a name and `infinity` / `NaN` have warned already.
       if (__DEV__ && !signedName && !mentionsUnsupportedMathKeyword(rawValue)) {
-        warnOnce(
-          'native-math-unresolvable',
-          `the value "${rawValue}" for "${camel}" is a math function React Native cannot resolve, so the declaration was ignored. ` +
-            'Give every operand the same type, and put font-relative or viewport operands in calc(), min(), max() or clamp().',
-          camel + ':' + rawValue
-        );
+        warnMathUnresolvable(camel, rawValue);
       }
       return {};
     }
@@ -487,6 +496,33 @@ function transformValue(prop: string, rawValue: string): Dict<unknown> {
 
   // Hot path for the common case (single color / numeric / ident).
   return { [camel]: coerceRawValue(camel, rawValue) };
+}
+
+function warnMathUnresolvable(camel: string, rawValue: string): void {
+  warnOnce(
+    'native-math-unresolvable',
+    `the value "${rawValue}" for "${camel}" is a math function React Native cannot resolve, so the declaration was ignored. ` +
+      'Give every operand the same type, and put font-relative or viewport operands in calc(), min(), max() or clamp().',
+    camel + ':' + rawValue
+  );
+}
+
+/** True when a longhand holds `calc()` / `min()` / `max()` / `clamp()` text that no resolver builds. */
+function hasUnbuildableMathText(out: Dict<unknown>): boolean {
+  for (const key in out) {
+    const v = out[key];
+    if (
+      typeof v === 'string' &&
+      (v.startsWith('calc(') ||
+        v.startsWith('min(') ||
+        v.startsWith('max(') ||
+        v.startsWith('clamp(')) &&
+      buildResolver(v, key) === null
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**

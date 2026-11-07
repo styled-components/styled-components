@@ -1,4 +1,5 @@
 import { describeOnRnWeb } from '../../describeOnRnWeb';
+import { resetWarningsForTest } from '../../dev';
 import { applyResolvers, buildResolver, escapeSentinelFallback, ResolveEnv } from '../resolvers';
 import { staticColorFunctionToHex } from '../colorMath';
 import { tokenize } from '../../tokenize';
@@ -1455,15 +1456,51 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
     // Spec §10.9: "At a + or - sub-expression, attempt to add the types of
     // the left and right arguments. If this returns failure, the entire
     // calculation's type is failure." sibling-index() is a <number>, so
-    // adding a <length> fails and the declaration yields no value.
+    // adding a <length> fails and the declaration yields no value. sibling-index()
+    // is a <number> whatever the tree, so the type is known when the resolver would be built.
     it.each([
       'calc(sibling-index() + 5px)',
       'calc(5px - sibling-index())',
       'calc(calc(sibling-index() * 2) + 5px)',
       'calc(min(sibling-index(), 4) - 5px)',
-    ])('rejects a runtime <number> added to a <length>: %s', value => {
-      const r = buildResolver(value)!;
-      expect(r({ ...baseEnv, siblingIndex: 3 })).toBeNull();
+    ])('builds no resolver for a <number> added to a <length>: %s', value => {
+      expect(buildResolver(value)).toBeNull();
+    });
+
+    // "For each of the above, if the type is failure, the math function is invalid."
+    // attr() reads a prop, so its type is known only at render. The mismatch drops the
+    // declaration then, and says so once in development.
+    it.each([
+      ['calc(attr(data-n number) + 5px)', '"number" with a "length"'],
+      ['calc(5px - attr(data-n number))', '"length" with a "number"'],
+      ['min(attr(data-n number), 5px)', '"number" with a "length"'],
+      ['calc(attr(data-n number) * attr(data-n number) + 5px)', '"number" with a "length"'],
+      ['calc(attr(data-n px) * attr(data-n px))', '"length" with a "length"'],
+    ])('drops %s at render with one development warning', (value, combined) => {
+      resetWarningsForTest();
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        const r = buildResolver(value, 'width')!;
+        const env = { ...baseEnv, props: { 'data-n': 3 } };
+        expect(r(env)).toBeNull();
+        expect(r(env)).toBeNull();
+        expect(warn.mock.calls.map(call => String(call[0]).split('\n')[0])).toEqual([
+          `[sc] a math function combines a ${combined}, which CSS does not allow, so the declaration was ignored. Give every operand the same type.`,
+        ]);
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it('stays quiet when the attr() prop is missing', () => {
+      resetWarningsForTest();
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        expect(buildResolver('calc(attr(data-n number) + 5px)', 'width')!(baseEnv)).toBeNull();
+        expect(warn).not.toHaveBeenCalled();
+      } finally {
+        warn.mockRestore();
+      }
     });
 
     it('adds a nested runtime <length> to a <length>: calc(calc(sibling-index() * 2px) + 5px) = 11px', () => {
@@ -1493,17 +1530,13 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
       'max(5px, sibling-index())',
       'clamp(1, sibling-index(), 5px)',
       'clamp(none, sibling-index(), 5px)',
-    ])('rejects a runtime <number> mixed with a <length> in min()/max()/clamp(): %s', value => {
-      const r = buildResolver(value)!;
-      expect(r({ ...baseEnv, siblingIndex: 3 })).toBeNull();
-    });
-
-    // The static fold rejects it (polyfills.test.ts), and the runtime resolver
-    // still exists but yields no value.
-    it('rejects a literal <number> mixed with a <length>: min(1, 5px)', () => {
-      const r = buildResolver('min(1, 5px)')!;
-      expect(r(baseEnv)).toBeNull();
-    });
+      'min(1, 5px)',
+    ])(
+      'builds no resolver for a <number> mixed with a <length> in min()/max()/clamp(): %s',
+      value => {
+        expect(buildResolver(value)).toBeNull();
+      }
+    );
 
     it.each([
       ['min(sibling-index(), 4)', 3],

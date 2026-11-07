@@ -369,10 +369,7 @@ function resolveMathFn(value: string, prop?: string): Resolver | null {
   // doesn't emit Paren tokens; the cheapest path to grouping support is
   // to rewrite bare `(...)` as `calc(...)` before tokenization so the
   // existing nested-calc support handles them.
-  const opts =
-    prop !== undefined && value.indexOf('anchor') !== -1
-      ? { ...NATIVE_MATH_OPTS, prop }
-      : NATIVE_MATH_OPTS;
+  const opts = prop !== undefined ? { ...NATIVE_MATH_OPTS, prop } : NATIVE_MATH_OPTS;
   const r = mathFnResolver(expandBareParens(value), opts);
   if (r === null) return null;
   // Static-mixed-unit math passes through to the browser's CSS engine,
@@ -1447,11 +1444,134 @@ function mathFnResolver(value: string, opts?: BuildOpts): Resolver | null {
   if (opts !== undefined && opts.resolvePercent !== undefined && isPurePercentMathFn(fn)) {
     effOpts = opts.prop !== undefined ? { prop: opts.prop } : undefined;
   }
-  if (name === 'calc') return calcResolverFromFn(fn, effOpts);
-  if (name === 'min' || name === 'max' || name === 'clamp') {
-    return minMaxClampResolverFromFn(name, fn, effOpts);
+  const isMinMaxClamp = name === 'min' || name === 'max' || name === 'clamp';
+  if (name !== 'calc' && !isMinMaxClamp) return null;
+  const unit = staticMathUnit(fn);
+  if (unit === null) return null;
+  // A style key takes a number, a length or a percentage; a color channel (no `prop`) may take an angle.
+  if (opts?.prop !== undefined && unit !== '' && unit !== 'px' && unit !== UNKNOWN_UNIT)
+    return null;
+  return isMinMaxClamp
+    ? minMaxClampResolverFromFn(name, fn, effOpts)
+    : calcResolverFromFn(fn, effOpts);
+}
+
+/** The unit of an operand whose type only render time can tell. */
+const UNKNOWN_UNIT = '?';
+
+/**
+ * The unit a `calc()` / `min()` / `max()` / `clamp()` call produces, found from its
+ * operands' types alone: `''` for a number, `px` for a length or percentage, another
+ * unit for an angle, {@link UNKNOWN_UNIT} when an operand's type is known only at
+ * render, and `null` when operands that must agree do not. Runs when the resolver is
+ * built, so a mismatch the text shows never reaches render.
+ */
+function staticMathUnit(fn: Token): string | null {
+  if (fn.name === 'calc') return expressionUnit(tokenizeFunctionArgs(fn));
+  return minMaxClampUnit(fn);
+}
+
+function minMaxClampUnit(fn: Token): string | null {
+  const args = tokenizeFunctionArgs(fn);
+  const isClamp = fn.name === 'clamp';
+  let unit = UNKNOWN_UNIT;
+  let current: Token[] = [];
+  let arm = 0;
+  for (let i = 0; i <= args.length; i++) {
+    const t = args[i];
+    if (t !== undefined && t.kind !== TokenKind.Comma) {
+      current.push(t);
+      continue;
+    }
+    const isNone =
+      isClamp &&
+      (arm === 0 || arm === 2) &&
+      current.length === 1 &&
+      current[0].kind === TokenKind.Ident &&
+      current[0].name === 'none';
+    if (!isNone) {
+      const armUnit = expressionUnit(current);
+      if (armUnit === null) return null;
+      if (unit === UNKNOWN_UNIT) unit = armUnit;
+      else if (armUnit !== UNKNOWN_UNIT && armUnit !== unit) return null;
+    }
+    current = [];
+    arm++;
   }
-  return null;
+  return unit;
+}
+
+/** The unit of one operand token, or `null` when the math function nested in it is invalid. */
+function operandUnit(t: Token): string | null {
+  switch (t.kind) {
+    case TokenKind.Number:
+      return '';
+    case TokenKind.Length:
+      return t.unit === '' ? '' : 'px';
+    case TokenKind.Percent:
+      return 'px';
+    case TokenKind.Angle:
+      return 'deg';
+    case TokenKind.Ident:
+      return t.name === 'pi' || t.name === 'e' ? '' : UNKNOWN_UNIT;
+    case TokenKind.Function: {
+      const name = t.name || '';
+      if (name === 'sibling-index' || name === 'sibling-count') return '';
+      if (name === 'calc' || name === 'min' || name === 'max' || name === 'clamp') {
+        return staticMathUnit(t);
+      }
+      const folded = resolveStaticMathFunction(t);
+      if (folded === null) return UNKNOWN_UNIT;
+      return folded.unit === '%' ? 'px' : folded.unit;
+    }
+    default:
+      return UNKNOWN_UNIT;
+  }
+}
+
+/** Sequence form of {@link staticMathUnit}: operands joined by `+ - * /`, with `*` and `/` first. */
+function expressionUnit(tokens: Token[]): string | null {
+  const units: string[] = [];
+  const ops: string[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (i % 2 === 0) {
+      const unit = operandUnit(t);
+      if (unit === null) return null;
+      units.push(unit);
+    } else if (t.kind === TokenKind.Slash) {
+      ops.push('/');
+    } else if (t.kind === TokenKind.Op) {
+      ops.push(t.op);
+    } else {
+      return UNKNOWN_UNIT;
+    }
+  }
+  if (units.length !== ops.length + 1) return UNKNOWN_UNIT;
+
+  for (let i = 0; i < ops.length; ) {
+    const op = ops[i];
+    if (op !== '*' && op !== '/') {
+      i++;
+      continue;
+    }
+    const a = units[i];
+    const b = units[i + 1];
+    const unit =
+      a === UNKNOWN_UNIT || b === UNKNOWN_UNIT
+        ? UNKNOWN_UNIT
+        : scaleUnit(op, { unit: a, value: 0 }, { unit: b, value: 0 });
+    if (unit === null) return null;
+    units.splice(i, 2, unit);
+    ops.splice(i, 1);
+  }
+  let unit = units[0];
+  for (let i = 1; i < units.length; i++) {
+    const next = units[i];
+    if (unit === UNKNOWN_UNIT) unit = next;
+    else if (next !== UNKNOWN_UNIT && next !== unit) return null;
+  }
+  return unit;
 }
 
 /**
@@ -1593,7 +1713,14 @@ function minMaxClampEvalFromFn(
       realOperands.push(r);
     }
     const unit = unifyUnits(realOperands);
-    if (unit === null) return null;
+    if (unit === null) {
+      if (__DEV__) {
+        const first = realOperands[0].unit;
+        const other = realOperands.find(o => o.unit !== first);
+        warnMixedTypes(first, other === undefined ? first : other.unit);
+      }
+      return null;
+    }
 
     let result: number;
     if (name === 'min') {
@@ -1836,7 +1963,10 @@ function reduceMath(items: Array<NumericResult | string>): NumericResult | null 
       const a = items[i - 1] as NumericResult;
       const b = items[i + 1] as NumericResult;
       const unit = scaleUnit(op, a, b);
-      if (unit === null) return null;
+      if (unit === null) {
+        if (__DEV__) warnMixedTypes(a.unit, b.unit);
+        return null;
+      }
       const v = op === '*' ? a.value * b.value : a.value / b.value;
       if (!Number.isFinite(v)) return null;
       items.splice(i - 1, 3, { value: v, unit });
@@ -1850,7 +1980,10 @@ function reduceMath(items: Array<NumericResult | string>): NumericResult | null 
     if (op === '+' || op === '-') {
       const a = items[i - 1] as NumericResult;
       const b = items[i + 1] as NumericResult;
-      if (a.unit !== b.unit) return null;
+      if (a.unit !== b.unit) {
+        if (__DEV__) warnMixedTypes(a.unit, b.unit);
+        return null;
+      }
       const v = op === '+' ? a.value + b.value : a.value - b.value;
       items.splice(i - 1, 3, { value: v, unit: a.unit });
     } else {
@@ -1859,6 +1992,17 @@ function reduceMath(items: Array<NumericResult | string>): NumericResult | null 
   }
   if (items.length !== 1) return null;
   return items[0] as NumericResult;
+}
+
+const TYPE_LABELS: Record<string, string> = { '': 'number', '%': 'percentage', px: 'length' };
+
+/** Dev warning for operands whose types only render time showed to disagree. */
+function warnMixedTypes(a: string, b: string): void {
+  warnOnce(
+    'native-math-mixed-types',
+    `a math function combines a "${TYPE_LABELS[a] ?? a}" with a "${TYPE_LABELS[b] ?? b}", which CSS does not allow, so the declaration was ignored. Give every operand the same type.`,
+    a + '|' + b
+  );
 }
 
 function numericToCss(r: NumericResult): number | string {

@@ -1,5 +1,5 @@
 import { resetWarningsForTest } from '../dev';
-import { transformDecl } from '../index';
+import { camelize, transformDecl } from '../index';
 import { describeOnRnWeb } from '../describeOnRnWeb';
 
 describe('transformDecl: pass-through + coercion', () => {
@@ -1255,24 +1255,32 @@ describe('CSS Values 4 §10.3-10.6 (Math L4 functions)', () => {
     });
   });
 
-  // The inverse trig functions return <angle> (degrees). Tested via
-  // a numeric-shaped property; the fold emits `'<n>deg'` for non-px
-  // units, which surfaces the value + unit in one place.
   describe('asin / acos / atan', () => {
-    it('asin(1) folds to 90deg', () => {
-      expect(transformDecl('width', 'asin(1)')).toEqual({ width: '90deg' });
-    });
-
-    it('acos(0) folds to 90deg', () => {
-      expect(transformDecl('width', 'acos(0)')).toEqual({ width: '90deg' });
-    });
-
-    it('atan(1) folds to 45deg', () => {
-      expect(transformDecl('width', 'atan(1)')).toEqual({ width: '45deg' });
-    });
-
-    it('atan2(1, 1) folds to 45deg', () => {
-      expect(transformDecl('width', 'atan2(1, 1)')).toEqual({ width: '45deg' });
+    // "A math function resolves to <number>, <length>, <angle>, <time>, <frequency>,
+    // <resolution>, <flex>, or <percentage> according to which of those productions its
+    // type matches. (These categories are mutually exclusive.) If it can’t match any of
+    // these, the math function is invalid."
+    // asin(), acos(), atan() and atan2() have the type «[ "angle" → 1 ]», so they resolve
+    // to an <angle>, which no length, number or percentage property accepts.
+    it.each([
+      ['width', 'asin(1)'],
+      ['width', 'acos(0)'],
+      ['width', 'atan(1)'],
+      ['width', 'atan2(1, 1)'],
+      ['width', 'calc(asin(1) * 2)'],
+      ['opacity', 'atan(1)'],
+      ['z-index', 'acos(0)'],
+    ])('%s: %s resolves to an angle and drops with a warning', (prop, value) => {
+      resetWarningsForTest();
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        expect(transformDecl(prop, value)).toEqual({});
+        expect(warnSpy.mock.calls.map(call => String(call[0]).split('\n')[0])).toEqual([
+          `[sc] the value "${value}" for "${camelize(prop)}" is a math function React Native cannot resolve, so the declaration was ignored. Give every operand the same type, and put font-relative or viewport operands in calc(), min(), max() or clamp().`,
+        ]);
+      } finally {
+        warnSpy.mockRestore();
+      }
     });
 
     it('asin(2) (out of domain) declines the fold and drops with a warning', () => {
