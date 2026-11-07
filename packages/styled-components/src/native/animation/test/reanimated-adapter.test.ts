@@ -259,3 +259,144 @@ describe('reanimated adapter mapDescriptorsToCSSLayer', () => {
     expect(mockSteps).toHaveBeenCalledWith(4, 'jump-end');
   });
 });
+
+describe('reanimated adapter rendered style layers', () => {
+  type StyledFactory = typeof import('../../').default;
+
+  let React: typeof import('react');
+  let TestRenderer: typeof import('react-test-renderer');
+  let View: typeof import('react-native').View;
+  let styled: StyledFactory;
+
+  beforeAll(() => {
+    React = require('react');
+    TestRenderer = require('react-test-renderer');
+    View = require('react-native').View;
+    styled = require('../../').default;
+    require('../../reanimated');
+  });
+
+  function renderedStyle(
+    Component: React.ComponentType<{ style?: unknown }>,
+    callerStyle: unknown
+  ): Record<string, unknown> {
+    const element = React.createElement(Component, { style: callerStyle });
+    let tree: import('react-test-renderer').ReactTestRenderer | undefined;
+    TestRenderer.act(() => {
+      tree = TestRenderer.create(element);
+    });
+    const rendered = tree?.root.findByType(View).props.style;
+    const declared: Record<string, unknown> = {};
+    for (const key of Object.keys(rendered)) {
+      if (!key.startsWith('animation') && !key.startsWith('transition')) {
+        declared[key] = rendered[key];
+      }
+    }
+    return declared;
+  }
+
+  it('keeps the caller style and the attrs style next to the declarations', () => {
+    const Box = styled.View.attrs({ style: { backgroundColor: 'red' } })`
+      padding-top: 10px;
+      width: 10vw;
+      animation: spin 1s linear infinite;
+      @keyframes spin {
+        to {
+          opacity: 0.2;
+        }
+      }
+    `;
+
+    expect(renderedStyle(Box, { opacity: 0.5 })).toEqual({
+      backgroundColor: 'red',
+      opacity: 0.5,
+      paddingTop: 10,
+      width: 75,
+    });
+  });
+
+  it('keeps both style sources next to a matching conditional bucket', () => {
+    const Box = styled.View.attrs({ style: { backgroundColor: 'red' } })`
+      padding-top: 10px;
+      animation: spin 1s linear infinite;
+      @media (min-width: 100px) {
+        margin-top: 3px;
+      }
+      @keyframes spin {
+        to {
+          opacity: 0.2;
+        }
+      }
+    `;
+
+    expect(renderedStyle(Box, { opacity: 0.5 })).toEqual({
+      backgroundColor: 'red',
+      marginTop: 3,
+      opacity: 0.5,
+      paddingTop: 10,
+    });
+  });
+
+  it('keeps both style sources under a base !important', () => {
+    const Box = styled.View.attrs({ style: { backgroundColor: 'red' } })`
+      padding-top: 10px !important;
+      animation: spin 1s linear infinite;
+      @keyframes spin {
+        to {
+          opacity: 0.2;
+        }
+      }
+    `;
+
+    expect(renderedStyle(Box, { opacity: 0.5 })).toEqual({
+      backgroundColor: 'red',
+      opacity: 0.5,
+      paddingTop: 10,
+    });
+  });
+
+  it('keeps both style sources under a base !important and a matching conditional bucket', () => {
+    const Box = styled.View.attrs({ style: { backgroundColor: 'red' } })`
+      padding-top: 10px !important;
+      animation: spin 1s linear infinite;
+      @media (min-width: 100px) {
+        margin-top: 3px;
+      }
+      @keyframes spin {
+        to {
+          opacity: 0.2;
+        }
+      }
+    `;
+
+    expect(renderedStyle(Box, { opacity: 0.5 })).toEqual({
+      backgroundColor: 'red',
+      marginTop: 3,
+      opacity: 0.5,
+      paddingTop: 10,
+    });
+  });
+
+  it.each([
+    ['plain', ''],
+    ['conditional bucket', '@media (min-width: 100px) { margin-top: 3px; }'],
+    ['base important', 'margin-left: 4px !important;'],
+    ['pseudo state', '&:active { margin-top: 3px; }'],
+  ])('merges a caller style nested at any depth (%s)', (_name, extra) => {
+    const Box = styled.View`
+      padding-top: 10px;
+      animation: spin 1s linear infinite;
+      ${extra}
+      @keyframes spin {
+        to {
+          opacity: 0.2;
+        }
+      }
+    `;
+    const style = [{ opacity: 0.5 }, [{ zIndex: 1 }, [{ zIndex: 2 }, false, null, { flex: 1 }]]];
+    const declared = renderedStyle(Box, style);
+
+    expect(declared).toMatchObject({ flex: 1, opacity: 0.5, paddingTop: 10, zIndex: 2 });
+    expect(Object.keys(declared).filter(key => /^\d+$/.test(key))).toEqual([]);
+  });
+});
