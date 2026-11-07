@@ -1406,13 +1406,15 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // renders that reach the component body with unchanged inputs (an animation
   // tick, for example). Keyed on the real inputs, never on props as a proxy.
   const positionAnchor = compiled.positionAnchor;
+  // The theme attrs left in context: the one compile read, so text and object values agree.
+  const resolveTheme = context.theme;
   let resolveEnv: ResolveEnv;
   const cachedResolveEnv = resolveEnvCacheRef.current;
   if (
     cachedResolveEnv !== null &&
     cachedResolveEnv.env === env &&
     cachedResolveEnv.containerCtx === containerCtx &&
-    cachedResolveEnv.theme === theme &&
+    cachedResolveEnv.theme === resolveTheme &&
     cachedResolveEnv.renderCascade === renderCascade &&
     cachedResolveEnv.parentCtx === parentCtx &&
     cachedResolveEnv.props === props &&
@@ -1425,7 +1427,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     resolveEnv = buildResolveEnv(
       env,
       containerCtx,
-      theme,
+      resolveTheme,
       renderCascade,
       parentCtx,
       props as Record<string, unknown>,
@@ -1442,7 +1444,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
       renderCascade,
       resolveEnv,
       safeAreaInsets,
-      theme,
+      theme: resolveTheme,
     };
   }
   let varImportant: Dict<unknown> | undefined;
@@ -1468,7 +1470,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
         compiled,
         env,
         containerCtx,
-        theme,
+        resolveTheme,
         props.style,
         // Generic Props can't structurally satisfy `Record<string, unknown>`
         // (TS lacks unsealed-object covariance); normalize at the boundary.

@@ -5,7 +5,7 @@ import { warnOnce } from '../dev';
 import { isSafeThemePath } from '../sanitize';
 import { tokenize, tokenizeFunctionArgs } from '../tokenize';
 import { Token, TokenKind } from '../tokens';
-import { coerceRawValue } from '../units';
+import { fifoSet } from '../../../utils/fifoMap';
 import { getCssPropertyRegistration } from '../../propertyRegistry';
 import { buildAnchorResolver } from './anchorFns';
 import { hasRelativeFromPrefix, staticColorFunctionToHex } from './colorMath';
@@ -203,7 +203,7 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
   // solid \0sc:color:#000` if it ever lands undivided) falls through to
   // the post-dispatch templateResolver below.
   if (c0 === 0 && findSentinelTerminator(value, 0) === value.length) {
-    return themeResolver(value, prop);
+    return themeResolver(value);
   }
 
   // Viewport / container units start with a digit, `-`, `+`, or `.`. Skip
@@ -853,16 +853,23 @@ function envResolver(value: string): Resolver | null {
  */
 const NO_THEME_SEEN: object = {};
 
-function authored(v: number | string, prop: string | undefined): number | string | null {
-  return prop === undefined || typeof v !== 'string' ? v : coerceRawValue(prop, v);
+/** The own-property value at a split dot path of the theme, or `undefined` when any step is missing. */
+function readThemePath(theme: ResolveEnv['theme'] | undefined, keys: string[]): unknown {
+  let v: unknown = theme;
+  for (let i = 0; i < keys.length; i++) {
+    if (v == null || typeof v !== 'object' || !Object.prototype.hasOwnProperty.call(v, keys[i])) {
+      return undefined;
+    }
+    v = Reflect.get(v, keys[i]);
+  }
+  return v;
 }
 
 /**
- * With `prop`, a string value (provider-supplied or fallback text) is read
- * as if authored for that property (`'8px'` becomes `8`), once per theme
- * change. Without it (a segment inside a larger value) the text stays text.
+ * Resolves a createTheme placeholder whose theme value is not text (a
+ * `PlatformColor` object): substitution leaves those in the style.
  */
-function themeResolver(value: string, prop?: string): Resolver | null {
+function themeResolver(value: string): Resolver | null {
   const firstColon = value.indexOf(':', 1);
   if (firstColon === -1) return null;
   const secondColon = value.indexOf(':', firstColon + 1);
@@ -870,10 +877,10 @@ function themeResolver(value: string, prop?: string): Resolver | null {
     secondColon === -1 ? value.slice(firstColon + 1) : value.slice(firstColon + 1, secondColon);
   const rawFallback = secondColon === -1 ? '' : value.slice(secondColon + 1);
   if (!isSafeThemePath(path)) return null;
-  const segments = path.split('.');
   // Decode escape sequences once at construction. The resolver is the only
   // consumer of fallback at render time, so this never re-runs per render.
-  const fallback = authored(unescapeSentinelFallback(rawFallback), prop);
+  const fallback = unescapeSentinelFallback(rawFallback);
+  const keys = path.split('.');
 
   // Single-slot identity cache. Theme is the only env field this resolver
   // reads, so caching `(theme identity → resolved value)` short-circuits the
@@ -885,24 +892,161 @@ function themeResolver(value: string, prop?: string): Resolver | null {
 
   return env => {
     if (env.theme === lastTheme) return lastResult;
-    let v: unknown = env.theme;
-    for (let i = 0; i < segments.length; i++) {
-      if (
-        v == null ||
-        typeof v !== 'object' ||
-        !Object.prototype.hasOwnProperty.call(v, segments[i])
-      ) {
-        v = undefined;
-        break;
-      }
-      v = Reflect.get(v, segments[i]);
-    }
+    const v = readThemePath(env.theme, keys);
     // Known gap: the public `Resolver` type is narrower than what a ThemeProvider override can supply (a `PlatformColor` object, for example).
-    const out = v === undefined || v === null ? fallback : authored(v as number | string, prop);
+    const out = v === undefined || v === null ? fallback : (v as number | string);
     lastTheme = env.theme;
     lastResult = out;
     return out;
   };
+}
+
+/** `;`, `{`, or `}`: what ends a declaration or opens a rule. */
+const isDeclarationBreak = (c: number): boolean => c === 0x3b || c === 0x7b || c === 0x7d;
+
+/** Where a createTheme placeholder ends, or where a theme value breaks into a second declaration. */
+function findValueEnd(text: string, start: number, inAtom: boolean): number {
+  let depth = 0;
+  let quote = 0;
+  for (let i = start; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    // A placeholder's fallback escapes these, so any raw one ends it, quoted or not.
+    if (
+      inAtom &&
+      (c === 0x20 || c === 0x09 || c === 0x0a || c === 0x0d || c === 0x2c || c === 0x2f)
+    ) {
+      return i;
+    }
+    if (quote !== 0) {
+      if (c === 0x5c /* \ */) i++;
+      else if (c === quote) quote = 0;
+    } else if (c === 0x22 /* " */ || c === 0x27 /* ' */) {
+      quote = c;
+    } else if (c === 0x28 /* ( */ || c === 0x5b /* [ */) {
+      depth++;
+    } else if (c === 0x29 /* ) */ || c === 0x5d /* ] */) {
+      if (depth > 0) depth--;
+      else if (inAtom) return i;
+    } else if (depth === 0 && isDeclarationBreak(c)) {
+      return i;
+    }
+  }
+  return text.length;
+}
+
+const BARE_NUMBER_RE = /^-?(?:\d+(?:\.\d+)?|\.\d+)$/;
+const VALUE_BREAK_RE = /[;{}]/;
+
+/**
+ * Replace each createTheme placeholder (`\0<prefix>:<path>:<fallback>`) in
+ * `text` with the theme's value read as text, so the declaration reads as if
+ * that text were authored in the template. A missing, `null`, or non-finite
+ * value reads as the fallback; a text that holds a second declaration or a rule
+ * does too (with a dev warning). Any other non-text value (a `PlatformColor`
+ * object) leaves its placeholder for {@link themeResolver}.
+ *
+ * `joined` marks text another interpolation built around the placeholder
+ * (`${t.space}px` returned from a function): the placeholder then swallowed
+ * the text after it, and a bare number re-takes the unit the fallback ends in.
+ */
+export function substituteThemeText(
+  text: string,
+  theme: ResolveEnv['theme'] | undefined,
+  joined: boolean
+): string {
+  if (text.indexOf('\0') === -1) return text;
+  let read = themeTextReads.get(text);
+  if (read === undefined) {
+    read = parseThemeText(text);
+    fifoSet(themeTextReads, text, read, THEME_TEXT_CACHE_LIMIT);
+  }
+  if (read === null) return text;
+  if (read.lastTheme === theme && read.lastJoined === joined) return read.lastText;
+
+  const parts = read.parts;
+  let out = '';
+  let copied = 0;
+  for (let i = 0; i < parts.length; i++) {
+    const { end, fallback, keys, start, unit } = parts[i];
+    const v = readThemePath(theme, keys);
+    let replacement: string;
+    if (typeof v === 'string' && v.charCodeAt(0) !== 0) {
+      if (VALUE_BREAK_RE.test(v) && findValueEnd(v, 0, false) !== v.length) {
+        if (__DEV__) {
+          const path = keys.join('.');
+          warnOnce(
+            'native-theme-value-not-single',
+            `The theme value at \`${path}\` holds more than one declaration or a rule, so its default is used. A theme value must be a single CSS value, such as "12px" or "red".`,
+            path
+          );
+        }
+        replacement = fallback;
+      } else {
+        replacement = joined && BARE_NUMBER_RE.test(v) ? v + unit : v;
+      }
+    } else if (typeof v === 'number' && Number.isFinite(v)) {
+      replacement = joined ? String(v) + unit : String(v);
+    } else if (v === undefined || v === null || typeof v === 'number' || typeof v === 'string') {
+      replacement = fallback;
+    } else {
+      continue;
+    }
+
+    out += text.slice(copied, start) + replacement;
+    copied = end;
+  }
+  const result = copied === 0 ? text : out + text.slice(copied);
+  read.lastJoined = joined;
+  read.lastText = result;
+  read.lastTheme = theme;
+  return result;
+}
+
+interface ThemeTextPart {
+  end: number;
+  fallback: string;
+  keys: string[];
+  start: number;
+  unit: string;
+}
+
+interface ThemeTextRead {
+  lastJoined: boolean;
+  lastText: string;
+  lastTheme: object | undefined;
+  parts: ThemeTextPart[];
+}
+
+/**
+ * The placeholders found in each text {@link substituteThemeText} has seen
+ * (`null` for a text with none), each with the theme it last read, so a repeat
+ * render under the same theme reuses the finished text. Placeholder texts come
+ * from the code; the limit bounds the ones a function interpolation builds from props.
+ */
+const themeTextReads = new Map<string, ThemeTextRead | null>();
+const THEME_TEXT_CACHE_LIMIT = 200;
+
+function parseThemeText(text: string): ThemeTextRead | null {
+  const parts: ThemeTextPart[] = [];
+  let at = text.indexOf('\0');
+  while (at !== -1) {
+    const end = findValueEnd(text, at + 1, true);
+    const firstColon = text.indexOf(':', at + 1);
+    const secondColon = firstColon === -1 ? -1 : text.indexOf(':', firstColon + 1);
+    const pathEnd = secondColon === -1 || secondColon > end ? end : secondColon;
+    const path = firstColon > at + 1 && firstColon < end ? text.slice(firstColon + 1, pathEnd) : '';
+    if (path === '' || !isSafeThemePath(path)) {
+      at = text.indexOf('\0', at + 1);
+      continue;
+    }
+
+    const fallback = unescapeSentinelFallback(pathEnd === end ? '' : text.slice(pathEnd + 1, end));
+    parts.push({ end, fallback, keys: path.split('.'), start: at, unit: fallbackUnit(fallback) });
+    at = text.indexOf('\0', end);
+  }
+  return parts.length === 0
+    ? null
+    : { lastJoined: false, lastText: text, lastTheme: NO_THEME_SEEN, parts };
 }
 
 /**

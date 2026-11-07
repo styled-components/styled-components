@@ -6,7 +6,7 @@ import {
   hasAnyFragment,
 } from '../parser/compile';
 import type { Source } from '../parser/source';
-import { getSource, synthesizeSourceForRuleSet } from '../parser/source';
+import { getSource, InterpolationKind, synthesizeSourceForRuleSet } from '../parser/source';
 import {
   ExecutionContext,
   INativeStyle,
@@ -16,6 +16,7 @@ import {
 } from '../types';
 import { LIMIT as TOO_MANY_CLASSES_LIMIT } from '../utils/createWarnTooManyClasses';
 import { fifoSet } from '../utils/fifoMap';
+import { substituteThemeText } from '../native/transform/polyfills/resolvers';
 import {
   toNativeStyles,
   astToNativeStyles,
@@ -42,6 +43,11 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
     private resolvedSource: Source | null | undefined = undefined;
     private filledBuffer: string[] | undefined;
     private fragmentsBuffer: (FastPathFragment | null)[] | undefined;
+    private holdsThemeText = false;
+    private lastTheme: object | undefined = undefined;
+    private lastThemedStyles: NativeStyles | null = null;
+    private prevTheme: object | undefined = undefined;
+    private prevThemedStyles: NativeStyles | null = null;
     staticEligible = false;
     staticCompiled: NativeStyles | null = null;
     usesAnchorFunctions = false;
@@ -72,7 +78,12 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
       // "no inset source" warning so a function interpolation that never emits
       // env() does not trigger a false "install the peer" nudge.
       this.usesSafeAreaInsetsStatically = hasStaticSafeAreaEnv;
-      if (this.staticCSS !== null) {
+      // A template of only text and createTheme values: no user code runs, so the theme object alone decides the output.
+      this.holdsThemeText =
+        this.staticCSS !== null &&
+        this.staticCSS.indexOf('\0') !== -1 &&
+        substituteThemeText(this.staticCSS, undefined, false) !== this.staticCSS;
+      if (this.staticCSS !== null && !this.holdsThemeText) {
         // A string value is still a value: joined text would read it as authored CSS.
         const compiled = getSource(rules)?.interpolations.length
           ? this.compile({} as ExecutionContext & Props)
@@ -107,7 +118,33 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
       if (this.staticCompiled !== null) {
         return this.staticCompiled;
       }
+      if (this.holdsThemeText) return this.compileThemed(executionContext);
 
+      return this.compileSlots(executionContext);
+    }
+
+    /** Two theme slots, so an app that switches between two themes (light and dark) keeps hitting. */
+    private compileThemed(executionContext: ExecutionContext & Props): NativeStyles {
+      const theme = executionContext.theme;
+      if (this.lastThemedStyles !== null && this.lastTheme === theme) return this.lastThemedStyles;
+      if (this.prevThemedStyles !== null && this.prevTheme === theme) {
+        const hit = this.prevThemedStyles;
+        this.prevTheme = this.lastTheme;
+        this.prevThemedStyles = this.lastThemedStyles;
+        this.lastTheme = theme;
+        this.lastThemedStyles = hit;
+        return hit;
+      }
+
+      const compiled = this.compileSlots(executionContext);
+      this.prevTheme = this.lastTheme;
+      this.prevThemedStyles = this.lastThemedStyles;
+      this.lastTheme = theme;
+      this.lastThemedStyles = compiled;
+      return compiled;
+    }
+
+    private compileSlots(executionContext: ExecutionContext & Props): NativeStyles {
       if (this.resolvedSource === undefined) {
         this.resolvedSource = getSource(this.rules) ?? null;
       }
@@ -137,6 +174,7 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
       if (filled === null) return toNativeStyles('', styleSheet);
 
       const fragments = hasAnyFragment(this.fragmentsBuffer) ? this.fragmentsBuffer : null;
+      substituteThemeSlots(filled, source.kinds, fragments, executionContext.theme);
       const interpKey = buildInterpKey(filled, fragments);
       const cached = this.interpKeyCache && this.interpKeyCache.get(interpKey);
       if (cached !== undefined) return cached;
@@ -153,6 +191,36 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
   };
 
   return NativeStyle;
+}
+
+/**
+ * {@link substituteThemeText} over every filled slot of a template and of the
+ * fragments spliced into it, in place. A slot is the placeholder's whole
+ * boundary only when its text is a static value; any other slot's text may
+ * have been joined around it. Lives here, not beside the text helper, because
+ * that file ships in the reanimated bundle, which cannot read these field names.
+ */
+export function substituteThemeSlots(
+  filled: string[],
+  kinds: ReadonlyArray<InterpolationKind>,
+  fragments: ReadonlyArray<FastPathFragment | null> | null,
+  theme: ExecutionContext['theme'] | undefined
+): void {
+  for (let i = 0; i < filled.length; i++) {
+    const text = filled[i];
+    if (text.indexOf('\0') !== -1) {
+      filled[i] = substituteThemeText(text, theme, kinds[i] !== InterpolationKind.Static);
+    }
+  }
+  if (fragments === null) return;
+
+  // A spliced fragment's slot holds no text of its own in `filled`.
+  for (let i = 0; i < fragments.length; i++) {
+    const fragment = fragments[i];
+    if (fragment) {
+      substituteThemeSlots(fragment.filled, fragment.source.kinds, fragment.fragments, theme);
+    }
+  }
 }
 
 function isAllStaticStrings(rules: ReadonlyArray<unknown>): boolean {
