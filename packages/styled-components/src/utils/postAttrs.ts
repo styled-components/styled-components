@@ -15,6 +15,7 @@ import { NodeKind, type Root } from '../parser/ast';
 import { fieldText } from '../parser/compile';
 import { isCustomProperty } from '../parser/parser';
 import type { CompiledAst, Dict } from '../types';
+import { CAN_HOLD_REFERENCE, hasReferenceMarker } from './serverReference';
 
 export interface PostAttrsPlan {
   /**
@@ -110,7 +111,10 @@ export function findBaseDecl(
       continue;
     }
     const v = node.value;
-    found = typeof v === 'string' ? v : filled === null ? null : fieldText(v, filled);
+    const text = typeof v === 'string' ? v : filled === null ? null : fieldText(v, filled);
+    // A declaration holding a reference is dropped from the emitted CSS, so it is unwritten here.
+    const dropped = CAN_HOLD_REFERENCE && text !== null && hasReferenceMarker(text);
+    if (!dropped) found = text;
   }
   return found;
 }

@@ -1,14 +1,13 @@
 import failOnConsole from 'jest-fail-on-console';
 
-import { resetSeenPlugins } from '../src/utils/compiler';
 import { resetWarnOnce } from '../src/utils/warnOnce';
 
 /**
  * Noise that is not under test, plus library warnings that suites trigger as
  * substrate while asserting something else (unknown-prop during attrs/CSS
- * tests, RSC client-reference interpolation, etc.). Warning *text* for those
- * library paths is locked in dedicated characterization tests that spy locally.
- * Matched as substrings against the util.format'd message.
+ * tests, etc.). Warning *text* for those library paths is locked in dedicated
+ * characterization tests that spy locally. Matched as substrings against the
+ * util.format'd message.
  */
 const silencedMessageSubstrings = [
   'Could not parse CSS stylesheet',
@@ -23,7 +22,6 @@ const silencedMessageSubstrings = [
   'not wrapped in act(...)',
   '[wpt] ',
   '[sc] unknown prop "',
-  '[sc] interpolating a client component',
   '[sc] no ThemeProvider or theme prop in scope',
   'or a quote that never closes',
   'cannot be used as a React Native dimension',
@@ -65,11 +63,15 @@ failOnConsole({
   },
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   // The shared `warnOnce` dedupe Set persists across tests; reset so each
   // assertion that expects a warning to fire actually sees it. The plugin
   // name registry persists for the same reason (a class-name collision
   // survives for the life of the page), so suites start each test clear.
+  // The compiler loads in the hook, after the test file: a static import here
+  // would load the parser before the file's `jest.mock` calls (of `isRsc`, say),
+  // and the parser would keep the real modules.
+  const { resetSeenPlugins } = await import('../src/utils/compiler');
   resetWarnOnce();
   resetSeenPlugins();
 });

@@ -1,11 +1,12 @@
-import { emitWeb } from '../parser/emit-web';
+import { emitWeb, namespaceForm } from '../parser/emit-web';
 import { parse, wrapAst } from '../parser/parser';
-import { compileWebFilled } from '../parser/compile';
+import { compileWebFilled, dropMarked } from '../parser/compile';
 import type { Compiler } from '../types';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
 import { SEED, phash } from './hash';
 import { normalize } from './normalize';
+import { CAN_HOLD_REFERENCE, hasReferenceMarker } from './serverReference';
 import { warnOnce } from './warnOnce';
 
 export { normalize } from './normalize';
@@ -159,16 +160,19 @@ export default function createCompiler({
     }
   }
 
+  const namespace = options.namespace ? namespaceForm(options.namespace) : undefined;
+
   const compileString = (css: string, selector = '', prefix = '', componentId = '&'): string[] => {
     // The author's CSS parses as the root block, so the parser's brace repair
     // keeps a stray `}` inside it; the wrapper is added as an AST node.
     const wrapSelector = prefix && selector ? prefix + ' ' + selector : prefix || selector;
     const body = parse(normalize(css));
-    const ast = wrapSelector ? wrapAst(body, wrapSelector) : body;
+    const wrapped = wrapSelector ? wrapAst(body, wrapSelector) : body;
+    const ast = CAN_HOLD_REFERENCE && hasReferenceMarker(css) ? dropMarked(wrapped) : wrapped;
     return emitWeb(ast, '', {
       selfRefSelector: selector,
       componentId,
-      namespace: options.namespace,
+      namespace,
       rw: postProcessSelector,
       decl: postProcessDecl,
     });
@@ -179,7 +183,7 @@ export default function createCompiler({
   const compiler: Compiler = {
     hash: h !== SEED ? h.toString() : '',
     compile: compileString,
-    emit: (source, filled, parentSelector, componentId, fragments) =>
+    emit: (source, filled, parentSelector, { componentId, fragments, ids }) =>
       compileWebFilled(
         source,
         filled,
@@ -187,7 +191,8 @@ export default function createCompiler({
         {
           selfRefSelector: parentSelector,
           componentId,
-          namespace: options.namespace,
+          ids,
+          namespace,
           rw: postProcessSelector,
           decl: postProcessDecl,
         },

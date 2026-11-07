@@ -127,11 +127,21 @@ So nothing keyed on time scopes a manager: a per-request slot, restore sentinels
 
 ### configureServerStyles
 
-- `configureServerStyles({ plugins })` sets the plugins every server component starts from, for the whole process. A manager inherits them like a nested manager inherits its parent's; `plugins={[]}` opts out.
+- `configureServerStyles({ namespace, plugins })` sets the namespace and plugins every server component starts from, for the whole process. A manager inherits them like a nested manager inherits its parent's; `plugins={[]}` and `namespace=""` opt out. Namespace semantics: [namespace.md](namespace.md).
 - Stored on `globalThis` under a `Symbol.for` key that names the major version, and shape-checked on read, so every copy of the library in the process reads one value (Next bundles each server layer apart).
 - Last call wins. A call applies to renders that start after it, so it is a top-level statement in a module every server render loads first: in Next, the root layout file. Next runs `instrumentation.ts` only in the live server, never in the build workers that prerender static pages, so a call there misses every prerendered route.
 - One value per process: an app with several root layouts (route groups) makes one call, or each layout's call replaces the others' for every route.
 - Server components only: a process-wide value would differ between server rendering and the browser for client components.
+
+## Client references in server styles
+
+A `'use client'` export reaches a server component as a client reference, and a value a server action received from the client as a temporary reference. Neither carries a class on the server, and reading most properties of one throws (a module export and a temporary reference throw on almost any read; the module proxy object mints a new reference per read).
+
+- Check an interpolated value for a reference before any other read or call of it; `$$typeof` is the one property every reference reads safely. The check is `isServerOpaqueReference` in `utils/serverReference.ts`.
+- An interpolation that is or returns one stands for a server-only marker string. The node holding the marker drops before emit: a selector-list item (the rule when none is left), an at-rule or keyframes block whose name or prelude holds it, a keyframes stop (the frame when none is left), or a declaration, including one inside a keyframes frame. A standalone slot joined into the next rule's head drops only the item it joins. A dropped node never widens a selector, and a dropped `view-transition-class` or `container-name` counts as unwritten.
+- The drop follows the forgiving selector-list model (an invalid item is removed, the list stays), not the browser's unforgiving style-rule rule, which would discard the whole rule.
+- Every interpolation still evaluates; only the emitted CSS loses the node.
+- Server components only (`CAN_HOLD_REFERENCE` in `utils/serverReference.ts`): references exist only under the `react-server` condition, so plain server rendering of a client tree skips every check, and native has no server components (`docs/react-native.md` "RSC on native").
 
 ## RSC style emission and Suspense
 
