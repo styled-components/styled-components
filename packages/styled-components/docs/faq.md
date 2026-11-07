@@ -165,6 +165,10 @@ This gives you `ThemeProvider`-like cascading without React Context.
 
 When possible, define all style variants ahead-of-time using CSS selectors rather than JavaScript interpolations to avoid serialization overhead in RSC.
 
+**Referencing a client component from server styles:**
+
+A styled component defined in a `'use client'` module has no class a server component can read. When a server component's styles interpolate one (`${ClientCard}:hover &`, `@container ${ClientCard} (...)`), the selector, at-rule, or declaration holding it is left out of the server's CSS, and a development warning names the component. Everything else in the template still applies. To target it from server styles, define the styled component in a module without `'use client'`; a server component can render it and a client component can import it.
+
 ### My styles are being repeated multiple times
 
 You might notice that generating styles based on dynamic props will result in repeated CSS declarations. In other words, in the following example:

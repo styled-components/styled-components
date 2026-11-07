@@ -331,7 +331,7 @@ const PasswordInput = styled.input.attrs({
 `;
 ```
 
-The function form receives a second `ast` argument for bridging declarations or theme tokens into props on third-party components. `peek` reads a value; `pop` reads and removes it from the rendered style. Both accept either a property name or a typed dot-separated theme path. The name is the CSS property as authored on web (`accent-color`) and the camelCase style key on React Native (`accentColor`); single-word properties like `color` are the same in both:
+The function form receives a second `ast` argument for bridging declarations or theme tokens into props on third-party components. `peek` reads a value; `pop` reads and removes it from the rendered style. Both accept either a property name or a typed dot-separated theme path. A property name may be written in kebab-case (`accent-color`) or camelCase (`accentColor`) on every platform:
 
 ```tsx
 import { Path } from 'react-native-svg';

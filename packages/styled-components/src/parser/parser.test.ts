@@ -1,7 +1,7 @@
 import { SPLITTER } from '../constants';
 import { NodeKind } from './ast';
 import { resetWarnOnce } from '../utils/warnOnce';
-import { NEEDS_FIELD_SCAN, parse, splitTopLevelCommas, staysOneField } from './parser';
+import { NEEDS_FIELD_SCAN, parse, scanQPB, splitTopLevelCommas, staysOneField } from './parser';
 
 const splitSelectors = (raw: string) => splitTopLevelCommas(raw, true);
 
@@ -807,6 +807,38 @@ describe('parser', () => {
       expect(parse('content: "a\\;b";')).toEqual([
         { kind: NodeKind.Decl, prop: 'content', value: '"a\\;b"' },
       ]);
+    });
+  });
+
+  /**
+   * Syntax 3, 4.3.7 (consume an escaped code point): "Consume as many hex digits as possible,
+   * but no more than 5. Note that this means 1-6 hex digits have been consumed in total. If the
+   * next input code point is whitespace, consume it as well." and "anything else: Return the
+   * current input code point." (one character).
+   */
+  describe('scanQPB reading a CSS escape', () => {
+    const SPACE = 32;
+    const GT = 62;
+
+    it.each<[string, string, number]>([
+      ['a hex escape takes the space after it', '.\\31 0 a', 6],
+      ['six hex digits take the space after them', '\\000041 b', 9],
+      ['a seventh digit is plain text', '\\0000411 x', 8],
+      ['only one whitespace belongs to the escape', '\\31  b', 4],
+      ['a tab after a hex escape belongs to it', '\\31\tb c', 5],
+      ['an uppercase hex digit counts', '\\3A b c', 5],
+      ['a hex escape with no whitespace after it takes none', '\\31g b', 4],
+      ['an escaped character that is not hex stays two bytes', '\\g b', 2],
+      ['an escaped space is no stop', '\\ a b', 3],
+      ['a hex escape at the end leaves no stop', 'a\\31 ', 5],
+      [
+        'a hex escape in a string takes the newline after it, so the string stays open',
+        '"\\31\nb" x',
+        7,
+      ],
+      ['a backslash as the last character leaves the text open', 'a\\', 3],
+    ])('%s', (_label, text, stop) => {
+      expect(scanQPB(text, 0, text.length, SPACE, GT, -1, -1)).toBe(stop);
     });
   });
 

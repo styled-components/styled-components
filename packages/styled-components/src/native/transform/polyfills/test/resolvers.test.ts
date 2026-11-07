@@ -1,4 +1,4 @@
-import { describeOnRnWeb } from '../../describeOnRnWeb';
+import { resetWarningsForTest } from '../../dev';
 import { applyResolvers, buildResolver, escapeSentinelFallback, ResolveEnv } from '../resolvers';
 import { staticColorFunctionToHex } from '../colorMath';
 import { tokenize } from '../../tokenize';
@@ -477,21 +477,6 @@ describe('applyResolvers', () => {
 });
 
 describe('dynamic math fn resolver;calc()', () => {
-  it('resolves calc() with one sentinel arm + static', () => {
-    const r = buildResolver('calc(\0sc:space.xl:55 + 47px)')!;
-    expect(r({ ...baseEnv, theme: { space: { xl: 55 } } })).toBe(102);
-  });
-
-  it('honors theme override for the sentinel arm', () => {
-    const r = buildResolver('calc(\0sc:space.xl:55 + 47px)')!;
-    expect(r({ ...baseEnv, theme: { space: { xl: 100 } } })).toBe(147);
-  });
-
-  it('falls back to the sentinel fallback when path is missing', () => {
-    const r = buildResolver('calc(\0sc:space.xl:55 + 47px)')!;
-    expect(r({ ...baseEnv, theme: {} })).toBe(102);
-  });
-
   it('resolves calc() with env() arm + static', () => {
     const r = buildResolver('calc(env(safe-area-inset-top) + 10px)')!;
     expect(r({ ...baseEnv, insets: { top: 47, right: 0, bottom: 0, left: 0 } })).toBe(57);
@@ -517,39 +502,39 @@ describe('dynamic math fn resolver;calc()', () => {
     expect(r({ ...baseEnv, container: { width: 200, height: 100 } })).toBe(110);
   });
 
-  it('resolves calc() with two sentinel arms', () => {
-    const r = buildResolver('calc(\0sc:a:1 + \0sc:b:2)')!;
-    expect(r({ ...baseEnv, theme: { a: 5, b: 10 } })).toBe(15);
+  it('resolves calc() with two dynamic arms', () => {
+    const r = buildResolver('calc(10vw + 10vh)')!;
+    expect(r(baseEnv)).toBe(120);
   });
 
   it('resolves calc() with subtraction', () => {
-    const r = buildResolver('calc(\0sc:x:50 - 10px)')!;
-    expect(r({ ...baseEnv, theme: { x: 30 } })).toBe(20);
+    const r = buildResolver('calc(50vw - 10px)')!;
+    expect(r(baseEnv)).toBe(190);
   });
 
-  it('resolves calc() with multiplication (sentinel × scalar)', () => {
-    const r = buildResolver('calc(\0sc:x:10 * 3)')!;
-    expect(r({ ...baseEnv, theme: { x: 7 } })).toBe(21);
+  it('resolves calc() with multiplication (dynamic × scalar)', () => {
+    const r = buildResolver('calc(10vw * 3)')!;
+    expect(r(baseEnv)).toBe(120);
   });
 
   it('resolves calc() with division', () => {
-    const r = buildResolver('calc(\0sc:x:60 / 4)')!;
-    expect(r({ ...baseEnv, theme: { x: 80 } })).toBe(20);
+    const r = buildResolver('calc(100vw / 4)')!;
+    expect(r(baseEnv)).toBe(100);
   });
 
   it('honors operator precedence (* over +)', () => {
-    const r = buildResolver('calc(\0sc:x:10 + 2 * 5)')!;
-    expect(r({ ...baseEnv, theme: { x: 10 } })).toBe(20);
+    const r = buildResolver('calc(10vw + 2px * 5)')!;
+    expect(r(baseEnv)).toBe(50);
   });
 
-  it('resolves nested calc() with sentinel inner arm', () => {
-    const r = buildResolver('calc(calc(\0sc:x:10 + 5px) + 3px)')!;
-    expect(r({ ...baseEnv, theme: { x: 20 } })).toBe(28);
+  it('resolves nested calc() with a dynamic inner arm', () => {
+    const r = buildResolver('calc(calc(10vw + 5px) + 3px)')!;
+    expect(r(baseEnv)).toBe(48);
   });
 
   it('returns null for divide-by-zero', () => {
-    const r = buildResolver('calc(\0sc:x:10 / 0)')!;
-    expect(r({ ...baseEnv, theme: { x: 5 } })).toBeNull();
+    const r = buildResolver('calc(10vw / 0)')!;
+    expect(r(baseEnv)).toBeNull();
   });
 
   it('returns null for malformed calc() (missing operand)', () => {
@@ -602,52 +587,36 @@ describe('dynamic math fn resolver;calc()', () => {
   });
 
   it('still emits a runtime resolver when a calc arm is dynamic', () => {
-    // Sentinels (theme tokens), env(), light-dark(), and viewport /
-    // container units all keep the runtime resolver path because the
-    // value depends on render-time inputs that the layout engine alone
-    // can't see (theme + safe-area + viewport / container metrics).
-    expect(buildResolver('calc(\0sc:x:10px + 50%)')).not.toBeNull();
+    // env(), light-dark(), and viewport / container units all keep the
+    // runtime resolver path because the value depends on render-time
+    // inputs that the layout engine alone can't see (safe-area +
+    // viewport / container metrics).
     expect(buildResolver('calc(env(safe-area-inset-top) + 10px)')).not.toBeNull();
     expect(buildResolver('calc(50vw - 10px)')).not.toBeNull();
     expect(buildResolver('calc(50cqw + 10px)')).not.toBeNull();
   });
 
-  it('resolves unitless + % by converting % to px against the container', () => {
-    // On native, every `%` operand (literal or surfaced from a
-    // sentinel) converts to px against env.container.width or
-    // env.media.width. baseEnv.container.width = 200, so 50% = 100;
-    // adding the unitless sentinel value `10` gives 110px.
-    const r = buildResolver('calc(\0sc:x:10 + 50%)')!;
-    expect(r({ ...baseEnv, theme: { x: 10 } })).toBe(110);
-  });
-
-  it('resolves sentinel-derived % consistently with literal %', () => {
-    // Sentinel that resolves to '10%' is a Percent operand in disguise;
-    // it converts to px the same way as a literal Percent token.
-    // x='10%' → 10% of 200 = 20px; plus 5% of 200 = 10px → 30px.
-    const r = buildResolver('calc(\0sc:x:10 + 5%)')!;
-    expect(r({ ...baseEnv, theme: { x: '10%' } })).toBe(30);
+  it('resolves a dynamic arm + % by converting % to px against the container', () => {
+    // On native, every `%` operand converts to px against
+    // env.container.width or env.media.width. baseEnv.container.width =
+    // 200, so 50% = 100; adding 10vw (40px) gives 140px.
+    const r = buildResolver('calc(10vw + 50%)')!;
+    expect(r(baseEnv)).toBe(140);
   });
 });
 
 describe('dynamic math fn resolver;min / max / clamp', () => {
-  it('resolves min() with sentinel + static', () => {
-    const r = buildResolver('min(\0sc:x:100, 50px)')!;
-    expect(r({ ...baseEnv, theme: { x: 200 } })).toBe(50);
-    expect(r({ ...baseEnv, theme: { x: 30 } })).toBe(30);
-  });
-
-  it('resolves max() with sentinel + static', () => {
-    const r = buildResolver('max(\0sc:x:10, 50px)')!;
-    expect(r({ ...baseEnv, theme: { x: 100 } })).toBe(100);
-    expect(r({ ...baseEnv, theme: { x: 5 } })).toBe(50);
+  it('resolves max() with viewport + static', () => {
+    const r = buildResolver('max(10vw, 50px)')!;
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, width: 1000 } })).toBe(100);
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, width: 200 } })).toBe(50);
   });
 
   it('resolves clamp() with three resolvable arms', () => {
-    const r = buildResolver('clamp(10px, \0sc:x:50, 100px)')!;
-    expect(r({ ...baseEnv, theme: { x: 30 } })).toBe(30);
-    expect(r({ ...baseEnv, theme: { x: 5 } })).toBe(10);
-    expect(r({ ...baseEnv, theme: { x: 200 } })).toBe(100);
+    const r = buildResolver('clamp(10px, 10vw, 100px)')!;
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, width: 300 } })).toBe(30);
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, width: 50 } })).toBe(10);
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, width: 2000 } })).toBe(100);
   });
 
   it('clamp() rejects malformed arity', () => {
@@ -665,39 +634,16 @@ describe('dynamic math fn resolver;min / max / clamp', () => {
     // On native, % converts to px before unifyUnits runs, so the typed
     // unit reduces to px. baseEnv.container.width = 200; 10% = 20px;
     // min(30, 20) = 20.
-    const r = buildResolver('min(\0sc:x:50, 10%)')!;
-    expect(r({ ...baseEnv, theme: { x: 30 } })).toBe(20);
+    const r = buildResolver('min(10vw, 10%)')!;
+    expect(r(baseEnv)).toBe(20);
   });
 });
 
-describe('light-dark with sentinel branches', () => {
-  it('resolves sentinel inside light branch', () => {
-    const r = buildResolver('light-dark(\0sc:colors.bg:#fff, #111)')!;
-    expect(
-      r({
-        ...baseEnv,
-        theme: { colors: { bg: '#fafafa' } },
-        media: { ...baseEnv.media, colorScheme: 'light' },
-      })
-    ).toBe('#fafafa');
-  });
-
-  it('resolves sentinel inside dark branch', () => {
-    const r = buildResolver('light-dark(#fff, \0sc:colors.bg:#111)')!;
-    expect(
-      r({
-        ...baseEnv,
-        theme: { colors: { bg: '#222' } },
-        media: { ...baseEnv.media, colorScheme: 'dark' },
-      })
-    ).toBe('#222');
-  });
-
-  it('falls back to fallback string when sentinel path is missing', () => {
-    const r = buildResolver('light-dark(\0sc:colors.bg:#fff, #000)')!;
-    expect(r({ ...baseEnv, theme: {}, media: { ...baseEnv.media, colorScheme: 'light' } })).toBe(
-      '#fff'
-    );
+describe('light-dark with dynamic branches', () => {
+  it('resolves a dynamic branch for the active color scheme', () => {
+    const r = buildResolver('light-dark(10vw, 20vw)')!;
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, colorScheme: 'light' } })).toBe(40);
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, colorScheme: 'dark' } })).toBe(80);
   });
 
   it('keeps literal strings working unchanged', () => {
@@ -985,24 +931,6 @@ describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
     );
   });
 
-  it('accepts theme-token sentinels in branches', () => {
-    const r = buildResolver('light-dark(\0sc:colors.bg:#fff, \0sc:colors.fg:#000)')!;
-    expect(
-      r({
-        ...baseEnv,
-        theme: { colors: { bg: '#fafafa', fg: '#1a1a1a' } },
-        media: { ...baseEnv.media, colorScheme: 'light' },
-      })
-    ).toBe('#fafafa');
-    expect(
-      r({
-        ...baseEnv,
-        theme: { colors: { bg: '#fafafa', fg: '#1a1a1a' } },
-        media: { ...baseEnv.media, colorScheme: 'dark' },
-      })
-    ).toBe('#1a1a1a');
-  });
-
   // Composition / nesting (`<color>` may itself contain nested functions).
 
   it('accepts nested light-dark in a branch (recursive)', () => {
@@ -1061,40 +989,15 @@ describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
     expect(buildResolver('1px solid mylight-dark(red, blue)')).toBeNull();
   });
 
-  describeOnRnWeb(() => {
-    // Mirrors rn-web bundle (`__NATIVE_WEB__`); browsers resolve several values statically,
-    // so omit resolvers. See `describeOnRnWeb` and `resolvers.ts`. rn-web `@react-native/normalize-colors`
-    // rejects literal `light-dark(...)` strings; `buildResolver(null)` pairs with custom-property wrapping
-    // in `polyfills.test.ts`.
-
-    it('pure-static light-dark returns null so transformDecl can wrap it', () => {
-      // `buildResolver(null)`: authored `light-dark(...)` survives for CSS indirection path.
-      expect(buildResolver('light-dark(red, blue)')).toBeNull();
-      expect(buildResolver('light-dark(#fafafa, #1a1a1a)')).toBeNull();
-    });
-
-    it('dynamic light-dark (sentinel branches) still resolves at render time', () => {
-      const r = buildResolver('light-dark(\0sc:colors.bg:#fff, #111)')!;
-      const env = { ...baseEnv, theme: { colors: { bg: '#fafafa' } } };
-      expect(r(env)).toBe('#fafafa');
-      expect(r({ ...env, media: { ...env.media, colorScheme: 'dark' } })).toBe('#111');
-    });
-
-    it('rejects mixed image + color forms regardless of host', () => {
-      expect(buildResolver('light-dark(red, linear-gradient(black, white))')).toBeNull();
-    });
+  it('rejects mixed image + color forms', () => {
+    expect(buildResolver('light-dark(red, linear-gradient(black, white))')).toBeNull();
   });
 });
 
 describe('env() with resolvable fallback', () => {
-  it('returns sentinel-resolved fallback when name is unknown', () => {
-    const r = buildResolver('env(keyboard-inset-top, \0sc:space.md:16)')!;
-    expect(r({ ...baseEnv, theme: { space: { md: 24 } } })).toBe(24);
-  });
-
-  it('returns sentinel fallback default when path missing', () => {
-    const r = buildResolver('env(keyboard-inset-top, \0sc:space.md:16)')!;
-    expect(r({ ...baseEnv, theme: {} })).toBe('16');
+  it('returns the resolved dynamic fallback when name is unknown', () => {
+    const r = buildResolver('env(keyboard-inset-top, 10vw)')!;
+    expect(r(baseEnv)).toBe(40);
   });
 
   it('static fallback path still works for unknown names', () => {
@@ -1103,73 +1006,32 @@ describe('env() with resolvable fallback', () => {
   });
 
   it('safe-area-inset-* names ignore the fallback when env supplies a value', () => {
-    const r = buildResolver('env(safe-area-inset-top, \0sc:fallback:99)')!;
+    const r = buildResolver('env(safe-area-inset-top, 10vw)')!;
     expect(r({ ...baseEnv, insets: { top: 47, right: 0, bottom: 0, left: 0 } })).toBe(47);
   });
 });
 
 describe('cross-feature integrations', () => {
-  it('calc(env() + sentinel);the showcase Header pattern', () => {
-    const r = buildResolver('calc(env(safe-area-inset-top) + \0sc:space.xl:55)')!;
-    const env = {
-      ...baseEnv,
-      insets: { top: 47, right: 0, bottom: 0, left: 0 },
-      theme: { space: { xl: 55 } },
-    };
-    expect(r(env)).toBe(102);
+  it('calc(env() + viewport);the showcase Header pattern', () => {
+    const r = buildResolver('calc(env(safe-area-inset-top) + 10vw)')!;
+    const env = { ...baseEnv, insets: { top: 47, right: 0, bottom: 0, left: 0 } };
+    expect(r(env)).toBe(87);
   });
 
-  it('calc(viewport + sentinel)', () => {
-    const r = buildResolver('calc(10vw + \0sc:space.md:16)')!;
-    expect(
-      r({ ...baseEnv, media: { ...baseEnv.media, width: 500 }, theme: { space: { md: 8 } } })
-    ).toBe(58);
+  it('calc(viewport + env fallback)', () => {
+    const r = buildResolver('calc(10vw + env(keyboard-inset-top, 16px))')!;
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, width: 500 } })).toBe(66);
   });
 
-  it('clamp(sentinel, viewport, sentinel)', () => {
-    const r = buildResolver('clamp(\0sc:min:100, 50vw, \0sc:max:300)')!;
-    const env = (w: number, theme: any) => ({
-      ...baseEnv,
-      media: { ...baseEnv.media, width: w },
-      theme,
-    });
-    expect(r(env(400, { min: 100, max: 300 }))).toBe(200); // 50vw of 400 = 200
-    expect(r(env(100, { min: 100, max: 300 }))).toBe(100); // clamped low
-    expect(r(env(800, { min: 100, max: 300 }))).toBe(300); // clamped high
+  it('clamp(static, viewport, static)', () => {
+    const r = buildResolver('clamp(100px, 50vw, 300px)')!;
+    const env = (w: number) => ({ ...baseEnv, media: { ...baseEnv.media, width: w } });
+    expect(r(env(400))).toBe(200); // 50vw of 400 = 200
+    expect(r(env(100))).toBe(100); // clamped low
+    expect(r(env(800))).toBe(300); // clamped high
   });
 
-  it('boxShadow with embedded sentinel resolves to assembled string', () => {
-    const r = buildResolver('0 1px 2px \0sc:colors.shadow:#000')!;
-    expect(r({ ...baseEnv, theme: { colors: { shadow: 'rgba(0,0,0,0.4)' } } })).toBe(
-      '0 1px 2px rgba(0,0,0,0.4)'
-    );
-  });
-
-  it('boxShadow falls back to fallback when sentinel path is missing', () => {
-    const r = buildResolver('0 1px 2px \0sc:colors.shadow:#000')!;
-    expect(r({ ...baseEnv, theme: {} })).toBe('0 1px 2px #000');
-  });
-
-  it('transform with sentinel inside translateY()', () => {
-    const r = buildResolver('translateY(\0sc:space.xl:55px)')!;
-    expect(r({ ...baseEnv, theme: { space: { xl: 55 } } })).toBe('translateY(55px)');
-  });
-
-  it('multi-sentinel value (transform with two arms)', () => {
-    const r = buildResolver('translateY(\0sc:y:10px) rotate(\0sc:angle:45deg)')!;
-    expect(r({ ...baseEnv, theme: { y: '20px', angle: '90deg' } })).toBe(
-      'translateY(20px) rotate(90deg)'
-    );
-  });
-
-  it('backgroundImage linear-gradient with sentinel color stops', () => {
-    const r = buildResolver('linear-gradient(\0sc:from:red, \0sc:to:blue)')!;
-    expect(r({ ...baseEnv, theme: { from: '#fafafa', to: '#111111' } })).toBe(
-      'linear-gradient(#fafafa, #111111)'
-    );
-  });
-
-  it('templateResolver bails on JS-concat leak (47\\0sc:...) so warn fires downstream', () => {
+  it('leaves a placeholder glued to other text unresolved', () => {
     expect(buildResolver('47\0sc:space.xl:55')).toBeNull();
   });
 
@@ -1182,110 +1044,59 @@ describe('cross-feature integrations', () => {
     expect(typeof v).toBe('number');
   });
 
-  it('multi-token starting with sentinel routes to templateResolver', () => {
-    // border shorthand normally splits these into 3 props, but if a
-    // pass-through-like value lands here, templateResolver assembles it.
-    const r = buildResolver('\0sc:borderWidth:1px solid \0sc:colors.ink:#000')!;
-    expect(r({ ...baseEnv, theme: { borderWidth: '2px', colors: { ink: '#222' } } })).toBe(
-      '2px solid #222'
-    );
-  });
+  describe('color functions with dynamic channel arms', () => {
+    const atIndex = (siblingIndex: number) => ({ ...baseEnv, siblingIndex });
 
-  describe('color functions with sentinel channel arms', () => {
-    it('oklch with sentinel L channel resolves to hex via static converter', () => {
-      const r = buildResolver('oklch(\0sc:lightness:0.5 0.1 200)')!;
-      const result = r({ ...baseEnv, theme: { lightness: 0.7 } });
+    it('oklch with a sibling-index() channel resolves to hex via static converter', () => {
+      const r = buildResolver('oklch(0.5 0.1 calc(sibling-index() * 55))')!;
+      const result = r(atIndex(2));
       expect(typeof result).toBe('string');
       expect(result).toMatch(/^#[0-9a-f]{6,8}$/);
-      // Different lightness yields different hex
-      const result2 = r({ ...baseEnv, theme: { lightness: 0.3 } });
-      expect(result2).not.toBe(result);
+      // A different index yields a different hex
+      expect(r(atIndex(5))).not.toBe(result);
     });
 
-    it('oklab with all sentinel channels', () => {
-      const r = buildResolver('oklab(\0sc:l:0.5 \0sc:a:0.1 \0sc:b:-0.1)')!;
-      const result = r({ ...baseEnv, theme: { l: 0.6, a: 0.05, b: -0.05 } });
-      expect(typeof result).toBe('string');
-      expect(result).toMatch(/^#[0-9a-f]{6,8}$/);
+    it('oklab with all dynamic channels', () => {
+      const r = buildResolver(
+        'oklab(calc(sibling-index() * 0.1) calc(sibling-index() * 0.05) calc(sibling-index() * -0.05))'
+      )!;
+      expect(r(atIndex(2))).toMatch(/^#[0-9a-f]{6,8}$/);
     });
 
-    it('lch with sentinel chroma + hue', () => {
-      const r = buildResolver('lch(50% \0sc:chroma:30 \0sc:hue:240)')!;
-      expect(r({ ...baseEnv, theme: { chroma: 30, hue: 240 } })).toMatch(/^#[0-9a-f]{6,8}$/);
+    it('lch with dynamic chroma + hue', () => {
+      const r = buildResolver('lch(50% calc(sibling-index() * 10) calc(sibling-index() * 80))')!;
+      expect(r(atIndex(3))).toMatch(/^#[0-9a-f]{6,8}$/);
     });
 
-    it('lab with mixed sentinel + literal channels', () => {
-      const r = buildResolver('lab(\0sc:l:50 25 -25)')!;
-      expect(r({ ...baseEnv, theme: { l: 70 } })).toMatch(/^#[0-9a-f]{6,8}$/);
+    it('lab with mixed dynamic + literal channels', () => {
+      const r = buildResolver('lab(calc(sibling-index() * 10) 25 -25)')!;
+      expect(r(atIndex(7))).toMatch(/^#[0-9a-f]{6,8}$/);
     });
 
-    it('oklch with sentinel values uses fallback when theme is missing the path', () => {
-      const r = buildResolver('oklch(\0sc:lightness:0.6 0.1 200)')!;
-      const result = r({ ...baseEnv, theme: {} });
-      expect(typeof result).toBe('string');
-      expect(result).toMatch(/^#[0-9a-f]{6,8}$/);
-    });
-
-    it('color-mix with sentinel color args resolves to hex', () => {
-      const r = buildResolver('color-mix(in srgb, \0sc:colors.fg:#000 50%, \0sc:colors.bg:#fff)')!;
-      const result = r({ ...baseEnv, theme: { colors: { fg: '#ff0000', bg: '#00ff00' } } });
-      expect(typeof result).toBe('string');
-      expect(result).toMatch(/^#[0-9a-f]{6,8}$/);
-    });
-
-    it('color-mix with one sentinel color and one static color', () => {
-      const r = buildResolver('color-mix(in srgb, \0sc:colors.fg:#000 30%, white)')!;
-      expect(r({ ...baseEnv, theme: { colors: { fg: '#0000ff' } } })).toMatch(/^#[0-9a-f]{6,8}$/);
+    it('color-mix with a sibling-index() weight resolves to hex', () => {
+      const r = buildResolver('color-mix(in srgb, red calc(sibling-index() * 20%), blue)')!;
+      expect(r(atIndex(2))).toMatch(/^#[0-9a-f]{6,8}$/);
     });
 
     it('static-only color fns are NOT routed through the runtime path', () => {
-      // Without sentinels, templateResolver returns null because there are
-      // no segments to substitute, and colorFnResolver bails accordingly.
-      // The static fold in transformDecl handles this case.
+      // With no segments to substitute, colorFnResolver bails; the static
+      // fold in transformDecl handles this case.
       expect(buildResolver('oklch(0.5 0.1 200)')).toBeNull();
     });
 
-    it('color fn with malformed sentinel position still bails (defends against leaks)', () => {
-      // Concatenated sentinel;same leak guard as templateResolver.
-      expect(buildResolver('oklch(0.5\0sc:bad:0.1 200)')).toBeNull();
-    });
-
-    it('oklch with calc() arm containing a sentinel resolves end-to-end', () => {
-      // `oklch(calc(${t.l} + 0.1) 0.2 240)` after fill becomes
-      // `oklch(calc(\0sc:l:0.5 + 0.1) 0.2 240)`. templateResolver
-      // substitutes the sentinel inside the calc(); readChannels then
-      // folds the calc() statically.
-      const r = buildResolver('oklch(calc(\0sc:l:0.5 + 0.1) 0.2 240)')!;
-      const result = r({ ...baseEnv, theme: { l: 0.5 } });
-      expect(typeof result).toBe('string');
-      expect(result).toMatch(/^#[0-9a-f]{6,8}$/);
-    });
-
     it('oklab with min() and max() in the a/b channels', () => {
-      const r = buildResolver('oklab(\0sc:l:0.5 min(0.1, \0sc:cap:0.05) max(0, -0.05))')!;
-      const result = r({ ...baseEnv, theme: { l: 0.6, cap: 0.04 } });
-      expect(typeof result).toBe('string');
-      expect(result).toMatch(/^#[0-9a-f]{6,8}$/);
+      const r = buildResolver('oklab(0.5 min(0.1, calc(sibling-index() * 0.05)) max(0, -0.05))')!;
+      expect(r(atIndex(2))).toMatch(/^#[0-9a-f]{6,8}$/);
     });
 
     it('lch with clamp() bounding the chroma channel', () => {
-      const r = buildResolver('lch(60% clamp(0, \0sc:c:50, 100) 200)')!;
-      expect(r({ ...baseEnv, theme: { c: 50 } })).toMatch(/^#[0-9a-f]{6,8}$/);
+      const r = buildResolver('lch(60% clamp(0, calc(sibling-index() * 50), 100) 200)')!;
+      expect(r(atIndex(1))).toMatch(/^#[0-9a-f]{6,8}$/);
     });
 
-    it('color-mix with calc() percentage on the first color', () => {
-      const r = buildResolver('color-mix(in srgb, \0sc:colors.fg:#000 calc(100% - 30%), white)')!;
-      expect(r({ ...baseEnv, theme: { colors: { fg: '#0000ff' } } })).toMatch(/^#[0-9a-f]{6,8}$/);
-    });
-
-    describeOnRnWeb(() => {
-      // Wide-gamut `<color>` functions stay as authored CSS strings on rn-web (`__NATIVE_WEB__`).
-      // Sentinels only splice resolved numbers into those strings.
-      it('pure-static sentinel oklch substitutes to assembled function text (passthrough)', () => {
-        const r = buildResolver('oklch(\0sc:c.l:.7 \0sc:c.c:.2 \0sc:c.h:200)')!;
-        const env = { ...baseEnv, theme: { c: { l: '0.7', c: '0.2', h: '200' } } };
-        expect(r(env)).toBe('oklch(0.7 0.2 200)');
-      });
+    it('color-mix with a calc() percentage on the first color', () => {
+      const r = buildResolver('color-mix(in srgb, red calc(100% - sibling-index() * 10%), white)')!;
+      expect(r(atIndex(3))).toMatch(/^#[0-9a-f]{6,8}$/);
     });
   });
 
@@ -1296,10 +1107,8 @@ describe('cross-feature integrations', () => {
     // is a number for px-units, valid for color-position contexts only if
     // RN accepts it. This test asserts no crash and a real number returns
     // for the chosen branch.
-    const r = buildResolver('light-dark(calc(\0sc:x:10 + 5), 999)')!;
-    expect(
-      r({ ...baseEnv, theme: { x: 20 }, media: { ...baseEnv.media, colorScheme: 'light' } })
-    ).toBe(25);
+    const r = buildResolver('light-dark(calc(10vw + 5px), 999)')!;
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, colorScheme: 'light' } })).toBe(45);
   });
 });
 
@@ -1621,6 +1430,149 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
       expect(buildResolver('calc(0 + 5px)')).toBeNull();
     });
 
+    // Spec §10.9: "At a + or - sub-expression, attempt to add the types of
+    // the left and right arguments. If this returns failure, the entire
+    // calculation's type is failure." sibling-index() is a <number>, so
+    // adding a <length> fails and the declaration yields no value. sibling-index()
+    // is a <number> whatever the tree, so the type is known when the resolver would be built.
+    it.each([
+      'calc(sibling-index() + 5px)',
+      'calc(5px - sibling-index())',
+      'calc(calc(sibling-index() * 2) + 5px)',
+      'calc(min(sibling-index(), 4) - 5px)',
+    ])('builds no resolver for a <number> added to a <length>: %s', value => {
+      expect(buildResolver(value)).toBeNull();
+    });
+
+    // "For each of the above, if the type is failure, the math function is invalid."
+    // attr() reads a prop, so its type is known only at render. The mismatch drops the
+    // declaration then, and says so once in development.
+    it.each([
+      ['calc(attr(data-n number) + 5px)', '"number" with a "length"'],
+      ['calc(5px - attr(data-n number))', '"length" with a "number"'],
+      ['min(attr(data-n number), 5px)', '"number" with a "length"'],
+      ['calc(attr(data-n number) * attr(data-n number) + 5px)', '"number" with a "length"'],
+      ['calc(attr(data-n px) * attr(data-n px))', '"length" with a "length"'],
+    ])('drops %s at render with one development warning', (value, combined) => {
+      resetWarningsForTest();
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        const r = buildResolver(value, 'width')!;
+        const env = { ...baseEnv, props: { 'data-n': 3 } };
+        expect(r(env)).toBeNull();
+        expect(r(env)).toBeNull();
+        expect(warn.mock.calls.map(call => String(call[0]).split('\n')[0])).toEqual([
+          `[sc] a math function combines a ${combined}, which CSS does not allow, so the declaration was ignored. Give every operand the same type.`,
+        ]);
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it('stays quiet when the attr() prop is missing', () => {
+      resetWarningsForTest();
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        expect(buildResolver('calc(attr(data-n number) + 5px)', 'width')!(baseEnv)).toBeNull();
+        expect(warn).not.toHaveBeenCalled();
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it('adds a nested runtime <length> to a <length>: calc(calc(sibling-index() * 2px) + 5px) = 11px', () => {
+      const r = buildResolver('calc(calc(sibling-index() * 2px) + 5px)')!;
+      expect(r({ ...baseEnv, siblingIndex: 3 })).toBe(11);
+    });
+
+    // Spec §10.9: "At a * sub-expression, multiply the types of the left and
+    // right arguments." The operand of + is the product, not the token beside
+    // the operator, so these add a <length> to a <length> and a <number> to a
+    // <number>.
+    it.each([
+      ['calc(sibling-index() * 4px * 2 + 1px)', 25],
+      ['calc(sibling-index() * 10px / 5px + 1)', 7],
+    ])('types a + operand by its whole product: %s = %s', (value, expected) => {
+      const r = buildResolver(value)!;
+      expect(r({ ...baseEnv, siblingIndex: 3 })).toBe(expected);
+    });
+
+    // Spec §10.2: "For all three functions, the argument calculations can
+    // resolve to any <number>, <dimension>, or <percentage>, but must have a
+    // consistent type or else the function is invalid; the result's type will
+    // be the consistent type." A <number> and a <length> have no consistent
+    // type, so the declaration yields no value.
+    it.each([
+      'min(sibling-index(), 5px)',
+      'max(5px, sibling-index())',
+      'clamp(1, sibling-index(), 5px)',
+      'clamp(none, sibling-index(), 5px)',
+      'min(1, 5px)',
+    ])(
+      'builds no resolver for a <number> mixed with a <length> in min()/max()/clamp(): %s',
+      value => {
+        expect(buildResolver(value)).toBeNull();
+      }
+    );
+
+    it.each([
+      ['min(sibling-index(), 4)', 3],
+      ['clamp(1, sibling-index(), 5)', 3],
+      ['min(10px, 50px)', 10],
+      ['clamp(10px, 10vw, 100px)', 40],
+    ])('accepts min()/max()/clamp() arguments of consistent type: %s = %d', (value, expected) => {
+      const r = buildResolver(value)!;
+      expect(r({ ...baseEnv, siblingIndex: 3 })).toBe(expected);
+    });
+
+    // Spec §10.9: "At a * sub-expression, multiply the types of the left and
+    // right arguments. The sub-expression's type is the returned result."
+    it('accepts a runtime <number> times a <length>: calc(sibling-index() * 5px) = 15px', () => {
+      const r = buildResolver('calc(sibling-index() * 5px)')!;
+      expect(r({ ...baseEnv, siblingIndex: 3 })).toBe(15);
+    });
+
+    // "At a * sub-expression, multiply the types of the left and right
+    // arguments. The sub-expression's type is the returned result." A
+    // <length> times a <length> is «[ "length" → 2 ]», a type no property
+    // accepts: "the width property accepts <length> values, so a math
+    // function that resolves to a <length>, such as calc(5px + 1em), can be
+    // used in width." Deviation: the draft also allows length² as an
+    // intermediate (calc(5px * 5px / 1px) is a <length>); the polyfill tracks
+    // one unit per operand, so any <length> * <length> is invalid.
+    it.each(['calc(5px * 5px)', 'calc(5px * sibling-index() * 5px)'])(
+      'rejects a <length> times a <length>: %s',
+      value => {
+        const r = buildResolver(value);
+        expect(r === null ? null : r({ ...baseEnv, siblingIndex: 3 })).toBeNull();
+      }
+    );
+
+    // "At a / sub-expression, let left type be the result of finding the
+    // types of its left argument, and right type be the result of finding
+    // the types of its right argument and then inverting it. The
+    // sub-expression's type is the result of multiplying the left type and
+    // right type." «[ "length" → 1 ]» times the inverse of «[ "length" → 1 ]»
+    // is «[ ]», a <number>; a <number> over a <length> is «[ "length" → -1 ]»,
+    // which no property accepts; a <length> over a <number> stays a <length>.
+    it.each([
+      ['calc(10px / 2px)', 5],
+      ['calc(10px / 2px * 3px)', 15],
+      ['calc(sibling-index() * 10px / 2px)', 15],
+      ['calc(10px / 4)', 2.5],
+    ])('divides by the divisor type: %s = %d', (value, expected) => {
+      const r = buildResolver(value)!;
+      expect(r({ ...baseEnv, siblingIndex: 3 })).toBe(expected);
+    });
+
+    it.each(['calc(10 / 2px)', 'calc(sibling-index() / 2px)', 'calc(10px / 2px / 2px)'])(
+      'rejects a <number> divided by a <length>: %s',
+      value => {
+        const r = buildResolver(value);
+        expect(r === null ? null : r({ ...baseEnv, siblingIndex: 3 })).toBeNull();
+      }
+    );
+
     it('accepts 0px + 5px (both <length>): calc(0px + 5px) = 5px', () => {
       const r = buildResolver('calc(0px + 5px)')!;
       expect(r(baseEnv)).toBe(5);
@@ -1695,24 +1647,6 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
           media: { ...baseEnv.media, width: 0 },
         })
       ).toBeNull();
-    });
-  });
-
-  describeOnRnWeb(() => {
-    // CSS Values §10 (calc/min/max/clamp): browsers resolve percentages against real layouts.
-    // Return null resolver so stylesheet text stays intact unless a sentinel needs substitution.
-    it('passes through static-mixed-unit calc/clamp/min/max expressions raw', () => {
-      expect(buildResolver('calc(33% - 5px)')!(baseEnv)).toBe('calc(33% - 5px)');
-      expect(buildResolver('clamp(10px, 50%, 100px)')!(baseEnv)).toBe('clamp(10px, 50%, 100px)');
-    });
-
-    it('still substitutes sentinels in calc arms that need runtime values', () => {
-      const r = buildResolver('calc(\0sc:gap:10 + 5px)')!;
-      expect(r({ ...baseEnv, theme: { gap: 12 } })).toBe(17);
-    });
-
-    it('rejects malformed calc so nothing invalid reaches CSS', () => {
-      expect(buildResolver('calc(10px +)')).toBeNull();
     });
   });
 });
@@ -1843,16 +1777,8 @@ describe('env() spec compliance (CSS Environment Variables Level 1 §3)', () => 
     });
   });
 
-  describeOnRnWeb(() => {
-    // `buildResolver('env(...)')` is not gated behind `__NATIVE_WEB__`;
-    // safe-area substitutions still read ResolveEnv.insets on rn-web.
-    it('parity: safe-area-inset-top resolves from env.insets', () => {
-      expect(buildResolver('env(safe-area-inset-top)')!(baseEnv)).toBe(44);
-    });
-
-    it('parity: unknown UA name + px fallback substitutes the fallback', () => {
-      expect(buildResolver('env(keyboard-height, 20px)')!(baseEnv)).toBe(20);
-    });
+  it('unknown UA name + px fallback substitutes the fallback', () => {
+    expect(buildResolver('env(keyboard-height, 20px)')!(baseEnv)).toBe(20);
   });
 });
 
@@ -1980,18 +1906,6 @@ describe('container units spec compliance (CSS Conditional 5 §7)', () => {
       // min(150, 100cqmin=100) = 100
       const r = buildResolver('min(150px, 100cqmin)')!;
       expect(r(baseEnv)).toBe(100);
-    });
-  });
-
-  describeOnRnWeb(() => {
-    // Viewport-relative units bypass resolvers on rn-web (`buildResolver → null`).
-    // Container cq* still resolve numerically against the RN layout probe.
-    it('parity: cqw resolves against registered container width', () => {
-      expect(buildResolver('50cqw')!(baseEnv)).toBe(100);
-    });
-
-    it('parity: cqmin resolves against smaller of cqi / cqb', () => {
-      expect(buildResolver('100cqmin')!(baseEnv)).toBe(100);
     });
   });
 });
@@ -2142,21 +2056,6 @@ describe('viewport units spec compliance (CSS Values Level 4 §6.1.2)', () => {
     it('vmin inside min', () => {
       // min(500, 50vmin=200) = 200
       expect(buildResolver('min(500px, 50vmin)')!(baseEnv)).toBe(200);
-    });
-  });
-
-  describeOnRnWeb(() => {
-    it('passes through static viewport values without a resolver', () => {
-      // Returning null from buildResolver leaves the raw `<n><unit>` in
-      // base so react-native-web forwards it to CSS unchanged. The browser
-      // distinguishes dvh / svh / lvh per CSS Values 4 §6.1.2.2.
-      expect(buildResolver('100vw')).toBeNull();
-      expect(buildResolver('100vh')).toBeNull();
-      expect(buildResolver('100dvh')).toBeNull();
-      expect(buildResolver('100svh')).toBeNull();
-      expect(buildResolver('100lvh')).toBeNull();
-      expect(buildResolver('50vmin')).toBeNull();
-      expect(buildResolver('50vmax')).toBeNull();
     });
   });
 });
@@ -2496,6 +2395,55 @@ describe('attr() spec compliance (CSS Values 5 §8.7)', () => {
     });
   });
 
+  describe('math operand types', () => {
+    // css-values-5: "If given as an <attr-unit> value, the value is first
+    // parsed as if number keyword was specified; if this fails to parse, it
+    // triggers fallback. Then, if the <attr-unit> value matches a known CSS
+    // unit name or is %, the number is turned into a dimension or
+    // percentage with that value and the given unit."
+    // css-values-4: "<length> the type is «[ "length" → 1 ]»"; "<number>
+    // <integer> the type is «[ ]» (empty map)". So px and type(<length>)
+    // operands are <length>s that add to a <length>.
+    it.each([
+      ['calc(attr(data-size px) + 5px)', '10'],
+      ['calc(attr(data-size type(<length>)) + 5px)', '10px'],
+    ])('a <length> attr() adds to a <length>: %s', (value, text) => {
+      const r = buildResolver(value)!;
+      expect(r(withProps({ 'data-size': 10 }))).toBe(15);
+      expect(r(withProps({ 'data-size': text }))).toBe(15);
+    });
+
+    // css-values-5: "If given as the number keyword, it causes the
+    // attribute's literal value, after stripping leading and trailing
+    // whitespace, to be parsed as a <number-token>." A <number> plus a
+    // <length> is a type failure ("add the types of the left and right
+    // arguments. If this returns failure, the entire calculation's type is
+    // failure").
+    it.each(['calc(attr(data-size number) + 5px)', 'calc(attr(data-size type(<number>)) + 5px)'])(
+      'a <number> attr() does not add to a <length>: %s',
+      value => {
+        const r = buildResolver(value)!;
+        expect(r(withProps({ 'data-size': 10 }))).toBeNull();
+      }
+    );
+
+    it('a <length> attr() times a <length> is invalid: calc(attr(data-size px) * 5px)', () => {
+      const r = buildResolver('calc(attr(data-size px) * 5px)')!;
+      expect(r(withProps({ 'data-size': 10 }))).toBeNull();
+    });
+
+    it('a <number> attr() times a <length> is a <length>: calc(attr(data-size number) * 5px)', () => {
+      const r = buildResolver('calc(attr(data-size number) * 5px)')!;
+      expect(r(withProps({ 'data-size': 10 }))).toBe(50);
+    });
+
+    // A <length> over a <length> is a <number>, which adds to a <number>.
+    it('a <length> attr() over a <length> is a <number>: calc(1 + attr(data-size px) / 5px)', () => {
+      const r = buildResolver('calc(1 + attr(data-size px) / 5px)')!;
+      expect(r(withProps({ 'data-size': 10 }))).toBe(3);
+    });
+  });
+
   describe('grammar edges', () => {
     it('namespaced attr names are not supported (deviation: invalidates)', () => {
       expect(buildResolver('attr(svg|width px, 0px)')).toBeNull();
@@ -2506,5 +2454,176 @@ describe('attr() spec compliance (CSS Values 5 §8.7)', () => {
       expect(r(withProps({ 'data-size': '12' }))).toBe(24);
       expect(r(withProps({}))).toBe(80);
     });
+
+    // css-values-5: "<declaration-value> Specifies a fallback value for the
+    // attr(), which will be substituted instead of the attribute’s value if
+    // the attribute is missing or fails to parse as the specified type." The
+    // fallback's tokens are substituted, so its type is its own text's: 40px
+    // adds to a <length>, 4 does not.
+    it('types a fallback by its own text inside calc()', () => {
+      expect(buildResolver('calc(attr(data-size px, 40px) + 5px)')!(withProps({}))).toBe(45);
+      expect(buildResolver('calc(attr(data-size px, 4) + 5px)')!(withProps({}))).toBeNull();
+    });
+
+    // The same rule types a fallback that is itself an expression: the type of
+    // the expression it builds ("<number> <integer> the type is «[ ]»",
+    // "<length> the type is «[ "length" → 1 ]»", and the type of a * or /
+    // sub-expression from its two sides).
+    it.each([
+      // <number> + <length> is a type failure
+      ['calc(attr(data-size number, sibling-index()) + 5px)', { siblingIndex: 3 }, null],
+      ['calc(attr(data-size px, calc(2 * 3)) + 5px)', {}, null],
+      ['calc(attr(data-size px, 1 + 2) + 5px)', {}, null],
+      // a <length>
+      ['calc(attr(data-size px, calc(2px * 3)) + 5px)', {}, 11],
+      ['calc(attr(data-size px, 2em) + 5px)', {}, 37],
+      ['calc(attr(data-size px, 20px / 4) + 5px)', {}, 10],
+      // a <number> times a <length> is a <length>
+      ['calc(attr(data-size number, sibling-index()) * 5px)', { siblingIndex: 3 }, 15],
+      ['calc(attr(data-size number, sibling-index()) * 5px + 1px)', { siblingIndex: 3 }, 16],
+      // a present, valid attribute is typed by the attr() type, not the fallback
+      ['calc(attr(data-size px, 4) + 5px)', { props: { 'data-size': 10 } }, 15],
+    ])('types the fallback of %s by its own expression', (value, extra, expected) => {
+      const env: ResolveEnv = { ...baseEnv, props: {}, ...extra };
+      expect(buildResolver(value)!(env)).toBe(expected);
+    });
+  });
+});
+
+// https://drafts.csswg.org/css-values-4/#calc-range (editor's draft, 10.12 Range Checking)
+//
+// "As the value of a numeric function can’t, generally, be known at parse time when range
+// restrictions are enforced, numeric functions returning out-of-range values never cause a
+// declaration to become invalid. Instead, the value of a numeric function is clamped to the
+// range allowed in the context it is used at computed value time if possible, and at used
+// value time otherwise. Similarly, if a numeric function returns a non-integer value, but is
+// used in a position that expects an <integer>, the computed value and used value are rounded
+// to the nearest integer."
+//
+// The Value lines that give each range are quoted above the rows in polyfills.test.ts,
+// "§10.12 range checking"; these rows run the render-time resolver the declaration builds
+// when an operand (em, viewport units) is only known at render time, or when a shorthand
+// keeps its math text for the resolver.
+describe('math results at render time are clamped to the range of the property (CSS Values 4 §10.12)', () => {
+  // 1em is 20, so every calc below is -10 before range checking.
+  const env: ResolveEnv = { ...baseEnv, fontSize: 20 };
+  const resolve = (value: string, prop?: string) => buildResolver(value, prop)!(env);
+
+  it.each([
+    'width',
+    'height',
+    'minWidth',
+    'minHeight',
+    'maxWidth',
+    'maxHeight',
+    'inlineSize',
+    'blockSize',
+    'minInlineSize',
+    'minBlockSize',
+    'maxInlineSize',
+    'maxBlockSize',
+    'padding',
+    'paddingTop',
+    'paddingRight',
+    'paddingBottom',
+    'paddingLeft',
+    'paddingStart',
+    'paddingEnd',
+    'paddingHorizontal',
+    'paddingVertical',
+    'paddingBlock',
+    'paddingBlockStart',
+    'paddingBlockEnd',
+    'paddingInline',
+    'paddingInlineStart',
+    'paddingInlineEnd',
+    'gap',
+    'rowGap',
+    'columnGap',
+    'borderWidth',
+    'borderTopWidth',
+    'borderRightWidth',
+    'borderBottomWidth',
+    'borderLeftWidth',
+    'borderStartWidth',
+    'borderEndWidth',
+    'borderRadius',
+    'borderTopLeftRadius',
+    'borderTopRightRadius',
+    'borderBottomLeftRadius',
+    'borderBottomRightRadius',
+    'borderStartStartRadius',
+    'borderStartEndRadius',
+    'borderEndStartRadius',
+    'borderEndEndRadius',
+    'borderTopStartRadius',
+    'borderTopEndRadius',
+    'borderBottomStartRadius',
+    'borderBottomEndRadius',
+    'outlineWidth',
+    'flexGrow',
+    'flexShrink',
+    'flexBasis',
+    'fontSize',
+    'lineHeight',
+  ])('%s: a result below zero clamps to 0', prop => {
+    expect(resolve('calc(1em - 30px)', prop)).toBe(0);
+    expect(resolve('max(1em - 30px, -50px)', prop)).toBe(0);
+  });
+
+  it('a result inside the range is untouched', () => {
+    expect(resolve('calc(1em + 30px)', 'width')).toBe(50);
+    expect(resolve('calc(1em + 30px)', 'paddingTop')).toBe(50);
+  });
+
+  it('a pure-percentage result below zero clamps to 0%', () => {
+    expect(resolve('calc(10% - 30%)', 'width')).toBe('0%');
+    expect(resolve('calc(50% - 10%)', 'width')).toBe('40%');
+  });
+
+  it('opacity clamps to [0,1]', () => {
+    expect(resolve('calc(1em / 10px)', 'opacity')).toBe(1);
+    expect(resolve('calc(1em - 30px)', 'opacity')).toBe(0);
+    expect(resolve('calc(1em / 40px)', 'opacity')).toBe(0.5);
+  });
+
+  it('font-weight clamps to [1,1000]', () => {
+    expect(resolve('calc(1em * 100)', 'fontWeight')).toBe(1000);
+    expect(resolve('calc(1em - 30px)', 'fontWeight')).toBe(1);
+    expect(resolve('calc(1em * 20)', 'fontWeight')).toBe(400);
+  });
+
+  it('z-index rounds to the nearest integer and has no bound', () => {
+    expect(resolve('calc(1em / 3px)', 'zIndex')).toBe(7);
+    expect(resolve('calc(1em / 6px)', 'zIndex')).toBe(3);
+    expect(resolve('calc(1em - 30px)', 'zIndex')).toBe(-10);
+  });
+
+  it.each(['marginTop', 'top', 'letterSpacing', 'outlineOffset'])(
+    '%s has no range and keeps a negative result',
+    prop => {
+      expect(resolve('calc(1em - 30px)', prop)).toBe(-10);
+    }
+  );
+
+  it('a declaration whose property is not known keeps a negative result', () => {
+    expect(resolve('calc(1em - 30px)')).toBe(-10);
+  });
+
+  // The clamp applies to the root of the calculation only: "the value of a numeric function is
+  // clamped to the range allowed in the context it is used", so an inner calc() that is
+  // negative still contributes its negative value to the sum.
+  it('clamps the root and not a nested function: calc(calc(1em - 30px) + 15px)', () => {
+    expect(resolve('calc(calc(1em - 30px) + 15px)', 'width')).toBe(5);
+    expect(resolve('calc(min(1em - 30px, 0px) + 15px)', 'width')).toBe(5);
+  });
+
+  // Each of these re-enters value resolution for the property they stand in.
+  it.each([
+    'light-dark(calc(1em - 30px), 5px)',
+    'env(not-a-name, calc(1em - 30px))',
+    'attr(data-size px, calc(1em - 30px))',
+  ])('clamps a math result inside %s', value => {
+    expect(resolve(value, 'width')).toBe(0);
   });
 });

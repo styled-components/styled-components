@@ -36,8 +36,6 @@ import { TokenStream } from '../tokenStream';
  * *curved* corners for different curves cannot be applied truthfully and
  * drops with a warning. Mixing `square` with one curve is fine, because the
  * square corners are expressed as radii instead of as a curve.
- *
- * rn-web passes the raw value through: Chrome 139+ ships `corner-shape`.
  */
 
 // Contours RN can draw, expressed as their borderCurve target.
@@ -134,12 +132,6 @@ export function cornerShapeShorthand(tokens: Token[]): Dict<unknown> | null {
   if (values.length === 0 || values.length > 4) return null;
 
   const raw = values.map(t => t.raw).join(' ');
-
-  if (__NATIVE_WEB__) {
-    // Chrome 139+ renders corner-shape natively; pass the authored value
-    // straight through and let the browser draw the contour.
-    return { cornerShape: raw };
-  }
 
   const resolved: Treatment[] = [];
   let hasUnsupportedCorner = false;

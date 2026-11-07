@@ -5,6 +5,7 @@ import hyphenate from './hyphenateStyleName';
 import isFunction from './isFunction';
 import isPlainObject from './isPlainObject';
 import { normalize } from './normalize';
+import { CAN_HOLD_REFERENCE, isServerOpaqueReference, referenceText } from './serverReference';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -27,8 +28,9 @@ export interface ObjectTemplate {
  * One walk serves both object entry points. Primitives format inline through
  * `write`; nested plain objects become nested rules whose key is the raw
  * selector text (so `&:hover`, `@media (...)`, etc. round-trip unchanged); a
- * function or `css\`...\`` fragment at value position goes to `slot`, which
- * returns `false` to abandon the walk. A primitive that would not stay one field
+ * function, a `css\`...\`` fragment, or (in a server build) a client or temporary
+ * reference at value position goes to `slot`, which returns `false` to abandon
+ * the walk. A reference is never called. A primitive that would not stay one field
  * in the text (including a `//` that reads as a comment to the end of the text,
  * and a NUL, which reads as a slot) also goes to `slot`, so it reads as a value
  * rather than as authored CSS.
@@ -45,7 +47,12 @@ function walkStyleObject(
   for (const key in obj) {
     if (!hasOwn.call(obj, key)) continue;
     let val: unknown = obj[key];
-    while (isFunction(val) && fillContext !== undefined) {
+    // A reference is never called: it throws on the server.
+    while (
+      isFunction(val) &&
+      fillContext !== undefined &&
+      !(CAN_HOLD_REFERENCE && isServerOpaqueReference(val))
+    ) {
       val = (val as (ctx: unknown) => unknown)(fillContext);
     }
     if (val === undefined || val === null || val === false || val === '') continue;
@@ -53,7 +60,11 @@ function walkStyleObject(
       write(key + '{');
       if (!walkStyleObject(val as Record<string, unknown>, write, slot, fillContext)) return false;
       write('}');
-    } else if (isFunction(val) || isCssProduct(val)) {
+    } else if (
+      isFunction(val) ||
+      isCssProduct(val) ||
+      (CAN_HOLD_REFERENCE && isServerOpaqueReference(val))
+    ) {
       write(hyphenate(key) + ':');
       if (!slot(val)) return false;
       write(';');
@@ -122,8 +133,13 @@ export function objectToCSS(obj: Record<string, unknown>, fillContext?: unknown)
       css += text;
     },
     value => {
-      if (typeof value !== 'string') return false;
-      css += wholeStatements(value);
+      if (typeof value === 'string') {
+        css += wholeStatements(value);
+        return true;
+      }
+      if (!(CAN_HOLD_REFERENCE && isServerOpaqueReference(value))) return false;
+
+      css += referenceText(value);
       return true;
     },
     fillContext

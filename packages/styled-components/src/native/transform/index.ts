@@ -1,18 +1,31 @@
 import { Dict } from '../../types';
 import * as $ from '../../utils/charCodes';
-import { warnIfAndroidSkew, warnIfIosGatedFilter, warnIfIosVerticalAlign, warnOnce } from './dev';
+import { camelize } from '../camelize';
 import {
-  collapseIdenticalCommas,
+  runWithWarningsSuppressed,
+  warnIfAndroidSkew,
+  warnIfIosGatedFilter,
+  warnIfIosVerticalAlign,
+  warnOnce,
+} from './dev';
+import {
   getPassthroughKeys,
-  isLayeredCommaProp,
-  isMultiTokenPosition,
   isValidLayeredBackgroundValue,
   normalizeBackgroundPositionValue,
   substituteBackgroundSizeKeywordsForNative,
 } from './passthrough';
 import { hasRelativeFromPrefix, staticColorFunctionToHex } from './polyfills/colorMath';
-import { numericResultToRn, resolveStaticMathFunction } from './polyfills/mathFns';
-import { buildResolver } from './polyfills/resolvers';
+import {
+  clampNumericResult,
+  mathRangeOf,
+  numericResultToRn,
+  resolveStaticMathFunction,
+} from './polyfills/mathFns';
+import {
+  buildResolver,
+  findThemePlaceholders,
+  mentionsUnsupportedMathKeyword,
+} from './polyfills/resolvers';
 import { getSystemColorPlatformColor } from './polyfills/systemColors';
 import { getShorthand } from './shorthands';
 import { tokenize } from './tokenize';
@@ -22,49 +35,6 @@ import { maybeExpandBackgroundImageSystemColors } from './backgroundGradientNati
 import { maybeExpandBoxShadowSystemColors } from './boxShadowSystemColors';
 import { maybeExpandFilterDropShadowSystemColors } from './filterSystemColors';
 import { coerceRawValue } from './units';
-
-/**
- * Camelize a CSS property name. Custom properties (`--var-name`) pass
- * through unchanged. Vendor prefixes (`-webkit-*`, `-ms-*`) are stripped
- * entirely; they never apply to RN, and the remaining name is
- * camelized.
- *
- * Hot-path; cached per-process. Uses a prototypeless object instead of
- * Map; for short string keys with high hit rate (prop names recur across
- * every styled component), V8 inline-caches dictionary access faster than
- * Map.get's getter-call. The `null` sentinel distinguishes "no entry" from
- * "value is undefined" (which can't happen here, but being explicit costs
- * nothing).
- */
-const camelCache: Record<string, string> = Object.create(null);
-export function camelize(prop: string): string {
-  const hit = camelCache[prop];
-  if (hit !== undefined) return hit;
-  // Custom properties are returned as-is (the parser may pass `--foo`)
-  if (prop.length > 1 && prop.charCodeAt(0) === $.HYPHEN && prop.charCodeAt(1) === $.HYPHEN) {
-    camelCache[prop] = prop;
-    return prop;
-  }
-  let out = '';
-  let toUpper = false;
-  let i = 0;
-  // Strip vendor prefix
-  if (prop.charCodeAt(0) === $.HYPHEN) {
-    const end = prop.indexOf('-', 1);
-    if (end !== -1) i = end + 1;
-  }
-  for (; i < prop.length; i++) {
-    const c = prop.charCodeAt(i);
-    if (c === $.HYPHEN) {
-      toUpper = true;
-      continue;
-    }
-    out += toUpper ? prop[i].toUpperCase() : prop[i];
-    toUpper = false;
-  }
-  camelCache[prop] = out;
-  return out;
-}
 
 // Side-effect import; populates the shorthand registry. Kept separate
 // so the registry module and the shorthand modules can tree-shake
@@ -78,24 +48,6 @@ import './shorthands.register';
 // listed fall through to `{ [passthroughKeys[0]]: value }`.
 type SinglePassthroughHandler = (value: string, rawValue: string) => Dict<unknown>;
 const SINGLE_PASSTHROUGH_HANDLERS: Record<string, SinglePassthroughHandler> = {
-  verticalAlign: value => {
-    // rn-web Text defaults to `display: inline`, where height is a no-op
-    // and vertical-align is inert inside flex parents; the align-content
-    // companion realizes the alignment there (flex-prefixed keywords only;
-    // rn-web's Flow types reject the bare `start` / `end` forms).
-    if (__NATIVE_WEB__) {
-      const alignContent =
-        value === 'top'
-          ? 'flex-start'
-          : value === 'middle'
-            ? 'center'
-            : value === 'bottom'
-              ? 'flex-end'
-              : null;
-      if (alignContent !== null) return { alignContent, verticalAlign: value };
-    }
-    return { verticalAlign: value };
-  },
   boxShadow: value => ({ boxShadow: maybeExpandBoxShadowSystemColors(value) }),
   filter: value => ({ filter: maybeExpandFilterDropShadowSystemColors(value) }),
   // Android has no isolation style key; the platform primitive that forces
@@ -103,16 +55,11 @@ const SINGLE_PASSTHROUGH_HANDLERS: Record<string, SinglePassthroughHandler> = {
   // against the group, not the page) is the hardware-texture layer. iOS
   // drops the Android-suffixed prop and consumes the style key instead.
   isolation: value =>
-    !__NATIVE_WEB__ && value === 'isolate'
+    value === 'isolate'
       ? { isolation: value, renderToHardwareTextureAndroid: true }
       : { isolation: value },
-  // Dual-emit so RN Text honors the cascade. rn-web rejects `direction` as
-  // a style key; the `dir` prop lift feeds its LocaleContext instead so
-  // descendants and BiDi-aware text-align resolve against the new value.
-  direction: value =>
-    __NATIVE_WEB__
-      ? { dir: value, writingDirection: value }
-      : { direction: value, writingDirection: value },
+  // Dual-emit so RN Text honors the cascade.
+  direction: value => ({ direction: value, writingDirection: value }),
 };
 
 /**
@@ -128,15 +75,72 @@ const SINGLE_PASSTHROUGH_HANDLERS: Record<string, SinglePassthroughHandler> = {
  *    a `'N%'` string.
  * 5. Otherwise → coerce the value (`10px` → `10`, keep percent strings,
  *    etc.) and emit `{ [prop]: coerced }`.
+ *
+ * A createTheme placeholder whose theme value is not text may remain only as
+ * the whole value of a color key; anywhere else the declaration reads as if
+ * the placeholder held its default text, with a dev warning.
  */
 export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
+  if (rawValue.indexOf('\0') === -1) return transformValue(prop, rawValue);
+  return transformWithPlaceholders(prop, rawValue);
+}
+
+const isColorKey = (key: string): boolean => key === 'color' || key.endsWith('Color');
+
+function isEmpty(dict: Dict<unknown>): boolean {
+  for (const _key in dict) return false;
+  return true;
+}
+
+/**
+ * Settles the createTheme placeholders in `rawValue`. A probe transform finds
+ * which ones end up as the whole value of a color key; each other one (all of
+ * them when the probe drops the declaration) is replaced by its default text
+ * before the declaration is transformed for real. The probe runs silent, so a
+ * warning never shows placeholder bytes.
+ */
+function transformWithPlaceholders(prop: string, rawValue: string): Dict<unknown> {
+  const parts = findThemePlaceholders(rawValue);
+  if (parts.length === 0) return transformValue(prop, rawValue);
+
+  const probe = runWithWarningsSuppressed(() => transformValue(prop, rawValue));
+  const dropped = isEmpty(probe);
+  let text = '';
+  let copied = 0;
+  for (let i = 0; i < parts.length; i++) {
+    const { end, fallback, keys, start } = parts[i];
+    const placeholder = rawValue.slice(start, end);
+    let wholeColor = false;
+    if (!dropped) {
+      for (const key in probe) {
+        if (isColorKey(key) && probe[key] === placeholder) wholeColor = true;
+      }
+    }
+    if (wholeColor) continue;
+
+    if (__DEV__) {
+      const path = keys.join('.');
+      warnOnce(
+        'native-theme-value-not-text',
+        `The theme value at \`${path}\` is not text, so \`${prop}\` uses its default, "${fallback}". A theme value that is not text (a platform color, for example) works only as a whole color value, such as \`color\` or \`border-color\`. Give \`${prop}\` a text value, or set the platform color on a color property of its own.`,
+        path + ':' + prop
+      );
+    }
+    text += rawValue.slice(copied, start) + fallback;
+    copied = end;
+  }
+  if (copied === 0) return __DEV__ ? transformValue(prop, rawValue) : probe;
+  return transformValue(prop, text + rawValue.slice(copied));
+}
+
+function transformValue(prop: string, rawValue: string): Dict<unknown> {
   const camel = camelize(prop);
 
   // System color keywords. Route through PlatformColor so iOS / Android
   // use semantic colors. `accentColor` skips here so its handler can
   // lift `trackColor.true` from the original keyword.
   if (
-    (camel === 'color' || camel.endsWith('Color')) &&
+    isColorKey(camel) &&
     camel !== 'accentColor' &&
     rawValue.length > 0 &&
     rawValue.indexOf(' ') === -1 &&
@@ -150,21 +154,14 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
 
   // `z-index: auto`: RN's zIndex prop is a plain number (Android Fabric
   // throws casting a string), and an absent zIndex is exactly the `auto`
-  // behavior, so the declaration drops on native. The browser implements
-  // `auto` natively.
-  if (camel === 'zIndex' && rawValue.trim() === 'auto') {
-    if (__NATIVE_WEB__) return { zIndex: 'auto' };
-    return {};
-  }
+  // behavior, so the declaration drops.
+  if (camel === 'zIndex' && rawValue.trim() === 'auto') return {};
 
   // `order`: browsers reorder flex/grid items visually without touching
   // source order. React Native's Yoga has no equivalent; children render
-  // in JSX order regardless. On rn-web the browser handles it; on native
-  // we drop it and tell the developer how to reorder for real.
+  // in JSX order regardless, so the declaration drops with a hint on how to
+  // reorder for real.
   if (camel === 'order') {
-    if (__NATIVE_WEB__) {
-      return { order: coerceRawValue('order', rawValue) };
-    }
     if (__DEV__) {
       warnOnce(
         'native-order-unsupported',
@@ -181,19 +178,16 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
   // closest primitive is a wrapping flex row, which the grid item math
   // (read from the published cascade at render) then sizes exactly. The
   // `__scGridContainer` sentinel signals `compileNative` to lift the
-  // grid metadata. On rn-web the browser lays out a real grid, so the
-  // declaration passes through. Other `display` values fall through to
+  // grid metadata. Other `display` values fall through to
   // the generic passthrough below.
   if (camel === 'display' && rawValue.trim() === 'grid') {
-    if (__NATIVE_WEB__) return { display: 'grid' };
     return { display: 'flex', flexDirection: 'row', flexWrap: 'wrap', __scGridContainer: true };
   }
 
   // CSS-wide keywords (initial / inherit / unset / revert / revert-layer):
   // React Native has no cascade to resolve them against, and its style
   // defaults differ from CSS initial values, so a silent drop or a literal
-  // string reaching RN would both misrender. Drop loudly on native; the
-  // browser implements explicit defaulting, so rn-web passes through.
+  // string reaching RN would both misrender. Drop loudly.
   const wideKeyword = asCssWideKeyword(rawValue);
   if (
     wideKeyword !== null &&
@@ -204,7 +198,6 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
     !(camel === 'direction' && wideKeyword === 'inherit') &&
     !(camel === 'flex' && wideKeyword === 'initial')
   ) {
-    if (__NATIVE_WEB__) return { [camel]: wideKeyword };
     if (__DEV__) {
       warnOnce(
         'native-css-wide-keyword',
@@ -217,24 +210,6 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
       );
     }
     return {};
-  }
-
-  // Whole-value `light-dark()` on rn-web: the color normalizer strips the
-  // function (its allowlist is @react-native/normalize-colors), but
-  // custom-property keys and `var()` references reach the DOM untouched, so
-  // the browser resolves both branches natively. The custom key is
-  // pre-hyphenated because rn-web runs hyphenateStyleName over every style
-  // key and would mangle a camelCase custom property. `color-scheme: light
-  // dark` is the opt-in the UA needs to honor the dark branch. Values
-  // carrying theme sentinels stay on the render-time resolver path instead;
-  // an inline custom property never passes through sentinel substitution.
-  if (__NATIVE_WEB__ && rawValue.indexOf('\0') === -1 && isWholeLightDark(rawValue)) {
-    const kebab = hyphenate(camel);
-    return {
-      ['--sc-ld-' + kebab]: rawValue,
-      [camel]: 'var(--sc-ld-' + kebab + ')',
-      colorScheme: 'light dark',
-    };
   }
 
   const passthroughKeys = getPassthroughKeys(camel);
@@ -258,8 +233,8 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
       }
       return {};
     }
-    let value = isLayeredCommaProp(camel) ? collapseIdenticalCommas(rawValue) : rawValue;
-    if (camel === 'backgroundPosition') value = normalizeBackgroundPositionValue(value);
+    const value =
+      camel === 'backgroundPosition' ? normalizeBackgroundPositionValue(rawValue) : rawValue;
     if (passthroughKeys.length === 1) {
       const handler = SINGLE_PASSTHROUGH_HANDLERS[camel];
       if (handler !== undefined) return handler(value, rawValue);
@@ -273,24 +248,14 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
     // `substituteBackgroundSizeKeywordsForNative` for the spec basis.
     // Pre-fold gradient stops carrying system colors so RN's array form
     // ships a PlatformColor object.
-    if (
-      __DEV__ &&
-      !__NATIVE_WEB__ &&
-      camel === 'backgroundImage' &&
-      value.indexOf('conic-gradient(') !== -1
-    ) {
+    if (__DEV__ && camel === 'backgroundImage' && value.indexOf('conic-gradient(') !== -1) {
       warnIfConicGradientNative(value);
     }
     const nativeImage =
       camel === 'backgroundImage' ? maybeExpandBackgroundImageSystemColors(value) : value;
-    // rn-web's validator rejects `backgroundPosition` with more than one
-    // top-level value; emit only the experimental_* key so the native
-    // side still receives the full grammar. See `isMultiTokenPosition`.
-    const skipRnWebPosition = camel === 'backgroundPosition' && isMultiTokenPosition(value);
     const out: Dict<unknown> = {};
     for (let i = 0; i < passthroughKeys.length; i++) {
       const key = passthroughKeys[i];
-      if (skipRnWebPosition && key === 'backgroundPosition') continue;
       if (key === 'experimental_backgroundImage') {
         out[key] = nativeImage;
         continue;
@@ -303,17 +268,6 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
     return out;
   }
 
-  // Single-token sentinel values (e.g. `color: ${t.colors.fg}` produces
-  // exactly one `\0sc:…` atom) bypass shorthand expansion; they're atomic
-  // placeholders that the render-time resolver replaces with the concrete
-  // theme value. Multi-token values containing a sentinel as one component
-  // (e.g. `border: ${t.borderWidth.hairline}px solid ${t.colors.ink}`)
-  // must NOT bypass;they need shorthand expansion so each part lands on
-  // the right RN prop.
-  if (rawValue.length > 0 && rawValue.charCodeAt(0) === 0 && isSingleSentinel(rawValue)) {
-    return { [camel]: rawValue };
-  }
-
   // Tokens are needed for shorthand expansion AND for the static math /
   // color polyfill checks below. Tokenize once; reuse across paths.
   let tokens: Token[] | null = null;
@@ -322,7 +276,17 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
   if (shorthand !== undefined) {
     tokens = tokenize(rawValue);
     const out = shorthand(tokens, rawValue);
-    if (out !== null) return out;
+    if (out !== null) {
+      // One invalid component invalidates the whole shorthand. A longhand left as math
+      // text that no resolver builds would otherwise reach React Native as that text.
+      if (rawValue.indexOf('(') !== -1 && hasUnbuildableMathText(out)) {
+        if (__DEV__ && !mentionsUnsupportedMathKeyword(rawValue)) {
+          warnMathUnresolvable(camel, rawValue);
+        }
+        return {};
+      }
+      return out;
+    }
     if (__DEV__) {
       warnOnce(
         'native-shorthand-parse',
@@ -333,25 +297,33 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
     return {};
   }
 
-  // Static math fns: fold on native. On rn-web, expressions whose result
-  // carries a unit pass through raw (the browser computes them against the
-  // real containing block); unitless results still fold because a bare
-  // function like `width: pow(8, 2)` is not renderable CSS, while the
-  // folded number follows the RN dp convention on every host.
+  // Static math fns: fold to a number.
   if (mightBeMathFn(rawValue)) {
     tokens = tokens ?? tokenize(rawValue);
     if (tokens.length === 1 && tokens[0].kind === TokenKind.Function) {
       const numeric = resolveStaticMathFunction(tokens[0]);
       if (numeric !== null) {
-        if (__NATIVE_WEB__ && numeric.unit !== '') return { [camel]: rawValue };
-        return { [camel]: numericResultToRn(numeric) };
+        // Every key this fold serves takes a number, a length or a percentage; an angle
+        // result falls through to the drop below.
+        if (numeric.unit === '' || numeric.unit === 'px' || numeric.unit === '%') {
+          const result =
+            camel === 'opacity' && numeric.unit === '%'
+              ? { unit: '', value: numeric.value / 100 }
+              : numeric;
+          const range = mathRangeOf(camel);
+          return {
+            [camel]: numericResultToRn(
+              range === undefined ? result : clampNumericResult(result, range)
+            ),
+          };
+        }
       }
     }
 
     // A sign joined to a name makes a different name, which nothing downstream
-    // can resolve. A browser judges the value on rn-web, and `-infinity` has
-    // its own warning.
-    if (__DEV__ && !__NATIVE_WEB__ && /(?:^|[\s(,*/])-(?!infinity\b)[a-z]/i.test(rawValue)) {
+    // can resolve. `-infinity` has its own warning.
+    const signedName = __DEV__ && /(?:^|[\s(,*/])-(?!infinity\b)[a-z]/i.test(rawValue);
+    if (signedName) {
       warnOnce(
         'native-math-signed-name',
         `the value "${rawValue}" for "${camel}" puts a sign on a name, which CSS reads as a different name, so React Native cannot resolve it. ` +
@@ -359,16 +331,28 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
         camel + ':' + rawValue
       );
     }
+
+    // The fold rejected the function and no render-time resolver can build it
+    // (mixed types, an operand only a fold can read), so the declaration drops
+    // and no text React Native cannot parse reaches it.
+    if (
+      tokens.length === 1 &&
+      tokens[0].kind === TokenKind.Function &&
+      buildResolver(rawValue, camel) === null
+    ) {
+      // A sign on a name and `infinity` / `NaN` have warned already.
+      if (__DEV__ && !signedName && !mentionsUnsupportedMathKeyword(rawValue)) {
+        warnMathUnresolvable(camel, rawValue);
+      }
+      return {};
+    }
   }
 
   // Polyfill: static color fn (`oklch` / `oklab` / `lch` / `lab` /
-  // `color-mix` / `color`) → hex. Same prefix-then-tokenize pattern. The
-  // fold runs on every host: rn-web's `normalizeColor` only recognizes
-  // hex / rgb / hsl / hwb (`@react-native/normalize-colors`), so the
-  // modern function forms get stripped to `undefined` (transparent)
-  // before the browser sees them. Folding to hex up front guarantees a
-  // renderable value on iOS, Android, and rn-web; out-of-gamut values
-  // clip per channel.
+  // `color-mix` / `color`) → hex. Same prefix-then-tokenize pattern.
+  // RN's `normalizeColor` only recognizes hex / rgb / hsl / hwb
+  // (`@react-native/normalize-colors`), so folding to hex up front
+  // guarantees a renderable value; out-of-gamut values clip per channel.
   if (mightBeModernColor(rawValue)) {
     tokens = tokens ?? tokenize(rawValue);
     if (tokens.length === 1 && tokens[0].kind === TokenKind.Function) {
@@ -376,14 +360,14 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
       if (hex !== null) return { [camel]: hex };
     }
     // Static fold bailed, but the value may still resolve at render
-    // time: theme-token sentinels, tree-counting functions
-    // (`sibling-index()`), and env-dependent channel math all get a
-    // resolver from `buildResolver` and fold to hex per render. Warn
+    // time: tree-counting functions (`sibling-index()`) and
+    // env-dependent channel math get a resolver from `buildResolver`
+    // and fold to hex per render. Warn
     // only when nothing downstream can render the value (unknown
     // colorspace, an interpolation space RN can't reach), so it doesn't
     // silently paint transparent. The dedupeSuffix is the value itself
     // so repeat declarations don't spam.
-    if (__DEV__ && rawValue.indexOf('\0') === -1 && buildResolver(rawValue, camel) === null) {
+    if (__DEV__ && buildResolver(rawValue, camel) === null) {
       warnOnce(
         'native-modern-color-cant-fold',
         `the value "${rawValue}" for "${camel}" uses a modern color form React Native cannot render directly. ` +
@@ -397,20 +381,31 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
   return { [camel]: coerceRawValue(camel, rawValue) };
 }
 
-/**
- * True when the value is exactly one createTheme sentinel atom (no
- * additional tokens). Sentinels terminate at whitespace, comma, or slash
- * (per `findSentinelEnd` in the tokenizer); so a single-token sentinel
- * has none of those characters.
- */
-function isSingleSentinel(v: string): boolean {
-  for (let i = 1; i < v.length; i++) {
-    const c = v.charCodeAt(i);
-    if (c === 0x20 || c === 0x09 || c === 0x0a || c === 0x0d || c === 0x2c || c === 0x2f) {
-      return false;
+function warnMathUnresolvable(camel: string, rawValue: string): void {
+  warnOnce(
+    'native-math-unresolvable',
+    `the value "${rawValue}" for "${camel}" is a math function React Native cannot resolve, so the declaration was ignored. ` +
+      'Give every operand the same type, and put font-relative or viewport operands in calc(), min(), max() or clamp().',
+    camel + ':' + rawValue
+  );
+}
+
+/** True when a longhand holds `calc()` / `min()` / `max()` / `clamp()` text that no resolver builds. */
+function hasUnbuildableMathText(out: Dict<unknown>): boolean {
+  for (const key in out) {
+    const v = out[key];
+    if (
+      typeof v === 'string' &&
+      (v.startsWith('calc(') ||
+        v.startsWith('min(') ||
+        v.startsWith('max(') ||
+        v.startsWith('clamp(')) &&
+      buildResolver(v, key) === null
+    ) {
+      return true;
     }
   }
-  return true;
+  return false;
 }
 
 /**
@@ -429,25 +424,6 @@ function hasUpperInPrefix(v: string, endExclusive: number): boolean {
     if (c >= 0x41 && c <= 0x5a) return true;
   }
   return false;
-}
-
-/** Kebab-case a camelCase property name (`backgroundColor` → `background-color`). */
-function hyphenate(camel: string): string {
-  let out = '';
-  for (let i = 0; i < camel.length; i++) {
-    const c = camel.charCodeAt(i);
-    out += c >= 0x41 && c <= 0x5a ? '-' + camel[i].toLowerCase() : camel[i];
-  }
-  return out;
-}
-
-/** True when the value is exactly one `light-dark(...)` function. */
-function isWholeLightDark(v: string): boolean {
-  if (v.length < 12) return false;
-  const haystack = hasUpperInPrefix(v, 11) ? v.toLowerCase() : v;
-  if (!haystack.startsWith('light-dark(')) return false;
-  const tokens = tokenize(v);
-  return tokens.length === 1 && tokens[0].kind === TokenKind.Function;
 }
 
 function mightBeMathFn(v: string): boolean {

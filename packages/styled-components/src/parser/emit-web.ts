@@ -119,16 +119,23 @@ export interface EmitOptions {
    * `selfRefSelector` in a self-reference position (e.g., `X + X`, `X > X`)
    * have that token rewritten to `.${componentId}` so the combinator refers
    * to the STATIC component class rather than the current render's hashed
-   * class.
+   * class. Also the fallback for `ids`.
    */
   componentId?: string | undefined;
+  /**
+   * Space-joined ids of the extension chain, base first and `componentId` last. Names the
+   * automatic `container-name` and `view-transition-class`; defaults to `componentId`.
+   * @internal
+   */
+  ids?: string | undefined;
   /** @internal */
   selfRefSelector?: string | undefined;
   /**
    * Prepended to every emitted rule selector AFTER `&` resolution (namespace
-   * from `StyleSheetManager`). Skipped for @keyframes.
+   * from `StyleSheetManager`), or joined onto a root-anchored item (see
+   * `prependNamespace`). Skipped for @keyframes.
    */
-  namespace?: string | undefined;
+  namespace?: NamespaceForm | undefined;
   /**
    * Final-stage selector transform. Used by RSC's child-selector rewrite so
    * `:first-child` / `:nth-child()` exclude `<style data-styled>` tags. Runs
@@ -161,44 +168,133 @@ export interface EmitOptions {
  */
 export function emitWeb(root: StaticRoot, parentSelector: string, options?: EmitOptions): string[] {
   composedSize = 0;
-  const componentId = options && options.componentId;
-  return emitNodes(
-    componentId ? maybeAugmentWithAutoName(root, componentId) : root,
-    parentSelector,
-    options
+  const ids = options && (options.ids || options.componentId);
+  // Global styles and `compile()` strings have no parent selector, so a root declaration has no
+  // element to land on.
+  if (ids && parentSelector) {
+    autoIds = ids;
+    foundNames = 0;
+    scanStack.length = 0;
+    return emitNodes(root, parentSelector, options, WalkState.Root);
+  }
+
+  return emitNodes(root, parentSelector, options, WalkState.Off);
+}
+
+/**
+ * Whether the property's value is a bare name: `${Component}` stringifies as a class selector
+ * (`.sc-abc`) and these take the name alone. `@container` preludes get the same treatment in
+ * `emitAtRule`. The length test rejects nearly every property before a string compare runs.
+ */
+function takesBareName(prop: string): boolean {
+  const length = prop.length;
+  return length === 9
+    ? prop === 'container'
+    : length === 14
+      ? prop === 'container-name'
+      : length === 21 && prop === 'view-transition-class';
+}
+
+/**
+ * Where a declaration sits relative to the component's own element:
+ * - `Own`: the component's own declarations, and rules on `&` alone inside it;
+ * - `Other`: the element in another state or condition (`&:hover`, `&[data-active]`, inside an
+ *   at-rule), where only a `view-transition-name` still names the component's own element;
+ * - `Off`: a descendant or another element, where nothing counts.
+ */
+const enum ScanState {
+  Off,
+  Other,
+  Own,
+}
+
+/**
+ * What `emitNodes` does with the declarations it walks: `Off` collects nothing, `On` collects, and
+ * `Root` is the outermost call, which collects and also writes the names after its walk.
+ */
+const enum WalkState {
+  Off,
+  On,
+  Root,
+}
+
+/** The ids to name by, and the flags of `ownNameBits` found so far, for the emit in progress. */
+let autoIds = '';
+let foundNames = 0;
+
+/** The selectors of each rule (`null` for an at-rule) the walk is inside, outermost first. */
+const scanStack: Array<string[] | null> = [];
+
+/** The scan state of the declarations at the current point of the walk. */
+function scanState(): ScanState {
+  let state = ScanState.Own;
+  for (let i = 0; i < scanStack.length && state; i++) {
+    const selectors = scanStack[i];
+    state = selectors ? scanOfRule(selectors, state) : ScanState.Other;
+  }
+  return state;
+}
+
+/** Records a declaration's flags, classifying it by where it sits only when it has any. */
+function noteNames(prop: string, value: string): void {
+  const bits = ownNameBits(prop, value, ScanState.Own);
+  if (!bits || (foundNames & bits) === bits) return;
+
+  const state = scanState();
+  if (state) foundNames |= ownNameBits(prop, value, state);
+}
+
+/**
+ * Flags for one declaration: 1 own `container-name`, 2 own `container-type` other than `normal`,
+ * 4 own `view-transition-class`, 8 a `view-transition-name` other than `none` on the element.
+ * Only a scan at `ScanState.Own` counts the own flags.
+ */
+function ownNameBits(prop: string, value: string, scan: ScanState): number {
+  if (prop === 'view-transition-name') return value !== 'none' ? 8 : 0;
+  if (scan < ScanState.Own) return 0;
+  if (prop === 'container-name') return 1;
+  if (prop === 'container-type') return value !== 'normal' ? 2 : 0;
+  return prop === 'view-transition-class' ? 4 : 0;
+}
+
+/**
+ * The scan state for a rule's children, from its parent's: a rule on one element (see
+ * `isSameElement`) stays in the scan, and one on `&` alone keeps the own flags.
+ */
+function scanOfRule(selectors: string[], scan: ScanState): ScanState {
+  if (!selectors.every(isSameElement)) return ScanState.Off;
+
+  return scan >= ScanState.Own && /^&+$/.test(selectors.join('')) ? ScanState.Own : ScanState.Other;
+}
+
+/**
+ * `&` with only a compound after it (`&:hover`, `&:is(.a, .b)`, `&[data-x="a b"]`): no top-level
+ * whitespace or combinator to another element; text inside parens, brackets, and strings does not
+ * count. A pseudo-element (`&::before`) counts too: the names it adds to the element stay inert,
+ * since a pseudo-element's own name or container type never makes the element a participant.
+ * The regex answers the common shapes; the token scans (measured at about 20% of an emit) run only
+ * when it says no.
+ */
+function isSameElement(selector: string): boolean {
+  const len = selector.length;
+  return (
+    /^&[^\s>+~]*$/.test(selector) ||
+    (selector.charCodeAt(0) === $.AMPERSAND &&
+      scanQPB(selector, 1, len, $.SPACE, $.GT, $.PLUS, $.TILDE) === len &&
+      scanQPB(selector, 1, len, $.TAB, $.LF, $.CR, $.FF) === len)
   );
 }
 
 /**
- * When the component's own element gets a `container-type` with a non-`normal` value but no
- * `container-name`, the name comes from the component's stable id, so `${Component}` in an
- * `@container <name>` query matches without anyone writing a `container-name`.
+ * A quoted string (group 1, kept whole) or a `.` starting a token: at the start, or after
+ * whitespace, `,`, `(`, or `/` (group 2 is what precedes it). Each alternative is a single
+ * non-nested scan, so the match is linear.
  */
-function maybeAugmentWithAutoName(root: StaticRoot, componentId: string): StaticRoot {
-  return writesToOwnElement(root, 'container-type') && !writesToOwnElement(root, 'container-name')
-    ? root.concat({
-        kind: NodeKind.Decl,
-        prop: 'container-name',
-        value: componentId,
-      })
-    : root;
-}
+const TOKEN_DOT = /("[^"]*"|'[^']*')|(^|[\s,(/])\./g;
 
-/** Root declarations and rules on `&` alone count; any other rule targets another element or state. */
-function writesToOwnElement(nodes: StaticRoot, prop: string): boolean {
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    if (
-      node.kind === NodeKind.Decl
-        ? node.prop === prop && (prop === 'container-name' || node.value !== 'normal')
-        : node.kind === NodeKind.Rule &&
-          writesToOwnElement(node.children, prop) &&
-          /^&+$/.test(node.selectors.join(''))
-    ) {
-      return true;
-    }
-  }
-  return false;
+/** Drops each token-leading `.` outside quoted strings, so `${Component}` text (`.sc-abc`) reads as a bare name. */
+function stripTokenDots(value: string): string {
+  return value.replace(TOKEN_DOT, (_match, quoted, lead) => quoted || lead);
 }
 
 /**
@@ -228,10 +324,17 @@ function wholeRule(head: string, block: string, unread = block): string {
   return '';
 }
 
+/**
+ * Emits a node list as rules. When `walk` is on (an `emitWeb` call with ids and a parent selector)
+ * it also notes the declarations that name the component's own element (`noteNames`), reading the
+ * rules and at-rules they sit in (`scanStack`) only when a relevant declaration is found. A
+ * component that sets none reads no selectors for it.
+ */
 function emitNodes(
   nodes: StaticNode[],
   currentSelector: string,
-  options: EmitOptions | undefined
+  options: EmitOptions | undefined,
+  walk: WalkState
 ): string[] {
   let body = '';
   const other: string[] = [];
@@ -241,11 +344,17 @@ function emitNodes(
     const node = nodes[i];
     switch (node.kind) {
       case NodeKind.Decl:
+        if (walk) noteNames(node.prop, node.value);
+
         // Post-fillAst invariant: `prop` and `value` are strings (any
         // TemplateValue was realized by `fillDecl`). The
         // `string | TemplateValue` AST type covers the parse-time form;
         // emit-web is only called on filled (or never-templated) ASTs.
-        body += formatDecl(node.prop, node.value, declTransform);
+        body += formatDecl(
+          node.prop,
+          takesBareName(node.prop) ? stripTokenDots(node.value) : node.value,
+          declTransform
+        );
         break;
       case NodeKind.Rule: {
         let resolved = resolveRuleSelectors(node.selectors, currentSelector);
@@ -258,14 +367,16 @@ function emitNodes(
             options.componentId
           );
         }
-        const childResults = emitNodes(node.children, resolved, options);
+        if (walk) scanStack.push(node.selectors);
+        const childResults = emitNodes(node.children, resolved, options, walk && WalkState.On);
+        if (walk) scanStack.pop();
         for (let k = 0; k < childResults.length; k++) other.push(childResults[k]);
         break;
       }
       case NodeKind.AtRule:
         // `@charset` has no effect in this pipeline; dropping it keeps emitted CSS stable.
         if (node.name !== 'charset') {
-          const emitted = emitAtRule(node, currentSelector, options);
+          const emitted = emitAtRule(node, currentSelector, options, walk && WalkState.On);
           if (emitted) other.push(emitted);
         }
         break;
@@ -275,6 +386,16 @@ function emitNodes(
         break;
       }
     }
+  }
+
+  // Both lists name every id of the extension chain, so an extension keeps matching its base's
+  // rules. A `container-name` makes an `@container <name>` query match a container-type other than
+  // `normal` on the element; a `view-transition-class` makes `::view-transition-group(*.<id>)`
+  // match a `view-transition-name` other than `none` in any state or condition.
+  if (walk === WalkState.Root && foundNames) {
+    const names = stripTokenDots(autoIds);
+    if ((foundNames & 3) === 2) body += formatDecl('container-name', names, declTransform);
+    if ((foundNames & 12) === 8) body += formatDecl('view-transition-class', names, declTransform);
   }
 
   const result: string[] = [];
@@ -299,23 +420,108 @@ function emitNodes(
   return result;
 }
 
+/** A namespace as `prependNamespace` writes it; a compiler derives it once, since it fixes its namespace. */
+export interface NamespaceForm {
+  /** The namespace joined onto a root name: '' when it cannot be joined onto a compound. */
+  join: string;
+  /** The namespace and a descendant combinator. */
+  prefix: string;
+}
+
+/** The form of `namespace` for `EmitOptions.namespace`. */
+export function namespaceForm(namespace: string): NamespaceForm {
+  const trimmed = trimRange(namespace, 0, namespace.length);
+  // Trimming removed the whitespace that ends a trailing hex escape.
+  const written = TRAILING_HEX_ESCAPE.test(trimmed) ? trimmed + ' ' : trimmed;
+  return { join: isOneCompound(trimmed) ? written : '', prefix: written + ' ' };
+}
+
 /**
- * Prepend a namespace prefix to every top-level comma-separated selector,
- * e.g. `.a,.b` with namespace `.parent` → `.parent .a,.parent .b`. Commas
- * inside `:is()`, `[attr]`, strings are preserved.
+ * Whether the trimmed namespace is one compound without a pseudo-element. Text left open is not
+ * judged: a head holding it is dropped whole, joined or not. Each scan stops at a top-level byte
+ * only, and a colon's end restarts it with no state to carry, so every character is read once.
  */
-function prependNamespace(selector: string, namespace: string): string {
-  const prefix = namespace + ' ';
-  if (selector.indexOf(',') === -1) return prefix + selector;
+function isOneCompound(trimmed: string): boolean {
+  const first = trimmed.charCodeAt(0);
+  if (first !== $.HASH && first !== $.DOT && first !== $.OPEN_BRACKET && first !== $.COLON) {
+    return false;
+  }
+
+  const len = trimmed.length;
+  for (
+    let from = 0, stop;
+    (stop = scanQPB(trimmed, from, len, $.COLON, $.SPACE, $.COMMA, $.GT)) < len;
+    from = stop + 1
+  ) {
+    if (trimmed.charCodeAt(stop) !== $.COLON) return false;
+
+    PSEUDO_ELEMENT.lastIndex = stop;
+    if (PSEUDO_ELEMENT.test(trimmed)) return false;
+  }
+
+  return (
+    scanQPB(trimmed, 0, len, $.TAB, $.LF, $.CR, $.FF) >= len &&
+    scanQPB(trimmed, 0, len, $.PLUS, $.TILDE, -1, -1) >= len
+  );
+}
+
+/** A pseudo-element at its colon: `::`, or one of the Level 1 and 2 names a browser still reads after one colon. */
+const PSEUDO_ELEMENT = /:(?::|(?:before|after|first-line|first-letter)(?![\w-]))/iy;
+
+/**
+ * A document-level view-transition pseudo, with or without the universal selector. Else `html` or
+ * `:root` as a whole name: no name character, escape or `|` (a namespace bar) after it.
+ */
+const ROOT_ITEM = /\*?::view-transition|(?:html|:root)(?![\w\\|-]|[^\0-\x7f])/iy;
+
+/**
+ * A hex escape (`\31`) closing the text, after an even run of backslashes so `\\31` is not one.
+ * The escape takes one whitespace after its digits as its end, so text written right after it
+ * would read as part of the code point, or lose its meaning (a space meant as a combinator).
+ * Linear: inside a backslash run only the character before the run can start a match.
+ */
+const TRAILING_HEX_ESCAPE = /(?:^|[^\\])(?:\\\\)*\\[\da-f]{1,6}$/i;
+
+/**
+ * The item with the namespace written for the root it names, else the item behind the prefix.
+ * `ROOT_ITEM.lastIndex` is 0 between calls: a miss resets it, and a hit's end is read, then cleared.
+ */
+function prefixItem(item: string, namespace: NamespaceForm): string {
+  const { join } = namespace;
+  const first = item.charCodeAt(0);
+  const mayBeRoot =
+    join !== '' &&
+    ((first | $.UPPER_TO_LOWER) === $.LOWER_H || first === $.COLON || first === $.ASTERISK);
+  if (!mayBeRoot || !ROOT_ITEM.test(item)) return namespace.prefix + item;
+
+  const nameEnd = ROOT_ITEM.lastIndex;
+  ROOT_ITEM.lastIndex = 0;
+  if (first === $.ASTERISK || item.charCodeAt(1) === $.COLON) {
+    return ':is(' + join + ',' + join + ' *)' + item.substring(first === $.ASTERISK ? 1 : 0);
+  }
+
+  return item.substring(0, nameEnd) + join + item.substring(nameEnd);
+}
+
+/**
+ * Write the namespace in front of every top-level comma-separated selector, e.g. `.a,.b` under
+ * `.parent` gives `.parent .a,.parent .b`. Commas inside `:is()`, `[attr]` and strings stay.
+ * Each item is placed by `prefixItem`; the placement rules are in docs/namespace.md "Placement
+ * model" and their rows in `emit-web.test.ts`.
+ */
+function prependNamespace(selector: string, namespace: NamespaceForm): string {
+  if (selector.indexOf(',') === -1) return prefixItem(selector, namespace);
+
   const parts = splitTopLevelCommas(selector);
-  for (let i = 0; i < parts.length; i++) parts[i] = prefix + parts[i];
+  for (let i = 0; i < parts.length; i++) parts[i] = prefixItem(parts[i], namespace);
   return parts.join(',');
 }
 
 function emitAtRule(
   node: StaticAtRuleNode,
   currentSelector: string,
-  options: EmitOptions | undefined
+  options: EmitOptions | undefined,
+  walk: WalkState.Off | WalkState.On
 ): string {
   // Post-fillAst invariant: prelude / name are strings.
   let prelude = stripCommaSpaces(node.prelude);
@@ -345,7 +551,9 @@ function emitAtRule(
     return '';
   }
 
-  const childStrings = emitNodes(node.children, currentSelector, options);
+  if (walk) scanStack.push(null);
+  const childStrings = emitNodes(node.children, currentSelector, options, walk);
+  if (walk) scanStack.pop();
   if (childStrings.length === 0) return '';
   return wholeRule(header, '{' + childStrings.join('') + '}', '');
 }

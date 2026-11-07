@@ -3,6 +3,7 @@ import { warnOnce } from '../dev';
 import { tokenToValue, withoutSlashes } from '../shorthandHelpers';
 import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
+import { isLengthMathFunction } from './spacing';
 
 const FLEX_WRAP = new Set(['nowrap', 'wrap', 'wrap-reverse']);
 const FLEX_DIRECTION = new Set(['row', 'row-reverse', 'column', 'column-reverse']);
@@ -60,6 +61,11 @@ export function flexShorthand(tokens: Token[]): Dict<unknown> | null {
       if (t.kind === TokenKind.Length || t.kind === TokenKind.Percent) {
         if (t.value < 0) return null;
         flexBasis = tokenToValue(t) as number | string;
+        stream.consume();
+        continue;
+      }
+      if (isLengthMathFunction(t)) {
+        flexBasis = t.raw;
         stream.consume();
         continue;
       }
@@ -128,25 +134,11 @@ const CONTENT_POSITION_NORMALIZE: Record<string, string> = {
   end: 'flex-end',
 };
 
-function joinRaw(tokens: Token[]): string {
-  let raw = '';
-  for (let i = 0; i < tokens.length; i++) {
-    if (i !== 0) raw += ' ';
-    raw += tokens[i].raw;
-  }
-  return raw;
-}
-
 /**
  * `place-content: <align-content> <justify-content>?`. Normalizes
- * start/end to the flex- forms on native; rn-web passes the raw
- * declaration through so the browser sees the full CSS grammar.
+ * start/end to the flex- forms.
  */
 export function placeContentShorthand(tokens: Token[]): Dict<unknown> | null {
-  if (__NATIVE_WEB__) {
-    if (tokens.length === 0) return null;
-    return { placeContent: joinRaw(tokens) };
-  }
   const stream = new TokenStream(withoutSlashes(tokens));
   const first = stream.consume();
   if (!first || first.kind !== TokenKind.Ident || !ALIGN_CONTENT.has(first.name)) return null;
@@ -165,7 +157,7 @@ export function placeContentShorthand(tokens: Token[]): Dict<unknown> | null {
 /**
  * Keyword set for `align-items` / `justify-items` / `align-self` / `justify-self`.
  * Authors writing `start` / `end` / `self-start` / `self-end` get normalized to
- * RN's flex-prefixed enum since Yoga and rn-web both accept only those forms.
+ * RN's flex-prefixed enum since Yoga accepts only those forms.
  * `first baseline` / `last baseline`
  * collapse to `baseline` (with a dev warn); `safe` / `unsafe` overflow prefixes
  * are stripped (with a dev warn).
@@ -242,10 +234,6 @@ function readItemsKeyword(stream: TokenStream): string | null {
  * Yoga.
  */
 export function placeItemsShorthand(tokens: Token[]): Dict<unknown> | null {
-  if (__NATIVE_WEB__) {
-    if (tokens.length === 0) return null;
-    return { placeItems: joinRaw(tokens) };
-  }
   const stream = new TokenStream(withoutSlashes(tokens));
   const alignItems = readItemsKeyword(stream);
   if (alignItems === null) return null;
@@ -270,10 +258,6 @@ function readSelfKeyword(stream: TokenStream): string | null {
 }
 
 export function placeSelfShorthand(tokens: Token[]): Dict<unknown> | null {
-  if (__NATIVE_WEB__) {
-    if (tokens.length === 0) return null;
-    return { placeSelf: joinRaw(tokens) };
-  }
   const stream = new TokenStream(withoutSlashes(tokens));
   const alignSelf = readSelfKeyword(stream);
   if (alignSelf === null) return null;

@@ -8,6 +8,12 @@ import isPlainObject from '../utils/isPlainObject';
 import { fifoSet } from '../utils/fifoMap';
 import { objectToCSS } from '../utils/objectToCSS';
 import { normalize } from '../utils/normalize';
+import {
+  CAN_HOLD_REFERENCE,
+  hasReferenceMarker,
+  isServerOpaqueReference,
+  referenceText,
+} from '../utils/serverReference';
 import { warnOnce } from '../utils/warnOnce';
 import { AT, COMMA } from '../utils/charCodes';
 import {
@@ -33,7 +39,7 @@ import {
   trimRange,
   wholeStatements,
 } from './parser';
-import { CLIENT_REFERENCE, getSource, InterpolationKind, isCssProduct, Source } from './source';
+import { getSource, InterpolationKind, isCssProduct, Source } from './source';
 
 /**
  * Resolved `${mixin}` fragment. Carried via a parallel side table so
@@ -261,7 +267,84 @@ export function compileWebFilled(
   // interpolations), it returns `source.ast` by reference and types it
   // as `StaticRoot`. So the no-interpolation fast path costs one extra
   // function call but avoids a duplicate `as StaticRoot` cast here.
-  return emitWeb(fillAst(source.ast, filled, fragments), parentSelector, options);
+  const root = fillAst(source.ast, filled, fragments);
+
+  return emitWeb(
+    CAN_HOLD_REFERENCE && holdsMarker(filled, fragments) ? dropMarked(root) : root,
+    parentSelector,
+    options
+  );
+}
+
+/** Whether a slot's text, or a nested fragment's, holds the marker a reference fills in. */
+function holdsMarker(
+  filled: ReadonlyArray<string>,
+  fragments: ReadonlyArray<FastPathFragment | null> | null | undefined
+): boolean {
+  for (let i = 0; i < filled.length; i++) {
+    const fragment = fragments ? fragments[i] : null;
+    const holds = fragment
+      ? holdsMarker(fragment.filled, fragment.fragments)
+      : hasReferenceMarker(filled[i]);
+    if (holds) return true;
+  }
+  return false;
+}
+
+/**
+ * A copy of `nodes` without each smallest node holding the reference marker: a selector-list
+ * item (the rule once none is left), an at-rule or keyframes block whose name or prelude holds
+ * it, a keyframes stop (the frame once none is left), or a declaration. A node left empty
+ * emits nothing. The input is shared with the parse cache, so it is never changed.
+ */
+export function dropMarked(nodes: StaticRoot): StaticRoot {
+  const out: StaticNode[] = [];
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    switch (node.kind) {
+      case NodeKind.Decl:
+        if (!hasReferenceMarker(node.prop) && !hasReferenceMarker(node.value)) out.push(node);
+        break;
+      case NodeKind.Rule: {
+        const selectors = node.selectors.filter(item => !hasReferenceMarker(item));
+        if (selectors.length > 0) {
+          out.push({ kind: NodeKind.Rule, selectors, children: dropMarked(node.children) });
+        }
+        break;
+      }
+      case NodeKind.AtRule:
+        if (!hasReferenceMarker(node.name) && !hasReferenceMarker(node.prelude)) {
+          out.push({
+            kind: NodeKind.AtRule,
+            name: node.name,
+            prelude: node.prelude,
+            children: node.children === null ? null : dropMarked(node.children),
+          });
+        }
+        break;
+      case NodeKind.Keyframes:
+        if (!hasReferenceMarker(node.name) && !hasReferenceMarker(node.prelude)) {
+          const frames: StaticKeyframeFrame[] = [];
+          for (let j = 0; j < node.frames.length; j++) {
+            const frame = node.frames[j];
+            const stops = frame.stops.filter(stop => !hasReferenceMarker(stop));
+            if (stops.length > 0) {
+              frames.push({
+                stops,
+                children: frame.children.filter(
+                  decl => !hasReferenceMarker(decl.prop) && !hasReferenceMarker(decl.value)
+                ),
+              });
+            }
+          }
+          out.push({ kind: NodeKind.Keyframes, name: node.name, prelude: node.prelude, frames });
+        }
+        break;
+      default:
+        out.push(node);
+    }
+  }
+  return out;
 }
 
 /**
@@ -312,7 +395,8 @@ export function compileWeb(
  * Handles function-returns-X cases (the directly-typed slot shapes are pre-classified
  * in `parseSource` and never reach here). Returns `null` to bail.
  *
- * Client reference proxies are bailed before invocation.
+ * A client reference or temporary reference resolves to its marker before any property read
+ * or call; `compileWebFilled` drops the node holding it.
  */
 function resolveInterpolation(
   slot: unknown,
@@ -325,6 +409,9 @@ function resolveInterpolation(
   if (slot === null || slot === undefined || typeof slot === 'boolean') return '';
   const t = typeof slot;
   if (t !== 'function' && t !== 'object') return null;
+
+  // A reference has no class and throws on most reads, so it is checked before any is made.
+  if (CAN_HOLD_REFERENCE && isServerOpaqueReference(slot)) return referenceText(slot);
 
   // Styled-component reference (`function` in React 19, `object` for
   // forwardRef-based components from older callers).
@@ -355,7 +442,6 @@ function resolveInterpolation(
     return text;
   }
   if (t === 'function') {
-    if ((slot as { $$typeof?: symbol }).$$typeof === CLIENT_REFERENCE) return null;
     const fn = slot as (ctx: unknown) => unknown;
     return resolveInterpolation(fn(fillContext), fillContext, compiler, outKeyframes);
   }

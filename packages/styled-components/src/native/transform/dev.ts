@@ -88,49 +88,6 @@ export function resetWarningsForTest(): void {
 }
 
 /**
- * Dev-time scan for createTheme sentinel tokens that survived the
- * resolver pipeline and would otherwise reach RN as opaque strings.
- *
- * A "leak" is a sentinel whose `\0` start is glued to a preceding
- * non-boundary character, indicating the sentinel was concatenated with
- * something else in JS land; typically `${p => 47 + t.space.xl}` style
- * arithmetic that coerced the sentinel to a string before the runtime
- * resolver could see it. Boundary characters (whitespace, comma, paren,
- * slash) are normal sentinel separators in multi-value contexts (e.g.
- * `border: ${t.borderWidth} solid ${t.colors.ink}`) and must NOT trigger
- * the warning.
- *
- * Callers must wrap in `if (__DEV__)` so production tree-shakes the call.
- */
-export function warnIfSentinelLeak(prop: string, value: unknown): void {
-  if (typeof value !== 'string') return;
-  const len = value.length;
-  for (let i = 0; i < len; i++) {
-    if (value.charCodeAt(i) !== 0) continue;
-    if (i === 0) continue;
-    const prev = value.charCodeAt(i - 1);
-    if (
-      prev === 0x20 || // space
-      prev === 0x09 || // tab
-      prev === 0x0a || // newline
-      prev === 0x0d || // CR
-      prev === 0x2c || // ,
-      prev === 0x28 || // (
-      prev === 0x29 || // )
-      prev === 0x2f // /
-    ) {
-      continue;
-    }
-    warnOnce(
-      'native-token-leak',
-      `a createTheme token was concatenated into the value of "${prop}" with JS arithmetic and won't resolve at render time. Common cause: \`\${p => p.x + t.space.xl}\`. Use \`calc(\${p.x}px + \${t.space.xl}px)\` instead. See https://styled-components.com/docs/api#createtheme for the composition rules.`,
-      prop
-    );
-    return;
-  }
-}
-
-/**
  * Warn when a `var(--name)` reference cannot be resolved against the
  * inherited custom-property map AND no fallback was supplied. The native
  * pipeline runs a CSS Variables L1-style cascade through
@@ -197,7 +154,6 @@ const IOS_GATED_FILTER_RE =
  */
 export function warnIfIosGatedFilter(value: string): void {
   if (!__DEV__) return;
-  if (__NATIVE_WEB__) return;
   if (!IOS_GATED_FILTER_RE.test(value)) return;
   if (getReactNativePlatformOS() !== 'ios') return;
   warnOnce(

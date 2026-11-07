@@ -8,8 +8,7 @@
  *     `container-type`.
  *   - `cascade`: the per-tree-position style values downstream
  *     resolvers need to interpret cascade-dependent units and
- *     keywords (`em`, `lh`, `rlh`, `text-align: start | end`,
- *     sentinel-base relative color).
+ *     keywords (`em`, `lh`, `rlh`, `text-align: start | end`).
  *
  * Why one consolidated context (rather than one per concern):
  *   - All fields update from in-tree Providers, not external
@@ -71,8 +70,7 @@ export interface NativeCascadeValues {
   /**
    * CSS custom properties contributed by every ancestor on the path to
    * the root, deep-merged so the nearest ancestor wins. Anchors `var()`
-   * substitution at render time. Native bundles only; rn-web defers to
-   * the browser's cascade.
+   * substitution at render time.
    */
   customProperties?: ReadonlyMap<string, string>;
   /**
@@ -80,8 +78,7 @@ export interface NativeCascadeValues {
    * size themselves. `ownerId` is the container's `styledComponentId`;
    * only children whose `parentId` equals it are grid items (the spec's
    * direct-children rule). `contentWidth` is the measured content-box
-   * width in dp, `0` before the first layout. Native bundles only;
-   * rn-web defers to the browser's grid layout.
+   * width in dp, `0` before the first layout.
    */
   grid?: {
     ownerId: string;

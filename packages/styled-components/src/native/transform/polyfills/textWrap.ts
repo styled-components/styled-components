@@ -77,9 +77,6 @@ function textWrapShorthand(tokens: Token[]): Dict<unknown> | null {
   if (mode === null && style === null) return null;
 
   const value = mode !== null && style !== null ? mode + ' ' + style : mode !== null ? mode : style;
-  // Browser ships text-wrap end-to-end; the Text prop lifts and the
-  // platform-limitation warns are native-only.
-  if (__NATIVE_WEB__) return { textWrap: value };
   const out: Dict<unknown> = { textWrap: value };
   if (mode === 'nowrap') applyTextWrapNowrap(out);
   applyTextWrapStyle(out, style);
@@ -96,7 +93,6 @@ function textWrapModeLonghand(tokens: Token[]): Dict<unknown> | null {
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
   if (!MODES.has(name)) return null;
-  if (__NATIVE_WEB__) return { textWrapMode: name };
   const out: Dict<unknown> = { textWrapMode: name };
   // Same nowrap approximation as the shorthand path, applied silently.
   if (name === 'nowrap') applyTextWrapNowrap(out);
@@ -115,7 +111,6 @@ function textWrapStyleLonghand(tokens: Token[]): Dict<unknown> | null {
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
   if (!STYLES.has(name)) return null;
-  if (__NATIVE_WEB__) return { textWrapStyle: name };
   const out: Dict<unknown> = { textWrapStyle: name };
   applyTextWrapStyle(out, name);
   return out;

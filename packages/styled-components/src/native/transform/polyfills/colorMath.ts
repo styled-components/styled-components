@@ -549,7 +549,6 @@ function readHsParts(tok: Token): [number, number, number, number] | null {
   const fnName = tok.name === 'hwb' ? 'hwb' : 'hsl';
   const from = parseRelativeFrom(args, 0, tok.name || fnName);
   if (from !== null) {
-    if ('sentinelBail' in from) return null;
     const bindings = rgbToTargetBindings(from.rgb, fnName);
     substituteRelativeBindings(args, from.consumed, RELATIVE_CHANNEL_KEYWORDS[fnName], bindings);
     // Omitted alpha defaults to the origin's alpha (not 100%).
@@ -1040,7 +1039,6 @@ function readColorFn(
   // space ident is read in the loop (the keyword set depends on it).
   const from = parseRelativeFrom(args, 0, tok.name || 'color');
   if (from !== null) {
-    if ('sentinelBail' in from) return null;
     relativeRgb = from.rgb;
     startIdx = from.consumed;
     // Omitted alpha defaults to the origin's alpha (not 100%).
@@ -1124,7 +1122,6 @@ function readRgbFn(tok: Token): [number, number, number, number] | null {
   // unconditional: `from` is unreachable in valid absolute rgb().
   const from = parseRelativeFrom(args, 0, tok.name || 'rgb');
   if (from !== null) {
-    if ('sentinelBail' in from) return null;
     const bindings = rgbToTargetBindings(from.rgb, 'rgb');
     substituteRelativeBindings(args, from.consumed, RELATIVE_CHANNEL_KEYWORDS.rgb, bindings);
     // Omitted alpha defaults to the origin's alpha (not 100%).
@@ -1920,28 +1917,9 @@ const RELATIVE_CHANNEL_KEYWORDS: Record<string, Record<string, number>> = {
 };
 
 /**
- * Walk an args tree (Function token contents) and return true if any
- * Sentinel token is reachable. Used to detect "sentinel-base relative
- * color", e.g. `oklch(from \0sc:colors.brand:#abc l c h)`, which v7 can't
- * statically fold without cascade-direction visibility plumbed to the
- * render-time resolver.
- */
-function containsSentinel(tok: Token): boolean {
-  if (tok.kind === TokenKind.Sentinel) return true;
-  if (tok.kind === TokenKind.Function) {
-    const inner = tokenizeFunctionArgs(tok);
-    for (let i = 0; i < inner.length; i++) {
-      if (containsSentinel(inner[i])) return true;
-    }
-  }
-  return false;
-}
-
-/**
  * Parse the `from <color>` prefix. Returns the origin color as RGB along with
- * the args consumed, or a `sentinelBail` marker if the base contains an
- * unresolvable theme reference (see `project_native_theme_reactivity` memory).
- * Returns null if `from` isn't present or the base isn't statically resolvable.
+ * the args consumed, or null if `from` isn't present or the base isn't
+ * statically resolvable.
  *
  * `outerFn` (e.g. `'oklch'`) feeds the dev warning emitted when the origin is
  * `currentColor`, which can't be folded without compile-time cascade visibility.
@@ -1950,7 +1928,7 @@ function parseRelativeFrom(
   args: Token[],
   startIdx: number,
   outerFn: string
-): { rgb: RGB; consumed: number } | { sentinelBail: true } | null {
+): { rgb: RGB; consumed: number } | null {
   if (
     startIdx >= args.length ||
     args[startIdx].kind !== TokenKind.Ident ||
@@ -1960,7 +1938,6 @@ function parseRelativeFrom(
   }
   const baseTok = args[startIdx + 1];
   if (baseTok === undefined) return null;
-  if (containsSentinel(baseTok)) return { sentinelBail: true };
 
   let rgb: RGB | null = null;
   if (baseTok.kind === TokenKind.Hash) {
@@ -1968,10 +1945,9 @@ function parseRelativeFrom(
   } else if (baseTok.kind === TokenKind.Ident) {
     const name = baseTok.name;
     // `currentColor` origin needs cascade visibility; the static fold has
-    // none, so warn and drop. The browser resolves currentColor itself, so
-    // rn-web stays silent and lets the authored text through.
+    // none, so warn and drop.
     if (name === 'currentcolor') {
-      if (__DEV__ && !__NATIVE_WEB__) {
+      if (__DEV__) {
         warnOnce(
           'native-relative-color-currentcolor',
           `\`${outerFn}(from currentColor ...)\` cannot be converted for React Native because \`currentColor\` depends on inherited styles. Use a theme value as the base color, or write the resolved color directly.`
@@ -2184,13 +2160,6 @@ function readChannels(
   if (relativeSpace !== undefined) {
     const from = parseRelativeFrom(args, 0, tok.name || relativeSpace);
     if (from !== null) {
-      if ('sentinelBail' in from) {
-        // Sentinel-base relative color (`oklch(from <theme-token> l c h)`)
-        // defers to `colorFnResolver`'s render-time substitution; the
-        // post-substitution string re-enters readChannels with a literal hex
-        // base. Bail the static fold silently.
-        return null;
-      }
       bindings = rgbToTargetBindings(from.rgb, relativeSpace);
       keywords = RELATIVE_CHANNEL_KEYWORDS[relativeSpace];
       // Relative-color alpha omitted ⇒ defaults to the origin's alpha (not 100%).

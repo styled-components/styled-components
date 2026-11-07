@@ -2,11 +2,20 @@ import '@testing-library/jest-dom';
 import { act, render } from '@testing-library/react';
 import React from 'react';
 import Frame, { FrameContextConsumer } from 'react-frame-component';
+import { renderToString } from 'react-dom/server';
 import rscPlugin from '../../plugins/rsc';
 import StyleSheet from '../../sheet';
 import { getCSS, resetStyled } from '../../test/utils';
+// After `test/utils`, which mocks the class name generator for modules loaded later.
+import createGlobalStyle from '../../constructors/createGlobalStyle';
 import { resetWarnOnce } from '../../utils/warnOnce';
-import { StyleSheetManager, configureServerStyles } from '../StyleSheetManager';
+import ServerStyleSheet from '../ServerStyleSheet';
+import {
+  StyleSheetManager,
+  configureServerStyles,
+  mainCompiler,
+  useStyleSheetContext,
+} from '../StyleSheetManager';
 
 let styled: ReturnType<typeof resetStyled>;
 
@@ -819,6 +828,170 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
+      </style>
+    `);
+  });
+
+  describe('namespace inheritance', () => {
+    const className = (element: Element | null): string | undefined =>
+      element?.className.split(' ').pop();
+
+    it('gives a nested manager that sets only plugins its parent namespace, and the class the parent gives', () => {
+      const Test = styled.div`
+        color: red;
+      `;
+
+      const { getByTestId } = render(
+        <>
+          <StyleSheetManager namespace="#foo">
+            <Test data-testid="direct" />
+          </StyleSheetManager>
+          <StyleSheetManager namespace="#foo">
+            <StyleSheetManager plugins={[]}>
+              <Test data-testid="nested" />
+            </StyleSheetManager>
+          </StyleSheetManager>
+        </>
+      );
+
+      const directClass = className(getByTestId('direct'));
+
+      expect(className(getByTestId('nested'))).toBe(directClass);
+      expect(getCSS(document)).toBe(`#foo .${directClass}{color:red;}`);
+    });
+
+    it('lets a nested manager clear the parent namespace with an empty one', () => {
+      const Test = styled.div`
+        color: red;
+      `;
+
+      const { getByTestId } = render(
+        <StyleSheetManager namespace="#foo">
+          <StyleSheetManager namespace="">
+            <Test data-testid="subject" />
+          </StyleSheetManager>
+        </StyleSheetManager>
+      );
+
+      expect(getCSS(document)).toBe(`.${className(getByTestId('subject'))}{color:red;}`);
+    });
+
+    it('lets a nested manager replace the parent namespace with its own', () => {
+      const Test = styled.div`
+        color: red;
+      `;
+
+      const { getByTestId } = render(
+        <StyleSheetManager namespace="#foo">
+          <StyleSheetManager namespace="#bar">
+            <Test data-testid="subject" />
+          </StyleSheetManager>
+        </StyleSheetManager>
+      );
+
+      expect(getCSS(document)).toBe(`#bar .${className(getByTestId('subject'))}{color:red;}`);
+    });
+
+    it('keeps the namespace through a manager that sets only a target', () => {
+      const Test = styled.div`
+        color: red;
+      `;
+
+      const { getByTestId } = render(
+        <StyleSheetManager namespace="#foo">
+          <StyleSheetManager target={document.body}>
+            <Test data-testid="subject" />
+          </StyleSheetManager>
+        </StyleSheetManager>
+      );
+
+      expect(getCSS(document)).toBe(`#foo .${className(getByTestId('subject'))}{color:red;}`);
+    });
+
+    it.each([
+      ['an empty namespace', { namespace: '' }],
+      ['an empty namespace and no plugins', { namespace: '', plugins: [] }],
+      ['no plugins and no namespace', { plugins: [] }],
+    ])('gives a manager with %s the default compiler', (_, props) => {
+      let compiler: unknown;
+      const Reader = () => {
+        compiler = useStyleSheetContext().compiler;
+
+        return null;
+      };
+
+      render(
+        <StyleSheetManager {...props}>
+          <Reader />
+        </StyleSheetManager>
+      );
+
+      expect(compiler).toBe(mainCompiler);
+    });
+
+    it('keeps a nested manager that clears its namespace on the default compiler, under a namespaced parent', () => {
+      let compiler: unknown;
+      const Reader = () => {
+        compiler = useStyleSheetContext().compiler;
+
+        return null;
+      };
+
+      render(
+        <StyleSheetManager namespace="#foo">
+          <StyleSheetManager namespace="">
+            <Reader />
+          </StyleSheetManager>
+        </StyleSheetManager>
+      );
+
+      expect(compiler).toBe(mainCompiler);
+    });
+  });
+
+  it('reaches root-anchored selectors when the namespace sits on the root element', () => {
+    const Card = styled.li`
+      view-transition-name: card;
+      html.dark & {
+        color: white;
+      }
+    `;
+    const Global = createGlobalStyle`
+      :root {
+        --primary: red;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      ::view-transition-group(*${Card}) {
+        animation-duration: 400ms;
+      }
+    `;
+
+    const sheet = new ServerStyleSheet();
+    renderToString(
+      sheet.collectStyles(
+        <StyleSheetManager namespace="#app">
+          <Global />
+          <Card />
+        </StyleSheetManager>
+      )
+    );
+    const tags = sheet.getStyleTags();
+    sheet.seal();
+
+    expect(tags).toMatchInlineSnapshot(`
+      <style data-styled="true"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        #app .c {view-transition-name: card; view-transition-class: sc-a;}/*!sc*/
+      html#app.dark .c {color: white;}/*!sc*/
+      data-styled.g1[id="sc-a"]{content:"c,"}/*!sc*/
+      :root#app {--primary: red;}/*!sc*/
+      html#app,#app body {margin: 0;}/*!sc*/
+      :is(#app,#app *)::view-transition-group(*.sc-a) {animation-duration: 400ms;}/*!sc*/
+      data-styled.g2[id="sc-global-b"]{content:"sc-global-b,"}/*!sc*/
       </style>
     `);
   });

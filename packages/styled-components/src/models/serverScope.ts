@@ -1,4 +1,5 @@
 import React from 'react';
+import { CLIENT_REFERENCE, TEMPORARY_REFERENCE } from '../utils/serverReference';
 import type { IStyleSheetContext } from './StyleSheetManager';
 
 /*
@@ -24,11 +25,9 @@ type Walk = {
   wrapperOf: Map<object, (props: object) => unknown>;
 };
 
-const CLIENT_REFERENCE = /*#__PURE__*/ Symbol.for('react.client.reference');
 const FORWARD_REF = /*#__PURE__*/ Symbol.for('react.forward_ref');
 const LAZY = /*#__PURE__*/ Symbol.for('react.lazy');
 const MEMO = /*#__PURE__*/ Symbol.for('react.memo');
-const TEMPORARY_REFERENCE = /*#__PURE__*/ Symbol.for('react.temporary.reference');
 
 /** The memo entry of a container whose fields are being walked. */
 const OPEN = /*#__PURE__*/ {};

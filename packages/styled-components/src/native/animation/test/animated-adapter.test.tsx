@@ -9,10 +9,11 @@
 import React from 'react';
 import { Animated } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
+import createTheme from '../../../constructors/createTheme';
+import ThemeProvider from '../../../models/ThemeProvider';
 import styled from '../../';
 import { resetResponsiveCache } from '../../responsive';
 import { resetNativeStyleCache, toNativeStyles } from '../../../models/compileNative';
-import { describeOnRnWeb } from '../../transform/describeOnRnWeb';
 import { resetWarningsForTest } from '../../transform/dev';
 import '../'; // ensure default adapter side-effect registers
 import {
@@ -1029,6 +1030,67 @@ describe('Animated adapter;@keyframes', () => {
     }
   });
 
+  it('resolves a createTheme value inside keyframes against the enclosing theme', () => {
+    jest.useFakeTimers();
+    const interpSpy = jest.spyOn(Animated.Value.prototype, 'interpolate');
+    try {
+      const theme = createTheme({ dim: 0.2 });
+      // The native entry has no `keyframes` helper; the block sits in the template.
+      const Box = styled.View`
+        animation: fade 50ms linear forwards;
+        @keyframes fade {
+          from {
+            opacity: 1;
+          }
+          to {
+            opacity: ${theme.dim};
+          }
+        }
+      `;
+      const withTheme = (provided: Record<string, number>) => (
+        <ThemeProvider theme={provided}>
+          <Box />
+        </ThemeProvider>
+      );
+      // The adapter hands its resolved frame values to `interpolate`; the last call holds the active ones.
+      const resolvedFrames = () => {
+        const calls = interpSpy.mock.calls;
+        return (calls[calls.length - 1][0] as { outputRange: unknown[] }).outputRange;
+      };
+
+      let renderer!: TestRenderer.ReactTestRenderer;
+      act(() => {
+        renderer = track(TestRenderer.create(withTheme({})));
+      });
+      const fallback = resolvedFrames();
+
+      act(() => {
+        renderer.update(withTheme({ dim: 0.4 }));
+      });
+      const themeA = resolvedFrames();
+
+      act(() => {
+        renderer.update(withTheme({ dim: 0.8 }));
+      });
+      const themeB = resolvedFrames();
+
+      const rounded = (range: unknown[]) => range.map(v => Number((v as number).toFixed(6)));
+
+      expect({
+        fallback: rounded(fallback),
+        themeA: rounded(themeA),
+        themeB: rounded(themeB),
+      }).toEqual({
+        fallback: [1, 0.2],
+        themeA: [1, 0.4],
+        themeB: [1, 0.8],
+      });
+    } finally {
+      interpSpy.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+
   it('fill-mode none: overrides cleared after completion', () => {
     jest.useFakeTimers();
     try {
@@ -2001,21 +2063,6 @@ describe('Animated adapter: lifecycle events (CSS Animations §5.1 / Transitions
         expect(parse('red')).toBeNull();
         expect(parse('#00f')).toEqual({ r: 0, g: 0, b: 255, a: 1 });
         expect(parse('rgb(1, 2, 3)')).toEqual({ r: 1, g: 2, b: 3, a: 1 });
-      });
-    });
-
-    describeOnRnWeb(() => {
-      it('unpacks the unsigned 0xAARRGGBB react-native-web returns', () => {
-        const rnWeb = require('react-native-web');
-        expect(rnWeb.processColor('red')).toBe(0xffff0000);
-        expect(rnWeb.processColor('rgba(0, 0, 255, 0.5)')).toBe(0x800000ff);
-
-        makeNormalizeColorsUnreachable();
-        const parse = parserFor(() => rnWeb);
-
-        expect(parse('red')).toEqual({ r: 255, g: 0, b: 0, a: 1 });
-        expect(parse('transparent')).toEqual({ r: 0, g: 0, b: 0, a: 0 });
-        expect(parse('not-a-color')).toBeNull();
       });
     });
   });

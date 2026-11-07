@@ -117,7 +117,7 @@ This file is the repo's only agent instructions file; there is no CLAUDE.md. It 
 
 - `__SERVER__`: build-time constant, `true` in the server build only. See the server-detection bullet in Critical Constraints for which gates depend on it and which traps to avoid.
 - `__NATIVE__`: build-time constant, `true` ONLY in the native build. The jest native setup flips it to `true` so jest-side createTheme tests reach the native branch.
-- `__NATIVE_WEB__`: build-time constant, `true` ONLY in the rn-web variant of the native bundle. Gate browser-handles-natively passthroughs (`light-dark`, `oklch` / `lab` / `lch` / `color-mix`, viewport units, `calc()` static-mixed) and host-only fixes (matrix3d rewrite) on this constant so rollup tree-shakes per bundle. Jest defaults the global to `false`; flip per-test to exercise the rn-web branch.
+- `__NATIVE_WEB__`: build-time constant, `true` ONLY in the rn-web bridge bundle (`styled-components/native` on web). The bridge compiles styles with the web pipeline and hands the CSS to the browser, so the native engine (transform, polyfills, `compileNative`, `NativeStyle`) never runs on web and never reads this constant; only web-pipeline code the bridge shares does. `treeshake.test.ts` "rn-web bridge build" locks the engine out of the bridge. Jest defaults the global to `false`.
 - `__DEV__`: build-time constant gating dev-only code. Substitution is wired so consumer bundlers DCE the dead branch in production via the standard `NODE_ENV` path. Prefer the outermost applicable `if (__DEV__) { ... }` that can wrap a contiguous dev-only region; never rely only on `warnOnce` or helpers to skip work. Message strings and warning arguments must not be constructed outside `__DEV__`. Jest defaults the global to `true`; flip per-test to exercise the production branch.
 - `IS_BROWSER` (`src/constants.ts`; window and document both present) is a runtime check; bundlers CANNOT tree-shake code behind it, so gate a decision that is fixed per bundle on the matching `__*` constant instead. See [docs/bundling.md](docs/bundling.md).
 - `IS_RSC`: module-level constant defined in `utils/isRsc.ts`. Rollup replaces it with literal `false` in every build except the server one, for DCE; runtime semantics live in the server-detection Critical Constraint above.
@@ -131,7 +131,7 @@ This file is the repo's only agent instructions file; there is no CLAUDE.md. It 
 
 ## CSS polyfills
 
-- Every native CSS polyfill has a spec-driven validation block, with an `on rn-web` sub-describe, before its internals are refactored. Follow the procedure and the rn-web parity rules in [docs/css-polyfills.md](docs/css-polyfills.md).
+- Every native CSS polyfill has a spec-driven validation block before its internals are refactored. Follow the procedure in [docs/css-polyfills.md](docs/css-polyfills.md).
 - An unsupported native construct emits `warnOnce` with a stable `code` and drops the declaration; never ship a guess to React Native.
 - Keep `packages/styled-components/docs/rn-css-compatibility.md` current with every change to native CSS support.
 
@@ -149,12 +149,13 @@ The `packages/native-showcase` app is the visual QA surface for v7 native polyfi
 
 - TypeScript type-instantiation budget, measured type constraints, and type-surface testing: [docs/typescript-performance.md](docs/typescript-performance.md)
 - React 19 behaviors that hit the render hot path and SSR/RSC output: [docs/react.md](docs/react.md)
+- `StyleSheetManager` namespace placement, inheritance, and the server default: [docs/namespace.md](docs/namespace.md)
 - React Native substrate: CSS capability by RN version, Yoga divergences, the in-house declaration transform: [docs/react-native.md](docs/react-native.md)
 - Jest + jsdom: jsdom's modern-CSS ceiling and how the web suite reads injected CSS: [docs/jest.md](docs/jest.md)
 - Bundling: per-bundle build-constant substitution, terser DCE traps, testing tree-shaking, bundle size and property mangling, dts/TS2742, edge runtime, published files: [docs/bundling.md](docs/bundling.md)
 - Web rendering sequence diagram: [docs/rendering-flow.md](docs/rendering-flow.md) (web flow only)
 - Animation adapters + spec coverage (Hermes / reanimated; rn-web hands CSS animation to the browser): [docs/animation-adapters.md](docs/animation-adapters.md)
-- Native CSS polyfill procedure and rn-web parity: [docs/css-polyfills.md](docs/css-polyfills.md)
+- Native CSS polyfill procedure, and why polyfills have no rn-web branch: [docs/css-polyfills.md](docs/css-polyfills.md)
 - `attrs` precedence and its escape hatches: [docs/attrs.md](docs/attrs.md)
 - `createGlobalStyle`'s shared group: the instance registry, rebuild order, and server append rule: [docs/global-styles.md](docs/global-styles.md)
 - Microbenchmark-validated hot-path patterns and V8 gotchas: [docs/performance.md](docs/performance.md)

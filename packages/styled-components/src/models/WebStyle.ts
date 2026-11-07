@@ -69,6 +69,11 @@ export default class WebStyle {
   /** @internal */
   baseStyle: WebStyle | null | undefined;
   componentId: string;
+  /**
+   * Space-joined ids of the chain, base first and `componentId` last.
+   * @internal
+   */
+  ids: string;
   // biome-ignore lint/suspicious/noExplicitAny: public through `IStyledStatics.webStyle`; each component stores rules of its own props shape, and `RuleSet<never>` changes the emitted .d.ts of the exposed property
   rules: RuleSet<any>;
   /**
@@ -108,6 +113,7 @@ export default class WebStyle {
   constructor(rules: RuleSet<any>, componentId: string, baseStyle?: WebStyle | undefined) {
     this.rules = rules;
     this.componentId = componentId;
+    this.ids = baseStyle ? baseStyle.ids + ' ' + componentId : componentId;
     this.baseHash = phash(SEED, componentId);
     this.baseStyle = baseStyle;
     StyleSheet.registerId(componentId);
@@ -253,7 +259,11 @@ export default class WebStyle {
         ? EMPTY_RULES
         : (styleSheet.getProvisionalRules(this.componentId, name) ?? EMPTY_RULES);
     } else {
-      rules = compiler.emit(source, fastFilled, '.' + name, this.componentId, fastFragments);
+      rules = compiler.emit(source, fastFilled, '.' + name, {
+        componentId: this.componentId,
+        fragments: fastFragments,
+        ids: this.ids,
+      });
       // Whoever renders this name next reuses the rules: later requests on the server, same-turn siblings elsewhere.
       if (IS_RSC) rememberRscRules(this, name, rules);
       else styleSheet.stashProvisionalRules(this.componentId, name, rules);

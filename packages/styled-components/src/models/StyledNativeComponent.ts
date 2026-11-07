@@ -41,7 +41,7 @@ import {
   useViewTimelineSubject,
 } from '../native/scrollTimeline';
 import { EMPTY_SAFE_AREA_INSETS, type SafeAreaInsets, useSafeAreaInsets } from '../native/safeArea';
-import { camelize } from '../native/transform';
+import { camelize } from '../native/camelize';
 import { applyResolvers, ResolveEnv } from '../native/transform/polyfills/resolvers';
 import { concatSourceInputs, getSource } from '../parser/source';
 import type {
@@ -159,17 +159,35 @@ function findNativeBaseDecl(ast: Root, prop: string): string | undefined | null 
 }
 
 /**
+ * Stack `over` above `under`, each kept as given (an array stays one nested
+ * entry). A function `style` (Pressable) on either side makes the result a
+ * function that calls each side with the same state.
+ */
+function layerStyle(under: unknown, over: unknown): unknown {
+  if (under == null) return over;
+  if (!isFunction(under) && !isFunction(over)) return [under, over];
+  return (state: InteractionState | undefined) => [
+    isFunction(under) ? under(state) : under,
+    isFunction(over) ? over(state) : over,
+  ];
+}
+
+/**
  * Merge an attrs result bag into context so attrs always wins (docs/attrs.md).
- * An `undefined` value removes the key when context held a defined value; a
- * context that already holds the caller's explicit `undefined` (echoed back by
- * an identity-spread attrs function) keeps it, and a key never present stays
- * absent.
+ * A `style` layers over the one context holds (the caller's, or an inner
+ * attrs'), so an empty one leaves it as is, as on web.
+ * Any other `undefined` value removes the key when context held a defined
+ * value; a context that already holds the caller's explicit `undefined`
+ * (echoed back by an identity-spread attrs function) keeps it, and a key never
+ * present stays absent.
  */
 function mergeAttrsResult(context: object, resolved: Dict<unknown>): void {
   const target = context as Dict<unknown>;
 
   for (const key in resolved) {
-    if (resolved[key] !== undefined) {
+    if (key === 'style') {
+      if (resolved.style != null) target.style = layerStyle(target.style, resolved.style);
+    } else if (resolved[key] !== undefined) {
       target[key] = resolved[key];
     } else if (target[key] !== undefined) {
       delete target[key];
@@ -1079,33 +1097,6 @@ function appendStyle(composed: unknown, extra: object): object {
   return Array.isArray(composed) ? [...composed, extra] : [composed, extra];
 }
 
-/**
- * Inject `container-name: <styledComponentId>` into the rendered
- * style when a component declares `container-type` without an
- * explicit `container-name`. Lets rn-web emit the matching CSS so
- * `@container <id> (...)` queries written via `${Component}`
- * interpolation match against the source on the browser side; on
- * native this prop is ignored by the view manager (the runtime
- * publisher carries the same name through `ContainerContext`).
- */
-function injectAutoContainerName(
-  composed: object,
-  info: NativeStyles['containerInfo'] | undefined,
-  styledComponentId: string
-): object {
-  if (!info || info.explicitName !== undefined) return composed;
-  return appendStyle(composed, { containerName: styledComponentId });
-}
-
-function composeStaticStyle(
-  compiled: NativeStyles,
-  userStyle: unknown,
-  styledComponentId: string
-): object {
-  const composed = composeBase(compiled.base, userStyle);
-  return injectAutoContainerName(composed, compiled.containerInfo, styledComponentId);
-}
-
 function createFastElement(
   elementToBeCreated: NativeTarget,
   elementProps: Dict<unknown>,
@@ -1169,7 +1160,7 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
       props,
       elementToBeCreated,
       undefined,
-      composeStaticStyle(compiled, props.style, styledComponentId),
+      composeBase(compiled.base, props.style),
       compiled.specialCases,
       forwardedRef,
       forwardedComponent
@@ -1184,7 +1175,7 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   // biome-ignore-start lint/correctness/useHookAtTopLevel: this static render path is reached only past an `if (IS_RSC)` early return above, and IS_RSC is a load-time constant, so a given bundle always runs all of these hooks or none of them
   const nativeStyleCtx = React.useContext(NativeStyleContext);
   const parentCtx = React.useContext(ParentContext);
-  let composedStyle = composeStaticStyle(compiled, props.style, styledComponentId);
+  let composedStyle = composeBase(compiled.base, props.style);
   const grid = nativeStyleCtx.cascade.grid;
   if (grid !== undefined && parentCtx.parentId === grid.ownerId) {
     // A `grid-column: span N` item is never static-eligible (the
@@ -1406,13 +1397,15 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // renders that reach the component body with unchanged inputs (an animation
   // tick, for example). Keyed on the real inputs, never on props as a proxy.
   const positionAnchor = compiled.positionAnchor;
+  // The theme attrs left in context: the one compile read, so text and object values agree.
+  const resolveTheme = context.theme;
   let resolveEnv: ResolveEnv;
   const cachedResolveEnv = resolveEnvCacheRef.current;
   if (
     cachedResolveEnv !== null &&
     cachedResolveEnv.env === env &&
     cachedResolveEnv.containerCtx === containerCtx &&
-    cachedResolveEnv.theme === theme &&
+    cachedResolveEnv.theme === resolveTheme &&
     cachedResolveEnv.renderCascade === renderCascade &&
     cachedResolveEnv.parentCtx === parentCtx &&
     cachedResolveEnv.props === props &&
@@ -1425,7 +1418,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     resolveEnv = buildResolveEnv(
       env,
       containerCtx,
-      theme,
+      resolveTheme,
       renderCascade,
       parentCtx,
       props as Record<string, unknown>,
@@ -1442,7 +1435,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
       renderCascade,
       resolveEnv,
       safeAreaInsets,
-      theme,
+      theme: resolveTheme,
     };
   }
   let varImportant: Dict<unknown> | undefined;
@@ -1463,29 +1456,28 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     if (varOut.important !== null) varImportant = varOut.important;
   }
   const baseOverride = effectiveBase !== compiled.base ? effectiveBase : undefined;
-  const baseComposed = hasResponsiveOutput(compiled)
-    ? assembleFinalStyle(
-        compiled,
-        env,
-        containerCtx,
-        theme,
-        props.style,
-        // Generic Props can't structurally satisfy `Record<string, unknown>`
-        // (TS lacks unsealed-object covariance); normalize at the boundary.
-        props as Record<string, unknown>,
-        baseOverride,
-        renderCascade,
-        parentCtx,
-        varImportant,
-        compiled.hasPseudo ? inertStateStyleTargetName(elementToBeCreated) : null,
-        safeAreaInsets
-      )
-    : composeBase(effectiveBase, props.style);
-  let composedStyle = injectAutoContainerName(
-    baseComposed,
-    compiled.containerInfo,
-    forwardedComponent.styledComponentId
-  );
+  // A var() with `!important` is known only after substitution, so the compile-time
+  // gate cannot see it; the overlay is built by assembleFinalStyle alone.
+  const baseComposed =
+    varImportant !== undefined || hasResponsiveOutput(compiled)
+      ? assembleFinalStyle(
+          compiled,
+          env,
+          containerCtx,
+          resolveTheme,
+          context.style,
+          // Generic Props can't structurally satisfy `Record<string, unknown>`
+          // (TS lacks unsealed-object covariance); normalize at the boundary.
+          props as Record<string, unknown>,
+          baseOverride,
+          renderCascade,
+          parentCtx,
+          varImportant,
+          compiled.hasPseudo ? inertStateStyleTargetName(elementToBeCreated) : null,
+          safeAreaInsets
+        )
+      : composeBase(effectiveBase, context.style);
+  let composedStyle = baseComposed;
   // Grid item sizing: a direct child of a `display: grid` container reads the
   // published grid entry and applies a computed width. The owner check
   // (`parentId === grid.ownerId`) enforces the spec's direct-children rule;
@@ -1568,7 +1560,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // on its two-arg signature; a boolean third arg regressed the
   // must-walk path by ~25% in a prior version.
   const publishedCascade =
-    compiled.publishesCascade || props.style != null
+    compiled.publishesCascade || context.style != null
       ? computePublishedCascade(renderCascade, composedStyle)
       : renderCascade;
   const cascadeChanged = publishedCascade !== nativeStyleCtx.cascade;
@@ -1966,7 +1958,7 @@ const SCROLLER_FLEX_PIN = Object.freeze({ flexGrow: 0 });
  *
  * - `nestedScrollEnabled: true`: browsers nest scrolling natively, while
  *   Android's ScrollView requires the opt-in before an inner scroller may
- *   claim a gesture from a scrollable ancestor. Inert on iOS and rn-web.
+ *   claim a gesture from a scrollable ancestor. Inert on iOS.
  * - `pinGrow` (compiled `scrollerFlexPin`): an authored width/height
  *   holds instead of stretching with RN ScrollView's `flexGrow: 1` base.
  *   The companion `flexShrink: 0` lives in the styled scroller baseline

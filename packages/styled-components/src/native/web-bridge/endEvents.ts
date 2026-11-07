@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Ref } from 'react';
 import type { NativeAnimationEvent, NativeTransitionEvent } from '../animation/types';
-import { camelize } from '../transform';
+import { camelize } from '../camelize';
 import { IS_RSC } from '../../utils/isRsc';
 import { warnOnce } from '../../utils/warnOnce';
 

@@ -2427,6 +2427,17 @@ s] { color: white; }`,
       const tree = TestRenderer.create(<Box data-size={15} />);
       expect(tree.root.findByType(View).props.style).toEqual({ width: 30 });
     });
+
+    // css-values-5: the px unit turns the number into a <length>, which adds
+    // to a <length> in calc().
+    it('a px attr() adds to a length inside calc()', () => {
+      const Box = styled.View.withConfig({ displayName: 'AttrCalcSumBox' })`
+        width: calc(attr(data-size px) + 5px);
+      `;
+      // @ts-expect-error data-* props are not part of ViewProps
+      const tree = TestRenderer.create(<Box data-size={10} />);
+      expect(tree.root.findByType(View).props.style).toEqual({ width: 15 });
+    });
   });
 
   describe(':nth-child family spec compliance (CSS Selectors 4: :nth-child / :nth-of-type)', () => {

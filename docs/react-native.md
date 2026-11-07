@@ -23,6 +23,7 @@ The New Architecture (Fabric + TurboModules + bridgeless) is mandatory from RN 0
 - `gap` / `row-gap` / `column-gap`: accept percentage values. RN 0.75+.
 - `cursor`: `auto`, `pointer` (iOS 17+).
 - `experimental_backgroundImage` (gradients as a raw string, experimental): the two gradient types landed four minors apart despite sharing the prop. `linear-gradient()` and `repeating-linear-gradient()` in RN 0.76.0; `radial-gradient()` only in RN 0.80.0. A matrix stating "gradients: 0.76+" over-claims radial on 0.76-0.79 where there is none.
+- Standard background names: RN registers `backgroundImage` from 0.87 and `backgroundSize` / `backgroundPosition` / `backgroundRepeat` from 0.88, where the `experimental_*` forms turn `@deprecated`; 0.85-0.86 drop the standard names silently. Across the peer range, every background declaration emits both keys with the same full value (`PASSTHROUGH_PROPS` in `src/native/transform/passthrough.ts`).
 
 ### `filter` on Android: hard API-31 cliff, applied per filter list
 
@@ -60,7 +61,7 @@ RN ships a vendored Yoga whose `flex-shrink` default is `0`, not CSS's `1`. This
 - `Style.h` defines `DefaultFlexShrink = 0.0f` and `WebDefaultFlexShrink = 1.0f`. The web-aligned value applies only when `config->useWebDefaults()` is true. RN ships no call to `setUseWebDefaults(true)`, so the effective RN default is `0`.
 - The same `useWebDefaults` gate also flips `align-content` (RN default `flex-start` vs web `stretch`) and the `min-width` / `min-height` semantics on flex items.
 
-This is a load-bearing invariant for any layout polyfill or rn-web parity test. RN baseline is `flex-shrink: 0`, so web-style layouts that rely on items shrinking need an explicit `flex-shrink: 1`, and a parity test that assumes the CSS default will diverge from native. When debugging "items not wrapping" versus "items shrinking inappropriately," check which side of this default the consumer expects.
+This is a load-bearing invariant for any layout polyfill. RN baseline is `flex-shrink: 0`, so web-style layouts that rely on items shrinking need an explicit `flex-shrink: 1`, and a test that assumes the CSS default will diverge from native. When debugging "items not wrapping" versus "items shrinking inappropriately," check which side of this default the consumer expects.
 
 ## The declaration transform is in-house
 

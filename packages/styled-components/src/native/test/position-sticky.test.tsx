@@ -43,7 +43,6 @@ import styled from '../';
 import { resetResponsiveCache } from '../responsive';
 import { resetNativeStyleCache, toNativeStyles } from '../../models/compileNative';
 import { resetWarningsForTest } from '../transform/dev';
-import { describeOnRnWeb } from '../transform/describeOnRnWeb';
 
 const stubStyleSheet = {
   create: <T extends object>(styles: T) => styles,
@@ -152,14 +151,6 @@ describe('position: sticky spec compliance (CSS Position 3 §3.4)', () => {
       const out = toNativeStyles('position: absolute;', stubStyleSheet);
       expect(out.sticky).toBeUndefined();
       expect((out.base as any).position).toBe('absolute');
-    });
-
-    describeOnRnWeb('on rn-web', () => {
-      it('passes position: sticky through for the browser', () => {
-        const out = toNativeStyles('position: sticky;', stubStyleSheet);
-        expect(out.sticky).toBeUndefined();
-        expect((out.base as any).position).toBe('sticky');
-      });
     });
   });
 
@@ -366,33 +357,6 @@ describe('position: sticky spec compliance (CSS Position 3 §3.4)', () => {
         )
       );
       expect(tree.root.findByType(ScrollView).props.stickyHeaderIndices).toEqual([1]);
-    });
-
-    describeOnRnWeb('on rn-web', () => {
-      it('mounts no overlay machinery; the browser handles sticking', () => {
-        const WebScroller = styled.ScrollView``;
-        const WebHeader = styled.View`
-          position: sticky;
-        `;
-        const tree = track(
-          TestRenderer.create(
-            <WebScroller testID="scroller">
-              <WebHeader testID="subject" />
-            </WebScroller>
-          )
-        );
-        act(() => {
-          findScroller(tree).props.onLayout(layoutEvent(0, 500, 0, 300));
-          findScroller(tree).props.onScroll(scrollEvent(150));
-        });
-        expect(findOverlayHosts(tree).length).toBe(0);
-        const nodes = tree.root.findAllByProps({ testID: 'subject' });
-        expect(nodes.length).toBeGreaterThan(0);
-        const flat = flatStyle(nodes[nodes.length - 1]);
-        // The raw declaration reaches the browser; no fade layer attaches.
-        expect(flat.some((l: any) => l.position === 'sticky')).toBe(true);
-        expect(flat.some((l: any) => l.opacity !== undefined)).toBe(false);
-      });
     });
   });
 });

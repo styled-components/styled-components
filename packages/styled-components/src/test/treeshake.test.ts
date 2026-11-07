@@ -224,10 +224,9 @@ describe('native build isolation', () => {
   });
 
   it('drops the rn-web matrix3d transport rewrite from the Hermes bundle', () => {
-    // `normalizeStyleForWeb` gates on `__NATIVE_WEB__` so
-    // `rewriteStyleForWebTransport` and `fixTransformMatrix3d` only
-    // ship on rn-web. The literal `matrix3d` only appears via that
-    // rewrite, so its absence is a tight proof of tree-shake.
+    // The matrix3d rewrite lives only in the rn-web bridge, and the
+    // literal `matrix3d` appears nowhere else in shipped code, so its
+    // absence proves the bridge stays out of the Hermes bundle.
     expect(nativeCJS).not.toContain('matrix3d');
     expect(nativeESM).not.toContain('matrix3d');
   });
@@ -260,6 +259,19 @@ describe('rn-web bridge build', () => {
     expect(bridgeCJS).not.toContain('createAnimatedComponent');
     expect(bridgeESM).not.toContain('createAnimatedComponent');
   });
+
+  it.each(['styled-components.web.js', 'styled-components.web.esm.js'])(
+    '%s bundles no module of the native declaration transform or animation engine',
+    file => {
+      const { sources }: { sources: string[] } = JSON.parse(readNative(file + '.map'));
+      const engineSources = sources.filter(source =>
+        /\/src\/native\/(transform|animation)\//.test(source)
+      );
+
+      expect(sources.length).toBeGreaterThan(0);
+      expect(engineSources).toEqual([]);
+    }
+  );
 
   it('keeps the 16-element matrix → matrix3d rewrite for rn-web preprocess', () => {
     // rn-web's preprocess.js emits `matrix(a,b,c,...,p)` for any
@@ -534,8 +546,11 @@ describe('bundle size', () => {
     // arity-2 attrs tracing with its runtime fallback, and the server entry
     // points a consumer bundle would shake away. Holds the security fix that keeps
     // malformed CSS inside its statement, `createGlobalStyle` interpolations in render,
-    // and at-rules whose bodies are declaration blocks (`@view-transition`, `@page` margin boxes).
-    expect(sizeKB).toBeLessThan(15.15);
+    // at-rules whose bodies are declaration blocks (`@view-transition`, `@page` margin boxes),
+    // the automatic `view-transition-class` and chain-wide `container-name`, a namespace
+    // joined onto root-anchored selectors, and `keyframes` reading fragments and style objects the
+    // way a styled template does.
+    expect(sizeKB).toBeLessThan(16.1);
   });
   it('production bundle size with real bundler tree-shaking', async () => {
     const zlib = require('zlib');
@@ -576,8 +591,11 @@ describe('bundle size', () => {
     // the global-style instance registry shared across colliding ids.
     // v6.4.1 for this same entry is 11.44kB gzip. Holds the security fix that keeps
     // malformed CSS inside its statement, `createGlobalStyle` interpolations in render,
-    // and at-rules whose bodies are declaration blocks (`@view-transition`, `@page` margin boxes).
-    expect(sizeKB).toBeLessThan(14);
+    // at-rules whose bodies are declaration blocks (`@view-transition`, `@page` margin boxes),
+    // the automatic `view-transition-class` and chain-wide `container-name`, a namespace
+    // joined onto root-anchored selectors, and `keyframes` reading fragments and style objects the
+    // way a styled template does.
+    expect(sizeKB).toBeLessThan(14.9);
   }, 30000);
 });
 

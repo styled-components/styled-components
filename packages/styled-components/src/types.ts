@@ -100,10 +100,11 @@ export type Interpolation<Props extends BaseObject> =
  * mapping `color` to `react-native-svg`'s `fill`).
  *
  * Both `pop` and `peek` accept either:
- * - A **CSS property name** (single segment, no dots;e.g. `'color'`,
- *   `'padding'`). Reads from the resolved compiled style; `pop` removes,
+ * - A **CSS property name** (single segment, no dots; e.g. `'color'`,
+ *   `'background-color'` or `'backgroundColor'`, either spelling on every
+ *   platform). Reads from the resolved compiled style; `pop` removes,
  *   `peek` leaves the decl in place. Returns `string | undefined`.
- * - A **typed theme path** (dot-separated;e.g. `'color.red.500'`).
+ * - A **typed theme path** (dot-separated; e.g. `'color.red.500'`).
  *   Reads a token out of the active theme. Autocomplete and value-type
  *   inference flow from the augmented `DefaultTheme`. Calling pop/peek
  *   with a theme path opts the attrs callback out of the construction-
@@ -196,7 +197,7 @@ export interface Compiler {
    * work `compile` performs against a freshly joined CSS string. A value
    * that cannot stay in its field is parsed on its own and spliced in.
    *
-   * `fragments` is the parallel side table populated by
+   * `options.fragments` is the parallel side table populated by
    * `evaluateForFastPath` for slots that resolved to a `css\`...\`` fragment.
    * Same parser, emitter, plugin set, namespace, and decl/selector transforms
    * as `compile`.
@@ -205,9 +206,19 @@ export interface Compiler {
     source: import('./parser/source').Source,
     filled: ReadonlyArray<string>,
     parentSelector: string,
-    componentId: string,
-    fragments?: ReadonlyArray<import('./parser/compile').FastPathFragment | null> | null
+    options: CompilerEmitOptions
   ) => string[];
+}
+
+export interface CompilerEmitOptions {
+  componentId: string;
+  /** @internal */
+  fragments?: ReadonlyArray<import('./parser/compile').FastPathFragment | null> | null | undefined;
+  /**
+   * Space-joined ids of the extension chain, base first and `componentId` last.
+   * @internal
+   */
+  ids?: string | undefined;
 }
 
 export interface ShouldForwardProp<R extends Runtime> {

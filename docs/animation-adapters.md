@@ -9,7 +9,7 @@ The v7 native engine has a pluggable animation contract (`src/native/animation/t
 
 The Animated adapter registers itself when the native engine loads. Importing the reanimated subpath registers the reanimated adapter, replacing the default.
 
-The rn-web bundle has no animation adapter. Its entry (`src/native/web-bridge/index.tsx`) builds on the web styling pipeline and never imports the native engine, so `animation*`, `transition*`, and `@keyframes` reach the browser as real CSS and the browser runs them with full spec semantics. `treeshake.test.ts` locks the engine out of that bundle.
+The rn-web bundle has no animation adapter. Its entry (`src/native/web-bridge/index.tsx`) builds on the web styling pipeline and never imports the native engine, so `animation*`, `transition*`, and `@keyframes` reach the browser as real CSS and the browser runs them, so support and behavior follow the browser. `treeshake.test.ts` locks the engine out of that bundle.
 
 ## Reanimated 4 CSS-layer adapter
 
@@ -61,7 +61,7 @@ CSS Animations L1+L2, Transitions L1+L2, Easing L1+L2.
 
 ## rn-web
 
-None of the gaps above apply on rn-web, where the browser runs the CSS itself. `onAnimationEnd` and `onTransitionEnd` fire on styled primitives whose ref is the DOM element, including `View` and `Text`, and on `FlatList`, `SectionList`, and `VirtualizedList`. They do not fire on `KeyboardAvoidingView`, whose ref is the component instance; put the callback on a styled `View` inside it. The payload is `{ animationName, elapsedTime }` or `{ propertyName, elapsedTime }`. `propertyName` is the camelCase style key, so `background-color` is reported as `backgroundColor`. `elapsedTime` is in seconds and does not include `animation-delay` or `transition-delay`, matching the Hermes adapter. A completion that bubbles from a descendant does not call an ancestor's callback, a completion on a pseudo-element does not call it, and `animationcancel` / `transitioncancel` do not call these props.
+The gaps above belong to the iOS and Android adapters. On rn-web the browser runs the CSS itself, so support follows the browser and `prefers-reduced-motion` applies only through authored media queries. `onAnimationEnd` and `onTransitionEnd` fire on styled primitives whose ref is the DOM element, including `View` and `Text`, and on `FlatList`, `SectionList`, and `VirtualizedList`. They do not fire on `KeyboardAvoidingView`, whose ref is the component instance; put the callback on a styled `View` inside it. The payload is `{ animationName, elapsedTime }` or `{ propertyName, elapsedTime }`. `propertyName` is the camelCase style key, so `background-color` is reported as `backgroundColor`. `elapsedTime` is in seconds and does not include `animation-delay` or `transition-delay`, matching the Hermes adapter. A completion that bubbles from a descendant does not call an ancestor's callback, a completion on a pseudo-element does not call it, and `animationcancel` / `transitioncancel` do not call these props.
 
 react-native-web primitives forward only an allowlist of props to the DOM element (`react-native-web/dist/modules/forwardedProps`). Those two callbacks are not on it, so the bridge listens for `animationend` and `transitionend` on the host node.
 

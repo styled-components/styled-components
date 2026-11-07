@@ -1,4 +1,3 @@
-import { describeOnRnWeb } from '../describeOnRnWeb';
 import { resetWarningsForTest } from '../dev';
 import { transformDecl } from '../index';
 import { getPassthroughKeys, getPrimaryPassthroughKey } from '../passthrough';
@@ -63,21 +62,6 @@ describe('passthrough mapping', () => {
         writingDirection: 'rtl',
       });
     });
-
-    describeOnRnWeb(() => {
-      // rn-web emits `writingDirection` (translates to CSS `direction`
-      // so the browser flips bidi rendering) AND lifts a `dir` prop
-      // through SPECIAL_CASE_PROPS - rn-web's LocaleContext / BiDi
-      // compiler reads `props.dir`, not the CSS direction, so a
-      // descendant `text-align: start | end` only flips when the prop
-      // reaches the host element.
-      it('emits writingDirection style + dir prop on rn-web', () => {
-        expect(transformDecl('direction', 'rtl')).toEqual({
-          writingDirection: 'rtl',
-          dir: 'rtl',
-        });
-      });
-    });
   });
 
   // CSS Display 4 §2.5 (display: contents)
@@ -104,10 +88,9 @@ describe('passthrough mapping', () => {
   });
 
   describe('dual-emit background props', () => {
-    // Native RN 0.85 only registers `experimental_*` (silently drops
-    // `backgroundImage`); rn-web only knows `backgroundImage` (silently
-    // drops the `experimental_*`). Emitting both lets each platform pick
-    // the one it understands.
+    // RN 0.85-0.86 register only the `experimental_*` names; later
+    // versions add the standard names. Emitting both covers the peer range
+    // (docs/react-native.md "Standard background names").
     const value = 'linear-gradient(135deg, #ff8a00, #6b1bb1)';
 
     it('background-image emits experimental_ first then standard CSS name', () => {
@@ -116,8 +99,7 @@ describe('passthrough mapping', () => {
         experimental_backgroundImage: value,
         backgroundImage: value,
       });
-      // Insertion order matters on rn-web (later key wins via
-      // preprocess overwrite). Verify experimental_ comes first.
+      // Key order is experimental_ first, standard name last.
       expect(Object.keys(out)).toEqual(['experimental_backgroundImage', 'backgroundImage']);
     });
 
@@ -125,9 +107,7 @@ describe('passthrough mapping', () => {
       // `cover` and `contain` are bare-string forms RN 0.85's native
       // parser drops; substitute to `auto` on the native key (the
       // spec-correct fold for gradients with no intrinsic dimensions,
-      // per CSS Backgrounds 3 §3.10), keeping the keyword for rn-web
-      // where the browser resolves cover / contain against the image
-      // type natively.
+      // per CSS Backgrounds 3 §3.10); the standard key keeps the keyword.
       expect(transformDecl('background-size', 'cover')).toEqual({
         experimental_backgroundSize: 'auto',
         backgroundSize: 'cover',
@@ -162,28 +142,16 @@ describe('passthrough mapping', () => {
       });
     });
 
-    it('background-position skips rn-web key for multi-token forms', () => {
-      // rn-web's validator rejects multi-value backgroundPosition; emit
-      // only the experimental_ key on native so rn-web doesn't see the
-      // offending string. The native side accepts the two-axis form
-      // and resolves it; rn-web silently uses its CSS default (the
-      // same paint it would have produced after dropping the invalid
-      // value).
-      expect(transformDecl('background-position', '0 0')).toEqual({
-        experimental_backgroundPosition: '0 0',
-      });
-      expect(transformDecl('background-position', '50% 50%')).toEqual({
-        experimental_backgroundPosition: '50% 50%',
-      });
-      expect(transformDecl('background-position', 'top left')).toEqual({
-        experimental_backgroundPosition: 'top left',
-      });
-      // Single-token forms still dual-emit (rn-web accepts them).
-      expect(transformDecl('background-position', 'center')).toEqual({
-        experimental_backgroundPosition: 'center',
-        backgroundPosition: 'center',
-      });
-    });
+    it.each([['0 0'], ['50% 50%'], ['top left'], ['left 10px top 20px']])(
+      'background-position dual-emits the multi-token value %s',
+      val => {
+        // RN 0.88+ reads the standard key; 0.85-0.87 read only the experimental_ key.
+        expect(transformDecl('background-position', val)).toEqual({
+          experimental_backgroundPosition: val,
+          backgroundPosition: val,
+        });
+      }
+    );
 
     it('background-position collapses equivalent center keyword pairs before dual emit', () => {
       expect(transformDecl('background-position', 'center top')).toEqual({
@@ -200,61 +168,49 @@ describe('passthrough mapping', () => {
       });
     });
 
-    it('preserves dual-emit through theme-token resolution path', () => {
-      // A multi-token gradient with sentinels reaches transformDecl as a
-      // raw string; resolvers run downstream. The passthrough boundary
-      // still emits both keys so each platform can drive its renderer.
-      const sentinelValue =
-        'linear-gradient(90deg, \0sc:colors.fail:#c8243a, \0sc:colors.ink:#000)';
-      const out = transformDecl('background-image', sentinelValue);
-      expect(out.experimental_backgroundImage).toBe(sentinelValue);
-      expect(out.backgroundImage).toBe(sentinelValue);
+    it('reads theme placeholders in a gradient as their default text and keeps dual-emit', () => {
+      const placeholders = 'linear-gradient(90deg, \0sc:colors.fail:#c8243a, \0sc:colors.ink:#000)';
+      const literal = 'linear-gradient(90deg, #c8243a, #000)';
+
+      expect(transformDecl('background-image', placeholders)).toEqual({
+        backgroundImage: literal,
+        experimental_backgroundImage: literal,
+      });
     });
 
-    // react-native-web's StyleSheet validator rejects multi-value
-    // `backgroundPosition` / `-size` / `-repeat`: `Invalid style
-    // property of "backgroundPosition". Value is "0% 0%,0% 0%" but only
-    // single values are supported.` Collapsing identical comma values
-    // to a single value is semantically equivalent on both hosts (CSS
-    // shorthand cycles a single value to all layers per Backgrounds 3).
-    describe('redundant layered comma collapse (rn-web validator workaround)', () => {
-      it('collapses identical multi-value backgroundPosition (native key only)', () => {
-        // Collapsed to `'0% 0%'` (still multi-token); rn-web key drops.
+    // RN's background-position / -size / -repeat processors split a
+    // comma-separated layer list themselves, so the authored value
+    // reaches both keys unchanged.
+    describe('layered comma values', () => {
+      it('keeps identical backgroundPosition layers on both keys', () => {
         expect(transformDecl('background-position', '0% 0%,0% 0%')).toEqual({
-          experimental_backgroundPosition: '0% 0%',
+          experimental_backgroundPosition: '0% 0%,0% 0%',
+          backgroundPosition: '0% 0%,0% 0%',
         });
       });
 
-      it('collapses identical multi-value backgroundSize', () => {
-        // `experimental_backgroundSize` folds `cover` to `auto`
-        // (RN 0.85 native parser bug workaround); the standard
-        // `backgroundSize` key keeps the keyword so rn-web hands it
-        // to the browser as-is.
+      it('keeps identical backgroundSize layers on both keys', () => {
         expect(transformDecl('background-size', 'cover, cover')).toEqual({
-          experimental_backgroundSize: 'auto',
-          backgroundSize: 'cover',
+          experimental_backgroundSize: 'auto, auto',
+          backgroundSize: 'cover, cover',
         });
       });
 
-      it('collapses identical multi-value backgroundRepeat', () => {
+      it('keeps identical backgroundRepeat layers on both keys', () => {
         expect(transformDecl('background-repeat', 'no-repeat,no-repeat,no-repeat')).toEqual({
-          experimental_backgroundRepeat: 'no-repeat',
-          backgroundRepeat: 'no-repeat',
+          experimental_backgroundRepeat: 'no-repeat,no-repeat,no-repeat',
+          backgroundRepeat: 'no-repeat,no-repeat,no-repeat',
         });
       });
 
-      it('keeps comma form on native key when layers differ; drops rn-web key', () => {
-        // Multi-token form on rn-web key would trigger the validator
-        // warning; the native key still carries the two-layer value.
+      it('keeps differing backgroundPosition layers on both keys', () => {
         expect(transformDecl('background-position', '0% 0%, 50% 50%')).toEqual({
           experimental_backgroundPosition: '0% 0%, 50% 50%',
+          backgroundPosition: '0% 0%, 50% 50%',
         });
       });
 
-      it('does not collapse non-layered passthroughs (no regression)', () => {
-        // `boxShadow` accepts comma-separated shadow layers; identical
-        // shadows are NOT semantically reducible (the spec still paints
-        // each layer). Only the layered background props cycle.
+      it('does not collapse non-layered passthroughs', () => {
         expect(transformDecl('box-shadow', '0 0 1px #000, 0 0 1px #000')).toEqual({
           boxShadow: '0 0 1px #000, 0 0 1px #000',
         });
@@ -280,12 +236,6 @@ describe('passthrough mapping', () => {
 
       it('auto stays a plain passthrough', () => {
         expect(transformDecl('isolation', 'auto')).toEqual({ isolation: 'auto' });
-      });
-
-      describeOnRnWeb(() => {
-        it('passes through untouched (browser implements isolation)', () => {
-          expect(transformDecl('isolation', 'isolate')).toEqual({ isolation: 'isolate' });
-        });
       });
     });
 
@@ -326,15 +276,6 @@ describe('passthrough mapping', () => {
         });
         expect(warnSpy).not.toHaveBeenCalled();
       });
-
-      describeOnRnWeb(() => {
-        it('never warns on rn-web (browser renders the full filter list)', () => {
-          expect(transformDecl('filter', 'saturate(1.4) blur(2px)')).toEqual({
-            filter: 'saturate(1.4) blur(2px)',
-          });
-          expect(warnSpy).not.toHaveBeenCalled();
-        });
-      });
     });
 
     describe('CSS Backgrounds 3 longhand grammar validation', () => {
@@ -356,6 +297,7 @@ describe('passthrough mapping', () => {
       it('background-position accepts edge-offset forms', () => {
         expect(transformDecl('background-position', 'right 3em bottom 10px')).toEqual({
           experimental_backgroundPosition: 'right 3em bottom 10px',
+          backgroundPosition: 'right 3em bottom 10px',
         });
         expect(warnSpy).not.toHaveBeenCalled();
       });
@@ -479,9 +421,10 @@ describe('passthrough mapping', () => {
       expect(out.boxShadow![1].color).toBe('rgba(0,0,0,0.5)');
     });
 
-    it('does not rewrite values containing theme sentinels', () => {
-      const v = '1px 2px \0sc:colors.shadow:#000';
-      expect(transformDecl('box-shadow', v)).toEqual({ boxShadow: v });
+    it('reads a theme placeholder as its default text', () => {
+      expect(transformDecl('box-shadow', '1px 2px \0sc:colors.shadow:#000')).toEqual(
+        transformDecl('box-shadow', '1px 2px #000')
+      );
     });
 
     it('normalizes newlines like RN before parsing', () => {
@@ -545,67 +488,37 @@ describe('passthrough mapping', () => {
       );
     });
 
-    it('does not rewrite filter values containing theme sentinels', () => {
-      const v = 'drop-shadow(1px 2px \0sc:colors.shadow:#000)';
-      expect(transformDecl('filter', v)).toEqual({ filter: v });
+    it('reads a theme placeholder as its default text', () => {
+      expect(transformDecl('filter', 'drop-shadow(1px 2px \0sc:colors.shadow:#000)')).toEqual(
+        transformDecl('filter', 'drop-shadow(1px 2px #000)')
+      );
     });
   });
 
-  describeOnRnWeb('box-shadow on rn-web', () => {
-    it('passes system color keywords through as a CSS string', () => {
-      expect(transformDecl('box-shadow', '1px 2px Highlight')).toEqual({
-        boxShadow: '1px 2px Highlight',
-      });
-    });
-  });
-
-  describeOnRnWeb('filter on rn-web', () => {
-    it('passes drop-shadow() with system colors through as a CSS string', () => {
-      expect(transformDecl('filter', 'drop-shadow(1px 2px Highlight)')).toEqual({
-        filter: 'drop-shadow(1px 2px Highlight)',
-      });
-    });
-  });
-
-  // Dual-emit background longhands do not branch on `__NATIVE_WEB__`; this
-  // subtree locks parity so a future rn-web-only shortcut cannot diverge
-  // from the Hermes path for structured stacks (see `index.ts` passthrough
-  // block + `substituteBackgroundSizeKeywordsForNative`).
-  describeOnRnWeb('dual-emit background longhands on rn-web', () => {
+  // See `index.ts` passthrough block + `substituteBackgroundSizeKeywordsForNative`.
+  describe('dual-emit background longhands', () => {
     it('background-size cover keeps keyword on standard key and folds native key', () => {
       expect(transformDecl('background-size', 'cover')).toEqual({
         experimental_backgroundSize: 'auto',
         backgroundSize: 'cover',
       });
     });
-
-    it('background-position multi-token still skips the rn-web key', () => {
-      expect(transformDecl('background-position', '0 0')).toEqual({
-        experimental_backgroundPosition: '0 0',
-      });
-    });
   });
 
-  describeOnRnWeb('vertical-align align-content polyfill on rn-web', () => {
-    // CSS Box Alignment L3 §5.3.
-
+  describe('vertical-align passthrough', () => {
     it.each([
-      ['top', 'flex-start'],
-      ['middle', 'center'],
-      ['bottom', 'flex-end'],
-    ])('vertical-align: %s also emits align-content: %s', (value, alignContent) => {
-      expect(transformDecl('vertical-align', value)).toEqual({
-        verticalAlign: value,
-        alignContent,
-      });
+      ['top'],
+      ['middle'],
+      ['bottom'],
+      ['baseline'],
+      ['sub'],
+      ['super'],
+      ['text-top'],
+      ['text-bottom'],
+      ['auto'],
+    ])('vertical-align: %s passes through unchanged', value => {
+      expect(transformDecl('vertical-align', value)).toEqual({ verticalAlign: value });
     });
-
-    it.each([['baseline'], ['sub'], ['super'], ['text-top'], ['text-bottom'], ['auto']])(
-      'vertical-align: %s passes through unchanged',
-      value => {
-        expect(transformDecl('vertical-align', value)).toEqual({ verticalAlign: value });
-      }
-    );
   });
 
   describe('helpers', () => {

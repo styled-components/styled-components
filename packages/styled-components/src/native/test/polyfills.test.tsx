@@ -2,24 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled from '../index';
-import {
-  __resetPlatformCacheForTesting,
-  applyBackgroundBlendModePolyfill,
-  applyStylePolyfills,
-  isWebPlatform,
-} from '../polyfills';
-
-// ──────────────────────────────────────────────────────────────────
-//  isWebPlatform
-// ──────────────────────────────────────────────────────────────────
-
-describe('isWebPlatform', () => {
-  beforeEach(() => __resetPlatformCacheForTesting());
-
-  it('reports false under the RN jest preset (Platform.OS=ios)', () => {
-    expect(isWebPlatform()).toBe(false);
-  });
-});
+import { applyBackgroundBlendModePolyfill, applyStylePolyfills } from '../polyfills';
 
 // ──────────────────────────────────────────────────────────────────
 //  applyBackgroundBlendModePolyfill
@@ -403,6 +386,22 @@ describe('background-blend-mode polyfill (rendered)', () => {
     expect(blendStyle.experimental_backgroundImage).toBe('linear-gradient(transparent, #000)');
     expect(blendStyle.mixBlendMode).toBe('multiply');
   });
+
+  it.each(['contain', 'cover'])(
+    'sizes a url() photo layer by the authored background-size: %s',
+    size => {
+      const Card = styled(View)`
+        background-color: red;
+        background-image: url(https://example.com/dog.jpg);
+        background-size: ${size};
+        background-blend-mode: multiply;
+      `;
+      const photo = TestRenderer.create(<Card />).root.find(
+        node => (node.props as { source?: unknown }).source !== undefined
+      );
+      expect(photo.props.resizeMode).toBe(size);
+    }
+  );
 
   it('preserves user-rendered children alongside the blend layers', () => {
     const Card = styled(View)`

@@ -18,8 +18,7 @@
  * flex-direction: row; flex-wrap: wrap` and measures its content-box
  * width via onLayout. Each direct styled child reads the published grid
  * entry from the cascade and computes a pixel width from the fr-unit
- * leftover-space formula. rn-web passes the raw grid CSS through to the
- * browser untouched.
+ * leftover-space formula.
  */
 import React from 'react';
 import { View } from 'react-native';
@@ -29,7 +28,6 @@ import { resetResponsiveCache } from '../responsive';
 import { resetNativeStyleCache, toNativeStyles } from '../../models/compileNative';
 import { resetWarningsForTest } from '../transform/dev';
 import { transformDecl } from '../transform';
-import { describeOnRnWeb } from '../transform/describeOnRnWeb';
 
 const stubStyleSheet = {
   create: <T extends object>(styles: T) => styles,
@@ -191,38 +189,6 @@ describe('display: grid subset spec compliance (CSS Grid 2)', () => {
     });
   });
 
-  describeOnRnWeb('transformDecl emissions (rn-web passthrough)', () => {
-    // Browsers ship CSS grid. The rn-web branch passes raw values through
-    // so the host engine lays out a real grid; no lifts, no warnings.
-    it('passes `display: grid` through unchanged', () => {
-      expect(transformDecl('display', 'grid')).toEqual({ display: 'grid' });
-    });
-
-    it('passes track lists, placement, and flow through as raw strings', () => {
-      expect(transformDecl('grid-template-columns', 'repeat(3, 1fr)')).toEqual({
-        gridTemplateColumns: 'repeat(3, 1fr)',
-      });
-      expect(transformDecl('grid-template-columns', '100px 1fr')).toEqual({
-        gridTemplateColumns: '100px 1fr',
-      });
-      expect(transformDecl('grid-column', 'span 2')).toEqual({ gridColumn: 'span 2' });
-      expect(transformDecl('grid-column', '1 / 3')).toEqual({ gridColumn: '1 / 3' });
-      expect(transformDecl('grid-auto-flow', 'column')).toEqual({ gridAutoFlow: 'column' });
-    });
-
-    it('does not warn for unsupported track lists on rn-web', () => {
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-      try {
-        transformDecl('grid-template-columns', '2fr 1fr');
-        transformDecl('grid-column', '1 / 3');
-        transformDecl('grid-auto-flow', 'dense');
-        expect(warnSpy).not.toHaveBeenCalled();
-      } finally {
-        warnSpy.mockRestore();
-      }
-    });
-  });
-
   describe('compile extraction (toNativeStyles)', () => {
     it('lifts a container with columns into gridInfo and strips the sentinels', () => {
       const r = toNativeStyles(
@@ -258,20 +224,6 @@ describe('display: grid subset spec compliance (CSS Grid 2)', () => {
       } finally {
         warnSpy.mockRestore();
       }
-    });
-
-    describeOnRnWeb('on rn-web', () => {
-      it('leaves grid CSS in the base for the browser; no gridInfo/gridSpan', () => {
-        const r = toNativeStyles(
-          'display: grid; grid-template-columns: repeat(3, 1fr); grid-column: span 2;',
-          stubStyleSheet
-        );
-        expect(r.gridInfo).toBeUndefined();
-        expect(r.gridSpan).toBeUndefined();
-        expect((r.base as any).display).toBe('grid');
-        expect((r.base as any).gridTemplateColumns).toBe('repeat(3, 1fr)');
-        expect((r.base as any).gridColumn).toBe('span 2');
-      });
     });
   });
 

@@ -4,7 +4,9 @@ import Keyframes from '../models/Keyframes';
 import StyleSheet from '../sheet';
 import createCompiler from '../utils/compiler';
 import { resetWarnOnce } from '../utils/warnOnce';
-import { compileWeb } from './compile';
+import { REFERENCE_MARKER } from '../utils/serverReference';
+import { compileWeb, dropMarked } from './compile';
+import { parse } from './parser';
 import { getSource, parseSource } from './source';
 
 const compiler = createCompiler();
@@ -1667,5 +1669,27 @@ describe('compileWeb', () => {
         compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a', rw: multi })
       ).toEqual(['.a::-webkit-input-placeholder{color:gray;}', '.a::placeholder{color:gray;}']);
     });
+  });
+});
+
+describe('dropMarked', () => {
+  const M = REFERENCE_MARKER;
+
+  it('drops the declaration, selector item, at-rule and keyframes stop holding the marker', () => {
+    const root = parse(
+      `color: ${M}; width: 1px; .a, .${M} { margin: 0; } .${M} { top: 0; } @media (${M}) { .c { top: 0; } } @keyframes k { from, ${M} { top: 0; left: ${M}; } ${M} { top: 1px; } }`
+    );
+    const kept = parse('width: 1px; .a { margin: 0; } @keyframes k { from { top: 0; } }');
+
+    expect(dropMarked(root)).toEqual(kept);
+  });
+
+  it('never changes its input', () => {
+    const root = parse(`color: ${M}; .a, .${M} { top: 0; }`);
+    const before = JSON.stringify(root);
+
+    dropMarked(root);
+
+    expect(JSON.stringify(root)).toBe(before);
   });
 });

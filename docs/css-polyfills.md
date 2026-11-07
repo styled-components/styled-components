@@ -18,25 +18,16 @@ Once the spec block is green, the polyfill internals (tokenization, AST shape, e
 
 Unsupported on Native (no viable workaround) MUST emit `warnOnce` with a stable `code` and a developer-facing message that names the offending construct and a concrete, actionable alternative, with no implementation details. Use a unique `dedupeSuffix` (typically the offending value) when the same construct could appear many times. Add a characterization test alongside the spec block so the warning text is regression-locked. The polyfill must still bail to `null` (drop the declaration) instead of shipping nonsense to RN.
 
-## rn-web parity rule
+## Polyfills never run on rn-web
 
-Every polyfill must verify its rn-web output against react-native-web's source (`packages/native-showcase/node_modules/react-native-web/src/`):
+On web, `styled-components/native` resolves to the rn-web bridge, which compiles styles with the web pipeline and hands the CSS to the browser through react-native-web's class-name path. The native engine and every polyfill are absent from that bundle, so:
 
-- If the browser ships the feature, the rn-web branch passes the raw CSS through. Don't expand, normalize, or fold what the browser handles.
-- Never emit a CSS property the browser doesn't ship yet. Lift the equivalent HTML attribute via SPECIAL_CASE_PROPS instead.
-- Gate RN-only prop lifts (`numberOfLines`, `ellipsizeMode`, `textBreakStrategy`, `focusable`, `accessibilityElementsHidden`, etc.) behind `if (!__NATIVE_WEB__)` when the browser implements the CSS surface.
-- Never let RN-only enum extensions (`pointer-events: box-none | box-only`) through the rn-web branch. Web-only enums (`safe center`, `first baseline`) reach rn-web fine.
-- Sentinel-shaped intermediates (`__sc_*`) are native-only. Short-circuit to a browser-recognized property + value before the sentinel forms on rn-web.
-- Every polyfill spec block needs an `on rn-web` sub-describe that exercises the rn-web bundle toggle in Jest and locks rn-web-visible output shape. Prefer `describeOnRnWeb` from `src/native/transform/describeOnRnWeb.ts` (sets `globalThis.__NATIVE_WEB__` for the subtree and restores it afterward).
-
-**What to assert in `describeOnRnWeb` (and what not to).** The outer `describe` locks Hermes/native polyfill semantics rule-by-rule. The rn-web subtree is **parity-focused**, not a second full copy of that matrix.
-
-- **Assert** behaviors that branch on `__NATIVE_WEB__` or must hold when it is true: passthrough vs fold, `buildResolver` returning `null` so transformed CSS can reach the browser, differing resolver coverage (for example container `cq*` versus viewport-only paths), native-only warnings that must not fire on rn-web, and invariants where the fork is unified (a few narrow `it` blocks suffice).
-- **Do not** mechanically duplicate every sibling `it` from the outer block when the rn-web bundle delegates resolution to the host; add targeted `it`s and a brief comment pointing to the handler or `resolvers.ts` (or equivalent) explaining omitted coverage.
-- **Waive explicitly** when a normative rule does not apply on rn-web: document next to the rn-web describe, same rigor as native deviation comments.
+- A polyfill has no rn-web branch and no rn-web test. Its spec block covers iOS and Android only.
+- What works on rn-web is what the browser supports. The compatibility doc's rn-web statements describe browser support and the bridge, never polyfill output.
+- Bridge behavior (prop mapping, `$$css` composition, end events, the 16-element matrix rewrite) is tested in `src/test/web-bridge.test.tsx`; the bridge bundle's contents in `treeshake.test.ts` "rn-web bridge build".
 
 Notes:
 
 - WPT corpus at `packages/styled-components/src/parser/wpt-corpus/` covers a lot of syntax parity; spec blocks fill the BEHAVIOR gap (e.g. mixed-form rejection in `light-dark()`, "unknown" color scheme handling, argument-count enforcement).
 - The light-dark prototype is in `resolvers.test.ts` under the `light-dark() spec compliance (CSS Color Module Level 5 §7)` describe; copy that shape when adding a new spec block.
-- When a spec rule does not apply on native or rn-web (e.g. animation-on-scheme-change is irrelevant on native since we resolve discretely on render), document the deviation in a comment alongside the test (or its omission).
+- When a spec rule does not apply on native (e.g. animation-on-scheme-change is irrelevant on native since we resolve discretely on render), document the deviation in a comment alongside the test (or its omission).

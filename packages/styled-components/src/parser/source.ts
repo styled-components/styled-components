@@ -11,6 +11,11 @@ import {
 } from '../utils/charCodes';
 import type { BaseObject, RuleSet } from '../types';
 import { normalize } from '../utils/normalize';
+import {
+  CAN_HOLD_REFERENCE,
+  isServerOpaqueReference,
+  referenceText,
+} from '../utils/serverReference';
 import { warnOnce } from '../utils/warnOnce';
 import { DYN, NodeKind, Root, TemplateValue } from './ast';
 import { parse, ParseOptions, scanQPB } from './parser';
@@ -21,7 +26,8 @@ import { parse, ParseOptions, scanQPB } from './parser';
  *
  * - `StatelessFn`: `(p) => …`; call and coerce.
  * - `Static`: primitive baked at construction (`${10}px`); also styled-
- *   component refs (pre-stringified to `.${styledComponentId}`).
+ *   component refs (pre-stringified to `.${styledComponentId}`) and, in a
+ *   server build, client and temporary references (their marker text).
  * - `General`: arrays, plain objects, and `${kf}` refs; full walk, bail on
  *   shapes the fast emitter doesn't cover. A keyframes ref resolves here at
  *   fill time since its hashed name varies per StyleSheetManager.
@@ -58,26 +64,6 @@ export interface Source {
    * @internal
    */
   slotIsStandalone: ReadonlyArray<boolean>;
-}
-
-export const CLIENT_REFERENCE = Symbol.for('react.client.reference');
-
-interface ClientReferenceShape {
-  $$typeof: symbol;
-  $$id?: string;
-  name?: string;
-}
-
-function warnClientReference(ref: unknown): void {
-  if (!__DEV__) return;
-  const r = ref as ClientReferenceShape;
-  const id = r.$$id;
-  const label = (id && id.includes('#') ? id.split('#').pop() : id) || r.name || 'unknown';
-  warnOnce(
-    'rsc-client-ref-selector',
-    `interpolating a client component (${label}) as a selector is not supported in server components. Use a plain CSS class selector instead.`,
-    label
-  );
 }
 
 /**
@@ -117,16 +103,15 @@ export function parseSource(
       value = String(slot);
     } else if (slot === null || slot === undefined || slot === false) {
       // Static-empty.
+    } else if (CAN_HOLD_REFERENCE && isServerOpaqueReference(slot)) {
+      // A reference has no class and throws on most reads, so it is checked before any is made.
+      value = referenceText(slot);
     } else if (ref && (slot as { styledComponentId?: string }).styledComponentId !== undefined) {
       // Styled-component ref: pre-stringify the class selector and dispatch as Static.
       value = '.' + (slot as { styledComponentId: string }).styledComponentId;
     } else if (isCssProduct(slot)) {
       // `css\`...\`` fragment ref; the child's Source is lazy-parsed at fill time.
       kind = InterpolationKind.Fragment;
-    } else if (ref && (slot as { $$typeof?: symbol }).$$typeof === CLIENT_REFERENCE) {
-      // Client reference proxies throw when invoked from a server component.
-      // Classify as Static-empty + dev warn so the rest of the template renders.
-      if (__DEV__) warnClientReference(slot);
     } else {
       kind = t === 'function' ? InterpolationKind.StatelessFn : InterpolationKind.General;
     }

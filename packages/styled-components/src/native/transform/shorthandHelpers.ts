@@ -83,8 +83,8 @@ export function consumeColor(stream: TokenStream): Token | null {
       return t;
     }
   }
-  // Theme sentinels (`\0sc:colors.fg:#000`) are opaque color placeholders;
-  // the resolver pass converts them at render time.
+  // A theme sentinel (`\0sc:colors.fg:#000`) is a whole color value the
+  // resolver pass converts at render time.
   if (t.kind === TokenKind.Sentinel) {
     stream.consume();
     return t;
@@ -197,7 +197,6 @@ export function directionalColor(
 function acceptDimensionLike(t: Token): Token | null {
   const k = t.kind;
   if (k === TokenKind.Length || k === TokenKind.Number || k === TokenKind.Percent) return t;
-  if (k === TokenKind.Sentinel) return t;
   if (k === TokenKind.Ident && t.name === 'auto') return t;
   if (k === TokenKind.Function) {
     const name = t.name || '';

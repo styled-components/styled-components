@@ -62,13 +62,6 @@ function warnNoPerEdgeStyle(edge: string, value: string): void {
   );
 }
 
-function camelEdge(edge: string): string {
-  return edge
-    .split('-')
-    .map(p => p[0].toUpperCase() + p.slice(1))
-    .join('');
-}
-
 /* ─────────── 12 single-edge longhands ─────────── */
 
 function singleColor(tokens: Token[], rnKey: string): Dict<unknown> | null {
@@ -91,9 +84,6 @@ function singleStyle(tokens: Token[], edge: string): Dict<unknown> | null {
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
   if (!CSS_LINE_STYLES.has(name)) return null;
-  if (__NATIVE_WEB__) {
-    return { ['border' + camelEdge(edge) + 'Style']: name };
-  }
   // `solid` matches RN's default border style on every edge, so the
   // declaration renders identically with or without per-edge support;
   // accept it silently and only warn for styles RN would visibly miss.
@@ -158,14 +148,6 @@ function axisStyle(tokens: Token[], axis: 'inline' | 'block'): Dict<unknown> | n
   }
   if (!stream.eof()) return null;
 
-  if (__NATIVE_WEB__) {
-    const startEdge = axis === 'inline' ? 'inline-start' : 'block-start';
-    const endEdge = axis === 'inline' ? 'inline-end' : 'block-end';
-    return {
-      ['border' + camelEdge(startEdge) + 'Style']: firstName,
-      ['border' + camelEdge(endEdge) + 'Style']: secondName,
-    };
-  }
   // Uniform `solid` matches RN's default border style; see singleStyle.
   if (firstName !== 'solid' || secondName !== 'solid') {
     warnNoPerEdgeStyle(axis, firstName + (firstName !== secondName ? ' ' + secondName : ''));
@@ -231,13 +213,7 @@ function compositeEdge(
   const map = EDGE_MAP[edge];
   if (width !== null) out[map.width] = tokenToValue(width);
   if (color !== null) out[map.color] = colorTokenToRnStyleValue(color);
-  if (style !== null) {
-    if (__NATIVE_WEB__) {
-      out['border' + camelEdge(edge) + 'Style'] = style;
-    } else {
-      warnNoPerEdgeStyle(edge, style);
-    }
-  }
+  if (style !== null) warnNoPerEdgeStyle(edge, style);
   return out;
 }
 
@@ -263,14 +239,7 @@ function modeSpanning(tokens: Token[], axis: 'inline' | 'block'): Dict<unknown> 
     out[startMap.color] = cv;
     out[endMap.color] = cv;
   }
-  if (style !== null) {
-    if (__NATIVE_WEB__) {
-      out['border' + camelEdge(startEdge) + 'Style'] = style;
-      out['border' + camelEdge(endEdge) + 'Style'] = style;
-    } else {
-      warnNoPerEdgeStyle(axis, style);
-    }
-  }
+  if (style !== null) warnNoPerEdgeStyle(axis, style);
   return out;
 }
 
