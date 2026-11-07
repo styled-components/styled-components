@@ -9,6 +9,8 @@
 import React from 'react';
 import { Animated } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
+import createTheme from '../../../constructors/createTheme';
+import ThemeProvider from '../../../models/ThemeProvider';
 import styled from '../../';
 import { resetResponsiveCache } from '../../responsive';
 import { resetNativeStyleCache, toNativeStyles } from '../../../models/compileNative';
@@ -1025,6 +1027,67 @@ describe('Animated adapter;@keyframes', () => {
       const flat = Array.isArray(style) ? Object.assign({}, ...style.flat()) : style;
       expect(flat).toHaveProperty('opacity');
     } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('resolves a createTheme value inside keyframes against the enclosing theme', () => {
+    jest.useFakeTimers();
+    const interpSpy = jest.spyOn(Animated.Value.prototype, 'interpolate');
+    try {
+      const theme = createTheme({ dim: 0.2 });
+      // The native entry has no `keyframes` helper; the block sits in the template.
+      const Box = styled.View`
+        animation: fade 50ms linear forwards;
+        @keyframes fade {
+          from {
+            opacity: 1;
+          }
+          to {
+            opacity: ${theme.dim};
+          }
+        }
+      `;
+      const withTheme = (provided: Record<string, number>) => (
+        <ThemeProvider theme={provided}>
+          <Box />
+        </ThemeProvider>
+      );
+      // The adapter hands its resolved frame values to `interpolate`; the last call holds the active ones.
+      const resolvedFrames = () => {
+        const calls = interpSpy.mock.calls;
+        return (calls[calls.length - 1][0] as { outputRange: unknown[] }).outputRange;
+      };
+
+      let renderer!: TestRenderer.ReactTestRenderer;
+      act(() => {
+        renderer = track(TestRenderer.create(withTheme({})));
+      });
+      const fallback = resolvedFrames();
+
+      act(() => {
+        renderer.update(withTheme({ dim: 0.4 }));
+      });
+      const themeA = resolvedFrames();
+
+      act(() => {
+        renderer.update(withTheme({ dim: 0.8 }));
+      });
+      const themeB = resolvedFrames();
+
+      const rounded = (range: unknown[]) => range.map(v => Number((v as number).toFixed(6)));
+
+      expect({
+        fallback: rounded(fallback),
+        themeA: rounded(themeA),
+        themeB: rounded(themeB),
+      }).toEqual({
+        fallback: [1, 0.2],
+        themeA: [1, 0.4],
+        themeB: [1, 0.8],
+      });
+    } finally {
+      interpSpy.mockRestore();
       jest.useRealTimers();
     }
   });

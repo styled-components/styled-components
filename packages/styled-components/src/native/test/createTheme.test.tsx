@@ -255,3 +255,129 @@ describe('createTheme;native parity', () => {
     );
   });
 });
+
+describe('createTheme;native theme values read as authored CSS', () => {
+  const defaults = { dim: 0.2, gap: 8, gapPx: '8px' };
+  const t = createTheme(defaults);
+
+  // Each row pairs a themed declaration with its literal-authored twin for
+  // the default value and for a provider-supplied value.
+  const rows = [
+    {
+      defaultLiteral: styled(View)`
+        opacity: 0.2;
+      `,
+      defaultStyle: { opacity: 0.2 },
+      name: 'opacity',
+      providerLiteral: styled(View)`
+        opacity: 0.4;
+      `,
+      providerStyle: { opacity: 0.4 },
+      themed: styled(View)`
+        opacity: ${t.dim};
+      `,
+    },
+    {
+      defaultLiteral: styled(View)`
+        margin-top: 8;
+      `,
+      defaultStyle: { marginTop: 8 },
+      name: 'a unitless length',
+      providerLiteral: styled(View)`
+        margin-top: 12;
+      `,
+      providerStyle: { marginTop: 12 },
+      themed: styled(View)`
+        margin-top: ${t.gap};
+      `,
+    },
+    {
+      defaultLiteral: styled(View)`
+        margin-left: 8px;
+      `,
+      defaultStyle: { marginLeft: 8 },
+      name: 'a px length string',
+      providerLiteral: styled(View)`
+        margin-left: 12px;
+      `,
+      providerStyle: { marginLeft: 12 },
+      themed: styled(View)`
+        margin-left: ${t.gapPx};
+      `,
+    },
+    {
+      defaultLiteral: styled(View)`
+        padding-top: 8px;
+      `,
+      defaultStyle: { paddingTop: 8 },
+      name: 'a value followed by px',
+      providerLiteral: styled(View)`
+        padding-top: 12px;
+      `,
+      providerStyle: { paddingTop: 12 },
+      themed: styled(View)`
+        padding-top: ${t.gap}px;
+      `,
+    },
+  ];
+
+  const styleOf = (Component: React.ComponentType, theme?: Record<string, unknown>) => {
+    const tree = TestRenderer.create(
+      theme === undefined ? (
+        <Component />
+      ) : (
+        <ThemeProvider theme={theme}>
+          <Component />
+        </ThemeProvider>
+      )
+    );
+    return tree.root.findByType(View).props.style;
+  };
+
+  test.each(rows)('$name from the createTheme default matches the literal', row => {
+    expect(styleOf(row.defaultLiteral)).toEqual(row.defaultStyle);
+    expect(styleOf(row.themed)).toEqual(styleOf(row.defaultLiteral));
+  });
+
+  test.each(rows)('$name from a ThemeProvider string matches the literal', row => {
+    const theme = { dim: '0.4', gap: '12px', gapPx: '12px' };
+
+    expect(styleOf(row.providerLiteral)).toEqual(row.providerStyle);
+    expect(styleOf(row.themed, theme)).toEqual(styleOf(row.providerLiteral));
+  });
+
+  test.each(rows)('$name from a ThemeProvider number matches the literal', row => {
+    const theme = { dim: 0.4, gap: 12, gapPx: 12 };
+
+    expect(styleOf(row.themed, theme)).toEqual(styleOf(row.providerLiteral));
+  });
+
+  it('re-reads the new value when the provider theme changes', () => {
+    const Box = styled(View)`
+      opacity: ${t.dim};
+    `;
+    const tree = TestRenderer.create(
+      <ThemeProvider theme={{ dim: '0.4' }}>
+        <Box />
+      </ThemeProvider>
+    );
+    TestRenderer.act(() => {
+      tree.update(
+        <ThemeProvider theme={{ dim: '0.6' }}>
+          <Box />
+        </ThemeProvider>
+      );
+    });
+
+    expect(tree.root.findByType(View).props.style).toEqual({ opacity: 0.6 });
+  });
+
+  it('keeps text-valued theme leaves as text', () => {
+    const palette = createTheme({ ink: 'tomato' });
+    const Tinted = styled(View)`
+      background-color: ${palette.ink};
+    `;
+
+    expect(styleOf(Tinted)).toEqual({ backgroundColor: 'tomato' });
+  });
+});

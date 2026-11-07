@@ -217,6 +217,12 @@ interface AnimScratch {
   transformKinds?: string[];
   fillMode: AnimationDescriptor['fillMode'];
   finished: boolean;
+  /**
+   * The resolved keyframes the current overrides were built from, empty until the first build. A
+   * theme or viewport change under an unchanged keyframes name resolves different values, which
+   * rebuild the interpolations on the running progress node without restarting the timing.
+   */
+  frames: NormalizedFrame[];
   prevPlayState?: string;
   /**
    * Identity of the scroll-timeline binding the current overrides were
@@ -1241,6 +1247,28 @@ function resolveKeyframes(
   return out.length > 0 ? out : null;
 }
 
+/** Frames match when every stop sits at the same offset with the same declaration values. */
+function sameFrames(a: NormalizedFrame[], b: NormalizedFrame[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+
+  for (let i = 0; i < a.length; i++) {
+    const declsA = a[i].decls;
+    const declsB = b[i].decls;
+    if (a[i].offset !== b[i].offset) return false;
+    if (declsA === declsB) continue;
+
+    for (const key in declsA) {
+      if (declsA[key] !== declsB[key]) return false;
+    }
+    for (const key in declsB) {
+      if (!(key in declsA)) return false;
+    }
+  }
+
+  return true;
+}
+
 function parseUnitString(v: string): { n: number; unit: string } | undefined {
   const m = /^(-?[\d.]+)([a-z]+)$/i.exec(v);
   return m ? { n: parseFloat(m[1]), unit: m[2] } : undefined;
@@ -2249,6 +2277,7 @@ function applyAnimations(
           drivenProps: new Set(),
           fillMode: desc.fillMode,
           finished: false,
+          frames: [],
         };
         scratch.anims.push(animS);
       }
@@ -2280,7 +2309,12 @@ function applyAnimations(
         continue;
       }
       const key = scrollTimelineKey(desc, target.entry, target.axis, viewSubject, canNative);
-      if (animS.name !== desc.name || animS.timelineKey !== key) {
+      // A theme or viewport change under an unchanged name and binding resolves new frame values.
+      if (
+        animS.name !== desc.name ||
+        animS.timelineKey !== key ||
+        !sameFrames(animS.frames, frames)
+      ) {
         animS.name = desc.name;
         animS.timelineKey = key;
         animS.finished = false;
@@ -2297,6 +2331,7 @@ function applyAnimations(
         );
         animS.overrides = result.overrides;
         animS.drivenProps = result.drivenProps;
+        animS.frames = frames;
         if (result.transformKinds) animS.transformKinds = result.transformKinds;
       }
       if (Object.keys(animS.overrides).length > 0) {
@@ -2339,6 +2374,7 @@ function applyAnimations(
         drivenProps: new Set(),
         fillMode: desc.fillMode,
         finished: false,
+        frames: [],
       };
       scratch.anims.push(animS);
     }
@@ -2375,12 +2411,29 @@ function applyAnimations(
       );
       animS.overrides = result.overrides;
       animS.drivenProps = result.drivenProps;
+      animS.frames = frames;
       if (result.transformKinds) animS.transformKinds = result.transformKinds;
 
       if (desc.playState === 'running') {
         startKeyframeAnimation(scratch, animS, desc, canNative, onAnimationEnd);
       }
     } else {
+      if (!sameFrames(animS.frames, frames)) {
+        const result = buildKeyframeInterpolations(
+          animS.progress,
+          frames,
+          desc.timingFunction,
+          baseValues,
+          framesAllowNativeDriver(frames),
+          desc.durationMs,
+          desc.composition
+        );
+        animS.overrides = result.overrides;
+        animS.drivenProps = result.drivenProps;
+        animS.frames = frames;
+        if (result.transformKinds) animS.transformKinds = result.transformKinds;
+      }
+
       // Same animation name: check play-state changes
       if (animS.prevPlayState !== desc.playState) {
         if (desc.playState === 'paused' && animS.handle) {

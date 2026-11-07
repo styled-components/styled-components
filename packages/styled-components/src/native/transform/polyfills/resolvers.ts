@@ -5,6 +5,7 @@ import { warnOnce } from '../dev';
 import { isSafeThemePath } from '../sanitize';
 import { tokenize, tokenizeFunctionArgs } from '../tokenize';
 import { Token, TokenKind } from '../tokens';
+import { coerceRawValue } from '../units';
 import { getCssPropertyRegistration } from '../../propertyRegistry';
 import { buildAnchorResolver } from './anchorFns';
 import { hasRelativeFromPrefix, staticColorFunctionToHex } from './colorMath';
@@ -202,7 +203,7 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
   // solid \0sc:color:#000` if it ever lands undivided) falls through to
   // the post-dispatch templateResolver below.
   if (c0 === 0 && findSentinelTerminator(value, 0) === value.length) {
-    return themeResolver(value);
+    return themeResolver(value, prop);
   }
 
   // Viewport / container units start with a digit, `-`, `+`, or `.`. Skip
@@ -852,7 +853,16 @@ function envResolver(value: string): Resolver | null {
  */
 const NO_THEME_SEEN: object = {};
 
-function themeResolver(value: string): Resolver | null {
+function authored(v: number | string, prop: string | undefined): number | string | null {
+  return prop === undefined || typeof v !== 'string' ? v : coerceRawValue(prop, v);
+}
+
+/**
+ * With `prop`, a string value (provider-supplied or fallback text) is read
+ * as if authored for that property (`'8px'` becomes `8`), once per theme
+ * change. Without it (a segment inside a larger value) the text stays text.
+ */
+function themeResolver(value: string, prop?: string): Resolver | null {
   const firstColon = value.indexOf(':', 1);
   if (firstColon === -1) return null;
   const secondColon = value.indexOf(':', firstColon + 1);
@@ -863,7 +873,7 @@ function themeResolver(value: string): Resolver | null {
   const segments = path.split('.');
   // Decode escape sequences once at construction. The resolver is the only
   // consumer of fallback at render time, so this never re-runs per render.
-  const fallback = unescapeSentinelFallback(rawFallback);
+  const fallback = authored(unescapeSentinelFallback(rawFallback), prop);
 
   // Single-slot identity cache. Theme is the only env field this resolver
   // reads, so caching `(theme identity → resolved value)` short-circuits the
@@ -871,7 +881,7 @@ function themeResolver(value: string): Resolver | null {
   // Within a typical app theme is allocated once per createTheme + persists
   // across renders, so the hit rate is dominated by re-renders.
   let lastTheme: object = NO_THEME_SEEN;
-  let lastResult: number | string = fallback;
+  let lastResult: number | string | null = fallback;
 
   return env => {
     if (env.theme === lastTheme) return lastResult;
@@ -888,7 +898,7 @@ function themeResolver(value: string): Resolver | null {
       v = Reflect.get(v, segments[i]);
     }
     // Known gap: the public `Resolver` type is narrower than what a ThemeProvider override can supply (a `PlatformColor` object, for example).
-    const out = v === undefined || v === null ? fallback : (v as number | string);
+    const out = v === undefined || v === null ? fallback : authored(v as number | string, prop);
     lastTheme = env.theme;
     lastResult = out;
     return out;

@@ -40,6 +40,8 @@
 import React from 'react';
 import { ScrollView, View } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
+import createTheme from '../../../constructors/createTheme';
+import ThemeProvider from '../../../models/ThemeProvider';
 import styled from '../../';
 import { resetResponsiveCache } from '../../responsive';
 import { resetNativeStyleCache } from '../../../models/compileNative';
@@ -409,5 +411,58 @@ describe('scroll progress timelines (Scroll-driven Animations L1 §2)', () => {
       });
     }).not.toThrow();
     expect(opacityOf(tree)).toBeCloseTo(0, 5);
+  });
+
+  it('resolves a createTheme value inside keyframes against the enclosing theme', () => {
+    const theme = createTheme({ dim: 0.2 });
+    // The native entry has no `keyframes` helper; the block sits in the template.
+    const Child = styled.View.withConfig({ displayName: 'TLChildTheme' })`
+        animation: fade linear both;
+        @keyframes fade {
+          from {
+            opacity: 1;
+          }
+          to {
+            opacity: ${theme.dim};
+          }
+        }
+        animation-timeline: scroll();
+      `;
+    const withTheme = (provided: Record<string, number>) => (
+      <ThemeProvider theme={provided}>
+        <Scroller>
+          <Child testID="subject" />
+        </Scroller>
+      </ThemeProvider>
+    );
+    const rounded = (value: number | undefined) => Number((value as number).toFixed(6));
+
+    const tree = track(TestRenderer.create(withTheme({})));
+    // Extent 400; the first scroll event seeds it, and offset 200 is progress 0.5.
+    act(() => {
+      tree.root.findByType(ScrollView).props.onScroll(scrollEvent(200));
+    });
+    const fallback = opacityOf(tree);
+
+    act(() => {
+      tree.update(withTheme({ dim: 0.4 }));
+    });
+    const themeA = opacityOf(tree);
+
+    act(() => {
+      tree.update(withTheme({ dim: 0.8 }));
+    });
+    const themeB = opacityOf(tree);
+
+    // Halfway between the from-frame (1) and the theme's `dim`.
+    expect({
+      fallback: rounded(fallback),
+      themeA: rounded(themeA),
+      themeB: rounded(themeB),
+    }).toEqual({
+      fallback: 0.6,
+      themeA: 0.7,
+      themeB: 0.9,
+    });
   });
 });
