@@ -657,12 +657,19 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
     // any <number>, <dimension>, or <percentage>, but must have the same type,
     // or else the function is invalid; the result will have the same type as
     // the arguments."
-    it.each(['mod(7, 3px)', 'mod(7px, 3)', 'rem(7, 3px)', 'rem(7px, 3)', 'mod(7px, 3%)'])(
+    it.each(['mod(7, 3px)', 'mod(7px, 3)', 'rem(7, 3px)', 'rem(7px, 3)'])(
       'rejects mod()/rem() arguments of different types: %s',
       src => {
         expect(mathOf(src)).toBeNull();
       }
     );
+
+    // Deviation: where a percentage resolves against a length (`width`), a
+    // <length> and a <percentage> have a consistent type and mod(7px, 3%) is
+    // valid. The static fold has no percentage basis, so it yields no value.
+    it('yields no value for mod() of a <length> and a <percentage>: mod(7px, 3%)', () => {
+      expect(mathOf('mod(7px, 3%)')).toBeNull();
+    });
 
     it('keeps mod()/rem() of one type: mod(7, 3) and rem(7px, 3px)', () => {
       expect(mathOf('mod(7, 3)')).toEqual({ unit: '', value: 1 });
