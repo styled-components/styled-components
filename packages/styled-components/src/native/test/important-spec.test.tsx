@@ -231,4 +231,59 @@ describe('native !important spec compliance (CSS Cascade L4 §3 + §6.2)', () =>
     const flat = StyleSheet.flatten(txt.props.style);
     expect(flat.fontSize).toBe(20);
   });
+
+  // CSS Custom Properties L1: a `var()` substitutes into the declaration that holds
+  // it, so the declaration keeps its own importance.
+  describe('an !important declaration whose value is a var()', () => {
+    it('applies the substituted value', () => {
+      const Box = styled(View)`
+        --p: 7px;
+        padding-top: var(--p) !important;
+      `;
+      expect(styleOf(Box)).toEqual({ paddingTop: 7 });
+    });
+
+    it('applies inside a matching @media block', () => {
+      const Box = styled(View)`
+        --p: 7px;
+        @media (min-width: 100px) {
+          padding-top: var(--p) !important;
+        }
+      `;
+      expect(styleOf(Box)).toEqual({ paddingTop: 7 });
+    });
+
+    it('beats a normal authored value written after it', () => {
+      const Box = styled(View)`
+        --p: 7px;
+        padding-top: var(--p) !important;
+        padding-top: 3px;
+      `;
+      expect(styleOf(Box)).toEqual({ paddingTop: 7 });
+    });
+
+    it('beats a normal authored value written before it', () => {
+      const Box = styled(View)`
+        --p: 7px;
+        padding-top: 3px;
+        padding-top: var(--p) !important;
+      `;
+      expect(styleOf(Box)).toEqual({ paddingTop: 7 });
+    });
+
+    it('beats the caller style prop', () => {
+      const Box = styled(View)`
+        --p: 7px;
+        padding-top: var(--p) !important;
+      `;
+      expect(styleOf(Box, { style: { paddingTop: 1 } })).toEqual({ paddingTop: 7 });
+    });
+
+    it('uses the fallback when the property is missing', () => {
+      const Box = styled(View)`
+        padding-top: var(--x, 4px) !important;
+      `;
+      expect(styleOf(Box)).toEqual({ paddingTop: 4 });
+    });
+  });
 });

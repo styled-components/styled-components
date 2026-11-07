@@ -1,6 +1,6 @@
 import { describeOnRnWeb } from '../transform/describeOnRnWeb';
 import React, { PropsWithChildren } from 'react';
-import { Animated, Image, Switch, Text, TextInput, View, ViewProps } from 'react-native';
+import { Animated, Image, Pressable, Switch, Text, TextInput, View, ViewProps } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider, css, toStyleSheet } from '../';
 import { resetStyleCache, RN_UNSUPPORTED_VALUES } from '../../models/NativeStyle';
@@ -14,6 +14,15 @@ function flattenStyle(style: unknown): Array<Record<string, any>> {
 
 function mergeStyle(style: unknown): Record<string, any> {
   return Object.assign({}, ...flattenStyle(style));
+}
+
+/** The function `style` handed to Pressable; its host child receives the resolved result instead. */
+function functionStyleOf(element: React.ReactElement): (state: { pressed?: boolean }) => unknown {
+  const holders = TestRenderer.create(element).root.findAll(
+    node => typeof node.props.style === 'function'
+  );
+  // The deepest holder is the Pressable the styled component rendered.
+  return holders[holders.length - 1].props.style;
 }
 
 describe('native', () => {
@@ -440,6 +449,144 @@ describe('native', () => {
       const view = TestRenderer.create(<Comp accessible={undefined} />).root.findByType(View);
       expect('accessible' in view.props).toBe(true);
       expect(view.props.nativeID).toBe('id');
+    });
+
+    describe('attrs style', () => {
+      it('reaches the element after the compiled style', () => {
+        const Comp = styled.View.attrs({ style: { backgroundColor: 'red' } })`
+          padding-top: 10px;
+        `;
+
+        const view = TestRenderer.create(<Comp />).root.findByType(View);
+        expect(view.props.style).toEqual([{ paddingTop: 10 }, { backgroundColor: 'red' }]);
+      });
+
+      it('reaches the element from the function form', () => {
+        const Comp = styled.View.attrs<{ $c?: string }>(p => ({
+          style: { backgroundColor: p.$c },
+        }))`
+          padding-top: 10px;
+        `;
+
+        const view = TestRenderer.create(<Comp $c="red" />).root.findByType(View);
+        expect(view.props.style).toEqual([{ paddingTop: 10 }, { backgroundColor: 'red' }]);
+      });
+
+      it('layers over the caller style, attrs winning a key both set', () => {
+        const Comp = styled.View.attrs({ style: { color: 'red' } })`
+          padding-top: 10px;
+        `;
+
+        const view = TestRenderer.create(
+          <Comp style={{ color: 'blue', opacity: 1 }} />
+        ).root.findByType(View);
+        expect(view.props.style).toEqual([
+          { paddingTop: 10 },
+          { color: 'blue', opacity: 1 },
+          { color: 'red' },
+        ]);
+        expect(mergeStyle(view.props.style)).toEqual({ color: 'red', opacity: 1, paddingTop: 10 });
+      });
+
+      it('is beaten by an !important declaration', () => {
+        const Comp = styled.View.attrs({ style: { color: 'red', opacity: 0.5 } })`
+          color: green !important;
+        `;
+
+        const view = TestRenderer.create(<Comp style={{ color: 'blue' }} />).root.findByType(View);
+        expect(mergeStyle(view.props.style)).toEqual({ color: 'green', opacity: 0.5 });
+      });
+
+      it('keeps a caller array as given inside its layer', () => {
+        const Comp = styled.View.attrs({ style: { color: 'red' } })`
+          padding-top: 10px;
+        `;
+
+        const view = TestRenderer.create(
+          <Comp style={[{ opacity: 1 }, { margin: 2 }]} />
+        ).root.findByType(View);
+        expect(view.props.style).toEqual([
+          { paddingTop: 10 },
+          [{ opacity: 1 }, { margin: 2 }],
+          { color: 'red' },
+        ]);
+      });
+
+      it('keeps an attrs array as given inside its layer', () => {
+        const Comp = styled.View.attrs({ style: [{ color: 'red' }, [{ margin: 2 }]] })`
+          padding-top: 10px;
+        `;
+
+        const view = TestRenderer.create(<Comp />).root.findByType(View);
+        expect(view.props.style).toEqual([{ paddingTop: 10 }, { color: 'red' }, [{ margin: 2 }]]);
+      });
+
+      it('composes with a caller function style on a Pressable, both called with the same state', () => {
+        const callerStyle = jest.fn((state: { pressed?: boolean }) =>
+          state.pressed ? { opacity: 0.5 } : { opacity: 1 }
+        );
+        const Comp = styled(Pressable).attrs({ style: { backgroundColor: 'red' } })`
+          padding-top: 10px;
+        `;
+
+        const style = functionStyleOf(<Comp style={callerStyle} />);
+        callerStyle.mockClear();
+        expect(style({ pressed: false })).toEqual([
+          { paddingTop: 10 },
+          { opacity: 1 },
+          { backgroundColor: 'red' },
+        ]);
+        expect(style({ pressed: true })).toEqual([
+          { paddingTop: 10 },
+          { opacity: 0.5 },
+          { backgroundColor: 'red' },
+        ]);
+        expect(callerStyle.mock.calls).toEqual([[{ pressed: false }], [{ pressed: true }]]);
+      });
+
+      it('composes an attrs function style with a caller object style', () => {
+        const attrsStyle = jest.fn((state: { pressed?: boolean }) =>
+          state.pressed ? { color: 'red' } : { color: 'blue' }
+        );
+        const Comp = styled(Pressable).attrs({ style: attrsStyle })`
+          padding-top: 10px;
+        `;
+
+        const style = functionStyleOf(<Comp style={{ opacity: 1 }} />);
+        attrsStyle.mockClear();
+        expect(style({ pressed: true })).toEqual([
+          { paddingTop: 10 },
+          { opacity: 1 },
+          { color: 'red' },
+        ]);
+        expect(attrsStyle.mock.calls).toEqual([[{ pressed: true }]]);
+      });
+
+      it('layers a two-argument attrs style over the caller style', () => {
+        const Comp = styled.View.attrs((_p, ast) => ({
+          style: { backgroundColor: ast.pop('color') },
+        }))`
+          color: red;
+          padding-top: 10px;
+        `;
+
+        const view = TestRenderer.create(<Comp style={{ opacity: 0.5 }} />).root.findByType(View);
+        expect(view.props.style).toEqual([
+          { paddingTop: 10 },
+          { opacity: 0.5 },
+          { backgroundColor: 'red' },
+        ]);
+      });
+
+      it('layers every attrs style across a wrapped chain, the outer winning', () => {
+        const Inner = styled.View.attrs({ style: { color: 'red', margin: 1 } })`
+          padding-top: 10px;
+        `;
+        const Outer = styled(Inner).attrs({ style: { color: 'green' } })``;
+
+        const view = TestRenderer.create(<Outer />).root.findByType(View);
+        expect(mergeStyle(view.props.style)).toEqual({ color: 'green', margin: 1, paddingTop: 10 });
+      });
     });
 
     it('theme prop works', () => {

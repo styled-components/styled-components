@@ -159,7 +159,23 @@ function findNativeBaseDecl(ast: Root, prop: string): string | undefined | null 
 }
 
 /**
+ * Stack `over` above `under`, each kept as given (an array stays one nested
+ * entry). A function `style` (Pressable) on either side makes the result a
+ * function that calls each side with the same state.
+ */
+function layerStyle(under: unknown, over: unknown): unknown {
+  if (under == null) return over;
+  if (!isFunction(under) && !isFunction(over)) return [under, over];
+  return (state: InteractionState | undefined) => [
+    isFunction(under) ? under(state) : under,
+    isFunction(over) ? over(state) : over,
+  ];
+}
+
+/**
  * Merge an attrs result bag into context so attrs always wins (docs/attrs.md).
+ * A `style` layers over the one context holds (the caller's, or an inner
+ * attrs') instead of replacing it.
  * An `undefined` value removes the key when context held a defined value; a
  * context that already holds the caller's explicit `undefined` (echoed back by
  * an identity-spread attrs function) keeps it, and a key never present stays
@@ -169,7 +185,9 @@ function mergeAttrsResult(context: object, resolved: Dict<unknown>): void {
   const target = context as Dict<unknown>;
 
   for (const key in resolved) {
-    if (resolved[key] !== undefined) {
+    if (key === 'style' && resolved.style != null) {
+      target.style = layerStyle(target.style, resolved.style);
+    } else if (resolved[key] !== undefined) {
       target[key] = resolved[key];
     } else if (target[key] !== undefined) {
       delete target[key];
@@ -1465,24 +1483,27 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     if (varOut.important !== null) varImportant = varOut.important;
   }
   const baseOverride = effectiveBase !== compiled.base ? effectiveBase : undefined;
-  const baseComposed = hasResponsiveOutput(compiled)
-    ? assembleFinalStyle(
-        compiled,
-        env,
-        containerCtx,
-        resolveTheme,
-        props.style,
-        // Generic Props can't structurally satisfy `Record<string, unknown>`
-        // (TS lacks unsealed-object covariance); normalize at the boundary.
-        props as Record<string, unknown>,
-        baseOverride,
-        renderCascade,
-        parentCtx,
-        varImportant,
-        compiled.hasPseudo ? inertStateStyleTargetName(elementToBeCreated) : null,
-        safeAreaInsets
-      )
-    : composeBase(effectiveBase, props.style);
+  // A var() with `!important` is known only after substitution, so the compile-time
+  // gate cannot see it; the overlay is built by assembleFinalStyle alone.
+  const baseComposed =
+    varImportant !== undefined || hasResponsiveOutput(compiled)
+      ? assembleFinalStyle(
+          compiled,
+          env,
+          containerCtx,
+          resolveTheme,
+          context.style,
+          // Generic Props can't structurally satisfy `Record<string, unknown>`
+          // (TS lacks unsealed-object covariance); normalize at the boundary.
+          props as Record<string, unknown>,
+          baseOverride,
+          renderCascade,
+          parentCtx,
+          varImportant,
+          compiled.hasPseudo ? inertStateStyleTargetName(elementToBeCreated) : null,
+          safeAreaInsets
+        )
+      : composeBase(effectiveBase, context.style);
   let composedStyle = injectAutoContainerName(
     baseComposed,
     compiled.containerInfo,
@@ -1570,7 +1591,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // on its two-arg signature; a boolean third arg regressed the
   // must-walk path by ~25% in a prior version.
   const publishedCascade =
-    compiled.publishesCascade || props.style != null
+    compiled.publishesCascade || context.style != null
       ? computePublishedCascade(renderCascade, composedStyle)
       : renderCascade;
   const cascadeChanged = publishedCascade !== nativeStyleCtx.cascade;
