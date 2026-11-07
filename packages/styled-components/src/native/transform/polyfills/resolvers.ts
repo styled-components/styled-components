@@ -230,9 +230,8 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
   // • Web: static-mixed-unit expressions (e.g. `calc(33% - 5px)`) pass
   //   through to the browser's CSS engine, which resolves `%` against the
   //   real containing block at paint time;strictly more accurate than
-  //   anything we could compute. Dynamic-arm calcs (sentinels, env(),
-  //   viewport units) fully evaluate via `mathFnResolver` because the
-  //   sentinels need substitution.
+  //   anything we could compute. Dynamic-arm calcs (env(), viewport
+  //   units) fully evaluate via `mathFnResolver`.
   // • Native: Yoga can't parse calc strings, so `mathFnResolver` always
   //   evaluates with `NATIVE_MATH_OPTS`, which resolves each `%` against
   //   the nearest container's width (`env.container.width`) or the
@@ -255,7 +254,7 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
 
   // Color functions (`oklch`, `oklab`, `lch`, `lab`);same shape: static
   // fold in transformDecl handles fully-literal channels; dynamic arms
-  // (sentinels) defer to colorFnResolver which substitutes + re-converts.
+  // (sibling-index(), env()) defer to colorFnResolver which substitutes + re-converts.
   if (c0 === 0x6f /* o */ && (value.startsWith('oklch(') || value.startsWith('oklab('))) {
     return colorFnResolver(value);
   }
@@ -275,7 +274,7 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
   // round(line-width, A) defers to a runtime resolver because the device
   // pixel ratio isn't known at compile time. The relative from-forms of
   // rgb()/rgba() also start with `r`; route them to colorFnResolver so a
-  // sentinel (theme-token) origin folds at render time. Absolute rgb()
+  // runtime-dependent origin folds at render time. Absolute rgb()
   // stays un-resolved (RN normalizeColor handles it).
   if (c0 === 0x72 /* r */) {
     if (value.startsWith('round(line-width,')) return lineWidthRoundResolver(value);
@@ -366,9 +365,9 @@ function resolveMathFn(value: string, prop?: string): Resolver | null {
   // which resolves `%` and friends against the real containing block at
   // paint time; strictly more accurate than anything computed here. The
   // resolver above still gates validity (malformed math must not reach
-  // CSS); only operands the browser cannot know (theme sentinels and our
-  // polyfilled attr() / anchor() / tree-counting / container units) force
-  // JS evaluation on rn-web.
+  // CSS); only operands the browser cannot know (our polyfilled attr() /
+  // anchor() / tree-counting / container units) force JS evaluation on
+  // rn-web.
   if (__NATIVE_WEB__ && !rnWebMathNeedsJsResolution(value)) {
     return () => value;
   }
@@ -703,7 +702,7 @@ function lightDarkResolver(value: string): Resolver | null {
  * CSS Image type: `url()`, gradient functions (linear / radial / conic,
  * plus repeating-*), `image-set()`, `image()`, `cross-fade()`,
  * `element()`, `paint()`. Any other value (named color, hex, rgb,
- * sentinel, calc, etc.) is treated as the color form.
+ * calc, etc.) is treated as the color form.
  *
  * Nested `light-dark()` calls are currently classified as color form
  * (the common case); a nested light-dark whose own branches are
@@ -739,8 +738,7 @@ function isImageBranch(s: string): boolean {
  *
  * Boundary detection: only treats `light-dark(` as a function call when
  * the preceding char is whitespace, comma, slash, paren, or
- * start-of-string;same boundary set used by the sentinel scanner so
- * `mylight-dark(...)` (an identifier ending in `light-dark`) doesn't
+ * start-of-string, so `mylight-dark(...)` (an identifier ending in `light-dark`) doesn't
  * trigger. Returns null when no calls are found or any call's body is
  * malformed (caller drops the decl).
  */
@@ -1368,7 +1366,7 @@ interface BuildOpts {
 
 /**
  * Runtime resolver for `calc()` / `min()` / `max()` / `clamp()`. Used
- * for both dynamic-arm cases (sentinels, env(), viewport / container
+ * for both dynamic-arm cases (env(), viewport / container
  * units, light-dark(), nested math fns) and the native static-mixed
  * path (where `opts.resolvePercent` does the % → px conversion the
  * layout engine would normally do).
@@ -1400,7 +1398,7 @@ function mathFnResolver(value: string, opts?: BuildOpts): Resolver | null {
  * True when a math function's operand tree contains at least one percent
  * and no other dimensional operand: numbers, arithmetic, and
  * number-valued functions (nested math, sibling-index() /
- * sibling-count()) are fine; any length, sentinel, or env-dependent
+ * sibling-count()) are fine; any length or env-dependent
  * length function makes the expression mixed.
  */
 function isPurePercentMathFn(fn: Token): boolean {
@@ -1565,9 +1563,9 @@ function buildExpression(
 
   // Type checking: `<number> + <length|percent>` is invalid (unitless 0
   // lengths aren't supported in math functions). Catch statically-typed
-  // mismatches at construction time. Sentinels and nested function
-  // tokens can resolve to either kind, so they defer to runtime where
-  // the produced NumericResult's unit fights it out.
+  // mismatches at construction time. Nested function tokens can resolve
+  // to either kind, so they defer to runtime where the produced
+  // NumericResult's unit fights it out.
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
     if (t.kind !== TokenKind.Op) continue;
@@ -1633,8 +1631,7 @@ function buildExpression(
       if (r === null) return null;
       if (rp !== undefined && r.unit === '%') {
         // Native path: any operand surfacing as `%` (literal Percent
-        // token, sentinel resolving to '10%', nested calc returning a
-        // percent string) converts to px against the container/viewport
+        // token, nested calc returning a percent string) converts to px against the container/viewport
         // base. Centralising the conversion here covers every operand
         // shape with one rule.
         const base = rp(env);
@@ -1730,8 +1727,8 @@ function buildOperand(
 /**
  * True when a token statically resolves to a CSS <number>. Numeric
  * constants `pi` / `e` count; `infinity` / `-infinity` / `NaN` are
- * caught earlier and never reach this check. Sentinels and nested
- * function tokens defer to runtime.
+ * caught earlier and never reach this check. Nested function tokens
+ * defer to runtime.
  */
 function isStaticNumberKind(t: Token): boolean {
   if (t.kind === TokenKind.Number) return true;
@@ -1744,7 +1741,7 @@ function isStaticNumberKind(t: Token): boolean {
 
 /**
  * True when a token statically resolves to a CSS <length> or
- * <percentage>. Sentinels and nested function tokens defer to runtime.
+ * <percentage>. Nested function tokens defer to runtime.
  */
 function isStaticDimensionKind(t: Token): boolean {
   return t.kind === TokenKind.Length || t.kind === TokenKind.Percent;
@@ -1780,11 +1777,9 @@ function reduceMath(items: Array<NumericResult | string>): NumericResult | null 
     if (op === '+' || op === '-') {
       const a = items[i - 1] as NumericResult;
       const b = items[i + 1] as NumericResult;
-      // Runtime relaxation (deviating from strict type checking): a
-      // sentinel-derived operand often surfaces unitless because the
-      // theme value doesn't carry a CSS unit. Tolerate `<unitless> +/-
-      // <typed>` here so `calc(${t.space.xl} + 47px)` still works at
-      // runtime; literal `calc(0 + 5px)` is rejected at construction
+      // Operands from env(), nested math, light-dark() and attr() surface
+      // unitless even when they are lengths, so `<unitless> +/- <typed>` is
+      // tolerated. A literal `calc(0 + 5px)` is rejected at construction
       // time in `buildExpression` before reaching here.
       if (a.unit && b.unit && a.unit !== b.unit) return null;
       const v = op === '+' ? a.value + b.value : a.value - b.value;

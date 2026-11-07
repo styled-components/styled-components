@@ -1452,6 +1452,13 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
       expect(buildResolver('calc(0 + 5px)')).toBeNull();
     });
 
+    // Spec §10.9: "At a * sub-expression, multiply the types of the left and
+    // right arguments. The sub-expression's type is the returned result."
+    it('accepts a runtime <number> times a <length>: calc(sibling-index() * 5px) = 15px', () => {
+      const r = buildResolver('calc(sibling-index() * 5px)')!;
+      expect(r({ ...baseEnv, siblingIndex: 3 })).toBe(15);
+    });
+
     it('accepts 0px + 5px (both <length>): calc(0px + 5px) = 5px', () => {
       const r = buildResolver('calc(0px + 5px)')!;
       expect(r(baseEnv)).toBe(5);
