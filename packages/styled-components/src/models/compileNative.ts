@@ -716,27 +716,52 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   return out;
 }
 
+const BACKGROUND_BLEND_MODE_CSS_NAME = 'background-blend-mode';
 const BACKGROUND_BLEND_MODE_KEY = 'backgroundBlendMode';
 
 /**
- * `background-blend-mode` in the base, a render-time resolver, a `var()`
- * deferral, or any conditional bucket. `base` itself may be a registered
- * StyleSheet id, so the pre-registration object is scanned.
+ * Whether a `[name, ...]` entry list holds `name`. `resolvers` and
+ * `importantResolvers` entries are named by React Native key
+ * (`flexGrow`); `varDeferred` entries keep the authored CSS name
+ * (`flex-grow`) for the render-time `transformDecl`.
+ */
+function listHasName(
+  list: ReadonlyArray<readonly [string, ...unknown[]]> | undefined,
+  name: string
+) {
+  if (list === undefined) return false;
+  for (let i = 0; i < list.length; i++) {
+    if (list[i][0] === name) return true;
+  }
+  return false;
+}
+
+/**
+ * `background-blend-mode` in the base, an important layer, a render-time
+ * resolver, a `var()` deferral, or any conditional bucket's equivalents.
+ * `base` itself may be a registered StyleSheet id, so the pre-registration
+ * object is scanned.
  */
 function declaresBackgroundBlendMode(out: NativeStyles, resolvedBase: Dict<unknown>): boolean {
   if (resolvedBase[BACKGROUND_BLEND_MODE_KEY] !== undefined) return true;
   if (out.important?.[BACKGROUND_BLEND_MODE_KEY] !== undefined) return true;
-  const keyLists = [out.resolvers, out.importantResolvers, out.varDeferred];
+  if (
+    listHasName(out.resolvers, BACKGROUND_BLEND_MODE_KEY) ||
+    listHasName(out.importantResolvers, BACKGROUND_BLEND_MODE_KEY) ||
+    listHasName(out.varDeferred, BACKGROUND_BLEND_MODE_CSS_NAME)
+  ) {
+    return true;
+  }
   for (let i = 0; i < out.conditional.length; i++) {
     const bucket = out.conditional[i];
-    if (bucket.styles[BACKGROUND_BLEND_MODE_KEY] !== undefined) return true;
-    keyLists.push(bucket.resolvers);
-  }
-  for (let i = 0; i < keyLists.length; i++) {
-    const list = keyLists[i];
-    if (list === undefined) continue;
-    for (let j = 0; j < list.length; j++) {
-      if (list[j][0] === BACKGROUND_BLEND_MODE_KEY) return true;
+    if (
+      bucket.styles[BACKGROUND_BLEND_MODE_KEY] !== undefined ||
+      bucket.important?.[BACKGROUND_BLEND_MODE_KEY] !== undefined ||
+      listHasName(bucket.resolvers, BACKGROUND_BLEND_MODE_KEY) ||
+      listHasName(bucket.importantResolvers, BACKGROUND_BLEND_MODE_KEY) ||
+      listHasName(bucket.varDeferred, BACKGROUND_BLEND_MODE_CSS_NAME)
+    ) {
+      return true;
     }
   }
   return false;
@@ -751,17 +776,37 @@ function declaresBackgroundBlendMode(out: NativeStyles, resolvedBase: Dict<unkno
 function computeScrollerFlexPin(out: NativeStyles): boolean {
   // `base` may be a registered StyleSheet id (number) rather than the
   // raw style object; the keys aren't inspectable then, so only the
-  // resolver / varDeferred scans below contribute.
+  // important / resolver / varDeferred scans below contribute.
   const base = out.base;
   const baseInspectable = typeof base === 'object' && base !== null;
-  let dim = baseInspectable && ('width' in base || 'height' in base);
-  let flex = baseInspectable && ('flex' in base || 'flexGrow' in base);
-  for (const list of [out.resolvers, out.varDeferred]) {
+  const important = out.important;
+  let dim =
+    (baseInspectable && ('width' in base || 'height' in base)) ||
+    (important !== undefined && ('width' in important || 'height' in important));
+  let flex =
+    (baseInspectable && ('flex' in base || 'flexGrow' in base)) ||
+    (important !== undefined && ('flex' in important || 'flexGrow' in important));
+  // Resolver lists hold React Native keys; the deferral list holds authored CSS names.
+  for (const list of [out.resolvers, out.importantResolvers]) {
     if (list === undefined) continue;
     for (let i = 0; i < list.length; i++) {
       const key = list[i][0];
       if (key === 'width' || key === 'height') dim = true;
       else if (key === 'flex' || key === 'flexGrow') flex = true;
+    }
+  }
+  const deferred = out.varDeferred;
+  if (deferred !== undefined) {
+    for (let i = 0; i < deferred.length; i++) {
+      const name = deferred[i][0];
+      if (
+        name === 'width' ||
+        name === 'height' ||
+        name === 'inline-size' ||
+        name === 'block-size'
+      ) {
+        dim = true;
+      } else if (name === 'flex' || name === 'flex-grow') flex = true;
     }
   }
   return dim && !flex;

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Appearance, View } from 'react-native';
+import { Appearance, Pressable, StyleSheet, View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
+import { toNativeStyles } from '../../models/compileNative';
 import styled from '../index';
 import { applyBackgroundBlendModePolyfill, applyStylePolyfills } from '../polyfills';
 import { resetResponsiveCache } from '../responsive';
@@ -579,6 +580,59 @@ describe('background-blend-mode layer slot (tree shape)', () => {
     expect(counter.mounts).toBe(2);
   });
 
+  it('keeps the children mounted when a color-scheme @media resolves a var() blend mode', () => {
+    const getSpy = jest.spyOn(Appearance, 'getColorScheme').mockReturnValue('light');
+    const addSpy = jest.spyOn(Appearance, 'addChangeListener');
+    try {
+      const { counter, Leaf } = mountCounter();
+      const Card = styled(View)`
+        --m: multiply;
+        width: 100px;
+        background-color: red;
+        background-image: linear-gradient(transparent, black);
+        @media (prefers-color-scheme: dark) {
+          background-blend-mode: var(--m);
+        }
+      `;
+      const tree = TestRenderer.create(
+        <Card>
+          <Leaf />
+        </Card>
+      );
+      const listener = addSpy.mock.calls[addSpy.mock.calls.length - 1]?.[0];
+      expect(listener).toBeDefined();
+      expect(hasBlendLayer(tree)).toBe(false);
+
+      TestRenderer.act(() => {
+        listener!({ colorScheme: 'dark' });
+      });
+      expect(hasBlendLayer(tree)).toBe(true);
+      expect(counter.mounts).toBe(1);
+    } finally {
+      getSpy.mockRestore();
+      addSpy.mockRestore();
+    }
+  });
+
+  it.each<[string, string]>([
+    ['the base', 'background-blend-mode: var(--m);'],
+    ['the base with !important', 'background-blend-mode: var(--m) !important;'],
+    ['a media bucket', '@media (min-width: 1px) { background-blend-mode: var(--m); }'],
+    [
+      'a media bucket with !important',
+      '@media (min-width: 1px) { background-blend-mode: var(--m) !important; }',
+    ],
+    ['a pseudo bucket', '&:hover { background-blend-mode: var(--m); }'],
+  ])('reserves the layer slot for a var() blend mode in %s', (_label, css) => {
+    const compiled = toNativeStyles(`--m: multiply; ${css}`, StyleSheet as never);
+    expect(compiled.blendLayerSlot).toBe(true);
+  });
+
+  it('reserves no layer slot without a blend mode declaration', () => {
+    const compiled = toNativeStyles('--m: multiply; width: var(--w);', StyleSheet as never);
+    expect(compiled.blendLayerSlot).toBeUndefined();
+  });
+
   it.each<[string, boolean]>([
     ['with the layers present', true],
     ['at rest in the layer slot', false],
@@ -649,5 +703,65 @@ describe('background-blend-mode layer slot (tree shape)', () => {
     );
     const styles = tree.root.findAllByType(Item).map(item => item.findByType(View).props.style);
     expect(styles).toEqual([[{ color: 'black' }, { color: 'red' }], { color: 'black' }]);
+  });
+
+  describe('function children', () => {
+    /** Renders the pressed flag a target hands the function child, and counts mounts of its output. */
+    function pressedProbe() {
+      const counter = { mounts: 0 };
+      function Probe({ pressed }: { pressed: boolean }) {
+        React.useState(() => {
+          counter.mounts++;
+          return 0;
+        });
+        return <View testID={pressed ? 'probe-pressed' : 'probe-rest'} />;
+      }
+      const render = ({ pressed }: { pressed: boolean }) => <Probe pressed={pressed} />;
+      return { counter, render };
+    }
+
+    it('calls a function child of a target when the layers are present', () => {
+      const { counter, render } = pressedProbe();
+      const Card = styled(Pressable)`
+        background-color: red;
+        background-image: linear-gradient(transparent, black);
+        background-blend-mode: multiply;
+      `;
+      const tree = TestRenderer.create(<Card>{render}</Card>);
+
+      expect(hasBlendLayer(tree)).toBe(true);
+      expect(tree.root.findAllByProps({ testID: 'probe-rest' }).length).toBeGreaterThan(0);
+      expect(counter.mounts).toBe(1);
+    });
+
+    it('calls a function child of a target when the layer slot is at rest, and keeps it mounted as layers appear', () => {
+      const getSpy = jest.spyOn(Appearance, 'getColorScheme').mockReturnValue('light');
+      const addSpy = jest.spyOn(Appearance, 'addChangeListener');
+      try {
+        const { counter, render } = pressedProbe();
+        const Card = styled(Pressable)`
+          background-color: red;
+          background-image: linear-gradient(transparent, black);
+          @media (prefers-color-scheme: dark) {
+            background-blend-mode: multiply;
+          }
+        `;
+        const tree = TestRenderer.create(<Card>{render}</Card>);
+        const listener = addSpy.mock.calls[addSpy.mock.calls.length - 1]?.[0];
+        expect(listener).toBeDefined();
+        expect(hasBlendLayer(tree)).toBe(false);
+        expect(tree.root.findAllByProps({ testID: 'probe-rest' }).length).toBeGreaterThan(0);
+
+        TestRenderer.act(() => {
+          listener!({ colorScheme: 'dark' });
+        });
+        expect(hasBlendLayer(tree)).toBe(true);
+        expect(tree.root.findAllByProps({ testID: 'probe-rest' }).length).toBeGreaterThan(0);
+        expect(counter.mounts).toBe(1);
+      } finally {
+        getSpy.mockRestore();
+        addSpy.mockRestore();
+      }
+    });
   });
 });
