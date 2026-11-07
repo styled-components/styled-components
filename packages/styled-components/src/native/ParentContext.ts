@@ -11,12 +11,12 @@
  *   - `:nth-of-type(n)`
  *   - `:has(<simple>)`     (recursive own-children walk)
  *
- * Direct-children limitation: position + ancestor information threads
- * through styled-component-rendered children only. A non-styled user
- * component between the parent styled component and a matched
- * descendant breaks the chain; the descendant's ancestor list
- * reflects the parent it actually rendered under, not the parent of
- * the user component.
+ * Direct-children limitation: sibling position is published only for
+ * styled elements that are direct children of the parent's JSX. A
+ * non-styled component between the parent and a descendant is
+ * transparent to the parent and ancestor chain (the descendant still
+ * sees the nearest styled ancestor), but the descendant gets no
+ * sibling position.
  */
 import React from 'react';
 import { NativeTarget } from '../types';
@@ -70,7 +70,7 @@ export interface ParentContextValue {
   ancestors: ReadonlyArray<string>;
   /** Position among parent's children (0-based). -1 when not tracked. */
   siblingIndex: number;
-  /** Total siblings emitted by parent's React.Children.map pass. */
+  /** Total children of the parent, as counted by its child walk. */
   totalSiblings: number;
   /** Immediate prior sibling's `styledComponentId`, for `+` matching. */
   prevSiblingId: string | null;
