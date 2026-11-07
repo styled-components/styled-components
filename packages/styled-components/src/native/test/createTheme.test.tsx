@@ -1285,7 +1285,7 @@ describe('createTheme;native theme values read as authored CSS', () => {
       platform.restore();
     });
 
-    it('names the path, not the placeholder, in a parse failure', () => {
+    it('shows the default, not the placeholder, in a parse failure', () => {
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
       const Broken = styled(View)`
         border: 1px nonsense solid ${palette.ink};
@@ -1293,7 +1293,8 @@ describe('createTheme;native theme values read as authored CSS', () => {
 
       expect(styleOf(Broken, { ink: platformColor })).toEqual({});
       expect(warnings(warn)).toEqual([
-        '[sc] the value "1px nonsense solid ink" could not be parsed for property "border". The declaration was ignored. Rewrite the value in standard CSS syntax.',
+        notText('ink', 'border', 'tomato'),
+        '[sc] the value "1px nonsense solid tomato" could not be parsed for property "border". The declaration was ignored. Rewrite the value in standard CSS syntax.',
       ]);
 
       warn.mockRestore();

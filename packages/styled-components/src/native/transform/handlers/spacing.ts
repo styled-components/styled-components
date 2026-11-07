@@ -155,7 +155,6 @@ function isRadiusValue(t: Token): boolean {
   if (t.kind === TokenKind.Length || t.kind === TokenKind.Number || t.kind === TokenKind.Percent) {
     return true;
   }
-  if (t.kind === TokenKind.Sentinel) return true;
   if (t.kind === TokenKind.Function) {
     const name = t.name || '';
     return (

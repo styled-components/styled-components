@@ -151,40 +151,29 @@ function isEmpty(dict: Dict<unknown>): boolean {
   return true;
 }
 
-/** The value with each createTheme placeholder shown as its theme path, for messages. */
-function showThemePaths(value: string): string {
-  const parts = findThemePlaceholders(value);
-  let out = '';
-  let copied = 0;
-  for (let i = 0; i < parts.length; i++) {
-    out += value.slice(copied, parts[i].start) + parts[i].keys.join('.');
-    copied = parts[i].end;
-  }
-  return copied === 0 ? value : out + value.slice(copied);
-}
-
 /**
  * Settles the createTheme placeholders in `rawValue`. A probe transform finds
- * which ones end up as the whole value of a color key; each other one is
- * replaced by its default text before the declaration is transformed for real.
- * The probe runs silent, so a warning never shows placeholder bytes.
+ * which ones end up as the whole value of a color key; each other one (all of
+ * them when the probe drops the declaration) is replaced by its default text
+ * before the declaration is transformed for real. The probe runs silent, so a
+ * warning never shows placeholder bytes.
  */
 function transformWithPlaceholders(prop: string, rawValue: string): Dict<unknown> {
   const parts = findThemePlaceholders(rawValue);
   if (parts.length === 0) return transformValue(prop, rawValue);
 
   const probe = runWithWarningsSuppressed(() => transformValue(prop, rawValue));
-  // A dropped declaration leaks nothing; the real run reports why it dropped.
-  if (isEmpty(probe)) return __DEV__ ? transformValue(prop, rawValue) : probe;
-
+  const dropped = isEmpty(probe);
   let text = '';
   let copied = 0;
   for (let i = 0; i < parts.length; i++) {
     const { end, fallback, keys, start } = parts[i];
     const placeholder = rawValue.slice(start, end);
     let wholeColor = false;
-    for (const key in probe) {
-      if (isColorKey(key) && probe[key] === placeholder) wholeColor = true;
+    if (!dropped) {
+      for (const key in probe) {
+        if (isColorKey(key) && probe[key] === placeholder) wholeColor = true;
+      }
     }
     if (wholeColor) continue;
 
@@ -324,7 +313,7 @@ function transformValue(prop: string, rawValue: string): Dict<unknown> {
       if (__DEV__) {
         warnOnce(
           'native-shorthand-parse',
-          `the value "${showThemePaths(rawValue)}" could not be parsed for property "${prop}". The declaration was ignored. Rewrite the value in standard CSS syntax.`,
+          `the value "${rawValue}" could not be parsed for property "${prop}". The declaration was ignored. Rewrite the value in standard CSS syntax.`,
           camel + ':' + rawValue
         );
       }
@@ -387,7 +376,7 @@ function transformValue(prop: string, rawValue: string): Dict<unknown> {
     if (__DEV__) {
       warnOnce(
         'native-shorthand-parse',
-        `the value "${showThemePaths(rawValue)}" could not be parsed for property "${camel}". The declaration was ignored. Rewrite the value in standard CSS syntax.`,
+        `the value "${rawValue}" could not be parsed for property "${camel}". The declaration was ignored. Rewrite the value in standard CSS syntax.`,
         camel + ':' + rawValue
       );
     }

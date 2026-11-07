@@ -197,7 +197,6 @@ export function directionalColor(
 function acceptDimensionLike(t: Token): Token | null {
   const k = t.kind;
   if (k === TokenKind.Length || k === TokenKind.Number || k === TokenKind.Percent) return t;
-  if (k === TokenKind.Sentinel) return t;
   if (k === TokenKind.Ident && t.name === 'auto') return t;
   if (k === TokenKind.Function) {
     const name = t.name || '';
