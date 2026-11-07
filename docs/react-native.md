@@ -23,7 +23,7 @@ The New Architecture (Fabric + TurboModules + bridgeless) is mandatory from RN 0
 - `gap` / `row-gap` / `column-gap`: accept percentage values. RN 0.75+.
 - `cursor`: `auto`, `pointer` (iOS 17+).
 - `experimental_backgroundImage` (gradients as a raw string, experimental): the two gradient types landed four minors apart despite sharing the prop. `linear-gradient()` and `repeating-linear-gradient()` in RN 0.76.0; `radial-gradient()` only in RN 0.80.0. A matrix stating "gradients: 0.76+" over-claims radial on 0.76-0.79 where there is none.
-- Standard background names: RN registers `backgroundImage` from 0.87 and `backgroundSize` / `backgroundPosition` / `backgroundRepeat` from 0.88, where the `experimental_*` forms turn `@deprecated`; 0.85-0.86 drop the standard names silently. Across the peer range, every background declaration emits both keys with the same full value (`PASSTHROUGH_PROPS` in `src/native/transform/passthrough.ts`).
+- Standard background names: RN registers `backgroundImage` from 0.87 and `backgroundSize` / `backgroundPosition` / `backgroundRepeat` from 0.88, where the `experimental_*` forms turn `@deprecated`; 0.85-0.86 drop the standard names silently. Across the peer range, every background declaration emits both keys carrying the full layered declaration (`PASSTHROUGH_PROPS` in `src/native/transform/passthrough.ts`). The experimental key differs in two places: `cover` / `contain` fold to `auto` there, because RN's native parser drops the bare keywords and an empty size list crashes the Android drawable (`substituteBackgroundSizeKeywordsForNative`); and `experimental_backgroundImage` may carry system-color stops expanded to an object array.
 
 ### `filter` on Android: hard API-31 cliff, applied per filter list
 

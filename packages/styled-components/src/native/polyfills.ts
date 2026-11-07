@@ -15,6 +15,7 @@
 
 import * as React from 'react';
 import { splitTopLevelCommas } from '../parser/parser';
+import { substituteBackgroundSizeKeywordsForNative } from './transform/passthrough';
 
 /**
  * The props these polyfills pass, not RN's full prop types: the style
@@ -141,8 +142,10 @@ export function applyBackgroundBlendModePolyfill(
 
   const images = splitTopLevelCommas(bgImage, true);
   const modes = splitTopLevelCommas(blendMode, true);
-  // The standard key carries the authored `cover` / `contain`; the
-  // experimental key holds them folded to `auto`.
+  // The standard key carries the authored `cover` / `contain` for a url()
+  // layer's resizeMode; a gradient layer's experimental key gets them folded
+  // to `auto` again, as the transform emits, since RN's native parser drops
+  // the bare keywords there.
   const sizes = readLayered(flat, 'backgroundSize', 'experimental_backgroundSize');
   const positions = readLayered(flat, 'experimental_backgroundPosition', 'backgroundPosition');
   const repeats = readLayered(flat, 'experimental_backgroundRepeat', 'backgroundRepeat');
@@ -186,6 +189,11 @@ export function applyBackgroundBlendModePolyfill(
       backgroundImage: image,
     };
     applyLayered(layerStyle, sizes, i, 'experimental_backgroundSize', 'backgroundSize');
+    if (typeof layerStyle.backgroundSize === 'string') {
+      layerStyle.experimental_backgroundSize = substituteBackgroundSizeKeywordsForNative(
+        layerStyle.backgroundSize
+      );
+    }
     applyLayered(layerStyle, positions, i, 'experimental_backgroundPosition', 'backgroundPosition');
     applyLayered(layerStyle, repeats, i, 'experimental_backgroundRepeat', 'backgroundRepeat');
     layers.push(createBlendLayer(View, key, blend, layerStyle));

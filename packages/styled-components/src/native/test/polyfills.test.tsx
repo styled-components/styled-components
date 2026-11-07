@@ -403,6 +403,27 @@ describe('background-blend-mode polyfill (rendered)', () => {
     }
   );
 
+  it.each(['contain', 'cover'])(
+    'gives a gradient layer the same size keys as an unblended view for background-size: %s',
+    size => {
+      const Card = styled(View)`
+        background-color: red;
+        background-image: linear-gradient(transparent, black);
+        background-size: ${size};
+        background-blend-mode: multiply;
+      `;
+      const layer = TestRenderer.create(<Card />).root.find(
+        node =>
+          (node.props as { style?: { mixBlendMode?: unknown } }).style?.mixBlendMode === 'multiply'
+      );
+      const { backgroundSize, experimental_backgroundSize } = layer.props.style;
+      expect({ backgroundSize, experimental_backgroundSize }).toEqual({
+        backgroundSize: size,
+        experimental_backgroundSize: 'auto',
+      });
+    }
+  );
+
   it('preserves user-rendered children alongside the blend layers', () => {
     const Card = styled(View)`
       background-color: red;
