@@ -159,13 +159,10 @@ export default class WebGlobalStyle<Props extends object> {
       );
       if (filled !== null) {
         keyframes = referenced;
-        rules = compiler.emit(
-          source,
-          filled,
-          '',
-          this.componentId,
-          hasAnyFragment(fragments) ? fragments : null
-        );
+        rules = compiler.emit(source, filled, '', {
+          componentId: this.componentId,
+          fragments: hasAnyFragment(fragments) ? fragments : null,
+        });
       }
     }
     return {

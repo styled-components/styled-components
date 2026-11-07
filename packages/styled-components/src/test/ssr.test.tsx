@@ -1354,4 +1354,195 @@ describe('ssr', () => {
       "
     `);
   });
+
+  /**
+   * css-view-transitions-2 10.3: "view-transition-class by itself doesn’t mark an element for
+   * capturing, it is only used as an additional way to style an element that already has a
+   * view-transition-name."
+   */
+  describe('view-transition-class from a component id', () => {
+    const render = (tree: React.ReactElement) => {
+      const sheet = new ServerStyleSheet();
+      const html = renderToString(sheet.collectStyles(tree));
+      return { html, tags: sheet.getStyleTags() };
+    };
+
+    it('lets a global rule select a named component by its reference', () => {
+      const Card = styled.li`
+        view-transition-name: match-element;
+      `;
+      const Global = createGlobalStyle`
+        ::view-transition-group(*${Card}) { animation-duration: 400ms; }
+      `;
+
+      const { html, tags } = render(
+        <>
+          <Global />
+          <Card />
+        </>
+      );
+
+      expect(html).toMatchInlineSnapshot(`
+        <li class="sc-a c">
+        </li>
+      `);
+      expect(tags).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .c{view-transition-name:match-element;view-transition-class:sc-a;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"c,"}/*!sc*/
+        ::view-transition-group(*.sc-a){animation-duration:400ms;}/*!sc*/
+        data-styled.g2[id="sc-global-b"]{content:"sc-global-b,"}/*!sc*/
+        </style>
+      `);
+    });
+
+    it('emits valid names for references in view-transition-class and container-name', () => {
+      const Card = styled.li`
+        view-transition-name: match-element;
+      `;
+      const Hero = styled.li`
+        container-type: size;
+      `;
+      const Follower = styled.div`
+        view-transition-name: x;
+        view-transition-class: ${Card} ${Hero};
+        container-name: ${Card};
+      `;
+
+      const { tags } = render(
+        <>
+          <Card />
+          <Hero />
+          <Follower />
+        </>
+      );
+
+      expect(tags).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .d{view-transition-name:match-element;view-transition-class:sc-a;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"d,"}/*!sc*/
+        .e{container-type:size;container-name:sc-b;}/*!sc*/
+        data-styled.g2[id="sc-b"]{content:"e,"}/*!sc*/
+        .f{view-transition-name:x;view-transition-class:sc-a sc-b;container-name:sc-a;}/*!sc*/
+        data-styled.g3[id="sc-c"]{content:"f,"}/*!sc*/
+        </style>
+      `);
+    });
+
+    it('adds the class for a name from a mixin and from a function slot', () => {
+      const mixin = css`
+        view-transition-name: card;
+      `;
+      const ViaMixin = styled.div`
+        ${mixin}
+      `;
+      const Viafn = styled.div`
+        ${() => 'view-transition-name: card;'}
+      `;
+      const Viafnnone = styled.div<{ $on?: boolean }>`
+        view-transition-name: ${p => (p.$on ? 'card' : 'none')};
+      `;
+
+      const { tags } = render(
+        <>
+          <ViaMixin />
+          <Viafn />
+          <Viafnnone />
+          <Viafnnone $on />
+        </>
+      );
+
+      expect(tags).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .d{view-transition-name:card;view-transition-class:sc-a;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"d,"}/*!sc*/
+        .e{view-transition-name:card;view-transition-class:sc-b;}/*!sc*/
+        data-styled.g2[id="sc-b"]{content:"e,"}/*!sc*/
+        .f{view-transition-name:none;}/*!sc*/
+        .g{view-transition-name:card;view-transition-class:sc-c;}/*!sc*/
+        data-styled.g3[id="sc-c"]{content:"f,g,"}/*!sc*/
+        </style>
+      `);
+    });
+
+    it('lists the chain on an extension that sets its own name', () => {
+      const Base = styled.div`
+        view-transition-name: base;
+      `;
+      const Ext = styled(Base)`
+        view-transition-name: ext;
+      `;
+
+      const { html, tags } = render(<Ext />);
+
+      expect(html).toMatchInlineSnapshot(`
+        <div class="sc-a sc-b c d">
+        </div>
+      `);
+      expect(tags).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .c{view-transition-name:base;view-transition-class:sc-a;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"c,"}/*!sc*/
+        .d{view-transition-name:ext;view-transition-class:sc-a sc-b;}/*!sc*/
+        data-styled.g2[id="sc-b"]{content:"d,"}/*!sc*/
+        </style>
+      `);
+    });
+
+    it('leaves a plain extension on its base class only', () => {
+      const Base = styled.div`
+        view-transition-name: base;
+      `;
+      const Ext = styled(Base)`
+        color: red;
+      `;
+
+      const { html, tags } = render(<Ext />);
+
+      expect(html).toMatchInlineSnapshot(`
+        <div class="sc-a sc-b c d">
+        </div>
+      `);
+      expect(tags).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .c{view-transition-name:base;view-transition-class:sc-a;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"c,"}/*!sc*/
+        .d{color:red;}/*!sc*/
+        data-styled.g2[id="sc-b"]{content:"d,"}/*!sc*/
+        </style>
+      `);
+    });
+
+    it('keeps an extension matching its base container name', () => {
+      const Base = styled.div`
+        container-type: inline-size;
+      `;
+      const Ext = styled(Base)`
+        container-type: size;
+      `;
+
+      const { tags } = render(<Ext />);
+
+      expect(tags).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .c{container-type:inline-size;container-name:sc-a;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"c,"}/*!sc*/
+        .d{container-type:size;container-name:sc-a sc-b;}/*!sc*/
+        data-styled.g2[id="sc-b"]{content:"d,"}/*!sc*/
+        </style>
+      `);
+    });
+  });
 });

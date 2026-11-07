@@ -43,6 +43,7 @@ export const UNDERSCORE = 95; // _
 export const LOWER_A = 97; // a
 export const LOWER_E = 101; // e
 export const LOWER_F = 102; // f
+export const LOWER_H = 104; // h
 export const LOWER_I = 105; // i
 export const LOWER_S = 115; // s
 export const LOWER_Z = 122; // z

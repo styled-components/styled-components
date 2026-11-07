@@ -196,7 +196,7 @@ export interface Compiler {
    * work `compile` performs against a freshly joined CSS string. A value
    * that cannot stay in its field is parsed on its own and spliced in.
    *
-   * `fragments` is the parallel side table populated by
+   * `options.fragments` is the parallel side table populated by
    * `evaluateForFastPath` for slots that resolved to a `css\`...\`` fragment.
    * Same parser, emitter, plugin set, namespace, and decl/selector transforms
    * as `compile`.
@@ -205,9 +205,19 @@ export interface Compiler {
     source: import('./parser/source').Source,
     filled: ReadonlyArray<string>,
     parentSelector: string,
-    componentId: string,
-    fragments?: ReadonlyArray<import('./parser/compile').FastPathFragment | null> | null
+    options: CompilerEmitOptions
   ) => string[];
+}
+
+export interface CompilerEmitOptions {
+  componentId: string;
+  /** @internal */
+  fragments?: ReadonlyArray<import('./parser/compile').FastPathFragment | null> | null | undefined;
+  /**
+   * Space-joined ids of the extension chain, base first and `componentId` last.
+   * @internal
+   */
+  ids?: string | undefined;
 }
 
 export interface ShouldForwardProp<R extends Runtime> {

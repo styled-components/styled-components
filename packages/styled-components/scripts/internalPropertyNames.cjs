@@ -45,6 +45,7 @@ const INTERNAL_PROPERTY_NAMES = [
   'filledBuffer',
   'fragmentsBuffer',
   'generated',
+  'ids',
   'interpKeyCache',
   'isNew',
   'keyframesBuffer',
