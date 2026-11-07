@@ -1677,11 +1677,6 @@ function buildOperand(
     const v = t.value;
     return () => ({ value: v, unit: '%' });
   }
-  if (t.kind === TokenKind.Sentinel) {
-    const r = buildResolver(t.raw);
-    if (r === null) return null;
-    return env => valueToNumeric(r(env), '');
-  }
   if (t.kind === TokenKind.Ident) {
     // Math-context numeric constants. `pi` / `e` are <number>s.
     // `infinity` / `-infinity` / `NaN` warn + drop.

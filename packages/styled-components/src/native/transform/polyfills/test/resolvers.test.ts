@@ -477,21 +477,6 @@ describe('applyResolvers', () => {
 });
 
 describe('dynamic math fn resolver;calc()', () => {
-  it('resolves calc() with one sentinel arm + static', () => {
-    const r = buildResolver('calc(\0sc:space.xl:55 + 47px)')!;
-    expect(r({ ...baseEnv, theme: { space: { xl: 55 } } })).toBe(102);
-  });
-
-  it('honors theme override for the sentinel arm', () => {
-    const r = buildResolver('calc(\0sc:space.xl:55 + 47px)')!;
-    expect(r({ ...baseEnv, theme: { space: { xl: 100 } } })).toBe(147);
-  });
-
-  it('falls back to the sentinel fallback when path is missing', () => {
-    const r = buildResolver('calc(\0sc:space.xl:55 + 47px)')!;
-    expect(r({ ...baseEnv, theme: {} })).toBe(102);
-  });
-
   it('resolves calc() with env() arm + static', () => {
     const r = buildResolver('calc(env(safe-area-inset-top) + 10px)')!;
     expect(r({ ...baseEnv, insets: { top: 47, right: 0, bottom: 0, left: 0 } })).toBe(57);
@@ -517,39 +502,39 @@ describe('dynamic math fn resolver;calc()', () => {
     expect(r({ ...baseEnv, container: { width: 200, height: 100 } })).toBe(110);
   });
 
-  it('resolves calc() with two sentinel arms', () => {
-    const r = buildResolver('calc(\0sc:a:1 + \0sc:b:2)')!;
-    expect(r({ ...baseEnv, theme: { a: 5, b: 10 } })).toBe(15);
+  it('resolves calc() with two dynamic arms', () => {
+    const r = buildResolver('calc(10vw + 10vh)')!;
+    expect(r(baseEnv)).toBe(120);
   });
 
   it('resolves calc() with subtraction', () => {
-    const r = buildResolver('calc(\0sc:x:50 - 10px)')!;
-    expect(r({ ...baseEnv, theme: { x: 30 } })).toBe(20);
+    const r = buildResolver('calc(50vw - 10px)')!;
+    expect(r(baseEnv)).toBe(190);
   });
 
-  it('resolves calc() with multiplication (sentinel × scalar)', () => {
-    const r = buildResolver('calc(\0sc:x:10 * 3)')!;
-    expect(r({ ...baseEnv, theme: { x: 7 } })).toBe(21);
+  it('resolves calc() with multiplication (dynamic × scalar)', () => {
+    const r = buildResolver('calc(10vw * 3)')!;
+    expect(r(baseEnv)).toBe(120);
   });
 
   it('resolves calc() with division', () => {
-    const r = buildResolver('calc(\0sc:x:60 / 4)')!;
-    expect(r({ ...baseEnv, theme: { x: 80 } })).toBe(20);
+    const r = buildResolver('calc(100vw / 4)')!;
+    expect(r(baseEnv)).toBe(100);
   });
 
   it('honors operator precedence (* over +)', () => {
-    const r = buildResolver('calc(\0sc:x:10 + 2 * 5)')!;
-    expect(r({ ...baseEnv, theme: { x: 10 } })).toBe(20);
+    const r = buildResolver('calc(10vw + 2px * 5)')!;
+    expect(r(baseEnv)).toBe(50);
   });
 
-  it('resolves nested calc() with sentinel inner arm', () => {
-    const r = buildResolver('calc(calc(\0sc:x:10 + 5px) + 3px)')!;
-    expect(r({ ...baseEnv, theme: { x: 20 } })).toBe(28);
+  it('resolves nested calc() with a dynamic inner arm', () => {
+    const r = buildResolver('calc(calc(10vw + 5px) + 3px)')!;
+    expect(r(baseEnv)).toBe(48);
   });
 
   it('returns null for divide-by-zero', () => {
-    const r = buildResolver('calc(\0sc:x:10 / 0)')!;
-    expect(r({ ...baseEnv, theme: { x: 5 } })).toBeNull();
+    const r = buildResolver('calc(10vw / 0)')!;
+    expect(r(baseEnv)).toBeNull();
   });
 
   it('returns null for malformed calc() (missing operand)', () => {
@@ -602,52 +587,36 @@ describe('dynamic math fn resolver;calc()', () => {
   });
 
   it('still emits a runtime resolver when a calc arm is dynamic', () => {
-    // Sentinels (theme tokens), env(), light-dark(), and viewport /
-    // container units all keep the runtime resolver path because the
-    // value depends on render-time inputs that the layout engine alone
-    // can't see (theme + safe-area + viewport / container metrics).
-    expect(buildResolver('calc(\0sc:x:10px + 50%)')).not.toBeNull();
+    // env(), light-dark(), and viewport / container units all keep the
+    // runtime resolver path because the value depends on render-time
+    // inputs that the layout engine alone can't see (safe-area +
+    // viewport / container metrics).
     expect(buildResolver('calc(env(safe-area-inset-top) + 10px)')).not.toBeNull();
     expect(buildResolver('calc(50vw - 10px)')).not.toBeNull();
     expect(buildResolver('calc(50cqw + 10px)')).not.toBeNull();
   });
 
-  it('resolves unitless + % by converting % to px against the container', () => {
-    // On native, every `%` operand (literal or surfaced from a
-    // sentinel) converts to px against env.container.width or
-    // env.media.width. baseEnv.container.width = 200, so 50% = 100;
-    // adding the unitless sentinel value `10` gives 110px.
-    const r = buildResolver('calc(\0sc:x:10 + 50%)')!;
-    expect(r({ ...baseEnv, theme: { x: 10 } })).toBe(110);
-  });
-
-  it('resolves sentinel-derived % consistently with literal %', () => {
-    // Sentinel that resolves to '10%' is a Percent operand in disguise;
-    // it converts to px the same way as a literal Percent token.
-    // x='10%' → 10% of 200 = 20px; plus 5% of 200 = 10px → 30px.
-    const r = buildResolver('calc(\0sc:x:10 + 5%)')!;
-    expect(r({ ...baseEnv, theme: { x: '10%' } })).toBe(30);
+  it('resolves a dynamic arm + % by converting % to px against the container', () => {
+    // On native, every `%` operand converts to px against
+    // env.container.width or env.media.width. baseEnv.container.width =
+    // 200, so 50% = 100; adding 10vw (40px) gives 140px.
+    const r = buildResolver('calc(10vw + 50%)')!;
+    expect(r(baseEnv)).toBe(140);
   });
 });
 
 describe('dynamic math fn resolver;min / max / clamp', () => {
-  it('resolves min() with sentinel + static', () => {
-    const r = buildResolver('min(\0sc:x:100, 50px)')!;
-    expect(r({ ...baseEnv, theme: { x: 200 } })).toBe(50);
-    expect(r({ ...baseEnv, theme: { x: 30 } })).toBe(30);
-  });
-
-  it('resolves max() with sentinel + static', () => {
-    const r = buildResolver('max(\0sc:x:10, 50px)')!;
-    expect(r({ ...baseEnv, theme: { x: 100 } })).toBe(100);
-    expect(r({ ...baseEnv, theme: { x: 5 } })).toBe(50);
+  it('resolves max() with viewport + static', () => {
+    const r = buildResolver('max(10vw, 50px)')!;
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, width: 1000 } })).toBe(100);
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, width: 200 } })).toBe(50);
   });
 
   it('resolves clamp() with three resolvable arms', () => {
-    const r = buildResolver('clamp(10px, \0sc:x:50, 100px)')!;
-    expect(r({ ...baseEnv, theme: { x: 30 } })).toBe(30);
-    expect(r({ ...baseEnv, theme: { x: 5 } })).toBe(10);
-    expect(r({ ...baseEnv, theme: { x: 200 } })).toBe(100);
+    const r = buildResolver('clamp(10px, 10vw, 100px)')!;
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, width: 300 } })).toBe(30);
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, width: 50 } })).toBe(10);
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, width: 2000 } })).toBe(100);
   });
 
   it('clamp() rejects malformed arity', () => {
@@ -665,8 +634,8 @@ describe('dynamic math fn resolver;min / max / clamp', () => {
     // On native, % converts to px before unifyUnits runs, so the typed
     // unit reduces to px. baseEnv.container.width = 200; 10% = 20px;
     // min(30, 20) = 20.
-    const r = buildResolver('min(\0sc:x:50, 10%)')!;
-    expect(r({ ...baseEnv, theme: { x: 30 } })).toBe(20);
+    const r = buildResolver('min(10vw, 10%)')!;
+    expect(r(baseEnv)).toBe(20);
   });
 });
 
@@ -1102,33 +1071,23 @@ describe('env() with resolvable fallback', () => {
 });
 
 describe('cross-feature integrations', () => {
-  it('calc(env() + sentinel);the showcase Header pattern', () => {
-    const r = buildResolver('calc(env(safe-area-inset-top) + \0sc:space.xl:55)')!;
-    const env = {
-      ...baseEnv,
-      insets: { top: 47, right: 0, bottom: 0, left: 0 },
-      theme: { space: { xl: 55 } },
-    };
-    expect(r(env)).toBe(102);
+  it('calc(env() + viewport);the showcase Header pattern', () => {
+    const r = buildResolver('calc(env(safe-area-inset-top) + 10vw)')!;
+    const env = { ...baseEnv, insets: { top: 47, right: 0, bottom: 0, left: 0 } };
+    expect(r(env)).toBe(87);
   });
 
-  it('calc(viewport + sentinel)', () => {
-    const r = buildResolver('calc(10vw + \0sc:space.md:16)')!;
-    expect(
-      r({ ...baseEnv, media: { ...baseEnv.media, width: 500 }, theme: { space: { md: 8 } } })
-    ).toBe(58);
+  it('calc(viewport + env fallback)', () => {
+    const r = buildResolver('calc(10vw + env(keyboard-inset-top, 16px))')!;
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, width: 500 } })).toBe(66);
   });
 
-  it('clamp(sentinel, viewport, sentinel)', () => {
-    const r = buildResolver('clamp(\0sc:min:100, 50vw, \0sc:max:300)')!;
-    const env = (w: number, theme: any) => ({
-      ...baseEnv,
-      media: { ...baseEnv.media, width: w },
-      theme,
-    });
-    expect(r(env(400, { min: 100, max: 300 }))).toBe(200); // 50vw of 400 = 200
-    expect(r(env(100, { min: 100, max: 300 }))).toBe(100); // clamped low
-    expect(r(env(800, { min: 100, max: 300 }))).toBe(300); // clamped high
+  it('clamp(static, viewport, static)', () => {
+    const r = buildResolver('clamp(100px, 50vw, 300px)')!;
+    const env = (w: number) => ({ ...baseEnv, media: { ...baseEnv.media, width: w } });
+    expect(r(env(400))).toBe(200); // 50vw of 400 = 200
+    expect(r(env(100))).toBe(100); // clamped low
+    expect(r(env(800))).toBe(300); // clamped high
   });
 
   it('leaves a placeholder glued to other text unresolved', () => {
@@ -1248,10 +1207,8 @@ describe('cross-feature integrations', () => {
     // is a number for px-units, valid for color-position contexts only if
     // RN accepts it. This test asserts no crash and a real number returns
     // for the chosen branch.
-    const r = buildResolver('light-dark(calc(\0sc:x:10 + 5), 999)')!;
-    expect(
-      r({ ...baseEnv, theme: { x: 20 }, media: { ...baseEnv.media, colorScheme: 'light' } })
-    ).toBe(25);
+    const r = buildResolver('light-dark(calc(10vw + 5px), 999)')!;
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, colorScheme: 'light' } })).toBe(45);
   });
 });
 
