@@ -377,8 +377,17 @@ function resolveMathFn(value: string, prop?: string): Resolver | null {
   if (__NATIVE_WEB__ && !rnWebMathNeedsJsResolution(value)) {
     return () => value;
   }
+  if (prop !== undefined && NON_NEGATIVE_MATH_PROPS.has(prop)) {
+    return env => {
+      const v = r(env);
+      return typeof v === 'number' && v < 0 ? 0 : v;
+    };
+  }
   return r;
 }
+
+/** Properties whose allowed range starts at zero; a negative math result clamps to 0. */
+const NON_NEGATIVE_MATH_PROPS: ReadonlySet<string> = new Set(['fontSize', 'lineHeight']);
 
 /** True when a math expression contains an operand only our JS runtime can
  *  substitute (rn-web passthrough must not strand these in CSS text). */

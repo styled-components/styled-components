@@ -155,11 +155,12 @@ function isRadiusValue(t: Token): boolean {
   if (t.kind === TokenKind.Length || t.kind === TokenKind.Number || t.kind === TokenKind.Percent) {
     return true;
   }
-  if (t.kind === TokenKind.Function) {
-    const name = t.name || '';
-    return (
-      name === 'env' || name === 'calc' || name === 'min' || name === 'max' || name === 'clamp'
-    );
-  }
-  return false;
+  return isLengthMathFunction(t) || (t.kind === TokenKind.Function && t.name === 'env');
+}
+
+/** True for a `calc` / `min` / `max` / `clamp` call, the math functions a length slot defers to the render-time resolver. */
+export function isLengthMathFunction(t: Token): boolean {
+  if (t.kind !== TokenKind.Function) return false;
+  const name = t.name || '';
+  return name === 'calc' || name === 'min' || name === 'max' || name === 'clamp';
 }

@@ -653,6 +653,21 @@ describe('flex shorthand spec compliance (CSS Flexbox Level 1 §7.1)', () => {
     expect(transformDecl('flex', '1 1 -1px')).toEqual({});
   });
 
+  // https://drafts.csswg.org/css-flexbox-1/#propdef-flex-basis (editor's draft)
+  // "Value: content | <'width'>"
+  // <'width'> takes a math function. The basis keeps its authored text for the
+  // render-time resolver, the way margin and padding do.
+  it.each(['calc(50% - 10px)', 'min(200px, 40vw)', 'clamp(100px, 20vw, 300px)'])(
+    'flex: a %s basis defers to the render-time resolver',
+    basis => {
+      expect(transformDecl('flex', `1 1 ${basis}`)).toEqual({
+        flexBasis: basis,
+        flexGrow: 1,
+        flexShrink: 1,
+      });
+    }
+  );
+
   describeOnRnWeb(() => {
     // flex shorthand does not fork on __NATIVE_WEB__; assert stable parity with the native bundle.
     it('flex: 1 matches native numeric expansion', () => {
@@ -1063,6 +1078,23 @@ describe('text-decoration shorthand spec compliance (CSS Text Decoration Level 4
       expect(msg).toMatch(/wavy/);
       expect(msg).toMatch(/React Native|iOS|Android/);
     });
+  });
+
+  // https://drafts.csswg.org/css-text-decor-4/#text-decoration-thickness-property (editor's draft)
+  // "Value: auto | from-font | <length-percentage> | <line-width>"
+  // A <length-percentage> admits a math function. RN cannot draw the thickness, so the
+  // component is consumed and the rest of the shorthand still applies.
+  it('text-decoration: a math-function thickness is consumed and the rest applies', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      expect(transformDecl('textDecoration', 'underline calc(1px + 1px) red')).toEqual({
+        textDecorationColor: 'red',
+        textDecorationLine: 'underline',
+        textDecorationStyle: 'solid',
+      });
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it('text-decoration: line style and color together', () => {
@@ -1838,6 +1870,127 @@ describe('CSS Text 3 §11.1 (letter-spacing) characterization', () => {
   describeOnRnWeb(() => {
     it('letter-spacing: em passes through for the browser', () => {
       expect(transformDecl('letterSpacing', '0.05em')).toEqual({ letterSpacing: '0.05em' });
+    });
+  });
+});
+
+// https://drafts.csswg.org/css-fonts-4/#font-size-prop (editor's draft)
+//
+// "Value: <absolute-size> | <relative-size> | <length-percentage [0,∞]> | math"
+// "Percentages: refer to parent element’s font size"
+//
+// https://drafts.csswg.org/css-inline-3/#line-height-property
+//
+// "Value: normal | <number [0,∞]> | <length-percentage [0,∞]>"
+//
+// https://drafts.csswg.org/css-text-4/#letter-spacing-property
+//
+// "Value: normal | <length-percentage>"
+//
+// https://drafts.csswg.org/css-values-4/#calc-serialize (editor's draft, 10.13 Serialization)
+//
+// "If the root of the calculation tree fn represents is a numeric value (number,
+// percentage, or dimension), and the serialization being produced is of a computed
+// value or later, then clamp the value to the range allowed for its context (if
+// necessary), then serialize the value as normal and return the result."
+describe('math functions in font-size, line-height, and letter-spacing', () => {
+  let warnSpy: jest.SpyInstance;
+  beforeEach(() => {
+    resetWarningsForTest();
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  // Operands that need the render environment (em, viewport units) stay as
+  // authored text for the render-time resolver.
+  it.each([
+    ['fontSize', 'calc(1em + 2px)'],
+    ['fontSize', 'clamp(14px, 2vw, 20px)'],
+    ['fontSize', 'min(2em, 30px)'],
+    ['fontSize', 'max(1rem, 12px)'],
+    ['lineHeight', 'calc(1em + 4px)'],
+    ['lineHeight', 'clamp(18px, 4vw, 28px)'],
+    ['letterSpacing', 'calc(0.1em + 1px)'],
+    ['letterSpacing', 'max(0.5px, 0.02em)'],
+  ] as const)('%s: %s defers to the render-time resolver', (prop, value) => {
+    expect(transformDecl(prop, value)).toEqual({ [prop]: value });
+  });
+
+  // A static result folds at compile time; a negative result clamps to the
+  // property's range ([0,∞] for font-size and line-height).
+  it.each([
+    ['fontSize', 'calc(10px + 4px)', 14],
+    ['fontSize', 'clamp(10px, 12px, 20px)', 12],
+    ['fontSize', 'calc(2px - 10px)', 0],
+    ['lineHeight', 'calc(10px + 14px)', 24],
+    ['lineHeight', 'calc(2px - 10px)', 0],
+    ['letterSpacing', 'calc(1px + 1px)', 2],
+    ['letterSpacing', 'calc(2px - 10px)', -8],
+  ] as const)('%s: %s folds at compile time to %s', (prop, value, expected) => {
+    expect(transformDecl(prop, value)).toEqual({ [prop]: expected });
+  });
+
+  // A percentage in these properties refers to the font size, which the
+  // math resolver cannot anchor (it resolves against the container width),
+  // so the declaration drops with the shared parse warning.
+  it.each([
+    ['fontSize', 'calc(50% + 2px)'],
+    ['lineHeight', 'calc(100% + 2px)'],
+    ['letterSpacing', 'min(10%, 2px)'],
+  ] as const)('%s: %s drops because a percentage cannot be resolved', (prop, value) => {
+    expect(transformDecl(prop, value)).toEqual({});
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  // The resolver cannot build an unfinished expression.
+  it.each(['fontSize', 'lineHeight', 'letterSpacing'] as const)(
+    '%s: a math function the resolver cannot build warns and drops',
+    prop => {
+      expect(transformDecl(prop, 'calc(1em + )')).toEqual({});
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  // "font: <size>[/<line-height>] <family>" takes the same <length-percentage>
+  // and math forms in its size and line-height slots.
+  it('font: math in the size and line-height slots defers to the render-time resolver', () => {
+    expect(transformDecl('font', 'italic calc(1em + 2px)/calc(20px + 4px) serif')).toEqual({
+      fontFamily: 'Times New Roman',
+      fontSize: 'calc(1em + 2px)',
+      fontStyle: 'italic',
+      fontVariant: [],
+      fontWeight: 'normal',
+      lineHeight: 24,
+    });
+  });
+
+  it('font: a deferred line-height slot keeps its authored text', () => {
+    expect(transformDecl('font', 'clamp(14px, 2vw, 20px)/calc(1em + 4px) serif')).toEqual({
+      fontFamily: 'Times New Roman',
+      fontSize: 'clamp(14px, 2vw, 20px)',
+      fontStyle: 'normal',
+      fontVariant: [],
+      fontWeight: 'normal',
+      lineHeight: 'calc(1em + 4px)',
+    });
+  });
+
+  it('font: an unbuildable math size warns and drops the declaration', () => {
+    expect(transformDecl('font', 'calc(1em + ) serif')).toEqual({});
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  describeOnRnWeb(() => {
+    it('font-size: a font-relative calc passes through for the browser', () => {
+      expect(transformDecl('fontSize', 'calc(1em + 2px)')).toEqual({ fontSize: 'calc(1em + 2px)' });
+    });
+
+    it('font: a font-relative calc size passes through for the browser', () => {
+      expect(transformDecl('font', 'calc(1em + 2px) serif')).toMatchObject({
+        fontSize: 'calc(1em + 2px)',
+      });
     });
   });
 });

@@ -1,6 +1,7 @@
 import { Dict } from '../../../types';
 import { warnOnce } from '../dev';
 import { isGenericFamily, resolveGenericFamily } from '../polyfills/genericFamily';
+import { resolveStaticMathFunction } from '../polyfills/mathFns';
 import { buildResolver } from '../polyfills/resolvers';
 import { tokenToValue, withoutSlashes } from '../shorthandHelpers';
 import { decodeName } from '../tokenize';
@@ -181,12 +182,18 @@ export function fontShorthand(tokens: Token[]): Dict<unknown> | null {
     !sizeTok ||
     (sizeTok.kind !== TokenKind.Length &&
       sizeTok.kind !== TokenKind.Percent &&
+      sizeTok.kind !== TokenKind.Function &&
       sizeTok.kind !== TokenKind.Sentinel)
   ) {
     return null;
   }
-  const fontSize: number | string =
-    sizeTok.kind === TokenKind.Sentinel ? sizeTok.raw : (tokenToValue(sizeTok) as number | string);
+  const fontSize =
+    sizeTok.kind === TokenKind.Sentinel
+      ? sizeTok.raw
+      : sizeTok.kind === TokenKind.Function
+        ? foldMathToken(sizeTok, 0)
+        : tokenToValue(sizeTok);
+  if (fontSize === null) return null;
 
   let lineHeight: number | string | undefined;
   if (stream.peek()?.kind === TokenKind.Slash) {
@@ -200,6 +207,10 @@ export function fontShorthand(tokens: Token[]): Dict<unknown> | null {
       } else {
         lineHeight = tokenToValue(lhTok);
       }
+    } else if (lhTok.kind === TokenKind.Function) {
+      const math = foldMathToken(lhTok, 0);
+      if (math === null) return null;
+      lineHeight = math;
     } else return null;
   }
 
@@ -345,6 +356,26 @@ function foldLengthToken(t: LengthToken): LengthFold {
 }
 
 /**
+ * Math-function counterpart of {@link foldLengthToken}: a static result folds
+ * to a number clamped to the property's lower bound `min`; one that needs the
+ * render environment (em, rem, viewport units) keeps its authored text for
+ * the resolver; `null` drops the declaration. A percentage in these
+ * properties refers to the font size, which the math resolver cannot anchor
+ * (it resolves against the container width), so any percentage drops. rn-web
+ * leaves the whole expression to the browser.
+ */
+function foldMathToken(t: Token, min: number): number | string | null {
+  if (!__NATIVE_WEB__) {
+    const folded = resolveStaticMathFunction(t);
+    if (folded !== null && (folded.unit === '' || folded.unit === 'px')) {
+      return folded.value < min ? min : folded.value;
+    }
+  }
+  if (t.raw.indexOf('%') !== -1 || buildResolver(t.raw) === null) return null;
+  return t.raw;
+}
+
+/**
  * `line-height` handler. Numeric multipliers and px resolve at compile
  * time; absolute lengths fold via the unit ratio table; everything else delegates
  * to buildResolver so coverage tracks the resolver automatically. rn-web
@@ -379,6 +410,10 @@ export function lineHeightHandler(tokens: Token[]): Dict<unknown> | null {
     // Percent anchors at the inherited font-size like em.
     return { lineHeight: t.value / 100 + 'em' };
   }
+  if (t.kind === TokenKind.Function) {
+    const math = foldMathToken(t, 0);
+    return math === null ? null : { lineHeight: math };
+  }
   if (t.kind === TokenKind.Ident && t.name === 'normal') return {};
   return null;
 }
@@ -412,6 +447,10 @@ export function letterSpacingHandler(tokens: Token[]): Dict<unknown> | null {
       );
     }
     return {};
+  }
+  if (t.kind === TokenKind.Function) {
+    const math = foldMathToken(t, -Infinity);
+    return math === null ? null : { letterSpacing: math };
   }
   if (t.kind === TokenKind.Ident && t.name === 'normal') return { letterSpacing: 0 };
   return null;
@@ -455,6 +494,11 @@ export function fontSizeHandler(tokens: Token[]): Dict<unknown> | null {
   if (t.kind === TokenKind.Percent) {
     if (t.value < 0) return null;
     return { fontSize: t.value / 100 + 'em' };
+  }
+
+  if (t.kind === TokenKind.Function) {
+    const math = foldMathToken(t, 0);
+    return math === null ? null : { fontSize: math };
   }
 
   return null;

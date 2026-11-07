@@ -10,6 +10,7 @@ import {
 import { register } from '../shorthands';
 import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
+import { isLengthMathFunction } from './spacing';
 
 const DECORATION_LINES = new Set(['none', 'underline', 'line-through', 'overline', 'blink']);
 const DECORATION_STYLES = new Set(['solid', 'double', 'dotted', 'dashed', 'wavy']);
@@ -81,6 +82,7 @@ export function textDecorationShorthand(tokens: Token[]): Dict<unknown> | null {
     if (
       t.kind === TokenKind.Length ||
       t.kind === TokenKind.Percent ||
+      isLengthMathFunction(t) ||
       (t.kind === TokenKind.Ident && (t.name === 'auto' || t.name === 'from-font'))
     ) {
       if (thickness !== null) return null;

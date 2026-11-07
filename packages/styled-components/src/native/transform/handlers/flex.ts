@@ -3,6 +3,7 @@ import { warnOnce } from '../dev';
 import { tokenToValue, withoutSlashes } from '../shorthandHelpers';
 import { Token, TokenKind } from '../tokens';
 import { TokenStream } from '../tokenStream';
+import { isLengthMathFunction } from './spacing';
 
 const FLEX_WRAP = new Set(['nowrap', 'wrap', 'wrap-reverse']);
 const FLEX_DIRECTION = new Set(['row', 'row-reverse', 'column', 'column-reverse']);
@@ -60,6 +61,11 @@ export function flexShorthand(tokens: Token[]): Dict<unknown> | null {
       if (t.kind === TokenKind.Length || t.kind === TokenKind.Percent) {
         if (t.value < 0) return null;
         flexBasis = tokenToValue(t) as number | string;
+        stream.consume();
+        continue;
+      }
+      if (isLengthMathFunction(t)) {
+        flexBasis = t.raw;
         stream.consume();
         continue;
       }

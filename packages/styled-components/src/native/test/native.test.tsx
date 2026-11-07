@@ -1590,6 +1590,108 @@ describe('native', () => {
     });
   });
 
+  // https://drafts.csswg.org/css-values-4/#em (editor's draft)
+  //
+  // "On the other hand: h1 { font-size: 1.2em } means that the font size of h1 elements
+  // will be 20% greater than the computed font size inherited by h1 elements."
+  //
+  // https://drafts.csswg.org/css-values-4/#calc-serialize (editor's draft, 10.13 Serialization)
+  //
+  // "If the root of the calculation tree fn represents is a numeric value (number,
+  // percentage, or dimension), and the serialization being produced is of a computed
+  // value or later, then clamp the value to the range allowed for its context (if
+  // necessary), then serialize the value as normal and return the result."
+  //
+  // https://drafts.csswg.org/css-fonts-4/#font-size-prop (editor's draft)
+  //
+  // "Value: <absolute-size> | <relative-size> | <length-percentage [0,∞]> | math"
+  describe('math functions in font properties resolve at render time', () => {
+    const renderUnder20px = (Child: React.ComponentType<PropsWithChildren>) => {
+      const Parent = styled.View`
+        font-size: 20px;
+      `;
+      const tree = TestRenderer.create(
+        <Parent>
+          <Child>hi</Child>
+        </Parent>
+      );
+      return mergeStyle(tree.root.findByType(Text).props.style);
+    };
+
+    it('font-size: em inside calc refers to the parent font size', () => {
+      const Child = styled.Text`
+        font-size: calc(1em + 2px);
+      `;
+      expect(renderUnder20px(Child).fontSize).toBe(22);
+    });
+
+    it('font-size: a calc result below zero clamps to zero', () => {
+      const Child = styled.Text`
+        font-size: calc(1em - 30px);
+      `;
+      expect(renderUnder20px(Child).fontSize).toBe(0);
+    });
+
+    it('font-size: a static calc result below zero clamps to zero', () => {
+      const Child = styled.Text`
+        font-size: calc(2px - 10px);
+      `;
+      expect(renderUnder20px(Child).fontSize).toBe(0);
+    });
+
+    // The jest window is 750 wide, so 2vw is 15.
+    it.each([
+      ['clamp(14px, 2vw, 20px)', 15],
+      ['clamp(16px, 2vw, 20px)', 16],
+      ['clamp(10px, 2vw, 12px)', 12],
+      ['min(2vw, 12px)', 12],
+      ['max(2vw, 18px)', 18],
+    ])('font-size: %s resolves against the window width to %i', (value, expected) => {
+      const Child = styled.Text`
+        font-size: ${value};
+      `;
+      expect(renderUnder20px(Child).fontSize).toBe(expected);
+    });
+
+    it('font-size: a calc value publishes to descendants resolving 1em', () => {
+      const Middle = styled.View`
+        font-size: calc(1em + 2px);
+      `;
+      const Child = styled.Text`
+        font-size: 1em;
+      `;
+      const Wrapped = () => (
+        <Middle>
+          <Child>hi</Child>
+        </Middle>
+      );
+      expect(renderUnder20px(Wrapped as React.ComponentType<PropsWithChildren>).fontSize).toBe(22);
+    });
+
+    it('line-height: em inside calc refers to the font size', () => {
+      const Child = styled.Text`
+        line-height: calc(1em + 4px);
+      `;
+      expect(renderUnder20px(Child).lineHeight).toBe(24);
+    });
+
+    it('letter-spacing: em inside calc refers to the font size', () => {
+      const Child = styled.Text`
+        letter-spacing: calc(0.1em + 1px);
+      `;
+      expect(renderUnder20px(Child).letterSpacing).toBe(3);
+    });
+
+    it('font: math in the size and line-height slots resolves', () => {
+      const Child = styled.Text`
+        font: italic calc(1em + 2px) / calc(20px + 4px) serif;
+      `;
+      const style = renderUnder20px(Child);
+      expect(style.fontSize).toBe(22);
+      expect(style.lineHeight).toBe(24);
+    });
+  });
+
   describe('ParentContext value memoization', () => {
     // Without memoization, every parent re-render allocates a fresh
     // `ParentContextValue` object and per-child Provider value. That
