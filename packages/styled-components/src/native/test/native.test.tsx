@@ -486,6 +486,30 @@ describe('native', () => {
       expect(toStyleSheet(cssStyle)).toEqual({ borderWidth: 10, opacity: 1 });
     });
 
+    // CSS Color 4: "<opacity-value> = <number> | <percentage>"; a percentage "computes to the
+    // equivalent <number> (0% to 0, 100% to 1)".
+    it('converts a percentage opacity to a number', () => {
+      expect(
+        toStyleSheet(css`
+          opacity: 50%;
+        `)
+      ).toEqual({ opacity: 0.5 });
+    });
+
+    it('converts a percentage opacity from an interpolated value', () => {
+      expect(toStyleSheet(css`opacity: ${'25%'};`)).toEqual({ opacity: 0.25 });
+    });
+
+    it('converts a percentage opacity inside a matching @media block', () => {
+      const Comp = styled.View`
+        @media (min-width: 100px) {
+          opacity: 50%;
+        }
+      `;
+      const view = TestRenderer.create(<Comp />).root.findByType(View);
+      expect(mergeStyle(view.props.style).opacity).toBe(0.5);
+    });
+
     it.each<[string, () => ReturnType<typeof css>]>([
       ['authored text', () => css`box-shadow: 0 0 1px red, 0 0 2px blue;`],
       ['a value', () => css`box-shadow: ${'0 0 1px red, 0 0 2px blue'};`],

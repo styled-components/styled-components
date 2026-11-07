@@ -344,6 +344,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<unknown> {
       const numeric = resolveStaticMathFunction(tokens[0]);
       if (numeric !== null) {
         if (__NATIVE_WEB__ && numeric.unit !== '') return { [camel]: rawValue };
+        if (camel === 'opacity' && numeric.unit === '%') return { opacity: numeric.value / 100 };
         return { [camel]: numericResultToRn(numeric) };
       }
     }

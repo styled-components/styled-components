@@ -49,6 +49,11 @@ const NPX_RE = /^(-?(?:\d*\.)?\d+(?:e[+-]?\d+)?)(?:px)?$/i;
 
 export function coerceRawValue(prop: string, value: string): number | string | null {
   if (UNITLESS_NUMERIC_PROPS.has(prop)) {
+    // RN's `opacity` takes only a number; the browser reads the percentage itself on rn-web.
+    if (!__NATIVE_WEB__ && prop === 'opacity' && value.charCodeAt(value.length - 1) === $.PERCENT) {
+      const percent = Number(value.slice(0, -1));
+      return Number.isFinite(percent) ? percent / 100 : value;
+    }
     const n = Number(value);
     return Number.isFinite(n) ? n : value;
   }

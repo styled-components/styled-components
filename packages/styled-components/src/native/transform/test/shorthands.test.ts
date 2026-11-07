@@ -56,6 +56,61 @@ describe('transformDecl: pass-through + coercion', () => {
     expect(transformDecl('zIndex', '10')).toEqual({ zIndex: 10 });
   });
 
+  // CSS Color 4, "Opacity: <opacity-value>":
+  //   <opacity-value> = <number> | <percentage>
+  //   "It can also be written as a <percentage>, which computes to the equivalent <number>
+  //   (0% to 0, 100% to 1)."
+  // CSS Color 4, "Serializing <opacity-value>":
+  //   "If the specified value for an opacity value matches a literal <percentage-token>
+  //   (i.e. does not use calc()) it should be serialized as the equivalent <number> ...
+  //   Opacity values outside the range [0,1] are preserved, without clamping, in the
+  //   serialized specified value."
+  // The clamp to [0, 1] happens at the computed value ("Opacity values outside the range
+  // [0,1] are not invalid, and are preserved in specified values, but are clamped to the
+  // range [0, 1] in computed values."); the decl transform emits the specified value and
+  // the platform clamps, so out-of-range percentages convert without clamping, as numbers do.
+  describe('opacity accepts <number> | <percentage>', () => {
+    it.each([
+      ['50%', 0.5],
+      ['0%', 0],
+      ['100%', 1],
+      ['12.5%', 0.125],
+      ['150%', 1.5],
+      ['-20%', -0.2],
+      ['0.5', 0.5],
+      ['0', 0],
+    ])('opacity: %s reaches React Native as the number %s', (value, expected) => {
+      expect(transformDecl('opacity', value)).toEqual({ opacity: expected });
+    });
+
+    it.each([
+      ['calc(50%)', 0.5],
+      ['calc(20% + 30%)', 0.5],
+      ['min(80%, 30%)', 0.3],
+    ])('opacity: %s folds to the number %s', (value, expected) => {
+      expect(transformDecl('opacity', value)).toEqual({ opacity: expected });
+    });
+
+    it('leaves the other number-only keys untouched', () => {
+      expect(transformDecl('flexGrow', '50%')).toEqual({ flexGrow: '50%' });
+    });
+
+    describeOnRnWeb(() => {
+      it.each([
+        ['50%', '50%'],
+        ['0.5', 0.5],
+      ])('opacity: %s is left for the browser to resolve', (value, expected) => {
+        expect(transformDecl('opacity', value)).toEqual({ opacity: expected });
+      });
+
+      it('leaves a percentage calc() for the browser', () => {
+        expect(transformDecl('opacity', 'calc(20% + 30%)')).toEqual({
+          opacity: 'calc(20% + 30%)',
+        });
+      });
+    });
+  });
+
   it('passes color names through', () => {
     expect(transformDecl('color', 'red')).toEqual({ color: 'red' });
     expect(transformDecl('color', '#fff')).toEqual({ color: '#fff' });
