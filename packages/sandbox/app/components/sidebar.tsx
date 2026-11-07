@@ -15,6 +15,7 @@ const sections = [
       { href: '/client-example', label: 'Client Components' },
       { href: '/global-style-test', label: 'Global Styles' },
       { href: '/container-queries', label: 'Container Queries' },
+      { href: '/view-transitions', label: 'View Transitions' },
     ],
   },
   {

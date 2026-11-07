@@ -5,6 +5,7 @@ import styled, { css, keyframes, useTheme } from 'styled-components';
 import { TestStatus, type TestCheck } from '../components/auto-test';
 import { TestSummary } from '../components/test-summary';
 import { Section, SectionTitle, SectionDesc, HintText } from '../components/test-ui';
+import themeContract from '../lib/theme';
 
 const test1Checks: TestCheck[] = [
   { ref: 'variant-card', type: 'exists', label: 'VariantCard renders' },
@@ -108,6 +109,30 @@ const test9Checks: TestCheck[] = [
   },
 ];
 
+const test10Checks: TestCheck[] = [
+  {
+    ref: 'keyframes-fragment',
+    type: 'style',
+    prop: 'opacity',
+    expected: '0.5',
+    label: 'A value inside a css fragment reaches the keyframes',
+  },
+  {
+    ref: 'keyframes-function',
+    type: 'style',
+    prop: 'opacity',
+    expected: '1',
+    label: 'A function in keyframes contributes nothing',
+  },
+  {
+    ref: 'keyframes-theme',
+    type: 'style',
+    prop: 'background-color',
+    expectedVar: '--sc-colors-accent',
+    label: 'A createTheme value in keyframes follows the active theme',
+  },
+];
+
 const clientSuites = [
   { name: '1. Variants', checks: test1Checks },
   { name: '2. Transient', checks: test2Checks },
@@ -118,6 +143,7 @@ const clientSuites = [
   { name: '7. Theme', checks: test7Checks },
   { name: '8. attrs chain', checks: test8Checks },
   { name: '9. CSS-var transient', checks: test9Checks },
+  { name: '10. Keyframes fragment, function, and theme value', checks: test10Checks },
 ];
 
 const VARIANTS = ['default', 'active', 'error'] as const;
@@ -319,6 +345,41 @@ export function ClientTestingHarness() {
             />
           </ProgressTrack>
         </ProgressColumn>
+      </Section>
+
+      {/* 10. keyframes from a css fragment, a function, and a createTheme value */}
+      <Section>
+        <SectionTitle>
+          10. Keyframes from a fragment, a function, and a theme value{' '}
+          <TestStatus checks={test10Checks} />
+        </SectionTitle>
+        <SectionDesc>
+          Keyframes are built once where they are defined, so a function inside them has no props or
+          theme to be called with. It is left out, and the browser console shows a development
+          warning. A value, including one inside a <code>css</code> fragment, is written as is. A{' '}
+          <code>createTheme</code> value follows the active theme. The left box should be half
+          transparent, the middle box solid, and the right box the accent color, which changes when
+          the theme toggles.
+        </SectionDesc>
+        <HintText>
+          If broken: the left box is solid (the fragment&apos;s value did not reach the keyframes),
+          the console shows no warning for the middle box, or the right box keeps one color across
+          theme toggles.
+        </HintText>
+        <KeyframesRow>
+          <KeyframesCell>
+            <FragmentBox data-testid="keyframes-fragment" />
+            <KeyframesCaption>Value in a fragment (0.5)</KeyframesCaption>
+          </KeyframesCell>
+          <KeyframesCell>
+            <FunctionBox data-testid="keyframes-function" />
+            <KeyframesCaption>Function (left out)</KeyframesCaption>
+          </KeyframesCell>
+          <KeyframesCell>
+            <ThemeBox data-testid="keyframes-theme" />
+            <KeyframesCaption>createTheme value</KeyframesCaption>
+          </KeyframesCell>
+        </KeyframesRow>
       </Section>
     </Container>
   );
@@ -565,4 +626,65 @@ const ProgressBar = styled.div`
   width: var(--progress, 0%);
   background: ${p => p.theme.colors.primary};
   transition: width 0.6s ease;
+`;
+
+// ---------------------------------------------------------------------------
+// 10. keyframes from a css fragment, a function, and a createTheme value
+// ---------------------------------------------------------------------------
+
+const fadeToHalf = css`
+  to {
+    opacity: ${0.5};
+  }
+`;
+
+const fragmentFade = keyframes`
+  from { opacity: 1; }
+  ${fadeToHalf}
+`;
+
+const functionFade = keyframes`
+  from { opacity: 1; }
+  to { opacity: ${() => 0.2}; }
+`;
+
+const themeFade = keyframes`
+  from { background-color: transparent; }
+  to { background-color: ${themeContract.colors.accent}; }
+`;
+
+const KeyframesRow = styled.div`
+  display: flex;
+  gap: 16px;
+`;
+
+const KeyframesCell = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const KeyframesCaption = styled.span`
+  font-size: 12px;
+  color: ${p => p.theme.colors.textMuted};
+`;
+
+const KeyframesBox = styled.div`
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  background: ${p => p.theme.colors.primary};
+`;
+
+/* Paused one second in, so each box holds its last frame */
+const FragmentBox = styled(KeyframesBox)`
+  animation: ${fragmentFade} 1s linear -1s forwards paused;
+`;
+
+const FunctionBox = styled(KeyframesBox)`
+  animation: ${functionFade} 1s linear -1s forwards paused;
+`;
+
+const ThemeBox = styled(KeyframesBox)`
+  animation: ${themeFade} 1s linear -1s forwards paused;
 `;
