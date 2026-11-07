@@ -3343,10 +3343,7 @@ describe('relative-color spec compliance (CSS Color Module Level 5 §4)', () => 
   });
 
   describe('§4.1 sentinel-base (theme-token) defers to runtime resolver', () => {
-    // The static fold bails (returns null) so transformDecl's
-    // dispatch falls into buildResolver → colorFnResolver, which at
-    // render time substitutes the sentinel with the resolved theme
-    // value and re-enters the fold pipeline. No warning fires.
+    // The static fold bails (returns null) without a warning.
     it('staticColorFunctionToHex returns null for sentinel-base values', () => {
       const tok = tokenize('oklch(from \0sc:colors.brand:#f00 l c h)')[0];
       const hex = staticColorFunctionToHex(tok);
@@ -3362,63 +3359,6 @@ describe('relative-color spec compliance (CSS Color Module Level 5 §4)', () => 
       } finally {
         warnSpy.mockRestore();
       }
-    });
-
-    it('buildResolver returns a resolver that substitutes + folds at render time', () => {
-      const r = buildResolver('oklch(from \0sc:colors.brand:#f00 l c h)');
-      expect(r).not.toBeNull();
-      // Theme path resolved at render time; the resolver substitutes
-      // the sentinel with the theme value, then folds the relative
-      // color against the resolved base.
-      const env = {
-        media: {
-          width: 0,
-          height: 0,
-          colorScheme: null,
-          reduceMotion: false,
-          fontScale: 1,
-          pixelRatio: 1,
-        },
-        container: null,
-        theme: { colors: { brand: '#00ff00' } },
-        insets: { top: 0, right: 0, bottom: 0, left: 0 },
-        rootFontSize: 16,
-        fontSize: 16,
-        lineHeight: 24,
-        direction: 'ltr' as const,
-      };
-      const out = r!(env);
-      expect(typeof out).toBe('string');
-      expect(out as string).toMatch(/^#[0-9a-f]{6}$/);
-      // The resolved hex should be the brand color (green) recomposed
-      // through OKLCh; bytes close to #00ff00.
-      const g = parseInt((out as string).slice(3, 5), 16);
-      expect(g).toBeGreaterThan(0xf0);
-    });
-
-    it('relative color with calc() against sentinel base resolves', () => {
-      const r = buildResolver('oklch(from \0sc:colors.brand:#0066cc calc(l - 0.15) c h)');
-      expect(r).not.toBeNull();
-      const env = {
-        media: {
-          width: 0,
-          height: 0,
-          colorScheme: null,
-          reduceMotion: false,
-          fontScale: 1,
-          pixelRatio: 1,
-        },
-        container: null,
-        theme: { colors: { brand: '#3399ff' } },
-        insets: { top: 0, right: 0, bottom: 0, left: 0 },
-        rootFontSize: 16,
-        fontSize: 16,
-        lineHeight: 24,
-        direction: 'ltr' as const,
-      };
-      const out = r!(env);
-      expect(typeof out).toBe('string');
-      expect(out as string).toMatch(/^#[0-9a-f]{6}$/);
     });
   });
 
@@ -3695,27 +3635,7 @@ describe('relative-color spec compliance (CSS Color Module Level 5 §4)', () => 
   });
 
   describe('§4.1 sentinel-base from-forms defer to runtime resolver', () => {
-    // Mirrors the oklch sentinel-base path: the static fold bails so
-    // buildResolver → colorFnResolver substitutes the theme value at
-    // render time, then re-enters the fold.
-    const env = {
-      media: {
-        width: 0,
-        height: 0,
-        colorScheme: null,
-        reduceMotion: false,
-        fontScale: 1,
-        pixelRatio: 1,
-      },
-      container: null,
-      theme: { colors: { brand: '#3399ff' } },
-      insets: { top: 0, right: 0, bottom: 0, left: 0 },
-      rootFontSize: 16,
-      fontSize: 16,
-      lineHeight: 24,
-      direction: 'ltr' as const,
-    };
-
+    // Mirrors the oklch sentinel-base path: the static fold bails.
     it('static fold returns null for rgb(from <sentinel> r g b)', () => {
       const tok = tokenize('rgb(from \0sc:colors.brand:#3399ff r g b)')[0];
       expect(staticColorFunctionToHex(tok)).toBeNull();
@@ -3731,18 +3651,6 @@ describe('relative-color spec compliance (CSS Color Module Level 5 §4)', () => 
       } finally {
         warnSpy.mockRestore();
       }
-    });
-
-    it('buildResolver folds rgb(from <sentinel> r g b) at render time', () => {
-      const r = buildResolver('rgb(from \0sc:colors.brand:#3399ff r g b)');
-      expect(r).not.toBeNull();
-      expect(r!(env)).toBe('#3399ff');
-    });
-
-    it('buildResolver folds hsl(from <sentinel> h s l) at render time', () => {
-      const r = buildResolver('hsl(from \0sc:colors.brand:#3399ff h s l)');
-      expect(r).not.toBeNull();
-      expect(r!(env)).toBe('#3399ff');
     });
 
     it('buildResolver leaves absolute rgb(255 0 0) un-resolved (RN handles it)', () => {
@@ -3774,10 +3682,6 @@ describe('relative-color spec compliance (CSS Color Module Level 5 §4)', () => 
 
     it('transformDecl folds color: rgb(from red r g b) to hex', () => {
       expect(transformDecl('color', 'rgb(from red r g b)').color).toBe('#ff0000');
-    });
-
-    it('sentinel base defers to the resolver (buildResolver non-null)', () => {
-      expect(buildResolver('rgb(from \0sc:colors.brand:#3399ff r g b)')).not.toBeNull();
     });
 
     it('absolute rgb(255 0 0) still passes through for the browser', () => {

@@ -672,8 +672,8 @@ function containerResolver(n: number, unit: string): Resolver {
  * → first arg.
  *
  * Branches are parsed through {@link buildResolver} so they can
- * contain sentinels (theme tokens), env(), nested light-dark, or any
- * other render-time-resolvable expression. Argument-count and empty-
+ * contain env(), viewport units, nested light-dark, or any other
+ * render-time-resolvable expression. Argument-count and empty-
  * branch validation reject 0 / 1 / 3+ args and empty branches.
  */
 function lightDarkResolver(value: string): Resolver | null {
@@ -687,7 +687,7 @@ function lightDarkResolver(value: string): Resolver | null {
   if (isImageBranch(light) !== isImageBranch(dark)) return null;
   const lightR = buildResolver(light);
   const darkR = buildResolver(dark);
-  // Dynamic branches (theme sentinels, env(), nested resolvers) evaluate
+  // Dynamic branches (env(), viewport units, nested resolvers) evaluate
   // at render time; the OS color-scheme change re-renders via the
   // Appearance listener.
   return env => {
@@ -809,7 +809,7 @@ function envResolver(value: string): Resolver | null {
   let fallback = commaIdx === -1 ? null : inner.slice(commaIdx + 1).trim();
   if (fallback === '') fallback = null;
 
-  // The fallback may itself be a sentinel, another env(), light-dark(),
+  // The fallback may itself be another env(), light-dark(),
   // viewport unit, or static literal. Build a resolver if it's dynamic;
   // otherwise pre-parse the static literal.
   const fallbackR = fallback === null ? null : buildResolver(fallback);
@@ -1837,15 +1837,12 @@ function isIdentChar(c: number): boolean {
  * `lab()` / `color-mix()` / `color()` / relative forms) when one or more
  * channel arms are dynamic. The static fold in `staticColorFunctionToHex`
  * (colorMath.ts) bails the moment a channel isn't a literal; we land
- * here, substitute the dynamic arms at render time (theme sentinels plus
- * env-dependent math: calc()/min()/max()/clamp() and bare
- * sibling-index()/sibling-count()), then run the assembled string back
- * through the static converter to produce a hex. Without the math
- * substitution the raw function string reached React Native, whose color
- * parser rejects it and paints transparent.
+ * here, substitute the dynamic arms at render time (env-dependent math:
+ * calc()/min()/max()/clamp() and bare sibling-index()/sibling-count()),
+ * then run the assembled string back through the static converter to
+ * produce a hex. Without the substitution the raw function string reached
+ * React Native, whose color parser rejects it and paints transparent.
  *
- * Splices BOTH theme sentinels and env-dependent math segments. Math segments may
- * themselves carry sentinels (the math operand machinery resolves them).
  * Returns null when the string has no dynamic segment this recognizes.
  */
 function colorFnResolver(value: string): Resolver | null {
@@ -1853,72 +1850,12 @@ function colorFnResolver(value: string): Resolver | null {
     start: number;
     end: number;
     resolver: Resolver;
-    unit: string;
   }
   const segments: Seg[] = [];
   let i = 0;
-  let depth = 0;
   const len = value.length;
   while (i < len) {
     const c = value.charCodeAt(i);
-    if (c === 0x28 /* ( */) {
-      depth++;
-      i++;
-      continue;
-    }
-    if (c === 0x29 /* ) */) {
-      depth--;
-      i++;
-      continue;
-    }
-    if (c === 0) {
-      // Sentinel atom: must start at a token boundary and ends at whitespace, comma, slash, or the enclosing paren.
-      if (i > 0) {
-        const prev = value.charCodeAt(i - 1);
-        const isBoundary =
-          prev === 0x20 ||
-          prev === 0x09 ||
-          prev === 0x0a ||
-          prev === 0x0d ||
-          prev === 0x2c ||
-          prev === 0x28 ||
-          prev === 0x29 ||
-          prev === 0x2f;
-        if (!isBoundary) return null;
-      }
-      const startDepth = depth;
-      let end = i + 1;
-      let scanDepth = depth;
-      while (end < len) {
-        const ec = value.charCodeAt(end);
-        if (
-          ec === 0x20 ||
-          ec === 0x09 ||
-          ec === 0x0a ||
-          ec === 0x0d ||
-          ec === 0x2c ||
-          ec === 0x2f
-        ) {
-          break;
-        }
-        if (ec === 0x28) {
-          scanDepth++;
-        } else if (ec === 0x29) {
-          if (scanDepth === startDepth) break;
-          scanDepth--;
-        }
-        end++;
-      }
-      const segment = value.substring(i, end);
-      const r = themeResolver(segment);
-      if (r === null) return null;
-      const lastColon = segment.lastIndexOf(':');
-      const fb = lastColon === -1 ? '' : segment.slice(lastColon + 1);
-      segments.push({ start: i, end, resolver: r, unit: fallbackUnit(fb) });
-      depth = scanDepth;
-      i = end;
-      continue;
-    }
     if (isIdentChar(c)) {
       const prev = i > 0 ? value.charCodeAt(i - 1) : -1;
       const isBoundary =
@@ -1939,7 +1876,7 @@ function colorFnResolver(value: string): Resolver | null {
           const seg = value.substring(i, close + 1);
           const r = head === 'sibling' ? buildResolver(seg) : resolveMathFn(seg);
           if (r !== null) {
-            segments.push({ start: i, end: close + 1, resolver: r, unit: '' });
+            segments.push({ start: i, end: close + 1, resolver: r });
             i = close + 1;
             continue;
           }
@@ -1962,19 +1899,15 @@ function colorFnResolver(value: string): Resolver | null {
       if (pos < s.start) out += value.substring(pos, s.start);
       const v = s.resolver(env);
       if (v === null) return null;
-      if (typeof v === 'number') {
-        out += s.unit === '' ? String(v) : String(v) + s.unit;
-      } else {
-        out += String(v);
-      }
+      out += String(v);
       pos = s.end;
     }
     if (pos < value.length) out += value.substring(pos);
     const tokens = tokenize(out);
     if (tokens.length !== 1 || tokens[0].kind !== TokenKind.Function) return null;
-    // Wide-gamut color functions stay authored CSS text on rn-web; the
-    // sentinels only splice resolved numbers into the string and the
-    // browser parses the function (and its color space) natively.
+    // Wide-gamut color functions stay authored CSS text on rn-web; only
+    // resolved numbers are spliced into the string and the browser parses
+    // the function (and its color space) natively.
     if (__NATIVE_WEB__) return out;
     return staticColorFunctionToHex(tokens[0]);
   };

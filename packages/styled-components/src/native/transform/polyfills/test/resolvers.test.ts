@@ -639,34 +639,11 @@ describe('dynamic math fn resolver;min / max / clamp', () => {
   });
 });
 
-describe('light-dark with sentinel branches', () => {
-  it('resolves sentinel inside light branch', () => {
-    const r = buildResolver('light-dark(\0sc:colors.bg:#fff, #111)')!;
-    expect(
-      r({
-        ...baseEnv,
-        theme: { colors: { bg: '#fafafa' } },
-        media: { ...baseEnv.media, colorScheme: 'light' },
-      })
-    ).toBe('#fafafa');
-  });
-
-  it('resolves sentinel inside dark branch', () => {
-    const r = buildResolver('light-dark(#fff, \0sc:colors.bg:#111)')!;
-    expect(
-      r({
-        ...baseEnv,
-        theme: { colors: { bg: '#222' } },
-        media: { ...baseEnv.media, colorScheme: 'dark' },
-      })
-    ).toBe('#222');
-  });
-
-  it('falls back to fallback string when sentinel path is missing', () => {
-    const r = buildResolver('light-dark(\0sc:colors.bg:#fff, #000)')!;
-    expect(r({ ...baseEnv, theme: {}, media: { ...baseEnv.media, colorScheme: 'light' } })).toBe(
-      '#fff'
-    );
+describe('light-dark with dynamic branches', () => {
+  it('resolves a dynamic branch for the active color scheme', () => {
+    const r = buildResolver('light-dark(10vw, 20vw)')!;
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, colorScheme: 'light' } })).toBe(40);
+    expect(r({ ...baseEnv, media: { ...baseEnv.media, colorScheme: 'dark' } })).toBe(80);
   });
 
   it('keeps literal strings working unchanged', () => {
@@ -954,24 +931,6 @@ describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
     );
   });
 
-  it('accepts theme-token sentinels in branches', () => {
-    const r = buildResolver('light-dark(\0sc:colors.bg:#fff, \0sc:colors.fg:#000)')!;
-    expect(
-      r({
-        ...baseEnv,
-        theme: { colors: { bg: '#fafafa', fg: '#1a1a1a' } },
-        media: { ...baseEnv.media, colorScheme: 'light' },
-      })
-    ).toBe('#fafafa');
-    expect(
-      r({
-        ...baseEnv,
-        theme: { colors: { bg: '#fafafa', fg: '#1a1a1a' } },
-        media: { ...baseEnv.media, colorScheme: 'dark' },
-      })
-    ).toBe('#1a1a1a');
-  });
-
   // Composition / nesting (`<color>` may itself contain nested functions).
 
   it('accepts nested light-dark in a branch (recursive)', () => {
@@ -1049,14 +1008,9 @@ describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
 });
 
 describe('env() with resolvable fallback', () => {
-  it('returns sentinel-resolved fallback when name is unknown', () => {
-    const r = buildResolver('env(keyboard-inset-top, \0sc:space.md:16)')!;
-    expect(r({ ...baseEnv, theme: { space: { md: 24 } } })).toBe(24);
-  });
-
-  it('returns sentinel fallback default when path missing', () => {
-    const r = buildResolver('env(keyboard-inset-top, \0sc:space.md:16)')!;
-    expect(r({ ...baseEnv, theme: {} })).toBe('16');
+  it('returns the resolved dynamic fallback when name is unknown', () => {
+    const r = buildResolver('env(keyboard-inset-top, 10vw)')!;
+    expect(r(baseEnv)).toBe(40);
   });
 
   it('static fallback path still works for unknown names', () => {
@@ -1065,7 +1019,7 @@ describe('env() with resolvable fallback', () => {
   });
 
   it('safe-area-inset-* names ignore the fallback when env supplies a value', () => {
-    const r = buildResolver('env(safe-area-inset-top, \0sc:fallback:99)')!;
+    const r = buildResolver('env(safe-area-inset-top, 10vw)')!;
     expect(r({ ...baseEnv, insets: { top: 47, right: 0, bottom: 0, left: 0 } })).toBe(47);
   });
 });
@@ -1103,51 +1057,38 @@ describe('cross-feature integrations', () => {
     expect(typeof v).toBe('number');
   });
 
-  describe('color functions with sentinel channel arms', () => {
-    it('oklch with sentinel L channel resolves to hex via static converter', () => {
-      const r = buildResolver('oklch(\0sc:lightness:0.5 0.1 200)')!;
-      const result = r({ ...baseEnv, theme: { lightness: 0.7 } });
+  describe('color functions with dynamic channel arms', () => {
+    const atIndex = (siblingIndex: number) => ({ ...baseEnv, siblingIndex });
+
+    it('oklch with a sibling-index() channel resolves to hex via static converter', () => {
+      const r = buildResolver('oklch(0.5 0.1 calc(sibling-index() * 55))')!;
+      const result = r(atIndex(2));
       expect(typeof result).toBe('string');
       expect(result).toMatch(/^#[0-9a-f]{6,8}$/);
-      // Different lightness yields different hex
-      const result2 = r({ ...baseEnv, theme: { lightness: 0.3 } });
-      expect(result2).not.toBe(result);
+      // A different index yields a different hex
+      expect(r(atIndex(5))).not.toBe(result);
     });
 
-    it('oklab with all sentinel channels', () => {
-      const r = buildResolver('oklab(\0sc:l:0.5 \0sc:a:0.1 \0sc:b:-0.1)')!;
-      const result = r({ ...baseEnv, theme: { l: 0.6, a: 0.05, b: -0.05 } });
-      expect(typeof result).toBe('string');
-      expect(result).toMatch(/^#[0-9a-f]{6,8}$/);
+    it('oklab with all dynamic channels', () => {
+      const r = buildResolver(
+        'oklab(calc(sibling-index() * 0.1) calc(sibling-index() * 0.05) calc(sibling-index() * -0.05))'
+      )!;
+      expect(r(atIndex(2))).toMatch(/^#[0-9a-f]{6,8}$/);
     });
 
-    it('lch with sentinel chroma + hue', () => {
-      const r = buildResolver('lch(50% \0sc:chroma:30 \0sc:hue:240)')!;
-      expect(r({ ...baseEnv, theme: { chroma: 30, hue: 240 } })).toMatch(/^#[0-9a-f]{6,8}$/);
+    it('lch with dynamic chroma + hue', () => {
+      const r = buildResolver('lch(50% calc(sibling-index() * 10) calc(sibling-index() * 80))')!;
+      expect(r(atIndex(3))).toMatch(/^#[0-9a-f]{6,8}$/);
     });
 
-    it('lab with mixed sentinel + literal channels', () => {
-      const r = buildResolver('lab(\0sc:l:50 25 -25)')!;
-      expect(r({ ...baseEnv, theme: { l: 70 } })).toMatch(/^#[0-9a-f]{6,8}$/);
+    it('lab with mixed dynamic + literal channels', () => {
+      const r = buildResolver('lab(calc(sibling-index() * 10) 25 -25)')!;
+      expect(r(atIndex(7))).toMatch(/^#[0-9a-f]{6,8}$/);
     });
 
-    it('oklch with sentinel values uses fallback when theme is missing the path', () => {
-      const r = buildResolver('oklch(\0sc:lightness:0.6 0.1 200)')!;
-      const result = r({ ...baseEnv, theme: {} });
-      expect(typeof result).toBe('string');
-      expect(result).toMatch(/^#[0-9a-f]{6,8}$/);
-    });
-
-    it('color-mix with sentinel color args resolves to hex', () => {
-      const r = buildResolver('color-mix(in srgb, \0sc:colors.fg:#000 50%, \0sc:colors.bg:#fff)')!;
-      const result = r({ ...baseEnv, theme: { colors: { fg: '#ff0000', bg: '#00ff00' } } });
-      expect(typeof result).toBe('string');
-      expect(result).toMatch(/^#[0-9a-f]{6,8}$/);
-    });
-
-    it('color-mix with one sentinel color and one static color', () => {
-      const r = buildResolver('color-mix(in srgb, \0sc:colors.fg:#000 30%, white)')!;
-      expect(r({ ...baseEnv, theme: { colors: { fg: '#0000ff' } } })).toMatch(/^#[0-9a-f]{6,8}$/);
+    it('color-mix with a sibling-index() weight resolves to hex', () => {
+      const r = buildResolver('color-mix(in srgb, red calc(sibling-index() * 20%), blue)')!;
+      expect(r(atIndex(2))).toMatch(/^#[0-9a-f]{6,8}$/);
     });
 
     it('static-only color fns are NOT routed through the runtime path', () => {
@@ -1156,46 +1097,27 @@ describe('cross-feature integrations', () => {
       expect(buildResolver('oklch(0.5 0.1 200)')).toBeNull();
     });
 
-    it('color fn with malformed sentinel position still bails (defends against leaks)', () => {
-      // A sentinel glued to other text is not a clean token boundary.
-      expect(buildResolver('oklch(0.5\0sc:bad:0.1 200)')).toBeNull();
-    });
-
-    it('oklch with calc() arm containing a sentinel resolves end-to-end', () => {
-      // `oklch(calc(${t.l} + 0.1) 0.2 240)` after fill becomes
-      // `oklch(calc(\0sc:l:0.5 + 0.1) 0.2 240)`. colorFnResolver
-      // substitutes the sentinel inside the calc(); readChannels then
-      // folds the calc() statically.
-      const r = buildResolver('oklch(calc(\0sc:l:0.5 + 0.1) 0.2 240)')!;
-      const result = r({ ...baseEnv, theme: { l: 0.5 } });
-      expect(typeof result).toBe('string');
-      expect(result).toMatch(/^#[0-9a-f]{6,8}$/);
-    });
-
     it('oklab with min() and max() in the a/b channels', () => {
-      const r = buildResolver('oklab(\0sc:l:0.5 min(0.1, \0sc:cap:0.05) max(0, -0.05))')!;
-      const result = r({ ...baseEnv, theme: { l: 0.6, cap: 0.04 } });
-      expect(typeof result).toBe('string');
-      expect(result).toMatch(/^#[0-9a-f]{6,8}$/);
+      const r = buildResolver('oklab(0.5 min(0.1, calc(sibling-index() * 0.05)) max(0, -0.05))')!;
+      expect(r(atIndex(2))).toMatch(/^#[0-9a-f]{6,8}$/);
     });
 
     it('lch with clamp() bounding the chroma channel', () => {
-      const r = buildResolver('lch(60% clamp(0, \0sc:c:50, 100) 200)')!;
-      expect(r({ ...baseEnv, theme: { c: 50 } })).toMatch(/^#[0-9a-f]{6,8}$/);
+      const r = buildResolver('lch(60% clamp(0, calc(sibling-index() * 50), 100) 200)')!;
+      expect(r(atIndex(1))).toMatch(/^#[0-9a-f]{6,8}$/);
     });
 
-    it('color-mix with calc() percentage on the first color', () => {
-      const r = buildResolver('color-mix(in srgb, \0sc:colors.fg:#000 calc(100% - 30%), white)')!;
-      expect(r({ ...baseEnv, theme: { colors: { fg: '#0000ff' } } })).toMatch(/^#[0-9a-f]{6,8}$/);
+    it('color-mix with a calc() percentage on the first color', () => {
+      const r = buildResolver('color-mix(in srgb, red calc(100% - sibling-index() * 10%), white)')!;
+      expect(r(atIndex(3))).toMatch(/^#[0-9a-f]{6,8}$/);
     });
 
     describeOnRnWeb(() => {
       // Wide-gamut `<color>` functions stay as authored CSS strings on rn-web (`__NATIVE_WEB__`).
-      // Sentinels only splice resolved numbers into those strings.
-      it('pure-static sentinel oklch substitutes to assembled function text (passthrough)', () => {
-        const r = buildResolver('oklch(\0sc:c.l:.7 \0sc:c.c:.2 \0sc:c.h:200)')!;
-        const env = { ...baseEnv, theme: { c: { l: '0.7', c: '0.2', h: '200' } } };
-        expect(r(env)).toBe('oklch(0.7 0.2 200)');
+      // Resolved numbers are spliced into those strings.
+      it('a dynamic oklch channel substitutes to assembled function text (passthrough)', () => {
+        const r = buildResolver('oklch(0.7 0.2 calc(sibling-index() * 100))')!;
+        expect(r(atIndex(2))).toBe('oklch(0.7 0.2 200)');
       });
     });
   });
