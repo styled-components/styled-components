@@ -1102,6 +1102,30 @@ describe('attrs', () => {
       error.mockRestore();
     });
 
+    it.each([
+      ['a static callback', false],
+      ['a render-time callback', true],
+    ])('pops a camelCase key from %s as the kebab-case declaration', (_label, readsProps) => {
+      const Comp = styled.div.attrs<{ 'data-bg'?: string; 'data-fill'?: string; $on?: boolean }>(
+        (p, ast) =>
+          readsProps && !p.$on
+            ? {}
+            : {
+                'data-bg': ast.pop('backgroundColor'),
+                'data-fill': ast.pop('WebkitTextFillColor'),
+              }
+      )`
+        background-color: red;
+        -webkit-text-fill-color: blue;
+      `;
+      const el = render(<Comp $on />).container.firstChild as HTMLElement;
+      expect([
+        el.getAttribute('data-bg'),
+        el.getAttribute('data-fill'),
+        el.style.backgroundColor,
+      ]).toEqual(['red', 'blue', 'unset']);
+    });
+
     it('pops a custom property by its verbatim name and unsets it inline', () => {
       const Comp = styled.div.attrs<{ 'data-tint'?: string; $on?: boolean }>((p, ast) => ({
         'data-tint': p.$on ? ast.pop('--tint') : 'off',

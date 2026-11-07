@@ -1045,7 +1045,7 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
     });
   });
 
-  describe('characterization: ast.pop key spelling in arity-2 attrs on Switch', () => {
+  describe('ast.pop key spelling in arity-2 attrs on Switch', () => {
     type SwitchFactory = {
       attrs: (
         a: (p: object, ast: { pop: (k: string) => unknown }) => object
@@ -1073,12 +1073,12 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
       expect(seen.at(-1)).toBe('rgb(1, 2, 3)');
     });
 
-    it('pop of the camelCase spelling returns undefined today (the web accessor matches the authored spelling only)', () => {
+    it('pop of the camelCase spelling returns the value, as on iOS and Android', () => {
       const { seen } = popWith('accentColor', 'rgb(4, 5, 6)');
-      expect(seen.at(-1)).toBeUndefined();
+      expect(seen.at(-1)).toBe('rgb(4, 5, 6)');
     });
 
-    it('leaves the declaration in the CSSOM after a pop of either spelling today', () => {
+    it('leaves the declaration in the CSSOM after a pop of either spelling', () => {
       expect({
         authored: popWith('accent-color', 'rgb(7, 8, 9)').hasDecl,
         camel: popWith('accentColor', 'rgb(10, 11, 12)').hasDecl,

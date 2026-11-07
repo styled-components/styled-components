@@ -100,10 +100,11 @@ export type Interpolation<Props extends BaseObject> =
  * mapping `color` to `react-native-svg`'s `fill`).
  *
  * Both `pop` and `peek` accept either:
- * - A **CSS property name** (single segment, no dots;e.g. `'color'`,
- *   `'padding'`). Reads from the resolved compiled style; `pop` removes,
+ * - A **CSS property name** (single segment, no dots; e.g. `'color'`,
+ *   `'background-color'` or `'backgroundColor'`, either spelling on every
+ *   platform). Reads from the resolved compiled style; `pop` removes,
  *   `peek` leaves the decl in place. Returns `string | undefined`.
- * - A **typed theme path** (dot-separated;e.g. `'color.red.500'`).
+ * - A **typed theme path** (dot-separated; e.g. `'color.red.500'`).
  *   Reads a token out of the active theme. Autocomplete and value-type
  *   inference flow from the augmented `DefaultTheme`. Calling pop/peek
  *   with a theme path opts the attrs callback out of the construction-
