@@ -1471,6 +1471,18 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
       expect(r({ ...baseEnv, siblingIndex: 3 })).toBe(11);
     });
 
+    // Spec §10.9: "At a * sub-expression, multiply the types of the left and
+    // right arguments." The operand of + is the product, not the token beside
+    // the operator, so these add a <length> to a <length> and a <number> to a
+    // <number>.
+    it.each([
+      ['calc(sibling-index() * 4px * 2 + 1px)', 25],
+      ['calc(sibling-index() * 10px / 5px + 1)', 7],
+    ])('types a + operand by its whole product: %s = %s', (value, expected) => {
+      const r = buildResolver(value)!;
+      expect(r({ ...baseEnv, siblingIndex: 3 })).toBe(expected);
+    });
+
     // Spec §10.2: "For all three functions, the argument calculations can
     // resolve to any <number>, <dimension>, or <percentage>, but must have a
     // consistent type or else the function is invalid; the result's type will
@@ -2479,6 +2491,16 @@ describe('attr() spec compliance (CSS Values 5 §8.7)', () => {
       const r = buildResolver('calc(attr(data-size px, 40px) * 2)')!;
       expect(r(withProps({ 'data-size': '12' }))).toBe(24);
       expect(r(withProps({}))).toBe(80);
+    });
+
+    // css-values-5: "<declaration-value> Specifies a fallback value for the
+    // attr(), which will be substituted instead of the attribute’s value if
+    // the attribute is missing or fails to parse as the specified type." The
+    // fallback's tokens are substituted, so its type is its own text's: 40px
+    // adds to a <length>, 4 does not.
+    it('types a fallback by its own text inside calc()', () => {
+      expect(buildResolver('calc(attr(data-size px, 40px) + 5px)')!(withProps({}))).toBe(45);
+      expect(buildResolver('calc(attr(data-size px, 4) + 5px)')!(withProps({}))).toBeNull();
     });
   });
 });

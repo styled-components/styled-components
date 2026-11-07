@@ -1188,10 +1188,11 @@ function normalizeAttrValue(s: string): number | string {
  * fallback per spec, and a missing fallback on a typed attr() drops the
  * declaration (guaranteed-invalid). `operandUnit` is the unit a number
  * result carries as a math operand (`px` for a <length> type, empty for a
- * <number> or untyped one); `onFallback` fires when the fallback supplied
- * the result.
+ * <number> or untyped one), and `fallbackUnit` the one a number from the
+ * fallback carries; `onFallback` fires when the fallback supplied the result.
  */
 function attrResolver(value: string): {
+  fallbackUnit: string;
   operandUnit: string;
   resolve: (env: ResolveEnv, onFallback?: () => void) => number | string | null;
 } | null {
@@ -1261,6 +1262,10 @@ function attrResolver(value: string): {
     (type.kind === 'syntax' && type.syntax === 'length')
       ? 'px'
       : '';
+  // A fallback number is unitless only when its text is a bare number; a px
+  // length and a dynamic fallback's resolved length both arrive as px numbers.
+  const fallbackMatch = fallbackRaw === null ? null : NUMERIC_RE.exec(fallbackRaw);
+  const fallbackUnit = fallbackMatch !== null && fallbackMatch[2] === '' ? '' : 'px';
 
   const resolve = (env: ResolveEnv, onFallback?: () => void) => {
     // Fallback construction is a pure env read (no subscription side
@@ -1293,7 +1298,7 @@ function attrResolver(value: string): {
     }
   };
 
-  return { operandUnit, resolve };
+  return { fallbackUnit, operandUnit, resolve };
 }
 
 function resolveAttrSyntax(
@@ -1602,8 +1607,12 @@ function buildExpression(
   // lengths aren't supported in math functions). Catch statically-typed
   // mismatches at construction time. Nested function tokens can resolve
   // to either kind, so they defer to runtime where the produced
-  // NumericResult's unit fights it out.
-  for (let i = 0; i < tokens.length; i++) {
+  // NumericResult's unit fights it out. With a `*` or `/` present, the
+  // token beside a `+` is only part of its operand, so `reduceMath` decides.
+  const scaled = tokens.some(
+    t => t.kind === TokenKind.Slash || (t.kind === TokenKind.Op && (t.op === '*' || t.op === '/'))
+  );
+  for (let i = 0; !scaled && i < tokens.length; i++) {
     const t = tokens[i];
     if (t.kind !== TokenKind.Op) continue;
     if (t.op !== '+' && t.op !== '-') continue;
@@ -1745,13 +1754,13 @@ function buildOperand(
     if (inner === 'attr') {
       const r = attrResolver(t.raw);
       if (r === null) return null;
-      // A fallback keeps parsing on its own text, so only the attribute's own value takes the type's unit.
+      // A fallback is typed by its own text, not by the attr type.
       return env => {
         let fellBack = false;
         const v = r.resolve(env, () => {
           fellBack = true;
         });
-        return valueToNumeric(v, fellBack ? '' : r.operandUnit);
+        return valueToNumeric(v, fellBack ? r.fallbackUnit : r.operandUnit);
       };
     }
     if ((inner === 'anchor' || inner === 'anchor-size') && opts?.prop !== undefined) {
