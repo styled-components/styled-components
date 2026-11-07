@@ -3,7 +3,10 @@ import React from 'react';
 import rscPlugin from '../../plugins/rsc';
 import Keyframes from '../../models/Keyframes';
 import { StyleSheetManager } from '../../models/StyleSheetManager';
+import ThemeProvider from '../../models/ThemeProvider';
 import { getRenderedCSS, resetStyled } from '../../test/utils';
+import { resetWarnOnce } from '../../utils/warnOnce';
+import createTheme from '../createTheme';
 import css from '../css';
 import keyframes from '../keyframes';
 
@@ -99,6 +102,159 @@ describe('keyframes', () => {
         animation: a 2s linear infinite;
       }"
     `);
+  });
+
+  it('reads a nested css fragment as its text, values included', () => {
+    const frames = keyframes`${css`from { opacity: ${0.5}; transform: scale(${2}); }`} to { opacity: 1; }`;
+
+    expect(frames.rules).toBe('from { opacity: 0.5; transform: scale(2); } to { opacity: 1; }');
+  });
+
+  it('reads a css fragment inside a css fragment at any depth', () => {
+    const inner = css`opacity: ${0.5};`;
+    const middle = css`from { ${inner} transform: scale(${2}); }`;
+    const frames = keyframes`${middle} to { ${css`${css`opacity: ${'1'};`}`} }`;
+
+    expect(frames.rules).toBe('from { opacity: 0.5; transform: scale(2); } to { opacity: 1; }');
+  });
+
+  describe('a style object', () => {
+    it('reads as the CSS a styled template gives, inside a stop', () => {
+      const frames = keyframes`from { ${{ opacity: 0, marginTop: 4 }} } to { opacity: 1; }`;
+
+      expect(frames.rules).toBe('from { opacity:0;margin-top:4px; } to { opacity: 1; }');
+    });
+
+    it('reads as the CSS a styled template gives, as stops', () => {
+      const frames = keyframes`${{ from: { opacity: 0 }, to: { opacity: 1 } }}`;
+
+      expect(frames.rules).toBe('from{opacity:0;}to{opacity:1;}');
+    });
+
+    it('reads inside a nested css fragment', () => {
+      const frames = keyframes`${css`from { ${{ opacity: 0 }} }`} to { opacity: 1; }`;
+
+      expect(frames.rules).toBe('from { opacity:0; } to { opacity: 1; }');
+    });
+
+    it('reads a css fragment held as a value', () => {
+      const frames = keyframes`from { ${{ opacity: css`${0.5}` }} } to { opacity: 1; }`;
+
+      expect(frames.rules).toBe('from { opacity:0.5; } to { opacity: 1; }');
+    });
+
+    it('keeps a text value inside its declaration, and warns', () => {
+      resetWarnOnce();
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const frames = keyframes`from { ${{ opacity: '0; } body { color: red' }} } to { opacity: 1; }`;
+      const warnings = warn.mock.calls;
+      warn.mockRestore();
+
+      expect({ rules: frames.rules, warnings }).toEqual({
+        rules: 'from { opacity:0;; } to { opacity: 1; }',
+        warnings: [
+          [
+            '[sc] An interpolated value holds an unmatched brace or leaves a string, paren, or bracket open, so "} body { color: red" was dropped. Write a value as `property: value;` declarations or whole `selector { ... }` rules.',
+          ],
+        ],
+      });
+    });
+  });
+
+  it('leaves out a boolean, as a styled template does', () => {
+    const frames = keyframes`from { opacity: 0; }${true} to { opacity: 1; }`;
+
+    expect(frames.rules).toBe('from { opacity: 0; } to { opacity: 1; }');
+  });
+
+  describe('a createTheme value', () => {
+    it('reads as its CSS variable reference with the default as fallback', () => {
+      const theme = createTheme({ dim: 0.2 });
+      const frames = keyframes`from { opacity: 1; } to { opacity: ${theme.dim}; }`;
+
+      expect(frames.rules).toBe('from { opacity: 1; } to { opacity: var(--sc-dim, 0.2); }');
+    });
+
+    it('keeps one keyframes name and one @keyframes rule across themes', () => {
+      const theme = createTheme({ dim: 0.2 });
+      const frames = keyframes`from { opacity: 1; } to { opacity: ${theme.dim}; }`;
+      const Box = styled.div`
+        animation: ${frames} 1s forwards;
+      `;
+
+      render(
+        <>
+          <ThemeProvider theme={{ dim: 0.4 }}>
+            <theme.GlobalStyle />
+            <Box />
+          </ThemeProvider>
+          <ThemeProvider theme={{ dim: 0.8 }}>
+            <Box />
+          </ThemeProvider>
+        </>
+      );
+
+      const name = frames.getName();
+      const css = getRenderedCSS();
+      const keyframeRules = css.split(`@keyframes ${name} `).length - 1;
+      const animationRules = css.split(`animation: ${name} 1s forwards;`).length - 1;
+
+      expect({ animationRules, keyframeRules }).toEqual({ animationRules: 1, keyframeRules: 1 });
+    });
+  });
+
+  describe('a function interpolation', () => {
+    const message =
+      '[sc] A function was interpolated into keyframes and was left out: keyframes are built once where they are defined, so there are no props or theme to call it with. For a theme value, interpolate the createTheme value; otherwise interpolate the value itself, or build the keyframes inside the function that has it.';
+    let warn: jest.SpyInstance;
+
+    beforeEach(() => {
+      resetWarnOnce();
+      warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      warn.mockRestore();
+    });
+
+    it('contributes no text, and warns once', () => {
+      const frames = keyframes`from { opacity: ${() => 0}; } to { opacity: ${() => 1}; }`;
+
+      expect({ rules: frames.rules, warnings: warn.mock.calls }).toEqual({
+        rules: 'from { opacity: ; } to { opacity: ; }',
+        warnings: [[message]],
+      });
+    });
+
+    it('contributes no text inside a nested css fragment, and warns once', () => {
+      const frames = keyframes`${css`from { opacity: ${css`${() => 0}`}; }`} to { opacity: 1; }`;
+
+      expect({ rules: frames.rules, warnings: warn.mock.calls }).toEqual({
+        rules: 'from { opacity: ; } to { opacity: 1; }',
+        warnings: [[message]],
+      });
+    });
+
+    it('contributes no text as a style object value, and warns once', () => {
+      const frames = keyframes`from { ${{ opacity: () => 0, marginTop: 4 }} } to { opacity: 1; }`;
+
+      expect({ rules: frames.rules, warnings: warn.mock.calls }).toEqual({
+        rules: 'from { opacity:;margin-top:4px; } to { opacity: 1; }',
+        warnings: [[message]],
+      });
+    });
+
+    it('keeps the class a styled component interpolates as', () => {
+      const Box = styled.div`
+        color: red;
+      `;
+      const frames = keyframes`${Box} { opacity: 1; }`;
+
+      expect({ rules: frames.rules, warnings: warn.mock.calls }).toEqual({
+        rules: `.${Box.styledComponentId} { opacity: 1; }`,
+        warnings: [],
+      });
+    });
   });
 
   it('should insert the correct styles for objects', () => {
