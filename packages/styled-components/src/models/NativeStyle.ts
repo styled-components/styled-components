@@ -44,10 +44,8 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
     private filledBuffer: string[] | undefined;
     private fragmentsBuffer: (FastPathFragment | null)[] | undefined;
     private holdsThemeText = false;
-    private lastTheme: object | undefined = undefined;
-    private lastThemedStyles: NativeStyles | null = null;
-    private prevTheme: object | undefined = undefined;
-    private prevThemedStyles: NativeStyles | null = null;
+    private themedKeyCache: Map<string, ThemedStyles> | undefined;
+    private themedStyles: ThemedStyles | undefined;
     staticEligible = false;
     staticCompiled: NativeStyles | null = null;
     usesAnchorFunctions = false;
@@ -123,24 +121,14 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
       return this.compileSlots(executionContext);
     }
 
-    /** Two theme slots, so an app that switches between two themes (light and dark) keeps hitting. */
     private compileThemed(executionContext: ExecutionContext & Props): NativeStyles {
       const theme = executionContext.theme;
-      if (this.lastThemedStyles !== null && this.lastTheme === theme) return this.lastThemedStyles;
-      if (this.prevThemedStyles !== null && this.prevTheme === theme) {
-        const hit = this.prevThemedStyles;
-        this.prevTheme = this.lastTheme;
-        this.prevThemedStyles = this.lastThemedStyles;
-        this.lastTheme = theme;
-        this.lastThemedStyles = hit;
-        return hit;
-      }
+      const slots = this.themedStyles ?? (this.themedStyles = new ThemedStyles());
+      const hit = slots.read(theme);
+      if (hit !== null) return hit;
 
       const compiled = this.compileSlots(executionContext);
-      this.prevTheme = this.lastTheme;
-      this.prevThemedStyles = this.lastThemedStyles;
-      this.lastTheme = theme;
-      this.lastThemedStyles = compiled;
+      slots.write(theme, compiled);
       return compiled;
     }
 
@@ -174,13 +162,54 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
       if (filled === null) return toNativeStyles('', styleSheet);
 
       const fragments = hasAnyFragment(this.fragmentsBuffer) ? this.fragmentsBuffer : null;
-      substituteThemeSlots(filled, source.kinds, fragments, executionContext.theme);
       const interpKey = buildInterpKey(filled, fragments);
       const cached = this.interpKeyCache && this.interpKeyCache.get(interpKey);
       if (cached !== undefined) return cached;
 
-      const compiled = astToNativeStyles(fillAst(source.ast, filled, fragments), styleSheet);
-      this.recordInterpKey(interpKey, compiled);
+      return this.compileMissed(source, filled, fragments, interpKey, executionContext.theme);
+    }
+
+    /**
+     * Only a render that missed `interpKeyCache` scans for theme placeholders, so a
+     * template without them pays nothing per render. A text holding one is never
+     * stored in `interpKeyCache` under its own key, since the theme changes what
+     * it reads as; `themedKeyCache` holds it per theme object instead.
+     */
+    private compileMissed(
+      source: Source,
+      filled: string[],
+      fragments: (FastPathFragment | null)[] | null,
+      interpKey: string,
+      theme: ExecutionContext['theme'] | undefined
+    ): NativeStyles {
+      const themed = this.themedKeyCache && this.themedKeyCache.get(interpKey);
+      if (themed !== undefined) {
+        const hit = themed.read(theme);
+        if (hit !== null) return hit;
+      } else if (!holdsPlaceholder(filled, fragments)) {
+        const compiled = astToNativeStyles(fillAst(source.ast, filled, fragments), styleSheet);
+        this.recordInterpKey(interpKey, compiled);
+        return compiled;
+      }
+
+      substituteThemeSlots(filled, source.kinds, fragments, theme);
+      const readKey = buildInterpKey(filled, fragments);
+      const known = this.interpKeyCache && this.interpKeyCache.get(readKey);
+      const compiled =
+        known !== undefined
+          ? known
+          : astToNativeStyles(fillAst(source.ast, filled, fragments), styleSheet);
+      // A placeholder left in place (an object value) reads differently under another theme.
+      if (known === undefined && !holdsPlaceholder(filled, fragments)) {
+        this.recordInterpKey(readKey, compiled);
+      }
+
+      const slots = themed ?? new ThemedStyles();
+      slots.write(theme, compiled);
+      if (themed === undefined) {
+        if (!this.themedKeyCache) this.themedKeyCache = new Map();
+        fifoSet(this.themedKeyCache, interpKey, slots, TOO_MANY_CLASSES_LIMIT);
+      }
       return compiled;
     }
 
@@ -191,6 +220,47 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
   };
 
   return NativeStyle;
+}
+
+/** The compiled styles of one template for the two theme objects it last read, so an app that switches between two themes (light and dark) keeps hitting. */
+class ThemedStyles {
+  private lastStyles: NativeStyles | null = null;
+  private lastTheme: object | undefined = undefined;
+  private prevStyles: NativeStyles | null = null;
+  private prevTheme: object | undefined = undefined;
+
+  read(theme: object | undefined): NativeStyles | null {
+    if (this.lastStyles !== null && this.lastTheme === theme) return this.lastStyles;
+    if (this.prevStyles === null || this.prevTheme !== theme) return null;
+
+    const hit = this.prevStyles;
+    this.write(theme, hit);
+    return hit;
+  }
+
+  write(theme: object | undefined, styles: NativeStyles): void {
+    this.prevStyles = this.lastStyles;
+    this.prevTheme = this.lastTheme;
+    this.lastStyles = styles;
+    this.lastTheme = theme;
+  }
+}
+
+/** True when any slot of a template, or of a fragment spliced into it, holds a NUL: the start of a createTheme placeholder. */
+function holdsPlaceholder(
+  filled: ReadonlyArray<string>,
+  fragments: ReadonlyArray<FastPathFragment | null> | null
+): boolean {
+  for (let i = 0; i < filled.length; i++) {
+    if (filled[i].indexOf('\0') !== -1) return true;
+  }
+  if (fragments === null) return false;
+
+  for (let i = 0; i < fragments.length; i++) {
+    const fragment = fragments[i];
+    if (fragment && holdsPlaceholder(fragment.filled, fragment.fragments)) return true;
+  }
+  return false;
 }
 
 /**

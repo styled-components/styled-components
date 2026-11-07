@@ -911,6 +911,84 @@ describe('createTheme;native theme values read as authored CSS', () => {
     });
   });
 
+  describe('a function interpolation that returns a themed value', () => {
+    const platformColor = { semantic: ['systemBackground'] };
+    const ink = createTheme({ dim: 0.2, ink: 'tomato' });
+    const Box = styled(View)`
+      color: ${() => ink.ink};
+      opacity: ${() => ink.dim};
+    `;
+    const Fragmented = styled(View)`
+      ${() => css`
+        color: ${ink.ink};
+        opacity: ${ink.dim};
+      `}
+    `;
+
+    it.each([
+      ['a text interpolation', Box],
+      ['a fragment interpolation', Fragmented],
+    ])('reads each of three themes correctly when they alternate, in %s', (_name, Component) => {
+      const themes = [
+        { dim: 0.4, ink: 'red' },
+        { dim: 0.6, ink: 'blue' },
+        { dim: 0.8, ink: 'green' },
+      ];
+      const seen = [0, 1, 0, 2, 1, 2, 0].map(index => styleOf(Component, themes[index]));
+
+      expect(seen).toEqual([
+        { color: 'red', opacity: 0.4 },
+        { color: 'blue', opacity: 0.6 },
+        { color: 'red', opacity: 0.4 },
+        { color: 'green', opacity: 0.8 },
+        { color: 'blue', opacity: 0.6 },
+        { color: 'green', opacity: 0.8 },
+        { color: 'red', opacity: 0.4 },
+      ]);
+    });
+
+    it.each([
+      ['a text interpolation', Box],
+      ['a fragment interpolation', Fragmented],
+    ])('reads text after an object, then an object again, in %s', (_name, Component) => {
+      const seen = [{ ink: platformColor }, { ink: 'red' }, { ink: platformColor }, undefined].map(
+        theme => styleOf(Component, theme)
+      );
+
+      expect(seen).toEqual([
+        { color: platformColor, opacity: 0.2 },
+        { color: 'red', opacity: 0.2 },
+        { color: platformColor, opacity: 0.2 },
+        { color: 'tomato', opacity: 0.2 },
+      ]);
+    });
+
+    it('expands a shorthand read after an object value of the same text', () => {
+      const spacing = createTheme({ space: '4px' });
+      const Spaced = styled(View)`
+        margin: ${() => spacing.space};
+      `;
+      const seen = [{ space: platformColor }, { space: '8px 2px' }, { space: '4px' }].map(theme =>
+        styleOf(Spaced, theme)
+      );
+
+      expect(seen.slice(1)).toEqual([
+        { marginBottom: 8, marginLeft: 2, marginRight: 2, marginTop: 8 },
+        { margin: 4 },
+      ]);
+    });
+
+    it('reads a new theme object that holds the same values as the old one', () => {
+      expect([
+        styleOf(Box, { dim: 0.4, ink: 'red' }),
+        styleOf(Box, { dim: 0.4, ink: 'red' }),
+      ]).toEqual([
+        { color: 'red', opacity: 0.4 },
+        { color: 'red', opacity: 0.4 },
+      ]);
+    });
+  });
+
   describe('a theme set by attrs', () => {
     const platformColor = { semantic: ['systemBackground'] };
     const palette = createTheme({ bg: '#ffffff', gap: '4px' });
