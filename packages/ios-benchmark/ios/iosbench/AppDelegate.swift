@@ -5,8 +5,6 @@ import ReactAppDependencyProvider
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
-  var window: UIWindow?
-
   var reactNativeDelegate: ReactNativeDelegate?
   var reactNativeFactory: RCTReactNativeFactory?
 
@@ -21,15 +19,30 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     reactNativeDelegate = delegate
     reactNativeFactory = factory
 
-    window = UIWindow(frame: UIScreen.main.bounds)
-
-    factory.startReactNative(
-      withModuleName: "iosbench",
-      in: window,
-      launchOptions: launchOptions
-    )
-
     return true
+  }
+}
+
+class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+  var window: UIWindow?
+
+  func scene(
+    _ scene: UIScene,
+    willConnectTo session: UISceneSession,
+    options connectionOptions: UIScene.ConnectionOptions
+  ) {
+    guard let windowScene = scene as? UIWindowScene else {
+      fatalError("iosbench: the connecting scene is not a UIWindowScene, so there is no window to start React Native in")
+    }
+
+    guard let factory = (UIApplication.shared.delegate as? AppDelegate)?.reactNativeFactory else {
+      fatalError("iosbench: AppDelegate has no reactNativeFactory when the scene connected")
+    }
+
+    let window = UIWindow(windowScene: windowScene)
+    self.window = window
+
+    factory.startReactNative(withModuleName: "iosbench", in: window)
   }
 }
 
