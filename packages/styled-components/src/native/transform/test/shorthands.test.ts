@@ -1,5 +1,6 @@
 import { resetWarningsForTest } from '../dev';
-import { camelize, transformDecl } from '../index';
+import { camelize } from '../../camelize';
+import { transformDecl } from '../index';
 import { describeOnRnWeb } from '../describeOnRnWeb';
 
 describe('transformDecl: pass-through + coercion', () => {

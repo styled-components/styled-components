@@ -1,5 +1,6 @@
 import { Dict } from '../../types';
 import * as $ from '../../utils/charCodes';
+import { camelize } from '../camelize';
 import {
   runWithWarningsSuppressed,
   warnIfAndroidSkew,
@@ -37,49 +38,6 @@ import { maybeExpandBackgroundImageSystemColors } from './backgroundGradientNati
 import { maybeExpandBoxShadowSystemColors } from './boxShadowSystemColors';
 import { maybeExpandFilterDropShadowSystemColors } from './filterSystemColors';
 import { coerceRawValue } from './units';
-
-/**
- * Camelize a CSS property name. Custom properties (`--var-name`) pass
- * through unchanged. Vendor prefixes (`-webkit-*`, `-ms-*`) are stripped
- * entirely; they never apply to RN, and the remaining name is
- * camelized.
- *
- * Hot-path; cached per-process. Uses a prototypeless object instead of
- * Map; for short string keys with high hit rate (prop names recur across
- * every styled component), V8 inline-caches dictionary access faster than
- * Map.get's getter-call. The `null` sentinel distinguishes "no entry" from
- * "value is undefined" (which can't happen here, but being explicit costs
- * nothing).
- */
-const camelCache: Record<string, string> = Object.create(null);
-export function camelize(prop: string): string {
-  const hit = camelCache[prop];
-  if (hit !== undefined) return hit;
-  // Custom properties are returned as-is (the parser may pass `--foo`)
-  if (prop.length > 1 && prop.charCodeAt(0) === $.HYPHEN && prop.charCodeAt(1) === $.HYPHEN) {
-    camelCache[prop] = prop;
-    return prop;
-  }
-  let out = '';
-  let toUpper = false;
-  let i = 0;
-  // Strip vendor prefix
-  if (prop.charCodeAt(0) === $.HYPHEN) {
-    const end = prop.indexOf('-', 1);
-    if (end !== -1) i = end + 1;
-  }
-  for (; i < prop.length; i++) {
-    const c = prop.charCodeAt(i);
-    if (c === $.HYPHEN) {
-      toUpper = true;
-      continue;
-    }
-    out += toUpper ? prop[i].toUpperCase() : prop[i];
-    toUpper = false;
-  }
-  camelCache[prop] = out;
-  return out;
-}
 
 // Side-effect import; populates the shorthand registry. Kept separate
 // so the registry module and the shorthand modules can tree-shake

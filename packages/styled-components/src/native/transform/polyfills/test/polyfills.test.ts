@@ -1,6 +1,7 @@
 import { resetWarningsForTest } from '../../dev';
 import { describeOnRnWeb } from '../../describeOnRnWeb';
-import { camelize, transformDecl } from '../../index';
+import { camelize } from '../../../camelize';
+import { transformDecl } from '../../index';
 import { tokenize } from '../../tokenize';
 import { TokenKind } from '../../tokens';
 import { staticColorFunctionToHex } from '../colorMath';

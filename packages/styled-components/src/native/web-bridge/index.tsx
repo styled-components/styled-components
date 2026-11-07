@@ -84,7 +84,7 @@ import isStyledComponent from '../../utils/isStyledComponent';
 import { warnOnce } from '../../utils/warnOnce';
 import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager';
 import ServerStyleSheet from '../../models/ServerStyleSheet';
-import { camelize } from '../transform';
+import { camelize } from '../camelize';
 import { useEndEventRef } from './endEvents';
 import type { Styled } from '../../constructors/constructWithOptions';
 import type { WebTarget } from '../../types';

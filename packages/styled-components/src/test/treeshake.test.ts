@@ -261,6 +261,19 @@ describe('rn-web bridge build', () => {
     expect(bridgeESM).not.toContain('createAnimatedComponent');
   });
 
+  it.each(['styled-components.web.js', 'styled-components.web.esm.js'])(
+    '%s bundles no module of the native declaration transform or animation engine',
+    file => {
+      const { sources }: { sources: string[] } = JSON.parse(readNative(file + '.map'));
+      const engineSources = sources.filter(source =>
+        /\/src\/native\/(transform|animation)\//.test(source)
+      );
+
+      expect(sources.length).toBeGreaterThan(0);
+      expect(engineSources).toEqual([]);
+    }
+  );
+
   it('keeps the 16-element matrix → matrix3d rewrite for rn-web preprocess', () => {
     // rn-web's preprocess.js emits `matrix(a,b,c,...,p)` for any
     // `transform:[{matrix:[...]}]` regardless of element count, which

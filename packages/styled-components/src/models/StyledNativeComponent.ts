@@ -41,7 +41,7 @@ import {
   useViewTimelineSubject,
 } from '../native/scrollTimeline';
 import { EMPTY_SAFE_AREA_INSETS, type SafeAreaInsets, useSafeAreaInsets } from '../native/safeArea';
-import { camelize } from '../native/transform';
+import { camelize } from '../native/camelize';
 import { applyResolvers, ResolveEnv } from '../native/transform/polyfills/resolvers';
 import { concatSourceInputs, getSource } from '../parser/source';
 import type {

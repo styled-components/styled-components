@@ -15,7 +15,8 @@ import {
   StaticRuleNode,
 } from '../parser/ast';
 import { classifyAtRuleNow, classifyRuleNow } from '../parser/nativePlan';
-import { camelize, transformDecl } from '../native/transform';
+import { camelize } from '../native/camelize';
+import { transformDecl } from '../native/transform';
 import { warnIfNativeCssVar, warnOnce } from '../native/transform/dev';
 import { getPrimaryPassthroughKey } from '../native/transform/passthrough';
 import {
