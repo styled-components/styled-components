@@ -168,8 +168,7 @@ const CQ_UNIT_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(cqw|cqh|cqmin|cqmax|cqi|cqb)$/i
 // Font-relative lengths. `rem` and `rlh` anchor at the root; `em` and
 // `lh` at the parent. RN has no DOM cascade; values come from
 // {@link ResolveEnv.rootFontSize / fontSize / lineHeight}, populated by
-// NativeStyleContext at render time. rn-web passes them through to the
-// browser unchanged.
+// NativeStyleContext at render time.
 //
 // `rem` / `rlh` must come BEFORE `em` / `lh` in the alternation so
 // Font-relative units: cascade-anchored (em / lh, parent) or root-anchored
@@ -217,13 +216,7 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
   // which dominate real-world base-dict contents.
   if ((c0 >= $.DIGIT_0 && c0 <= $.DIGIT_9) || c0 === $.HYPHEN || c0 === $.DOT || c0 === $.PLUS) {
     const vp = VP_UNIT_RE.exec(value);
-    if (vp !== null) {
-      // The browser distinguishes dvh / svh / lvh against the real URL-bar
-      // state; a JS resolver would collapse them to one number. Leave the
-      // authored unit on the value so rn-web forwards it to CSS unchanged.
-      if (__NATIVE_WEB__) return null;
-      return viewportResolver(parseFloat(vp[1]), vp[2].toLowerCase());
-    }
+    if (vp !== null) return viewportResolver(parseFloat(vp[1]), vp[2].toLowerCase());
     const cq = CQ_UNIT_RE.exec(value);
     if (cq !== null) return containerResolver(parseFloat(cq[1]), cq[2].toLowerCase());
     const rem = REM_UNIT_RE.exec(value);
@@ -270,12 +263,7 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
 
   // Non-numeric prefix; `light-dark(` and `lch`/`lab` color fns share `l`.
   if (c0 === 0x6c /* l */) {
-    if (value.startsWith('light-dark(')) {
-      // Pure-static light-dark survives as authored text on rn-web so the
-      // CSS indirection path (`--sc-ld-*` + `var()`) reaches the browser.
-      if (__NATIVE_WEB__) return null;
-      return lightDarkResolver(value, prop);
-    }
+    if (value.startsWith('light-dark(')) return lightDarkResolver(value, prop);
     if (value.startsWith('lch(') || value.startsWith('lab(')) return colorFnResolver(value);
   }
   if (c0 === 0x65 /* e */ && value.startsWith('env(')) return envResolver(value, prop);
@@ -372,16 +360,6 @@ function resolveMathFn(value: string, prop?: string): Resolver | null {
   const opts = prop !== undefined ? { ...NATIVE_MATH_OPTS, prop } : NATIVE_MATH_OPTS;
   const r = mathFnResolver(expandBareParens(value), opts);
   if (r === null) return null;
-  // Static-mixed-unit math passes through to the browser's CSS engine,
-  // which resolves `%` and friends against the real containing block at
-  // paint time; strictly more accurate than anything computed here. The
-  // resolver above still gates validity (malformed math must not reach
-  // CSS); only operands the browser cannot know (our polyfilled attr() /
-  // anchor() / tree-counting / container units) force JS evaluation on
-  // rn-web.
-  if (__NATIVE_WEB__ && !rnWebMathNeedsJsResolution(value)) {
-    return () => value;
-  }
   // The range lookup runs once here, so a property without one adds nothing per render.
   const range = prop === undefined ? undefined : mathRangeOf(prop);
   if (range === undefined) return r;
@@ -396,22 +374,6 @@ function clampMathResult(v: number | string | null, range: MathRange): number | 
   }
   return v;
 }
-
-/** True when a math expression contains an operand only our JS runtime can
- *  substitute (rn-web passthrough must not strand these in CSS text). */
-function rnWebMathNeedsJsResolution(value: string): boolean {
-  return (
-    value.indexOf('attr(') !== -1 ||
-    value.indexOf('anchor') !== -1 ||
-    value.indexOf('sibling-') !== -1 ||
-    CQ_UNIT_ANYWHERE_RE.test(value)
-  );
-}
-
-// Container-query units anywhere in the expression (CQ_UNIT_RE is anchored
-// to a whole value). Containers are polyfilled on rn-web, so cq* lengths
-// always need the JS resolver.
-const CQ_UNIT_ANYWHERE_RE = /\d(?:cqw|cqh|cqi|cqb|cqmin|cqmax)\b/i;
 
 /**
  * Convert bare grouping parentheses inside a math expression to a nested
@@ -2113,10 +2075,6 @@ function colorFnResolver(value: string): Resolver | null {
     if (pos < value.length) out += value.substring(pos);
     const tokens = tokenize(out);
     if (tokens.length !== 1 || tokens[0].kind !== TokenKind.Function) return null;
-    // Wide-gamut color functions stay authored CSS text on rn-web; only
-    // resolved numbers are spliced into the string and the browser parses
-    // the function (and its color space) natively.
-    if (__NATIVE_WEB__) return out;
     return staticColorFunctionToHex(tokens[0]);
   };
 }

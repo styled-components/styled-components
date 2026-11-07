@@ -194,10 +194,6 @@ function parseLinearGradientLayer(
  * **Linear gradients only**; `radial-gradient()` passes through unchanged.
  */
 export function maybeExpandBackgroundImageSystemColors(rawValue: string): string | Dict<unknown>[] {
-  // The browser parses system keywords inside gradient stops natively; the
-  // structured-object rewrite is a native-only workaround.
-  if (__NATIVE_WEB__) return rawValue;
-
   const normalized = rawValue.replace(/\n/g, ' ');
   if (normalized.toLowerCase().includes('radial-gradient')) return rawValue;
 

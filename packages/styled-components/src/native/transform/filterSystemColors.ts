@@ -107,10 +107,6 @@ function parseDropShadowInner(
 export function maybeExpandFilterDropShadowSystemColors(
   rawValue: string
 ): string | Dict<unknown>[] {
-  // The browser parses system keywords inside drop-shadow() natively; the
-  // array rewrite is a native-only workaround.
-  if (__NATIVE_WEB__) return rawValue;
-
   const normalized = rawValue.replace(/\n/g, ' ');
   FILTER_FN_REGEX.lastIndex = 0;
   const matches: RegExpExecArray[] = [];

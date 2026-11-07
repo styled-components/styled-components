@@ -18,7 +18,7 @@ import { TokenStream } from '../tokenStream';
  * `background` shorthand. Sets all eight background longhands; comma-separated
  * layers, only the final layer may carry `background-color`; position and size
  * split by `/`. RN 0.85 has no surface for `background-attachment / origin / clip`
- * so non-surface declarations on native warn; rn-web passes everything through.
+ * so non-surface declarations warn.
  */
 
 const POSITION_KEYWORDS = new Set(['top', 'right', 'bottom', 'left', 'center']);
@@ -34,14 +34,12 @@ const NONE_IDENT = 'none';
 /**
  * Warn once when a conic (or repeating-conic) gradient layer is present on
  * native. RN's gradient support covers linear and radial only; conic layers
- * silently render nothing on iOS and Android. The layer still renders on
- * the web (rn-web) and on the server, so emission is left untouched; the
- * warning makes the native gap visible in dev. dedupeSuffix is the raw
+ * silently render nothing on iOS and Android. Emission is left untouched;
+ * the warning makes the gap visible in dev. dedupeSuffix is the raw
  * value so distinct gradients each warn once.
  */
 export function warnIfConicGradientNative(value: string): void {
   if (!__DEV__) return;
-  if (__NATIVE_WEB__) return;
   if (value.indexOf('conic-gradient(') === -1) return;
   warnOnce(
     'native-conic-gradient-unsupported',
@@ -255,15 +253,10 @@ export function backgroundShorthand(tokens: Token[]): Dict<unknown> | null {
   const finalLayer = layers[layers.length - 1];
   for (let i = 0; i < layers.length; i++) {
     const layer = layers[i];
-    if (
-      __DEV__ &&
-      !__NATIVE_WEB__ &&
-      layer.image !== null &&
-      layer.image.indexOf('conic-gradient(') !== -1
-    ) {
+    if (__DEV__ && layer.image !== null && layer.image.indexOf('conic-gradient(') !== -1) {
       warnIfConicGradientNative(layer.image);
     }
-    if (__DEV__ && !__NATIVE_WEB__ && layer.attachment !== null && layer.attachment !== 'scroll') {
+    if (__DEV__ && layer.attachment !== null && layer.attachment !== 'scroll') {
       if (layer.attachment === 'fixed') {
         warnOnce(
           'native-background-attachment-fixed',
@@ -278,7 +271,7 @@ export function backgroundShorthand(tokens: Token[]): Dict<unknown> | null {
         );
       }
     }
-    if (__DEV__ && !__NATIVE_WEB__ && layer.origin !== null && layer.origin !== 'padding-box') {
+    if (__DEV__ && layer.origin !== null && layer.origin !== 'padding-box') {
       warnOnce(
         'native-background-origin-unsupported',
         '`background-origin: ' +
@@ -287,7 +280,7 @@ export function backgroundShorthand(tokens: Token[]): Dict<unknown> | null {
         layer.origin
       );
     }
-    if (__DEV__ && !__NATIVE_WEB__ && layer.clip !== null && layer.clip !== 'border-box') {
+    if (__DEV__ && layer.clip !== null && layer.clip !== 'border-box') {
       warnOnce(
         'native-background-clip-unsupported',
         '`background-clip: ' +
@@ -318,15 +311,10 @@ export function backgroundShorthand(tokens: Token[]): Dict<unknown> | null {
     );
     const sizes = collapseIdenticalCommas(imageLayers.map(l => l.size ?? 'auto').join(', '));
     const repeats = collapseIdenticalCommas(imageLayers.map(l => l.repeat ?? 'repeat').join(', '));
-    const attachments = imageLayers.map(l => l.attachment ?? 'scroll').join(', ');
-    const origins = imageLayers.map(l => l.origin ?? 'padding-box').join(', ');
-    const clips = imageLayers.map(l => l.clip ?? 'border-box').join(', ');
 
     // Pre-fold gradient stops carrying system colors so RN's array form
-    // ships a PlatformColor object. rn-web keeps the raw string.
-    out.experimental_backgroundImage = __NATIVE_WEB__
-      ? images
-      : maybeExpandBackgroundImageSystemColors(images);
+    // ships a PlatformColor object.
+    out.experimental_backgroundImage = maybeExpandBackgroundImageSystemColors(images);
     out.backgroundImage = images;
     out.experimental_backgroundPosition = positions;
     // `backgroundPosition` (rn-web key) is skipped for multi-token forms;
@@ -339,11 +327,6 @@ export function backgroundShorthand(tokens: Token[]): Dict<unknown> | null {
     out.backgroundSize = sizes;
     out.experimental_backgroundRepeat = repeats;
     out.backgroundRepeat = repeats;
-    if (__NATIVE_WEB__) {
-      out.backgroundAttachment = attachments;
-      out.backgroundOrigin = origins;
-      out.backgroundClip = clips;
-    }
   }
 
   return out;
@@ -395,7 +378,6 @@ function everyIdentIs(tokens: Token[], value: string): boolean {
 export function backgroundAttachmentLonghand(tokens: Token[]): Dict<unknown> | null {
   const raw = rawBackgroundLonghand(tokens);
   if (raw === null) return null;
-  if (__NATIVE_WEB__) return { backgroundAttachment: raw };
   if (!everyIdentInSet(tokens, ATTACHMENT_KEYWORDS)) return null;
   if (__DEV__ && !everyIdentIs(tokens, 'scroll')) {
     warnOnce(
@@ -412,7 +394,6 @@ export function backgroundAttachmentLonghand(tokens: Token[]): Dict<unknown> | n
 export function backgroundOriginLonghand(tokens: Token[]): Dict<unknown> | null {
   const raw = rawBackgroundLonghand(tokens);
   if (raw === null) return null;
-  if (__NATIVE_WEB__) return { backgroundOrigin: raw };
   if (!everyIdentInSet(tokens, BOX_KEYWORDS)) return null;
   if (__DEV__ && !everyIdentIs(tokens, 'padding-box')) {
     warnOnce(
@@ -429,7 +410,6 @@ export function backgroundOriginLonghand(tokens: Token[]): Dict<unknown> | null 
 export function backgroundClipLonghand(tokens: Token[]): Dict<unknown> | null {
   const raw = rawBackgroundLonghand(tokens);
   if (raw === null) return null;
-  if (__NATIVE_WEB__) return { backgroundClip: raw };
   if (!everyIdentInSet(tokens, BOX_KEYWORDS)) return null;
   if (__DEV__ && !everyIdentIs(tokens, 'border-box')) {
     warnOnce(

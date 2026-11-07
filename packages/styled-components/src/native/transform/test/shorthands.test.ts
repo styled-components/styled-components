@@ -1,7 +1,6 @@
 import { resetWarningsForTest } from '../dev';
 import { camelize } from '../../camelize';
 import { transformDecl } from '../index';
-import { describeOnRnWeb } from '../describeOnRnWeb';
 
 describe('transformDecl: pass-through + coercion', () => {
   it('passes through transform as a CSS string (RN parses natively)', () => {
@@ -98,21 +97,6 @@ describe('transformDecl: pass-through + coercion', () => {
 
     it('leaves the other number-only keys untouched', () => {
       expect(transformDecl('flexGrow', '50%')).toEqual({ flexGrow: '50%' });
-    });
-
-    describeOnRnWeb(() => {
-      it.each([
-        ['50%', '50%'],
-        ['0.5', 0.5],
-      ])('opacity: %s is left for the browser to resolve', (value, expected) => {
-        expect(transformDecl('opacity', value)).toEqual({ opacity: expected });
-      });
-
-      it('leaves a percentage calc() for the browser', () => {
-        expect(transformDecl('opacity', 'calc(20% + 30%)')).toEqual({
-          opacity: 'calc(20% + 30%)',
-        });
-      });
     });
   });
 
@@ -340,18 +324,6 @@ describe('border-color shorthand spec compliance (CSS Backgrounds 3 §3.1)', () 
       }
     `);
   });
-
-  describeOnRnWeb(() => {
-    // border-color expansion does not fork on __NATIVE_WEB__; assert stable parity with the native bundle.
-    it('four-value border-color shorthand matches native TRBL expansion', () => {
-      expect(transformDecl('borderColor', 'red green blue yellow')).toEqual({
-        borderTopColor: 'red',
-        borderRightColor: 'green',
-        borderBottomColor: 'blue',
-        borderLeftColor: 'yellow',
-      });
-    });
-  });
 });
 
 describe('border-radius spec compliance (CSS Backgrounds 3 §4.1)', () => {
@@ -391,20 +363,9 @@ describe('border-radius spec compliance (CSS Backgrounds 3 §4.1)', () => {
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy.mock.calls[0][0]).toMatch(/border-radius: 10px \/ 20px/);
   });
-
-  describeOnRnWeb(() => {
-    it('preserves slash-separated elliptical radii for the browser', () => {
-      expect(transformDecl('borderRadius', '10px / 20px')).toEqual({
-        borderRadius: '10px / 20px',
-      });
-      expect(warnSpy).not.toHaveBeenCalled();
-    });
-  });
 });
 
 // https://drafts.csswg.org/css-backgrounds-3/#border-shorthands (editor's draft, fetched 2026-05-13)
-// rn-web: unsupported <line-style> on the `border` shorthand is covered in
-// "border line styles spec compliance (CSS Backgrounds 3 §3.2, §3.4)" describeOnRnWeb.
 describe('border shorthand spec compliance (CSS Backgrounds 3 §3.4)', () => {
   // Value: <line-width> || <line-style> || <color>
   it('accepts <line-width> || <line-style> || <color> in typical source order', () => {
@@ -540,24 +501,6 @@ describe('border line styles spec compliance (CSS Backgrounds 3 §3.2, §3.4)', 
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy.mock.calls[0][0]).toMatch(/border-style: double/);
   });
-
-  describeOnRnWeb(() => {
-    it('border-style preserves multi-value CSS for the browser', () => {
-      expect(transformDecl('borderStyle', 'solid dotted')).toEqual({
-        borderStyle: 'solid dotted',
-      });
-      expect(warnSpy).not.toHaveBeenCalled();
-    });
-
-    it('border shorthand preserves browser-rendered line styles', () => {
-      expect(transformDecl('border', '2px double red')).toEqual({
-        borderWidth: 2,
-        borderStyle: 'double',
-        borderColor: 'red',
-      });
-      expect(warnSpy).not.toHaveBeenCalled();
-    });
-  });
 });
 
 // https://drafts.csswg.org/css-flexbox-1/#flex-property (editor's draft, fetched 2026-05-13)
@@ -668,17 +611,6 @@ describe('flex shorthand spec compliance (CSS Flexbox Level 1 §7.1)', () => {
       });
     }
   );
-
-  describeOnRnWeb(() => {
-    // flex shorthand does not fork on __NATIVE_WEB__; assert stable parity with the native bundle.
-    it('flex: 1 matches native numeric expansion', () => {
-      expect(transformDecl('flex', '1')).toEqual({
-        flexGrow: 1,
-        flexShrink: 1,
-        flexBasis: 0,
-      });
-    });
-  });
 });
 
 // https://drafts.csswg.org/css-flexbox-1/#flex-flow-property (editor's draft, fetched 2026-05-13)
@@ -703,15 +635,6 @@ describe('flex-flow shorthand spec compliance (CSS Flexbox Level 1 §5.3)', () =
         "flexWrap": "wrap",
       }
     `);
-  });
-
-  describeOnRnWeb(() => {
-    it('flex-flow: row wrap matches native expansion', () => {
-      expect(transformDecl('flexFlow', 'row wrap')).toEqual({
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-      });
-    });
   });
 });
 
@@ -774,44 +697,6 @@ describe('place-content shorthand spec compliance (CSS Box Alignment Level 3 §5
     expect(transformDecl('placeContent', 'start')).toEqual({
       alignContent: 'flex-start',
       justifyContent: 'flex-start',
-    });
-  });
-
-  describeOnRnWeb(() => {
-    // On rn-web the browser implements the full CSS Box Alignment 3 §5.2
-    // grammar, including baselines, normal, the safe / unsafe overflow
-    // prefixes, and the left / right keywords on justify-content. Native
-    // can't honor those values (Yoga's keyword set is narrower), but the
-    // browser can: pass the raw declaration through so the browser sees
-    // exactly what the author wrote.
-    it('place-content: two-keyword form passes through to the browser', () => {
-      expect(transformDecl('placeContent', 'flex-start space-between')).toEqual({
-        placeContent: 'flex-start space-between',
-      });
-    });
-
-    it('place-content: baseline passes through to the browser', () => {
-      expect(transformDecl('placeContent', 'baseline')).toEqual({
-        placeContent: 'baseline',
-      });
-    });
-
-    it('place-content: normal passes through to the browser', () => {
-      expect(transformDecl('placeContent', 'normal')).toEqual({
-        placeContent: 'normal',
-      });
-    });
-
-    it('place-content: safe center keeps the overflow-position prefix', () => {
-      expect(transformDecl('placeContent', 'safe center')).toEqual({
-        placeContent: 'safe center',
-      });
-    });
-
-    it('place-content: center left forwards the justify-only keyword', () => {
-      expect(transformDecl('placeContent', 'center left')).toEqual({
-        placeContent: 'center left',
-      });
     });
   });
 });
@@ -944,39 +829,6 @@ describe('font shorthand spec compliance (CSS Fonts 4 §2.7)', () => {
       expect(msg).toMatch(/caption/);
     });
   });
-
-  describeOnRnWeb(() => {
-    it('font: percentage line-height passes through for the browser', () => {
-      expect(transformDecl('font', '16px/150% Arial')).toEqual({
-        fontStyle: 'normal',
-        fontWeight: 'normal',
-        fontVariant: [],
-        fontSize: 16,
-        fontFamily: 'Arial',
-        lineHeight: '150%',
-      });
-    });
-
-    // Parity guarantee: rn-web must resolve absolute-size keywords to the
-    // same pixel values native uses so the rendered text matches on every
-    // platform. Otherwise the browser's default-medium and the user's
-    // browser preference could drift away from iOS / Android.
-    it.each([
-      ['xx-small', 9],
-      ['x-small', 10],
-      ['small', 13],
-      ['medium', 16],
-      ['large', 18],
-      ['x-large', 24],
-      ['xx-large', 32],
-      ['xxx-large', 48],
-    ] as const)('font: <absolute-size> %s resolves to %ipx on rn-web', (keyword, px) => {
-      expect(transformDecl('font', `${keyword} Arial`)).toMatchObject({
-        fontSize: px,
-        fontFamily: 'Arial',
-      });
-    });
-  });
 });
 
 describe('fontFamily and fontVariant', () => {
@@ -1106,16 +958,6 @@ describe('text-decoration shorthand spec compliance (CSS Text Decoration Level 4
         "textDecorationStyle": "dashed",
       }
     `);
-  });
-
-  describeOnRnWeb(() => {
-    it('text-decoration: underline dashed red matches native longhand split', () => {
-      expect(transformDecl('textDecoration', 'underline dashed red')).toEqual({
-        textDecorationLine: 'underline',
-        textDecorationStyle: 'dashed',
-        textDecorationColor: 'red',
-      });
-    });
   });
 });
 
@@ -1441,14 +1283,6 @@ describe('CSS Logical 1 §4.5 (border-inline / border-block)', () => {
       borderBottomColor: 'green',
     });
   });
-
-  describeOnRnWeb(() => {
-    it('per-edge style emits the camelCase key for atomic CSS hyphenation', () => {
-      expect(transformDecl('borderInlineStartStyle', 'dashed')).toEqual({
-        borderInlineStartStyle: 'dashed',
-      });
-    });
-  });
 });
 
 // https://drafts.csswg.org/css-ui-4/#outline-style
@@ -1513,7 +1347,7 @@ describe('background shorthand spec compliance (CSS Backgrounds 3 §2.10)', () =
   it('background: <image> <position> / <size> <repeat>', () => {
     // `cover` folds to `auto` on the native key (RN 0.85 parser drops
     // the keyword form, producing an empty list that crashes the draw
-    // pass); rn-web keeps the keyword so the browser resolves it.
+    // pass); the standard key keeps the keyword.
     expect(
       transformDecl('background', 'linear-gradient(red, blue) center / cover no-repeat')
     ).toEqual({
@@ -1653,75 +1487,6 @@ describe('background shorthand spec compliance (CSS Backgrounds 3 §2.10)', () =
     expect(out.experimental_backgroundRepeat).toBe('space round');
     expect(out.backgroundRepeat).toBe('space round');
   });
-
-  describeOnRnWeb(() => {
-    // "<bg-layer> = <bg-image> || <bg-position> [ / <bg-size> ]? ||
-    // <repeat-style> || <attachment> || <visual-box> || <visual-box>"
-    it('keeps attachment, origin, and clip longhands for browser parsing', () => {
-      expect(
-        transformDecl(
-          'background',
-          'linear-gradient(red, blue) center / cover fixed content-box padding-box'
-        )
-      ).toEqual({
-        backgroundColor: 'transparent',
-        experimental_backgroundImage: 'linear-gradient(red, blue)',
-        backgroundImage: 'linear-gradient(red, blue)',
-        experimental_backgroundPosition: 'center',
-        backgroundPosition: 'center',
-        experimental_backgroundSize: 'auto',
-        backgroundSize: 'cover',
-        experimental_backgroundRepeat: 'repeat',
-        backgroundRepeat: 'repeat',
-        backgroundAttachment: 'fixed',
-        backgroundOrigin: 'content-box',
-        backgroundClip: 'padding-box',
-      });
-    });
-
-    // "If one <visual-box> value is present then it sets both
-    // background-origin and background-clip to that value."
-    it('uses one visual-box for both origin and clip on rn-web', () => {
-      expect(transformDecl('background', 'linear-gradient(red, blue) border-box')).toEqual({
-        backgroundColor: 'transparent',
-        experimental_backgroundImage: 'linear-gradient(red, blue)',
-        backgroundImage: 'linear-gradient(red, blue)',
-        experimental_backgroundPosition: '0% 0%',
-        experimental_backgroundSize: 'auto',
-        backgroundSize: 'auto',
-        experimental_backgroundRepeat: 'repeat',
-        backgroundRepeat: 'repeat',
-        backgroundAttachment: 'scroll',
-        backgroundOrigin: 'border-box',
-        backgroundClip: 'border-box',
-      });
-    });
-
-    // Native path warns on `local` / `fixed`; rn-web keeps the authored
-    // attachment for the browser without `[sc]` noise.
-    it('background: local emits attachment on rn-web without native dev warning', () => {
-      resetWarningsForTest();
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-      try {
-        expect(transformDecl('background', 'linear-gradient(red, blue) local')).toEqual({
-          backgroundColor: 'transparent',
-          experimental_backgroundImage: 'linear-gradient(red, blue)',
-          backgroundImage: 'linear-gradient(red, blue)',
-          experimental_backgroundPosition: '0% 0%',
-          experimental_backgroundSize: 'auto',
-          backgroundSize: 'auto',
-          experimental_backgroundRepeat: 'repeat',
-          backgroundRepeat: 'repeat',
-          backgroundAttachment: 'local',
-          backgroundOrigin: 'padding-box',
-          backgroundClip: 'border-box',
-        });
-        expect(warnSpy).not.toHaveBeenCalled();
-      } finally {
-        warnSpy.mockRestore();
-      }
-    });
-  });
 });
 
 describe('background box longhands spec compliance (CSS Backgrounds 3 §2.5, §2.7, §2.8)', () => {
@@ -1766,31 +1531,6 @@ describe('background box longhands spec compliance (CSS Backgrounds 3 §2.5, §2
       warnSpy.mockRestore();
     }
   });
-
-  describeOnRnWeb(() => {
-    // "The property’s value is given as a comma-separated list of
-    // <attachment> keywords..."
-    it('background-attachment passes through for browser parsing', () => {
-      expect(transformDecl('backgroundAttachment', 'fixed, local')).toEqual({
-        backgroundAttachment: 'fixed,local',
-      });
-    });
-
-    // "Computed value: list, each item a keyword as specified"
-    it('background-origin passes through authored visual boxes', () => {
-      expect(transformDecl('backgroundOrigin', 'content-box, border-box')).toEqual({
-        backgroundOrigin: 'content-box,border-box',
-      });
-    });
-
-    // "Determines the background painting area, which determines the
-    // area within which the background is painted."
-    it('background-clip passes through authored visual boxes', () => {
-      expect(transformDecl('backgroundClip', 'padding-box, content-box')).toEqual({
-        backgroundClip: 'padding-box,content-box',
-      });
-    });
-  });
 });
 
 // https://drafts.csswg.org/css-fonts-4/#font-style-prop
@@ -1814,12 +1554,6 @@ describe('CSS Fonts 4 §2.4 (font-style)', () => {
 
   it('rejects unknown keyword', () => {
     expect(transformDecl('fontStyle', 'banana')).toEqual({});
-  });
-
-  describeOnRnWeb(() => {
-    it('passes oblique <angle> through to the browser', () => {
-      expect(transformDecl('fontStyle', 'oblique 14deg')).toEqual({ fontStyle: 'oblique 14deg' });
-    });
   });
 });
 
@@ -1846,16 +1580,6 @@ describe('line-height characterization (CSS Inline Layout 3)', () => {
 
   it('line-height: normal is a no-op on native (RN default applies)', () => {
     expect(transformDecl('lineHeight', 'normal')).toEqual({});
-  });
-
-  describeOnRnWeb(() => {
-    it('line-height: percentage passes through for the browser', () => {
-      expect(transformDecl('lineHeight', '140%')).toEqual({ lineHeight: '140%' });
-    });
-
-    it('line-height: em passes through for the browser', () => {
-      expect(transformDecl('lineHeight', '1.2em')).toEqual({ lineHeight: '1.2em' });
-    });
   });
 });
 
@@ -1886,12 +1610,6 @@ describe('CSS Text 3 §11.1 (letter-spacing) characterization', () => {
 
   it('letter-spacing: normal collapses to zero', () => {
     expect(transformDecl('letterSpacing', 'normal')).toEqual({ letterSpacing: 0 });
-  });
-
-  describeOnRnWeb(() => {
-    it('letter-spacing: em passes through for the browser', () => {
-      expect(transformDecl('letterSpacing', '0.05em')).toEqual({ letterSpacing: '0.05em' });
-    });
   });
 });
 
@@ -2014,18 +1732,6 @@ describe('math functions in font-size, line-height, and letter-spacing', () => {
     expect(transformDecl('font', 'calc(1em + ) serif')).toEqual({});
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
-
-  describeOnRnWeb(() => {
-    it('font-size: a font-relative calc passes through for the browser', () => {
-      expect(transformDecl('fontSize', 'calc(1em + 2px)')).toEqual({ fontSize: 'calc(1em + 2px)' });
-    });
-
-    it('font: a font-relative calc size passes through for the browser', () => {
-      expect(transformDecl('font', 'calc(1em + 2px) serif')).toMatchObject({
-        fontSize: 'calc(1em + 2px)',
-      });
-    });
-  });
 });
 
 // https://drafts.csswg.org/css-fonts-4/#generic-family-value (editor's draft, fetched 2026-05-13)
@@ -2067,31 +1773,6 @@ describe('CSS Fonts 4 §2.1.5 (generic font families)', () => {
       fontFamily: 'Avenir Next',
     });
   });
-
-  describeOnRnWeb(() => {
-    let warnSpy: jest.SpyInstance;
-    beforeEach(() => {
-      warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    });
-    afterEach(() => {
-      warnSpy.mockRestore();
-    });
-
-    it('generic keyword passes through (browser resolves)', () => {
-      expect(transformDecl('fontFamily', 'sans-serif')).toEqual({ fontFamily: 'sans-serif' });
-    });
-
-    it('ui-rounded passes through', () => {
-      expect(transformDecl('fontFamily', 'ui-rounded')).toEqual({ fontFamily: 'ui-rounded' });
-    });
-
-    it('comma fallbacks pass through without native fallback warning', () => {
-      expect(transformDecl('fontFamily', '"Avenir Next", Arial, sans-serif')).toEqual({
-        fontFamily: '"Avenir Next", Arial, sans-serif',
-      });
-      expect(warnSpy).not.toHaveBeenCalled();
-    });
-  });
 });
 
 // https://drafts.csswg.org/css-sizing-4/#aspect-ratio
@@ -2106,8 +1787,7 @@ describe('CSS Sizing 4 §4.1 (aspect-ratio)', () => {
   });
 
   // "Initial: auto"; bare `auto` produces no constraint on non-replaced
-  // styled views; emitted as the string so RN and rn-web both interpret
-  // (rn-web honors via the browser; RN treats unknown string as no-op).
+  // styled views; emitted as the string (RN treats an unknown string as no-op).
   it('aspect-ratio: auto (bare)', () => {
     expect(transformDecl('aspectRatio', 'auto')).toEqual({ aspectRatio: 'auto' });
   });
@@ -2162,20 +1842,6 @@ describe('CSS Text 4 §7.1 (text-align)', () => {
       expect(transformDecl('textAlign', value)).toEqual({ textAlign: value });
     }
   );
-
-  describeOnRnWeb(() => {
-    it('text-align: start passes through (browser honors)', () => {
-      expect(transformDecl('textAlign', 'start')).toEqual({ textAlign: 'start' });
-    });
-
-    it('text-align: end passes through (browser honors)', () => {
-      expect(transformDecl('textAlign', 'end')).toEqual({ textAlign: 'end' });
-    });
-
-    it('text-align: match-parent passes through (browser honors)', () => {
-      expect(transformDecl('textAlign', 'match-parent')).toEqual({ textAlign: 'match-parent' });
-    });
-  });
 });
 
 // https://drafts.csswg.org/css-align-3/#place-items-property
@@ -2199,10 +1865,9 @@ describe('CSS Box Alignment 3 §7.3 (place-items) and §6.3 (place-self)', () =>
   });
 
   // CSS Box Alignment 3 §6.2: <self-position> = center | start | end |
-  // self-start | self-end | flex-start | flex-end. Yoga and rn-web's
-  // Style.js Flow types both accept only the flex-prefixed forms; so
-  // bare `start` / `end` / `self-start` / `self-end` normalize to the
-  // flex variants per `knowledge_rnweb_alignment_enum.md`.
+  // self-start | self-end | flex-start | flex-end. Yoga accepts only the
+  // flex-prefixed forms; so bare `start` / `end` / `self-start` /
+  // `self-end` normalize to the flex variants.
   it('place-items: normalizes bare `start` to `flex-start`', () => {
     expect(transformDecl('placeItems', 'start')).toEqual({
       alignItems: 'flex-start',
@@ -2336,17 +2001,6 @@ describe('transform CSS string (CSS Transforms 1 / 2; pass-through)', () => {
   it('vendor-prefixed matrix() in the transform list passes through', () => {
     expect(transformDecl('transform', '-webkit-matrix(1, 0, 0, 1, 0, 0)')).toEqual({
       transform: '-webkit-matrix(1, 0, 0, 1, 0, 0)',
-    });
-  });
-
-  describeOnRnWeb(() => {
-    it('matrix() and matrix3d() pass through unchanged on rn-web', () => {
-      expect(transformDecl('transform', 'matrix(1, 0, 0, 1, 40, 40)')).toEqual({
-        transform: 'matrix(1, 0, 0, 1, 40, 40)',
-      });
-      expect(transformDecl('transform', identity3d)).toEqual({
-        transform: identity3d,
-      });
     });
   });
 });
@@ -2491,29 +2145,6 @@ describe('place-self spec compliance (CSS Box Alignment 3 §6.3)', () => {
   it('place-self: rejects unknown keyword', () => {
     expect(transformDecl('placeSelf', 'bananas')).toEqual({});
   });
-
-  // rn-web's style compiler doesn't enum-validate align values; it
-  // passes any value through to the DOM. The browser implements CSS
-  // Box Alignment 3 end-to-end (start/end normalize to flex-start/end
-  // inside flex containers per §6.2.4; safe / unsafe overflow prefixes
-  // and first/last baseline qualifiers are honored). Skip our native
-  // normalization on rn-web so authors get the full spec surface.
-  describeOnRnWeb(() => {
-    it('place-items passes through raw so the browser parses the full grammar', () => {
-      expect(transformDecl('placeItems', 'safe center')).toEqual({ placeItems: 'safe center' });
-      expect(transformDecl('placeItems', 'first baseline')).toEqual({
-        placeItems: 'first baseline',
-      });
-      expect(transformDecl('placeItems', 'start end')).toEqual({ placeItems: 'start end' });
-    });
-
-    it('place-self passes through raw so the browser parses the full grammar', () => {
-      expect(transformDecl('placeSelf', 'unsafe end')).toEqual({ placeSelf: 'unsafe end' });
-      expect(transformDecl('placeSelf', 'last baseline')).toEqual({
-        placeSelf: 'last baseline',
-      });
-    });
-  });
 });
 
 // https://drafts.csswg.org/css-sizing-4/#aspect-ratio
@@ -2620,18 +2251,8 @@ describe('font-style spec compliance (CSS Fonts 4 §2.4)', () => {
     expect(transformDecl('fontStyle', 'Oblique')).toEqual({ fontStyle: 'italic' });
   });
 
-  describeOnRnWeb(() => {
-    it('font-style: oblique 14deg passes through (browser honors slant axis)', () => {
-      expect(transformDecl('fontStyle', 'oblique 14deg')).toEqual({ fontStyle: 'oblique 14deg' });
-    });
-
-    it('font-style: oblique left passes through (browser honors italic direction)', () => {
-      expect(transformDecl('fontStyle', 'oblique left')).toEqual({ fontStyle: 'oblique left' });
-    });
-
-    it('font-style: rejects oblique 91deg on rn-web too (spec range applies on every host)', () => {
-      expect(transformDecl('fontStyle', 'oblique 91deg')).toEqual({});
-    });
+  it('font-style: rejects oblique 91deg (outside the spec angle range)', () => {
+    expect(transformDecl('fontStyle', 'oblique 91deg')).toEqual({});
   });
 });
 
@@ -2989,57 +2610,6 @@ describe('border-inline / border-block spec compliance (CSS Logical Properties 1
       });
     });
   });
-
-  describe('on rn-web: logical properties pass through to the browser', () => {
-    // §4.5 + §4.6: rn-web routes logical names to the browser, which
-    // already implements them natively. The polyfill emits the
-    // per-edge-style longhand in camelCase form so rn-web's atomic-CSS
-    // pipeline hyphenates it and the browser parses it.
-    const g = global as { __NATIVE_WEB__?: boolean };
-    const originalNativeWeb = g.__NATIVE_WEB__;
-    beforeAll(() => {
-      g.__NATIVE_WEB__ = true;
-    });
-    afterAll(() => {
-      g.__NATIVE_WEB__ = originalNativeWeb;
-    });
-
-    it('border-inline-start-style: solid emits a camelCase per-edge style on rn-web', () => {
-      expect(transformDecl('borderInlineStartStyle', 'solid')).toEqual({
-        borderInlineStartStyle: 'solid',
-      });
-    });
-
-    it('border-inline-end-style: dashed emits a camelCase per-edge style on rn-web', () => {
-      expect(transformDecl('borderInlineEndStyle', 'dashed')).toEqual({
-        borderInlineEndStyle: 'dashed',
-      });
-    });
-
-    it('border-block-start-style: dotted emits a camelCase per-edge style on rn-web', () => {
-      expect(transformDecl('borderBlockStartStyle', 'dotted')).toEqual({
-        borderBlockStartStyle: 'dotted',
-      });
-    });
-
-    it('border-inline-style: dashed solid honors two-value per-edge style on rn-web', () => {
-      expect(transformDecl('borderInlineStyle', 'dashed solid')).toEqual({
-        borderInlineStartStyle: 'dashed',
-        borderInlineEndStyle: 'solid',
-      });
-    });
-
-    it('border-inline: 1px solid red includes the per-edge style on rn-web', () => {
-      expect(transformDecl('borderInline', '1px solid red')).toEqual({
-        borderStartWidth: 1,
-        borderEndWidth: 1,
-        borderStartColor: 'red',
-        borderEndColor: 'red',
-        borderInlineStartStyle: 'solid',
-        borderInlineEndStyle: 'solid',
-      });
-    });
-  });
 });
 
 // CSS Text 4 §7.1: text-align: justify-all degrades to justify on native + warn;
@@ -3137,7 +2707,7 @@ describe('text-wrap nowrap spec compliance (CSS Text 4 §5.4)', () => {
 
 // CSS Transforms 2 §9: perspective-origin: sets the vanishing point
 // for perspective-transformed descendants. RN 0.85 has no surface;
-// drops with a one-time warn. rn-web honors the property natively.
+// drops with a one-time warn.
 // https://drafts.csswg.org/css-transforms-2/#perspective-origin-property
 describe('perspective-origin spec compliance (CSS Transforms 2 §9)', () => {
   beforeEach(() => {
@@ -3167,29 +2737,6 @@ describe('perspective-origin spec compliance (CSS Transforms 2 §9)', () => {
     } finally {
       warnSpy.mockRestore();
     }
-  });
-
-  describe('on rn-web: passes through to the browser', () => {
-    const g = global as { __NATIVE_WEB__?: boolean };
-    const originalNativeWeb = g.__NATIVE_WEB__;
-    beforeAll(() => {
-      g.__NATIVE_WEB__ = true;
-    });
-    afterAll(() => {
-      g.__NATIVE_WEB__ = originalNativeWeb;
-    });
-
-    it('perspective-origin: center passes through on rn-web', () => {
-      expect(transformDecl('perspectiveOrigin', 'center')).toEqual({
-        perspectiveOrigin: 'center',
-      });
-    });
-
-    it('perspective-origin: 25% 75% passes through on rn-web', () => {
-      expect(transformDecl('perspectiveOrigin', '25% 75%')).toEqual({
-        perspectiveOrigin: '25% 75%',
-      });
-    });
   });
 });
 

@@ -76,10 +76,6 @@ function parseBoxShadowLayer(
  * to the object-array form so `color` can be a `PlatformColor`.
  */
 export function maybeExpandBoxShadowSystemColors(rawValue: string): string | Dict<unknown>[] {
-  // The browser parses system keywords inside box-shadow natively; the
-  // object-array rewrite is a native-only workaround.
-  if (__NATIVE_WEB__) return rawValue;
-
   const normalized = rawValue.replace(/\n/g, ' ');
   const layerStrings = splitTopLevelCommas(normalized, true);
   if (layerStrings.length === 0) return rawValue;

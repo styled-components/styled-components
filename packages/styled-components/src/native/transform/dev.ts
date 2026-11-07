@@ -154,7 +154,6 @@ const IOS_GATED_FILTER_RE =
  */
 export function warnIfIosGatedFilter(value: string): void {
   if (!__DEV__) return;
-  if (__NATIVE_WEB__) return;
   if (!IOS_GATED_FILTER_RE.test(value)) return;
   if (getReactNativePlatformOS() !== 'ios') return;
   warnOnce(

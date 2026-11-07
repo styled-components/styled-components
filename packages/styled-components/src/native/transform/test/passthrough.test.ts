@@ -1,4 +1,3 @@
-import { describeOnRnWeb } from '../describeOnRnWeb';
 import { resetWarningsForTest } from '../dev';
 import { transformDecl } from '../index';
 import { getPassthroughKeys, getPrimaryPassthroughKey } from '../passthrough';
@@ -61,21 +60,6 @@ describe('passthrough mapping', () => {
       expect(transformDecl('direction', 'rtl')).toEqual({
         direction: 'rtl',
         writingDirection: 'rtl',
-      });
-    });
-
-    describeOnRnWeb(() => {
-      // rn-web emits `writingDirection` (translates to CSS `direction`
-      // so the browser flips bidi rendering) AND lifts a `dir` prop
-      // through SPECIAL_CASE_PROPS - rn-web's LocaleContext / BiDi
-      // compiler reads `props.dir`, not the CSS direction, so a
-      // descendant `text-align: start | end` only flips when the prop
-      // reaches the host element.
-      it('emits writingDirection style + dir prop on rn-web', () => {
-        expect(transformDecl('direction', 'rtl')).toEqual({
-          writingDirection: 'rtl',
-          dir: 'rtl',
-        });
       });
     });
   });
@@ -280,12 +264,6 @@ describe('passthrough mapping', () => {
       it('auto stays a plain passthrough', () => {
         expect(transformDecl('isolation', 'auto')).toEqual({ isolation: 'auto' });
       });
-
-      describeOnRnWeb(() => {
-        it('passes through untouched (browser implements isolation)', () => {
-          expect(transformDecl('isolation', 'isolate')).toEqual({ isolation: 'isolate' });
-        });
-      });
     });
 
     describe('filter iOS release-level gate characterization', () => {
@@ -324,15 +302,6 @@ describe('passthrough mapping', () => {
           filter: 'brightness(1.2) opacity(0.9)',
         });
         expect(warnSpy).not.toHaveBeenCalled();
-      });
-
-      describeOnRnWeb(() => {
-        it('never warns on rn-web (browser renders the full filter list)', () => {
-          expect(transformDecl('filter', 'saturate(1.4) blur(2px)')).toEqual({
-            filter: 'saturate(1.4) blur(2px)',
-          });
-          expect(warnSpy).not.toHaveBeenCalled();
-        });
       });
     });
 
@@ -552,27 +521,8 @@ describe('passthrough mapping', () => {
     });
   });
 
-  describeOnRnWeb('box-shadow on rn-web', () => {
-    it('passes system color keywords through as a CSS string', () => {
-      expect(transformDecl('box-shadow', '1px 2px Highlight')).toEqual({
-        boxShadow: '1px 2px Highlight',
-      });
-    });
-  });
-
-  describeOnRnWeb('filter on rn-web', () => {
-    it('passes drop-shadow() with system colors through as a CSS string', () => {
-      expect(transformDecl('filter', 'drop-shadow(1px 2px Highlight)')).toEqual({
-        filter: 'drop-shadow(1px 2px Highlight)',
-      });
-    });
-  });
-
-  // Dual-emit background longhands do not branch on `__NATIVE_WEB__`; this
-  // subtree locks parity so a future rn-web-only shortcut cannot diverge
-  // from the Hermes path for structured stacks (see `index.ts` passthrough
-  // block + `substituteBackgroundSizeKeywordsForNative`).
-  describeOnRnWeb('dual-emit background longhands on rn-web', () => {
+  // See `index.ts` passthrough block + `substituteBackgroundSizeKeywordsForNative`.
+  describe('dual-emit background longhands', () => {
     it('background-size cover keeps keyword on standard key and folds native key', () => {
       expect(transformDecl('background-size', 'cover')).toEqual({
         experimental_backgroundSize: 'auto',
@@ -580,33 +530,27 @@ describe('passthrough mapping', () => {
       });
     });
 
-    it('background-position multi-token still skips the rn-web key', () => {
+    it('background-position multi-token emits only the experimental key', () => {
       expect(transformDecl('background-position', '0 0')).toEqual({
         experimental_backgroundPosition: '0 0',
       });
     });
   });
 
-  describeOnRnWeb('vertical-align align-content polyfill on rn-web', () => {
-    // CSS Box Alignment L3 §5.3.
-
+  describe('vertical-align passthrough', () => {
     it.each([
-      ['top', 'flex-start'],
-      ['middle', 'center'],
-      ['bottom', 'flex-end'],
-    ])('vertical-align: %s also emits align-content: %s', (value, alignContent) => {
-      expect(transformDecl('vertical-align', value)).toEqual({
-        verticalAlign: value,
-        alignContent,
-      });
+      ['top'],
+      ['middle'],
+      ['bottom'],
+      ['baseline'],
+      ['sub'],
+      ['super'],
+      ['text-top'],
+      ['text-bottom'],
+      ['auto'],
+    ])('vertical-align: %s passes through unchanged', value => {
+      expect(transformDecl('vertical-align', value)).toEqual({ verticalAlign: value });
     });
-
-    it.each([['baseline'], ['sub'], ['super'], ['text-top'], ['text-bottom'], ['auto']])(
-      'vertical-align: %s passes through unchanged',
-      value => {
-        expect(transformDecl('vertical-align', value)).toEqual({ verticalAlign: value });
-      }
-    );
   });
 
   describe('helpers', () => {

@@ -1945,10 +1945,9 @@ function parseRelativeFrom(
   } else if (baseTok.kind === TokenKind.Ident) {
     const name = baseTok.name;
     // `currentColor` origin needs cascade visibility; the static fold has
-    // none, so warn and drop. The browser resolves currentColor itself, so
-    // rn-web stays silent and lets the authored text through.
+    // none, so warn and drop.
     if (name === 'currentcolor') {
-      if (__DEV__ && !__NATIVE_WEB__) {
+      if (__DEV__) {
         warnOnce(
           'native-relative-color-currentcolor',
           `\`${outerFn}(from currentColor ...)\` cannot be converted for React Native because \`currentColor\` depends on inherited styles. Use a theme value as the base color, or write the resolved color directly.`

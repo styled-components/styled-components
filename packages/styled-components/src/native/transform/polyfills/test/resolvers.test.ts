@@ -1,4 +1,3 @@
-import { describeOnRnWeb } from '../../describeOnRnWeb';
 import { resetWarningsForTest } from '../../dev';
 import { applyResolvers, buildResolver, escapeSentinelFallback, ResolveEnv } from '../resolvers';
 import { staticColorFunctionToHex } from '../colorMath';
@@ -990,21 +989,8 @@ describe('light-dark() spec compliance (CSS Color Module Level 5 §7)', () => {
     expect(buildResolver('1px solid mylight-dark(red, blue)')).toBeNull();
   });
 
-  describeOnRnWeb(() => {
-    // Mirrors rn-web bundle (`__NATIVE_WEB__`); browsers resolve several values statically,
-    // so omit resolvers. See `describeOnRnWeb` and `resolvers.ts`. rn-web `@react-native/normalize-colors`
-    // rejects literal `light-dark(...)` strings; `buildResolver(null)` pairs with custom-property wrapping
-    // in `polyfills.test.ts`.
-
-    it('pure-static light-dark returns null so transformDecl can wrap it', () => {
-      // `buildResolver(null)`: authored `light-dark(...)` survives for CSS indirection path.
-      expect(buildResolver('light-dark(red, blue)')).toBeNull();
-      expect(buildResolver('light-dark(#fafafa, #1a1a1a)')).toBeNull();
-    });
-
-    it('rejects mixed image + color forms regardless of host', () => {
-      expect(buildResolver('light-dark(red, linear-gradient(black, white))')).toBeNull();
-    });
+  it('rejects mixed image + color forms', () => {
+    expect(buildResolver('light-dark(red, linear-gradient(black, white))')).toBeNull();
   });
 });
 
@@ -1111,15 +1097,6 @@ describe('cross-feature integrations', () => {
     it('color-mix with a calc() percentage on the first color', () => {
       const r = buildResolver('color-mix(in srgb, red calc(100% - sibling-index() * 10%), white)')!;
       expect(r(atIndex(3))).toMatch(/^#[0-9a-f]{6,8}$/);
-    });
-
-    describeOnRnWeb(() => {
-      // Wide-gamut `<color>` functions stay as authored CSS strings on rn-web (`__NATIVE_WEB__`).
-      // Resolved numbers are spliced into those strings.
-      it('a dynamic oklch channel substitutes to assembled function text (passthrough)', () => {
-        const r = buildResolver('oklch(0.7 0.2 calc(sibling-index() * 100))')!;
-        expect(r(atIndex(2))).toBe('oklch(0.7 0.2 200)');
-      });
     });
   });
 
@@ -1672,19 +1649,6 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
       ).toBeNull();
     });
   });
-
-  describeOnRnWeb(() => {
-    // CSS Values §10 (calc/min/max/clamp): browsers resolve percentages against real layouts.
-    // Return null resolver so stylesheet text stays intact unless a sentinel needs substitution.
-    it('passes through static-mixed-unit calc/clamp/min/max expressions raw', () => {
-      expect(buildResolver('calc(33% - 5px)')!(baseEnv)).toBe('calc(33% - 5px)');
-      expect(buildResolver('clamp(10px, 50%, 100px)')!(baseEnv)).toBe('clamp(10px, 50%, 100px)');
-    });
-
-    it('rejects malformed calc so nothing invalid reaches CSS', () => {
-      expect(buildResolver('calc(10px +)')).toBeNull();
-    });
-  });
 });
 
 describe('env() spec compliance (CSS Environment Variables Level 1 §3)', () => {
@@ -1813,16 +1777,8 @@ describe('env() spec compliance (CSS Environment Variables Level 1 §3)', () => 
     });
   });
 
-  describeOnRnWeb(() => {
-    // `buildResolver('env(...)')` is not gated behind `__NATIVE_WEB__`;
-    // safe-area substitutions still read ResolveEnv.insets on rn-web.
-    it('parity: safe-area-inset-top resolves from env.insets', () => {
-      expect(buildResolver('env(safe-area-inset-top)')!(baseEnv)).toBe(44);
-    });
-
-    it('parity: unknown UA name + px fallback substitutes the fallback', () => {
-      expect(buildResolver('env(keyboard-height, 20px)')!(baseEnv)).toBe(20);
-    });
+  it('unknown UA name + px fallback substitutes the fallback', () => {
+    expect(buildResolver('env(keyboard-height, 20px)')!(baseEnv)).toBe(20);
   });
 });
 
@@ -1950,18 +1906,6 @@ describe('container units spec compliance (CSS Conditional 5 §7)', () => {
       // min(150, 100cqmin=100) = 100
       const r = buildResolver('min(150px, 100cqmin)')!;
       expect(r(baseEnv)).toBe(100);
-    });
-  });
-
-  describeOnRnWeb(() => {
-    // Viewport-relative units bypass resolvers on rn-web (`buildResolver → null`).
-    // Container cq* still resolve numerically against the RN layout probe.
-    it('parity: cqw resolves against registered container width', () => {
-      expect(buildResolver('50cqw')!(baseEnv)).toBe(100);
-    });
-
-    it('parity: cqmin resolves against smaller of cqi / cqb', () => {
-      expect(buildResolver('100cqmin')!(baseEnv)).toBe(100);
     });
   });
 });
@@ -2112,21 +2056,6 @@ describe('viewport units spec compliance (CSS Values Level 4 §6.1.2)', () => {
     it('vmin inside min', () => {
       // min(500, 50vmin=200) = 200
       expect(buildResolver('min(500px, 50vmin)')!(baseEnv)).toBe(200);
-    });
-  });
-
-  describeOnRnWeb(() => {
-    it('passes through static viewport values without a resolver', () => {
-      // Returning null from buildResolver leaves the raw `<n><unit>` in
-      // base so react-native-web forwards it to CSS unchanged. The browser
-      // distinguishes dvh / svh / lvh per CSS Values 4 §6.1.2.2.
-      expect(buildResolver('100vw')).toBeNull();
-      expect(buildResolver('100vh')).toBeNull();
-      expect(buildResolver('100dvh')).toBeNull();
-      expect(buildResolver('100svh')).toBeNull();
-      expect(buildResolver('100lvh')).toBeNull();
-      expect(buildResolver('50vmin')).toBeNull();
-      expect(buildResolver('50vmax')).toBeNull();
     });
   });
 });
@@ -2696,12 +2625,5 @@ describe('math results at render time are clamped to the range of the property (
     'attr(data-size px, calc(1em - 30px))',
   ])('clamps a math result inside %s', value => {
     expect(resolve(value, 'width')).toBe(0);
-  });
-
-  describeOnRnWeb(() => {
-    // The browser clamps the text it receives.
-    it('passes a static-mixed-unit calc through for the browser to clamp', () => {
-      expect(resolve('calc(10% - 30px)', 'width')).toBe('calc(10% - 30px)');
-    });
   });
 });

@@ -14,7 +14,6 @@ import ThemeProvider from '../../../models/ThemeProvider';
 import styled from '../../';
 import { resetResponsiveCache } from '../../responsive';
 import { resetNativeStyleCache, toNativeStyles } from '../../../models/compileNative';
-import { describeOnRnWeb } from '../../transform/describeOnRnWeb';
 import { resetWarningsForTest } from '../../transform/dev';
 import '../'; // ensure default adapter side-effect registers
 import {
@@ -2064,21 +2063,6 @@ describe('Animated adapter: lifecycle events (CSS Animations §5.1 / Transitions
         expect(parse('red')).toBeNull();
         expect(parse('#00f')).toEqual({ r: 0, g: 0, b: 255, a: 1 });
         expect(parse('rgb(1, 2, 3)')).toEqual({ r: 1, g: 2, b: 3, a: 1 });
-      });
-    });
-
-    describeOnRnWeb(() => {
-      it('unpacks the unsigned 0xAARRGGBB react-native-web returns', () => {
-        const rnWeb = require('react-native-web');
-        expect(rnWeb.processColor('red')).toBe(0xffff0000);
-        expect(rnWeb.processColor('rgba(0, 0, 255, 0.5)')).toBe(0x800000ff);
-
-        makeNormalizeColorsUnreachable();
-        const parse = parserFor(() => rnWeb);
-
-        expect(parse('red')).toEqual({ r: 255, g: 0, b: 0, a: 1 });
-        expect(parse('transparent')).toEqual({ r: 0, g: 0, b: 0, a: 0 });
-        expect(parse('not-a-color')).toBeNull();
       });
     });
   });

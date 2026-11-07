@@ -267,9 +267,7 @@ export interface NativeStyles {
    *
    * `explicitName` is the value of `container-name` if the user wrote
    * one; otherwise undefined and the render path auto-names with the
-   * styled-component's `styledComponentId`. The componentId is also
-   * injected into the runtime style as `containerName` so rn-web
-   * emits the matching `container-name: <id>` CSS for the browser.
+   * styled-component's `styledComponentId`.
    */
   containerInfo?: { type: string; explicitName?: string };
   /**
@@ -319,9 +317,6 @@ export interface NativeStyles {
    * grow the view to its natural text size; no JS-side autosize
    * wiring. This flag exists so the render path can dev-warn when the
    * user passes `multiline={false}` explicitly (voiding the lift).
-   * On rn-web the polyfill keeps the declaration in `base` so the
-   * browser handles `field-sizing` natively;the extract here only
-   * runs on non-rn-web bundles via `__NATIVE_WEB__` tree-shaking.
    */
   fieldSizing?: 'content';
   /**
@@ -349,8 +344,7 @@ export interface NativeStyles {
    * CSS custom property declarations (`--name: value;`) collected from
    * the base styles. Published to descendants via NativeStyleContext so
    * a child's `var(--name)` references resolve through the cascade. Set
-   * only when at least one `--xxx` decl appears; rn-web leaves these in
-   * the base so the browser's own cascade handles them.
+   * only when at least one `--xxx` decl appears.
    */
   customProperties?: ReadonlyMap<string, string>;
   /**
@@ -472,16 +466,9 @@ export const SPECIAL_CASE_PROPS: Record<string, SpecialCaseMeta> = {
   // composite against the group instead of the page; iOS drops the prop
   // via RN's own view-prop filter and honors the `isolation` style key.
   renderToHardwareTextureAndroid: { validOn: [...VIEW_LIKE_TARGETS], source: 'isolation' },
-  // <Image> only. On rn-web `objectFit` is ignored as a style key; the
-  // polyfill lifts a `resizeMode` prop carrying the spec-mapped value.
+  // <Image> only. The polyfill lifts a `resizeMode` prop carrying the
+  // spec-mapped value.
   resizeMode: { validOn: ['Image'], source: 'object-fit' },
-  // rn-web LocaleContext lift. rn-web reads `props.dir` to derive its
-  // writingDirection context (which the BiDi-aware compiler uses to
-  // resolve `text-align: start | end` against). The `direction`
-  // polyfill emits this on rn-web so the cascaded direction reaches
-  // descendants. On native this entry never fires (the polyfill is
-  // gated by `__NATIVE_WEB__`).
-  dir: { validOn: [...VIEW_LIKE_TARGETS, 'TextInput', 'Image'], source: 'direction' },
   // Android-only TextInput prop. iOS drops; rationale in
   // `native/transform/polyfills/caretColor.ts`.
   cursorColor: { validOn: ['TextInput'], source: 'caret-color' },
@@ -489,24 +476,11 @@ export const SPECIAL_CASE_PROPS: Record<string, SpecialCaseMeta> = {
   // by the caret-color polyfill on iOS only so Android's selection stays
   // untouched (Android uses `cursorColor` for the caret alone).
   selectionColor: { validOn: ['TextInput'], source: 'caret-color' },
-  // `interactivity: inert` on rn-web: a single HTML `inert` attribute
-  // covers hit-testing, focus, text selection, editable suppression,
-  // and a11y subtree hiding. rn-web's
-  // `forwardedProps.accessibilityProps` whitelists `inert` so the prop
-  // reaches the DOM verbatim. On native this entry never fires (the
-  // polyfill is gated by `__NATIVE_WEB__`).
-  inert: {
-    validOn: [...VIEW_LIKE_TARGETS, 'TextInput'],
-    source: 'interactivity',
-    priority: 1,
-  },
-  // `interactivity: inert` on native: RN has no `inert` prop, so the
-  // polyfill lifts the six underlying surfaces individually. Priority
-  // over author props is required: hit-testing must act as if
-  // `pointer-events` were `none` regardless of its actual value, and
-  // equivalent for the a11y / focus / selection / editable surfaces.
-  // The lift is skipped on rn-web (see `shouldLiftSpecialCase`); rn-web
-  // deprecated `props.pointerEvents` in favor of `style.pointerEvents`.
+  // `interactivity: inert`: RN has no `inert` prop, so the polyfill lifts
+  // the six underlying surfaces individually. Priority over author props
+  // is required: hit-testing must act as if `pointer-events` were `none`
+  // regardless of its actual value, and equivalent for the a11y / focus /
+  // selection / editable surfaces.
   pointerEvents: { validOn: VIEW_LIKE_TARGETS, source: 'interactivity', priority: 1 },
   accessibilityElementsHidden: {
     validOn: VIEW_LIKE_TARGETS,
@@ -644,10 +618,7 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   const sticky = extractSticky(resolvedBase);
   const snapTarget = extractSnapTarget(resolvedBase);
   const anchorDecls = extractAnchorDecls(resolvedBase);
-  // Only lift `fieldSizing` out of `base` on native bundles; on rn-web
-  // the polyfill leaves it in place so the browser sees `field-sizing`
-  // and handles autosize without engaging the render-time hook.
-  const fieldSizing = __NATIVE_WEB__ ? null : extractFieldSizing(resolvedBase);
+  const fieldSizing = extractFieldSizing(resolvedBase);
   // Snapshot the FULL base (including sentinel-laden values that became
   // resolvers) for the animation adapter to diff across renders.
   // Capturing only `resolvedBase` would miss values that contain
@@ -829,19 +800,13 @@ function resolversWriteCascadeKey(rs: ReadonlyArray<[string, unknown]>): boolean
 function extractSpecialCases(base: Dict<unknown>): Dict<unknown> | null {
   let lifted: Dict<unknown> | null = null;
   for (const k in base) {
-    if (SPECIAL_CASE_PROPS[k] !== undefined && shouldLiftSpecialCase(k)) {
+    if (SPECIAL_CASE_PROPS[k] !== undefined) {
       if (lifted === null) lifted = {};
       lifted[k] = base[k];
       delete base[k];
     }
   }
   return lifted;
-}
-
-// `pointerEvents` stays in style on rn-web; rn-web warns when it reaches
-// as a prop. Every other special-case key lifts on both bars.
-function shouldLiftSpecialCase(key: string): boolean {
-  return !(__NATIVE_WEB__ && key === 'pointerEvents');
 }
 
 /**
@@ -852,9 +817,8 @@ function shouldLiftSpecialCase(key: string): boolean {
  * in `ContainerPublisher` and feed the resolved name into the
  * `ContainerContext` for descendants.
  *
- * Both declarations stay in `base` so rn-web emits the matching CSS
- * for the browser. RN's view-prop filter silently drops unknown style
- * keys, so they're harmless on iOS / Android. Auto-naming with the
+ * Both declarations stay in `base`; RN's view-prop filter silently
+ * drops unknown style keys, so they're harmless on iOS / Android. Auto-naming with the
  * component's `styledComponentId` happens at render time (the id
  * isn't known here at compile).
  */
@@ -869,14 +833,12 @@ function extractContainerInfo(base: Dict<unknown>): { type: string; explicitName
  * Lift `anchor-name` / `position-anchor` declarations off the style
  * object (RN's validator doesn't know them). `anchor-name` drives the
  * render-time anchor rect publisher; `position-anchor` becomes the
- * implicit target for anchor functions. rn-web leaves both in place
- * for the browser. Mutates `base`.
+ * implicit target for anchor functions. Mutates `base`.
  */
 function extractAnchorDecls(base: Dict<unknown>): {
   anchorName: string | null;
   positionAnchor: string | null;
 } {
-  if (__NATIVE_WEB__) return { anchorName: null, positionAnchor: null };
   let anchorName: string | null = null;
   let positionAnchor: string | null = null;
   const an = base.anchorName;
@@ -898,12 +860,10 @@ function extractAnchorDecls(base: Dict<unknown>): {
  * the parent styled ScrollView via `stickyHeaderIndices`, so the
  * declaration must not reach RN's style validator. The element behaves
  * as relative when not stuck (RN's default), matching the spec's
- * "identical to relative, except..." framing. rn-web leaves the
- * declaration in place for the browser. Mutates `base`.
+ * "identical to relative, except..." framing. Mutates `base`.
  */
 function extractSticky(base: Dict<unknown>): true | null {
   if (base.position !== 'sticky') return null;
-  if (__NATIVE_WEB__) return null;
   delete base.position;
   return true;
 }
@@ -966,15 +926,11 @@ function extractScrollTimeline(base: Dict<unknown>): { name: string; axis: Timel
  * (it lays out as a wrapping flex row), but it can't compute per-child
  * widths, so it warns and produces no `gridInfo`. The sentinels are
  * always removed so RN's style validator never sees them.
- *
- * Skipped on rn-web (the grid CSS stays in `base` for the browser; the
- * sentinels never form there).
  */
 function extractGrid(base: Dict<unknown>): {
   gridInfo: { columns: number } | null;
   gridSpan: number | null;
 } {
-  if (__NATIVE_WEB__) return { gridInfo: null, gridSpan: null };
   const isContainer = base.__scGridContainer === true;
   const columns = base.__scGridColumns;
   const span = base.__scGridSpan;
@@ -1123,9 +1079,7 @@ function extractDescriptors<T extends object>(
  * properties against compiled `baseValues` keys directly, without
  * per-lookup case translation.
  *
- * Dual-emit passthrough props return the primary (native) key;gradient
- * transitions only run through this adapter on native; rn-web has its
- * own CSS animation pipeline.
+ * Dual-emit passthrough props return the primary (native) key.
  *
  * `'all'` and `'none'` pass through; the adapter treats them as
  * sentinels rather than real prop names.
@@ -1171,7 +1125,7 @@ function stripSpecialCasesFromConditional(
 ): Dict<unknown> {
   let out: Dict<unknown> | null = null;
   for (const k in styles) {
-    if (SPECIAL_CASE_PROPS[k] !== undefined && shouldLiftSpecialCase(k)) {
+    if (SPECIAL_CASE_PROPS[k] !== undefined) {
       if (__DEV__) {
         const meta = SPECIAL_CASE_PROPS[k];
         const cond = describeCondition(entry);
@@ -1305,7 +1259,7 @@ function processDecls(decls: StaticDeclNode[]): {
     let partial: Dict<unknown>;
     const { prop } = decl;
     let { value } = decl;
-    if (!__NATIVE_WEB__ && prop.charCodeAt(0) === 0x2d && prop.charCodeAt(1) === 0x2d) {
+    if (prop.charCodeAt(0) === 0x2d && prop.charCodeAt(1) === 0x2d) {
       // Bare `--` is reserved for future use and must not become a
       // custom property; drop silently so it never lands on the host.
       if (prop.length === 2) continue;
@@ -1320,12 +1274,12 @@ function processDecls(decls: StaticDeclNode[]): {
     // Stripping `!important` early lets the cache keys (pairCache by
     // (prop, strippedValue) / staticDeclCache by decl-node) reuse the
     // partial across same-value normal + important decls.
-    const bangPos = !__NATIVE_WEB__ ? findImportantStart(value) : -1;
+    const bangPos = findImportantStart(value);
     const isImportant = bangPos !== -1;
     if (isImportant) {
       value = stripImportant(value);
     }
-    if (!__NATIVE_WEB__ && indexOfUnquotedSubstring(value, 'var(--', 0) !== -1) {
+    if (indexOfUnquotedSubstring(value, 'var(--', 0) !== -1) {
       // Defer to render time so the cascade map can supply the
       // substitution; the runtime re-runs transformDecl on the
       // substituted text so shorthand expansion still fires. The
@@ -1390,17 +1344,11 @@ function processDecls(decls: StaticDeclNode[]): {
       }
     }
   }
-  // rn-web emits raw `perspective:` directly (the browser exposes it as a
-  // separate surface), so the sentinel never lands in `base` on web and
-  // the post-merge fold is dead. Gate the call so terser can DCE both the
-  // helper and the sentinel string on the rn-web bundle.
-  if (!__NATIVE_WEB__) {
-    foldPerspectiveSentinel(raw, base);
-    // Both layers, because `corner-shape: square !important` lands the
-    // sentinel in `important` and would otherwise never be folded.
-    foldCornerShapeSquare(raw, base);
-    if (important !== null) foldCornerShapeSquare(raw, important);
-  }
+  foldPerspectiveSentinel(raw, base);
+  // Both layers, because `corner-shape: square !important` lands the
+  // sentinel in `important` and would otherwise never be folded.
+  foldCornerShapeSquare(raw, base);
+  if (important !== null) foldCornerShapeSquare(raw, important);
   return { raw, base, resolvers, important, importantResolvers, customProperties, varDeferred };
 }
 
@@ -1950,22 +1898,6 @@ function handlePropertyAtRule(node: StaticAtRuleNode): void {
       );
       return;
     }
-  }
-  if (__NATIVE_WEB__) {
-    const css = (globalThis as { CSS?: { registerProperty?: (definition: unknown) => void } }).CSS;
-    if (css && typeof css.registerProperty === 'function') {
-      try {
-        css.registerProperty({
-          name,
-          syntax,
-          inherits,
-          ...(initialValue !== null ? { initialValue } : null),
-        });
-      } catch {
-        // Double registration in the browser throws; the first wins.
-      }
-    }
-    return;
   }
   registerCssProperty(name, { syntax, inherits, initialValue });
 }

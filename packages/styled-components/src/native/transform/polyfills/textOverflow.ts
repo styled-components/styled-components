@@ -18,9 +18,6 @@ import { TokenStream } from '../tokenStream';
  *   - fade / fade() -> ellipsizeMode 'clip' (no fade primitive; clip is the
  *                      honest fallback)
  * Each L4 form warns once so the degradation is visible in dev.
- *
- * rn-web emits the raw `text-overflow` value for every form (the browser
- * implements the full grammar). The `ellipsizeMode` lift is native-only.
  */
 
 interface ParsedValue {
@@ -82,12 +79,6 @@ function textOverflowShorthand(tokens: Token[]): Dict<unknown> | null {
     .map(t => t.raw)
     .join(' ')
     .trim();
-
-  if (__NATIVE_WEB__) {
-    // The browser implements the full grammar; pass the authored value
-    // through and don't lift ellipsizeMode.
-    return { textOverflow: raw };
-  }
 
   if (anyL4 && __DEV__) {
     warnOnce(

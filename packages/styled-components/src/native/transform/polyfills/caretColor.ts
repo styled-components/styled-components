@@ -31,9 +31,7 @@ function caretColorShorthand(tokens: Token[]): Dict<unknown> | null {
       return null;
     }
     if (!stream.eof()) return null;
-    // The block-caret note is a native limitation; the browser handles the
-    // second value itself, so the drop stays silent on rn-web.
-    if (__DEV__ && !__NATIVE_WEB__) {
+    if (__DEV__) {
       warnOnce(
         'native-caret-color-block',
         "`caret-color`'s second value only affects block carets, which React Native does not render on iOS or Android. The first value still applies. Write a single color to drop the warning."
@@ -42,12 +40,6 @@ function caretColorShorthand(tokens: Token[]): Dict<unknown> | null {
   }
 
   if (firstIsAuto) return { caretColor: 'auto' };
-
-  // Browser ships caret-color; emit the authored color text only (rn-web
-  // does not run caretColor through its color normalizer, so system
-  // keywords survive as CSS strings). The TextInput prop lifts are
-  // native-only.
-  if (__NATIVE_WEB__) return { caretColor: first.raw };
 
   const v = colorTokenToRnStyleValue(first);
   if (getReactNativePlatformOS() === 'ios') {

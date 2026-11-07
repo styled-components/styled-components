@@ -22,7 +22,7 @@ const DECORATION_STYLES = new Set(['solid', 'double', 'dotted', 'dashed', 'wavy'
  * + iOS RCTTextAttributes) re-swaps the visual edge when the inherited
  * paragraph direction is rtl, so pre-flipping here would double-correct and
  * land the text on the wrong edge. `justify-all` degrades to `justify` with a
- * dev warn. rn-web passes the full grammar through.
+ * dev warn.
  */
 const TEXT_ALIGN_NATIVE_PASS = new Set(['auto', 'left', 'right', 'center', 'justify']);
 
@@ -31,10 +31,6 @@ export function textAlignHandler(tokens: Token[]): Dict<unknown> | null {
   const t = stream.consume();
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const value = t.name;
-
-  if (__NATIVE_WEB__) {
-    return { textAlign: value };
-  }
 
   if (value === 'start' || value === 'match-parent') {
     return { textAlign: 'left' };
@@ -111,7 +107,7 @@ export function textDecorationShorthand(tokens: Token[]): Dict<unknown> | null {
       if (style !== null) return null;
       style = t.name;
       stream.consume();
-      if (!__NATIVE_WEB__ && style === 'wavy') {
+      if (style === 'wavy') {
         if (__DEV__) {
           warnOnce(
             'native-text-decoration-style-wavy',
@@ -148,18 +144,14 @@ export function textDecorationShorthand(tokens: Token[]): Dict<unknown> | null {
     // block while leaving the platform to its currentcolor behavior.
     textDecorationColor: color !== null ? colorTokenToRnStyleValue(color) : undefined,
   };
-  if (thickness !== null) {
-    if (__NATIVE_WEB__) {
-      out.textDecorationThickness = thickness;
-    } else if (__DEV__) {
-      warnOnce(
-        'native-text-decoration-thickness-unsupported',
-        '`text-decoration-thickness: ' +
-          thickness +
-          '` has no effect on React Native; iOS and Android draw a fixed-position underline with no thickness, offset, or position control. For a heavier or offset underline, put a `border-bottom` on a wrapping View.',
-        thickness
-      );
-    }
+  if (__DEV__ && thickness !== null) {
+    warnOnce(
+      'native-text-decoration-thickness-unsupported',
+      '`text-decoration-thickness: ' +
+        thickness +
+        '` has no effect on React Native; iOS and Android draw a fixed-position underline with no thickness, offset, or position control. For a heavier or offset underline, put a `border-bottom` on a wrapping View.',
+      thickness
+    );
   }
   return out;
 }
@@ -170,10 +162,8 @@ export function textDecorationShorthand(tokens: Token[]): Dict<unknown> | null {
  * fixed-position, fixed-weight underline with no control over thickness,
  * vertical offset, or which side of the text it sits on. Each native
  * handler drops the declaration and points at the border-bottom workaround.
- * rn-web passes the authored value straight through to the browser.
  */
 function makeUnsupportedTextDecorationLonghand(
-  styleKey: 'textDecorationThickness' | 'textUnderlineOffset' | 'textUnderlinePosition',
   cssName: string,
   code: string
 ): (tokens: Token[]) => Dict<unknown> | null {
@@ -183,9 +173,6 @@ function makeUnsupportedTextDecorationLonghand(
       .join(' ')
       .trim();
     if (raw.length === 0) return null;
-    if (__NATIVE_WEB__) {
-      return { [styleKey]: raw };
-    }
     if (__DEV__) {
       warnOnce(
         code,
@@ -202,17 +189,14 @@ function makeUnsupportedTextDecorationLonghand(
 }
 
 export const textDecorationThicknessHandler = makeUnsupportedTextDecorationLonghand(
-  'textDecorationThickness',
   'text-decoration-thickness',
   'native-text-decoration-thickness-unsupported'
 );
 export const textUnderlineOffsetHandler = makeUnsupportedTextDecorationLonghand(
-  'textUnderlineOffset',
   'text-underline-offset',
   'native-text-underline-offset-unsupported'
 );
 export const textUnderlinePositionHandler = makeUnsupportedTextDecorationLonghand(
-  'textUnderlinePosition',
   'text-underline-position',
   'native-text-underline-position-unsupported'
 );
@@ -238,14 +222,9 @@ export function textDecorationLineShorthand(tokens: Token[]): Dict<unknown> | nu
  * `text-shadow: none | <shadow>#`, each layer `<offset-x> <offset-y>
  * [<blur>] [<color>]` (any order relative to the color) → RN's three
  * split longhands. RN renders one shadow, so a comma-separated list keeps
- * the first (topmost) layer and warns. rn-web passes the authored value
- * through raw: the browser ships the full grammar, and react-native-web
- * deprecates the textShadow* longhands in favor of a `textShadow` string.
+ * the first (topmost) layer and warns.
  */
 export function textShadowShorthand(tokens: Token[], rawValue: string): Dict<unknown> | null {
-  if (__NATIVE_WEB__) {
-    return { textShadow: rawValue };
-  }
   const layers = splitShadowLayers(tokens);
   const parsed: ParsedShadow[] = [];
   for (let i = 0; i < layers.length; i++) {

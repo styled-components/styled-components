@@ -1,4 +1,3 @@
-import { describeOnRnWeb } from '../transform/describeOnRnWeb';
 import React, { PropsWithChildren } from 'react';
 import { Animated, Image, Pressable, Switch, Text, TextInput, View, ViewProps } from 'react-native';
 import TestRenderer from 'react-test-renderer';
@@ -2497,22 +2496,6 @@ describe('native', () => {
       expect(root.props.pointerEvents).toBe('auto');
       expect(root.props.focusable).toBeUndefined();
     });
-
-    describeOnRnWeb(() => {
-      // rn-web deprecated `props.pointerEvents` in favor of
-      // `style.pointerEvents`; the lift would trigger a runtime
-      // deprecation warning on every render.
-      it('pointer-events stays in style on rn-web (no prop lift)', () => {
-        const NoTouch = styled.View`
-          pointer-events: none;
-        `;
-        const tree = TestRenderer.create(<NoTouch />);
-        const root = tree.root.findByType(View);
-        expect(root.props.pointerEvents).toBeUndefined();
-        const flat = mergeStyle(root.props.style);
-        expect(flat.pointerEvents).toBe('none');
-      });
-    });
   });
 
   // https://drafts.csswg.org/css-transforms-2/#perspective-property
@@ -2565,53 +2548,6 @@ describe('native', () => {
       const tree = TestRenderer.create(<Spin />);
       const merged = getMergedStyle(tree.root.findByType(View));
       expect(merged.transform).toBe('scale(1.2)');
-    });
-  });
-
-  // Render-level coverage for the rn-web SPECIAL_CASE_PROPS lifts the
-  // unit transformDecl tests can't reach: validates the prop reaches the
-  // underlying component and is gated to the validOn target.
-  describe('rn-web prop lifts', () => {
-    describeOnRnWeb(() => {
-      it('direction: rtl lifts a dir prop onto a styled View', () => {
-        const Page = styled.View`
-          direction: rtl;
-        `;
-        const tree = TestRenderer.create(<Page />);
-        const root = tree.root.findByType(View);
-        expect(root.props.dir).toBe('rtl');
-        const flat = mergeStyle(root.props.style);
-        expect(flat.writingDirection).toBe('rtl');
-      });
-
-      it('accent-color: <color> lifts trackColor onto a styled Switch', () => {
-        const Toggle = styled.Switch`
-          accent-color: red;
-        `;
-        const tree = TestRenderer.create(<Toggle value={false} onValueChange={() => {}} />);
-        const root = tree.root.findByType(Switch);
-        expect(root.props.trackColor).toEqual({ true: 'red' });
-      });
-
-      it('accent-color trackColor lift is skipped on a non-Switch target', () => {
-        const warnSpy2 = jest.spyOn(console, 'warn').mockImplementation(() => {});
-        try {
-          const Misuse = styled.View`
-            accent-color: red;
-          `;
-          const tree = TestRenderer.create(<Misuse />);
-          const root = tree.root.findByType(View);
-          expect(root.props.trackColor).toBeUndefined();
-          const flat = mergeStyle(root.props.style);
-          expect(flat.accentColor).toBe('red');
-          expect(warnSpy2).toHaveBeenCalled();
-          const message = warnSpy2.mock.calls[0][0] as string;
-          expect(message).toContain('accent-color');
-          expect(message).toContain('<Switch>');
-        } finally {
-          warnSpy2.mockRestore();
-        }
-      });
     });
   });
 });

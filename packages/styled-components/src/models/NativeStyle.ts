@@ -64,7 +64,7 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
       // anchor() value, so they conservatively enable the subscription;
       // otherwise such a component would never re-resolve when an anchor
       // rect moves.
-      if (!__NATIVE_WEB__ && (ANCHOR_FN_RE.test(joined) || hasFn)) {
+      if (ANCHOR_FN_RE.test(joined) || hasFn) {
         this.usesAnchorFunctions = true;
       }
       // Gates the SafeAreaProvider subscription for env(safe-area-inset-*).

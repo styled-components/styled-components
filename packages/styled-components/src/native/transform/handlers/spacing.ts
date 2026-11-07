@@ -50,7 +50,6 @@ export function borderRadiusShorthand(tokens: Token[]) {
   for (let i = 0; i < tokens.length; i++) {
     if (tokens[i].kind === TokenKind.Slash) {
       const raw = rawTokens(tokens);
-      if (__NATIVE_WEB__) return { borderRadius: raw };
       const circular = collapseCircularSlashRadius(tokens);
       if (circular !== null) return circular;
       if (__DEV__) {
