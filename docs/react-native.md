@@ -60,7 +60,7 @@ RN ships a vendored Yoga whose `flex-shrink` default is `0`, not CSS's `1`. This
 - `Style.h` defines `DefaultFlexShrink = 0.0f` and `WebDefaultFlexShrink = 1.0f`. The web-aligned value applies only when `config->useWebDefaults()` is true. RN ships no call to `setUseWebDefaults(true)`, so the effective RN default is `0`.
 - The same `useWebDefaults` gate also flips `align-content` (RN default `flex-start` vs web `stretch`) and the `min-width` / `min-height` semantics on flex items.
 
-This is a load-bearing invariant for any layout polyfill or rn-web parity test. RN baseline is `flex-shrink: 0`, so web-style layouts that rely on items shrinking need an explicit `flex-shrink: 1`, and a parity test that assumes the CSS default will diverge from native. When debugging "items not wrapping" versus "items shrinking inappropriately," check which side of this default the consumer expects.
+This is a load-bearing invariant for any layout polyfill. RN baseline is `flex-shrink: 0`, so web-style layouts that rely on items shrinking need an explicit `flex-shrink: 1`, and a test that assumes the CSS default will diverge from native. When debugging "items not wrapping" versus "items shrinking inappropriately," check which side of this default the consumer expects.
 
 ## The declaration transform is in-house
 
