@@ -9,10 +9,7 @@ import {
   warnOnce,
 } from './dev';
 import {
-  collapseIdenticalCommas,
   getPassthroughKeys,
-  isLayeredCommaProp,
-  isMultiTokenPosition,
   isValidLayeredBackgroundValue,
   normalizeBackgroundPositionValue,
   substituteBackgroundSizeKeywordsForNative,
@@ -236,8 +233,8 @@ function transformValue(prop: string, rawValue: string): Dict<unknown> {
       }
       return {};
     }
-    let value = isLayeredCommaProp(camel) ? collapseIdenticalCommas(rawValue) : rawValue;
-    if (camel === 'backgroundPosition') value = normalizeBackgroundPositionValue(value);
+    const value =
+      camel === 'backgroundPosition' ? normalizeBackgroundPositionValue(rawValue) : rawValue;
     if (passthroughKeys.length === 1) {
       const handler = SINGLE_PASSTHROUGH_HANDLERS[camel];
       if (handler !== undefined) return handler(value, rawValue);
@@ -256,14 +253,9 @@ function transformValue(prop: string, rawValue: string): Dict<unknown> {
     }
     const nativeImage =
       camel === 'backgroundImage' ? maybeExpandBackgroundImageSystemColors(value) : value;
-    // rn-web's validator rejects `backgroundPosition` with more than one
-    // top-level value; emit only the experimental_* key so the native
-    // side still receives the full grammar. See `isMultiTokenPosition`.
-    const skipRnWebPosition = camel === 'backgroundPosition' && isMultiTokenPosition(value);
     const out: Dict<unknown> = {};
     for (let i = 0; i < passthroughKeys.length; i++) {
       const key = passthroughKeys[i];
-      if (skipRnWebPosition && key === 'backgroundPosition') continue;
       if (key === 'experimental_backgroundImage') {
         out[key] = nativeImage;
         continue;

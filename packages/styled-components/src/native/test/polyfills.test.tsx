@@ -2,24 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled from '../index';
-import {
-  __resetPlatformCacheForTesting,
-  applyBackgroundBlendModePolyfill,
-  applyStylePolyfills,
-  isWebPlatform,
-} from '../polyfills';
-
-// ──────────────────────────────────────────────────────────────────
-//  isWebPlatform
-// ──────────────────────────────────────────────────────────────────
-
-describe('isWebPlatform', () => {
-  beforeEach(() => __resetPlatformCacheForTesting());
-
-  it('reports false under the RN jest preset (Platform.OS=ios)', () => {
-    expect(isWebPlatform()).toBe(false);
-  });
-});
+import { applyBackgroundBlendModePolyfill, applyStylePolyfills } from '../polyfills';
 
 // ──────────────────────────────────────────────────────────────────
 //  applyBackgroundBlendModePolyfill

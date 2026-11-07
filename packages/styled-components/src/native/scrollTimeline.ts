@@ -11,7 +11,6 @@ import { resolveRangeBoundary, type NamedRangeRect } from './animation/range';
 import { useComposedRef, type ElementProps } from './composeRef';
 import { warnOnce } from './transform/dev';
 import { getRN } from './responsive';
-import { isWebPlatform } from './polyfills';
 import { isDebugEnabled } from './animation/debug';
 
 /**
@@ -205,7 +204,7 @@ export function createScrollTimelineEntry(axis: TimelineAxis): ScrollTimelineEnt
   if (!Animated) return null;
   const offsetX = new Animated.Value(0);
   const offsetY = new Animated.Value(0);
-  const nativeDriven = !isWebPlatform() && typeof Animated.attachNativeEvent === 'function';
+  const nativeDriven = typeof Animated.attachNativeEvent === 'function';
   return {
     offsetX,
     offsetY,

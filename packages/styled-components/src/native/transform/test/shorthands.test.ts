@@ -21,7 +21,7 @@ describe('transformDecl: pass-through + coercion', () => {
     });
   });
 
-  it('dual-emits backgroundImage gradients (RN experimental_ + standard CSS name for rn-web)', () => {
+  it('dual-emits backgroundImage gradients (RN experimental_ + standard CSS name)', () => {
     expect(transformDecl('backgroundImage', 'linear-gradient(to right, red, blue)')).toEqual({
       experimental_backgroundImage: 'linear-gradient(to right, red, blue)',
       backgroundImage: 'linear-gradient(to right, red, blue)',
@@ -1315,15 +1315,14 @@ describe('background shorthand spec compliance (CSS Backgrounds 3 §2.10)', () =
   // "Finally background-color is set to the specified color, if any, else
   // set to its initial value."
   it('background: <image> only → emits dual-emit longhands with defaults', () => {
-    // backgroundPosition default `0% 0%` is multi-token; the rn-web
-    // key is skipped to avoid the validator warning. Per spec the
-    // shorthand also resets background-color to its initial value
-    // (transparent).
+    // Per spec the shorthand also resets background-color to its initial
+    // value (transparent).
     expect(transformDecl('background', 'linear-gradient(red, blue)')).toEqual({
       backgroundColor: 'transparent',
       experimental_backgroundImage: 'linear-gradient(red, blue)',
       backgroundImage: 'linear-gradient(red, blue)',
       experimental_backgroundPosition: '0% 0%',
+      backgroundPosition: '0% 0%',
       experimental_backgroundSize: 'auto',
       backgroundSize: 'auto',
       experimental_backgroundRepeat: 'repeat',
@@ -1337,6 +1336,7 @@ describe('background shorthand spec compliance (CSS Backgrounds 3 §2.10)', () =
       experimental_backgroundImage: 'linear-gradient(red, blue)',
       backgroundImage: 'linear-gradient(red, blue)',
       experimental_backgroundPosition: '0% 0%',
+      backgroundPosition: '0% 0%',
       experimental_backgroundSize: 'auto',
       backgroundSize: 'auto',
       experimental_backgroundRepeat: 'repeat',
@@ -1402,23 +1402,27 @@ describe('background shorthand spec compliance (CSS Backgrounds 3 §2.10)', () =
     expect(out.experimental_backgroundImage).toBe(
       'linear-gradient(red, blue), linear-gradient(green, yellow)'
     );
-    expect(out.experimental_backgroundPosition).toBe('0% 0%');
+    expect(out.experimental_backgroundPosition).toBe('0% 0%, 0% 0%');
   });
 
-  // Per Backgrounds 3 list matching, one background-position / size /
-  // repeat value cycles across all image layers. Collapsing identical
-  // defaults preserves paint while avoiding host validators that reject
-  // redundant comma lists.
-  it('collapses identical default longhands from layered background shorthand', () => {
+  // Each image layer carries its own default position / size / repeat.
+  it('emits one default longhand per layer from layered background shorthand', () => {
     const out = transformDecl(
       'background',
       'linear-gradient(red, blue), linear-gradient(green, yellow)'
     );
-    expect(out.experimental_backgroundPosition).toBe('0% 0%');
-    expect(out.experimental_backgroundSize).toBe('auto');
-    expect(out.backgroundSize).toBe('auto');
-    expect(out.experimental_backgroundRepeat).toBe('repeat');
-    expect(out.backgroundRepeat).toBe('repeat');
+    expect(out.experimental_backgroundPosition).toBe('0% 0%, 0% 0%');
+    expect(out.backgroundPosition).toBe('0% 0%, 0% 0%');
+    expect(out.experimental_backgroundSize).toBe('auto, auto');
+    expect(out.backgroundSize).toBe('auto, auto');
+    expect(out.experimental_backgroundRepeat).toBe('repeat, repeat');
+    expect(out.backgroundRepeat).toBe('repeat, repeat');
+  });
+
+  it('background: <image> <multi-token position> emits both position keys', () => {
+    const out = transformDecl('background', 'linear-gradient(red, blue) left 10px top 20px');
+    expect(out.experimental_backgroundPosition).toBe('left 10px top 20px');
+    expect(out.backgroundPosition).toBe('left 10px top 20px');
   });
 
   // "A color is permitted in <final-bg-layer>, but not in <bg-layer>."
@@ -1463,6 +1467,7 @@ describe('background shorthand spec compliance (CSS Backgrounds 3 §2.10)', () =
       experimental_backgroundImage: 'none',
       backgroundImage: 'none',
       experimental_backgroundPosition: '0% 0%',
+      backgroundPosition: '0% 0%',
       experimental_backgroundSize: 'auto',
       backgroundSize: 'auto',
       experimental_backgroundRepeat: 'repeat',
@@ -1970,7 +1975,7 @@ describe('bug fixes from CSSTN', () => {
     });
   });
 
-  it('backgroundImage: dual-emits gradient (RN experimental_ + standard CSS name for rn-web)', () => {
+  it('backgroundImage: dual-emits gradient (RN experimental_ + standard CSS name)', () => {
     expect(transformDecl('backgroundImage', 'linear-gradient(90deg, red, blue)')).toEqual({
       experimental_backgroundImage: 'linear-gradient(90deg, red, blue)',
       backgroundImage: 'linear-gradient(90deg, red, blue)',

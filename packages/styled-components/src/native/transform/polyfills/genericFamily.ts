@@ -5,10 +5,7 @@ import { getReactNativePlatformOS } from '../dev';
  * / "system mono" / etc.; each platform registers concrete font names
  * that ship with the OS. We resolve the keyword to a per-platform face
  * name at the v7 transform boundary so a single CSS declaration produces
- * the right glyphs on iOS, Android, and rn-web.
- *
- * rn-web hands the keyword to the browser unchanged (the CSS engine
- * resolves it against the user-agent stylesheet).
+ * the right glyphs on iOS and Android.
  *
  * Picks below are conservative defaults; document any iOS-version /
  * Android-API gates inline. Update when a platform exposes a better
@@ -100,9 +97,6 @@ export function isGenericFamily(name: string): boolean {
  * `SANS-SERIF` resolve identically. Returns the input string unchanged
  * when the keyword is unknown (defensive; callers gate on
  * {@link isGenericFamily} first).
- *
- * rn-web callers should NOT use this; pass the keyword through so
- * the browser resolves it via the user-agent stylesheet.
  */
 export function resolveGenericFamily(keyword: string): string {
   const os = getPlatformOS();

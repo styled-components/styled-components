@@ -1989,7 +1989,7 @@ const SCROLLER_FLEX_PIN = Object.freeze({ flexGrow: 0 });
  *
  * - `nestedScrollEnabled: true`: browsers nest scrolling natively, while
  *   Android's ScrollView requires the opt-in before an inner scroller may
- *   claim a gesture from a scrollable ancestor. Inert on iOS and rn-web.
+ *   claim a gesture from a scrollable ancestor. Inert on iOS.
  * - `pinGrow` (compiled `scrollerFlexPin`): an authored width/height
  *   holds instead of stretching with RN ScrollView's `flexGrow: 1` base.
  *   The companion `flexShrink: 0` lives in the styled scroller baseline

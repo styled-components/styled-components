@@ -3,8 +3,6 @@ import { splitTopLevelCommas } from '../../../parser/parser';
 import { maybeExpandBackgroundImageSystemColors } from '../backgroundGradientNative';
 import { warnOnce } from '../dev';
 import {
-  collapseIdenticalCommas,
-  isMultiTokenPosition,
   isValidLayeredBackgroundValue,
   normalizeBackgroundPositionValue,
   substituteBackgroundSizeKeywordsForNative,
@@ -307,20 +305,17 @@ export function backgroundShorthand(tokens: Token[]): Dict<unknown> | null {
   if (imageLayers.length > 0) {
     const images = imageLayers.map(l => l.image ?? 'none').join(', ');
     const positions = normalizeBackgroundPositionValue(
-      collapseIdenticalCommas(imageLayers.map(l => l.position ?? '0% 0%').join(', '))
+      imageLayers.map(l => l.position ?? '0% 0%').join(', ')
     );
-    const sizes = collapseIdenticalCommas(imageLayers.map(l => l.size ?? 'auto').join(', '));
-    const repeats = collapseIdenticalCommas(imageLayers.map(l => l.repeat ?? 'repeat').join(', '));
+    const sizes = imageLayers.map(l => l.size ?? 'auto').join(', ');
+    const repeats = imageLayers.map(l => l.repeat ?? 'repeat').join(', ');
 
     // Pre-fold gradient stops carrying system colors so RN's array form
     // ships a PlatformColor object.
     out.experimental_backgroundImage = maybeExpandBackgroundImageSystemColors(images);
     out.backgroundImage = images;
     out.experimental_backgroundPosition = positions;
-    // `backgroundPosition` (rn-web key) is skipped for multi-token forms;
-    // see `isMultiTokenPosition` in passthrough.ts. rn-web's validator
-    // would have dropped the value with a console.error otherwise.
-    if (!isMultiTokenPosition(positions)) out.backgroundPosition = positions;
+    out.backgroundPosition = positions;
     // `experimental_backgroundSize` folds `cover` / `contain` to `auto`
     // (see `substituteBackgroundSizeKeywordsForNative` in passthrough.ts).
     out.experimental_backgroundSize = substituteBackgroundSizeKeywordsForNative(sizes);

@@ -16,32 +16,6 @@
 import * as React from 'react';
 import { splitTopLevelCommas } from '../parser/parser';
 
-// ──────────────────────────────────────────────────────────────────
-//  Platform detection
-// ──────────────────────────────────────────────────────────────────
-
-let isWebCached: boolean | null = null;
-
-/**
- * Single source of truth for "are we running under react-native-web?".
- * Cached after first call. Platform.OS doesn't change at runtime.
- */
-export function isWebPlatform(): boolean {
-  if (isWebCached !== null) return isWebCached;
-  try {
-    const rn: { Platform?: { OS?: string } } = require('react-native');
-    isWebCached = rn.Platform?.OS === 'web';
-  } catch {
-    isWebCached = false;
-  }
-  return isWebCached;
-}
-
-/** Test-only: clear the cached platform result. */
-export function __resetPlatformCacheForTesting(): void {
-  isWebCached = null;
-}
-
 /**
  * The props these polyfills pass, not RN's full prop types: the style
  * carries `experimental_*` keys RN's published `ViewStyle` omits.

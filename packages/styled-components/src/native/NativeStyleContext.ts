@@ -70,8 +70,7 @@ export interface NativeCascadeValues {
   /**
    * CSS custom properties contributed by every ancestor on the path to
    * the root, deep-merged so the nearest ancestor wins. Anchors `var()`
-   * substitution at render time. Native bundles only; rn-web defers to
-   * the browser's cascade.
+   * substitution at render time.
    */
   customProperties?: ReadonlyMap<string, string>;
   /**
@@ -79,8 +78,7 @@ export interface NativeCascadeValues {
    * size themselves. `ownerId` is the container's `styledComponentId`;
    * only children whose `parentId` equals it are grid items (the spec's
    * direct-children rule). `contentWidth` is the measured content-box
-   * width in dp, `0` before the first layout. Native bundles only;
-   * rn-web defers to the browser's grid layout.
+   * width in dp, `0` before the first layout.
    */
   grid?: {
     ownerId: string;

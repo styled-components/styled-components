@@ -59,7 +59,6 @@ import {
 import { tokenize } from '../transform/tokenize';
 import { TokenKind } from '../transform/tokens';
 import { getRN } from '../responsive';
-import { isWebPlatform } from '../polyfills';
 import {
   buildScrollProgressNode,
   resolveTimelineEntry,
@@ -812,13 +811,12 @@ function startTiming(
       `easing=${easing.kind}`
     );
   }
-  const useNativeDriverOnHost = useNative && !isWebPlatform();
   const handle = Animated.timing(state.progress, {
     toValue: 1,
     duration,
     delay,
     easing: useNative ? LINEAR_EASING : (t: number) => evaluateEasing(easing, t),
-    useNativeDriver: useNativeDriverOnHost,
+    useNativeDriver: useNative,
   });
   scratch.running.add(handle);
   state.active = handle;
@@ -1289,8 +1287,7 @@ interface RGBA255 {
  * dependency and is invisible to third parties under strict installs).
  * `processColor` returns `0xAARRGGBB`: unsigned on iOS, a signed 32-bit int
  * on Android. `undefined` means the string is not a color; an object means a
- * platform color, which has no channels to read. react-native-web returns
- * the unsigned form.
+ * platform color, which has no channels to read.
  */
 function processNativeColor(s: string): number | null {
   const { processColor } = getRN();
@@ -1838,7 +1835,6 @@ function startKeyframeAnimation(
   const Animated = getAnimated();
   if (!Animated) return;
 
-  const useNativeDriverOnHost = useNative && !isWebPlatform();
   let duration = desc.durationMs;
   let delay = desc.delayMs;
   const isReverse = desc.direction === 'reverse' || desc.direction === 'alternate-reverse';
@@ -1930,7 +1926,7 @@ function startKeyframeAnimation(
       duration: dur,
       delay: dl,
       easing: LINEAR_EASING,
-      useNativeDriver: useNativeDriverOnHost,
+      useNativeDriver: useNative,
     });
 
   const makeReverse = (dur: number, dl: number) =>
@@ -1939,7 +1935,7 @@ function startKeyframeAnimation(
       duration: dur,
       delay: dl,
       easing: LINEAR_EASING,
-      useNativeDriver: useNativeDriverOnHost,
+      useNativeDriver: useNative,
     });
 
   /** Zero-duration timing that snaps `animS.progress` straight to `toValue`, optionally after `delay`. */
@@ -1949,7 +1945,7 @@ function startKeyframeAnimation(
       duration: 0,
       delay,
       easing: LINEAR_EASING,
-      useNativeDriver: useNativeDriverOnHost,
+      useNativeDriver: useNative,
     });
 
   /**
@@ -2019,7 +2015,7 @@ function startKeyframeAnimation(
       // after the partial. JS-driven loops still run `reset()` between
       // iterations; insert a 0-duration snap back to the cycle start
       // only for the native forward case.
-      const needsNativeLoopRestartSnap = useNativeDriverOnHost && !isReverse;
+      const needsNativeLoopRestartSnap = useNative && !isReverse;
       const snapToLoopStart = snap(0);
       body = needsNativeLoopRestartSnap
         ? Animated.sequence([partial, snapToLoopStart, loopBody])
