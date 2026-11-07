@@ -1452,6 +1452,25 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
       expect(buildResolver('calc(0 + 5px)')).toBeNull();
     });
 
+    // Spec §10.9: "At a + or - sub-expression, attempt to add the types of
+    // the left and right arguments. If this returns failure, the entire
+    // calculation's type is failure." sibling-index() is a <number>, so
+    // adding a <length> fails and the declaration yields no value.
+    it.each([
+      'calc(sibling-index() + 5px)',
+      'calc(5px - sibling-index())',
+      'calc(calc(sibling-index() * 2) + 5px)',
+      'calc(min(sibling-index(), 4) - 5px)',
+    ])('rejects a runtime <number> added to a <length>: %s', value => {
+      const r = buildResolver(value)!;
+      expect(r({ ...baseEnv, siblingIndex: 3 })).toBeNull();
+    });
+
+    it('adds a nested runtime <length> to a <length>: calc(calc(sibling-index() * 2px) + 5px) = 11px', () => {
+      const r = buildResolver('calc(calc(sibling-index() * 2px) + 5px)')!;
+      expect(r({ ...baseEnv, siblingIndex: 3 })).toBe(11);
+    });
+
     // Spec §10.9: "At a * sub-expression, multiply the types of the left and
     // right arguments. The sub-expression's type is the returned result."
     it('accepts a runtime <number> times a <length>: calc(sibling-index() * 5px) = 15px', () => {

@@ -1440,8 +1440,7 @@ function scanPurePercent(fn: Token): 0 | 1 | -1 {
 }
 
 function calcResolverFromFn(fn: Token, opts?: BuildOpts): Resolver | null {
-  const args = tokenizeFunctionArgs(fn);
-  const armEval = buildExpression(args, opts);
+  const armEval = buildExpression(tokenizeFunctionArgs(fn), opts);
   if (armEval === null) return null;
   return env => {
     const r = armEval(env);
@@ -1451,6 +1450,21 @@ function calcResolverFromFn(fn: Token, opts?: BuildOpts): Resolver | null {
 }
 
 function minMaxClampResolverFromFn(name: string, fn: Token, opts?: BuildOpts): Resolver | null {
+  const evalFn = minMaxClampEvalFromFn(name, fn, opts);
+  if (evalFn === null) return null;
+  return env => {
+    const r = evalFn(env);
+    if (r === null) return null;
+    return numericToCss(r);
+  };
+}
+
+/** Like {@link minMaxClampResolverFromFn}, keeping the result's unit for an enclosing expression. */
+function minMaxClampEvalFromFn(
+  name: string,
+  fn: Token,
+  opts?: BuildOpts
+): ((env: ResolveEnv) => NumericResult | null) | null {
   const args = tokenizeFunctionArgs(fn);
   const groups: Token[][] = [];
   let current: Token[] = [];
@@ -1544,7 +1558,7 @@ function minMaxClampResolverFromFn(name: string, fn: Token, opts?: BuildOpts): R
       if (lo !== null && v < lo.value) v = lo.value;
       result = v;
     }
-    return numericToCss({ value: result, unit });
+    return { value: result, unit };
   };
 }
 
@@ -1687,20 +1701,15 @@ function buildOperand(
     if (num !== null) return () => num;
     // Otherwise build a runtime resolver from the function's raw form.
     const inner = t.name || '';
-    if (inner === 'calc') {
-      const r = calcResolverFromFn(t, opts);
-      if (r === null) return null;
-      return env => valueToNumeric(r(env), '');
-    }
+    // Nested math keeps the unit its own expression produced.
+    if (inner === 'calc') return buildExpression(tokenizeFunctionArgs(t), opts);
     if (inner === 'min' || inner === 'max' || inner === 'clamp') {
-      const r = minMaxClampResolverFromFn(inner, t, opts);
-      if (r === null) return null;
-      return env => valueToNumeric(r(env), '');
+      return minMaxClampEvalFromFn(inner, t, opts);
     }
     if (inner === 'env' || inner === 'light-dark') {
       const r = buildResolver(t.raw);
       if (r === null) return null;
-      return env => valueToNumeric(r(env), '');
+      return env => valueToNumeric(r(env), 'px');
     }
     if (inner === 'sibling-index' || inner === 'sibling-count') {
       if ((t.args || '').trim() !== '') return null;
@@ -1777,13 +1786,9 @@ function reduceMath(items: Array<NumericResult | string>): NumericResult | null 
     if (op === '+' || op === '-') {
       const a = items[i - 1] as NumericResult;
       const b = items[i + 1] as NumericResult;
-      // Operands from env(), nested math, light-dark() and attr() surface
-      // unitless even when they are lengths, so `<unitless> +/- <typed>` is
-      // tolerated. A literal `calc(0 + 5px)` is rejected at construction
-      // time in `buildExpression` before reaching here.
-      if (a.unit && b.unit && a.unit !== b.unit) return null;
+      if (a.unit !== b.unit) return null;
       const v = op === '+' ? a.value + b.value : a.value - b.value;
-      items.splice(i - 1, 3, { value: v, unit: a.unit || b.unit });
+      items.splice(i - 1, 3, { value: v, unit: a.unit });
     } else {
       i++;
     }
