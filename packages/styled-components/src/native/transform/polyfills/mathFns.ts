@@ -116,8 +116,8 @@ function resolveStepped(name: string, fn: Token, permitNonFinite: boolean): Nume
   if (keyword !== null) return null;
   if (args.length !== 2) return null;
   const [a, b] = args;
-  if (a.unit !== '' && b.unit !== '' && a.unit !== b.unit) return null;
-  const unit = a.unit || b.unit;
+  if (a.unit !== b.unit) return null;
+  const unit = a.unit;
   if (b.value === 0) {
     if (!permitNonFinite) return null;
     return { value: NaN, unit };

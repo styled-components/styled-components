@@ -1481,10 +1481,16 @@ describe('math functions spec compliance (CSS Values Level 4 §10)', () => {
       'max(5px, sibling-index())',
       'clamp(1, sibling-index(), 5px)',
       'clamp(none, sibling-index(), 5px)',
-      'min(1, 5px)',
-    ])('rejects min()/max()/clamp() arguments of inconsistent type: %s', value => {
-      const r = buildResolver(value);
-      if (r !== null) expect(r({ ...baseEnv, siblingIndex: 3 })).toBeNull();
+    ])('rejects a runtime <number> mixed with a <length> in min()/max()/clamp(): %s', value => {
+      const r = buildResolver(value)!;
+      expect(r({ ...baseEnv, siblingIndex: 3 })).toBeNull();
+    });
+
+    // The static fold rejects it (polyfills.test.ts), and the runtime resolver
+    // still exists but yields no value.
+    it('rejects a literal <number> mixed with a <length>: min(1, 5px)', () => {
+      const r = buildResolver('min(1, 5px)')!;
+      expect(r(baseEnv)).toBeNull();
     });
 
     it.each([

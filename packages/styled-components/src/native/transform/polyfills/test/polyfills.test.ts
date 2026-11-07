@@ -651,6 +651,107 @@ describe('Math L4 spec compliance (CSS Values 4 §10.3-§10.6)', () => {
       expect(mathOf('min(10px, 50px)')).toEqual({ unit: 'px', value: 10 });
     });
 
+    // §10.3: "mod(A, B) and rem(A, B) similarly contain two calculations A and
+    // B, and return the difference between A and the nearest integer multiple
+    // of B either above or below A. The argument calculations can resolve to
+    // any <number>, <dimension>, or <percentage>, but must have the same type,
+    // or else the function is invalid; the result will have the same type as
+    // the arguments."
+    it.each(['mod(7, 3px)', 'mod(7px, 3)', 'rem(7, 3px)', 'rem(7px, 3)', 'mod(7px, 3%)'])(
+      'rejects mod()/rem() arguments of different types: %s',
+      src => {
+        expect(mathOf(src)).toBeNull();
+      }
+    );
+
+    it('keeps mod()/rem() of one type: mod(7, 3) and rem(7px, 3px)', () => {
+      expect(mathOf('mod(7, 3)')).toEqual({ unit: '', value: 1 });
+      expect(mathOf('rem(7px, 3px)')).toEqual({ unit: 'px', value: 1 });
+    });
+
+    // §10.3: "The argument calculations can resolve to any <number>,
+    // <dimension>, or <percentage>, but must have a consistent type or else
+    // the function is invalid; the result's type will be the consistent type."
+    // and "If the type of A matches <number>, then B may be omitted, and
+    // defaults to 1. [...] In all other cases, omitting B is invalid."
+    it.each([
+      'round(7, 3px)',
+      'round(7px, 3)',
+      'round(up, 7px, 3)',
+      'round(10px)',
+      'round(up, 10px)',
+    ])('rejects round() with mixed types or an omitted step on a <length>: %s', src => {
+      expect(mathOf(src)).toBeNull();
+    });
+
+    it('keeps round(A) of a <number> and round() of one type: round(7.4) and round(up, 7px, 3px)', () => {
+      expect(mathOf('round(7.4)')).toEqual({ unit: '', value: 7 });
+      expect(mathOf('round(up, 7px, 3px)')).toEqual({ unit: 'px', value: 9 });
+    });
+
+    // §10.5: "The argument calculations can resolve to any <number>,
+    // <dimension>, or <percentage>, but must have a consistent type or else
+    // the function is invalid; the result's type will be the consistent type."
+    it.each(['hypot(3, 4px)', 'hypot(3px, 4)', 'hypot(3px, 4px, 5)'])(
+      'rejects hypot() arguments of different types: %s',
+      src => {
+        expect(mathOf(src)).toBeNull();
+      }
+    );
+
+    it('keeps hypot() of one type: hypot(3, 4) and hypot(3px, 4px)', () => {
+      expect(mathOf('hypot(3, 4)')).toEqual({ unit: '', value: 5 });
+      expect(mathOf('hypot(3px, 4px)')).toEqual({ unit: 'px', value: 5 });
+    });
+
+    // §10.4: "A and B can resolve to any <number>, <dimension>, or
+    // <percentage>, but must have a consistent type or else the function is
+    // invalid. The function returns the <angle> between the positive X-axis
+    // and the point (B,A)".
+    it.each(['atan2(1, 1px)', 'atan2(1px, 1)'])(
+      'rejects atan2() arguments of different types: %s',
+      src => {
+        expect(mathOf(src)).toBeNull();
+      }
+    );
+
+    it('returns an angle from atan2() of one type: atan2(1px, 1px) = 45deg', () => {
+      const r = mathOf('atan2(1px, 1px)')!;
+      expect(r.unit).toBe('deg');
+      expect(r.value).toBeCloseTo(45, 6);
+    });
+
+    // §10.6: "The abs(A) function contains one calculation A, and returns the
+    // absolute value of A, as the same type as the input" and "The sign(A)
+    // function contains one calculation A [...] The return type is a <number>,
+    // made consistent with the input calculation's type." Any single type is
+    // accepted.
+    it('accepts any single type in abs() and sign()', () => {
+      expect(mathOf('abs(-3)')).toEqual({ unit: '', value: 3 });
+      expect(mathOf('abs(-3px)')).toEqual({ unit: 'px', value: 3 });
+      expect(mathOf('sign(-3px)')).toEqual({ unit: '', value: -1 });
+      expect(mathOf('sign(3)')).toEqual({ unit: '', value: 1 });
+    });
+
+    // §10.5: "pow(A, B) [...] both of which must resolve to <number>s" and
+    // "The sqrt(A) function contains a single calculation which must resolve
+    // to a <number>"; log() and exp() likewise take <number>s.
+    it.each(['pow(2, 3px)', 'pow(2px, 3)', 'sqrt(4px)', 'log(8px)', 'log(8, 2px)', 'exp(1px)'])(
+      'rejects a <length> in pow()/sqrt()/log()/exp(): %s',
+      src => {
+        expect(mathOf(src)).toBeNull();
+      }
+    );
+
+    // §10.4: "The sin(A), cos(A), and tan(A) functions all contain a single
+    // calculation which must resolve to either a <number> or an <angle>".
+    it.each(['sin(1px)', 'cos(1px)', 'tan(1px)', 'asin(1px)'])(
+      'rejects a <length> in the trigonometric functions: %s',
+      src => {
+        expect(mathOf(src)).toBeNull();
+      }
+    );
+
     // §10.4: "atan2(A, B) ... is equivalent to atan(A / B), except that
     // it handles the case where A and B have value 0 and where B is 0
     // gracefully." Both zero → 0.
