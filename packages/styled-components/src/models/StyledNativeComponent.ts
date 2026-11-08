@@ -16,6 +16,7 @@ import {
 } from '../native/NativeStyleContext';
 import {
   DEFAULT_PARENT_CONTEXT,
+  PARENT_SLOT_PROP,
   ParentContext,
   ParentContextValue,
   SiblingInfo,
@@ -32,7 +33,7 @@ import {
   subscribeAnchors,
   useAnchorNamePublisher,
 } from '../native/anchorRegistry';
-import { applyStylePolyfills } from '../native/polyfills';
+import { applyStylePolyfills, hasBackgroundBlendMode } from '../native/polyfills';
 import { useSnapSettle } from '../native/snapSettle';
 import { matchSupports } from '../native/supports';
 import {
@@ -201,7 +202,15 @@ function mergeAttrsResult(context: object, resolved: Dict<unknown>): void {
 }
 
 interface StyledComponentImplProps extends ExecutionProps {
+  /** Set by a styled parent on its styled children; removed before any user code sees the props. */
+  [PARENT_SLOT_PROP]?: ParentContextValue;
   style?: unknown;
+}
+
+/** The props without the parent's slot value, so neither user code nor the target receives it. */
+function withoutParentSlot<Props extends StyledComponentImplProps>(props: Props): Props {
+  const { [PARENT_SLOT_PROP]: _slot, ...rest } = props;
+  return rest as Props;
 }
 
 function buildPropsForElement<Source extends object>(
@@ -929,6 +938,16 @@ const STATELESS_STYLE_TARGETS = new Set([
   'VirtualizedList',
 ]);
 
+/**
+ * RN components that clone their single child to attach handlers, style and a
+ * ref, so they cannot hold the extra children `background-blend-mode` layers add.
+ */
+export const SINGLE_CHILD_CLONING_TARGETS = new Set([
+  'TouchableHighlight',
+  'TouchableNativeFeedback',
+  'TouchableWithoutFeedback',
+]);
+
 /** Leaf target name when it cannot receive a function style; null otherwise. */
 function inertStateStyleTargetName(target: unknown): string | null {
   const name = leafName(resolveLeafTarget(target));
@@ -1152,9 +1171,11 @@ function StaticContainerPublisherDispatch({
 // `${Foo} &` only matches when Foo happens to have responsive CSS.
 function useStaticImpl<Props extends StyledComponentImplProps>(
   forwardedComponent: IStyledComponent<'native', Props>,
-  props: Props,
+  ownProps: Props,
   forwardedRef: Ref<unknown> | undefined
 ): React.ReactElement {
+  const slotValue = ownProps[PARENT_SLOT_PROP];
+  const props = slotValue === undefined ? ownProps : withoutParentSlot(ownProps);
   const { nativeStyle, target, styledComponentId } = forwardedComponent;
   const compiled = nativeStyle.staticCompiled as NativeStyles | null;
   if (compiled === null) throw new Error(MISSING_STATIC_STYLES);
@@ -1179,7 +1200,8 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   // of the grid that published the entry.
   // biome-ignore-start lint/correctness/useHookAtTopLevel: this static render path is reached only past an `if (IS_RSC)` early return above, and IS_RSC is a load-time constant, so a given bundle always runs all of these hooks or none of them
   const nativeStyleCtx = React.useContext(NativeStyleContext);
-  const parentCtx = React.useContext(ParentContext);
+  const contextParent = React.useContext(ParentContext);
+  const parentCtx = slotValue ?? contextParent;
   let composedStyle = composeBase(compiled.base, props.style);
   const grid = nativeStyleCtx.cascade.grid;
   if (grid !== undefined && parentCtx.parentId === grid.ownerId) {
@@ -1200,10 +1222,9 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   const publishCacheRef = React.useRef<ParentPublishCache | null>(null);
   if (publishCacheRef.current === null) publishCacheRef.current = createParentPublishCache();
   // Index sibling positions BEFORE running polyfills + createFastElement
-  // so per-child Providers attach to user JSX even when a container
-  // wrap is in the way (createFastElement would otherwise hand the
-  // host construction to StaticContainerPublisherDispatch, hiding the
-  // children).
+  // so each position lands on user JSX even when a container wrap is in the
+  // way (createFastElement would otherwise hand the host construction to
+  // StaticContainerPublisherDispatch, hiding the children).
   const publishedValue = buildPublishedParentValue(
     publishCacheRef.current,
     parentCtx,
@@ -1221,7 +1242,8 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   // Static-eligible scroll containers still publish their timeline so
   // descendants' `animation-timeline: scroll()` resolves, and lift
   // sticky children onto stickyHeaderIndices.
-  const isScroller = isScrollableTargetName(leafName(resolveLeafTarget(elementToBeCreated)));
+  const leaf = leafName(resolveLeafTarget(elementToBeCreated));
+  const isScroller = isScrollableTargetName(leaf);
   const [scrollProps, wrapScrollTimeline, timelineEntry] = useScrollTimelinePublisher(
     isScroller || compiled.scrollTimeline !== undefined,
     compiled.scrollTimeline,
@@ -1238,7 +1260,7 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   const inner = wrapScrollTimeline(
     createFastElement(
       elementToBeCreated,
-      applyPolyfillsWithLayerSlot(publishCacheRef.current, compiled, effectiveProps),
+      applyPolyfillsWithLayerSlot(publishCacheRef.current, compiled, effectiveProps, leaf),
       containerName
     )
   );
@@ -1250,13 +1272,25 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
  * layer slot once it has rendered, or could render, blend layers. A blend mode
  * only the caller's style supplies (known at first render only by its
  * presence) latches the slot when the layers first appear: one remount of the
- * children, then none.
+ * children, then none. A target that clones its single child gets no layers and
+ * no slot: its child stays the one element it expects.
  */
 function applyPolyfillsWithLayerSlot(
   cache: ParentPublishCache,
   compiled: NativeStyles,
-  elementProps: Dict<unknown>
+  elementProps: Dict<unknown>,
+  leaf: string | undefined
 ): Dict<unknown> {
+  if (leaf !== undefined && SINGLE_CHILD_CLONING_TARGETS.has(leaf)) {
+    if (__DEV__ && hasBackgroundBlendMode(elementProps.style)) {
+      warnOnce(
+        'native-background-blend-mode-single-child-target',
+        `\`background-blend-mode\` cannot be applied to a styled <${leaf}>, which passes its props to its single child. Put \`background-blend-mode\` on a <View> inside the <${leaf}> instead.`,
+        leaf
+      );
+    }
+    return elementProps;
+  }
   const layerSlot = cache.blendLayerSlot || compiled.blendLayerSlot === true;
   const out = applyStylePolyfills(elementProps, layerSlot);
   cache.blendLayerSlot = layerSlot || out !== elementProps;
@@ -1282,9 +1316,11 @@ function applyPolyfillsWithLayerSlot(
  */
 function useDynamicImpl<Props extends StyledComponentImplProps>(
   forwardedComponent: IStyledComponent<'native', Props>,
-  props: Props,
+  ownProps: Props,
   forwardedRef: Ref<unknown> | undefined
 ) {
+  const slotValue = ownProps[PARENT_SLOT_PROP];
+  const props = slotValue === undefined ? ownProps : withoutParentSlot(ownProps);
   const { attrs: componentAttrs, nativeStyle, shouldForwardProp, target } = forwardedComponent;
 
   // biome-ignore-start lint/correctness/useHookAtTopLevel: every gate in this block is IS_RSC, a load-time constant, so a given bundle always takes the same side. The one exception is the anchor gate below, which is noted separately.
@@ -1299,7 +1335,8 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // ParentContext.
   const nativeStyleCtx = !IS_RSC ? React.useContext(NativeStyleContext) : DEFAULT_NATIVE_STYLE;
   const containerCtx = nativeStyleCtx.container;
-  const parentCtx = !IS_RSC ? React.useContext(ParentContext) : DEFAULT_PARENT_CONTEXT;
+  const contextParent = !IS_RSC ? React.useContext(ParentContext) : DEFAULT_PARENT_CONTEXT;
+  const parentCtx = slotValue ?? contextParent;
   // Anchor-rect reactivity: components whose CSS uses anchor() / anchor-size()
   // subscribe so any anchor's rect change re-renders them; the always-run
   // compile and assembly below then re-resolve against the current rects. The
@@ -1430,7 +1467,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     cachedResolveEnv.theme === resolveTheme &&
     cachedResolveEnv.renderCascade === renderCascade &&
     cachedResolveEnv.parentCtx === parentCtx &&
-    cachedResolveEnv.props === props &&
+    cachedResolveEnv.props === ownProps &&
     cachedResolveEnv.positionAnchor === positionAnchor &&
     cachedResolveEnv.safeAreaInsets === safeAreaInsets &&
     cachedResolveEnv.anchorVersion === anchorVersion
@@ -1453,7 +1490,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
       env,
       parentCtx,
       positionAnchor,
-      props,
+      props: ownProps,
       renderCascade,
       resolveEnv,
       safeAreaInsets,
@@ -1551,9 +1588,8 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // combinator selectors (`${Foo} &`, `${Foo} > &`) can match. Index
   // child sibling position BEFORE the polyfills (which add blend layers
   // among the children) and before layering any cascade / container /
-  // isolate-3d Provider wrap, otherwise the per-child Providers would
-  // count the layers or attach to the wrapper rather than the host's
-  // user JSX.
+  // isolate-3d Provider wrap, otherwise the positions would count the
+  // layers or land on the wrapper rather than the host's user JSX.
   const publishedValue = buildPublishedParentValue(
     publishCache,
     parentCtx,
@@ -1569,13 +1605,15 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     forwardedRef,
     forwardedComponent
   );
+  const leaf = leafName(resolveLeafTarget(elementToBeCreated));
   const elementProps = applyPolyfillsWithLayerSlot(
     publishCache,
     compiled,
     withIndexedChildren(
       finalizedProps,
       indexStyledChildren(publishCache, finalizedProps.children as React.ReactNode, publishedValue)
-    )
+    ),
+    leaf
   );
 
   // `field-sizing: content` dev guard. The polyfill lifts `multiline:
@@ -1611,8 +1649,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // Scroll progress timelines: styled scroll containers publish their
   // offset/extent so descendants' `animation-timeline: scroll()` /
   // named references resolve. Hook order is unconditional inside.
-  const isScroller =
-    !IS_RSC && isScrollableTargetName(leafName(resolveLeafTarget(elementToBeCreated)));
+  const isScroller = !IS_RSC && isScrollableTargetName(leaf);
   const [scrollProps, wrapScrollTimeline, timelineEntry] = useScrollTimelinePublisher(
     isScroller || (!IS_RSC && compiled.scrollTimeline !== undefined),
     compiled.scrollTimeline,

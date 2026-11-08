@@ -1,10 +1,21 @@
 import React from 'react';
-import { Appearance, Pressable, StyleSheet, View } from 'react-native';
+import {
+  Appearance,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableHighlight,
+  TouchableNativeFeedback,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import { toNativeStyles } from '../../models/compileNative';
+import { hasWarned, warnKey } from '../../utils/warnOnce';
 import styled from '../index';
 import { applyBackgroundBlendModePolyfill, applyStylePolyfills } from '../polyfills';
 import { resetResponsiveCache } from '../responsive';
+import { resetWarningsForTest } from '../transform/dev';
 
 // ──────────────────────────────────────────────────────────────────
 //  applyBackgroundBlendModePolyfill
@@ -763,5 +774,153 @@ describe('background-blend-mode layer slot (tree shape)', () => {
         addSpy.mockRestore();
       }
     });
+  });
+});
+
+describe('background-blend-mode on a target that clones its only child', () => {
+  let warnSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    resetWarningsForTest();
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    // A released TouchableHighlight hides its underlay on a timer; run it inside the test, not after it.
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    TestRenderer.act(() => jest.runOnlyPendingTimers());
+    jest.useRealTimers();
+    warnSpy.mockRestore();
+  });
+
+  const touchables = [
+    ['TouchableWithoutFeedback', TouchableWithoutFeedback],
+    ['TouchableHighlight', TouchableHighlight],
+    ['TouchableNativeFeedback', TouchableNativeFeedback],
+  ] as const;
+
+  const blendCss = {
+    layers: `
+      background-color: red;
+      background-image: linear-gradient(transparent, black);
+      background-blend-mode: multiply;
+    `,
+    'a blend mode and no image to blend': `
+      background-color: red;
+      background-blend-mode: multiply;
+    `,
+  } as const;
+
+  /** A press lands on the deepest ancestor of `leaf` that claims the responder; a tree with no claimant takes no press. */
+  function pressFrom(leaf: TestRenderer.ReactTestInstance) {
+    let responder = leaf.parent;
+    while (responder !== null && typeof responder.props.onStartShouldSetResponder !== 'function') {
+      responder = responder.parent;
+    }
+    // The responder region is measured on grant, so the target needs a native node's `measure`.
+    const nativeNode = {
+      measure: (done: (...frame: number[]) => void) => done(0, 0, 100, 100, 0, 0),
+    };
+    const event = {
+      currentTarget: nativeNode,
+      nativeEvent: { timestamp: 0, touches: [] },
+      persist: () => {},
+      target: nativeNode,
+    };
+    TestRenderer.act(() => responder?.props.onResponderGrant(event));
+    TestRenderer.act(() => responder?.props.onResponderRelease(event));
+  }
+
+  const cases = touchables.flatMap(([name, Touchable]) =>
+    (Object.keys(blendCss) as Array<keyof typeof blendCss>).map(
+      kind => [name, kind, Touchable] as const
+    )
+  );
+
+  it.each(cases)(
+    'renders a styled %s with %s, and its single child takes the press',
+    (_name, kind, Touchable) => {
+      const onPress = jest.fn();
+      const Target = styled(Touchable as React.ComponentType<any>)`
+        ${blendCss[kind]}
+      `;
+
+      const tree = TestRenderer.create(
+        <Target onPress={onPress}>
+          <View>
+            <Text testID="label">go</Text>
+          </View>
+        </Target>
+      );
+      pressFrom(tree.root.findByProps({ testID: 'label' }));
+
+      expect(onPress).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it.each(touchables)(
+    'warns once that a styled %s cannot hold blend layers, and renders no layer',
+    (name, Touchable) => {
+      const Target = styled(Touchable as React.ComponentType<any>)`
+        ${blendCss.layers}
+      `;
+      const render = () =>
+        TestRenderer.create(
+          <Target onPress={() => {}}>
+            <View testID="child" />
+          </Target>
+        );
+
+      const tree = render();
+      render();
+
+      expect(warnSpy.mock.calls).toEqual([
+        [
+          `[sc] \`background-blend-mode\` cannot be applied to a styled <${name}>, which passes its props to its single child. Put \`background-blend-mode\` on a <View> inside the <${name}> instead.`,
+        ],
+      ]);
+      expect(hasWarned(warnKey('native-background-blend-mode-single-child-target', name))).toBe(
+        true
+      );
+      expect(tree.root.findAll(node => node.props.shouldRasterizeIOS === true)).toHaveLength(0);
+    }
+  );
+
+  it('stays silent on a styled TouchableHighlight with no blend mode', () => {
+    const Target = styled(TouchableHighlight)`
+      background-color: red;
+    `;
+
+    TestRenderer.create(
+      <Target onPress={() => {}}>
+        <View />
+      </Target>
+    );
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('stays silent on a styled View with layers, which holds them', () => {
+    const Card = styled(View)`
+      ${blendCss.layers}
+    `;
+
+    TestRenderer.create(<Card />);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('renders a styled View with a blend mode and no image to blend, and keeps its child', () => {
+    const Card = styled(View)`
+      ${blendCss['a blend mode and no image to blend']}
+    `;
+
+    const tree = TestRenderer.create(
+      <Card>
+        <Text testID="label">go</Text>
+      </Card>
+    );
+
+    expect(tree.root.findAllByProps({ testID: 'label' }).length).toBeGreaterThan(0);
   });
 });

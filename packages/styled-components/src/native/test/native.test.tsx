@@ -1,8 +1,22 @@
 import React, { PropsWithChildren } from 'react';
-import { Animated, Image, Pressable, Switch, Text, TextInput, View, ViewProps } from 'react-native';
+import {
+  Animated,
+  Image,
+  Pressable,
+  Switch,
+  Text,
+  TextInput,
+  TouchableHighlight,
+  TouchableNativeFeedback,
+  TouchableWithoutFeedback,
+  View,
+  ViewProps,
+} from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider, css, toStyleSheet } from '../';
 import { resetStyleCache, RN_UNSUPPORTED_VALUES } from '../../models/NativeStyle';
+import hoistNonReactStatics from '../../utils/hoist';
+import { PARENT_SLOT_PROP } from '../ParentContext';
 import { resetWarningsForTest } from '../transform/dev';
 
 // NOTE: These tests are like the ones for Web but a "light-version" of them
@@ -2868,5 +2882,328 @@ describe('tree shape stability', () => {
 
     expect(counter.mounts).toBe(1);
     expect(errorSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('a styled child of a target that clones its only child', () => {
+  // A released TouchableHighlight hides its underlay on a timer; run it inside the test, not after it.
+  beforeEach(() => jest.useFakeTimers());
+
+  afterEach(() => {
+    TestRenderer.act(() => jest.runOnlyPendingTimers());
+    jest.useRealTimers();
+  });
+
+  const touchables = [
+    ['TouchableWithoutFeedback', TouchableWithoutFeedback],
+    ['TouchableHighlight', TouchableHighlight],
+    ['TouchableNativeFeedback', TouchableNativeFeedback],
+  ] as const;
+
+  /**
+   * A touch lands on the deepest ancestor of `leaf` that claims the responder,
+   * the way React Native's touch system picks it. A tree with no claimant takes
+   * no touch: `down` and `up` do nothing.
+   */
+  function touchFrom(leaf: TestRenderer.ReactTestInstance) {
+    let responder = leaf.parent;
+    while (responder !== null && typeof responder.props.onStartShouldSetResponder !== 'function') {
+      responder = responder.parent;
+    }
+    // The responder region is measured on grant, so the target needs a native node's `measure`.
+    const nativeNode = {
+      measure: (done: (...frame: number[]) => void) => done(0, 0, 100, 100, 0, 0),
+    };
+    const event = {
+      currentTarget: nativeNode,
+      nativeEvent: { timestamp: 0, touches: [] },
+      persist: () => {},
+      target: nativeNode,
+    };
+    return {
+      down: () => TestRenderer.act(() => responder?.props.onResponderGrant(event)),
+      up: () => TestRenderer.act(() => responder?.props.onResponderRelease(event)),
+    };
+  }
+
+  function pressFrom(leaf: TestRenderer.ReactTestInstance) {
+    const touch = touchFrom(leaf);
+    touch.down();
+    touch.up();
+  }
+
+  const labelOf = (tree: TestRenderer.ReactTestRenderer) =>
+    tree.root.findByProps({ testID: 'label' });
+
+  it.each(touchables)(
+    'calls the onPress of a styled %s when its single styled child is pressed',
+    (_name, Touchable) => {
+      const onPress = jest.fn();
+      const Target = styled(Touchable as React.ComponentType<any>)``;
+      const Child = styled.View``;
+
+      const tree = TestRenderer.create(
+        <Target onPress={onPress}>
+          <Child>
+            <Text testID="label">go</Text>
+          </Child>
+        </Target>
+      );
+      pressFrom(labelOf(tree));
+
+      expect(onPress).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it.each(touchables)(
+    'calls the onPress of a styled %s when its single plain child is pressed',
+    (_name, Touchable) => {
+      const onPress = jest.fn();
+      const Target = styled(Touchable as React.ComponentType<any>)``;
+
+      const tree = TestRenderer.create(
+        <Target onPress={onPress}>
+          <View>
+            <Text testID="label">go</Text>
+          </View>
+        </Target>
+      );
+      pressFrom(labelOf(tree));
+
+      expect(onPress).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it.each(touchables)(
+    'calls the onPress of an unstyled %s when its single styled child is pressed',
+    (_name, Touchable) => {
+      const onPress = jest.fn();
+      const Child = styled.View``;
+      const Plain = Touchable as React.ComponentType<any>;
+
+      const tree = TestRenderer.create(
+        <Plain onPress={onPress}>
+          <Child>
+            <Text testID="label">go</Text>
+          </Child>
+        </Plain>
+      );
+      pressFrom(labelOf(tree));
+
+      expect(onPress).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it('gives the single styled child of a styled TouchableHighlight the pressed opacity', () => {
+    const Target = styled(TouchableHighlight)``;
+    const Child = styled.View`
+      padding-top: 4px;
+    `;
+    const childStyle = (tree: TestRenderer.ReactTestRenderer) =>
+      mergeStyle(
+        tree.root.find(node => node.type === View && node.props.testID === 'child').props.style
+      );
+
+    const tree = TestRenderer.create(
+      <Target onPress={() => {}}>
+        <Child testID="child">
+          <Text testID="label">go</Text>
+        </Child>
+      </Target>
+    );
+    expect(childStyle(tree)).toEqual({ paddingTop: 4 });
+
+    // Press in and hold: the child carries the touchable's activeOpacity (0.85 by default).
+    const touch = touchFrom(labelOf(tree));
+    touch.down();
+    expect(childStyle(tree)).toEqual({ opacity: 0.85, paddingTop: 4 });
+
+    touch.up();
+  });
+
+  it('lays out the styled child a sticky header clones', () => {
+    // The jest preset mocks ScrollView without sticky headers; the real one wraps each sticky index in ScrollViewStickyHeader.
+    const RealScrollView: React.ComponentType<any> = jest.requireActual(
+      'react-native/Libraries/Components/ScrollView/ScrollView'
+    ).default;
+    const Scroller = styled(RealScrollView)``;
+    const Header = styled.View``;
+    const onLayout = jest.fn();
+    const event = { nativeEvent: { layout: { height: 10, width: 100, x: 0, y: 0 } } };
+
+    const tree = TestRenderer.create(
+      <Scroller stickyHeaderIndices={[0]}>
+        <Header onLayout={onLayout} testID="header" />
+        <View />
+      </Scroller>
+    );
+    // The sticky header is the nearest ancestor of the header whose onLayout is not the header's own.
+    let stickyHeader = tree.root.find(node => node.props.testID === 'header').parent;
+    while (stickyHeader !== null && stickyHeader.props.onLayout === undefined) {
+      stickyHeader = stickyHeader.parent;
+    }
+    TestRenderer.act(() => stickyHeader?.props.onLayout(event));
+
+    expect(onLayout).toHaveBeenCalledTimes(1);
+  });
+
+  describe('sibling position', () => {
+    const Marked = styled.View`
+      color: black;
+      &:first-child {
+        color: red;
+      }
+    `;
+
+    /** The styled-component wrapper a HOC returns: statics hoisted, props forwarded or not. */
+    function hoistedFrom(Inner: typeof Marked, forwardProps: boolean) {
+      const Wrapper = (props: object) => <Inner {...(forwardProps ? props : {})} />;
+      return hoistNonReactStatics(Wrapper, Inner) as unknown as typeof Marked;
+    }
+
+    it('matches :first-child through a HOC that hoists statics and forwards props', () => {
+      const Wrapped = hoistedFrom(Marked, true);
+      const Parent = styled.View``;
+
+      const tree = TestRenderer.create(
+        <Parent>
+          <Wrapped testID="wrapped" />
+        </Parent>
+      );
+      const host = tree.root.find(node => node.type === View && node.props.testID === 'wrapped');
+
+      expect(mergeStyle(host.props.style).color).toBe('red');
+    });
+
+    it('renders through a HOC that hoists statics and drops props', () => {
+      const Wrapped = hoistedFrom(Marked, false);
+      const Parent = styled.View``;
+
+      const tree = TestRenderer.create(
+        <Parent>
+          <Wrapped />
+          <Wrapped />
+        </Parent>
+      );
+
+      expect(tree.root.findAllByType(View)).toHaveLength(3);
+    });
+
+    it('matches :first-child and :only-child on the single styled child of a styled TouchableHighlight', () => {
+      const Target = styled(TouchableHighlight)``;
+      const Child = styled.View`
+        &:first-child {
+          padding-top: 8px;
+        }
+        &:only-child {
+          margin-top: 2px;
+        }
+      `;
+
+      const tree = TestRenderer.create(
+        <Target onPress={() => {}}>
+          <Child testID="child" />
+        </Target>
+      );
+      const host = tree.root.find(node => node.type === View && node.props.testID === 'child');
+
+      expect(mergeStyle(host.props.style)).toEqual({ marginTop: 2, paddingTop: 8 });
+    });
+
+    it('matches `${Card} + &` and :nth-child(2) under a styled target that clones each child', () => {
+      const CloneEach = ({ children }: PropsWithChildren) => (
+        <View>{React.Children.map(children, child => React.cloneElement(child as never))}</View>
+      );
+      const Target = styled(CloneEach)``;
+      const Card = styled.View``;
+      const Next = styled.View`
+        ${Card} + & {
+          color: red;
+        }
+        &:nth-child(2) {
+          margin-top: 2px;
+        }
+      `;
+
+      const tree = TestRenderer.create(
+        <Target>
+          <Card testID="card" />
+          <Next testID="next" />
+        </Target>
+      );
+      const host = (id: string) =>
+        tree.root.find(node => node.type === View && node.props.testID === id);
+
+      expect(mergeStyle(host('card').props.style)).toEqual({});
+      expect(mergeStyle(host('next').props.style)).toEqual({ color: 'red', marginTop: 2 });
+    });
+  });
+
+  describe('the parent slot prop', () => {
+    const received: Array<Record<string, unknown>> = [];
+    const Probe = (props: Record<string, unknown>) => {
+      received.push(props);
+      return <View />;
+    };
+    const Parent = styled.View``;
+
+    beforeEach(() => {
+      received.length = 0;
+    });
+
+    it('never reaches the target of a static styled child', () => {
+      const Child = styled(Probe as React.ComponentType<any>)`
+        padding-top: 4px;
+      `;
+      expect(Child.nativeStyle.staticEligible).toBe(true);
+
+      TestRenderer.create(
+        <Parent>
+          <Child testID="child" />
+        </Parent>
+      );
+
+      expect(received.map(props => PARENT_SLOT_PROP in props)).toEqual([false]);
+      expect(received[0].testID).toBe('child');
+    });
+
+    it('never reaches attrs, an interpolation, shouldForwardProp or the target of a dynamic styled child', () => {
+      const attrsProps: Array<Record<string, unknown>> = [];
+      const interpolationProps: Array<Record<string, unknown>> = [];
+      const forwarded: string[] = [];
+      const Child = styled(Probe as React.ComponentType<any>)
+        .withConfig({
+          shouldForwardProp: prop => {
+            forwarded.push(prop);
+            return true;
+          },
+        })
+        .attrs((props: Record<string, unknown>) => {
+          attrsProps.push(props);
+          return {};
+        })`
+        color: ${(props: Record<string, unknown>) => {
+          interpolationProps.push(props);
+          return 'blue';
+        }};
+        &:first-child {
+          color: red;
+        }
+      `;
+      expect(Child.nativeStyle.staticEligible).toBe(false);
+
+      TestRenderer.create(
+        <Parent>
+          <Child testID="child" />
+        </Parent>
+      );
+
+      expect(attrsProps.map(props => PARENT_SLOT_PROP in props)).toEqual([false]);
+      expect(interpolationProps.map(props => PARENT_SLOT_PROP in props)).toEqual([false]);
+      expect(forwarded).not.toContain(PARENT_SLOT_PROP);
+      expect(received.map(props => PARENT_SLOT_PROP in props)).toEqual([false]);
+      // The position it carried was still read.
+      expect(mergeStyle(received[0].style).color).toBe('red');
+    });
   });
 });

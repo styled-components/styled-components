@@ -1,8 +1,8 @@
-import React, { createElement } from 'react';
+import React from 'react';
 import type { Dict, NativeTarget } from '../types';
 import {
   EMPTY_SIBLINGS,
-  ParentContext,
+  PARENT_SLOT_PROP,
   type ParentContextValue,
   type SiblingInfo,
   type SiblingsList,
@@ -209,11 +209,11 @@ function tallyChildren(node: React.ReactNode, tally: ChildTally): void {
 }
 
 /**
- * Rebuild `node` with each styled element wrapped in its own Provider, copying
- * an array or Fragment only when something inside changed. `slot` is the raw
- * position among the siblings (null and false slots keep theirs), and keys a
- * wrapped element that has no key of its own, so a slot keeps its fiber when
- * the siblings around it come and go.
+ * Rebuild `node` with each styled element carrying its own position in
+ * {@link PARENT_SLOT_PROP}, copying an array or Fragment only when something
+ * inside changed. `slot` is the raw position among the siblings (null and false
+ * slots keep theirs), and keys a rebuilt element that has no key of its own, so a
+ * slot keeps its fiber when the siblings around it come and go.
  */
 function reindexChildren(node: React.ReactNode, slot: number, run: IndexRun): React.ReactNode {
   if (Array.isArray(node)) {
@@ -320,17 +320,16 @@ function reindexElement(element: React.ReactElement, slot: number, run: IndexRun
   run.prevTarget = target;
   if (target !== null) seenByType.set(target, idxOfType + 1);
 
-  return createElement(
-    ParentContext.Provider,
-    { value: perChildValue, key: element.key ?? `__sc_sib_${slot}` },
-    element
-  );
+  const config: Dict<unknown> = { [PARENT_SLOT_PROP]: perChildValue };
+  if (element.key === null) config.key = `__sc_sib_${slot}`;
+
+  return React.cloneElement(element, config);
 }
 
 /**
  * Walk `children`, identifying styled descendants (those carrying a
- * `styledComponentId` static) and wrapping each one in a per-child
- * `ParentContext.Provider` that publishes its sibling position.
+ * `styledComponentId` static) and handing each one its sibling position in
+ * {@link PARENT_SLOT_PROP}.
  * Plain elements, text, and everything else pass through in place, so
  * their position and fiber never depend on whether a styled sibling exists.
  *
@@ -344,13 +343,12 @@ function reindexElement(element: React.ReactElement, slot: number, run: IndexRun
  * wrapper between them means a deeper styled descendant sees no sibling
  * info (its inherited Provider holds the default values).
  *
- * Each per-child Provider's `value` is cached structurally by position:
- * when the next render produces the same (id, target, total, prev*,
- * idx-of-type, total-of-type, parentValue ref) at index i, the same
- * `ParentContextValue` reference is reused. JSX re-creation in the
- * caller produces fresh React elements each render, but the per-child
- * Provider `value` stays reference-stable, which lets `React.memo` on
- * styled descendants short-circuit cleanly.
+ * Each per-child value is cached structurally by position: when the next
+ * render produces the same (id, target, total, prev*, idx-of-type,
+ * total-of-type, parentValue ref) at index i, the same `ParentContextValue`
+ * reference is reused. JSX re-creation in the caller produces fresh React
+ * elements each render, but the prop's value stays reference-stable, which
+ * lets `React.memo` on styled descendants short-circuit cleanly.
  */
 export function indexStyledChildren(
   cache: ParentPublishCache,

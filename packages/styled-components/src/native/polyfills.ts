@@ -348,7 +348,7 @@ function flatten(style: unknown, out: Record<string, unknown>): void {
  * the first hit. The hot path for components without
  * `backgroundBlendMode` pays roughly one property-existence check.
  */
-function hasBackgroundBlendMode(style: unknown): boolean {
+export function hasBackgroundBlendMode(style: unknown): boolean {
   if (style === null || style === undefined || typeof style === 'function') {
     return false;
   }

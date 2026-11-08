@@ -129,6 +129,20 @@ export { EMPTY_SIBLINGS };
 
 export const ParentContext = React.createContext<ParentContextValue>(DEFAULT_PARENT_CONTEXT);
 
+/**
+ * The prop a styled parent sets on each styled child to hand it that child's own
+ * sibling position. A prop travels with the element through a target that clones
+ * its only child (`TouchableHighlight`, `ScrollViewStickyHeader`, an `asChild`
+ * slot), which a wrapping Provider would not. A styled component removes it before
+ * any user code or host sees its props.
+ */
+export const PARENT_SLOT_PROP = '__sc_parent_slot';
+
+/**
+ * The nearest published parent value: the enclosing styled component's identity
+ * and ancestor chain. Inside a styled component's own styles that is its
+ * parent's published value, not the component's position among its siblings.
+ */
 export function useParentContext(): ParentContextValue {
   return React.useContext(ParentContext);
 }
