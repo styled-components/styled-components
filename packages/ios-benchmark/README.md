@@ -46,7 +46,7 @@ The driver spins up an HTTP receiver on `127.0.0.1:9999`, terminates and relaunc
 # pretty-print the latest results JSON
 node scripts/format-report.mjs
 
-# print the top self-time frames of a profile
+# print the top functions of a profile by self time, with total time beside each (Hermes trace-event JSON or Chrome .cpuprofile, detected from the contents)
 node scripts/analyze-profile.mjs .bench-results/profiles/<name>.cpuprofile --top 12
 ```
 
