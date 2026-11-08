@@ -948,7 +948,7 @@ const STATELESS_STYLE_TARGETS = new Set([
  * RN components that clone their single child to attach handlers, style and a
  * ref, so they cannot hold the extra children `background-blend-mode` layers add.
  */
-export const SINGLE_CHILD_CLONING_TARGETS = new Set([
+const SINGLE_CHILD_CLONING_TARGETS = new Set([
   'TouchableHighlight',
   'TouchableNativeFeedback',
   'TouchableWithoutFeedback',

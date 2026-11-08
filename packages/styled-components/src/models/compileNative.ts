@@ -1738,8 +1738,8 @@ function applyRuleClass(
 }
 
 /**
- * `:nth-child` family bucket. The match runs against ParentContext's
- * sibling-position fields published by the parent's per-child Provider.
+ * `:nth-child` family bucket. The match runs against the sibling-position
+ * fields the parent hands each styled child in its parent slot prop.
  * Top-level only (the outer-at-rule + nthChild compound is rejected by
  * the same direct-children scoping as combinators).
  */

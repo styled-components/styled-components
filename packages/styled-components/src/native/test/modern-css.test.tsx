@@ -2769,10 +2769,9 @@ s] { color: white; }`,
     });
 
     // Regression: cascade-publishing parent (font-size / line-height /
-    // direction) wraps its host in a NativeStyleContext.Provider before
-    // the ParentContext.Provider. The per-child sibling indexing must
-    // attach to the user's JSX children, not the cascade-wrap's only
-    // child. Same constraint holds for container-type and 3D isolation.
+    // direction) wraps its host in a NativeStyleContext.Provider. The
+    // per-child sibling indexing must attach to the user's JSX children,
+    // not the cascade-wrap's only child. Same constraint holds for container-type and 3D isolation.
     it(':nth-child fires under a cascade-publishing parent', () => {
       const Parent = styled.View.withConfig({ displayName: 'CascadeNthParent' })`
         font-size: 18px;
