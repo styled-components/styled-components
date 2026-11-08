@@ -630,7 +630,7 @@ interface CompileOutput {
   gridSpan?: number;
   /** Set when `background-blend-mode` appears in the base or any conditional bucket; the render path then keeps the children behind a stable layer slot. */
   blendLayerSlot?: true;
-  /** `true` when this compile output could publish a cascade value (font-size / line-height / direction) to descendants. */
+  /** `true` when font-size, line-height or direction is declared in the base, a bucket, an `!important` layer or a `var()`; keyframes, transitions and `@starting-style` do not count. */
   publishesCascade: boolean;
   /** Authored width/height with no authored flex factor; scrollable targets pin `flexGrow: 0` at render so the declared size holds. */
   scrollerFlexPin?: true;

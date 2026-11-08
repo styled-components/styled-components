@@ -7,6 +7,7 @@ import {
   type SiblingInfo,
   type SiblingsList,
 } from './ParentContext';
+import type { CascadeHolder } from './publishCascade';
 
 /**
  * Compute the {@link ParentContextValue} this component publishes to
@@ -87,7 +88,7 @@ interface PerChildCacheEntry {
   perChildValue: ParentContextValue;
 }
 
-export interface ParentPublishCache {
+export interface ParentPublishCache extends CascadeHolder {
   /**
    * Latched once the component rendered, or could render, `background-blend-mode`
    * layers: its children then always sit behind a layer slot, so a layer
@@ -100,16 +101,20 @@ export interface ParentPublishCache {
   perChild: Array<PerChildCacheEntry | null>;
   /** Stable SiblingsList wrapper; `entries` is mutated each render. */
   siblingsList: SiblingsList | null;
+  /** The `Pressable` state wrap's own slot holder, so its rest and pressed values never replace the body's cached ones. */
+  stateHolder: CascadeHolder | null;
 }
 
 export function createParentPublishCache(): ParentPublishCache {
   return {
     blendLayerSlot: false,
+    cascadeSlot: null,
     publishedKeyParentCtx: null,
     publishedKeyElementType: null,
     publishedValue: null,
     perChild: [],
     siblingsList: null,
+    stateHolder: null,
   };
 }
 

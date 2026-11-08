@@ -4,21 +4,23 @@
  * Carries the tree-pushed state v7's resolver needs in one provider:
  *
  *   - `container`: nearest + named CSS Container Query ancestors.
- *     Published by `ContainerPublisher` when a component declares
- *     `container-type`.
+ *     Added by a component that declares `container-type`.
  *   - `cascade`: the per-tree-position style values downstream
  *     resolvers need to interpret cascade-dependent units and
  *     keywords (`em`, `lh`, `rlh`, `text-align: start | end`).
+ *
+ * Every styled component (outside server components) renders a provider
+ * carrying its own value. A component that sets neither field passes the
+ * value it read, so its consumers do not re-render.
  *
  * Why one consolidated context (rather than one per concern):
  *   - All fields update from in-tree Providers, not external
  *     subscriptions (those flow via `useMediaEnv`'s
  *     useSyncExternalStore).
- *   - The consumer set is the same every render (useDynamicImpl
- *     reads both fields). Splitting wouldn't reduce re-renders.
- *   - One stable object reference per render keeps context consumers
- *     from re-rendering and lets the merged-cascade cache short-circuit
- *     cleanly when neither field changed.
+ *   - Every consumer reads both fields. Splitting wouldn't reduce
+ *     re-renders.
+ *   - One stable object reference per distinct pair of field values keeps
+ *     context consumers from re-rendering when neither field changed.
  *
  * Theme stays in `ThemeContext` (`models/ThemeProvider`): it's the
  * public ergonomic surface (`<ThemeProvider theme={…}>`) and the
@@ -109,6 +111,11 @@ export const DEFAULT_NATIVE_STYLE: NativeStyleContextValue = {
 export const NativeStyleContext =
   React.createContext<NativeStyleContextValue>(DEFAULT_NATIVE_STYLE);
 
+/**
+ * The nearest styled ancestor's container entries and cascade values at its
+ * current state (its press state, for a `Pressable`). The returned object is
+ * the same until one of those values changes.
+ */
 export function useNativeStyleContext(): NativeStyleContextValue {
   return React.useContext(NativeStyleContext);
 }

@@ -601,6 +601,48 @@ describe('toNativeStyles', () => {
     });
   });
 
+  // CSS Cascade 5, "The cascaded value represents the result of the cascade: it is the
+  // declared value that wins the cascade (is sorted first in the output of the cascade)."
+  // A declaration of font-size, line-height or direction can win from any layer the
+  // compiler keeps (base, bucket, `!important`, `var()` deferral, resolver), so each of them
+  // must turn the render path's cascade walk on. A declaration only an animation reads
+  // (keyframes, a transition list, `@starting-style`) never wins the cascade, so it does not.
+  describe('declared-key scan', () => {
+    test.each([
+      ['font-size', 'font-size: 20px;'],
+      ['line-height', 'line-height: 20px;'],
+      ['direction', 'direction: rtl;'],
+      ['the font shorthand', 'font: 12px/16px serif;'],
+      ['a resolver font-size', 'font-size: 2rem;'],
+      ['an @media bucket', '@media (min-width: 1px) { font-size: 20px; }'],
+      ['a pseudo-state bucket', '&:active { font-size: 20px; }'],
+      ['an !important font-size', 'font-size: 20px !important;'],
+      [
+        'an !important font-size inside @media',
+        '@media (min-width: 1px) { font-size: 20px !important; }',
+      ],
+      ['an !important resolver font-size', 'font-size: 2rem !important;'],
+      ['var() on font-size', 'font-size: var(--s);'],
+      ['var() on line-height', 'line-height: var(--l);'],
+      ['var() on direction', 'direction: var(--d);'],
+      ['var() on the font shorthand', 'font: var(--f);'],
+      ['var() inside @media', '@media (min-width: 1px) { font-size: var(--s); }'],
+    ])('publishesCascade is true for %s', (_name, css) => {
+      expect(compile(css).publishesCascade).toBe(true);
+    });
+
+    test.each([
+      ['keyframes alone', '@keyframes grow { from { font-size: 10px; } to { font-size: 20px; } }'],
+      ['@starting-style alone', '@starting-style { font-size: 20px; }'],
+      ['a font-size transition alone', 'transition: font-size 1s;'],
+      ['a custom property named like the key', '--font-size: 20px;'],
+      ['var() on an unrelated property', 'color: var(--x);'],
+      ['no declarations', 'color: red;'],
+    ])('publishesCascade is false for %s', (_name, css) => {
+      expect(compile(css).publishesCascade).toBe(false);
+    });
+  });
+
   describe('rawCSS parse hardening (interpolation-sentinel gate)', () => {
     // `toNativeStyles(rawCSS)` is the static-input parse path; it's reachable
     // from the `NativeStyle.compile` fallback after a fast-path bail, where

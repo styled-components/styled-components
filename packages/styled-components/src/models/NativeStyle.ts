@@ -20,7 +20,6 @@ import { substituteThemeText } from '../native/transform/polyfills/resolvers';
 import {
   toNativeStyles,
   astToNativeStyles,
-  hasCascadeKey,
   hasResponsiveOutput,
   NativeStyles,
   resetNativeStyleCache,
@@ -87,10 +86,11 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
           ? this.compile({} as ExecutionContext & Props)
           : toNativeStyles(this.staticCSS, styleSheet);
         this.staticCompiled = compiled;
-        // Static rendering is hookless, so cascade publishers and live outputs
-        // must stay on the dynamic path. Custom property declarations and
-        // var() references publish / consume cascade values, so they also
-        // disqualify a component from the hookless static fast path.
+        // Static rendering is hookless, so live outputs must stay on the dynamic
+        // path. Custom property declarations and var() references publish /
+        // consume cascade values, so they also disqualify a component from the
+        // hookless static fast path. A font-size, line-height or direction
+        // declaration does not: the static path publishes its own.
         this.staticEligible =
           !hasResponsiveOutput(compiled) &&
           compiled.startingStyle === undefined &&
@@ -107,8 +107,7 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
           // Grid containers publish a measured cascade entry and grid
           // items read it; both require the dynamic path's hooks.
           compiled.gridInfo === undefined &&
-          compiled.gridSpan === undefined &&
-          !hasCascadeKey(compiled.base);
+          compiled.gridSpan === undefined;
       }
     }
 

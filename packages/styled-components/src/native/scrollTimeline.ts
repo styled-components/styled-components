@@ -9,6 +9,7 @@ import type {
 } from './animation/types';
 import { resolveRangeBoundary, type NamedRangeRect } from './animation/range';
 import { useComposedRef, type ElementProps } from './composeRef';
+import { NativeStyleContext, type NativeStyleContextValue } from './NativeStyleContext';
 import { warnOnce } from './transform/dev';
 import { getRN } from './responsive';
 import { isDebugEnabled } from './animation/debug';
@@ -1046,8 +1047,14 @@ export interface StickyPosition {
   layer: { opacity: AnimatedInterpolationNode } | null;
   /** Publish the layout-pinned twin of the final rendered element into
    *  the scroller's overlay. `style` is the element's resolved style
-   *  WITHOUT the in-flow fade layer. */
-  register: (type: NativeTarget, props: Dict<unknown>, style: unknown) => void;
+   *  WITHOUT the in-flow fade layer; `value` is the context value the
+   *  element publishes to its own descendants. */
+  register: (
+    type: NativeTarget,
+    props: Dict<unknown>,
+    style: unknown,
+    value: NativeStyleContextValue
+  ) => void;
 }
 
 function noopRegister(): void {}
@@ -1202,29 +1209,38 @@ export function useStickyPosition(active: boolean): StickyPosition {
     return out;
   };
 
-  const register = (type: NativeTarget, props: Dict<unknown>, style: unknown): void => {
+  const register = (
+    type: NativeTarget,
+    props: Dict<unknown>,
+    style: unknown,
+    value: NativeStyleContextValue
+  ): void => {
     if (entry === null || layout === null || fades === null) {
       cloneRef.current = null;
       return;
     }
     const { onLayout: _onLayout, ref: _ref, style: _style, ...rest } = props;
-    cloneRef.current = React.createElement(type, {
-      ...rest,
-      accessibilityElementsHidden: !stuck,
-      importantForAccessibility: stuck ? 'auto' : 'no-hide-descendants',
-      key: 'sc-sticky-' + idRef.current,
-      pointerEvents: stuck ? 'auto' : 'none',
-      style: [
-        style,
-        {
-          left: layout.x,
-          opacity: fades.cloneOpacity,
-          position: 'absolute',
-          top: 0,
-          width: layout.width,
-        },
-      ],
-    });
+    // The overlay host sits outside the element's subtree, so the twin carries the element's own context value to its descendants.
+    cloneRef.current = React.createElement(
+      NativeStyleContext.Provider,
+      { key: 'sc-sticky-' + idRef.current, value },
+      React.createElement(type, {
+        ...rest,
+        accessibilityElementsHidden: !stuck,
+        importantForAccessibility: stuck ? 'auto' : 'no-hide-descendants',
+        pointerEvents: stuck ? 'auto' : 'none',
+        style: [
+          style,
+          {
+            left: layout.x,
+            opacity: fades.cloneOpacity,
+            position: 'absolute',
+            top: 0,
+            width: layout.width,
+          },
+        ],
+      })
+    );
   };
 
   return { compose, layer, register };

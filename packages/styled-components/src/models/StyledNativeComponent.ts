@@ -38,6 +38,13 @@ import {
   hasBackgroundBlendMode,
   withoutBackgroundBlendMode,
 } from '../native/polyfills';
+import {
+  contextValueFor,
+  PRESSABLE_TARGET,
+  publishCascade,
+  REST_STATE,
+  withStateCascade,
+} from '../native/publishCascade';
 import { useSnapSettle } from '../native/snapSettle';
 import { matchSupports } from '../native/supports';
 import {
@@ -379,60 +386,6 @@ function buildResolveEnv(
   return out;
 }
 
-/**
- * Derive the cascade values to publish to descendants from the
- * resolved style. Returns the original `inherited` reference when no
- * cascade-relevant property fires (the caller skips the Provider
- * wrap), otherwise a fresh merged cascade.
- *
- * The cheap short-circuit (`!compiled.publishesCascade && no user
- * style`) lives at the call site, not here: this function stays
- * monomorphic on (inherited, resolvedStyle) so V8's IC and inliner
- * see the same signature the pre-stamp form had. Adding a third
- * boolean arg to gate the walk inside the function regressed the
- * must-walk path by ~25%, traced to IC polymorphism on the boolean.
- *
- * Single right-to-left walk over array layers (matches RN's array-style
- * merge semantics; last write wins). Each layer captures all three
- * fields at once. The common case is a flat object with no cascade-
- * relevant property, which returns after one object visit.
- */
-function computePublishedCascade(
-  inherited: NativeCascadeValues,
-  resolvedStyle: unknown
-): NativeCascadeValues {
-  // Per-call allocation. A module-level scratch tuple measured the same on
-  // V8 (escape analysis) and only marginal on Hermes, not worth the
-  // single-threaded-JS invariant it would lock in against any future
-  // parallel-render API.
-  const slots: [unknown, unknown, unknown] = [undefined, undefined, undefined];
-  collectCascadeSlots(resolvedStyle, slots);
-  const [fs, lh, dir] = slots;
-  if (fs === undefined && lh === undefined && dir === undefined) return inherited;
-  const fontSize = typeof fs === 'number' ? fs : inherited.fontSize;
-  const lineHeight = typeof lh === 'number' ? lh : inherited.lineHeight;
-  const direction: 'ltr' | 'rtl' = dir === 'rtl' || dir === 'ltr' ? dir : inherited.direction;
-  if (
-    fontSize === inherited.fontSize &&
-    lineHeight === inherited.lineHeight &&
-    direction === inherited.direction
-  ) {
-    return inherited;
-  }
-  const next: NativeCascadeValues = {
-    fontSize,
-    lineHeight,
-    rootFontSize: inherited.rootFontSize,
-    direction,
-  };
-  if (inherited.customProperties !== undefined) next.customProperties = inherited.customProperties;
-  // Grid items size against the nearest grid container's published entry;
-  // carry it through any cascade rebuild so a child that also changes
-  // font-size / direction still sees its grid owner.
-  if (inherited.grid !== undefined) next.grid = inherited.grid;
-  return next;
-}
-
 type MergedCascadeCache = {
   inherited: NativeCascadeValues;
   own: ReadonlyMap<string, string> | undefined;
@@ -485,21 +438,6 @@ function mergeCustomPropertiesIntoCascade(
   };
   if (inherited.grid !== undefined) next.grid = inherited.grid;
   return next;
-}
-
-function collectCascadeSlots(style: unknown, slots: [unknown, unknown, unknown]): boolean {
-  if (style === null || style === undefined) return false;
-  if (Array.isArray(style)) {
-    for (let i = style.length - 1; i >= 0; i--) {
-      if (collectCascadeSlots(style[i], slots)) return true;
-    }
-    return false;
-  }
-  if (typeof style !== 'object') return false;
-  if (slots[0] === undefined && 'fontSize' in style) slots[0] = style.fontSize;
-  if (slots[1] === undefined && 'lineHeight' in style) slots[1] = style.lineHeight;
-  if (slots[2] === undefined && 'direction' in style) slots[2] = style.direction;
-  return slots[0] !== undefined && slots[1] !== undefined && slots[2] !== undefined;
 }
 
 // Mutable scratch env reused across container-query evaluations.
@@ -954,10 +892,32 @@ const SINGLE_CHILD_CLONING_TARGETS = new Set([
   'TouchableWithoutFeedback',
 ]);
 
-/** Leaf target name when it cannot receive a function style; null otherwise. */
-function inertStateStyleTargetName(target: unknown): string | null {
-  const name = leafName(resolveLeafTarget(target));
-  return name !== undefined && STATELESS_STYLE_TARGETS.has(name) ? name : null;
+/** True when the leaf target drops a function style. */
+function dropsFunctionStyle(leaf: string | undefined): leaf is string {
+  return leaf !== undefined && STATELESS_STYLE_TARGETS.has(leaf);
+}
+
+/**
+ * The style whose layers a component publishes a cascade from, or null when it
+ * publishes its parent's. A `Pressable` publishes from its state wrap, so a
+ * function style gives null here; a host that drops a function style gives null
+ * because it never renders one; a custom component's function style is read at
+ * rest.
+ */
+function cascadeWalkStyle(
+  gate: boolean,
+  composedStyle: unknown,
+  leaf: string | undefined
+): unknown {
+  if (!gate) return null;
+  if (!isFunction(composedStyle)) return composedStyle;
+  if (leaf === PRESSABLE_TARGET || dropsFunctionStyle(leaf)) return null;
+  return composedStyle(REST_STATE);
+}
+
+/** The function style a `Pressable` evaluates per press state when it can publish from one; null otherwise. */
+function pressableStateStyle(gate: boolean, composedStyle: unknown, leaf: string | undefined) {
+  return gate && leaf === PRESSABLE_TARGET && isFunction(composedStyle) ? composedStyle : null;
 }
 
 const PSEUDO_TO_SELECTOR: Record<PseudoState, string> = {
@@ -1161,11 +1121,11 @@ function StaticContainerPublisherDispatch({
 }: StaticContainerPublisherDispatchProps): React.ReactElement {
   const parent = React.useContext(NativeStyleContext);
   return createElement(ContainerPublisher, {
+    cascade: parent.cascade,
+    elementProps,
+    elementType,
     name,
     parent,
-    cascadeOverride: null,
-    elementType,
-    elementProps,
   } as ContainerPublisherProps);
 }
 
@@ -1199,6 +1159,7 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
     );
     return createFastElement(elementToBeCreated, applyStylePolyfills(elementProps), containerName);
   }
+  const leaf = leafName(resolveLeafTarget(elementToBeCreated));
   // A static-eligible component can still be a grid item: an empty or
   // purely-static child placed inside a `display: grid` container. The
   // parent decides this at runtime, so the static path reads the cascade
@@ -1227,10 +1188,8 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   );
   const publishCacheRef = React.useRef<ParentPublishCache | null>(null);
   if (publishCacheRef.current === null) publishCacheRef.current = createParentPublishCache();
-  // Index sibling positions BEFORE running polyfills + createFastElement
-  // so each position lands on user JSX even when a container wrap is in the
-  // way (createFastElement would otherwise hand the host construction to
-  // StaticContainerPublisherDispatch, hiding the children).
+  // Index sibling positions BEFORE running the polyfills and wrapping the host,
+  // so each position lands on user JSX.
   const publishedValue = buildPublishedParentValue(
     publishCacheRef.current,
     parentCtx,
@@ -1248,7 +1207,6 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   // Static-eligible scroll containers still publish their timeline so
   // descendants' `animation-timeline: scroll()` resolves, and lift
   // sticky children onto stickyHeaderIndices.
-  const leaf = leafName(resolveLeafTarget(elementToBeCreated));
   const isScroller = isScrollableTargetName(leaf);
   const [scrollProps, wrapScrollTimeline, timelineEntry] = useScrollTimelinePublisher(
     isScroller || compiled.scrollTimeline !== undefined,
@@ -1263,14 +1221,38 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
     scrollProps
   );
   // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the IS_RSC-gated static render path
-  const inner = wrapScrollTimeline(
-    createFastElement(
-      elementToBeCreated,
-      applyPolyfillsWithLayerSlot(publishCacheRef.current, compiled, effectiveProps, leaf),
-      containerName
-    )
-  );
-  return createElement(ParentContext.Provider, { value: publishedValue }, inner);
+  const publishCache = publishCacheRef.current;
+  const publishGate = compiled.publishesCascade || props.style != null;
+  const walkStyle = cascadeWalkStyle(publishGate, composedStyle, leaf);
+  const published =
+    walkStyle === null
+      ? nativeStyleCtx.cascade
+      : publishCascade(publishCache, nativeStyleCtx.cascade, walkStyle);
+  const layeredProps = applyPolyfillsWithLayerSlot(publishCache, compiled, effectiveProps, leaf);
+  const polyfilledProps =
+    leaf === PRESSABLE_TARGET
+      ? withStateCascade(
+          layeredProps,
+          publishCache.stateHolder ?? (publishCache.stateHolder = { cascadeSlot: null }),
+          pressableStateStyle(publishGate, composedStyle, leaf)
+        )
+      : layeredProps;
+  const host =
+    containerName === undefined
+      ? createElement(
+          NativeStyleContext.Provider,
+          { value: contextValueFor(publishCache, nativeStyleCtx, published) },
+          createElement(elementToBeCreated, polyfilledProps)
+        )
+      : createElement(ContainerPublisher, {
+          cascade: published,
+          elementProps: polyfilledProps,
+          elementType: elementToBeCreated,
+          name: containerName,
+          parent: nativeStyleCtx,
+        } as ContainerPublisherProps);
+
+  return createElement(ParentContext.Provider, { value: publishedValue }, wrapScrollTimeline(host));
 }
 
 /**
@@ -1406,6 +1388,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // resolveContext spreads props before applying attrs, so context.as already
   // covers props.as; no separate fallback needed.
   const elementToBeCreated: NativeTarget = (context.as as NativeTarget | undefined) || target;
+  const leaf = leafName(resolveLeafTarget(elementToBeCreated));
 
   // Post-compile attrs phase: clone `compiled.base` (canonical, must stay
   // intact for reuse by later renders sharing this compiled output) and run
@@ -1539,7 +1522,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
           renderCascade,
           parentCtx,
           varImportant,
-          compiled.hasPseudo ? inertStateStyleTargetName(elementToBeCreated) : null,
+          compiled.hasPseudo && dropsFunctionStyle(leaf) ? leaf : null,
           safeAreaInsets
         )
       : composeBase(effectiveBase, context.style);
@@ -1612,7 +1595,6 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     forwardedRef,
     forwardedComponent
   );
-  const leaf = leafName(resolveLeafTarget(elementToBeCreated));
   const elementProps = applyPolyfillsWithLayerSlot(
     publishCache,
     compiled,
@@ -1640,16 +1622,13 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     compiled.containerInfo,
     forwardedComponent.styledComponentId
   );
-  // Skip the walk entirely when the compile-time scan said no cascade
-  // key is published AND no user style prop supplied one. The gate
-  // stays at the call site to keep computePublishedCascade monomorphic
-  // on its two-arg signature; a boolean third arg regressed the
-  // must-walk path by ~25% in a prior version.
-  const publishedCascade =
-    compiled.publishesCascade || context.style != null
-      ? computePublishedCascade(renderCascade, composedStyle)
-      : renderCascade;
-  const cascadeChanged = publishedCascade !== nativeStyleCtx.cascade;
+  // Skip the walk when the compile-time scan found no cascade key and no
+  // `style` (the caller's or attrs') could supply one.
+  const publishGate = compiled.publishesCascade || context.style != null;
+  const walkStyle = cascadeWalkStyle(publishGate, composedStyle, leaf);
+  const published =
+    walkStyle === null ? renderCascade : publishCascade(publishCache, renderCascade, walkStyle);
+  const ownValue = contextValueFor(publishCache, nativeStyleCtx, published);
 
   let effectiveProps = elementProps;
 
@@ -1677,7 +1656,15 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   );
   effectiveProps = withViewSubjectLayout(effectiveProps);
   effectiveProps = sticky.compose(effectiveProps);
-  sticky.register(renderType, effectiveProps, stickyTwinStyle);
+  // After every props-composing hook, so none sees the wrapped children.
+  if (!IS_RSC && leaf === PRESSABLE_TARGET) {
+    effectiveProps = withStateCascade(
+      effectiveProps,
+      publishCache.stateHolder ?? (publishCache.stateHolder = { cascadeSlot: null }),
+      pressableStateStyle(publishGate, composedStyle, leaf)
+    );
+  }
+  sticky.register(renderType, effectiveProps, stickyTwinStyle, ownValue);
 
   let inner: React.ReactElement;
   if (compiled.gridInfo !== undefined) {
@@ -1687,36 +1674,32 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     // `rowGap` / `columnGap`).
     const gutters = readGridGutters(composedStyle);
     inner = createElement(GridPublisher, {
-      ownerId: forwardedComponent.styledComponentId,
-      columns: compiled.gridInfo.columns,
+      cascade: published,
       columnGap: gutters.columnGap,
-      rowGap: gutters.rowGap,
+      columns: compiled.gridInfo.columns,
       containerName,
-      parent: nativeStyleCtx,
-      cascadeOverride: cascadeChanged ? publishedCascade : null,
-      elementType: renderType,
       elementProps: effectiveProps,
+      elementType: renderType,
+      ownerId: forwardedComponent.styledComponentId,
+      parent: nativeStyleCtx,
+      rowGap: gutters.rowGap,
     } as GridPublisherProps);
   } else if (containerName !== undefined) {
     inner = createElement(ContainerPublisher, {
+      cascade: published,
+      elementProps: effectiveProps,
+      elementType: renderType,
       name: containerName,
       parent: nativeStyleCtx,
-      cascadeOverride: cascadeChanged ? publishedCascade : null,
-      elementType: renderType,
-      elementProps: effectiveProps,
     } as ContainerPublisherProps);
   } else {
     inner = createElement(renderType, effectiveProps);
     if (animOut.isolate3d) {
       inner = createElement(get3dIsolationView(), { collapsable: false }, inner);
     }
-    if (cascadeChanged) {
-      inner = createElement(
-        NativeStyleContext.Provider,
-        { value: { container: nativeStyleCtx.container, cascade: publishedCascade } },
-        inner
-      );
-    }
+    // An idle Provider passes the parent's own value, so consumers never re-render for it
+    // and the tree keeps its shape when a published value appears or leaves.
+    if (!IS_RSC) inner = createElement(NativeStyleContext.Provider, { value: ownValue }, inner);
   }
 
   inner = wrapScrollTimeline(inner);
@@ -1806,17 +1789,17 @@ function useScrollerSnapProps(
 type LayoutEvent = { nativeEvent: { layout: { width: number; height: number } } };
 
 interface ContainerPublisherProps {
-  name: string;
-  /** Inherited NativeStyle from the nearest ancestor publisher; the
-   *  cascade fields carry through unchanged and only `container.named`
-   *  / `container.nearest` get rewritten with this publisher's entry. */
-  parent: NativeStyleContextValue;
-  /** Cascade values to publish if this component overrides any of
-   *  font-size / line-height / direction. `null` when the inherited
-   *  cascade should flow through. */
-  cascadeOverride: NativeCascadeValues | null;
-  elementType: NativeTarget;
+  /** The cascade this component publishes: `parent.cascade` when it sets no
+   *  font-size / line-height / direction of its own. Identity-stable across
+   *  renders with equal values, so the published value is too. */
+  cascade: NativeCascadeValues;
   elementProps: Dict<unknown>;
+  elementType: NativeTarget;
+  name: string;
+  /** Inherited NativeStyle from the nearest ancestor publisher; only
+   *  `container.named` / `container.nearest` get rewritten with this
+   *  publisher's entry. */
+  parent: NativeStyleContextValue;
 }
 
 /**
@@ -1918,11 +1901,11 @@ function numOrZero(v: unknown): number {
  * extra hook slots only fire when the feature is actually used.
  */
 function ContainerPublisher({
+  cascade,
+  elementProps,
+  elementType,
   name,
   parent,
-  cascadeOverride,
-  elementType,
-  elementProps,
 }: ContainerPublisherProps): React.ReactElement {
   const [entry, setEntry] = React.useState<ContainerEntry | null>(null);
   const lastRef = React.useRef<ContainerEntry | null>(null);
@@ -1977,12 +1960,8 @@ function ContainerPublisher({
       const named = Object.freeze({ ...parentContainer.named, [name]: entry });
       container = { nearest: entry, named };
     }
-    // Cascade fields pass through unchanged except when this
-    // component declares a cascade-significant override
-    // (font-size / line-height / direction); useDynamicImpl computes
-    // the override and forwards it via `cascadeOverride`.
-    return { container, cascade: cascadeOverride ?? parent.cascade };
-  }, [entry, name, parent, cascadeOverride]);
+    return { container, cascade };
+  }, [entry, name, parent, cascade]);
 
   const existingOnLayout = elementProps.onLayout;
   const composedOnLayout = React.useMemo(
@@ -2008,22 +1987,22 @@ function ContainerPublisher({
 }
 
 interface GridPublisherProps {
-  ownerId: string;
-  columns: number;
+  /** The cascade this component publishes (`parent.cascade` when it sets no
+   *  font-size / line-height / direction of its own), with this publisher's
+   *  grid entry added. Identity-stable across renders with equal values. */
+  cascade: NativeCascadeValues;
   columnGap: number;
-  rowGap: number;
+  columns: number;
   /** Set when the grid container also declares `container-type`: the
    *  element is a query container regardless of display type, so the
    *  grid role must publish the container box too instead of eating it. */
   containerName: string | undefined;
-  /** Inherited NativeStyle; container + cascade pass through, with this
-   *  publisher's grid entry added to the cascade. */
-  parent: NativeStyleContextValue;
-  /** Cascade override when the grid container also changes a cascade
-   *  key (font-size / line-height / direction); `null` otherwise. */
-  cascadeOverride: NativeCascadeValues | null;
-  elementType: NativeTarget;
   elementProps: Dict<unknown>;
+  elementType: NativeTarget;
+  ownerId: string;
+  /** Inherited NativeStyle; the container state passes through. */
+  parent: NativeStyleContextValue;
+  rowGap: number;
 }
 
 /**
@@ -2052,15 +2031,15 @@ const EMPTY_BOX = { width: 0, height: 0 };
  * the rest of the cascade pass through unchanged.
  */
 function GridPublisher({
-  ownerId,
-  columns,
+  cascade: publishedCascade,
   columnGap,
-  rowGap,
+  columns,
   containerName,
-  parent,
-  cascadeOverride,
-  elementType,
   elementProps,
+  elementType,
+  ownerId,
+  parent,
+  rowGap,
 }: GridPublisherProps): React.ReactElement {
   const [contentBox, setContentBox] = React.useState<{ width: number; height: number }>(EMPTY_BOX);
   const lastRef = React.useRef(EMPTY_BOX);
@@ -2089,9 +2068,8 @@ function GridPublisher({
   );
 
   const value = React.useMemo<NativeStyleContextValue>(() => {
-    const baseCascade = cascadeOverride ?? parent.cascade;
     const cascade: NativeCascadeValues = {
-      ...baseCascade,
+      ...publishedCascade,
       grid: { ownerId, columns, columnGap, rowGap, contentWidth: contentBox.width },
     };
     // A `container-type` declaration on the grid container makes it a
@@ -2109,7 +2087,7 @@ function GridPublisher({
       container = { nearest: entry, named };
     }
     return { container, cascade };
-  }, [parent, cascadeOverride, ownerId, columns, columnGap, rowGap, contentBox, containerName]);
+  }, [parent, publishedCascade, ownerId, columns, columnGap, rowGap, contentBox, containerName]);
 
   const existingOnLayout = elementProps.onLayout;
   const composedOnLayout = React.useMemo(

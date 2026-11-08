@@ -338,13 +338,11 @@ export interface NativeStyles {
    */
   blendLayerSlot?: true;
   /**
-   * `true` when this compile output COULD publish a cascade value
-   * (font-size / line-height / direction) to descendants. Set when any
-   * of base, resolvers, conditional buckets, starting-style, transitions,
-   * or animation keyframes declare a cascade key. Lets the render path
-   * skip the per-render `collectCascadeSlots` walk when both this flag
-   * is false AND no user style was supplied (the only other source of
-   * cascade keys is a `style={{ fontSize: ... }}` prop).
+   * `true` when font-size, line-height or direction is declared in the
+   * base, a bucket, an `!important` layer or a `var()`; keyframes,
+   * transitions and `@starting-style` do not count. Lets the render path
+   * skip the cascade walk when this flag is false AND no style was supplied
+   * (the only other source of cascade keys is a `style` prop or `attrs`).
    */
   publishesCascade: boolean;
   /**
@@ -710,164 +708,93 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   if (anchorDecls.anchorName !== null) out.anchorName = anchorDecls.anchorName;
   if (anchorDecls.positionAnchor !== null) out.positionAnchor = anchorDecls.positionAnchor;
   if (fieldSizing !== null) out.fieldSizing = fieldSizing;
-  out.publishesCascade = computePublishesCascade(out);
-  if (computeScrollerFlexPin(out)) out.scrollerFlexPin = true;
-  if (declaresBackgroundBlendMode(out, resolvedBase)) out.blendLayerSlot = true;
+  const declared = scanDeclaredKeys(out, resolvedBase);
+  out.publishesCascade = (declared & KeyClass.Cascade) !== 0;
+  if (declared & KeyClass.Blend) out.blendLayerSlot = true;
+  if (declared & KeyClass.Dimension && !(declared & KeyClass.Flex)) out.scrollerFlexPin = true;
   return out;
 }
 
-const BACKGROUND_BLEND_MODE_CSS_NAME = 'background-blend-mode';
-const BACKGROUND_BLEND_MODE_KEY = 'backgroundBlendMode';
+/** Bit flags: which render-time behavior a declared style key switches on. */
+const KeyClass = {
+  Blend: 2,
+  Cascade: 1,
+  Dimension: 4,
+  Flex: 8,
+} as const;
 
 /**
- * Whether a `[name, ...]` entry list holds `name`. `resolvers` and
- * `importantResolvers` entries are named by React Native key
- * (`flexGrow`); `varDeferred` entries keep the authored CSS name
- * (`flex-grow`) for the render-time `transformDecl`.
+ * Declared React Native style keys the render path reacts to. `font` is only
+ * ever a `var()` deferral name, since the shorthand expands into the other keys
+ * everywhere else.
  */
-function listHasName(
-  list: ReadonlyArray<readonly [string, ...unknown[]]> | undefined,
-  name: string
-) {
-  if (list === undefined) return false;
-  for (let i = 0; i < list.length; i++) {
-    if (list[i][0] === name) return true;
-  }
-  return false;
+const KEY_CLASSES = new Map<string, number>([
+  ['backgroundBlendMode', KeyClass.Blend],
+  ['blockSize', KeyClass.Dimension],
+  ['direction', KeyClass.Cascade],
+  ['flex', KeyClass.Flex],
+  ['flexGrow', KeyClass.Flex],
+  ['font', KeyClass.Cascade],
+  ['fontSize', KeyClass.Cascade],
+  ['height', KeyClass.Dimension],
+  ['inlineSize', KeyClass.Dimension],
+  ['lineHeight', KeyClass.Cascade],
+  ['width', KeyClass.Dimension],
+]);
+
+/** The classes of the keys a style object declares (`in`, so an explicit `undefined` counts). */
+function objectKeyClasses(style: Dict<unknown> | undefined): number {
+  let classes = 0;
+  if (style === undefined) return classes;
+  for (const key in style) classes |= KEY_CLASSES.get(key) ?? 0;
+  return classes;
 }
 
 /**
- * `background-blend-mode` in the base, an important layer, a render-time
- * resolver, a `var()` deferral, or any conditional bucket's equivalents.
- * `base` itself may be a registered StyleSheet id, so the pre-registration
- * object is scanned.
+ * The classes of the keys an entry list names. `resolvers` and
+ * `importantResolvers` entries are named by React Native key (`flexGrow`);
+ * `varDeferred` entries keep the authored CSS name (`flex-grow`) for the
+ * render-time `transformDecl`, so `deferred` compares them as `camelize` spells them.
  */
-function declaresBackgroundBlendMode(out: NativeStyles, resolvedBase: Dict<unknown>): boolean {
-  if (resolvedBase[BACKGROUND_BLEND_MODE_KEY] !== undefined) return true;
-  if (out.important?.[BACKGROUND_BLEND_MODE_KEY] !== undefined) return true;
-  if (
-    listHasName(out.resolvers, BACKGROUND_BLEND_MODE_KEY) ||
-    listHasName(out.importantResolvers, BACKGROUND_BLEND_MODE_KEY) ||
-    listHasName(out.varDeferred, BACKGROUND_BLEND_MODE_CSS_NAME)
-  ) {
-    return true;
+function listKeyClasses(
+  list: ReadonlyArray<readonly [string, ...unknown[]]> | undefined,
+  deferred: boolean
+): number {
+  let classes = 0;
+  if (list === undefined) return classes;
+  for (let i = 0; i < list.length; i++) {
+    classes |= KEY_CLASSES.get(deferred ? camelize(list[i][0]) : list[i][0]) ?? 0;
   }
+  return classes;
+}
+
+/**
+ * OR of the {@link KeyClass} bits for every key a compiled output declares
+ * in its base, `!important` layer, resolvers and `var()` deferrals, and (for
+ * `Cascade` and `Blend` only; the scroller pin never reads a bucket) in each
+ * conditional bucket's equivalents. Keyframes, transitions and `@starting-style`
+ * never win the cascade, so they are not read. `resolvedBase` is the
+ * pre-registration object, since `out.base` may be a registered StyleSheet id.
+ */
+function scanDeclaredKeys(out: NativeStyles, resolvedBase: Dict<unknown>): number {
+  let classes =
+    objectKeyClasses(resolvedBase) |
+    objectKeyClasses(out.important) |
+    listKeyClasses(out.resolvers, false) |
+    listKeyClasses(out.importantResolvers, false) |
+    listKeyClasses(out.varDeferred, true);
+  let bucketClasses = 0;
   for (let i = 0; i < out.conditional.length; i++) {
     const bucket = out.conditional[i];
-    if (
-      bucket.styles[BACKGROUND_BLEND_MODE_KEY] !== undefined ||
-      bucket.important?.[BACKGROUND_BLEND_MODE_KEY] !== undefined ||
-      listHasName(bucket.resolvers, BACKGROUND_BLEND_MODE_KEY) ||
-      listHasName(bucket.importantResolvers, BACKGROUND_BLEND_MODE_KEY) ||
-      listHasName(bucket.varDeferred, BACKGROUND_BLEND_MODE_CSS_NAME)
-    ) {
-      return true;
-    }
+    bucketClasses |=
+      objectKeyClasses(bucket.styles) |
+      objectKeyClasses(bucket.important) |
+      listKeyClasses(bucket.resolvers, false) |
+      listKeyClasses(bucket.importantResolvers, false) |
+      listKeyClasses(bucket.varDeferred, true);
   }
-  return false;
-}
-
-/**
- * Authored width/height (post-transform, so logical properties already
- * map) with no authored flex factor. See `scrollerFlexPin` on the
- * compiled shape for why the render path pins `flexGrow: 0` on
- * scrollable targets when this is set.
- */
-function computeScrollerFlexPin(out: NativeStyles): boolean {
-  // `base` may be a registered StyleSheet id (number) rather than the
-  // raw style object; the keys aren't inspectable then, so only the
-  // important / resolver / varDeferred scans below contribute.
-  const base = out.base;
-  const baseInspectable = typeof base === 'object' && base !== null;
-  const important = out.important;
-  let dim =
-    (baseInspectable && ('width' in base || 'height' in base)) ||
-    (important !== undefined && ('width' in important || 'height' in important));
-  let flex =
-    (baseInspectable && ('flex' in base || 'flexGrow' in base)) ||
-    (important !== undefined && ('flex' in important || 'flexGrow' in important));
-  // Resolver lists hold React Native keys; the deferral list holds authored CSS names.
-  for (const list of [out.resolvers, out.importantResolvers]) {
-    if (list === undefined) continue;
-    for (let i = 0; i < list.length; i++) {
-      const key = list[i][0];
-      if (key === 'width' || key === 'height') dim = true;
-      else if (key === 'flex' || key === 'flexGrow') flex = true;
-    }
-  }
-  const deferred = out.varDeferred;
-  if (deferred !== undefined) {
-    for (let i = 0; i < deferred.length; i++) {
-      const name = deferred[i][0];
-      if (
-        name === 'width' ||
-        name === 'height' ||
-        name === 'inline-size' ||
-        name === 'block-size'
-      ) {
-        dim = true;
-      } else if (name === 'flex' || name === 'flex-grow') flex = true;
-    }
-  }
-  return dim && !flex;
-}
-
-/**
- * Scan a compiled output for declarations that could publish a cascade
- * value (font-size / line-height / direction) to descendants. Considers
- * static base, render-time resolvers, conditional buckets and their
- * resolvers, `@starting-style`, transitions, and animation keyframes.
- *
- * Lets the render path's per-render `collectCascadeSlots` walk
- * short-circuit when this flag is false AND the consumer didn't supply
- * a `style={{ fontSize: ... }}` prop (the only other source of cascade
- * values).
- */
-function computePublishesCascade(out: NativeStyles): boolean {
-  if (hasCascadeKey(out.base)) return true;
-  if (out.resolvers && resolversWriteCascadeKey(out.resolvers)) return true;
-  for (let i = 0; i < out.conditional.length; i++) {
-    const c = out.conditional[i];
-    if (hasCascadeKey(c.styles)) return true;
-    if (c.resolvers && resolversWriteCascadeKey(c.resolvers)) return true;
-  }
-  if (out.startingStyle && hasCascadeKey(out.startingStyle)) return true;
-  if (out.startingStyleResolvers && resolversWriteCascadeKey(out.startingStyleResolvers)) {
-    return true;
-  }
-  if (out.transitions) {
-    for (let i = 0; i < out.transitions.length; i++) {
-      const p = out.transitions[i].property;
-      if (p === 'all' || isCascadeKey(p)) return true;
-    }
-  }
-  for (let i = 0; i < out.keyframes.length; i++) {
-    const frames = out.keyframes[i].frames;
-    for (let j = 0; j < frames.length; j++) {
-      if (hasCascadeKey(frames[j].decls)) return true;
-    }
-  }
-  return false;
-}
-
-function isCascadeKey(k: string): boolean {
-  return k === 'fontSize' || k === 'lineHeight' || k === 'direction';
-}
-
-/**
- * `true` when `o` has any cascade-publishing key (font-size / line-height /
- * direction) set to a defined value. Exported so `NativeStyle.staticEligible`
- * can use the same set without drift.
- */
-export function hasCascadeKey(o: Dict<unknown>): boolean {
-  return o.fontSize !== undefined || o.lineHeight !== undefined || o.direction !== undefined;
-}
-
-function resolversWriteCascadeKey(rs: ReadonlyArray<[string, unknown]>): boolean {
-  for (let i = 0; i < rs.length; i++) {
-    if (isCascadeKey(rs[i][0])) return true;
-  }
-  return false;
+  classes |= bucketClasses & (KeyClass.Cascade | KeyClass.Blend);
+  return classes;
 }
 
 /**

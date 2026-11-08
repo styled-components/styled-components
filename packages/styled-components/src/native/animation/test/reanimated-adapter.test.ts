@@ -377,6 +377,27 @@ describe('reanimated adapter rendered style layers', () => {
     });
   });
 
+  // The cascade is read before the adapter, so an animated font size publishes the
+  // CSS value under either adapter.
+  it('publishes the CSS font-size of a transition to a descendant', () => {
+    const { useNativeStyleContext } = require('../../') as typeof import('../../');
+    let published: number | undefined;
+    function Probe() {
+      published = useNativeStyleContext().cascade.fontSize;
+      return null;
+    }
+    const Box = styled.View`
+      font-size: 20px;
+      transition: font-size 1s;
+    `;
+
+    TestRenderer.act(() => {
+      TestRenderer.create(React.createElement(Box, null, React.createElement(Probe)));
+    });
+
+    expect(published).toBe(20);
+  });
+
   it.each([
     ['plain', ''],
     ['conditional bucket', '@media (min-width: 100px) { margin-top: 3px; }'],
