@@ -1,6 +1,7 @@
 import React from 'react';
-import { Appearance, Dimensions, Text, View } from 'react-native';
+import { Appearance, Text, View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
+import { watchWindowChange } from '../../test/nativeHarness';
 import styled, { NativeStyleContext } from '../';
 import { DEFAULT_CASCADE } from '../NativeStyleContext';
 import { resetResponsiveCache } from '../responsive';
@@ -301,7 +302,7 @@ describe('modern CSS on React Native', () => {
     it('re-renders when Dimensions.change fires', () => {
       // Capture the listener at subscribe time;must spy BEFORE mount, since
       // useMediaEnv's useEffect wires it up during the initial commit.
-      const addEventListenerSpy = jest.spyOn(Dimensions, 'addEventListener');
+      const { emitWindowChange, restore } = watchWindowChange();
       try {
         const Comp = styled.View`
           color: red;
@@ -313,15 +314,7 @@ describe('modern CSS on React Native', () => {
         const tree = TestRenderer.create(<Comp />);
         expect(tree.root.findByType(View).props.style).toEqual({ color: 'red' });
 
-        const listener = addEventListenerSpy.mock.calls.find(c => c[0] === 'change')?.[1];
-        expect(listener).toBeDefined();
-
-        TestRenderer.act(() => {
-          listener!({
-            window: { width: 1200, height: 800, scale: 2, fontScale: 1 },
-            screen: { width: 1200, height: 800, scale: 2, fontScale: 1 },
-          } as any);
-        });
+        emitWindowChange(1200);
 
         expect(tree.root.findByType(View).props.style).toMatchInlineSnapshot(`
           [
@@ -334,7 +327,7 @@ describe('modern CSS on React Native', () => {
           ]
         `);
       } finally {
-        addEventListenerSpy.mockRestore();
+        restore();
       }
     });
 
@@ -2427,6 +2420,17 @@ s] { color: white; }`,
       const tree = TestRenderer.create(<Box data-size={15} />);
       expect(tree.root.findByType(View).props.style).toEqual({ width: 30 });
     });
+
+    // css-values-5: the px unit turns the number into a <length>, which adds
+    // to a <length> in calc().
+    it('a px attr() adds to a length inside calc()', () => {
+      const Box = styled.View.withConfig({ displayName: 'AttrCalcSumBox' })`
+        width: calc(attr(data-size px) + 5px);
+      `;
+      // @ts-expect-error data-* props are not part of ViewProps
+      const tree = TestRenderer.create(<Box data-size={10} />);
+      expect(tree.root.findByType(View).props.style).toEqual({ width: 15 });
+    });
   });
 
   describe(':nth-child family spec compliance (CSS Selectors 4: :nth-child / :nth-of-type)', () => {
@@ -2758,10 +2762,9 @@ s] { color: white; }`,
     });
 
     // Regression: cascade-publishing parent (font-size / line-height /
-    // direction) wraps its host in a NativeStyleContext.Provider before
-    // the ParentContext.Provider. The per-child sibling indexing must
-    // attach to the user's JSX children, not the cascade-wrap's only
-    // child. Same constraint holds for container-type and 3D isolation.
+    // direction) wraps its host in a NativeStyleContext.Provider. The
+    // per-child sibling indexing must attach to the user's JSX children,
+    // not the cascade-wrap's only child. Same constraint holds for container-type and 3D isolation.
     it(':nth-child fires under a cascade-publishing parent', () => {
       const Parent = styled.View.withConfig({ displayName: 'CascadeNthParent' })`
         font-size: 18px;
@@ -2807,6 +2810,299 @@ s] { color: white; }`,
       const nextViews = allViews.slice(2);
       expect(nextViews[0].props.style).toEqual([{ color: 'black' }, { color: 'red' }]);
       expect(nextViews[1].props.style).toEqual({ color: 'black' });
+    });
+
+    // https://drafts.csswg.org/selectors-4/#child-index
+    // "The pseudo-classes defined in this section select elements based on their index amongst their inclusive siblings."
+    //
+    // https://drafts.csswg.org/selectors-4/#the-nth-child-pseudo
+    // "The :nth-child(An+B [of S]? ) pseudo-class notation represents elements that are among An+Bth elements from the list composed of their inclusive siblings that match the selector list S, which is a <complex-real-selector-list>. If S is omitted, it defaults to *|*."
+    //
+    // https://drafts.csswg.org/selectors-4/#the-only-child-pseudo
+    // "The :only-child pseudo-class represents an element that has no siblings."
+    //
+    // https://drafts.csswg.org/selectors-4/#the-nth-of-type-pseudo
+    // "The :nth-of-type(An+B) pseudo-class notation represents the same elements that would be matched by :nth-child(|An+B| of S), where S is a type selector and namespace prefix matching the element in question."
+    //
+    // https://drafts.csswg.org/selectors-4/#adjacent-sibling-combinators
+    // "Non-element nodes (e.g. text between elements) are ignored when considering the adjacency of elements."
+    //
+    // Element view on native: every JSX element counts as one sibling whatever it renders
+    // (a plain component included), and text, null, booleans and undefined do not count.
+    // Arrays and Fragments are counted through. Deviation: an iterable such as a generator,
+    // a Suspense boundary, a memo-wrapped element and a portal are one opaque sibling, since
+    // the elements they render are not known when the parent renders.
+    describe('counts elements by JSX position', () => {
+      const black = { color: 'black' };
+      const matched = [{ color: 'black' }, { color: 'red' }];
+
+      it.each<[string, unknown]>([
+        ['a string', 'text'],
+        ['a number', 7],
+        ['null', null],
+        ['false', false],
+        ['undefined', undefined],
+      ])('skips %s between two siblings for :nth-child and +', (_label, filler) => {
+        const Parent = styled.View.withConfig({ displayName: 'CountSkipParent' })`
+          flex: 1;
+        `;
+        const First = styled.View.withConfig({ displayName: 'CountSkipFirst' })`
+          color: black;
+        `;
+        const Second = styled.View.withConfig({ displayName: 'CountSkipSecond' })`
+          color: black;
+          ${First} + & {
+            color: red;
+          }
+        `;
+        const Third = styled.View.withConfig({ displayName: 'CountSkipThird' })`
+          color: black;
+          &:nth-child(3) {
+            color: red;
+          }
+        `;
+        const tree = TestRenderer.create(
+          <Parent>
+            <First />
+            {filler as React.ReactNode}
+            <Second />
+            {filler as React.ReactNode}
+            <Third />
+          </Parent>
+        );
+        const views = tree.root.findAllByType(View);
+        expect(views[2].props.style).toEqual(matched);
+        expect(views[3].props.style).toEqual(matched);
+      });
+
+      it('matches :only-child, :first-child and :last-child with text around a lone element', () => {
+        const Parent = styled.View.withConfig({ displayName: 'CountLoneParent' })`
+          flex: 1;
+        `;
+        const Item = styled.View.withConfig({ displayName: 'CountLoneItem' })`
+          color: black;
+          &:only-child {
+            padding-top: 1px;
+          }
+          &:first-child {
+            padding-bottom: 2px;
+          }
+          &:nth-last-child(1) {
+            margin-top: 3px;
+          }
+        `;
+        const tree = TestRenderer.create(
+          <Parent>
+            {'before'}
+            <Item />
+            {'after'}
+          </Parent>
+        );
+        expect(tree.root.findAllByType(View)[1].props.style).toEqual([
+          black,
+          { paddingTop: 1 },
+          { paddingBottom: 2 },
+          { marginTop: 3 },
+        ]);
+      });
+
+      it('counts the elements inside a Fragment as siblings of the elements around it', () => {
+        const Parent = styled.View.withConfig({ displayName: 'CountFragParent' })`
+          flex: 1;
+        `;
+        const Item = styled.View.withConfig({ displayName: 'CountFragItem' })`
+          color: black;
+          &:nth-child(2) {
+            color: red;
+          }
+          &:last-child {
+            padding-top: 3px;
+          }
+        `;
+        const tree = TestRenderer.create(
+          <Parent>
+            <Item />
+            <>
+              <Item />
+              <Item />
+            </>
+          </Parent>
+        );
+        const views = tree.root.findAllByType(View);
+        expect(views[1].props.style).toEqual(black);
+        expect(views[2].props.style).toEqual(matched);
+        expect(views[3].props.style).toEqual([black, { paddingTop: 3 }]);
+      });
+
+      it('counts the elements of a nested array as siblings of the elements around it', () => {
+        const Parent = styled.View.withConfig({ displayName: 'CountArrayParent' })`
+          flex: 1;
+        `;
+        const Item = styled.View.withConfig({ displayName: 'CountArrayItem' })`
+          color: black;
+          &:nth-child(odd) {
+            color: red;
+          }
+        `;
+        const tree = TestRenderer.create(
+          <Parent>
+            <Item />
+            {[<Item key="a" />, [<Item key="b" />]]}
+            <Item />
+          </Parent>
+        );
+        const views = tree.root.findAllByType(View).slice(1);
+        expect(views.map(view => view.props.style)).toEqual([matched, black, matched, black]);
+      });
+
+      it('counts a plain element between two styled siblings, and breaks + across it', () => {
+        const Parent = styled.View.withConfig({ displayName: 'CountPlainParent' })`
+          flex: 1;
+        `;
+        const Card = styled.View.withConfig({ displayName: 'CountPlainCard' })`
+          color: black;
+        `;
+        const Next = styled.View.withConfig({ displayName: 'CountPlainNext' })`
+          color: black;
+          ${Card} + & {
+            color: red;
+          }
+          &:nth-child(3) {
+            padding-top: 3px;
+          }
+        `;
+        const Plain = () => <View testID="plain" />;
+        const tree = TestRenderer.create(
+          <Parent>
+            <Card />
+            <Plain />
+            <Next />
+          </Parent>
+        );
+        const next = tree.root.findAllByType(View)[3];
+        expect(next.props.style).toEqual([black, { paddingTop: 3 }]);
+      });
+
+      it('counts a plain element of the same type for :nth-of-type and :only-of-type', () => {
+        const Parent = styled.View.withConfig({ displayName: 'CountTypeParent' })`
+          flex: 1;
+        `;
+        const Box = styled.View.withConfig({ displayName: 'CountTypeBox' })`
+          color: black;
+          &:nth-of-type(2) {
+            color: red;
+          }
+          &:only-of-type {
+            padding-top: 3px;
+          }
+        `;
+        const withPlainView = TestRenderer.create(
+          <Parent>
+            <View />
+            <Box />
+          </Parent>
+        );
+        const withPlainText = TestRenderer.create(
+          <Parent>
+            <Text>label</Text>
+            <Box />
+          </Parent>
+        );
+        expect(withPlainView.root.findAllByType(View)[2].props.style).toEqual(matched);
+        expect(withPlainText.root.findAllByType(View)[1].props.style).toEqual([
+          black,
+          { paddingTop: 3 },
+        ]);
+      });
+
+      it('indexes :nth-child(2 of S) by element, with text and a Fragment around the siblings', () => {
+        const Parent = styled.View.withConfig({ displayName: 'CountOfParent' })`
+          flex: 1;
+        `;
+        const Item = styled.View.withConfig({ displayName: 'CountOfItem' })`
+          color: black;
+          &:nth-child(2 of [data-active]) {
+            color: red;
+          }
+        `;
+        const tree = TestRenderer.create(
+          <Parent>
+            <Item data-active />
+            {'text'}
+            <>
+              <Item />
+              <Item data-active />
+            </>
+            {null}
+            <Item data-active />
+          </Parent>
+        );
+        const views = tree.root.findAllByType(View).slice(1);
+        expect(views.map(view => view.props.style)).toEqual([black, black, matched, black]);
+      });
+
+      it('publishes sibling position to the children of an element nested in its own kind', () => {
+        const Item = styled.View.withConfig({ displayName: 'CountSelfItem' })`
+          flex: 1;
+        `;
+        const Other = styled.View.withConfig({ displayName: 'CountSelfOther' })`
+          color: black;
+        `;
+        const Child = styled.View.withConfig({ displayName: 'CountSelfChild' })`
+          color: black;
+          ${Other} + & {
+            color: red;
+          }
+          &:nth-child(2) {
+            padding-top: 3px;
+          }
+          &:first-child {
+            padding-bottom: 4px;
+          }
+        `;
+        const tree = TestRenderer.create(
+          <Item>
+            <Item>
+              <Other />
+              <Child />
+            </Item>
+          </Item>
+        );
+        // Views: outer Item, inner Item, Other, Child.
+        expect(tree.root.findAllByType(View)[3].props.style).toEqual([
+          black,
+          { color: 'red' },
+          { paddingTop: 3 },
+        ]);
+      });
+
+      it('does not give the children of an element nested in its own kind that element position', () => {
+        const Item = styled.View.withConfig({ displayName: 'CountSelfPosItem' })`
+          flex: 1;
+        `;
+        const Other = styled.View.withConfig({ displayName: 'CountSelfPosOther' })`
+          color: black;
+        `;
+        const Only = styled.View.withConfig({ displayName: 'CountSelfPosOnly' })`
+          color: black;
+          ${Other} + & {
+            color: red;
+          }
+          &:only-child {
+            padding-top: 3px;
+          }
+        `;
+        const tree = TestRenderer.create(
+          <Item>
+            <Other />
+            <Item>
+              <Only />
+            </Item>
+          </Item>
+        );
+        // Views: outer Item, Other, inner Item, Only. Only is the lone child of the inner Item.
+        expect(tree.root.findAllByType(View)[3].props.style).toEqual([black, { paddingTop: 3 }]);
+      });
     });
   });
 

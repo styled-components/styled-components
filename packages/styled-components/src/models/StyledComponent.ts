@@ -50,6 +50,7 @@ import escape from '../utils/escape';
 import generateComponentId from '../utils/generateComponentId';
 import getComponentName from '../utils/getComponentName';
 import hoist from '../utils/hoist';
+import hyphenateStyleName from '../utils/hyphenateStyleName';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
@@ -395,17 +396,20 @@ const noFilled: FilledOf = () => null;
 /**
  * Resolve a declaration key across the extension chain, innermost template
  * first: each level emits its own class after its base's, so the innermost
- * match is the cascade winner. Returns {@link findBaseDecl}'s tri-state.
+ * match is the cascade winner. A camelCase key reads its kebab-case
+ * declaration, so omniplatform code written against the native spelling
+ * resolves on web too. Returns {@link findBaseDecl}'s tri-state.
  */
 function findChainDecl(
   style: WebStyle | null | undefined,
   prop: string,
   filledOf: FilledOf
 ): string | undefined | null {
+  const key = prop.indexOf('-') === -1 ? hyphenateStyleName(prop) : prop;
   for (let w = style; w; w = w.baseStyle) {
     const source = getSource(w.rules);
     if (source === undefined) continue;
-    const v = findBaseDecl(source.ast, prop, filledOf(w, source));
+    const v = findBaseDecl(source.ast, key, filledOf(w, source));
     if (v !== undefined) return v;
   }
   return undefined;

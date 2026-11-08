@@ -52,7 +52,7 @@ const ensureSheetReset: (() => void) | null = IS_RSC
     })
   : null;
 
-type ServerStylesHolder = { plugins?: unknown };
+type ServerStylesHolder = { namespace?: unknown; plugins?: unknown };
 
 let serverStylesHolder: ServerStylesHolder | undefined;
 
@@ -78,15 +78,19 @@ function serverStyles(): ServerStylesHolder {
 }
 
 /**
- * Sets the plugins every server component is styled with, for the whole
- * server process. Call it once, at the top level of a module every server
- * render loads before any page renders (in Next.js, the root layout file). A
- * later call replaces an earlier
- * one and applies to renders that start after it. A `StyleSheetManager` inside
- * a server component starts from these plugins; `plugins={[]}` drops them.
- * Client components take their plugins from a client `StyleSheetManager`.
+ * Sets the namespace and plugins every server component is styled with, for
+ * the whole server process. Call it once, at the top level of a module every
+ * server render loads before any page renders (in Next.js, the root layout
+ * file). A later call replaces an earlier one, both fields included (a call
+ * with only `plugins` clears the namespace), and applies to renders that
+ * start after it. A `StyleSheetManager` inside a server component starts from
+ * these values; `plugins={[]}` and `namespace=""` drop them. Client components
+ * take theirs from a client `StyleSheetManager` with the same values.
  */
-export function configureServerStyles(options: { plugins: SCPlugin[] }): void {
+export function configureServerStyles(options: {
+  namespace?: undefined | string;
+  plugins?: undefined | SCPlugin[];
+}): void {
   if (!__SERVER__) {
     if (__DEV__) {
       warnOnce(
@@ -100,7 +104,9 @@ export function configureServerStyles(options: { plugins: SCPlugin[] }): void {
 
   if (__DEV__) warnUnsupportedPlugins(options.plugins);
 
-  serverStyles().plugins = options.plugins;
+  const holder = serverStyles();
+  holder.namespace = options.namespace;
+  holder.plugins = options.plugins;
 }
 
 let lastNamespace: string | undefined;
@@ -136,20 +142,31 @@ function compilerFor(namespace: string | undefined, plugins: SCPlugin[] | undefi
   return lastCompiler;
 }
 
-let derivedFrom: SCPlugin[] | undefined;
+let derivedPlugins: SCPlugin[] | undefined;
+let derivedNamespace: string | undefined;
 let derivedContext: IStyleSheetContext | undefined;
 
-/** The context a server component sees outside every manager: the configured plugins, or the plain defaults. */
+/** The context a server component sees outside every manager: the configured namespace and plugins, or the plain defaults. */
 function serverDefaults(): IStyleSheetContext {
-  const configured = serverStyles().plugins;
-  if (!Array.isArray(configured) || !configured.length) return defaultContextValue;
+  const holder = serverStyles();
+  const namespace =
+    typeof holder.namespace === 'string' && holder.namespace ? holder.namespace : undefined;
+  const configured = holder.plugins;
+  const plugins: SCPlugin[] | undefined =
+    Array.isArray(configured) && configured.length ? configured : undefined;
 
-  const plugins: SCPlugin[] = configured;
+  if (!namespace && !plugins) return defaultContextValue;
 
-  if (derivedContext === undefined || derivedFrom !== plugins) {
-    derivedFrom = plugins;
+  if (
+    derivedContext === undefined ||
+    derivedPlugins !== plugins ||
+    derivedNamespace !== namespace
+  ) {
+    derivedPlugins = plugins;
+    derivedNamespace = namespace;
     derivedContext = {
-      compiler: createCompiler({ plugins }),
+      compiler: compilerFor(namespace, plugins),
+      namespace,
       plugins,
       shouldForwardProp: undefined,
       styleSheet: mainSheet,
@@ -163,8 +180,9 @@ export type IStyleSheetContext = {
   shouldForwardProp?: ShouldForwardProp<'web'> | undefined;
   styleSheet: StyleSheet;
   compiler: Compiler;
-  /** Preserved for inheritance; inner SSMs that set namespace but not plugins
-   *  still inherit the parent's plugins. */
+  /** Kept so a nested `StyleSheetManager` that sets only one of `namespace` and `plugins` inherits the other. Unset is `undefined`, never `""`. */
+  namespace?: string | undefined;
+  /** Kept so a nested `StyleSheetManager` that sets only one of `namespace` and `plugins` inherits the other. */
   plugins?: SCPlugin[] | undefined;
 };
 
@@ -172,6 +190,7 @@ const defaultContextValue: IStyleSheetContext = {
   shouldForwardProp: undefined,
   styleSheet: mainSheet,
   compiler: mainCompiler,
+  namespace: undefined,
   plugins: undefined,
 };
 
@@ -203,6 +222,12 @@ export function useStyleSheetContext() {
 export type IStyleSheetManager = React.PropsWithChildren<{
   /**
    * Provide an optional selector to be prepended to all generated style rules.
+   * A rule anchored at the document root (`html.dark &`, `:root`, `html`,
+   * `::view-transition-*`) takes the selector joined onto the root instead
+   * when it is one compound (`#app`, `.app`, `[data-app]`), so it matches
+   * when the selector names the root element. When nested inside another
+   * `StyleSheetManager`, omitting this prop inherits the parent's namespace.
+   * Pass an empty string to clear an inherited one.
    */
   namespace?: undefined | string;
   /**
@@ -249,6 +274,7 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
 
     const parent = currentScope() ?? serverDefaults();
     const hasCompilerProps = props.plugins !== undefined || props.namespace !== undefined;
+    const namespace = (props.namespace ?? parent.namespace) || undefined;
     const plugins = props.plugins ?? parent.plugins;
     const shouldForwardProp =
       'shouldForwardProp' in props ? props.shouldForwardProp : parent.shouldForwardProp;
@@ -257,10 +283,11 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
 
     const compiler = !hasCompilerProps
       ? parent.compiler
-      : props.namespace === undefined && !plugins?.length
+      : !namespace && !plugins?.length
         ? mainCompiler
-        : compilerFor(props.namespace, plugins);
+        : compilerFor(namespace, plugins);
 
+    // A compiler is built from one namespace and plugin list, so the same compiler implies the same namespace.
     if (
       compiler === parent.compiler &&
       shouldForwardProp === parent.shouldForwardProp &&
@@ -273,6 +300,7 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
       <>
         {scopeChildren(props.children, {
           compiler,
+          namespace,
           plugins,
           shouldForwardProp,
           styleSheet: mainSheet,
@@ -304,33 +332,36 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     return sheet;
   }, [props.nonce, props.sheet, props.target, styleSheet]);
 
-  // When `namespace` changes, create a new instance but still inherit plugins
-  // from the parent if `plugins` is omitted. An explicit empty array disables
-  // inherited plugins.
+  // Setting one of `namespace` and `plugins` inherits the other from the
+  // parent. An explicit empty array disables inherited plugins, and an empty
+  // string disables an inherited namespace.
+  const resolvedNamespace = (props.namespace ?? parentContext.namespace) || undefined;
+  const resolvedPlugins = props.plugins ?? parentContext.plugins;
+
   const compiler = React.useMemo(() => {
     if (props.plugins === undefined && props.namespace === undefined) {
       return parentContext.compiler;
     }
     warnUnsupportedPlugins(props.plugins);
+    if (!resolvedNamespace && !resolvedPlugins?.length) return mainCompiler;
     return createCompiler({
-      options: { namespace: props.namespace },
-      plugins: props.plugins ?? parentContext.plugins,
+      options: { namespace: resolvedNamespace },
+      plugins: resolvedPlugins,
     });
-  }, [props.namespace, props.plugins, parentContext.compiler, parentContext.plugins]);
+  }, [props.namespace, props.plugins, parentContext.compiler, resolvedNamespace, resolvedPlugins]);
 
   const shouldForwardProp =
     'shouldForwardProp' in props ? props.shouldForwardProp : parentContext.shouldForwardProp;
-
-  const resolvedPlugins = props.plugins ?? parentContext.plugins;
 
   const styleSheetContextValue = React.useMemo(
     () => ({
       shouldForwardProp,
       styleSheet: resolvedStyleSheet,
       compiler,
+      namespace: resolvedNamespace,
       plugins: resolvedPlugins,
     }),
-    [shouldForwardProp, resolvedStyleSheet, compiler, resolvedPlugins]
+    [shouldForwardProp, resolvedStyleSheet, compiler, resolvedNamespace, resolvedPlugins]
   );
   // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the IS_RSC-gated region
 

@@ -5,8 +5,7 @@ import { runWithWarningsSuppressed } from './transform/dev';
 /**
  * Runtime evaluator for `@supports` preludes.
  *
- * On rn-web the browser is the authority: `CSS.supports()` receives the
- * raw prelude. On iOS / Android a declaration leaf answers "does this
+ * A declaration leaf answers "does this
  * engine produce output the platform renders": the declaration runs
  * through the transform pipeline (with dev warnings suppressed, since
  * probing for a gap is the author's intent) and counts as supported when
@@ -183,19 +182,7 @@ const cache = new Map<string, boolean>();
 export function matchSupports(condition: string): boolean {
   let hit = cache.get(condition);
   if (hit !== undefined) return hit;
-  let result: boolean;
-  const cssApi = __NATIVE_WEB__
-    ? (globalThis as { CSS?: { supports?: (c: string) => boolean } }).CSS
-    : undefined;
-  if (cssApi !== undefined && typeof cssApi.supports === 'function') {
-    try {
-      result = cssApi.supports(condition);
-    } catch {
-      result = false;
-    }
-  } else {
-    result = evalCondition(condition) === true;
-  }
+  const result = evalCondition(condition) === true;
   cache.set(condition, result);
   return result;
 }

@@ -156,6 +156,43 @@ describe('__DEV__ substitution in built output', () => {
     expect(readNative(file)).not.toContain('!process.env.NODE_ENV');
   });
 
+  /**
+   * A bundler that replaces only `process.env.NODE_ENV` textually (Vite) leaves any other
+   * `process` reference in place, and a browser has no `process` global. A dead property read
+   * terser reduces to a bare `process;` statement throws a ReferenceError at module load.
+   * Flagged: `process` as a whole operand, a statement or a comma-sequence member (`}process;`,
+   * `a(),process,b()`, `(0,process)`). Allowed forms, none of which match:
+   * - `typeof process`: the guard that makes the member reads safe.
+   * - `process.env` and `process?.env` member reads: only emitted behind that guard.
+   * - the word in prose (error text, comments), which a space precedes.
+   * A plain identifier match is not practical: the standalone UMD file keeps prose comments.
+   */
+  const deadProcessRead = /(?<=^|[;{}(,])process(?=[;,)])/g;
+  const unguardedProcessReads = (source: string) =>
+    source
+      .replaceAll('process.env.NODE_ENV', '"production"')
+      .split('\n')
+      .flatMap((line, index) =>
+        [...line.matchAll(deadProcessRead)].map(
+          match =>
+            `${index + 1}:${match.index}: ${line.slice(Math.max(0, match.index - 30), match.index + 30)}`
+        )
+      );
+
+  it.each(jsFiles(distDir))(
+    'never reads the process global once NODE_ENV is replaced in %s',
+    file => {
+      expect(unguardedProcessReads(read(file))).toEqual([]);
+    }
+  );
+
+  it.each(jsFiles(nativeDistDir))(
+    'never reads the process global once NODE_ENV is replaced in native/%s',
+    file => {
+      expect(unguardedProcessReads(readNative(file))).toEqual([]);
+    }
+  );
+
   it('throws readable errors outside production', () => {
     const { ServerStyleSheet } = require(path.join(distDir, 'styled-components.cjs.js'));
     const sheet = new ServerStyleSheet();
@@ -224,10 +261,9 @@ describe('native build isolation', () => {
   });
 
   it('drops the rn-web matrix3d transport rewrite from the Hermes bundle', () => {
-    // `normalizeStyleForWeb` gates on `__NATIVE_WEB__` so
-    // `rewriteStyleForWebTransport` and `fixTransformMatrix3d` only
-    // ship on rn-web. The literal `matrix3d` only appears via that
-    // rewrite, so its absence is a tight proof of tree-shake.
+    // The matrix3d rewrite lives only in the rn-web bridge, and the
+    // literal `matrix3d` appears nowhere else in shipped code, so its
+    // absence proves the bridge stays out of the Hermes bundle.
     expect(nativeCJS).not.toContain('matrix3d');
     expect(nativeESM).not.toContain('matrix3d');
   });
@@ -260,6 +296,19 @@ describe('rn-web bridge build', () => {
     expect(bridgeCJS).not.toContain('createAnimatedComponent');
     expect(bridgeESM).not.toContain('createAnimatedComponent');
   });
+
+  it.each(['styled-components.web.js', 'styled-components.web.esm.js'])(
+    '%s bundles no module of the native declaration transform or animation engine',
+    file => {
+      const { sources }: { sources: string[] } = JSON.parse(readNative(file + '.map'));
+      const engineSources = sources.filter(source =>
+        /\/src\/native\/(transform|animation)\//.test(source)
+      );
+
+      expect(sources.length).toBeGreaterThan(0);
+      expect(engineSources).toEqual([]);
+    }
+  );
 
   it('keeps the 16-element matrix → matrix3d rewrite for rn-web preprocess', () => {
     // rn-web's preprocess.js emits `matrix(a,b,c,...,p)` for any
@@ -534,8 +583,11 @@ describe('bundle size', () => {
     // arity-2 attrs tracing with its runtime fallback, and the server entry
     // points a consumer bundle would shake away. Holds the security fix that keeps
     // malformed CSS inside its statement, `createGlobalStyle` interpolations in render,
-    // and at-rules whose bodies are declaration blocks (`@view-transition`, `@page` margin boxes).
-    expect(sizeKB).toBeLessThan(15.15);
+    // at-rules whose bodies are declaration blocks (`@view-transition`, `@page` margin boxes),
+    // the automatic `view-transition-class` and chain-wide `container-name`, a namespace
+    // joined onto root-anchored selectors, and `keyframes` reading fragments and style objects the
+    // way a styled template does.
+    expect(sizeKB).toBeLessThan(16.1);
   });
   it('production bundle size with real bundler tree-shaking', async () => {
     const zlib = require('zlib');
@@ -576,8 +628,11 @@ describe('bundle size', () => {
     // the global-style instance registry shared across colliding ids.
     // v6.4.1 for this same entry is 11.44kB gzip. Holds the security fix that keeps
     // malformed CSS inside its statement, `createGlobalStyle` interpolations in render,
-    // and at-rules whose bodies are declaration blocks (`@view-transition`, `@page` margin boxes).
-    expect(sizeKB).toBeLessThan(14);
+    // at-rules whose bodies are declaration blocks (`@view-transition`, `@page` margin boxes),
+    // the automatic `view-transition-class` and chain-wide `container-name`, a namespace
+    // joined onto root-anchored selectors, and `keyframes` reading fragments and style objects the
+    // way a styled template does.
+    expect(sizeKB).toBeLessThan(14.9);
   }, 30000);
 });
 

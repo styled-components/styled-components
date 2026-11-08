@@ -141,6 +141,14 @@ const configBase = {
   // \0 is rollup convention for generated in memory modules
   external: id => !id.startsWith('\0') && !id.startsWith('.') && !id.startsWith('/'),
   plugins: commonPlugins,
+
+  // A `__DEV__` replaced by a `process.env.NODE_ENV` test leaves dead property reads in bundles
+  // that never take the branch; terser reduces each to a bare `process;`, a ReferenceError in a
+  // browser whose bundler only replaces NODE_ENV textually.
+  treeshake: {
+    propertyReadSideEffects: false,
+    unknownGlobalSideEffects: false,
+  },
 };
 
 const globals = { react: 'React', 'react-dom': 'ReactDOM' };
@@ -168,9 +176,6 @@ const standaloneBaseConfig = {
       "typeof React.createContext === 'undefined'": JSON.stringify(false),
     })
   ),
-  treeshake: {
-    propertyReadSideEffects: false,
-  },
 };
 
 const standaloneConfig = {
@@ -237,6 +242,8 @@ const browserConfig = {
 };
 
 // Shared between the Hermes-target native bundle and the rn-web variant.
+// The replace makes `IS_RSC` (`utils/isRsc.ts`) literal false here: the native modules call
+// `React.createContext` at import, so a react-server build cannot load them.
 const nativeBasePlugins = [
   nativeTypescriptPlugin,
   ...basePlugins,

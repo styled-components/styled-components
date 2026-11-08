@@ -1,4 +1,5 @@
 import { Dict } from '../../types';
+import { camelize } from '../camelize';
 import { getSystemColorPlatformColor } from './polyfills/systemColors';
 import { cssColorRawToRnStyleValue, isSingleTokenColorArg } from './shorthandHelpers';
 
@@ -7,13 +8,6 @@ const WHITESPACE_SPLIT_REGEX = /\s+(?![^(]*\))/;
 
 /** Same function-scan regex as RN `processFilter` for string input. */
 const FILTER_FN_REGEX = /([\w-]+)\(([^()]*|\([^()]*\)|[^()]*\([^()]*\)[^()]*)\)/g;
-
-// Local camelize: the shared `camelize` in `./index` would create an import
-// cycle (index → filterSystemColors → index). Filter names are a fixed set
-// of ~7 short strings, so the per-call work is negligible without a cache.
-function camelizeFilterName(name: string): string {
-  return name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
-}
 
 // Required digit in group 1 prevents a zero-length match. The previous
 // all-optional shape worked for the single `exec()` here (the caller
@@ -113,11 +107,6 @@ function parseDropShadowInner(
 export function maybeExpandFilterDropShadowSystemColors(
   rawValue: string
 ): string | Dict<unknown>[] {
-  // The browser parses system keywords inside drop-shadow() natively; the
-  // array rewrite is a native-only workaround.
-  if (__NATIVE_WEB__) return rawValue;
-  if (rawValue.indexOf('\0') !== -1) return rawValue;
-
   const normalized = rawValue.replace(/\n/g, ' ');
   FILTER_FN_REGEX.lastIndex = 0;
   const matches: RegExpExecArray[] = [];
@@ -140,7 +129,7 @@ export function maybeExpandFilterDropShadowSystemColors(
       if (parsed.hadSystemColor) anySystem = true;
       out.push({ dropShadow: parsed.layer });
     } else {
-      const camel = camelizeFilterName(filterName);
+      const camel = camelize(filterName);
       const amount = parseFilterScalarAmount(camel, inner);
       if (amount === null) return rawValue;
       out.push({ [camel]: amount });

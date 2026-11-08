@@ -9,25 +9,44 @@ import {
   ContainerContextValue,
   ContainerEntry,
   DEFAULT_CASCADE,
-  DEFAULT_NATIVE_STYLE,
   NativeCascadeValues,
   NativeStyleContext,
   NativeStyleContextValue,
 } from '../native/NativeStyleContext';
 import {
   DEFAULT_PARENT_CONTEXT,
-  EMPTY_SIBLINGS,
+  PARENT_SLOT_PROP,
   ParentContext,
   ParentContextValue,
   SiblingInfo,
-  SiblingsList,
 } from '../native/ParentContext';
+import {
+  buildPublishedParentValue,
+  createParentPublishCache,
+  indexStyledChildren,
+  type ParentPublishCache,
+  withIndexedChildren,
+} from '../native/childIndex';
 import {
   getAnchorVersion,
   subscribeAnchors,
   useAnchorNamePublisher,
 } from '../native/anchorRegistry';
-import { applyStylePolyfills } from '../native/polyfills';
+import {
+  applyStylePolyfills,
+  hasBackgroundBlendMode,
+  withoutBackgroundBlendMode,
+} from '../native/polyfills';
+import {
+  contextValueFor,
+  type InteractionState,
+  isStateFunction,
+  PRESSABLE_TARGET,
+  publishCascade,
+  REST_STATE,
+  type StateStyle,
+  withStateCascade,
+} from '../native/publishCascade';
 import { useSnapSettle } from '../native/snapSettle';
 import { matchSupports } from '../native/supports';
 import {
@@ -41,7 +60,7 @@ import {
   useViewTimelineSubject,
 } from '../native/scrollTimeline';
 import { EMPTY_SAFE_AREA_INSETS, type SafeAreaInsets, useSafeAreaInsets } from '../native/safeArea';
-import { camelize } from '../native/transform';
+import { camelize } from '../native/camelize';
 import { applyResolvers, ResolveEnv } from '../native/transform/polyfills/resolvers';
 import { concatSourceInputs, getSource } from '../parser/source';
 import type {
@@ -74,7 +93,6 @@ import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
-import { IS_RSC } from '../utils/isRsc';
 import isStyledComponent from '../utils/isStyledComponent';
 import { warnOnce } from '../utils/warnOnce';
 import type {
@@ -159,17 +177,35 @@ function findNativeBaseDecl(ast: Root, prop: string): string | undefined | null 
 }
 
 /**
+ * Stack `over` above `under`, each kept as given (an array stays one nested
+ * entry). A function `style` (Pressable) on either side makes the result a
+ * function that calls each side with the same state.
+ */
+function layerStyle(under: unknown, over: unknown): unknown {
+  if (under == null) return over;
+  if (!isFunction(under) && !isFunction(over)) return [under, over];
+  return (state: InteractionState | undefined) => [
+    isFunction(under) ? under(state) : under,
+    isFunction(over) ? over(state) : over,
+  ];
+}
+
+/**
  * Merge an attrs result bag into context so attrs always wins (docs/attrs.md).
- * An `undefined` value removes the key when context held a defined value; a
- * context that already holds the caller's explicit `undefined` (echoed back by
- * an identity-spread attrs function) keeps it, and a key never present stays
- * absent.
+ * A `style` layers over the one context holds (the caller's, or an inner
+ * attrs'), so an empty one leaves it as is, as on web.
+ * Any other `undefined` value removes the key when context held a defined
+ * value; a context that already holds the caller's explicit `undefined`
+ * (echoed back by an identity-spread attrs function) keeps it, and a key never
+ * present stays absent.
  */
 function mergeAttrsResult(context: object, resolved: Dict<unknown>): void {
   const target = context as Dict<unknown>;
 
   for (const key in resolved) {
-    if (resolved[key] !== undefined) {
+    if (key === 'style') {
+      if (resolved.style != null) target.style = layerStyle(target.style, resolved.style);
+    } else if (resolved[key] !== undefined) {
       target[key] = resolved[key];
     } else if (target[key] !== undefined) {
       delete target[key];
@@ -178,7 +214,17 @@ function mergeAttrsResult(context: object, resolved: Dict<unknown>): void {
 }
 
 interface StyledComponentImplProps extends ExecutionProps {
+  /** Set by a styled parent on its styled children; removed before any user code sees the props. */
+  [PARENT_SLOT_PROP]?: ParentContextValue;
   style?: unknown;
+}
+
+/** The props without the parent's slot value, so neither user code nor the target receives it. */
+function withoutParentSlot<Props extends StyledComponentImplProps>(props: Props): Props {
+  const { [PARENT_SLOT_PROP]: _slot, ...rest } = props;
+
+  // The slot is optional in `Props`, so a bag without it is a `Props`; TS cannot prove that for a generic `Omit`.
+  return rest as Props;
 }
 
 function buildPropsForElement<Source extends object>(
@@ -341,60 +387,6 @@ function buildResolveEnv(
   return out;
 }
 
-/**
- * Derive the cascade values to publish to descendants from the
- * resolved style. Returns the original `inherited` reference when no
- * cascade-relevant property fires (the caller skips the Provider
- * wrap), otherwise a fresh merged cascade.
- *
- * The cheap short-circuit (`!compiled.publishesCascade && no user
- * style`) lives at the call site, not here: this function stays
- * monomorphic on (inherited, resolvedStyle) so V8's IC and inliner
- * see the same signature the pre-stamp form had. Adding a third
- * boolean arg to gate the walk inside the function regressed the
- * must-walk path by ~25%, traced to IC polymorphism on the boolean.
- *
- * Single right-to-left walk over array layers (matches RN's array-style
- * merge semantics; last write wins). Each layer captures all three
- * fields at once. The common case is a flat object with no cascade-
- * relevant property, which returns after one object visit.
- */
-function computePublishedCascade(
-  inherited: NativeCascadeValues,
-  resolvedStyle: unknown
-): NativeCascadeValues {
-  // Per-call allocation. A module-level scratch tuple measured the same on
-  // V8 (escape analysis) and only marginal on Hermes, not worth the
-  // single-threaded-JS invariant it would lock in against any future
-  // parallel-render API.
-  const slots: [unknown, unknown, unknown] = [undefined, undefined, undefined];
-  collectCascadeSlots(resolvedStyle, slots);
-  const [fs, lh, dir] = slots;
-  if (fs === undefined && lh === undefined && dir === undefined) return inherited;
-  const fontSize = typeof fs === 'number' ? fs : inherited.fontSize;
-  const lineHeight = typeof lh === 'number' ? lh : inherited.lineHeight;
-  const direction: 'ltr' | 'rtl' = dir === 'rtl' || dir === 'ltr' ? dir : inherited.direction;
-  if (
-    fontSize === inherited.fontSize &&
-    lineHeight === inherited.lineHeight &&
-    direction === inherited.direction
-  ) {
-    return inherited;
-  }
-  const next: NativeCascadeValues = {
-    fontSize,
-    lineHeight,
-    rootFontSize: inherited.rootFontSize,
-    direction,
-  };
-  if (inherited.customProperties !== undefined) next.customProperties = inherited.customProperties;
-  // Grid items size against the nearest grid container's published entry;
-  // carry it through any cascade rebuild so a child that also changes
-  // font-size / direction still sees its grid owner.
-  if (inherited.grid !== undefined) next.grid = inherited.grid;
-  return next;
-}
-
 type MergedCascadeCache = {
   inherited: NativeCascadeValues;
   own: ReadonlyMap<string, string> | undefined;
@@ -447,21 +439,6 @@ function mergeCustomPropertiesIntoCascade(
   };
   if (inherited.grid !== undefined) next.grid = inherited.grid;
   return next;
-}
-
-function collectCascadeSlots(style: unknown, slots: [unknown, unknown, unknown]): boolean {
-  if (style === null || style === undefined) return false;
-  if (Array.isArray(style)) {
-    for (let i = style.length - 1; i >= 0; i--) {
-      if (collectCascadeSlots(style[i], slots)) return true;
-    }
-    return false;
-  }
-  if (typeof style !== 'object') return false;
-  if (slots[0] === undefined && 'fontSize' in style) slots[0] = style.fontSize;
-  if (slots[1] === undefined && 'lineHeight' in style) slots[1] = style.lineHeight;
-  if (slots[2] === undefined && 'direction' in style) slots[2] = style.direction;
-  return slots[0] !== undefined && slots[1] !== undefined && slots[2] !== undefined;
 }
 
 // Mutable scratch env reused across container-query evaluations.
@@ -599,8 +576,8 @@ function matchConditionals(
 
 /**
  * Combinator selector match against ParentContext. Non-styled intermediaries are
- * transparent to ancestors (descendant combinator) but reset the immediate parent
- * (child combinator), since only styled components publish ParentContext.
+ * transparent to both the descendant and the child combinator, since only styled
+ * components publish ParentContext: the nearest styled ancestor is the "parent".
  */
 function combinatorMatches(entry: ConditionalStyle, parentCtx: ParentContextValue): boolean {
   const ancestorId = entry.condition;
@@ -634,24 +611,24 @@ function hasMatches(entry: ConditionalStyle, children: React.ReactNode): boolean
   return walkForHas(children, inner);
 }
 
+/**
+ * Arrays and elements only: an iterable such as a generator is never iterated,
+ * since reading it here would consume it before React renders it.
+ */
 function walkForHas(
   children: React.ReactNode,
   inner: { kind: 'component'; id: string } | { kind: 'attr'; attr: ConditionalAttr }
 ): boolean {
-  let found = false;
-  React.Children.forEach(children, child => {
-    if (found) return;
-    if (!React.isValidElement(child)) return;
-    if (matchesHasInner(child, inner)) {
-      found = true;
-      return;
+  if (Array.isArray(children)) {
+    for (let i = 0; i < children.length; i++) {
+      if (walkForHas(children[i], inner)) return true;
     }
-    const grand = (child.props as { children?: React.ReactNode }).children;
-    if (grand !== undefined && grand !== null && walkForHas(grand, inner)) {
-      found = true;
-    }
-  });
-  return found;
+    return false;
+  }
+  if (!React.isValidElement(children)) return false;
+  if (matchesHasInner(children, inner)) return true;
+  const grand = (children.props as { children?: React.ReactNode }).children;
+  return grand !== undefined && grand !== null && walkForHas(grand, inner);
 }
 
 function matchesHasInner(
@@ -906,10 +883,42 @@ const STATELESS_STYLE_TARGETS = new Set([
   'VirtualizedList',
 ]);
 
-/** Leaf target name when it cannot receive a function style; null otherwise. */
-function inertStateStyleTargetName(target: unknown): string | null {
-  const name = leafName(resolveLeafTarget(target));
-  return name !== undefined && STATELESS_STYLE_TARGETS.has(name) ? name : null;
+/**
+ * RN components that clone their single child to attach handlers, style and a
+ * ref, so they cannot hold the extra children `background-blend-mode` layers add.
+ */
+const SINGLE_CHILD_CLONING_TARGETS = new Set([
+  'TouchableHighlight',
+  'TouchableNativeFeedback',
+  'TouchableWithoutFeedback',
+]);
+
+/** True when the leaf target drops a function style. */
+function dropsFunctionStyle(leaf: string | undefined): leaf is string {
+  return leaf !== undefined && STATELESS_STYLE_TARGETS.has(leaf);
+}
+
+/**
+ * The style whose layers a component publishes a cascade from, or null when it
+ * publishes its parent's. A `Pressable` publishes from its state wrap, so a
+ * function style gives null here; a host that drops a function style gives null
+ * because it never renders one; a custom component's function style is read at
+ * rest.
+ */
+function cascadeWalkStyle(
+  gate: boolean,
+  composedStyle: unknown,
+  leaf: string | undefined
+): unknown {
+  if (!gate) return null;
+  if (!isStateFunction(composedStyle)) return composedStyle;
+  if (leaf === PRESSABLE_TARGET || dropsFunctionStyle(leaf)) return null;
+  return composedStyle(REST_STATE);
+}
+
+/** The function style a `Pressable` evaluates per press state when it can publish from one; null otherwise. */
+function pressableStateStyle(gate: boolean, composedStyle: unknown): StateStyle | null {
+  return gate && isStateFunction(composedStyle) ? composedStyle : null;
 }
 
 const PSEUDO_TO_SELECTOR: Record<PseudoState, string> = {
@@ -965,14 +974,6 @@ const PSEUDO_TO_STATE_KEY: Record<PseudoState, 'pressed' | 'hovered' | 'focused'
   hover: 'hovered',
   focus: 'focused',
   disabled: 'disabled',
-};
-
-/** The interaction state React Native's `Pressable` hands to a `style` callback. */
-type InteractionState = {
-  pressed?: boolean;
-  hovered?: boolean;
-  focused?: boolean;
-  disabled?: boolean;
 };
 
 function pseudoActive(pseudo: PseudoState, state: InteractionState): boolean {
@@ -1079,75 +1080,6 @@ function appendStyle(composed: unknown, extra: object): object {
   return Array.isArray(composed) ? [...composed, extra] : [composed, extra];
 }
 
-/**
- * Inject `container-name: <styledComponentId>` into the rendered
- * style when a component declares `container-type` without an
- * explicit `container-name`. Lets rn-web emit the matching CSS so
- * `@container <id> (...)` queries written via `${Component}`
- * interpolation match against the source on the browser side; on
- * native this prop is ignored by the view manager (the runtime
- * publisher carries the same name through `ContainerContext`).
- */
-function injectAutoContainerName(
-  composed: object,
-  info: NativeStyles['containerInfo'] | undefined,
-  styledComponentId: string
-): object {
-  if (!info || info.explicitName !== undefined) return composed;
-  return appendStyle(composed, { containerName: styledComponentId });
-}
-
-function composeStaticStyle(
-  compiled: NativeStyles,
-  userStyle: unknown,
-  styledComponentId: string
-): object {
-  const composed = composeBase(compiled.base, userStyle);
-  return injectAutoContainerName(composed, compiled.containerInfo, styledComponentId);
-}
-
-function createFastElement(
-  elementToBeCreated: NativeTarget,
-  elementProps: Dict<unknown>,
-  containerName: string | undefined
-): React.ReactElement {
-  if (containerName) {
-    return createElement(StaticContainerPublisherDispatch, {
-      name: containerName,
-      elementType: elementToBeCreated,
-      elementProps,
-    });
-  }
-  return createElement(elementToBeCreated, elementProps);
-}
-
-interface StaticContainerPublisherDispatchProps {
-  name: string;
-  elementType: NativeTarget;
-  elementProps: Dict<unknown>;
-}
-
-/**
- * Container-publish dispatch for the static path. `NativeStyleContext`
- * is read only when the rendered component declares `container-type`
- * in its CSS, so the common case of a non-container component pays no
- * useContext for the container/cascade pair.
- */
-function StaticContainerPublisherDispatch({
-  name,
-  elementType,
-  elementProps,
-}: StaticContainerPublisherDispatchProps): React.ReactElement {
-  const parent = React.useContext(NativeStyleContext);
-  return createElement(ContainerPublisher, {
-    name,
-    parent,
-    cascadeOverride: null,
-    elementType,
-    elementProps,
-  } as ContainerPublisherProps);
-}
-
 // Eligibility is frozen at construction (INativeStyle.staticEligible) so hook
 // ordering stays stable. Reads ParentContext so descendants of this
 // element see it as an ancestor under Tier 2 combinator selectors
@@ -1156,35 +1088,26 @@ function StaticContainerPublisherDispatch({
 // `${Foo} &` only matches when Foo happens to have responsive CSS.
 function useStaticImpl<Props extends StyledComponentImplProps>(
   forwardedComponent: IStyledComponent<'native', Props>,
-  props: Props,
+  ownProps: Props,
   forwardedRef: Ref<unknown> | undefined
 ): React.ReactElement {
+  const slotValue = ownProps[PARENT_SLOT_PROP];
+  const props = slotValue === undefined ? ownProps : withoutParentSlot(ownProps);
   const { nativeStyle, target, styledComponentId } = forwardedComponent;
   const compiled = nativeStyle.staticCompiled as NativeStyles | null;
   if (compiled === null) throw new Error(MISSING_STATIC_STYLES);
   const elementToBeCreated: NativeTarget = (props.as as NativeTarget) || target;
   const containerName = resolveContainerName(compiled.containerInfo, styledComponentId);
-  if (IS_RSC) {
-    const elementProps = finalizeElementProps(
-      props,
-      elementToBeCreated,
-      undefined,
-      composeStaticStyle(compiled, props.style, styledComponentId),
-      compiled.specialCases,
-      forwardedRef,
-      forwardedComponent
-    );
-    return createFastElement(elementToBeCreated, applyStylePolyfills(elementProps), containerName);
-  }
+  const leaf = leafName(resolveLeafTarget(elementToBeCreated));
   // A static-eligible component can still be a grid item: an empty or
   // purely-static child placed inside a `display: grid` container. The
   // parent decides this at runtime, so the static path reads the cascade
   // and applies the computed width when this component is a direct child
   // of the grid that published the entry.
-  // biome-ignore-start lint/correctness/useHookAtTopLevel: this static render path is reached only past an `if (IS_RSC)` early return above, and IS_RSC is a load-time constant, so a given bundle always runs all of these hooks or none of them
   const nativeStyleCtx = React.useContext(NativeStyleContext);
-  const parentCtx = React.useContext(ParentContext);
-  let composedStyle = composeStaticStyle(compiled, props.style, styledComponentId);
+  const contextParent = React.useContext(ParentContext);
+  const parentCtx = slotValue ?? contextParent;
+  let composedStyle = composeBase(compiled.base, props.style);
   const grid = nativeStyleCtx.cascade.grid;
   if (grid !== undefined && parentCtx.parentId === grid.ownerId) {
     // A `grid-column: span N` item is never static-eligible (the
@@ -1203,32 +1126,26 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   );
   const publishCacheRef = React.useRef<ParentPublishCache | null>(null);
   if (publishCacheRef.current === null) publishCacheRef.current = createParentPublishCache();
-  // Index sibling positions BEFORE running polyfills + createFastElement
-  // so per-child Providers attach to user JSX even when a container
-  // wrap is in the way (createFastElement would otherwise hand the
-  // host construction to StaticContainerPublisherDispatch, hiding the
-  // children).
+  // Index sibling positions BEFORE running the polyfills and wrapping the host,
+  // so each position lands on user JSX.
   const publishedValue = buildPublishedParentValue(
     publishCacheRef.current,
     parentCtx,
     styledComponentId,
     elementToBeCreated
   );
-  let effectiveProps =
-    publishedValue !== null
-      ? withIndexedChildren(
-          elementProps,
-          indexStyledChildren(
-            publishCacheRef.current,
-            elementProps.children as React.ReactNode,
-            publishedValue
-          )
-        )
-      : elementProps;
+  let effectiveProps = withIndexedChildren(
+    elementProps,
+    indexStyledChildren(
+      publishCacheRef.current,
+      elementProps.children as React.ReactNode,
+      publishedValue
+    )
+  );
   // Static-eligible scroll containers still publish their timeline so
   // descendants' `animation-timeline: scroll()` resolves, and lift
   // sticky children onto stickyHeaderIndices.
-  const isScroller = isScrollableTargetName(leafName(resolveLeafTarget(elementToBeCreated)));
+  const isScroller = isScrollableTargetName(leaf);
   const [scrollProps, wrapScrollTimeline, timelineEntry] = useScrollTimelinePublisher(
     isScroller || compiled.scrollTimeline !== undefined,
     compiled.scrollTimeline,
@@ -1241,13 +1158,69 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
     timelineEntry,
     scrollProps
   );
-  // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the IS_RSC-gated static render path
-  const inner = wrapScrollTimeline(
-    createFastElement(elementToBeCreated, applyStylePolyfills(effectiveProps), containerName)
-  );
-  return publishedValue !== null
-    ? createElement(ParentContext.Provider, { value: publishedValue }, inner)
-    : inner;
+  const publishCache = publishCacheRef.current;
+  const publishGate = compiled.publishesCascade || props.style != null;
+  const walkStyle = cascadeWalkStyle(publishGate, composedStyle, leaf);
+  const published =
+    walkStyle === null
+      ? nativeStyleCtx.cascade
+      : publishCascade(publishCache, nativeStyleCtx.cascade, walkStyle);
+  const layeredProps = applyPolyfillsWithLayerSlot(publishCache, compiled, effectiveProps, leaf);
+  const polyfilledProps =
+    leaf === PRESSABLE_TARGET
+      ? withStateCascade(
+          layeredProps,
+          publishCache,
+          pressableStateStyle(publishGate, composedStyle)
+        )
+      : layeredProps;
+  const host =
+    containerName === undefined
+      ? createElement(
+          NativeStyleContext.Provider,
+          { value: contextValueFor(publishCache, nativeStyleCtx, published) },
+          createElement(elementToBeCreated, polyfilledProps)
+        )
+      : createElement(ContainerPublisher, {
+          cascade: published,
+          elementProps: polyfilledProps,
+          elementType: elementToBeCreated,
+          name: containerName,
+          parent: nativeStyleCtx,
+        });
+
+  return createElement(ParentContext.Provider, { value: publishedValue }, wrapScrollTimeline(host));
+}
+
+/**
+ * {@link applyStylePolyfills} for a component that keeps its children behind a
+ * layer slot once it has rendered, or could render, blend layers. A blend mode
+ * only the caller's style supplies (known at first render only by its
+ * presence) latches the slot when the layers first appear: one remount of the
+ * children, then none. A target that clones its single child gets no layers and
+ * no slot: its child stays the one element it expects.
+ */
+function applyPolyfillsWithLayerSlot(
+  cache: ParentPublishCache,
+  compiled: NativeStyles,
+  elementProps: Dict<unknown>,
+  leaf: string | undefined
+): Dict<unknown> {
+  if (leaf !== undefined && SINGLE_CHILD_CLONING_TARGETS.has(leaf)) {
+    if (!hasBackgroundBlendMode(elementProps.style)) return elementProps;
+    if (__DEV__) {
+      warnOnce(
+        'native-background-blend-mode-single-child-target',
+        `\`background-blend-mode\` cannot be applied to a styled <${leaf}>, which passes its props to its single child. Put \`background-blend-mode\` on a <View> inside the <${leaf}> instead.`,
+        leaf
+      );
+    }
+    return withoutBackgroundBlendMode(elementProps);
+  }
+  const layerSlot = cache.blendLayerSlot || compiled.blendLayerSlot === true;
+  const out = applyStylePolyfills(elementProps, layerSlot);
+  cache.blendLayerSlot = layerSlot || out !== elementProps;
+  return out;
 }
 
 /**
@@ -1262,20 +1235,22 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
  * reference-stable, and the bailout on equal props is the wrapping React.memo.
  *
  * Components with provably-static CSS (no responsive features, no
- * animations, no cascade-significant declarations) bypass this path
- * entirely and use `useStaticImpl`, which reads `ParentContext` and a
- * memoization ref but skips theme / env / container subscription and
- * the full assembly pipeline.
+ * animations) bypass this path entirely and use `useStaticImpl`, which
+ * reads `ParentContext` and a memoization ref but skips theme / env /
+ * container subscription and the full assembly pipeline. A static
+ * component's own font-size, line-height and direction still publish
+ * through `useStaticImpl`.
  */
 function useDynamicImpl<Props extends StyledComponentImplProps>(
   forwardedComponent: IStyledComponent<'native', Props>,
-  props: Props,
+  ownProps: Props,
   forwardedRef: Ref<unknown> | undefined
 ) {
+  const slotValue = ownProps[PARENT_SLOT_PROP];
+  const props = slotValue === undefined ? ownProps : withoutParentSlot(ownProps);
   const { attrs: componentAttrs, nativeStyle, shouldForwardProp, target } = forwardedComponent;
 
-  // biome-ignore-start lint/correctness/useHookAtTopLevel: every gate in this block is IS_RSC, a load-time constant, so a given bundle always takes the same side. The one exception is the anchor gate below, which is noted separately.
-  const contextTheme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
+  const contextTheme = React.useContext(ThemeContext);
   const theme = determineTheme(props, contextTheme) || EMPTY_OBJECT;
 
   const env = useMediaEnv();
@@ -1284,40 +1259,39 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // changes reach consumers through one context reference. Tier 2 selectors
   // (`>`, `+`, `~`, `:nth-child`, `:has`) read sibling / ancestor info from
   // ParentContext.
-  const nativeStyleCtx = !IS_RSC ? React.useContext(NativeStyleContext) : DEFAULT_NATIVE_STYLE;
+  const nativeStyleCtx = React.useContext(NativeStyleContext);
   const containerCtx = nativeStyleCtx.container;
-  const parentCtx = !IS_RSC ? React.useContext(ParentContext) : DEFAULT_PARENT_CONTEXT;
+  const contextParent = React.useContext(ParentContext);
+  const parentCtx = slotValue ?? contextParent;
   // Anchor-rect reactivity: components whose CSS uses anchor() / anchor-size()
   // subscribe so any anchor's rect change re-renders them; the always-run
   // compile and assembly below then re-resolve against the current rects. The
   // version keys the ResolveEnv reuse below, whose env-keyed resolver caches
   // would otherwise replay the old rects.
   //
-  // This anchor gate and the safe-area gate below are the two here that are
-  // not build constants. `nativeStyle` is fixed when the styled component is
+  // This anchor gate and the safe-area gate below are the two conditional
+  // hooks here. `nativeStyle` is fixed when the styled component is
   // constructed, so `usesAnchorFunctions` (like `usesSafeAreaInsets`) cannot
   // change across renders of a given component and the hook branch is stable
   // for its whole lifetime. Anything that made either depend on props or state
-  // would be a genuine rules-of-hooks violation, and the enclosing
-  // `biome-ignore-start` would hide it, so keep both derived from `nativeStyle`.
-  const anchorVersion =
-    !IS_RSC && nativeStyle.usesAnchorFunctions
-      ? React.useSyncExternalStore(subscribeAnchors, getAnchorVersion)
-      : 0;
+  // would be a genuine rules-of-hooks violation, and the `biome-ignore` would
+  // hide it, so keep both derived from `nativeStyle`.
+  // biome-ignore-start lint/correctness/useHookAtTopLevel: `usesAnchorFunctions` and `usesSafeAreaInsets` are fixed at construction, so each branch is stable for the component's lifetime
+  const anchorVersion = nativeStyle.usesAnchorFunctions
+    ? React.useSyncExternalStore(subscribeAnchors, getAnchorVersion)
+    : 0;
   // Safe-area reactivity for env(safe-area-inset-*). `usesSafeAreaInsets`
   // is fixed at construction (same lifetime-constant rule as the anchor
   // gate above), so this hook branch is stable for the component.
   // Pass the static-usage flag so the hook warns (once, in dev, when no inset
   // source is present) only for components that literally wrote
   // env(safe-area-inset-*), not the conservative function-interpolation opt-in.
-  const safeAreaInsets =
-    !IS_RSC && nativeStyle.usesSafeAreaInsets
-      ? useSafeAreaInsets(nativeStyle.usesSafeAreaInsetsStatically)
-      : EMPTY_SAFE_AREA_INSETS;
+  const safeAreaInsets = nativeStyle.usesSafeAreaInsets
+    ? useSafeAreaInsets(nativeStyle.usesSafeAreaInsetsStatically)
+    : EMPTY_SAFE_AREA_INSETS;
+  // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the two construction-fixed hook gates
 
-  const publishCacheRef = (
-    !IS_RSC ? React.useRef<ParentPublishCache | null>(null) : { current: null }
-  ) as { current: ParentPublishCache | null };
+  const publishCacheRef = React.useRef<ParentPublishCache | null>(null);
   let publishCache = publishCacheRef.current;
   if (publishCache === null) {
     publishCache = createParentPublishCache();
@@ -1329,13 +1303,8 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // it once per render and reuse when both inputs reference-match.
   // Stable-input renders thus avoid a Map allocation + descendant
   // re-renders triggered by a spurious cascade identity change.
-  const mergedCascadeCacheRef = (
-    !IS_RSC ? React.useRef<MergedCascadeCache>(null) : { current: null }
-  ) as { current: MergedCascadeCache };
-  const resolveEnvCacheRef = (
-    !IS_RSC ? React.useRef<ResolveEnvCache>(null) : { current: null }
-  ) as { current: ResolveEnvCache };
-  // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the IS_RSC-gated region
+  const mergedCascadeCacheRef = React.useRef<MergedCascadeCache>(null);
+  const resolveEnvCacheRef = React.useRef<ResolveEnvCache>(null);
 
   // Interpolations and attrs are the component's own render-body user code: they
   // run every render so a hook called inside one keeps a stable hook count, and
@@ -1349,6 +1318,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // resolveContext spreads props before applying attrs, so context.as already
   // covers props.as; no separate fallback needed.
   const elementToBeCreated: NativeTarget = (context.as as NativeTarget | undefined) || target;
+  const leaf = leafName(resolveLeafTarget(elementToBeCreated));
 
   // Post-compile attrs phase: clone `compiled.base` (canonical, must stay
   // intact for reuse by later renders sharing this compiled output) and run
@@ -1406,16 +1376,18 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // renders that reach the component body with unchanged inputs (an animation
   // tick, for example). Keyed on the real inputs, never on props as a proxy.
   const positionAnchor = compiled.positionAnchor;
+  // The theme attrs left in context: the one compile read, so text and object values agree.
+  const resolveTheme = context.theme;
   let resolveEnv: ResolveEnv;
   const cachedResolveEnv = resolveEnvCacheRef.current;
   if (
     cachedResolveEnv !== null &&
     cachedResolveEnv.env === env &&
     cachedResolveEnv.containerCtx === containerCtx &&
-    cachedResolveEnv.theme === theme &&
+    cachedResolveEnv.theme === resolveTheme &&
     cachedResolveEnv.renderCascade === renderCascade &&
     cachedResolveEnv.parentCtx === parentCtx &&
-    cachedResolveEnv.props === props &&
+    cachedResolveEnv.props === ownProps &&
     cachedResolveEnv.positionAnchor === positionAnchor &&
     cachedResolveEnv.safeAreaInsets === safeAreaInsets &&
     cachedResolveEnv.anchorVersion === anchorVersion
@@ -1425,7 +1397,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     resolveEnv = buildResolveEnv(
       env,
       containerCtx,
-      theme,
+      resolveTheme,
       renderCascade,
       parentCtx,
       props as Record<string, unknown>,
@@ -1438,11 +1410,11 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
       env,
       parentCtx,
       positionAnchor,
-      props,
+      props: ownProps,
       renderCascade,
       resolveEnv,
       safeAreaInsets,
-      theme,
+      theme: resolveTheme,
     };
   }
   let varImportant: Dict<unknown> | undefined;
@@ -1463,29 +1435,28 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     if (varOut.important !== null) varImportant = varOut.important;
   }
   const baseOverride = effectiveBase !== compiled.base ? effectiveBase : undefined;
-  const baseComposed = hasResponsiveOutput(compiled)
-    ? assembleFinalStyle(
-        compiled,
-        env,
-        containerCtx,
-        theme,
-        props.style,
-        // Generic Props can't structurally satisfy `Record<string, unknown>`
-        // (TS lacks unsealed-object covariance); normalize at the boundary.
-        props as Record<string, unknown>,
-        baseOverride,
-        renderCascade,
-        parentCtx,
-        varImportant,
-        compiled.hasPseudo ? inertStateStyleTargetName(elementToBeCreated) : null,
-        safeAreaInsets
-      )
-    : composeBase(effectiveBase, props.style);
-  let composedStyle = injectAutoContainerName(
-    baseComposed,
-    compiled.containerInfo,
-    forwardedComponent.styledComponentId
-  );
+  // A var() with `!important` is known only after substitution, so the compile-time
+  // gate cannot see it; the overlay is built by assembleFinalStyle alone.
+  const baseComposed =
+    varImportant !== undefined || hasResponsiveOutput(compiled)
+      ? assembleFinalStyle(
+          compiled,
+          env,
+          containerCtx,
+          resolveTheme,
+          context.style,
+          // Generic Props can't structurally satisfy `Record<string, unknown>`
+          // (TS lacks unsealed-object covariance); normalize at the boundary.
+          props as Record<string, unknown>,
+          baseOverride,
+          renderCascade,
+          parentCtx,
+          varImportant,
+          compiled.hasPseudo && dropsFunctionStyle(leaf) ? leaf : null,
+          safeAreaInsets
+        )
+      : composeBase(effectiveBase, context.style);
+  let composedStyle = baseComposed;
   // Grid item sizing: a direct child of a `display: grid` container reads the
   // published grid entry and applies a computed width. The owner check
   // (`parentId === grid.ownerId`) enforces the spec's direct-children rule;
@@ -1507,9 +1478,9 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // so the timeline can place them within the scroller; the composed
   // onLayout lands on the element props below. Hook order is
   // unconditional inside.
-  const isViewSubject = !IS_RSC && animationsUseViewTimeline(compiled.animations);
+  const isViewSubject = animationsUseViewTimeline(compiled.animations);
   const [viewSubjectLayout, withViewSubjectLayout] = useViewTimelineSubject(isViewSubject);
-  const sticky = useStickyPosition(!IS_RSC && compiled.sticky === true);
+  const sticky = useStickyPosition(compiled.sticky === true);
   const animInput: AnimatedStyleInput = {
     compiled,
     resolved: composedStyle,
@@ -1533,16 +1504,35 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     renderType = getAnimatedComponentCached(renderType) ?? renderType;
   }
 
-  const elementProps = applyStylePolyfills(
-    finalizeElementProps(
-      context,
-      renderType,
-      shouldForwardProp,
-      renderStyle,
-      compiled.specialCases,
-      forwardedRef,
-      forwardedComponent
-    )
+  // Publish this component's identity to descendants so Tier 2
+  // combinator selectors (`${Foo} &`, `${Foo} > &`) can match. Index
+  // child sibling position BEFORE the polyfills (which add blend layers
+  // among the children) and before layering any cascade / container /
+  // isolate-3d Provider wrap, otherwise the positions would count the
+  // layers or land on the wrapper rather than the host's user JSX.
+  const publishedValue = buildPublishedParentValue(
+    publishCache,
+    parentCtx,
+    forwardedComponent.styledComponentId,
+    animOut.elementType
+  );
+  const finalizedProps = finalizeElementProps(
+    context,
+    renderType,
+    shouldForwardProp,
+    renderStyle,
+    compiled.specialCases,
+    forwardedRef,
+    forwardedComponent
+  );
+  const elementProps = applyPolyfillsWithLayerSlot(
+    publishCache,
+    compiled,
+    withIndexedChildren(
+      finalizedProps,
+      indexStyledChildren(publishCache, finalizedProps.children as React.ReactNode, publishedValue)
+    ),
+    leaf
   );
 
   // `field-sizing: content` dev guard. The polyfill lifts `multiline:
@@ -1562,66 +1552,46 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     compiled.containerInfo,
     forwardedComponent.styledComponentId
   );
-  // Skip the walk entirely when the compile-time scan said no cascade
-  // key is published AND no user style prop supplied one. The gate
-  // stays at the call site to keep computePublishedCascade monomorphic
-  // on its two-arg signature; a boolean third arg regressed the
-  // must-walk path by ~25% in a prior version.
-  const publishedCascade =
-    compiled.publishesCascade || props.style != null
-      ? computePublishedCascade(renderCascade, composedStyle)
-      : renderCascade;
-  const cascadeChanged = publishedCascade !== nativeStyleCtx.cascade;
+  // Skip the walk when the compile-time scan found no cascade key and no
+  // `style` (the caller's or attrs') could supply one.
+  const publishGate = compiled.publishesCascade || context.style != null;
+  const walkStyle = cascadeWalkStyle(publishGate, composedStyle, leaf);
+  const published =
+    walkStyle === null ? renderCascade : publishCascade(publishCache, renderCascade, walkStyle);
+  const ownValue = contextValueFor(publishCache, nativeStyleCtx, published);
 
-  // Publish this component's identity to descendants so Tier 2
-  // combinator selectors (`${Foo} &`, `${Foo} > &`) can match. Index
-  // child sibling position BEFORE layering any cascade / container /
-  // isolate-3d Provider wrap, otherwise the per-child Providers would
-  // attach to the wrapper rather than the host's user JSX.
-  const publishedValue = buildPublishedParentValue(
-    publishCache,
-    parentCtx,
-    forwardedComponent.styledComponentId,
-    animOut.elementType
-  );
-  let effectiveProps =
-    publishedValue !== null
-      ? withIndexedChildren(
-          elementProps,
-          indexStyledChildren(
-            publishCache,
-            elementProps.children as React.ReactNode,
-            publishedValue
-          )
-        )
-      : elementProps;
+  let effectiveProps = elementProps;
 
   // Scroll progress timelines: styled scroll containers publish their
   // offset/extent so descendants' `animation-timeline: scroll()` /
   // named references resolve. Hook order is unconditional inside.
-  const isScroller =
-    !IS_RSC && isScrollableTargetName(leafName(resolveLeafTarget(elementToBeCreated)));
+  const isScroller = isScrollableTargetName(leaf);
   const [scrollProps, wrapScrollTimeline, timelineEntry] = useScrollTimelinePublisher(
-    isScroller || (!IS_RSC && compiled.scrollTimeline !== undefined),
+    isScroller || compiled.scrollTimeline !== undefined,
     compiled.scrollTimeline,
     effectiveProps
   );
   effectiveProps = useScrollerSnapProps(
     isScroller,
     compiled,
-    !IS_RSC ? compiled.snapTarget : undefined,
+    compiled.snapTarget,
     timelineEntry,
     scrollProps
   );
   // anchor-name publishers report their parent-relative rect for
   // anchor() / anchor-size() consumers.
-  effectiveProps = useAnchorNamePublisher(
-    !IS_RSC ? compiled.anchorName : undefined,
-    effectiveProps
-  );
+  effectiveProps = useAnchorNamePublisher(compiled.anchorName, effectiveProps);
   effectiveProps = withViewSubjectLayout(effectiveProps);
   effectiveProps = sticky.compose(effectiveProps);
-  sticky.register(renderType, effectiveProps, stickyTwinStyle);
+  // After every props-composing hook, so none sees the wrapped children.
+  if (leaf === PRESSABLE_TARGET) {
+    effectiveProps = withStateCascade(
+      effectiveProps,
+      publishCache,
+      pressableStateStyle(publishGate, composedStyle)
+    );
+  }
+  sticky.register(renderType, effectiveProps, stickyTwinStyle, ownValue);
 
   let inner: React.ReactElement;
   if (compiled.gridInfo !== undefined) {
@@ -1631,326 +1601,37 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     // `rowGap` / `columnGap`).
     const gutters = readGridGutters(composedStyle);
     inner = createElement(GridPublisher, {
-      ownerId: forwardedComponent.styledComponentId,
-      columns: compiled.gridInfo.columns,
+      cascade: published,
       columnGap: gutters.columnGap,
-      rowGap: gutters.rowGap,
+      columns: compiled.gridInfo.columns,
       containerName,
-      parent: nativeStyleCtx,
-      cascadeOverride: cascadeChanged ? publishedCascade : null,
-      elementType: renderType,
       elementProps: effectiveProps,
-    } as GridPublisherProps);
+      elementType: renderType,
+      ownerId: forwardedComponent.styledComponentId,
+      parent: nativeStyleCtx,
+      rowGap: gutters.rowGap,
+    });
   } else if (containerName !== undefined) {
     inner = createElement(ContainerPublisher, {
+      cascade: published,
+      elementProps: effectiveProps,
+      elementType: renderType,
       name: containerName,
       parent: nativeStyleCtx,
-      cascadeOverride: cascadeChanged ? publishedCascade : null,
-      elementType: renderType,
-      elementProps: effectiveProps,
-    } as ContainerPublisherProps);
+    });
   } else {
     inner = createElement(renderType, effectiveProps);
     if (animOut.isolate3d) {
       inner = createElement(get3dIsolationView(), { collapsable: false }, inner);
     }
-    if (cascadeChanged) {
-      inner = createElement(
-        NativeStyleContext.Provider,
-        { value: { container: nativeStyleCtx.container, cascade: publishedCascade } },
-        inner
-      );
-    }
+    // An idle Provider passes the parent's own value, so consumers never re-render for it
+    // and the tree keeps its shape when a published value appears or leaves.
+    inner = createElement(NativeStyleContext.Provider, { value: ownValue }, inner);
   }
 
   inner = wrapScrollTimeline(inner);
 
-  return publishedValue !== null
-    ? createElement(ParentContext.Provider, { value: publishedValue }, inner)
-    : inner;
-}
-
-/**
- * Compute the {@link ParentContextValue} this component publishes to
- * descendants. Identity = `styledComponentId` + element target; the
- * ancestor chain accumulates the parent's so descendant combinators
- * can match an ancestor anywhere up the tree.
- *
- * Returns `null` when the inherited `parentId` already equals this
- * component's id (defensive; would accumulate duplicates on
- * re-render). The caller should fall through to the inherited context
- * without re-wrapping in a Provider.
- *
- * Result is memoized per-component in `ParentPublishCache` so the
- * `value` handed to `ParentContext.Provider` stays reference-stable
- * across renders with unchanged inherited context. That stability lets
- * `React.memo` on styled descendants short-circuit when their props
- * are equal: the provider's `value` no longer changes by reference on
- * every parent render.
- */
-function buildPublishedParentValue(
-  cache: ParentPublishCache,
-  parent: ParentContextValue,
-  styledComponentId: string,
-  elementType: NativeTarget
-): ParentContextValue | null {
-  if (cache.publishedKeyParentCtx === parent && cache.publishedKeyElementType === elementType) {
-    return cache.publishedValue;
-  }
-  let value: ParentContextValue | null;
-  if (parent.parentId === styledComponentId) {
-    value = null;
-  } else {
-    const ancestors =
-      parent.parentId === null
-        ? parent.ancestors
-        : parent.ancestors.length === 0
-          ? [parent.parentId]
-          : parent.ancestors.concat(parent.parentId);
-    value = {
-      parentId: styledComponentId,
-      parentTarget: elementType,
-      ancestors,
-      siblingIndex: -1,
-      totalSiblings: 0,
-      prevSiblingId: null,
-      prevSiblingTarget: null,
-      prevSiblings: EMPTY_PREV_SIBLINGS,
-      prevSiblingsCount: 0,
-      siblingIndexOfType: -1,
-      totalSiblingsOfType: 0,
-      siblings: EMPTY_SIBLINGS,
-    };
-  }
-  cache.publishedKeyParentCtx = parent;
-  cache.publishedKeyElementType = elementType;
-  cache.publishedValue = value;
-  // Per-child cache entries reference the prior published value via
-  // `parentValue`; let `indexStyledChildren` invalidate them lazily
-  // when its entry-by-entry compare mismatches.
-  return value;
-}
-
-interface PerChildCacheEntry {
-  id: string | null;
-  target: NativeTarget | null;
-  total: number;
-  prevId: string | null;
-  prevTarget: NativeTarget | null;
-  prevSiblingsKey: string;
-  idxOfType: number;
-  totalOfType: number;
-  parentValue: ParentContextValue;
-  /** Identity of the SiblingsList wrapper at the time perChildValue was built. */
-  siblings: SiblingsList;
-  perChildValue: ParentContextValue;
-}
-
-interface ParentPublishCache {
-  publishedKeyParentCtx: ParentContextValue | null;
-  publishedKeyElementType: NativeTarget | null;
-  publishedValue: ParentContextValue | null;
-  perChild: Array<PerChildCacheEntry | null>;
-  /** Stable SiblingsList wrapper; `entries` is mutated each render. */
-  siblingsList: SiblingsList | null;
-}
-
-function createParentPublishCache(): ParentPublishCache {
-  return {
-    publishedKeyParentCtx: null,
-    publishedKeyElementType: null,
-    publishedValue: null,
-    perChild: [],
-    siblingsList: null,
-  };
-}
-
-const EMPTY_PREV_SIBLINGS: ReadonlyArray<string> = Object.freeze([]);
-
-/**
- * Walk `children`, identifying styled descendants (those carrying a
- * `styledComponentId` static) and wrapping each one in a per-child
- * `ParentContext.Provider` that publishes its sibling position.
- * Non-styled children pass through untouched.
- *
- * Returns the original `children` when no styled children are present
- * so callers can reuse the original `elementProps` reference, keeping it
- * reference-stable for React.
- *
- * Sibling info reflects literal JSX position among the parent's direct
- * children. Combinator selectors only see immediate styled-child
- * relationships of a styled parent; a non-styled wrapper between them
- * means a deeper styled descendant sees no sibling info (its inherited
- * Provider holds the default values).
- *
- * Each per-child Provider's `value` is cached structurally by position:
- * when the next render produces the same (id, target, total, prev*,
- * idx-of-type, total-of-type, parentValue ref) at slot i, the same
- * `ParentContextValue` reference is reused. JSX re-creation in the
- * caller produces fresh React elements each render, but the per-child
- * Provider `value` stays reference-stable, which lets `React.memo` on
- * styled descendants short-circuit cleanly.
- */
-function indexStyledChildren(
-  cache: ParentPublishCache,
-  children: React.ReactNode,
-  parentValue: ParentContextValue
-): React.ReactNode {
-  if (children === undefined || children === null) return children;
-  if (typeof children === 'string' || typeof children === 'number') return children;
-
-  const arr = React.Children.toArray(children);
-  if (arr.length === 0) return children;
-
-  // First pass: identify styled children, total per target, and collect
-  // the `SiblingInfo` array used by `:nth-child(<formula> of <selector>)`
-  // matchers. Skipping non-styled entries keeps the array aligned with
-  // the parent walk's view of "styled children" used elsewhere.
-  const total = arr.length;
-  const childIds: Array<string | null> = new Array(total);
-  const childTargets: Array<NativeTarget | null> = new Array(total);
-  const totalsByTarget = new Map<NativeTarget, number>();
-  const siblingsMut: SiblingInfo[] = [];
-  let hasAnyStyled = false;
-  for (let i = 0; i < total; i++) {
-    const c = arr[i];
-    if (React.isValidElement(c)) {
-      const tp = c.type as { styledComponentId?: string; target?: NativeTarget } | string;
-      if (typeof tp !== 'string' && tp.styledComponentId !== undefined) {
-        const id = tp.styledComponentId;
-        childIds[i] = id;
-        const target = tp.target ?? null;
-        childTargets[i] = target;
-        hasAnyStyled = true;
-        if (target !== null) {
-          totalsByTarget.set(target, (totalsByTarget.get(target) ?? 0) + 1);
-        }
-        siblingsMut.push({
-          id,
-          target,
-          props: c.props as Readonly<Record<string, unknown>>,
-          index: i,
-        });
-        continue;
-      }
-    }
-    childIds[i] = null;
-    childTargets[i] = null;
-  }
-  if (!hasAnyStyled) return children;
-  // Reuse the cache's SiblingsList wrapper across renders; just swap
-  // `.entries`. This keeps perChildValue identity stable when sibling
-  // shape is unchanged while still giving of-selector matchers a fresh
-  // array reference (so their entry-keyed plan caches invalidate).
-  let siblings = cache.siblingsList;
-  if (siblings === null) {
-    siblings = { entries: siblingsMut };
-    cache.siblingsList = siblings;
-  } else {
-    siblings.entries = siblingsMut;
-  }
-
-  const prevSiblingsRunning: string[] = [];
-  // Running NUL-joined fingerprint of `prevSiblingsRunning`. Maintained
-  // incrementally so each iteration appends one id (O(1) amortized) instead
-  // of re-joining the whole array (O(i) per iteration, O(n²) total). For a
-  // parent with N styled children this drops the total work from quadratic
-  // to linear.
-  let prevSiblingsKeyRunning = '';
-  const sameTypeCount = new Map<NativeTarget, number>();
-  const nextChildren: React.ReactNode[] = new Array(total);
-  const perChildCache = cache.perChild;
-  if (perChildCache.length !== total) perChildCache.length = total;
-  for (let i = 0; i < total; i++) {
-    const child = arr[i];
-    const id = childIds[i];
-    if (id === null) {
-      nextChildren[i] = child;
-      perChildCache[i] = null;
-      continue;
-    }
-    const target = childTargets[i];
-    const prevId = i > 0 ? childIds[i - 1] : null;
-    const prevTarget = i > 0 ? childTargets[i - 1] : null;
-    const idxOfType = target !== null ? (sameTypeCount.get(target) ?? 0) : -1;
-    const totalOfType = target !== null ? (totalsByTarget.get(target) ?? 0) : 0;
-    const prevSiblingsKey = prevSiblingsKeyRunning;
-    const cached = perChildCache[i];
-    let perChildValue: ParentContextValue;
-    if (
-      cached !== null &&
-      cached !== undefined &&
-      cached.id === id &&
-      cached.target === target &&
-      cached.total === total &&
-      cached.prevId === prevId &&
-      cached.prevTarget === prevTarget &&
-      cached.prevSiblingsKey === prevSiblingsKey &&
-      cached.idxOfType === idxOfType &&
-      cached.totalOfType === totalOfType &&
-      cached.parentValue === parentValue &&
-      cached.siblings === siblings
-    ) {
-      perChildValue = cached.perChildValue;
-    } else {
-      // Publish the shared running array directly. Each child's
-      // `prevSiblingsCount` caps the valid prefix; later siblings will
-      // append to the same backing array as the parent walk continues,
-      // but consumers (e.g. general-sibling combinator matcher) iterate
-      // up to the count, not the array's length. Avoids the O(N²) slice
-      // cost of per-child copies on first parent render.
-      perChildValue = {
-        parentId: parentValue.parentId,
-        parentTarget: parentValue.parentTarget,
-        ancestors: parentValue.ancestors,
-        siblingIndex: i,
-        totalSiblings: total,
-        prevSiblingId: prevId,
-        prevSiblingTarget: prevTarget,
-        prevSiblings: prevSiblingsRunning.length === 0 ? EMPTY_PREV_SIBLINGS : prevSiblingsRunning,
-        prevSiblingsCount: prevSiblingsRunning.length,
-        siblingIndexOfType: idxOfType,
-        totalSiblingsOfType: totalOfType,
-        siblings,
-      };
-      perChildCache[i] = {
-        id,
-        target,
-        total,
-        prevId,
-        prevTarget,
-        prevSiblingsKey,
-        idxOfType,
-        totalOfType,
-        parentValue,
-        siblings,
-        perChildValue,
-      };
-    }
-    nextChildren[i] = createElement(
-      ParentContext.Provider,
-      { value: perChildValue, key: (child as React.ReactElement).key ?? `__sc_sib_${i}` },
-      child
-    );
-    prevSiblingsRunning.push(id);
-    prevSiblingsKeyRunning =
-      prevSiblingsKeyRunning === '' ? id : prevSiblingsKeyRunning + '\0' + id;
-    if (target !== null) sameTypeCount.set(target, idxOfType + 1);
-  }
-  return nextChildren;
-}
-
-/**
- * Substitute `children` on `elementProps` with `indexedChildren` if the
- * latter is a fresh reference. When `indexedChildren === elementProps.children`,
- * the original object is returned so it stays reference-stable for React.
- */
-function withIndexedChildren(
-  elementProps: Dict<unknown>,
-  indexedChildren: React.ReactNode
-): Dict<unknown> {
-  if (indexedChildren === elementProps.children) return elementProps;
-  return { ...elementProps, children: indexedChildren };
+  return createElement(ParentContext.Provider, { value: publishedValue }, inner);
 }
 
 /** Prepended below the composed style: anything in props.style beats
@@ -1966,7 +1647,7 @@ const SCROLLER_FLEX_PIN = Object.freeze({ flexGrow: 0 });
  *
  * - `nestedScrollEnabled: true`: browsers nest scrolling natively, while
  *   Android's ScrollView requires the opt-in before an inner scroller may
- *   claim a gesture from a scrollable ancestor. Inert on iOS and rn-web.
+ *   claim a gesture from a scrollable ancestor. Inert on iOS.
  * - `pinGrow` (compiled `scrollerFlexPin`): an authored width/height
  *   holds instead of stretching with RN ScrollView's `flexGrow: 1` base.
  *   The companion `flexShrink: 0` lives in the styled scroller baseline
@@ -2018,7 +1699,6 @@ function useScrollerSnapProps(
     compiled.specialCases !== undefined &&
     (compiled.specialCases.pagingEnabled === true ||
       compiled.specialCases.snapToAlignment !== undefined);
-  // biome-ignore-start lint/correctness/useHookAtTopLevel: these three are called unconditionally here. The rule reports them as "indirect and conditional" because the one caller sits past an IS_RSC-gated early return, and IS_RSC is a load-time constant. Each takes its own enable flag as an argument rather than being called behind a branch, which is what keeps the sequence fixed.
   out = useSnapTargetRegistration(snapTarget, out);
   out = useSnapOffsets(isScroller && snapTypeDeclared, timelineEntry, out);
   return useSnapSettle(
@@ -2028,24 +1708,23 @@ function useScrollerSnapProps(
     timelineEntry,
     out
   );
-  // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the snap-props hook sequence
 }
 
 /** The slice of React Native's `onLayout` event these publishers read. */
 type LayoutEvent = { nativeEvent: { layout: { width: number; height: number } } };
 
 interface ContainerPublisherProps {
-  name: string;
-  /** Inherited NativeStyle from the nearest ancestor publisher; the
-   *  cascade fields carry through unchanged and only `container.named`
-   *  / `container.nearest` get rewritten with this publisher's entry. */
-  parent: NativeStyleContextValue;
-  /** Cascade values to publish if this component overrides any of
-   *  font-size / line-height / direction. `null` when the inherited
-   *  cascade should flow through. */
-  cascadeOverride: NativeCascadeValues | null;
-  elementType: NativeTarget;
+  /** The cascade this component publishes: `parent.cascade` when it sets no
+   *  font-size / line-height / direction of its own. Identity-stable across
+   *  renders with equal values, so the published value is too. */
+  cascade: NativeCascadeValues;
   elementProps: Dict<unknown>;
+  elementType: NativeTarget;
+  name: string;
+  /** Inherited NativeStyle from the nearest ancestor publisher; only
+   *  `container.named` / `container.nearest` get rewritten with this
+   *  publisher's entry. */
+  parent: NativeStyleContextValue;
 }
 
 /**
@@ -2147,11 +1826,11 @@ function numOrZero(v: unknown): number {
  * extra hook slots only fire when the feature is actually used.
  */
 function ContainerPublisher({
+  cascade,
+  elementProps,
+  elementType,
   name,
   parent,
-  cascadeOverride,
-  elementType,
-  elementProps,
 }: ContainerPublisherProps): React.ReactElement {
   const [entry, setEntry] = React.useState<ContainerEntry | null>(null);
   const lastRef = React.useRef<ContainerEntry | null>(null);
@@ -2206,12 +1885,8 @@ function ContainerPublisher({
       const named = Object.freeze({ ...parentContainer.named, [name]: entry });
       container = { nearest: entry, named };
     }
-    // Cascade fields pass through unchanged except when this
-    // component declares a cascade-significant override
-    // (font-size / line-height / direction); useDynamicImpl computes
-    // the override and forwards it via `cascadeOverride`.
-    return { container, cascade: cascadeOverride ?? parent.cascade };
-  }, [entry, name, parent, cascadeOverride]);
+    return { container, cascade };
+  }, [entry, name, parent, cascade]);
 
   const existingOnLayout = elementProps.onLayout;
   const composedOnLayout = React.useMemo(
@@ -2237,22 +1912,22 @@ function ContainerPublisher({
 }
 
 interface GridPublisherProps {
-  ownerId: string;
-  columns: number;
+  /** The cascade this component publishes (`parent.cascade` when it sets no
+   *  font-size / line-height / direction of its own), with this publisher's
+   *  grid entry added. Identity-stable across renders with equal values. */
+  cascade: NativeCascadeValues;
   columnGap: number;
-  rowGap: number;
+  columns: number;
   /** Set when the grid container also declares `container-type`: the
    *  element is a query container regardless of display type, so the
    *  grid role must publish the container box too instead of eating it. */
   containerName: string | undefined;
-  /** Inherited NativeStyle; container + cascade pass through, with this
-   *  publisher's grid entry added to the cascade. */
-  parent: NativeStyleContextValue;
-  /** Cascade override when the grid container also changes a cascade
-   *  key (font-size / line-height / direction); `null` otherwise. */
-  cascadeOverride: NativeCascadeValues | null;
-  elementType: NativeTarget;
   elementProps: Dict<unknown>;
+  elementType: NativeTarget;
+  ownerId: string;
+  /** Inherited NativeStyle; the container state passes through. */
+  parent: NativeStyleContextValue;
+  rowGap: number;
 }
 
 /**
@@ -2281,15 +1956,15 @@ const EMPTY_BOX = { width: 0, height: 0 };
  * the rest of the cascade pass through unchanged.
  */
 function GridPublisher({
-  ownerId,
-  columns,
+  cascade: publishedCascade,
   columnGap,
-  rowGap,
+  columns,
   containerName,
-  parent,
-  cascadeOverride,
-  elementType,
   elementProps,
+  elementType,
+  ownerId,
+  parent,
+  rowGap,
 }: GridPublisherProps): React.ReactElement {
   const [contentBox, setContentBox] = React.useState<{ width: number; height: number }>(EMPTY_BOX);
   const lastRef = React.useRef(EMPTY_BOX);
@@ -2318,9 +1993,8 @@ function GridPublisher({
   );
 
   const value = React.useMemo<NativeStyleContextValue>(() => {
-    const baseCascade = cascadeOverride ?? parent.cascade;
     const cascade: NativeCascadeValues = {
-      ...baseCascade,
+      ...publishedCascade,
       grid: { ownerId, columns, columnGap, rowGap, contentWidth: contentBox.width },
     };
     // A `container-type` declaration on the grid container makes it a
@@ -2338,7 +2012,7 @@ function GridPublisher({
       container = { nearest: entry, named };
     }
     return { container, cascade };
-  }, [parent, cascadeOverride, ownerId, columns, columnGap, rowGap, contentBox, containerName]);
+  }, [parent, publishedCascade, ownerId, columns, columnGap, rowGap, contentBox, containerName]);
 
   const existingOnLayout = elementProps.onLayout;
   const composedOnLayout = React.useMemo(

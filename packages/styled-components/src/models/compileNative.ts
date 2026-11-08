@@ -15,8 +15,9 @@ import {
   StaticRuleNode,
 } from '../parser/ast';
 import { classifyAtRuleNow, classifyRuleNow } from '../parser/nativePlan';
-import { camelize, transformDecl } from '../native/transform';
-import { warnIfNativeCssVar, warnIfSentinelLeak, warnOnce } from '../native/transform/dev';
+import { camelize } from '../native/camelize';
+import { transformDecl } from '../native/transform';
+import { warnIfNativeCssVar, warnOnce } from '../native/transform/dev';
 import { getPrimaryPassthroughKey } from '../native/transform/passthrough';
 import {
   buildResolver,
@@ -266,9 +267,7 @@ export interface NativeStyles {
    *
    * `explicitName` is the value of `container-name` if the user wrote
    * one; otherwise undefined and the render path auto-names with the
-   * styled-component's `styledComponentId`. The componentId is also
-   * injected into the runtime style as `containerName` so rn-web
-   * emits the matching `container-name: <id>` CSS for the browser.
+   * styled-component's `styledComponentId`.
    */
   containerInfo?: { type: string; explicitName?: string };
   /**
@@ -318,9 +317,6 @@ export interface NativeStyles {
    * grow the view to its natural text size; no JS-side autosize
    * wiring. This flag exists so the render path can dev-warn when the
    * user passes `multiline={false}` explicitly (voiding the lift).
-   * On rn-web the polyfill keeps the declaration in `base` so the
-   * browser handles `field-sizing` natively;the extract here only
-   * runs on non-rn-web bundles via `__NATIVE_WEB__` tree-shaking.
    */
   fieldSizing?: 'content';
   /**
@@ -330,26 +326,31 @@ export interface NativeStyles {
    * render path appends `flexGrow: 0` so the declared size holds: RN's
    * ScrollView base style ships `flexGrow: 1`, which stretches declared
    * dimensions with the flex parent, while CSS elements default
-   * `flex-grow: 0`. Computed from base + render-time resolver keys
-   * (declarations inside @media buckets do not set it).
+   * `flex-grow: 0`. Computed from the base, `!important` layer, render-time
+   * resolver keys and `var()` deferrals (declarations inside @media buckets
+   * do not set it).
    */
   scrollerFlexPin?: true;
   /**
-   * `true` when this compile output COULD publish a cascade value
-   * (font-size / line-height / direction) to descendants. Set when any
-   * of base, resolvers, conditional buckets, starting-style, transitions,
-   * or animation keyframes declare a cascade key. Lets the render path
-   * skip the per-render `collectCascadeSlots` walk when both this flag
-   * is false AND no user style was supplied (the only other source of
-   * cascade keys is a `style={{ fontSize: ... }}` prop).
+   * Set when `background-blend-mode` appears in the base, a resolver, or any
+   * conditional bucket (a color-scheme `@media` included). The render path
+   * then keeps the component's children behind a layer slot from the first
+   * render, so the blend layers appearing later never moves them.
+   */
+  blendLayerSlot?: true;
+  /**
+   * `true` when font-size, line-height or direction is declared in the
+   * base, a bucket, an `!important` layer or a `var()`; keyframes,
+   * transitions and `@starting-style` do not count. Lets the render path
+   * skip the cascade walk when this flag is false AND no style was supplied
+   * (the only other source of cascade keys is a `style` prop or `attrs`).
    */
   publishesCascade: boolean;
   /**
    * CSS custom property declarations (`--name: value;`) collected from
    * the base styles. Published to descendants via NativeStyleContext so
    * a child's `var(--name)` references resolve through the cascade. Set
-   * only when at least one `--xxx` decl appears; rn-web leaves these in
-   * the base so the browser's own cascade handles them.
+   * only when at least one `--xxx` decl appears.
    */
   customProperties?: ReadonlyMap<string, string>;
   /**
@@ -471,16 +472,9 @@ export const SPECIAL_CASE_PROPS: Record<string, SpecialCaseMeta> = {
   // composite against the group instead of the page; iOS drops the prop
   // via RN's own view-prop filter and honors the `isolation` style key.
   renderToHardwareTextureAndroid: { validOn: [...VIEW_LIKE_TARGETS], source: 'isolation' },
-  // <Image> only. On rn-web `objectFit` is ignored as a style key; the
-  // polyfill lifts a `resizeMode` prop carrying the spec-mapped value.
+  // <Image> only. The polyfill lifts a `resizeMode` prop carrying the
+  // spec-mapped value.
   resizeMode: { validOn: ['Image'], source: 'object-fit' },
-  // rn-web LocaleContext lift. rn-web reads `props.dir` to derive its
-  // writingDirection context (which the BiDi-aware compiler uses to
-  // resolve `text-align: start | end` against). The `direction`
-  // polyfill emits this on rn-web so the cascaded direction reaches
-  // descendants. On native this entry never fires (the polyfill is
-  // gated by `__NATIVE_WEB__`).
-  dir: { validOn: [...VIEW_LIKE_TARGETS, 'TextInput', 'Image'], source: 'direction' },
   // Android-only TextInput prop. iOS drops; rationale in
   // `native/transform/polyfills/caretColor.ts`.
   cursorColor: { validOn: ['TextInput'], source: 'caret-color' },
@@ -488,24 +482,11 @@ export const SPECIAL_CASE_PROPS: Record<string, SpecialCaseMeta> = {
   // by the caret-color polyfill on iOS only so Android's selection stays
   // untouched (Android uses `cursorColor` for the caret alone).
   selectionColor: { validOn: ['TextInput'], source: 'caret-color' },
-  // `interactivity: inert` on rn-web: a single HTML `inert` attribute
-  // covers hit-testing, focus, text selection, editable suppression,
-  // and a11y subtree hiding. rn-web's
-  // `forwardedProps.accessibilityProps` whitelists `inert` so the prop
-  // reaches the DOM verbatim. On native this entry never fires (the
-  // polyfill is gated by `__NATIVE_WEB__`).
-  inert: {
-    validOn: [...VIEW_LIKE_TARGETS, 'TextInput'],
-    source: 'interactivity',
-    priority: 1,
-  },
-  // `interactivity: inert` on native: RN has no `inert` prop, so the
-  // polyfill lifts the six underlying surfaces individually. Priority
-  // over author props is required: hit-testing must act as if
-  // `pointer-events` were `none` regardless of its actual value, and
-  // equivalent for the a11y / focus / selection / editable surfaces.
-  // The lift is skipped on rn-web (see `shouldLiftSpecialCase`); rn-web
-  // deprecated `props.pointerEvents` in favor of `style.pointerEvents`.
+  // `interactivity: inert`: RN has no `inert` prop, so the polyfill lifts
+  // the six underlying surfaces individually. Priority over author props
+  // is required: hit-testing must act as if `pointer-events` were `none`
+  // regardless of its actual value, and equivalent for the a11y / focus /
+  // selection / editable surfaces.
   pointerEvents: { validOn: VIEW_LIKE_TARGETS, source: 'interactivity', priority: 1 },
   accessibilityElementsHidden: {
     validOn: VIEW_LIKE_TARGETS,
@@ -643,10 +624,7 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   const sticky = extractSticky(resolvedBase);
   const snapTarget = extractSnapTarget(resolvedBase);
   const anchorDecls = extractAnchorDecls(resolvedBase);
-  // Only lift `fieldSizing` out of `base` on native bundles; on rn-web
-  // the polyfill leaves it in place so the browser sees `field-sizing`
-  // and handles autosize without engaging the render-time hook.
-  const fieldSizing = __NATIVE_WEB__ ? null : extractFieldSizing(resolvedBase);
+  const fieldSizing = extractFieldSizing(resolvedBase);
   // Snapshot the FULL base (including sentinel-laden values that became
   // resolvers) for the animation adapter to diff across renders.
   // Capturing only `resolvedBase` would miss values that contain
@@ -696,8 +674,7 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
     pseudoEntries,
     keyframes,
     hasPseudo,
-    // Filled below after every optional field is attached so the scan
-    // can see startingStyle / resolvers / animations / transitions.
+    // Filled below, once the scan can read the resolvers, `!important` layers and `var()` deferrals.
     publishesCascade: false,
   };
   if (specialCases !== null) out.specialCases = specialCases;
@@ -731,92 +708,93 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   if (anchorDecls.anchorName !== null) out.anchorName = anchorDecls.anchorName;
   if (anchorDecls.positionAnchor !== null) out.positionAnchor = anchorDecls.positionAnchor;
   if (fieldSizing !== null) out.fieldSizing = fieldSizing;
-  out.publishesCascade = computePublishesCascade(out);
-  if (computeScrollerFlexPin(out)) out.scrollerFlexPin = true;
+  const declared = scanDeclaredKeys(out, resolvedBase);
+  out.publishesCascade = (declared & KeyClass.Cascade) !== 0;
+  if (declared & KeyClass.Blend) out.blendLayerSlot = true;
+  if (declared & KeyClass.Dimension && !(declared & KeyClass.Flex)) out.scrollerFlexPin = true;
   return out;
 }
 
+/** Bit flags: which render-time behavior a declared style key switches on. */
+const KeyClass = {
+  Blend: 2,
+  Cascade: 1,
+  Dimension: 4,
+  Flex: 8,
+} as const;
+
 /**
- * Authored width/height (post-transform, so logical properties already
- * map) with no authored flex factor. See `scrollerFlexPin` on the
- * compiled shape for why the render path pins `flexGrow: 0` on
- * scrollable targets when this is set.
+ * Declared React Native style keys the render path reacts to. `font` is only
+ * ever a `var()` deferral name, since the shorthand expands into the other keys
+ * everywhere else.
  */
-function computeScrollerFlexPin(out: NativeStyles): boolean {
-  // `base` may be a registered StyleSheet id (number) rather than the
-  // raw style object; the keys aren't inspectable then, so only the
-  // resolver / varDeferred scans below contribute.
-  const base = out.base;
-  const baseInspectable = typeof base === 'object' && base !== null;
-  let dim = baseInspectable && ('width' in base || 'height' in base);
-  let flex = baseInspectable && ('flex' in base || 'flexGrow' in base);
-  for (const list of [out.resolvers, out.varDeferred]) {
-    if (list === undefined) continue;
-    for (let i = 0; i < list.length; i++) {
-      const key = list[i][0];
-      if (key === 'width' || key === 'height') dim = true;
-      else if (key === 'flex' || key === 'flexGrow') flex = true;
-    }
-  }
-  return dim && !flex;
+const KEY_CLASSES = new Map<string, number>([
+  ['backgroundBlendMode', KeyClass.Blend],
+  ['blockSize', KeyClass.Dimension],
+  ['direction', KeyClass.Cascade],
+  ['flex', KeyClass.Flex],
+  ['flexGrow', KeyClass.Flex],
+  ['font', KeyClass.Cascade],
+  ['fontSize', KeyClass.Cascade],
+  ['height', KeyClass.Dimension],
+  ['inlineSize', KeyClass.Dimension],
+  ['lineHeight', KeyClass.Cascade],
+  ['width', KeyClass.Dimension],
+]);
+
+/** The classes of the keys a style object declares (`in`, so an explicit `undefined` counts). */
+function objectKeyClasses(style: Dict<unknown> | undefined): number {
+  let classes = 0;
+  if (style === undefined) return classes;
+  for (const key in style) classes |= KEY_CLASSES.get(key) ?? 0;
+  return classes;
 }
 
 /**
- * Scan a compiled output for declarations that could publish a cascade
- * value (font-size / line-height / direction) to descendants. Considers
- * static base, render-time resolvers, conditional buckets and their
- * resolvers, `@starting-style`, transitions, and animation keyframes.
- *
- * Lets the render path's per-render `collectCascadeSlots` walk
- * short-circuit when this flag is false AND the consumer didn't supply
- * a `style={{ fontSize: ... }}` prop (the only other source of cascade
- * values).
+ * The classes of the keys an entry list names. `resolvers` and
+ * `importantResolvers` entries are named by React Native key (`flexGrow`);
+ * `varDeferred` entries keep the authored CSS name (`flex-grow`) for the
+ * render-time `transformDecl`, so `deferred` compares them as `camelize` spells them.
  */
-function computePublishesCascade(out: NativeStyles): boolean {
-  if (hasCascadeKey(out.base)) return true;
-  if (out.resolvers && resolversWriteCascadeKey(out.resolvers)) return true;
+function listKeyClasses(
+  list: ReadonlyArray<readonly [string, ...unknown[]]> | undefined,
+  deferred: boolean
+): number {
+  let classes = 0;
+  if (list === undefined) return classes;
+  for (let i = 0; i < list.length; i++) {
+    classes |= KEY_CLASSES.get(deferred ? camelize(list[i][0]) : list[i][0]) ?? 0;
+  }
+  return classes;
+}
+
+/**
+ * OR of the {@link KeyClass} bits for every key a compiled output declares
+ * in its base, `!important` layer, resolvers and `var()` deferrals, and (for
+ * `Cascade` and `Blend` only; the scroller pin never reads a bucket) in each
+ * conditional bucket's equivalents. Keyframes, transitions and `@starting-style`
+ * never win the cascade, so they are not read. `resolvedBase` is the
+ * pre-registration object, since `out.base` may be a registered StyleSheet id.
+ */
+function scanDeclaredKeys(out: NativeStyles, resolvedBase: Dict<unknown>): number {
+  let classes =
+    objectKeyClasses(resolvedBase) |
+    objectKeyClasses(out.important) |
+    listKeyClasses(out.resolvers, false) |
+    listKeyClasses(out.importantResolvers, false) |
+    listKeyClasses(out.varDeferred, true);
+  let bucketClasses = 0;
   for (let i = 0; i < out.conditional.length; i++) {
-    const c = out.conditional[i];
-    if (hasCascadeKey(c.styles)) return true;
-    if (c.resolvers && resolversWriteCascadeKey(c.resolvers)) return true;
+    const bucket = out.conditional[i];
+    bucketClasses |=
+      objectKeyClasses(bucket.styles) |
+      objectKeyClasses(bucket.important) |
+      listKeyClasses(bucket.resolvers, false) |
+      listKeyClasses(bucket.importantResolvers, false) |
+      listKeyClasses(bucket.varDeferred, true);
   }
-  if (out.startingStyle && hasCascadeKey(out.startingStyle)) return true;
-  if (out.startingStyleResolvers && resolversWriteCascadeKey(out.startingStyleResolvers)) {
-    return true;
-  }
-  if (out.transitions) {
-    for (let i = 0; i < out.transitions.length; i++) {
-      const p = out.transitions[i].property;
-      if (p === 'all' || isCascadeKey(p)) return true;
-    }
-  }
-  for (let i = 0; i < out.keyframes.length; i++) {
-    const frames = out.keyframes[i].frames;
-    for (let j = 0; j < frames.length; j++) {
-      if (hasCascadeKey(frames[j].decls)) return true;
-    }
-  }
-  return false;
-}
-
-function isCascadeKey(k: string): boolean {
-  return k === 'fontSize' || k === 'lineHeight' || k === 'direction';
-}
-
-/**
- * `true` when `o` has any cascade-publishing key (font-size / line-height /
- * direction) set to a defined value. Exported so `NativeStyle.staticEligible`
- * can use the same set without drift.
- */
-export function hasCascadeKey(o: Dict<unknown>): boolean {
-  return o.fontSize !== undefined || o.lineHeight !== undefined || o.direction !== undefined;
-}
-
-function resolversWriteCascadeKey(rs: ReadonlyArray<[string, unknown]>): boolean {
-  for (let i = 0; i < rs.length; i++) {
-    if (isCascadeKey(rs[i][0])) return true;
-  }
-  return false;
+  classes |= bucketClasses & (KeyClass.Cascade | KeyClass.Blend);
+  return classes;
 }
 
 /**
@@ -828,19 +806,13 @@ function resolversWriteCascadeKey(rs: ReadonlyArray<[string, unknown]>): boolean
 function extractSpecialCases(base: Dict<unknown>): Dict<unknown> | null {
   let lifted: Dict<unknown> | null = null;
   for (const k in base) {
-    if (SPECIAL_CASE_PROPS[k] !== undefined && shouldLiftSpecialCase(k)) {
+    if (SPECIAL_CASE_PROPS[k] !== undefined) {
       if (lifted === null) lifted = {};
       lifted[k] = base[k];
       delete base[k];
     }
   }
   return lifted;
-}
-
-// `pointerEvents` stays in style on rn-web; rn-web warns when it reaches
-// as a prop. Every other special-case key lifts on both bars.
-function shouldLiftSpecialCase(key: string): boolean {
-  return !(__NATIVE_WEB__ && key === 'pointerEvents');
 }
 
 /**
@@ -851,9 +823,8 @@ function shouldLiftSpecialCase(key: string): boolean {
  * in `ContainerPublisher` and feed the resolved name into the
  * `ContainerContext` for descendants.
  *
- * Both declarations stay in `base` so rn-web emits the matching CSS
- * for the browser. RN's view-prop filter silently drops unknown style
- * keys, so they're harmless on iOS / Android. Auto-naming with the
+ * Both declarations stay in `base`; RN's view-prop filter silently
+ * drops unknown style keys, so they're harmless on iOS / Android. Auto-naming with the
  * component's `styledComponentId` happens at render time (the id
  * isn't known here at compile).
  */
@@ -868,14 +839,12 @@ function extractContainerInfo(base: Dict<unknown>): { type: string; explicitName
  * Lift `anchor-name` / `position-anchor` declarations off the style
  * object (RN's validator doesn't know them). `anchor-name` drives the
  * render-time anchor rect publisher; `position-anchor` becomes the
- * implicit target for anchor functions. rn-web leaves both in place
- * for the browser. Mutates `base`.
+ * implicit target for anchor functions. Mutates `base`.
  */
 function extractAnchorDecls(base: Dict<unknown>): {
   anchorName: string | null;
   positionAnchor: string | null;
 } {
-  if (__NATIVE_WEB__) return { anchorName: null, positionAnchor: null };
   let anchorName: string | null = null;
   let positionAnchor: string | null = null;
   const an = base.anchorName;
@@ -897,12 +866,10 @@ function extractAnchorDecls(base: Dict<unknown>): {
  * the parent styled ScrollView via `stickyHeaderIndices`, so the
  * declaration must not reach RN's style validator. The element behaves
  * as relative when not stuck (RN's default), matching the spec's
- * "identical to relative, except..." framing. rn-web leaves the
- * declaration in place for the browser. Mutates `base`.
+ * "identical to relative, except..." framing. Mutates `base`.
  */
 function extractSticky(base: Dict<unknown>): true | null {
   if (base.position !== 'sticky') return null;
-  if (__NATIVE_WEB__) return null;
   delete base.position;
   return true;
 }
@@ -965,15 +932,11 @@ function extractScrollTimeline(base: Dict<unknown>): { name: string; axis: Timel
  * (it lays out as a wrapping flex row), but it can't compute per-child
  * widths, so it warns and produces no `gridInfo`. The sentinels are
  * always removed so RN's style validator never sees them.
- *
- * Skipped on rn-web (the grid CSS stays in `base` for the browser; the
- * sentinels never form there).
  */
 function extractGrid(base: Dict<unknown>): {
   gridInfo: { columns: number } | null;
   gridSpan: number | null;
 } {
-  if (__NATIVE_WEB__) return { gridInfo: null, gridSpan: null };
   const isContainer = base.__scGridContainer === true;
   const columns = base.__scGridColumns;
   const span = base.__scGridSpan;
@@ -1122,9 +1085,7 @@ function extractDescriptors<T extends object>(
  * properties against compiled `baseValues` keys directly, without
  * per-lookup case translation.
  *
- * Dual-emit passthrough props return the primary (native) key;gradient
- * transitions only run through this adapter on native; rn-web has its
- * own CSS animation pipeline.
+ * Dual-emit passthrough props return the primary (native) key.
  *
  * `'all'` and `'none'` pass through; the adapter treats them as
  * sentinels rather than real prop names.
@@ -1170,7 +1131,7 @@ function stripSpecialCasesFromConditional(
 ): Dict<unknown> {
   let out: Dict<unknown> | null = null;
   for (const k in styles) {
-    if (SPECIAL_CASE_PROPS[k] !== undefined && shouldLiftSpecialCase(k)) {
+    if (SPECIAL_CASE_PROPS[k] !== undefined) {
       if (__DEV__) {
         const meta = SPECIAL_CASE_PROPS[k];
         const cond = describeCondition(entry);
@@ -1304,7 +1265,7 @@ function processDecls(decls: StaticDeclNode[]): {
     let partial: Dict<unknown>;
     const { prop } = decl;
     let { value } = decl;
-    if (!__NATIVE_WEB__ && prop.charCodeAt(0) === 0x2d && prop.charCodeAt(1) === 0x2d) {
+    if (prop.charCodeAt(0) === 0x2d && prop.charCodeAt(1) === 0x2d) {
       // Bare `--` is reserved for future use and must not become a
       // custom property; drop silently so it never lands on the host.
       if (prop.length === 2) continue;
@@ -1319,12 +1280,12 @@ function processDecls(decls: StaticDeclNode[]): {
     // Stripping `!important` early lets the cache keys (pairCache by
     // (prop, strippedValue) / staticDeclCache by decl-node) reuse the
     // partial across same-value normal + important decls.
-    const bangPos = !__NATIVE_WEB__ ? findImportantStart(value) : -1;
+    const bangPos = findImportantStart(value);
     const isImportant = bangPos !== -1;
     if (isImportant) {
       value = stripImportant(value);
     }
-    if (!__NATIVE_WEB__ && indexOfUnquotedSubstring(value, 'var(--', 0) !== -1) {
+    if (indexOfUnquotedSubstring(value, 'var(--', 0) !== -1) {
       // Defer to render time so the cascade map can supply the
       // substitution; the runtime re-runs transformDecl on the
       // substituted text so shorthand expansion still fires. The
@@ -1378,7 +1339,6 @@ function processDecls(decls: StaticDeclNode[]): {
           if (importantResolvers === null) importantResolvers = [];
           importantResolvers.push([k, r]);
         } else {
-          if (__DEV__) warnIfSentinelLeak(k, v);
           important[k] = v;
         }
         continue;
@@ -1386,24 +1346,15 @@ function processDecls(decls: StaticDeclNode[]): {
       if (r !== null) {
         resolvers.push([k, r]);
       } else {
-        if (__DEV__) {
-          warnIfSentinelLeak(k, v);
-        }
         base[k] = v;
       }
     }
   }
-  // rn-web emits raw `perspective:` directly (the browser exposes it as a
-  // separate surface), so the sentinel never lands in `base` on web and
-  // the post-merge fold is dead. Gate the call so terser can DCE both the
-  // helper and the sentinel string on the rn-web bundle.
-  if (!__NATIVE_WEB__) {
-    foldPerspectiveSentinel(raw, base);
-    // Both layers, because `corner-shape: square !important` lands the
-    // sentinel in `important` and would otherwise never be folded.
-    foldCornerShapeSquare(raw, base);
-    if (important !== null) foldCornerShapeSquare(raw, important);
-  }
+  foldPerspectiveSentinel(raw, base);
+  // Both layers, because `corner-shape: square !important` lands the
+  // sentinel in `important` and would otherwise never be folded.
+  foldCornerShapeSquare(raw, base);
+  if (important !== null) foldCornerShapeSquare(raw, important);
   return { raw, base, resolvers, important, importantResolvers, customProperties, varDeferred };
 }
 
@@ -1714,8 +1665,8 @@ function applyRuleClass(
 }
 
 /**
- * `:nth-child` family bucket. The match runs against ParentContext's
- * sibling-position fields published by the parent's per-child Provider.
+ * `:nth-child` family bucket. The match runs against the sibling-position
+ * fields the parent hands each styled child in its parent slot prop.
  * Top-level only (the outer-at-rule + nthChild compound is rejected by
  * the same direct-children scoping as combinators).
  */
@@ -1953,22 +1904,6 @@ function handlePropertyAtRule(node: StaticAtRuleNode): void {
       );
       return;
     }
-  }
-  if (__NATIVE_WEB__) {
-    const css = (globalThis as { CSS?: { registerProperty?: (definition: unknown) => void } }).CSS;
-    if (css && typeof css.registerProperty === 'function') {
-      try {
-        css.registerProperty({
-          name,
-          syntax,
-          inherits,
-          ...(initialValue !== null ? { initialValue } : null),
-        });
-      } catch {
-        // Double registration in the browser throws; the first wins.
-      }
-    }
-    return;
   }
   registerCssProperty(name, { syntax, inherits, initialValue });
 }

@@ -722,7 +722,7 @@ describe('rn-web bridge: web-native primitives and arbitrary components', () => 
   });
 });
 
-describe('rn-web bridge: baselines that match the native rn-web variant', () => {
+describe('rn-web bridge: web baselines', () => {
   it('opts the document into both color schemes so light-dark() and useColorScheme resolve', () => {
     // Importing the bridge module set this at evaluation time; check it.
     expect(document.documentElement.style.colorScheme).toBe('light dark');
@@ -739,11 +739,10 @@ describe('rn-web bridge: baselines that match the native rn-web variant', () => 
 });
 
 describe('rn-web bridge: CSS surfaces that needed polyfills on native pass through to the browser', () => {
-  // The native rn-web variant lifts a set of CSS properties to React Native
-  // component props (numberOfLines from text-overflow, resizeMode from
-  // object-fit, etc.) because rn-web filters unknown style keys. On the
-  // bridge those styles go through the web pipeline → CSSOM, so the
-  // browser sees the spec property names directly.
+  // rn-web filters unknown style keys, so a native-style prop route (numberOfLines
+  // from text-overflow, resizeMode from object-fit, etc.) would be needed
+  // there. The bridge sends these styles through the web pipeline to the
+  // CSSOM, so the browser sees the spec property names directly.
   const surfaces: ReadonlyArray<[string, string, RegExp]> = [
     ['text-overflow', 'text-overflow: ellipsis; white-space: nowrap;', /text-overflow:\s*ellipsis/],
     ['object-fit', 'object-fit: cover;', /object-fit:\s*cover/],
@@ -776,6 +775,7 @@ describe('rn-web bridge: omniplatform export parity', () => {
   const OMNIPLATFORM_VALUE_EXPORTS = [
     'NativeStyleContext',
     'ParentContext',
+    'SafeAreaInsetsProvider',
     'ThemeConsumer',
     'ThemeContext',
     'ThemeProvider',
@@ -800,6 +800,16 @@ describe('rn-web bridge: omniplatform export parity', () => {
   it.each(OMNIPLATFORM_VALUE_EXPORTS)('exports %s', name => {
     const bridge = require('../native/web-bridge');
     expect(bridge[name]).toBeDefined();
+  });
+
+  it('SafeAreaInsetsProvider renders its children unchanged (the browser owns env(safe-area-inset-*))', () => {
+    const { SafeAreaInsetsProvider } = require('../native/web-bridge');
+    const { getByTestId } = render(
+      <SafeAreaInsetsProvider insets={{ bottom: 1, left: 2, right: 3, top: 4 }}>
+        <span data-testid="inside">child</span>
+      </SafeAreaInsetsProvider>
+    );
+    expect(getByTestId('inside').textContent).toBe('child');
   });
 
   it('setAnimationDebug is callable and inert (browser owns animations on web)', () => {
@@ -912,8 +922,8 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
     // rn-web's `<Image>` renders as a `<div>` with `background-image: url(...)`,
     // not as `<img>`. CSS `object-fit` only applies to replaced elements, so a
     // raw `object-fit: cover` declaration is a no-op against a `<div>`. The
-    // native engine knew this and lifted `object-fit` to a `resizeMode` prop
-    // (which rn-web's Image then translates to `background-size`).
+    // bridge lifts `object-fit` to a `resizeMode` prop (which rn-web's Image
+    // translates to `background-size`).
     it('lands the bridge class on the Image DOM node', () => {
       const Pic = styled.Image`
         object-fit: contain;
@@ -1032,6 +1042,47 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
       expect(node).not.toBeNull();
       // Lift still fired: trackColor reaches the track via accentColor.
       expect(readAllCss()).toMatch(/background-color:\s*rgba?\(11,\s*22,\s*33/i);
+    });
+  });
+
+  describe('ast.pop key spelling in arity-2 attrs on Switch', () => {
+    type SwitchFactory = {
+      attrs: (
+        a: (p: object, ast: { pop: (k: string) => unknown }) => object
+      ) => (
+        s: TemplateStringsArray
+      ) => React.ComponentType<{ testID?: string; value?: boolean; onValueChange?: () => void }>;
+    };
+
+    /** Each spelling authors its own color so the CSSOM check reads only that component's rule. */
+    function popWith(key: string, color: string) {
+      const seen: unknown[] = [];
+      const Factory = styled.Switch as unknown as SwitchFactory;
+      const Toggle = Factory.attrs((_p, ast) => {
+        seen.push(ast.pop(key));
+        return {};
+      })`
+        accent-color: ${color};
+      `;
+      render(<Toggle testID={`pop-${color}`} value={true} onValueChange={() => {}} />);
+      return { hasDecl: readAllCss().includes(`accent-color: ${color}`), seen };
+    }
+
+    it('pop of the authored spelling returns the value', () => {
+      const { seen } = popWith('accent-color', 'rgb(1, 2, 3)');
+      expect(seen.at(-1)).toBe('rgb(1, 2, 3)');
+    });
+
+    it('pop of the camelCase spelling returns the value, as on iOS and Android', () => {
+      const { seen } = popWith('accentColor', 'rgb(4, 5, 6)');
+      expect(seen.at(-1)).toBe('rgb(4, 5, 6)');
+    });
+
+    it('leaves the declaration in the CSSOM after a pop of either spelling', () => {
+      expect({
+        authored: popWith('accent-color', 'rgb(7, 8, 9)').hasDecl,
+        camel: popWith('accentColor', 'rgb(10, 11, 12)').hasDecl,
+      }).toEqual({ authored: true, camel: true });
     });
   });
 
@@ -1245,7 +1296,7 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
       expect(trackMatch).not.toBeNull();
     });
 
-    it('resolves accent-color: auto to the browser AccentColor system color', () => {
+    it('resolves accent-color: auto to a fixed accent fallback on Switch', () => {
       const Toggle = styled.Switch`
         accent-color: auto;
       `;
@@ -1421,9 +1472,8 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
     // CSS specificity: each `:not(<simple>)` contributes the simple's
     // weight, so `:not([a]):not([b]):not([c])` adds (0,3,0) — beating
     // a simple `[data-channel]` rule (weight (0,1,0)) regardless of
-    // source order. The native engine has no specificity; the bridge
-    // wraps :not chains in :where() to zero them out so the cascade
-    // matches native intent.
+    // source order. The bridge wraps :not chains in :where() to zero
+    // them out so source order decides the cascade.
     it('wraps .cls:not(...) chains in :where(...) so simple [attr] rules win', () => {
       const Pill = styled.View`
         border: 2px solid blue;
@@ -1558,10 +1608,9 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
       expect(css).not.toMatch(/opacity:\s*calc\(pow/);
     });
 
-    // Regression guard: BARE_MATH_FN_RE previously had nested-whitespace
-    // backtracking that turned an ~4 KB malformed input into a 6-second
-    // CPU spin. The fix anchors the inner body on non-whitespace; the
-    // budget below catches any reintroduction.
+    // BARE_MATH_FN_RE anchors its inner body on non-whitespace so a
+    // malformed whitespace-padded input stays linear-time; the budget
+    // below catches nested-whitespace backtracking.
     it('rejects whitespace-padded malformed math fns within a wall-clock budget', () => {
       const attack = 'width: abs(' + ' '.repeat(2000) + '1' + ' '.repeat(2000) + ') X';
       const t0 = Date.now();

@@ -85,7 +85,7 @@ function matchOutlineStyle(t: Token, stream: TokenStream): string | null {
     const webOnly = WEB_ONLY_OUTLINE_STYLES.has(name);
     if (webOnly || RN_OUTLINE_STYLES.has(name)) {
       stream.consume();
-      if (__DEV__ && webOnly && !__NATIVE_WEB__) {
+      if (__DEV__ && webOnly) {
         warnOnce(
           'native-outline-style',
           '`outline-style: ' +
@@ -159,16 +159,14 @@ export function borderShorthand(tokens: Token[]): Dict<unknown> | null {
   if (parsed === null) return null;
   const { width, style, color } = parsed;
 
-  if (!__NATIVE_WEB__ && style !== null) {
+  if (style !== null) {
     const nativeStyle = normalizeNativeBorderStyle(style);
     if (nativeStyle === null) return {};
   }
 
   const out: Dict<unknown> = {};
-  out.borderWidth =
-    !__NATIVE_WEB__ && style === 'hidden' ? 0 : width !== null ? tokenToValue(width) : 1;
-  out.borderStyle =
-    style !== null ? (__NATIVE_WEB__ || style !== 'hidden' ? style : 'none') : 'solid';
+  out.borderWidth = style === 'hidden' ? 0 : width !== null ? tokenToValue(width) : 1;
+  out.borderStyle = style !== null ? (style !== 'hidden' ? style : 'none') : 'solid';
   out.borderColor = color !== null ? colorTokenToRnStyleValue(color) : 'black';
   return out;
 }
@@ -181,7 +179,7 @@ export function borderColorShorthand(tokens: Token[]) {
 /**
  * `outline: <width> || <style> || <color>`. RN 0.85 has the longhands but not
  * the shorthand; outlineStyle on RN is restricted to solid / dotted / dashed.
- * Web-only styles warn and pass through so rn-web honors them.
+ * Web-only styles warn and pass through.
  */
 export function outlineShorthand(tokens: Token[]): Dict<unknown> | null {
   if (tokens.length === 1 && tokens[0].kind === TokenKind.Ident && tokens[0].name === 'none') {
@@ -228,7 +226,6 @@ export function borderStyleShorthand(tokens: Token[]): Dict<unknown> | null {
     names.push(t.name);
   }
   if (names.length === 0 || names.length > 4) return null;
-  if (__NATIVE_WEB__) return { borderStyle: names.join(' ') };
   if (__DEV__ && names.length > 1 && hasMixedValues(names))
     warnMultipleBorderStyles(names.join(' '));
   return normalizeNativeBorderStyle(names[0]) ?? {};

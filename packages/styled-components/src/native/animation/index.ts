@@ -59,7 +59,6 @@ import {
 import { tokenize } from '../transform/tokenize';
 import { TokenKind } from '../transform/tokens';
 import { getRN } from '../responsive';
-import { isWebPlatform } from '../polyfills';
 import {
   buildScrollProgressNode,
   resolveTimelineEntry,
@@ -217,6 +216,12 @@ interface AnimScratch {
   transformKinds?: string[];
   fillMode: AnimationDescriptor['fillMode'];
   finished: boolean;
+  /**
+   * The resolved keyframes the current overrides were built from, empty until the first build. A
+   * theme or viewport change under an unchanged keyframes name resolves different values, which
+   * rebuild the interpolations on the running progress node without restarting the timing.
+   */
+  frames: NormalizedFrame[];
   prevPlayState?: string;
   /**
    * Identity of the scroll-timeline binding the current overrides were
@@ -806,13 +811,12 @@ function startTiming(
       `easing=${easing.kind}`
     );
   }
-  const useNativeDriverOnHost = useNative && !isWebPlatform();
   const handle = Animated.timing(state.progress, {
     toValue: 1,
     duration,
     delay,
     easing: useNative ? LINEAR_EASING : (t: number) => evaluateEasing(easing, t),
-    useNativeDriver: useNativeDriverOnHost,
+    useNativeDriver: useNative,
   });
   scratch.running.add(handle);
   state.active = handle;
@@ -1241,6 +1245,28 @@ function resolveKeyframes(
   return out.length > 0 ? out : null;
 }
 
+/** Frames match when every stop sits at the same offset with the same declaration values. */
+function sameFrames(a: NormalizedFrame[], b: NormalizedFrame[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+
+  for (let i = 0; i < a.length; i++) {
+    const declsA = a[i].decls;
+    const declsB = b[i].decls;
+    if (a[i].offset !== b[i].offset) return false;
+    if (declsA === declsB) continue;
+
+    for (const key in declsA) {
+      if (declsA[key] !== declsB[key]) return false;
+    }
+    for (const key in declsB) {
+      if (!(key in declsA)) return false;
+    }
+  }
+
+  return true;
+}
+
 function parseUnitString(v: string): { n: number; unit: string } | undefined {
   const m = /^(-?[\d.]+)([a-z]+)$/i.exec(v);
   return m ? { n: parseFloat(m[1]), unit: m[2] } : undefined;
@@ -1261,8 +1287,7 @@ interface RGBA255 {
  * dependency and is invisible to third parties under strict installs).
  * `processColor` returns `0xAARRGGBB`: unsigned on iOS, a signed 32-bit int
  * on Android. `undefined` means the string is not a color; an object means a
- * platform color, which has no channels to read. react-native-web returns
- * the unsigned form.
+ * platform color, which has no channels to read.
  */
 function processNativeColor(s: string): number | null {
   const { processColor } = getRN();
@@ -1810,7 +1835,6 @@ function startKeyframeAnimation(
   const Animated = getAnimated();
   if (!Animated) return;
 
-  const useNativeDriverOnHost = useNative && !isWebPlatform();
   let duration = desc.durationMs;
   let delay = desc.delayMs;
   const isReverse = desc.direction === 'reverse' || desc.direction === 'alternate-reverse';
@@ -1902,7 +1926,7 @@ function startKeyframeAnimation(
       duration: dur,
       delay: dl,
       easing: LINEAR_EASING,
-      useNativeDriver: useNativeDriverOnHost,
+      useNativeDriver: useNative,
     });
 
   const makeReverse = (dur: number, dl: number) =>
@@ -1911,7 +1935,7 @@ function startKeyframeAnimation(
       duration: dur,
       delay: dl,
       easing: LINEAR_EASING,
-      useNativeDriver: useNativeDriverOnHost,
+      useNativeDriver: useNative,
     });
 
   /** Zero-duration timing that snaps `animS.progress` straight to `toValue`, optionally after `delay`. */
@@ -1921,7 +1945,7 @@ function startKeyframeAnimation(
       duration: 0,
       delay,
       easing: LINEAR_EASING,
-      useNativeDriver: useNativeDriverOnHost,
+      useNativeDriver: useNative,
     });
 
   /**
@@ -1991,7 +2015,7 @@ function startKeyframeAnimation(
       // after the partial. JS-driven loops still run `reset()` between
       // iterations; insert a 0-duration snap back to the cycle start
       // only for the native forward case.
-      const needsNativeLoopRestartSnap = useNativeDriverOnHost && !isReverse;
+      const needsNativeLoopRestartSnap = useNative && !isReverse;
       const snapToLoopStart = snap(0);
       body = needsNativeLoopRestartSnap
         ? Animated.sequence([partial, snapToLoopStart, loopBody])
@@ -2249,6 +2273,7 @@ function applyAnimations(
           drivenProps: new Set(),
           fillMode: desc.fillMode,
           finished: false,
+          frames: [],
         };
         scratch.anims.push(animS);
       }
@@ -2280,7 +2305,12 @@ function applyAnimations(
         continue;
       }
       const key = scrollTimelineKey(desc, target.entry, target.axis, viewSubject, canNative);
-      if (animS.name !== desc.name || animS.timelineKey !== key) {
+      // A theme or viewport change under an unchanged name and binding resolves new frame values.
+      if (
+        animS.name !== desc.name ||
+        animS.timelineKey !== key ||
+        !sameFrames(animS.frames, frames)
+      ) {
         animS.name = desc.name;
         animS.timelineKey = key;
         animS.finished = false;
@@ -2297,6 +2327,7 @@ function applyAnimations(
         );
         animS.overrides = result.overrides;
         animS.drivenProps = result.drivenProps;
+        animS.frames = frames;
         if (result.transformKinds) animS.transformKinds = result.transformKinds;
       }
       if (Object.keys(animS.overrides).length > 0) {
@@ -2339,6 +2370,7 @@ function applyAnimations(
         drivenProps: new Set(),
         fillMode: desc.fillMode,
         finished: false,
+        frames: [],
       };
       scratch.anims.push(animS);
     }
@@ -2375,12 +2407,29 @@ function applyAnimations(
       );
       animS.overrides = result.overrides;
       animS.drivenProps = result.drivenProps;
+      animS.frames = frames;
       if (result.transformKinds) animS.transformKinds = result.transformKinds;
 
       if (desc.playState === 'running') {
         startKeyframeAnimation(scratch, animS, desc, canNative, onAnimationEnd);
       }
     } else {
+      if (!sameFrames(animS.frames, frames)) {
+        const result = buildKeyframeInterpolations(
+          animS.progress,
+          frames,
+          desc.timingFunction,
+          baseValues,
+          framesAllowNativeDriver(frames),
+          desc.durationMs,
+          desc.composition
+        );
+        animS.overrides = result.overrides;
+        animS.drivenProps = result.drivenProps;
+        animS.frames = frames;
+        if (result.transformKinds) animS.transformKinds = result.transformKinds;
+      }
+
       // Same animation name: check play-state changes
       if (animS.prevPlayState !== desc.playState) {
         if (desc.playState === 'paused' && animS.handle) {

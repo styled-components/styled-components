@@ -21,6 +21,36 @@ import { hasResponsiveOutput, type NativeStyles } from '../models/compileNative'
 import type { MediaQueryEnv } from '../native/responsive';
 import { passthroughOutput } from '../native/animation/types';
 
+// The render benches below load the native entry, which reads react-native.
+jest.mock('react-native', () => ({
+  AccessibilityInfo: {
+    addEventListener: () => ({ remove() {} }),
+    isReduceMotionEnabled: () => Promise.resolve(false),
+  },
+  Appearance: { addChangeListener: () => ({ remove() {} }), getColorScheme: () => 'light' },
+  Dimensions: {
+    addEventListener: () => ({ remove() {} }),
+    get: () => ({ fontScale: 1, height: 667, scale: 2, width: 375 }),
+  },
+  PixelRatio: { get: () => 2 },
+  Platform: { OS: 'ios', select: (spec: Record<string, unknown>) => spec.ios ?? spec.default },
+  // Stands in for React Native's Pressable: a function `style` or `children` receives `{pressed}`.
+  Pressable: Object.assign(
+    function Pressable({ children, style, testOnly_pressed, ...rest }: Record<string, any>) {
+      const state = { pressed: testOnly_pressed === true };
+      return require('react').createElement(
+        'View',
+        { ...rest, style: typeof style === 'function' ? style(state) : style },
+        typeof children === 'function' ? children(state) : children
+      );
+    },
+    { displayName: 'Pressable' }
+  ),
+  StyleSheet: { create: (styles: unknown) => styles, flatten: (style: unknown) => style },
+  Text: 'Text',
+  View: 'View',
+}));
+
 const env: MediaQueryEnv = {
   width: 375,
   height: 667,
@@ -51,6 +81,7 @@ const flatCompiled: NativeStyles = {
   pseudoEntries: [],
   hasPseudo: false,
   keyframes: [],
+  publishesCascade: false,
 };
 
 const mediaBucket: NativeStyles['nonPseudoEntries'][number] = {
@@ -69,6 +100,7 @@ const responsiveCompiled: NativeStyles = {
   pseudoEntries: [],
   hasPseudo: false,
   keyframes: [],
+  publishesCascade: false,
 };
 
 describe('useDynamicImpl render-path work delta', () => {
@@ -136,6 +168,257 @@ describe('useDynamicImpl render-path work delta', () => {
         target: 'View' as any,
         env: resolveEnv,
       });
+    });
+  });
+});
+
+/**
+ * Parent re-render with children, through the public `styled` API. The child
+ * elements are built once and reused, so every child bails out and an update
+ * costs the parent's own work: walking its children and wrapping each styled
+ * child with its sibling position. Only the public API is used, so the same file
+ * runs against any checkout.
+ */
+describe('styled parent re-render with children', () => {
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  let TestRenderer: any;
+  let React: any;
+  let styled: any;
+
+  const priorNodeEnv = process.env.NODE_ENV;
+
+  beforeAll(() => {
+    // The test renderer flushes an update synchronously only inside `act`, which
+    // React ships in its development build alone, so load that build here.
+    process.env.NODE_ENV = 'development';
+    jest.resetModules();
+    (globalThis as any).__NATIVE__ = true;
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    React = require('react');
+    TestRenderer = require('react-test-renderer');
+    styled = require('../native').default;
+  });
+
+  afterAll(() => {
+    process.env.NODE_ENV = priorNodeEnv;
+    (globalThis as any).__NATIVE__ = false;
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = false;
+  });
+
+  /** `propsFor(i)` is the parent's props at update `i`; it must differ between updates so the parent's body runs. */
+  function benchUpdate(
+    name: string,
+    iterations: number,
+    Parent: any,
+    children: any,
+    propsFor: (i: number) => Record<string, unknown>
+  ) {
+    let tree: any;
+    TestRenderer.act(() => {
+      tree = TestRenderer.create(React.createElement(Parent, propsFor(1), children));
+    });
+    bench(name, iterations, i => {
+      TestRenderer.act(() => {
+        tree.update(React.createElement(Parent, propsFor(i), children));
+      });
+    });
+    TestRenderer.act(() => tree.unmount());
+  }
+
+  /** A prop that differs between updates, so the parent's body runs each time. */
+  const tag = (i: number) => ({ testID: i % 2 === 0 ? 'b' : 'a' });
+
+  const makeItem = () => styled.View`
+    margin: 1px;
+  `;
+
+  /** `count` keyed elements of `Item`; `keyPrefix` keeps two lists in one tree from sharing keys. */
+  function itemsOf(Item: any, count: number, keyPrefix = '') {
+    return Array.from({ length: count }, (_, i) =>
+      React.createElement(Item, { key: `${keyPrefix}${i}` })
+    );
+  }
+
+  const twentyItems = () => itemsOf(makeItem(), 20);
+
+  function benchRerender(name: string, iterations: number, build: () => any) {
+    const Parent = styled.View`
+      padding: 1px;
+    `;
+    benchUpdate(name, iterations, Parent, build(), tag);
+  }
+
+  test('5 plain children', () => {
+    benchRerender('5 plain children', 20_000, () =>
+      Array.from({ length: 5 }, (_, i) => React.createElement('View', { key: i }))
+    );
+  });
+
+  test('5 styled children', () => {
+    benchRerender('5 styled children', 20_000, () => itemsOf(makeItem(), 5));
+  });
+
+  test('3 + 2 styled children and a nested map of 20', () => {
+    const Item = makeItem();
+    benchRerender('3 + 2 styled children and a nested map of 20', 5_000, () => [
+      React.createElement(Item, { key: 'a' }),
+      React.createElement(Item, { key: 'b' }),
+      React.createElement(Item, { key: 'c' }),
+      [React.createElement(Item, { key: 'd' }), React.createElement(Item, { key: 'e' })],
+      itemsOf(Item, 20, 'm'),
+    ]);
+  });
+
+  describe('where a font size, line height or direction can come from', () => {
+    const makeDynamicParent = () => styled.View`
+      padding: ${(p: { $pad: number }) => p.$pad}px;
+    `;
+
+    test('dynamic parent, no cascade source, 20 reused styled children', () => {
+      benchUpdate(
+        'dynamic parent, no source, 20 children',
+        20_000,
+        makeDynamicParent(),
+        twentyItems(),
+        i => ({
+          $pad: i % 2,
+        })
+      );
+    });
+
+    test('dynamic parent with a fresh style object that sets no font size', () => {
+      benchUpdate(
+        'dynamic parent, fresh {opacity}, 20 children',
+        20_000,
+        makeDynamicParent(),
+        twentyItems(),
+        i => ({
+          $pad: i % 2,
+          style: { opacity: 0.5 },
+        })
+      );
+    });
+
+    test('dynamic parent with a CSS font size', () => {
+      const Parent = styled.View`
+        font-size: 20px;
+        padding: ${(p: { $pad: number }) => p.$pad}px;
+      `;
+      benchUpdate(
+        'dynamic parent, CSS font-size, 20 children',
+        5_000,
+        Parent,
+        twentyItems(),
+        i => ({
+          $pad: i % 2,
+        })
+      );
+    });
+
+    test('static parent with a fresh style object that sets a font size', () => {
+      const Parent = styled.View`
+        padding: 1px;
+      `;
+      benchUpdate(
+        'static parent, fresh {fontSize}, 20 children',
+        5_000,
+        Parent,
+        twentyItems(),
+        i => ({
+          ...tag(i),
+          style: { fontSize: 20 },
+        })
+      );
+    });
+
+    test('static parent with a fresh style object that sets no font size', () => {
+      const Parent = styled.View`
+        padding: 1px;
+      `;
+      benchUpdate(
+        'static parent, fresh {opacity}, 20 children',
+        20_000,
+        Parent,
+        twentyItems(),
+        i => ({
+          ...tag(i),
+          style: { opacity: 0.5 },
+        })
+      );
+    });
+
+    test('styled Pressable with an :active font size, at rest', () => {
+      const Press = styled(require('react-native').Pressable)`
+        padding: 1px;
+        &:active {
+          font-size: 30px;
+        }
+      `;
+      benchUpdate(
+        'Pressable :active font-size, at rest, 20 children',
+        20_000,
+        Press,
+        twentyItems(),
+        tag
+      );
+    });
+
+    test('styled Pressable with an :active font size, pressed and released', () => {
+      const Press = styled(require('react-native').Pressable)`
+        padding: 1px;
+        &:active {
+          font-size: 30px;
+        }
+      `;
+      benchUpdate(
+        'Pressable :active font-size, flips, 20 children',
+        20_000,
+        Press,
+        twentyItems(),
+        i => ({
+          testOnly_pressed: i % 2 === 0,
+        })
+      );
+    });
+
+    function benchMount(name: string, Box: any) {
+      // The renderer logs its deprecation notice on every create; the logging would dominate the timing.
+      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        bench(name, 500, () => {
+          let tree: any;
+          TestRenderer.act(() => {
+            tree = TestRenderer.create(
+              React.createElement(
+                'View',
+                null,
+                Array.from({ length: 200 }, (_, i) => React.createElement(Box, { key: i }))
+              )
+            );
+          });
+          TestRenderer.act(() => tree.unmount());
+        });
+      } finally {
+        errorSpy.mockRestore();
+      }
+    }
+
+    test('mount and unmount 200 static boxes', () => {
+      benchMount(
+        'mount + unmount 200 static boxes',
+        styled.View`
+          margin: 1px;
+        `
+      );
+    });
+
+    test('mount and unmount 200 dynamic boxes', () => {
+      benchMount(
+        'mount + unmount 200 dynamic boxes',
+        styled.View`
+          margin: ${(p: { $pad?: number }) => p.$pad ?? 1}px;
+        `
+      );
     });
   });
 });

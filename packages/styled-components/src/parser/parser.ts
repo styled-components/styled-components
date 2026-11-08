@@ -51,6 +51,9 @@ const MAX_DEPTH = 512;
  */
 const closers = new Uint8Array(MAX_DEPTH);
 
+/** What follows a backslash in a hex escape: 1-6 hex digits and one whitespace. Any other escape is one character. */
+const HEX_ESCAPE = /[\da-f]{1,6}[ \t\n\r\f]?/iy;
+
 /**
  * Scan `s[start..end]` tracking strings, escapes, url tokens, and `(`, `[`, and `{`
  * as blocks only their own closer ends, so `[attr=",b"]` stays whole and the `)` in
@@ -81,7 +84,8 @@ export function scanQPB(
     const ch = s.charCodeAt(i);
     if (ch === BACKSLASH) {
       escape = i;
-      i += 2;
+      HEX_ESCAPE.lastIndex = i + 1;
+      i = HEX_ESCAPE.test(s) ? HEX_ESCAPE.lastIndex : i + 2;
       continue;
     }
     if (quote !== 0) {

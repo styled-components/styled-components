@@ -1,6 +1,7 @@
 import { Dict } from '../../../types';
 import { warnOnce } from '../dev';
 import { isGenericFamily, resolveGenericFamily } from '../polyfills/genericFamily';
+import { clampToRange, mathRangeOf, resolveStaticMathFunction } from '../polyfills/mathFns';
 import { buildResolver } from '../polyfills/resolvers';
 import { tokenToValue, withoutSlashes } from '../shorthandHelpers';
 import { decodeName } from '../tokenize';
@@ -181,12 +182,18 @@ export function fontShorthand(tokens: Token[]): Dict<unknown> | null {
     !sizeTok ||
     (sizeTok.kind !== TokenKind.Length &&
       sizeTok.kind !== TokenKind.Percent &&
+      sizeTok.kind !== TokenKind.Function &&
       sizeTok.kind !== TokenKind.Sentinel)
   ) {
     return null;
   }
-  const fontSize: number | string =
-    sizeTok.kind === TokenKind.Sentinel ? sizeTok.raw : (tokenToValue(sizeTok) as number | string);
+  const fontSize =
+    sizeTok.kind === TokenKind.Sentinel
+      ? sizeTok.raw
+      : sizeTok.kind === TokenKind.Function
+        ? foldMathToken(sizeTok, 'fontSize')
+        : tokenToValue(sizeTok);
+  if (fontSize === null) return null;
 
   let lineHeight: number | string | undefined;
   if (stream.peek()?.kind === TokenKind.Slash) {
@@ -195,21 +202,24 @@ export function fontShorthand(tokens: Token[]): Dict<unknown> | null {
     if (!lhTok) return null;
     if (lhTok.kind === TokenKind.Number) lineHeight = lhTok.value;
     else if (lhTok.kind === TokenKind.Length || lhTok.kind === TokenKind.Percent) {
-      if (!__NATIVE_WEB__ && lhTok.kind === TokenKind.Percent && typeof fontSize === 'number') {
+      if (lhTok.kind === TokenKind.Percent && typeof fontSize === 'number') {
         lineHeight = (fontSize * lhTok.value) / 100;
       } else {
         lineHeight = tokenToValue(lhTok);
       }
+    } else if (lhTok.kind === TokenKind.Function) {
+      const math = foldMathToken(lhTok, 'lineHeight');
+      if (math === null) return null;
+      lineHeight = math;
     } else return null;
   }
 
   // Required: font-family (one or more idents/strings)
-  const familyStart = stream.pos;
   const fontFamily = readFontFamily(stream);
   if (fontFamily === null) return null;
 
   const hasFamilyFallbacks = !stream.eof();
-  if (__DEV__ && hasFamilyFallbacks && !__NATIVE_WEB__) {
+  if (__DEV__ && hasFamilyFallbacks) {
     warnOnce(
       'native-font-family-fallbacks-dropped',
       '`font-family` accepts one family on React Native. Extra comma-separated fallbacks are ignored on iOS and Android. List only the family you want.',
@@ -217,9 +227,8 @@ export function fontShorthand(tokens: Token[]): Dict<unknown> | null {
     );
   }
 
-  const resolvedFamily = __NATIVE_WEB__
-    ? rawTokens(stream.tokens.slice(familyStart))
-    : !fontFamily.quoted && isGenericFamily(fontFamily.name)
+  const resolvedFamily =
+    !fontFamily.quoted && isGenericFamily(fontFamily.name)
       ? resolveGenericFamily(fontFamily.name)
       : fontFamily.name;
 
@@ -238,11 +247,9 @@ export function fontShorthand(tokens: Token[]): Dict<unknown> | null {
  * `font-family: <family-name>+, …`. RN's `fontFamily` is a single string, so
  * comma-separated fallback lists collapse to the first family with a one-time
  * warn. Generic keywords (`serif`, `system-ui`, etc.) resolve to a platform
- * face on native; rn-web passes the full list through.
+ * face.
  */
 export function fontFamilyShorthand(tokens: Token[]): Dict<unknown> | null {
-  if (__NATIVE_WEB__) return tokens.length === 0 ? null : { fontFamily: rawTokens(tokens) };
-
   const stream = new TokenStream(tokens);
   const family = readFontFamily(stream);
   if (family === null) return null;
@@ -256,9 +263,9 @@ export function fontFamilyShorthand(tokens: Token[]): Dict<unknown> | null {
     );
   }
 
-  // Generic keyword resolution: native-only, bare idents only (quoted strings
-  // are author-supplied face names).
-  if (!__NATIVE_WEB__ && !family.quoted && isGenericFamily(family.name)) {
+  // Generic keyword resolution: bare idents only (quoted strings are
+  // author-supplied face names).
+  if (!family.quoted && isGenericFamily(family.name)) {
     return { fontFamily: resolveGenericFamily(family.name) };
   }
   return { fontFamily: family.name };
@@ -268,8 +275,7 @@ export function fontFamilyShorthand(tokens: Token[]): Dict<unknown> | null {
  * `font-style: normal | italic | oblique [ <angle [-90deg,90deg]> | left | right ]?`.
  * RN's fontStyle only accepts `normal | italic`, so `oblique` (and its angle /
  * direction arguments) collapses to `italic` on native with a dev warn naming
- * the dropped argument. rn-web passes the declaration through. Out-of-range
- * angles are rejected on both branches.
+ * the dropped argument. Out-of-range angles are rejected.
  */
 const OBLIQUE_DIRECTION = new Set(['left', 'right']);
 
@@ -285,17 +291,15 @@ export function fontStyleHandler(tokens: Token[]): Dict<unknown> | null {
   }
 
   if (name === 'oblique') {
-    if (stream.eof()) return { fontStyle: __NATIVE_WEB__ ? 'oblique' : 'italic' };
+    if (stream.eof()) return { fontStyle: 'italic' };
     const arg = stream.consume();
     if (!arg || !stream.eof()) return null;
     if (arg.kind === TokenKind.Ident && arg.name && OBLIQUE_DIRECTION.has(arg.name)) {
-      if (__NATIVE_WEB__) return { fontStyle: 'oblique ' + arg.name };
       return { fontStyle: 'italic' };
     }
     if (arg.kind !== TokenKind.Angle) return null;
     const deg = degreesOf(arg);
     if (deg === null || deg < -90 || deg > 90) return null;
-    if (__NATIVE_WEB__) return { fontStyle: 'oblique ' + arg.raw };
     if (__DEV__) {
       warnOnce(
         'native-font-oblique-angle-dropped',
@@ -345,19 +349,33 @@ function foldLengthToken(t: LengthToken): LengthFold {
 }
 
 /**
+ * Math-function counterpart of {@link foldLengthToken}: a static result folds
+ * to a number held to the range of the native style key `key`; one that needs
+ * the render environment (em, rem, viewport units) keeps its authored text for
+ * the resolver, which holds its result to the same range; `null` drops the
+ * declaration. A percentage in these properties refers to the font size, which
+ * the math resolver cannot anchor (it resolves against the container width),
+ * so any percentage drops.
+ */
+function foldMathToken(t: Token, key: string): number | string | null {
+  const folded = resolveStaticMathFunction(t);
+  if (folded !== null && (folded.unit === '' || folded.unit === 'px')) {
+    const range = mathRangeOf(key);
+    return range === undefined ? folded.value : clampToRange(folded.value, range);
+  }
+  if (t.raw.indexOf('%') !== -1 || buildResolver(t.raw) === null) return null;
+  return t.raw;
+}
+
+/**
  * `line-height` handler. Numeric multipliers and px resolve at compile
  * time; absolute lengths fold via the unit ratio table; everything else delegates
- * to buildResolver so coverage tracks the resolver automatically. rn-web
- * defers to the browser.
+ * to buildResolver so coverage tracks the resolver automatically.
  */
 export function lineHeightHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || !stream.eof()) return null;
-
-  if (__NATIVE_WEB__) {
-    return { lineHeight: t.raw };
-  }
 
   if (t.kind === TokenKind.Number) return { lineHeight: t.value };
   if (t.kind === TokenKind.Length) {
@@ -379,6 +397,10 @@ export function lineHeightHandler(tokens: Token[]): Dict<unknown> | null {
     // Percent anchors at the inherited font-size like em.
     return { lineHeight: t.value / 100 + 'em' };
   }
+  if (t.kind === TokenKind.Function) {
+    const math = foldMathToken(t, 'lineHeight');
+    return math === null ? null : { lineHeight: math };
+  }
   if (t.kind === TokenKind.Ident && t.name === 'normal') return {};
   return null;
 }
@@ -386,16 +408,12 @@ export function lineHeightHandler(tokens: Token[]): Dict<unknown> | null {
 /**
  * `letter-spacing` handler. Numeric and px values resolve at compile time;
  * absolute lengths fold via the unit ratio table; everything else delegates to
- * buildResolver. rn-web defers to the browser.
+ * buildResolver.
  */
 export function letterSpacingHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || !stream.eof()) return null;
-
-  if (__NATIVE_WEB__) {
-    return { letterSpacing: t.raw };
-  }
 
   if (t.kind === TokenKind.Number) return { letterSpacing: t.value };
   if (t.kind === TokenKind.Length) {
@@ -413,6 +431,10 @@ export function letterSpacingHandler(tokens: Token[]): Dict<unknown> | null {
     }
     return {};
   }
+  if (t.kind === TokenKind.Function) {
+    const math = foldMathToken(t, 'letterSpacing');
+    return math === null ? null : { letterSpacing: math };
+  }
   if (t.kind === TokenKind.Ident && t.name === 'normal') return { letterSpacing: 0 };
   return null;
 }
@@ -426,10 +448,6 @@ export function fontSizeHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
   const t = stream.consume();
   if (!t || !stream.eof()) return null;
-
-  if (__NATIVE_WEB__) {
-    return { fontSize: t.raw };
-  }
 
   if (t.kind === TokenKind.Ident) {
     const name = t.name;
@@ -455,6 +473,11 @@ export function fontSizeHandler(tokens: Token[]): Dict<unknown> | null {
   if (t.kind === TokenKind.Percent) {
     if (t.value < 0) return null;
     return { fontSize: t.value / 100 + 'em' };
+  }
+
+  if (t.kind === TokenKind.Function) {
+    const math = foldMathToken(t, 'fontSize');
+    return math === null ? null : { fontSize: math };
   }
 
   return null;

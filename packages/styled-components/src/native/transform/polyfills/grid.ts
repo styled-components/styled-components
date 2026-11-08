@@ -16,8 +16,7 @@ import { tokenizeFunctionArgs } from '../tokenize';
  *
  * Each handler emits a native-only sentinel (`__scGridColumns` /
  * `__scGridSpan`) that `compileNative` lifts into `gridInfo` / `gridSpan`
- * and removes from the style object. On rn-web the browser ships grid, so
- * every handler passes the raw value straight through and never warns.
+ * and removes from the style object.
  *
  * The handlers return `{}` (parsed, emit nothing) rather than `null` when
  * a value is outside the subset, so the generic `native-shorthand-parse`
@@ -61,7 +60,6 @@ function isOneFr(tok: Token): boolean {
 }
 
 function gridTemplateColumnsHandler(tokens: Token[], rawValue: string): Dict<unknown> | null {
-  if (__NATIVE_WEB__) return { gridTemplateColumns: rawValue };
   const columns = countEqualFrColumns(tokens);
   if (columns !== null) return { __scGridColumns: columns };
   if (__DEV__) {
@@ -75,7 +73,6 @@ function gridTemplateColumnsHandler(tokens: Token[], rawValue: string): Dict<unk
 }
 
 function gridColumnHandler(tokens: Token[], rawValue: string): Dict<unknown> | null {
-  if (__NATIVE_WEB__) return { gridColumn: rawValue };
   // `span N`: Ident('span') followed by an integer.
   if (
     tokens.length === 2 &&
@@ -96,12 +93,7 @@ function gridColumnHandler(tokens: Token[], rawValue: string): Dict<unknown> | n
   return {};
 }
 
-function gridPlacementUnsupportedHandler(
-  rawValue: string,
-  camelKey: string,
-  cssName: string
-): Dict<unknown> | null {
-  if (__NATIVE_WEB__) return { [camelKey]: rawValue };
+function gridPlacementUnsupportedHandler(rawValue: string, cssName: string): Dict<unknown> | null {
   if (__DEV__) {
     warnOnce(
       'native-grid-placement-unsupported',
@@ -113,7 +105,6 @@ function gridPlacementUnsupportedHandler(
 }
 
 function gridAutoFlowHandler(tokens: Token[], rawValue: string): Dict<unknown> | null {
-  if (__NATIVE_WEB__) return { gridAutoFlow: rawValue };
   // `row` is the initial value and the only flow the subset implements.
   if (tokens.length === 1 && tokens[0].kind === TokenKind.Ident && tokens[0].name === 'row') {
     return {};
@@ -129,14 +120,9 @@ function gridAutoFlowHandler(tokens: Token[], rawValue: string): Dict<unknown> |
 }
 
 // `grid-row` and `grid-area` share the placement-unsupported handler;
-// the prop names are bound here so the warning and the rn-web passthrough
-// key name the right property.
+// the property names are bound here so the warning names the right property.
 register('gridTemplateColumns', gridTemplateColumnsHandler);
 register('gridColumn', gridColumnHandler);
-register('gridRow', (_tokens, rawValue) =>
-  gridPlacementUnsupportedHandler(rawValue, 'gridRow', 'grid-row')
-);
-register('gridArea', (_tokens, rawValue) =>
-  gridPlacementUnsupportedHandler(rawValue, 'gridArea', 'grid-area')
-);
+register('gridRow', (_tokens, rawValue) => gridPlacementUnsupportedHandler(rawValue, 'grid-row'));
+register('gridArea', (_tokens, rawValue) => gridPlacementUnsupportedHandler(rawValue, 'grid-area'));
 register('gridAutoFlow', gridAutoFlowHandler);

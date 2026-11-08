@@ -8,8 +8,7 @@ import { Token } from './tokens';
  * then falls back to a string pass-through with a dev warning.
  *
  * `rawValue` is the exact authored value. Most handlers ignore it and
- * work off tokens; grid passthrough handlers use it to re-emit the raw
- * CSS untouched on rn-web.
+ * work off tokens; a handler may quote it in a warning.
  */
 export type ShorthandHandler = (tokens: Token[], rawValue: string) => Dict<unknown> | null;
 

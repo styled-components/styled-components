@@ -6,10 +6,9 @@
 //   - Within a single styled component (base + matched conditional
 //     buckets), `!important` declarations beat normal ones regardless
 //     of source order or which bucket they originated in.
-//   - The `style={{}}` prop is still applied last and wins over
-//     `!important` from the styled component itself; that surface is
-//     the runtime escape hatch and is documented as a deliberate
-//     deviation from strict spec cascade origins.
+//   - The `style={{}}` prop and an attrs `style` beat the component's
+//     normal declarations and lose to its `!important` ones, as an
+//     inline style does on web.
 //   - Cross-component cascade of `!important` (a parent's `!important
 //     font-size` defeating a child's normal one) is out of v1 scope.
 
@@ -230,5 +229,63 @@ describe('native !important spec compliance (CSS Cascade L4 §3 + §6.2)', () =>
     const txt = tree.root.findByType(Text);
     const flat = StyleSheet.flatten(txt.props.style);
     expect(flat.fontSize).toBe(20);
+  });
+
+  // css-cascade-5 §6.3: "A declaration is important if it has a !important
+  // annotation as defined by [css-syntax-3], i.e. if the last two
+  // (non-whitespace, non-comment) tokens in its value are the delimiter token !
+  // followed by the identifier token important." A `var()` in the value does
+  // not change which declaration carries the annotation.
+  describe('an !important declaration whose value is a var()', () => {
+    it('applies the substituted value', () => {
+      const Box = styled(View)`
+        --p: 7px;
+        padding-top: var(--p) !important;
+      `;
+      expect(styleOf(Box)).toEqual({ paddingTop: 7 });
+    });
+
+    it('applies inside a matching @media block', () => {
+      const Box = styled(View)`
+        --p: 7px;
+        @media (min-width: 100px) {
+          padding-top: var(--p) !important;
+        }
+      `;
+      expect(styleOf(Box)).toEqual({ paddingTop: 7 });
+    });
+
+    it('beats a normal authored value written after it', () => {
+      const Box = styled(View)`
+        --p: 7px;
+        padding-top: var(--p) !important;
+        padding-top: 3px;
+      `;
+      expect(styleOf(Box)).toEqual({ paddingTop: 7 });
+    });
+
+    it('beats a normal authored value written before it', () => {
+      const Box = styled(View)`
+        --p: 7px;
+        padding-top: 3px;
+        padding-top: var(--p) !important;
+      `;
+      expect(styleOf(Box)).toEqual({ paddingTop: 7 });
+    });
+
+    it('beats the caller style prop', () => {
+      const Box = styled(View)`
+        --p: 7px;
+        padding-top: var(--p) !important;
+      `;
+      expect(styleOf(Box, { style: { paddingTop: 1 } })).toEqual({ paddingTop: 7 });
+    });
+
+    it('uses the fallback when the property is missing', () => {
+      const Box = styled(View)`
+        padding-top: var(--x, 4px) !important;
+      `;
+      expect(styleOf(Box)).toEqual({ paddingTop: 4 });
+    });
   });
 });

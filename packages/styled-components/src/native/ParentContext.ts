@@ -11,12 +11,12 @@
  *   - `:nth-of-type(n)`
  *   - `:has(<simple>)`     (recursive own-children walk)
  *
- * Direct-children limitation: position + ancestor information threads
- * through styled-component-rendered children only. A non-styled user
- * component between the parent styled component and a matched
- * descendant breaks the chain; the descendant's ancestor list
- * reflects the parent it actually rendered under, not the parent of
- * the user component.
+ * Direct-children limitation: sibling position is published only for
+ * styled elements that are direct children of the parent's JSX. A
+ * non-styled component between the parent and a descendant is
+ * transparent to the parent and ancestor chain (the descendant still
+ * sees the nearest styled ancestor), but the descendant gets no
+ * sibling position.
  */
 import React from 'react';
 import { NativeTarget } from '../types';
@@ -70,7 +70,7 @@ export interface ParentContextValue {
   ancestors: ReadonlyArray<string>;
   /** Position among parent's children (0-based). -1 when not tracked. */
   siblingIndex: number;
-  /** Total siblings emitted by parent's React.Children.map pass. */
+  /** Total children of the parent, as counted by its child walk. */
   totalSiblings: number;
   /** Immediate prior sibling's `styledComponentId`, for `+` matching. */
   prevSiblingId: string | null;
@@ -129,6 +129,20 @@ export { EMPTY_SIBLINGS };
 
 export const ParentContext = React.createContext<ParentContextValue>(DEFAULT_PARENT_CONTEXT);
 
+/**
+ * The prop a styled parent sets on each styled child to hand it that child's own
+ * sibling position. A prop travels with the element through a target that clones
+ * its only child (`TouchableHighlight`, `ScrollViewStickyHeader`, an `asChild`
+ * slot), which a wrapping Provider would not. A styled component removes it before
+ * any user code or host sees its props.
+ */
+export const PARENT_SLOT_PROP = '__sc_parent_slot';
+
+/**
+ * The nearest published parent value: the enclosing styled component's identity
+ * and ancestor chain. Inside a styled component's own styles that is its
+ * parent's published value, not the component's position among its siblings.
+ */
 export function useParentContext(): ParentContextValue {
   return React.useContext(ParentContext);
 }

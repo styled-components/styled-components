@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 import { Writable } from 'stream';
 
 type FlightServer = {
+  createClientModuleProxy: (moduleId: string) => Record<string, unknown>;
   createTemporaryReferenceSet: () => object;
   decodeReply: (
     body: string,
@@ -33,6 +34,11 @@ export function clientComponent<Props extends object>(name: string): (props: Pro
   };
 
   return flight.registerClientReference(proxy, `client/${name}`, 'default');
+}
+
+/** What a bundler hands a server component for an import of a `'use client'` module: an object whose named properties are that module's client references. */
+export function clientModule(moduleId: string): Record<string, unknown> {
+  return flight.createClientModuleProxy(moduleId);
 }
 
 /** A temporary reference as a server-action reply delivers one: a value from the client that the server can only pass back. */

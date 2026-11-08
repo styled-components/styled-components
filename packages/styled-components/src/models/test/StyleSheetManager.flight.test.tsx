@@ -195,6 +195,50 @@ describe('StyleSheetManager scope by position', () => {
     expectScopes(result, { nested: { namespace: 'ns', tag: 'outer' }, outside: {} });
   });
 
+  it('lets a nested manager that sets only plugins keep the parent namespace', async () => {
+    const result = await renderFlight(
+      <>
+        <StyleSheetManager namespace="ns">
+          <StyleSheetManager plugins={[outer]}>
+            <Probe id="plugins" />
+          </StyleSheetManager>
+          <StyleSheetManager plugins={[]}>
+            <Probe id="empty" />
+          </StyleSheetManager>
+        </StyleSheetManager>
+        <Probe id="outside" />
+      </>
+    );
+
+    expectScopes(result, {
+      empty: { namespace: 'ns' },
+      outside: {},
+      plugins: { namespace: 'ns', tag: 'outer' },
+    });
+  });
+
+  it('lets a nested manager replace the parent namespace, or clear it with an empty one', async () => {
+    const result = await renderFlight(
+      <StyleSheetManager namespace="ns">
+        <StyleSheetManager namespace="other">
+          <Probe id="replaced" />
+        </StyleSheetManager>
+        <StyleSheetManager namespace="">
+          <Probe id="cleared" />
+        </StyleSheetManager>
+        <StyleSheetManager namespace="" plugins={[outer]}>
+          <Probe id="clearedWithPlugins" />
+        </StyleSheetManager>
+      </StyleSheetManager>
+    );
+
+    expectScopes(result, {
+      cleared: {},
+      clearedWithPlugins: { tag: 'outer' },
+      replaced: { namespace: 'other' },
+    });
+  });
+
   it('lets a nested manager with an empty plugin list drop the parent plugins', async () => {
     const result = await renderFlight(
       <>
@@ -819,6 +863,23 @@ describe('StyleSheetManager compiler sharing', () => {
     expect(compilers.second).toBe(compilers.first);
   });
 
+  it('shares the configured compiler with a manager that sets the configured values', async () => {
+    configureServerStyles({ namespace: 'ns', plugins: [configured] });
+
+    const result = await renderFlight(
+      <>
+        <Reader id="bare" />
+        <StyleSheetManager namespace="ns" plugins={[configured]}>
+          <Reader id="managed" />
+        </StyleSheetManager>
+      </>
+    );
+
+    expect(result.errors).toEqual([]);
+    expect(compilers.bare).toBeDefined();
+    expect(compilers.managed).toBe(compilers.bare);
+  });
+
   it.each([
     ['a different plugin', () => [inner], undefined],
     ['the same plugins in another order', () => [inner, outer], undefined],
@@ -894,6 +955,111 @@ describe('configureServerStyles', () => {
     const result = await renderFlight(<Probe id="bare" />);
 
     expectScopes(result, { bare: { tag: 'configured' } });
+  });
+
+  it('styles a component that has no manager with the configured namespace, plugins or not', async () => {
+    configureServerStyles({ namespace: 'ns' });
+    const only = await renderFlight(<Probe id="bare" />);
+
+    configureServerStyles({ namespace: 'ns', plugins: [configured] });
+    const both = await renderFlight(<Probe id="bare" />);
+
+    expectScopes(only, { bare: { namespace: 'ns' } });
+    expectScopes(both, { bare: { namespace: 'ns', tag: 'configured' } });
+  });
+
+  it('writes the configured namespace in front of a global style, joined onto the root', async () => {
+    configureServerStyles({ namespace: '#app' });
+
+    const result = await renderFlight(
+      <>
+        <GlobalInside />
+        <GlobalOutside />
+      </>
+    );
+
+    expect(result.errors).toEqual([]);
+    expect([...result.globals].sort()).toEqual(['#app body{color:red;}', 'html#app{color:red;}']);
+  });
+
+  it('lets a manager inherit the configured namespace when it sets only plugins', async () => {
+    configureServerStyles({ namespace: 'ns' });
+
+    const result = await renderFlight(
+      <>
+        <StyleSheetManager plugins={[outer]}>
+          <Probe id="plugins" />
+        </StyleSheetManager>
+        <StyleSheetManager plugins={[]}>
+          <Probe id="empty" />
+        </StyleSheetManager>
+        <Probe id="outside" />
+      </>
+    );
+
+    expectScopes(result, {
+      empty: { namespace: 'ns' },
+      outside: { namespace: 'ns' },
+      plugins: { namespace: 'ns', tag: 'outer' },
+    });
+  });
+
+  it('lets a manager replace the configured namespace, or clear it with an empty one', async () => {
+    configureServerStyles({ namespace: 'ns' });
+
+    const result = await renderFlight(
+      <>
+        <StyleSheetManager namespace="other">
+          <Probe id="replaced" />
+        </StyleSheetManager>
+        <StyleSheetManager namespace="">
+          <Probe id="cleared" />
+        </StyleSheetManager>
+      </>
+    );
+
+    expectScopes(result, { cleared: {}, replaced: { namespace: 'other' } });
+  });
+
+  it('clears the namespace when a later call sets only plugins', async () => {
+    configureServerStyles({ namespace: 'ns', plugins: [configured] });
+    configureServerStyles({ plugins: [configured] });
+
+    const result = await renderFlight(<Probe id="bare" />);
+
+    expectScopes(result, { bare: { tag: 'configured' } });
+  });
+
+  it('clears the namespace when a later call sets an empty one', async () => {
+    configureServerStyles({ namespace: 'ns' });
+    configureServerStyles({ namespace: '' });
+
+    const result = await renderFlight(<Probe id="bare" />);
+
+    expectScopes(result, { bare: {} });
+  });
+
+  it('ignores a namespace that is not a string', async () => {
+    // Reflect.apply skips the parameter type, as a plain JavaScript caller does.
+    Reflect.apply(configureServerStyles, undefined, [{ namespace: 5, plugins: [configured] }]);
+
+    const result = await renderFlight(<Probe id="bare" />);
+
+    expectScopes(result, { bare: { tag: 'configured' } });
+  });
+
+  it('gives a component the same class from the configured namespace as from a manager with it', async () => {
+    configureServerStyles({ namespace: 'ns' });
+    const configuredResult = await renderFlight(<Probe id="bare" />);
+
+    configureServerStyles({ plugins: [] });
+    const managerResult = await renderFlight(
+      <StyleSheetManager namespace="ns">
+        <Probe id="bare" />
+      </StyleSheetManager>
+    );
+
+    expect(configuredResult.probes.bare.className).toBe(managerResult.probes.bare.className);
   });
 
   it('uses the last call', async () => {

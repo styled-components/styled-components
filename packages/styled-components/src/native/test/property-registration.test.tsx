@@ -40,7 +40,6 @@ import styled from '..';
 import { resetCssPropertiesForTest } from '../propertyRegistry';
 import { resetNativeStyleCache } from '../../models/compileNative';
 import { resetWarningsForTest } from '../transform/dev';
-import { describeOnRnWeb } from '../transform/describeOnRnWeb';
 
 function styleOf(el: React.ReactElement): any {
   const tree = TestRenderer.create(el);
@@ -235,33 +234,6 @@ describe('@property spec compliance (CSS Properties and Values API §3)', () => 
           </Parent>
         ).paddingTop
       ).toBe(20);
-    });
-  });
-
-  describeOnRnWeb('on rn-web', () => {
-    it('forwards the registration to CSS.registerProperty for the browser', () => {
-      const registerProperty = jest.fn();
-      const prevCSS = (globalThis as any).CSS;
-      (globalThis as any).CSS = { registerProperty };
-      try {
-        const Box = styled(View)`
-          @property --web-gauge {
-            syntax: '<percentage>';
-            inherits: true;
-            initial-value: 25%;
-          }
-          flex: 1;
-        `;
-        TestRenderer.create(<Box />);
-        expect(registerProperty).toHaveBeenCalledWith({
-          name: '--web-gauge',
-          syntax: '<percentage>',
-          inherits: true,
-          initialValue: '25%',
-        });
-      } finally {
-        (globalThis as any).CSS = prevCSS;
-      }
     });
   });
 });

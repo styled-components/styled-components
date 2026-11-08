@@ -489,9 +489,9 @@ describe('toNativeStyles', () => {
   });
 
   describe('@keyframes with dynamic values', () => {
-    it('extracts theme sentinels from @keyframes frame decls into per-frame resolvers', () => {
+    it('extracts theme color placeholders from @keyframes frame decls into per-frame resolvers', () => {
       const r = compile(
-        '@keyframes fade { 0% { opacity: 0; } 100% { opacity: \0sc:opacity.end:1; } }'
+        '@keyframes fade { 0% { color: red; } 100% { color: \0sc:colors.end:blue; } }'
       );
       expect(r.keyframes.length).toBe(1);
       const kf = r.keyframes[0];
@@ -499,14 +499,14 @@ describe('toNativeStyles', () => {
       expect(kf.frames.length).toBe(2);
       // 0% frame is fully static
       expect(kf.frames[0].stops).toEqual(['0%']);
-      expect(kf.frames[0].decls).toEqual({ opacity: 0 });
+      expect(kf.frames[0].decls).toEqual({ color: 'red' });
       expect(kf.frames[0].resolvers).toBeUndefined();
       // 100% frame has a sentinel that landed in resolvers
       expect(kf.frames[1].stops).toEqual(['100%']);
       expect(kf.frames[1].decls).toEqual({});
       expect(kf.frames[1].resolvers).toBeDefined();
       expect(kf.frames[1].resolvers!.length).toBe(1);
-      expect(kf.frames[1].resolvers![0][0]).toBe('opacity');
+      expect(kf.frames[1].resolvers![0][0]).toBe('color');
     });
 
     it('extracts viewport-unit values from @keyframes frame decls into resolvers', () => {
@@ -577,14 +577,14 @@ describe('toNativeStyles', () => {
   });
 
   describe('@starting-style with dynamic values', () => {
-    it('extracts theme sentinels from @starting-style into resolvers', () => {
-      const r = compile('@starting-style { opacity: \0sc:opacity.start:0; }');
+    it('extracts theme color placeholders from @starting-style into resolvers', () => {
+      const r = compile('@starting-style { color: \0sc:colors.start:red; }');
       // The static portion of starting-style strips out resolver-bearing
       // values; the resolvers go into startingStyleResolvers.
       expect(r.startingStyle).toEqual({});
       expect(r.startingStyleResolvers).toBeDefined();
       expect(r.startingStyleResolvers!.length).toBe(1);
-      expect(r.startingStyleResolvers![0][0]).toBe('opacity');
+      expect(r.startingStyleResolvers![0][0]).toBe('color');
     });
 
     it('keeps fully-static @starting-style declarations on the static side', () => {
@@ -601,25 +601,45 @@ describe('toNativeStyles', () => {
     });
   });
 
-  describe('sentinel-leak detection (dev-time)', () => {
-    it('warns when a sentinel is concatenated with a leading number', () => {
-      // Simulates `${p => 47 + t.space.xl}px` after JS evaluation: the
-      // sentinel `\0sc:space.xl:55` got coerced to a string and glued to
-      // the `47` literal.
-      compile('padding-top: 47\0sc:space.xl:55px;');
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('createTheme token was concatenated')
-      );
+  // CSS Cascade 5, "The cascaded value represents the result of the cascade: it is the
+  // declared value that wins the cascade (is sorted first in the output of the cascade)."
+  // A declaration of font-size, line-height or direction can win from any layer the
+  // compiler keeps (base, bucket, `!important`, `var()` deferral, resolver), so each of them
+  // must turn the render path's cascade walk on. A declaration only an animation reads
+  // (keyframes, a transition list, `@starting-style`) never wins the cascade, so it does not.
+  describe('declared-key scan', () => {
+    test.each([
+      ['font-size', 'font-size: 20px;'],
+      ['line-height', 'line-height: 20px;'],
+      ['direction', 'direction: rtl;'],
+      ['the font shorthand', 'font: 12px/16px serif;'],
+      ['a resolver font-size', 'font-size: 2rem;'],
+      ['an @media bucket', '@media (min-width: 1px) { font-size: 20px; }'],
+      ['a pseudo-state bucket', '&:active { font-size: 20px; }'],
+      ['an !important font-size', 'font-size: 20px !important;'],
+      [
+        'an !important font-size inside @media',
+        '@media (min-width: 1px) { font-size: 20px !important; }',
+      ],
+      ['an !important resolver font-size', 'font-size: 2rem !important;'],
+      ['var() on font-size', 'font-size: var(--s);'],
+      ['var() on line-height', 'line-height: var(--l);'],
+      ['var() on direction', 'direction: var(--d);'],
+      ['var() on the font shorthand', 'font: var(--f);'],
+      ['var() inside @media', '@media (min-width: 1px) { font-size: var(--s); }'],
+    ])('publishesCascade is true for %s', (_name, css) => {
+      expect(compile(css).publishesCascade).toBe(true);
     });
 
-    it('does NOT warn for clean single-sentinel values', () => {
-      compile('color: \0sc:colors.fg:#000;');
-      expect(warnSpy).not.toHaveBeenCalled();
-    });
-
-    it('does NOT warn for properly-separated multi-sentinel values', () => {
-      compile('border: \0sc:borderWidth.hairline:1px solid \0sc:colors.ink:#000;');
-      expect(warnSpy).not.toHaveBeenCalled();
+    test.each([
+      ['keyframes alone', '@keyframes grow { from { font-size: 10px; } to { font-size: 20px; } }'],
+      ['@starting-style alone', '@starting-style { font-size: 20px; }'],
+      ['a font-size transition alone', 'transition: font-size 1s;'],
+      ['a custom property named like the key', '--font-size: 20px;'],
+      ['var() on an unrelated property', 'color: var(--x);'],
+      ['no declarations', 'color: red;'],
+    ])('publishesCascade is false for %s', (_name, css) => {
+      expect(compile(css).publishesCascade).toBe(false);
     });
   });
 

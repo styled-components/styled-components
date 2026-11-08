@@ -1000,16 +1000,6 @@ describe('styled RSC mode', () => {
       }
     }
 
-    /** Assert no :where() wrapping exists inside CSS string values (content, url, attr selectors) */
-    function assertNoWhereInValues(allCSS: string, ...substrings: string[]) {
-      for (const s of substrings) {
-        // The substring should appear verbatim (possibly HTML-encoded) without :where() corruption
-        expect(allCSS).not.toMatch(
-          new RegExp(':where\\([^)]*' + s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')')
-        );
-      }
-    }
-
     it('should not corrupt CSS content property with class-name-like strings', () => {
       const Base = styled.div`
         &::before {
@@ -2004,118 +1994,6 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
       expect(allCSS).toMatchInlineSnapshot(`".dnGtrT:first-child{color:red;}"`);
       expect(allCSS).not.toContain(':not(style');
-    });
-  });
-
-  describe('client reference proxy interpolation', () => {
-    /** Simulate a named-export client reference (typeof 'function', throws on call) */
-    function createNamedExportProxy(exportName: string) {
-      const proxy = function () {
-        throw new Error(
-          `Attempted to call ${exportName}() from the server but it's on the client.`
-        );
-      };
-      Object.defineProperties(proxy, {
-        $$typeof: { value: Symbol.for('react.client.reference') },
-        $$id: { value: `app/components/client-button.tsx#${exportName}` },
-        $$async: { value: false },
-      });
-      return proxy;
-    }
-
-    /** Simulate a module-level client reference (typeof 'object', no $$id export suffix) */
-    function createModuleLevelProxy(modulePath: string) {
-      const proxy = {};
-      Object.defineProperties(proxy, {
-        $$typeof: { value: Symbol.for('react.client.reference') },
-        $$id: { value: modulePath },
-        $$async: { value: false },
-      });
-      return proxy;
-    }
-
-    it('should not throw when a named-export client reference is interpolated', () => {
-      const ClientButton = createNamedExportProxy('ClientButton');
-
-      expect(() => {
-        const Parent = styled.div`
-          ${ClientButton as any} {
-            font-weight: bold;
-          }
-          padding: 8px;
-        `;
-
-        ReactDOMServer.renderToString(<Parent />);
-      }).not.toThrow();
-    });
-
-    it('should not throw when a module-level client reference is interpolated', () => {
-      const ClientModule = createModuleLevelProxy('app/components/client-button.tsx');
-
-      expect(() => {
-        const Parent = styled.div`
-          ${ClientModule as any} {
-            font-weight: bold;
-          }
-          padding: 8px;
-        `;
-
-        ReactDOMServer.renderToString(<Parent />);
-      }).not.toThrow();
-    });
-
-    it('should skip client reference interpolation and render remaining CSS', () => {
-      const ClientButton = createNamedExportProxy('ClientButton');
-
-      const Parent = styled.div`
-        ${ClientButton as any} {
-          font-weight: bold;
-        }
-        padding: 8px;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Parent />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toContain('padding:8px');
-    });
-
-    it('should warn with export name from $$id for named-export proxies', () => {
-      const ClientButton = createNamedExportProxy('ClientButton');
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const Parent = styled.div`
-        ${ClientButton as any} {
-          font-weight: bold;
-        }
-      `;
-
-      ReactDOMServer.renderToString(<Parent />);
-
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('client component'));
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('ClientButton'));
-
-      warnSpy.mockRestore();
-    });
-
-    it('should warn with module path for module-level proxies without export name', () => {
-      const ClientModule = createModuleLevelProxy('app/components/client-button.tsx');
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const Parent = styled.div`
-        ${ClientModule as any} {
-          font-weight: bold;
-        }
-      `;
-
-      ReactDOMServer.renderToString(<Parent />);
-
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('client component'));
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('app/components/client-button.tsx')
-      );
-
-      warnSpy.mockRestore();
     });
   });
 });

@@ -1,9 +1,32 @@
-import { describeOnRnWeb } from '../transform/describeOnRnWeb';
 import React, { PropsWithChildren } from 'react';
-import { Animated, Image, Switch, Text, TextInput, View, ViewProps } from 'react-native';
+import {
+  Animated,
+  Image,
+  Pressable,
+  type PressableProps,
+  type StyleProp,
+  Switch,
+  Text,
+  TextInput,
+  type TextStyle,
+  TouchableHighlight,
+  TouchableNativeFeedback,
+  TouchableWithoutFeedback,
+  View,
+  ViewProps,
+} from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider, css, toStyleSheet } from '../';
 import { resetStyleCache, RN_UNSUPPORTED_VALUES } from '../../models/NativeStyle';
+import {
+  createCascadeProbe,
+  type PublishedValues,
+  sizeByState,
+  watchWindowChange,
+} from '../../test/nativeHarness';
+import hoistNonReactStatics from '../../utils/hoist';
+import { PARENT_SLOT_PROP, type ParentContextValue, useParentContext } from '../ParentContext';
+import { resetWarningsForTest } from '../transform/dev';
 
 // NOTE: These tests are like the ones for Web but a "light-version" of them
 // This is mostly due to the similar logic
@@ -15,6 +38,53 @@ function flattenStyle(style: unknown): Array<Record<string, any>> {
 function mergeStyle(style: unknown): Record<string, any> {
   return Object.assign({}, ...flattenStyle(style));
 }
+
+/** The function `style` handed to Pressable; its host child receives the resolved result instead. */
+function functionStyleOf(element: React.ReactElement): (state: { pressed?: boolean }) => unknown {
+  const holders = TestRenderer.create(element).root.findAll(
+    node => typeof node.props.style === 'function'
+  );
+  // The deepest holder is the Pressable the styled component rendered.
+  return holders[holders.length - 1].props.style;
+}
+
+/** An ancestor that declares 12px / 18px, so every expected value is relative to a size it set. */
+const CascadeAncestor = styled.View`
+  font-size: 12px;
+  line-height: 18px;
+`;
+
+/**
+ * A custom component that forwards its props to a host, as one wrapping a Pressable does:
+ * its `style` may be a state function, which the library resolves for it.
+ */
+const StateStyleView = (props: Omit<ViewProps, 'style'> & { style?: PressableProps['style'] }) => (
+  <View {...props} style={undefined} />
+);
+
+/** A function interpolation that adds no CSS and sends a component down the dynamic render path. */
+const forceDynamic = () => '';
+
+/**
+ * Mounts the subject, which receives a probe to place among its children, under
+ * {@link CascadeAncestor}. `read` returns what the probe's `useNativeStyleContext()`
+ * returned last, so the assertion goes through the public hook.
+ */
+function mountCascadeProbe(subject: (probe: React.ReactElement) => React.ReactElement) {
+  const { log, Probe, read } = createCascadeProbe();
+
+  const render = (next: typeof subject) => <CascadeAncestor>{next(<Probe />)}</CascadeAncestor>;
+  const tree = TestRenderer.create(render(subject));
+
+  return {
+    log,
+    read,
+    rerender: (next: typeof subject) => TestRenderer.act(() => tree.update(render(next))),
+    unmount: () => TestRenderer.act(() => tree.unmount()),
+  };
+}
+
+const PUBLISHED_BY_ANCESTOR: PublishedValues = { direction: 'ltr', fontSize: 12, lineHeight: 18 };
 
 describe('native', () => {
   let warnSpy: jest.SpyInstance;
@@ -442,6 +512,156 @@ describe('native', () => {
       expect(view.props.nativeID).toBe('id');
     });
 
+    describe('attrs style', () => {
+      it('reaches the element after the compiled style', () => {
+        const Comp = styled.View.attrs({ style: { backgroundColor: 'red' } })`
+          padding-top: 10px;
+        `;
+
+        const view = TestRenderer.create(<Comp />).root.findByType(View);
+        expect(view.props.style).toEqual([{ paddingTop: 10 }, { backgroundColor: 'red' }]);
+      });
+
+      it('reaches the element from the function form', () => {
+        const Comp = styled.View.attrs<{ $c?: string }>(p => ({
+          style: { backgroundColor: p.$c },
+        }))`
+          padding-top: 10px;
+        `;
+
+        const view = TestRenderer.create(<Comp $c="red" />).root.findByType(View);
+        expect(view.props.style).toEqual([{ paddingTop: 10 }, { backgroundColor: 'red' }]);
+      });
+
+      it('layers over the caller style, attrs winning a key both set', () => {
+        const Comp = styled.View.attrs({ style: { color: 'red' } })`
+          padding-top: 10px;
+        `;
+
+        const view = TestRenderer.create(
+          <Comp style={{ color: 'blue', opacity: 1 }} />
+        ).root.findByType(View);
+        expect(view.props.style).toEqual([
+          { paddingTop: 10 },
+          { color: 'blue', opacity: 1 },
+          { color: 'red' },
+        ]);
+        expect(mergeStyle(view.props.style)).toEqual({ color: 'red', opacity: 1, paddingTop: 10 });
+      });
+
+      it('is beaten by an !important declaration', () => {
+        const Comp = styled.View.attrs({ style: { color: 'red', opacity: 0.5 } })`
+          color: green !important;
+        `;
+
+        const view = TestRenderer.create(<Comp style={{ color: 'blue' }} />).root.findByType(View);
+        expect(mergeStyle(view.props.style)).toEqual({ color: 'green', opacity: 0.5 });
+      });
+
+      it('keeps a caller array as given inside its layer', () => {
+        const Comp = styled.View.attrs({ style: { color: 'red' } })`
+          padding-top: 10px;
+        `;
+
+        const view = TestRenderer.create(
+          <Comp style={[{ opacity: 1 }, { margin: 2 }]} />
+        ).root.findByType(View);
+        expect(view.props.style).toEqual([
+          { paddingTop: 10 },
+          [{ opacity: 1 }, { margin: 2 }],
+          { color: 'red' },
+        ]);
+      });
+
+      it('keeps an attrs array as given inside its layer', () => {
+        const Comp = styled.View.attrs({ style: [{ color: 'red' }, [{ margin: 2 }]] })`
+          padding-top: 10px;
+        `;
+
+        const view = TestRenderer.create(<Comp />).root.findByType(View);
+        expect(view.props.style).toEqual([{ paddingTop: 10 }, { color: 'red' }, [{ margin: 2 }]]);
+      });
+
+      it('composes with a caller function style on a Pressable, both called with the same state', () => {
+        const callerStyle = jest.fn((state: { pressed?: boolean }) =>
+          state.pressed ? { opacity: 0.5 } : { opacity: 1 }
+        );
+        const Comp = styled(Pressable).attrs({ style: { backgroundColor: 'red' } })`
+          padding-top: 10px;
+        `;
+
+        const style = functionStyleOf(<Comp style={callerStyle} />);
+        callerStyle.mockClear();
+        expect(style({ pressed: false })).toEqual([
+          { paddingTop: 10 },
+          { opacity: 1 },
+          { backgroundColor: 'red' },
+        ]);
+        expect(style({ pressed: true })).toEqual([
+          { paddingTop: 10 },
+          { opacity: 0.5 },
+          { backgroundColor: 'red' },
+        ]);
+        expect(callerStyle.mock.calls).toEqual([[{ pressed: false }], [{ pressed: true }]]);
+      });
+
+      it('composes an attrs function style with a caller object style', () => {
+        const attrsStyle = jest.fn((state: { pressed?: boolean }) =>
+          state.pressed ? { color: 'red' } : { color: 'blue' }
+        );
+        const Comp = styled(Pressable).attrs({ style: attrsStyle })`
+          padding-top: 10px;
+        `;
+
+        const style = functionStyleOf(<Comp style={{ opacity: 1 }} />);
+        attrsStyle.mockClear();
+        expect(style({ pressed: true })).toEqual([
+          { paddingTop: 10 },
+          { opacity: 1 },
+          { color: 'red' },
+        ]);
+        expect(attrsStyle.mock.calls).toEqual([[{ pressed: true }]]);
+      });
+
+      it('layers a two-argument attrs style over the caller style', () => {
+        const Comp = styled.View.attrs((_p, ast) => ({
+          style: { backgroundColor: ast.pop('color') },
+        }))`
+          color: red;
+          padding-top: 10px;
+        `;
+
+        const view = TestRenderer.create(<Comp style={{ opacity: 0.5 }} />).root.findByType(View);
+        expect(view.props.style).toEqual([
+          { paddingTop: 10 },
+          { opacity: 0.5 },
+          { backgroundColor: 'red' },
+        ]);
+      });
+
+      it('layers every attrs style across a wrapped chain, the outer winning', () => {
+        const Inner = styled.View.attrs({ style: { color: 'red', margin: 1 } })`
+          padding-top: 10px;
+        `;
+        const Outer = styled(Inner).attrs({ style: { color: 'green' } })``;
+
+        const view = TestRenderer.create(<Outer />).root.findByType(View);
+        expect(mergeStyle(view.props.style)).toEqual({ color: 'green', margin: 1, paddingTop: 10 });
+      });
+
+      it.each([undefined, null])(
+        'keeps the caller style under an attrs style of %s',
+        attrsStyle => {
+          const Comp = styled.View.attrs({ style: attrsStyle })`
+          padding-top: 10px;
+        `;
+
+          const view = TestRenderer.create(<Comp style={{ opacity: 0.5 }} />).root.findByType(View);
+          expect(mergeStyle(view.props.style)).toEqual({ opacity: 0.5, paddingTop: 10 });
+        }
+      );
+    });
+
     it('theme prop works', () => {
       const Comp = styled.Text`
         color: ${({ theme }) => theme.myColor};
@@ -484,6 +704,30 @@ describe('native', () => {
       `;
 
       expect(toStyleSheet(cssStyle)).toEqual({ borderWidth: 10, opacity: 1 });
+    });
+
+    // CSS Color 4: "<opacity-value> = <number> | <percentage>"; a percentage "computes to the
+    // equivalent <number> (0% to 0, 100% to 1)".
+    it('converts a percentage opacity to a number', () => {
+      expect(
+        toStyleSheet(css`
+          opacity: 50%;
+        `)
+      ).toEqual({ opacity: 0.5 });
+    });
+
+    it('converts a percentage opacity from an interpolated value', () => {
+      expect(toStyleSheet(css`opacity: ${'25%'};`)).toEqual({ opacity: 0.25 });
+    });
+
+    it('converts a percentage opacity inside a matching @media block', () => {
+      const Comp = styled.View`
+        @media (min-width: 100px) {
+          opacity: 50%;
+        }
+      `;
+      const view = TestRenderer.create(<Comp />).root.findByType(View);
+      expect(mergeStyle(view.props.style).opacity).toBe(0.5);
     });
 
     it.each<[string, () => ReturnType<typeof css>]>([
@@ -1246,27 +1490,27 @@ describe('native', () => {
       expect(Comp.nativeStyle.staticEligible).toBe(false);
     });
 
-    // Cascade-publishing properties must route to useDynamicImpl so a
-    // fresh NativeStyleContext value reaches descendants. Without the
-    // disqualification a child `1em` would resolve against the
-    // inherited base font-size, not this component's override.
-    it('font-size declaration disqualifies static eligibility', () => {
+    // The static render path publishes its own font size, line height and
+    // direction, so declaring them does not need the dynamic path. Values that
+    // are only known at render time (`!important`, `var()`, `rem`) still do.
+    it.each([
+      ['font-size', 'font-size: 24px;'],
+      ['line-height', 'line-height: 32px;'],
+      ['direction', 'direction: rtl;'],
+    ])('a %s declaration keeps a component static-eligible', (_name, css) => {
       const Comp = styled.View`
-        font-size: 24px;
+        ${css}
       `;
-      expect(Comp.nativeStyle.staticEligible).toBe(false);
+      expect(Comp.nativeStyle.staticEligible).toBe(true);
     });
 
-    it('line-height declaration disqualifies static eligibility', () => {
+    it.each([
+      ['an !important font-size', 'font-size: 24px !important;'],
+      ['a var() font-size', 'font-size: var(--s);'],
+      ['a rem font-size', 'font-size: 2rem;'],
+    ])('%s is not static-eligible', (_name, css) => {
       const Comp = styled.View`
-        line-height: 32px;
-      `;
-      expect(Comp.nativeStyle.staticEligible).toBe(false);
-    });
-
-    it('direction declaration disqualifies static eligibility', () => {
-      const Comp = styled.View`
-        direction: rtl;
+        ${css}
       `;
       expect(Comp.nativeStyle.staticEligible).toBe(false);
     });
@@ -1405,6 +1649,769 @@ describe('native', () => {
       const merged = mergeStyle(text.props.style);
       expect(merged.fontSize).toBe(24);
     });
+
+    // CSS Cascade 5, "The cascaded value represents the result of the cascade: it is the
+    // declared value that wins the cascade (is sorted first in the output of the cascade)."
+    // A component publishes the winner among its own CSS and the caller's `style`, whether it
+    // renders on the static path or, with a function interpolation, the dynamic one.
+    describe('a component publishes its cascade', () => {
+      const staticSubjects = {
+        Contained: styled.View`
+          container-type: inline-size;
+        `,
+        Plain: styled.View`
+          color: red;
+        `,
+        Sized: styled.View`
+          font-size: 30px;
+        `,
+      };
+      const dynamicSubjects: typeof staticSubjects = {
+        Contained: styled.View`
+          container-type: inline-size;
+          ${forceDynamic}
+        `,
+        Plain: styled.View`
+          color: red;
+          ${forceDynamic}
+        `,
+        Sized: styled.View`
+          font-size: 30px;
+          ${forceDynamic}
+        `,
+      };
+      const TWENTY: PublishedValues = { direction: 'ltr', fontSize: 20, lineHeight: 18 };
+
+      describe.each<[string, typeof staticSubjects, boolean]>([
+        ['static', staticSubjects, true],
+        ['dynamic', dynamicSubjects, false],
+      ])('on the %s path', (_path, subjects, staticEligible) => {
+        it.each<
+          [string, keyof typeof staticSubjects, StyleProp<TextStyle> | undefined, PublishedValues]
+        >([
+          [
+            'its own font-size',
+            'Sized',
+            undefined,
+            { direction: 'ltr', fontSize: 30, lineHeight: 18 },
+          ],
+          ['a caller style object', 'Plain', { fontSize: 20 }, TWENTY],
+          [
+            'the last of a caller style array',
+            'Plain',
+            [{ fontSize: 10 }, { fontSize: 20 }],
+            TWENTY,
+          ],
+          ['a caller style over its CSS', 'Sized', { fontSize: 20 }, TWENTY],
+          [
+            'the ancestor font-size when the winning layer holds undefined',
+            'Sized',
+            { fontSize: undefined },
+            PUBLISHED_BY_ANCESTOR,
+          ],
+          // React Native's types reject null in these keys, but JavaScript callers pass it, and
+          // `flattenStyle` keeps a later null, so the host has no value of its own and inherits.
+          [
+            'the ancestor font-size when the winning layer holds null',
+            'Sized',
+            { fontSize: null } as unknown as TextStyle,
+            PUBLISHED_BY_ANCESTOR,
+          ],
+          [
+            'the ancestor line-height when a later layer holds null',
+            'Plain',
+            [{ lineHeight: 30 }, { lineHeight: null }] as unknown as TextStyle[],
+            PUBLISHED_BY_ANCESTOR,
+          ],
+          [
+            'the ancestor direction when a later layer holds null',
+            'Plain',
+            [{ direction: 'rtl' }, { direction: null }] as unknown as TextStyle[],
+            PUBLISHED_BY_ANCESTOR,
+          ],
+          ['a caller font-size on a container', 'Contained', { fontSize: 20 }, TWENTY],
+        ])('publishes %s', (_name, subject, style, expected) => {
+          const Subject = subjects[subject];
+
+          expect(Subject.nativeStyle.staticEligible).toBe(staticEligible);
+          expect(
+            mountCascadeProbe(probe => <Subject style={style}>{probe}</Subject>).read()
+          ).toEqual(expected);
+        });
+      });
+    });
+  });
+
+  describe('cascade publishing from every source', () => {
+    // rn-web has no rows: the bridge hands CSS to the browser, which cascades these values itself,
+    // and never runs this engine.
+    const TWENTY: PublishedValues = { direction: 'ltr', fontSize: 20, lineHeight: 18 };
+
+    beforeEach(() => {
+      resetWarningsForTest();
+    });
+
+    it.each<[string, (probe: React.ReactElement) => React.ReactElement, PublishedValues]>([
+      [
+        'an !important font-size',
+        probe => {
+          const S = styled.View`
+            font-size: 20px !important;
+            ${forceDynamic}
+          `;
+          return <S>{probe}</S>;
+        },
+        TWENTY,
+      ],
+      [
+        'an !important font-size inside @media',
+        probe => {
+          const S = styled.View`
+            @media (min-width: 100px) {
+              font-size: 20px !important;
+            }
+            ${forceDynamic}
+          `;
+          return <S>{probe}</S>;
+        },
+        TWENTY,
+      ],
+      [
+        'an !important font-size over the caller style',
+        probe => {
+          const S = styled.View`
+            font-size: 20px !important;
+            ${forceDynamic}
+          `;
+          return <S style={{ fontSize: 30 }}>{probe}</S>;
+        },
+        TWENTY,
+      ],
+      [
+        'a font-size set by its own var()',
+        probe => {
+          const S = styled.View`
+            --s: 20px;
+            font-size: var(--s);
+          `;
+          return <S>{probe}</S>;
+        },
+        TWENTY,
+      ],
+      [
+        'a line-height set by its own var()',
+        probe => {
+          const S = styled.View`
+            --l: 30px;
+            line-height: var(--l);
+          `;
+          return <S>{probe}</S>;
+        },
+        { direction: 'ltr', fontSize: 12, lineHeight: 30 },
+      ],
+      [
+        'a direction set by its own var()',
+        probe => {
+          const S = styled.View`
+            --d: rtl;
+            direction: var(--d);
+          `;
+          return <S>{probe}</S>;
+        },
+        { direction: 'rtl', fontSize: 12, lineHeight: 18 },
+      ],
+      [
+        'a font-size set by a var() inside @media',
+        probe => {
+          const S = styled.View`
+            --s: 20px;
+            @media (min-width: 100px) {
+              font-size: var(--s);
+            }
+          `;
+          return <S>{probe}</S>;
+        },
+        TWENTY,
+      ],
+      [
+        'a font shorthand set by a var()',
+        probe => {
+          const S = styled.View`
+            --f: 20px serif;
+            font: var(--f);
+          `;
+          return <S>{probe}</S>;
+        },
+        { direction: 'ltr', fontSize: 20, lineHeight: 18 },
+      ],
+      [
+        'a font-size set by a var() from an ancestor',
+        probe => {
+          const Vars = styled.View`
+            --s: 20px;
+          `;
+          const S = styled.View`
+            font-size: var(--s);
+          `;
+          return (
+            <Vars>
+              <S>{probe}</S>
+            </Vars>
+          );
+        },
+        TWENTY,
+      ],
+      [
+        'an !important font-size set by a var()',
+        probe => {
+          const S = styled.View`
+            --s: 20px;
+            font-size: var(--s) !important;
+          `;
+          return <S style={{ fontSize: 30 }}>{probe}</S>;
+        },
+        TWENTY,
+      ],
+      [
+        'the CSS font-size under an animated caller font-size',
+        probe => {
+          const S = styled(Animated.Text)`
+            font-size: 20px;
+            ${forceDynamic}
+          `;
+          return <S style={{ fontSize: new Animated.Value(30) }}>{probe}</S>;
+        },
+        TWENTY,
+      ],
+      [
+        'the resting font-size of a custom component with a function style',
+        probe => {
+          const S = styled(StateStyleView)`
+            ${forceDynamic}
+          `;
+          return <S style={sizeByState}>{probe}</S>;
+        },
+        TWENTY,
+      ],
+    ])('publishes %s', (_name, subject, expected) => {
+      expect(mountCascadeProbe(subject).read()).toEqual(expected);
+    });
+
+    // Guards: each passes before the change, and keeps passing.
+    it.each<[string, (probe: React.ReactElement) => React.ReactElement, PublishedValues]>([
+      [
+        'a font-size inside a matching @media',
+        probe => {
+          const S = styled.View`
+            @media (min-width: 100px) {
+              font-size: 20px;
+            }
+          `;
+          return <S>{probe}</S>;
+        },
+        TWENTY,
+      ],
+      [
+        'a rem font-size against the 16px root',
+        probe => {
+          const S = styled.View`
+            font-size: 2rem;
+          `;
+          return <S>{probe}</S>;
+        },
+        { direction: 'ltr', fontSize: 32, lineHeight: 18 },
+      ],
+      [
+        'an attrs style object',
+        probe => {
+          const S = styled.View.attrs({ style: { fontSize: 20 } })``;
+          return <S>{probe}</S>;
+        },
+        TWENTY,
+      ],
+      [
+        'a caller style array nested with null and false entries',
+        probe => {
+          const S = styled.View`
+            ${forceDynamic}
+          `;
+          return <S style={[null, [false, { fontSize: 20 }], null]}>{probe}</S>;
+        },
+        TWENTY,
+      ],
+      [
+        'the ancestor direction for direction: inherit',
+        probe => {
+          const S = styled.View`
+            direction: rtl;
+            ${forceDynamic}
+          `;
+          return <S style={{ direction: 'inherit' }}>{probe}</S>;
+        },
+        PUBLISHED_BY_ANCESTOR,
+      ],
+      [
+        'the ancestor font-size for a View with a function style',
+        probe => {
+          const S = styled.View`
+            ${forceDynamic}
+          `;
+          return <S style={() => ({ fontSize: 30 })}>{probe}</S>;
+        },
+        PUBLISHED_BY_ANCESTOR,
+      ],
+    ])('publishes %s', (_name, subject, expected) => {
+      expect(mountCascadeProbe(subject).read()).toEqual(expected);
+    });
+
+    it('publishes the base font-size of a View with an :active font-size, and warns once', () => {
+      const S = styled.View`
+        font-size: 20px;
+        &:active {
+          font-size: 30px;
+        }
+      `;
+
+      const probed = mountCascadeProbe(probe => <S>{probe}</S>);
+
+      expect(probed.read()).toEqual(TWENTY);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('publishes the CSS font-size of a transition at once', () => {
+      const S = styled.View<{ $size: number }>`
+        font-size: ${p => p.$size}px;
+        transition: font-size 1s;
+      `;
+
+      const probed = mountCascadeProbe(probe => <S $size={20}>{probe}</S>);
+      probed.rerender(probe => <S $size={30}>{probe}</S>);
+      const published = probed.read();
+      // The transition's frame timer must not outlive the test.
+      probed.unmount();
+
+      expect(published).toEqual({ direction: 'ltr', fontSize: 30, lineHeight: 18 });
+    });
+
+    // A Pressable hands its pressed state to a `style` function, so what it publishes
+    // depends on that state. `testOnly_pressed` holds the Pressable pressed.
+    describe('a styled Pressable', () => {
+      const ByFunctionStyle = styled(Pressable)`
+        ${forceDynamic}
+      `;
+      const ByAttrsStyle = styled(Pressable).attrs({
+        style: sizeByState,
+      })``;
+      const ByActive = styled(Pressable)`
+        &:active {
+          font-size: 30px;
+        }
+      `;
+      const ByBaseAndActiveOpacity = styled(Pressable)`
+        font-size: 20px;
+        &:active {
+          opacity: 0.5;
+        }
+      `;
+      const StaticByFunctionStyle = styled(Pressable)`
+        color: red;
+      `;
+      const PRESSED: PublishedValues = { direction: 'ltr', fontSize: 30, lineHeight: 18 };
+
+      it.each<
+        [
+          string,
+          { nativeStyle: { staticEligible: boolean } },
+          // null: attrs take the dynamic path at render time, which the CSS-level flag does not show
+          boolean | null,
+          (probe: React.ReactElement, pressed: boolean) => React.ReactElement,
+          PublishedValues,
+          PublishedValues,
+        ]
+      >([
+        [
+          'a function style',
+          ByFunctionStyle,
+          false,
+          (probe, pressed) => (
+            <ByFunctionStyle testOnly_pressed={pressed} style={sizeByState}>
+              {probe}
+            </ByFunctionStyle>
+          ),
+          TWENTY,
+          PRESSED,
+        ],
+        [
+          'an attrs style function',
+          ByAttrsStyle,
+          null,
+          (probe, pressed) => <ByAttrsStyle testOnly_pressed={pressed}>{probe}</ByAttrsStyle>,
+          TWENTY,
+          PRESSED,
+        ],
+        [
+          'an :active font-size',
+          ByActive,
+          false,
+          (probe, pressed) => <ByActive testOnly_pressed={pressed}>{probe}</ByActive>,
+          PUBLISHED_BY_ANCESTOR,
+          PRESSED,
+        ],
+        [
+          'a base font-size with an :active opacity',
+          ByBaseAndActiveOpacity,
+          false,
+          (probe, pressed) => (
+            <ByBaseAndActiveOpacity testOnly_pressed={pressed}>{probe}</ByBaseAndActiveOpacity>
+          ),
+          TWENTY,
+          TWENTY,
+        ],
+        [
+          'a function style on a static component',
+          StaticByFunctionStyle,
+          true,
+          (probe, pressed) => (
+            <StaticByFunctionStyle testOnly_pressed={pressed} style={sizeByState}>
+              {probe}
+            </StaticByFunctionStyle>
+          ),
+          TWENTY,
+          PRESSED,
+        ],
+      ])(
+        'publishes %s at rest and while pressed',
+        (_name, Subject, staticEligible, subject, atRest, whilePressed) => {
+          if (staticEligible !== null) {
+            expect(Subject.nativeStyle.staticEligible).toBe(staticEligible);
+          }
+          expect(mountCascadeProbe(probe => subject(probe, false)).read()).toEqual(atRest);
+          expect(mountCascadeProbe(probe => subject(probe, true)).read()).toEqual(whilePressed);
+        }
+      );
+
+      it('publishes the pressed size to a child of a function children Pressable', () => {
+        const probed = mountCascadeProbe(probe => (
+          <ByActive testOnly_pressed>{() => probe}</ByActive>
+        ));
+
+        expect(probed.read()).toEqual(PRESSED);
+      });
+
+      describe('with a container or grid', () => {
+        const Contained = styled.View`
+          container-type: inline-size;
+        `;
+        const Reader = styled.View`
+          font-size: 1em;
+          @container (max-width: 100px) {
+            margin-top: 5px;
+          }
+        `;
+        const PressContainer = styled(Pressable)`
+          container-type: inline-size;
+          &:active {
+            font-size: 30px;
+          }
+        `;
+        const PressGrid = styled(Pressable)`
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          &:active {
+            font-size: 30px;
+          }
+        `;
+        const GridItem = styled.View`
+          font-size: 1em;
+        `;
+
+        /** The reader's host style: the last View in the tree. */
+        const hostStyleOf = (tree: TestRenderer.ReactTestRenderer) => {
+          const views = tree.root.findAllByType(View);
+          return mergeStyle(views[views.length - 1].props.style);
+        };
+
+        it('keeps the container entry above a pressed Pressable', () => {
+          const tree = TestRenderer.create(
+            <Contained>
+              <ByActive testOnly_pressed>
+                <Reader />
+              </ByActive>
+            </Contained>
+          );
+
+          expect(hostStyleOf(tree)).toEqual({ fontSize: 30, marginTop: 5 });
+        });
+
+        it('keeps the container entry of a Pressable that is the container while it is pressed', () => {
+          const tree = TestRenderer.create(
+            <PressContainer testOnly_pressed>
+              <Reader />
+            </PressContainer>
+          );
+
+          expect(hostStyleOf(tree)).toEqual({ fontSize: 30, marginTop: 5 });
+        });
+
+        it('keeps the grid entry of a Pressable that is the grid while it is pressed', () => {
+          const tree = TestRenderer.create(
+            <PressGrid testOnly_pressed>
+              <GridItem />
+            </PressGrid>
+          );
+
+          expect(hostStyleOf(tree)).toEqual({ fontSize: 30, width: '50%' });
+        });
+      });
+    });
+  });
+
+  // https://drafts.csswg.org/css-values-4/#em (editor's draft)
+  //
+  // "On the other hand: h1 { font-size: 1.2em } means that the font size of h1 elements
+  // will be 20% greater than the computed font size inherited by h1 elements."
+  //
+  // https://drafts.csswg.org/css-values-4/#calc-serialize (editor's draft, 10.13 Serialization)
+  //
+  // "If the root of the calculation tree fn represents is a numeric value (number,
+  // percentage, or dimension), and the serialization being produced is of a computed
+  // value or later, then clamp the value to the range allowed for its context (if
+  // necessary), then serialize the value as normal and return the result."
+  //
+  // https://drafts.csswg.org/css-fonts-4/#font-size-prop (editor's draft)
+  //
+  // "Value: <absolute-size> | <relative-size> | <length-percentage [0,∞]> | math"
+  describe('math functions in font properties resolve at render time', () => {
+    const renderUnder20px = (Child: React.ComponentType<PropsWithChildren>) => {
+      const Parent = styled.View`
+        font-size: 20px;
+      `;
+      const tree = TestRenderer.create(
+        <Parent>
+          <Child>hi</Child>
+        </Parent>
+      );
+      return mergeStyle(tree.root.findByType(Text).props.style);
+    };
+
+    it('font-size: em inside calc refers to the parent font size', () => {
+      const Child = styled.Text`
+        font-size: calc(1em + 2px);
+      `;
+      expect(renderUnder20px(Child).fontSize).toBe(22);
+    });
+
+    it('font-size: a calc result below zero clamps to zero', () => {
+      const Child = styled.Text`
+        font-size: calc(1em - 30px);
+      `;
+      expect(renderUnder20px(Child).fontSize).toBe(0);
+    });
+
+    it('font-size: a static calc result below zero clamps to zero', () => {
+      const Child = styled.Text`
+        font-size: calc(2px - 10px);
+      `;
+      expect(renderUnder20px(Child).fontSize).toBe(0);
+    });
+
+    // The jest window is 750 wide, so 2vw is 15.
+    it.each([
+      ['clamp(14px, 2vw, 20px)', 15],
+      ['clamp(16px, 2vw, 20px)', 16],
+      ['clamp(10px, 2vw, 12px)', 12],
+      ['min(2vw, 12px)', 12],
+      ['max(2vw, 18px)', 18],
+    ])('font-size: %s resolves against the window width to %i', (value, expected) => {
+      const Child = styled.Text`
+        font-size: ${value};
+      `;
+      expect(renderUnder20px(Child).fontSize).toBe(expected);
+    });
+
+    it('font-size: a calc value publishes to descendants resolving 1em', () => {
+      const Middle = styled.View`
+        font-size: calc(1em + 2px);
+      `;
+      const Child = styled.Text`
+        font-size: 1em;
+      `;
+      const Wrapped = () => (
+        <Middle>
+          <Child>hi</Child>
+        </Middle>
+      );
+      expect(renderUnder20px(Wrapped as React.ComponentType<PropsWithChildren>).fontSize).toBe(22);
+    });
+
+    it('line-height: em inside calc refers to the font size', () => {
+      const Child = styled.Text`
+        line-height: calc(1em + 4px);
+      `;
+      expect(renderUnder20px(Child).lineHeight).toBe(24);
+    });
+
+    it('letter-spacing: em inside calc refers to the font size', () => {
+      const Child = styled.Text`
+        letter-spacing: calc(0.1em + 1px);
+      `;
+      expect(renderUnder20px(Child).letterSpacing).toBe(3);
+    });
+
+    it('font: math in the size and line-height slots resolves', () => {
+      const Child = styled.Text`
+        font: italic calc(1em + 2px) / calc(20px + 4px) serif;
+      `;
+      const style = renderUnder20px(Child);
+      expect(style.fontSize).toBe(22);
+      expect(style.lineHeight).toBe(24);
+    });
+  });
+
+  // https://drafts.csswg.org/css-values-4/#calc-range (editor's draft, 10.12 Range Checking)
+  //
+  // "numeric functions returning out-of-range values never cause a declaration to become
+  // invalid. Instead, the value of a numeric function is clamped to the range allowed in the
+  // context it is used at computed value time if possible, and at used value time otherwise.
+  // Similarly, if a numeric function returns a non-integer value, but is used in a position
+  // that expects an <integer>, the computed value and used value are rounded to the nearest
+  // integer."
+  //
+  // "Since widths smaller than 0px are not allowed, these three declarations are equivalent:
+  // width: calc(5px - 10px); width: calc(-5px); width: 0px;"
+  describe('a math result is clamped to the range of its property in the rendered style', () => {
+    const renderStyle = (Child: React.ComponentType<PropsWithChildren>) => {
+      const Parent = styled.View`
+        font-size: 20px;
+      `;
+      const tree = TestRenderer.create(
+        <Parent>
+          <Child>hi</Child>
+        </Parent>
+      );
+      return mergeStyle(tree.root.findByType(Text).props.style);
+    };
+
+    // 1em is 20px under the parent, so each value is -10px before range checking.
+    it('width, padding, border-width, and border-radius clamp to 0', () => {
+      const Child = styled.Text`
+        width: calc(1em - 30px);
+        padding: calc(1em - 30px);
+        padding-block: calc(1em - 30px);
+        border-width: calc(1em - 30px);
+        border-block-width: calc(1em - 30px);
+        border-radius: calc(1em - 30px);
+        row-gap: calc(1em - 30px);
+      `;
+      const style = renderStyle(Child);
+      expect({
+        borderBottomWidth: style.borderBottomWidth,
+        borderRadius: style.borderRadius,
+        borderTopWidth: style.borderTopWidth,
+        borderWidth: style.borderWidth,
+        padding: style.padding,
+        paddingBottom: style.paddingBottom,
+        paddingTop: style.paddingTop,
+        rowGap: style.rowGap,
+        width: style.width,
+      }).toEqual({
+        borderBottomWidth: 0,
+        borderRadius: 0,
+        borderTopWidth: 0,
+        borderWidth: 0,
+        padding: 0,
+        paddingBottom: 0,
+        paddingTop: 0,
+        rowGap: 0,
+        width: 0,
+      });
+    });
+
+    it('a static result clamps at compile time', () => {
+      const Child = styled.Text`
+        width: calc(2px - 10px);
+        opacity: calc(5 - 3);
+        z-index: calc(7 / 3);
+      `;
+      const style = renderStyle(Child);
+      expect({ opacity: style.opacity, width: style.width, zIndex: style.zIndex }).toEqual({
+        opacity: 1,
+        width: 0,
+        zIndex: 2,
+      });
+    });
+
+    it('a property with no range keeps a negative result', () => {
+      const Child = styled.Text`
+        margin-top: calc(1em - 30px);
+      `;
+      expect(renderStyle(Child).marginTop).toBe(-10);
+    });
+
+    // A var() is substituted before the declaration is transformed, so the drop for an
+    // unbuildable function never sees one.
+    it('math around var() resolves after substitution, and clamps', () => {
+      const Parent = styled.View`
+        --gap: 10px;
+      `;
+      const Child = styled.Text`
+        width: calc(var(--gap) + 2px);
+        height: min(var(--gap), 5px);
+        padding-top: calc(var(--gap) - 30px);
+      `;
+      const tree = TestRenderer.create(
+        <Parent>
+          <Child>hi</Child>
+        </Parent>
+      );
+      const style = mergeStyle(tree.root.findByType(Text).props.style);
+      expect({ height: style.height, paddingTop: style.paddingTop, width: style.width }).toEqual({
+        height: 5,
+        paddingTop: 0,
+        width: 12,
+      });
+    });
+
+    // "if the type is failure, the math function is invalid": a shorthand drops whole, so no
+    // function text reaches the host.
+    it('a math function with inconsistent types drops the declaration, shorthand or not', () => {
+      resetWarningsForTest();
+      const Child = styled.Text`
+        margin: calc(1 + 5px);
+        width: min(1, 5px);
+        height: 3px;
+      `;
+      const style = renderStyle(Child);
+      expect({
+        height: style.height,
+        marginTop: style.marginTop,
+        marginLeft: style.marginLeft,
+        width: style.width,
+      }).toEqual({ height: 3, marginLeft: undefined, marginTop: undefined, width: undefined });
+      expect(warnSpy.mock.calls.map(call => String(call[0]).split('\n')[0])).toEqual([
+        '[sc] the value "calc(1 + 5px)" for "margin" is a math function React Native cannot resolve, so the declaration was ignored. Give every operand the same type, and put font-relative or viewport operands in calc(), min(), max() or clamp().',
+        '[sc] the value "min(1, 5px)" for "width" is a math function React Native cannot resolve, so the declaration was ignored. Give every operand the same type, and put font-relative or viewport operands in calc(), min(), max() or clamp().',
+      ]);
+    });
+
+    it('a math function no resolver builds drops the declaration with a warning', () => {
+      resetWarningsForTest();
+      const Child = styled.Text`
+        width: mod(7, 3px);
+        height: abs(1em);
+        margin-top: 4px;
+      `;
+      const style = renderStyle(Child);
+      expect({ height: style.height, marginTop: style.marginTop, width: style.width }).toEqual({
+        height: undefined,
+        marginTop: 4,
+        width: undefined,
+      });
+      expect(warnSpy.mock.calls.map(call => String(call[0]).split('\n')[0])).toEqual([
+        '[sc] the value "mod(7, 3px)" for "width" is a math function React Native cannot resolve, so the declaration was ignored. Give every operand the same type, and put font-relative or viewport operands in calc(), min(), max() or clamp().',
+        '[sc] the value "abs(1em)" for "height" is a math function React Native cannot resolve, so the declaration was ignored. Give every operand the same type, and put font-relative or viewport operands in calc(), min(), max() or clamp().',
+      ]);
+    });
   });
 
   describe('ParentContext value memoization', () => {
@@ -1527,14 +2534,15 @@ describe('native', () => {
         expect(view.props.style).toEqual({ paddingTop: 10 });
       });
 
-      it('auto-injects containerName when container-type is declared without container-name', () => {
+      // The implicit container name travels to descendants through context;
+      // React Native's view manager ignores a `containerName` style key.
+      it('adds no containerName style key for a container without container-name', () => {
         const Card = styled.View.withConfig({ displayName: 'AutoNameCard' })`
           container-type: size;
         `;
         const wrapper = TestRenderer.create(<Card />);
         const view = wrapper.root.findByType(View);
-        const merged = mergeStyle(view.props.style);
-        expect(merged.containerName).toBe(Card.styledComponentId);
+        expect(mergeStyle(view.props.style)).not.toHaveProperty('containerName');
       });
 
       it('does NOT auto-inject containerName when container-name was supplied explicitly', () => {
@@ -1550,7 +2558,7 @@ describe('native', () => {
         expect(merged.containerName).toBe('explicit');
       });
 
-      it('auto-injects containerName alongside an object user style', () => {
+      it('composes a container with an object user style', () => {
         const Card = styled.View.withConfig({ displayName: 'AutoNameUserCard' })`
           container-type: size;
         `;
@@ -1558,7 +2566,7 @@ describe('native', () => {
         const view = wrapper.root.findByType(View);
         const merged = mergeStyle(view.props.style);
         expect(merged.opacity).toBe(0.7);
-        expect(merged.containerName).toBe(Card.styledComponentId);
+        expect(merged).not.toHaveProperty('containerName');
       });
 
       it('layers function-form user style as a state callback returning [base, callbackResult]', () => {
@@ -1585,7 +2593,7 @@ describe('native', () => {
         expect(view.props.style({})).toEqual([{ paddingTop: 10 }, { opacity: 0.5 }, { margin: 4 }]);
       });
 
-      it('layers auto-containerName ON TOP OF a function-form user style', () => {
+      it('keeps a function-form user style on a container', () => {
         const Card = styled.View.withConfig({ displayName: 'AutoNameFnCard' })`
           container-type: size;
         `;
@@ -1593,13 +2601,10 @@ describe('native', () => {
           state.pressed ? { opacity: 0.5 } : { opacity: 1 };
         const wrapper = TestRenderer.create(<Card style={userStyle} />);
         const view = wrapper.root.findByType(View);
-        // Function form preserved; container name appended as a static layer
-        // after the callback result.
         expect(typeof view.props.style).toBe('function');
-        const result = view.props.style({ pressed: true });
-        const merged = mergeStyle(result);
+        const merged = mergeStyle(view.props.style({ pressed: true }));
         expect(merged.opacity).toBe(0.5);
-        expect(merged.containerName).toBe(Card.styledComponentId);
+        expect(merged).not.toHaveProperty('containerName');
       });
     });
 
@@ -1624,7 +2629,7 @@ describe('native', () => {
         expect(merged.opacity).toBe(0.5);
       });
 
-      it('auto-injects containerName on the dynamic path', () => {
+      it('adds no containerName style key for a container on the dynamic path', () => {
         const Card = styled.View.withConfig({ displayName: 'DynAutoNameCard' })<{ $w: number }>`
           width: ${p => p.$w}px;
           container-type: size;
@@ -1633,11 +2638,11 @@ describe('native', () => {
         const wrapper = TestRenderer.create(<Card $w={200} />);
         const view = wrapper.root.findByType(View);
         const merged = mergeStyle(view.props.style);
-        expect(merged.containerName).toBe(Card.styledComponentId);
+        expect(merged).not.toHaveProperty('containerName');
         expect(merged.width).toBe(200);
       });
 
-      it('layers function-form user style with auto-container-name on the dynamic path', () => {
+      it('keeps a function-form user style on a container on the dynamic path', () => {
         const Card = styled.View.withConfig({ displayName: 'DynAutoNameFnCard' })<{ $w: number }>`
           width: ${p => p.$w}px;
           container-type: size;
@@ -1650,7 +2655,7 @@ describe('native', () => {
         const result = view.props.style({ pressed: true });
         const merged = mergeStyle(result);
         expect(merged.opacity).toBe(0.5);
-        expect(merged.containerName).toBe(Card.styledComponentId);
+        expect(merged).not.toHaveProperty('containerName');
         expect(merged.width).toBe(200);
       });
     });
@@ -2065,22 +3070,6 @@ describe('native', () => {
       expect(root.props.pointerEvents).toBe('auto');
       expect(root.props.focusable).toBeUndefined();
     });
-
-    describeOnRnWeb(() => {
-      // rn-web deprecated `props.pointerEvents` in favor of
-      // `style.pointerEvents`; the lift would trigger a runtime
-      // deprecation warning on every render.
-      it('pointer-events stays in style on rn-web (no prop lift)', () => {
-        const NoTouch = styled.View`
-          pointer-events: none;
-        `;
-        const tree = TestRenderer.create(<NoTouch />);
-        const root = tree.root.findByType(View);
-        expect(root.props.pointerEvents).toBeUndefined();
-        const flat = mergeStyle(root.props.style);
-        expect(flat.pointerEvents).toBe('none');
-      });
-    });
   });
 
   // https://drafts.csswg.org/css-transforms-2/#perspective-property
@@ -2133,53 +3122,6 @@ describe('native', () => {
       const tree = TestRenderer.create(<Spin />);
       const merged = getMergedStyle(tree.root.findByType(View));
       expect(merged.transform).toBe('scale(1.2)');
-    });
-  });
-
-  // Render-level coverage for the rn-web SPECIAL_CASE_PROPS lifts the
-  // unit transformDecl tests can't reach: validates the prop reaches the
-  // underlying component and is gated to the validOn target.
-  describe('rn-web prop lifts', () => {
-    describeOnRnWeb(() => {
-      it('direction: rtl lifts a dir prop onto a styled View', () => {
-        const Page = styled.View`
-          direction: rtl;
-        `;
-        const tree = TestRenderer.create(<Page />);
-        const root = tree.root.findByType(View);
-        expect(root.props.dir).toBe('rtl');
-        const flat = mergeStyle(root.props.style);
-        expect(flat.writingDirection).toBe('rtl');
-      });
-
-      it('accent-color: <color> lifts trackColor onto a styled Switch', () => {
-        const Toggle = styled.Switch`
-          accent-color: red;
-        `;
-        const tree = TestRenderer.create(<Toggle value={false} onValueChange={() => {}} />);
-        const root = tree.root.findByType(Switch);
-        expect(root.props.trackColor).toEqual({ true: 'red' });
-      });
-
-      it('accent-color trackColor lift is skipped on a non-Switch target', () => {
-        const warnSpy2 = jest.spyOn(console, 'warn').mockImplementation(() => {});
-        try {
-          const Misuse = styled.View`
-            accent-color: red;
-          `;
-          const tree = TestRenderer.create(<Misuse />);
-          const root = tree.root.findByType(View);
-          expect(root.props.trackColor).toBeUndefined();
-          const flat = mergeStyle(root.props.style);
-          expect(flat.accentColor).toBe('red');
-          expect(warnSpy2).toHaveBeenCalled();
-          const message = warnSpy2.mock.calls[0][0] as string;
-          expect(message).toContain('accent-color');
-          expect(message).toContain('<Switch>');
-        } finally {
-          warnSpy2.mockRestore();
-        }
-      });
     });
   });
 });
@@ -2293,5 +3235,694 @@ describe('a plain string value stays in its declaration', () => {
     } finally {
       warn.mockRestore();
     }
+  });
+});
+
+// A mount count above the expected one means the library moved the user's elements to a new
+// place in the tree (React unmounts and remounts anything whose place changed).
+describe('tree shape stability', () => {
+  /** Counts mounts of its instances: a state initializer runs once per mount. */
+  function mountCounter() {
+    const counter = { mounts: 0 };
+    function Leaf() {
+      React.useState(() => {
+        counter.mounts++;
+        return 0;
+      });
+      return <View />;
+    }
+    return { counter, Leaf };
+  }
+
+  /** React's own dev warning for a lone generator child, raised once by React and by no walk of ours. */
+  function expectOnlyReactIteratorWarning(spy: jest.SpyInstance) {
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(String(spy.mock.calls[0][0])).toContain('Using Iterators as children is unsupported');
+  }
+
+  let errorSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    errorSpy.mockRestore();
+  });
+
+  it('keeps a plain sibling mounted while a styled sibling appears and leaves before it', () => {
+    const { counter, Leaf } = mountCounter();
+    const Form = styled.View``;
+    const ErrorText = styled.Text``;
+    const render = (error: boolean) => (
+      <Form>
+        {error && <ErrorText>invalid</ErrorText>}
+        <Leaf />
+      </Form>
+    );
+
+    const tree = TestRenderer.create(render(false));
+    tree.update(render(true));
+    tree.update(render(false));
+
+    expect(counter.mounts).toBe(1);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps a keyed list mounted while a styled sibling appears before it', () => {
+    const { counter, Leaf } = mountCounter();
+    const Form = styled.View``;
+    const Header = styled.Text``;
+    const render = (header: boolean) => (
+      <Form>
+        {header && <Header>title</Header>}
+        {['a', 'b', 'c'].map(id => (
+          <Leaf key={id} />
+        ))}
+      </Form>
+    );
+
+    const tree = TestRenderer.create(render(false));
+    tree.update(render(true));
+
+    expect(counter.mounts).toBe(3);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps a plain sibling and the kept rows mounted while a mapped list of styled rows grows and shrinks', () => {
+    const lead = mountCounter();
+    const row = mountCounter();
+    const Form = styled.View``;
+    const Row = styled.View``;
+    const render = (ids: string[]) => (
+      <Form>
+        <lead.Leaf />
+        {ids.map(id => (
+          <Row key={id}>
+            <row.Leaf />
+          </Row>
+        ))}
+      </Form>
+    );
+
+    const tree = TestRenderer.create(render([]));
+    tree.update(render(['a', 'b']));
+    tree.update(render(['a']));
+
+    expect(lead.counter.mounts).toBe(1);
+    expect(row.counter.mounts).toBe(2);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps keyed styled rows mounted when they reorder', () => {
+    const row = mountCounter();
+    const Form = styled.View``;
+    const Row = styled.View``;
+    const render = (ids: string[]) => (
+      <Form>
+        {ids.map(id => (
+          <Row key={id}>
+            <row.Leaf />
+          </Row>
+        ))}
+      </Form>
+    );
+
+    const tree = TestRenderer.create(render(['a', 'b']));
+    tree.update(render(['b', 'a']));
+
+    expect(row.counter.mounts).toBe(2);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps an unkeyed styled child at its position while the siblings before it come and go', () => {
+    const last = mountCounter();
+    const Form = styled.View``;
+    const Row = styled.View``;
+    const render = (middle: boolean) => (
+      <Form>
+        <Row />
+        {middle && <Row />}
+        <Row>
+          <last.Leaf />
+        </Row>
+      </Form>
+    );
+
+    const tree = TestRenderer.create(render(false));
+    tree.update(render(true));
+    tree.update(render(false));
+
+    expect(last.counter.mounts).toBe(1);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('raises no missing-key warning for two or more static children', () => {
+    const Form = styled.View``;
+    const Row = styled.View``;
+    const Plain = () => <View />;
+    const render = (testID: string) => (
+      <Form testID={testID}>
+        <Row />
+        <Plain />
+        <Row />
+        text
+      </Form>
+    );
+
+    const tree = TestRenderer.create(render('one'));
+    tree.update(render('two'));
+
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('renders the elements of a generator child as React renders them', () => {
+    const { counter, Leaf } = mountCounter();
+    const Form = styled.View``;
+    function* items() {
+      yield <Leaf key="g" />;
+    }
+
+    TestRenderer.create(<Form>{items()}</Form>);
+
+    expect(counter.mounts).toBe(1);
+    expectOnlyReactIteratorWarning(errorSpy);
+  });
+
+  it('renders the elements of a generator child under a :has() parent', () => {
+    const { counter, Leaf } = mountCounter();
+    const Marker = styled.View``;
+    const Form = styled.View`
+      padding-top: 1px;
+      &:has(${Marker}) {
+        padding-top: 2px;
+      }
+    `;
+    function* items() {
+      yield <Leaf key="g" />;
+    }
+
+    const tree = TestRenderer.create(
+      <Form>
+        <Marker />
+        {items()}
+      </Form>
+    );
+
+    expect(counter.mounts).toBe(1);
+    expect(mergeStyle(tree.root.findAllByType(View)[0].props.style)).toEqual({ paddingTop: 2 });
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('renders function children of a styled Pressable once and keeps them mounted', () => {
+    const { counter, Leaf } = mountCounter();
+    const Press = styled(Pressable)``;
+    const render = (testID: string) => <Press testID={testID}>{() => <Leaf />}</Press>;
+
+    const tree = TestRenderer.create(render('one'));
+    tree.update(render('two'));
+
+    expect(counter.mounts).toBe(1);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  describe('a font size, line height or direction appearing and leaving', () => {
+    it('keeps a child mounted while a font-size declared only inside @media turns on and off', () => {
+      const { counter, Leaf } = mountCounter();
+      const Form = styled.View`
+        @media (min-width: 1000px) {
+          font-size: 20px;
+        }
+      `;
+      const { emitWindowChange, restore } = watchWindowChange();
+
+      try {
+        TestRenderer.create(
+          <Form>
+            <Leaf />
+          </Form>
+        );
+        emitWindowChange(1200);
+        emitWindowChange(750);
+
+        expect(counter.mounts).toBe(1);
+        expect(errorSpy).not.toHaveBeenCalled();
+      } finally {
+        restore();
+      }
+    });
+
+    it.each([
+      ['an object', { fontSize: 20 }],
+      ['an object holding another key', { opacity: 0.5 }],
+    ])('keeps a child mounted while a caller style of %s appears and leaves', (_name, style) => {
+      const { counter, Leaf } = mountCounter();
+      const Form = styled.View`
+        ${forceDynamic}
+      `;
+      const render = (next?: object) => (
+        <Form style={next}>
+          <Leaf />
+        </Form>
+      );
+
+      const tree = TestRenderer.create(render());
+      tree.update(render(style));
+      tree.update(render());
+
+      expect(counter.mounts).toBe(1);
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+
+    it('keeps a child mounted while an interpolated custom property appears and leaves', () => {
+      const { counter, Leaf } = mountCounter();
+      const Form = styled.View<{ $on: boolean }>`
+        ${p => (p.$on ? '--s: 20px;' : '')}
+      `;
+      const render = (on: boolean) => (
+        <Form $on={on}>
+          <Leaf />
+        </Form>
+      );
+
+      const tree = TestRenderer.create(render(false));
+      tree.update(render(true));
+      tree.update(render(false));
+
+      expect(counter.mounts).toBe(1);
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+
+    describe('on a styled Pressable', () => {
+      const Press = styled(Pressable)`
+        ${forceDynamic}
+      `;
+      const PressByActive = styled(Pressable)`
+        &:active {
+          font-size: 20px;
+        }
+      `;
+
+      it('keeps a child mounted while the style is an object, then a function, then an object', () => {
+        const { counter, Leaf } = mountCounter();
+        const render = (style: PressableProps['style']) => (
+          <Press style={style}>
+            <Leaf />
+          </Press>
+        );
+
+        const sized = (): TextStyle => ({ fontSize: 20 });
+
+        const tree = TestRenderer.create(render(sized()));
+        tree.update(render(sizeByState));
+        tree.update(render(sized()));
+
+        expect(counter.mounts).toBe(1);
+        expect(errorSpy).not.toHaveBeenCalled();
+      });
+
+      it('keeps a child mounted while the Pressable is pressed and released', () => {
+        const { counter, Leaf } = mountCounter();
+        const render = (pressed: boolean) => (
+          <PressByActive testOnly_pressed={pressed}>
+            <Leaf />
+          </PressByActive>
+        );
+
+        const tree = TestRenderer.create(render(false));
+        tree.update(render(true));
+        tree.update(render(false));
+
+        expect(counter.mounts).toBe(1);
+        expect(errorSpy).not.toHaveBeenCalled();
+      });
+
+      it('keeps matching :nth-child by JSX position under a function style', () => {
+        const Row = styled.View`
+          &:nth-child(2) {
+            opacity: 0.5;
+          }
+        `;
+
+        const tree = TestRenderer.create(
+          <Press style={sizeByState}>
+            <Row />
+            <Row />
+          </Press>
+        );
+
+        const rows = tree.root.findAllByType(View).slice(-2);
+        expect(rows.map(row => mergeStyle(row.props.style))).toEqual([{}, { opacity: 0.5 }]);
+      });
+    });
+  });
+});
+
+describe('a styled child of a target that clones its only child', () => {
+  // A released TouchableHighlight hides its underlay on a timer; run it inside the test, not after it.
+  beforeEach(() => jest.useFakeTimers());
+
+  afterEach(() => {
+    TestRenderer.act(() => jest.runOnlyPendingTimers());
+    jest.useRealTimers();
+  });
+
+  const touchables = [
+    ['TouchableWithoutFeedback', TouchableWithoutFeedback],
+    ['TouchableHighlight', TouchableHighlight],
+    ['TouchableNativeFeedback', TouchableNativeFeedback],
+  ] as const;
+
+  /**
+   * A touch lands on the deepest ancestor of `leaf` that claims the responder,
+   * the way React Native's touch system picks it. A tree with no claimant takes
+   * no touch: `down` and `up` do nothing.
+   */
+  function touchFrom(leaf: TestRenderer.ReactTestInstance) {
+    let responder = leaf.parent;
+    while (responder !== null && typeof responder.props.onStartShouldSetResponder !== 'function') {
+      responder = responder.parent;
+    }
+    // The responder region is measured on grant, so the target needs a native node's `measure`.
+    const nativeNode = {
+      measure: (done: (...frame: number[]) => void) => done(0, 0, 100, 100, 0, 0),
+    };
+    const event = {
+      currentTarget: nativeNode,
+      nativeEvent: { timestamp: 0, touches: [] },
+      persist: () => {},
+      target: nativeNode,
+    };
+    return {
+      down: () => TestRenderer.act(() => responder?.props.onResponderGrant(event)),
+      up: () => TestRenderer.act(() => responder?.props.onResponderRelease(event)),
+    };
+  }
+
+  function pressFrom(leaf: TestRenderer.ReactTestInstance) {
+    const touch = touchFrom(leaf);
+    touch.down();
+    touch.up();
+  }
+
+  const labelOf = (tree: TestRenderer.ReactTestRenderer) =>
+    tree.root.findByProps({ testID: 'label' });
+
+  it.each(touchables)(
+    'calls the onPress of a styled %s when its single styled child is pressed',
+    (_name, Touchable) => {
+      const onPress = jest.fn();
+      const Target = styled(Touchable as React.ComponentType<any>)``;
+      const Child = styled.View``;
+
+      const tree = TestRenderer.create(
+        <Target onPress={onPress}>
+          <Child>
+            <Text testID="label">go</Text>
+          </Child>
+        </Target>
+      );
+      pressFrom(labelOf(tree));
+
+      expect(onPress).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it.each(touchables)(
+    'calls the onPress of a styled %s when its single plain child is pressed',
+    (_name, Touchable) => {
+      const onPress = jest.fn();
+      const Target = styled(Touchable as React.ComponentType<any>)``;
+
+      const tree = TestRenderer.create(
+        <Target onPress={onPress}>
+          <View>
+            <Text testID="label">go</Text>
+          </View>
+        </Target>
+      );
+      pressFrom(labelOf(tree));
+
+      expect(onPress).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it.each(touchables)(
+    'calls the onPress of an unstyled %s when its single styled child is pressed',
+    (_name, Touchable) => {
+      const onPress = jest.fn();
+      const Child = styled.View``;
+      const Plain = Touchable as React.ComponentType<any>;
+
+      const tree = TestRenderer.create(
+        <Plain onPress={onPress}>
+          <Child>
+            <Text testID="label">go</Text>
+          </Child>
+        </Plain>
+      );
+      pressFrom(labelOf(tree));
+
+      expect(onPress).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it('gives the single styled child of a styled TouchableHighlight the pressed opacity', () => {
+    const Target = styled(TouchableHighlight)``;
+    const Child = styled.View`
+      padding-top: 4px;
+    `;
+    const childStyle = (tree: TestRenderer.ReactTestRenderer) =>
+      mergeStyle(
+        tree.root.find(node => node.type === View && node.props.testID === 'child').props.style
+      );
+
+    const tree = TestRenderer.create(
+      <Target onPress={() => {}}>
+        <Child testID="child">
+          <Text testID="label">go</Text>
+        </Child>
+      </Target>
+    );
+    expect(childStyle(tree)).toEqual({ paddingTop: 4 });
+
+    // Press in and hold: the child carries the touchable's activeOpacity (0.85 by default).
+    const touch = touchFrom(labelOf(tree));
+    touch.down();
+    expect(childStyle(tree)).toEqual({ opacity: 0.85, paddingTop: 4 });
+
+    touch.up();
+  });
+
+  it('lays out the styled child a sticky header clones', () => {
+    // The jest preset mocks ScrollView without sticky headers; the real one wraps each sticky index in ScrollViewStickyHeader.
+    const RealScrollView: React.ComponentType<any> = jest.requireActual(
+      'react-native/Libraries/Components/ScrollView/ScrollView'
+    ).default;
+    const Scroller = styled(RealScrollView)``;
+    const Header = styled.View``;
+    const onLayout = jest.fn();
+    const event = { nativeEvent: { layout: { height: 10, width: 100, x: 0, y: 0 } } };
+
+    const tree = TestRenderer.create(
+      <Scroller stickyHeaderIndices={[0]}>
+        <Header onLayout={onLayout} testID="header" />
+        <View />
+      </Scroller>
+    );
+    // The sticky header is the nearest ancestor of the header whose onLayout is not the header's own.
+    let stickyHeader = tree.root.find(node => node.props.testID === 'header').parent;
+    while (stickyHeader !== null && stickyHeader.props.onLayout === undefined) {
+      stickyHeader = stickyHeader.parent;
+    }
+    TestRenderer.act(() => stickyHeader?.props.onLayout(event));
+
+    expect(onLayout).toHaveBeenCalledTimes(1);
+  });
+
+  describe('sibling position', () => {
+    const Marked = styled.View`
+      color: black;
+      &:first-child {
+        color: red;
+      }
+    `;
+
+    /** The styled-component wrapper a HOC returns: statics hoisted, props forwarded or not. */
+    function hoistedFrom(Inner: typeof Marked, forwardProps: boolean) {
+      const Wrapper = (props: object) => <Inner {...(forwardProps ? props : {})} />;
+      return hoistNonReactStatics(Wrapper, Inner) as unknown as typeof Marked;
+    }
+
+    it('matches :first-child through a HOC that hoists statics and forwards props', () => {
+      const Wrapped = hoistedFrom(Marked, true);
+      const Parent = styled.View``;
+
+      const tree = TestRenderer.create(
+        <Parent>
+          <Wrapped testID="wrapped" />
+        </Parent>
+      );
+      const host = tree.root.find(node => node.type === View && node.props.testID === 'wrapped');
+
+      expect(mergeStyle(host.props.style).color).toBe('red');
+    });
+
+    it('renders through a HOC that hoists statics and drops props', () => {
+      const Wrapped = hoistedFrom(Marked, false);
+      const Parent = styled.View``;
+
+      const tree = TestRenderer.create(
+        <Parent>
+          <Wrapped />
+          <Wrapped />
+        </Parent>
+      );
+
+      expect(tree.root.findAllByType(View)).toHaveLength(3);
+    });
+
+    it('matches :first-child and :only-child on the single styled child of a styled TouchableHighlight', () => {
+      const Target = styled(TouchableHighlight)``;
+      const Child = styled.View`
+        &:first-child {
+          padding-top: 8px;
+        }
+        &:only-child {
+          margin-top: 2px;
+        }
+      `;
+
+      const tree = TestRenderer.create(
+        <Target onPress={() => {}}>
+          <Child testID="child" />
+        </Target>
+      );
+      const host = tree.root.find(node => node.type === View && node.props.testID === 'child');
+
+      expect(mergeStyle(host.props.style)).toEqual({ marginTop: 2, paddingTop: 8 });
+    });
+
+    it('matches `${Card} + &` and :nth-child(2) under a styled target that clones each child', () => {
+      const CloneEach = ({ children }: PropsWithChildren) => (
+        <View>{React.Children.map(children, child => React.cloneElement(child as never))}</View>
+      );
+      const Target = styled(CloneEach)``;
+      const Card = styled.View``;
+      const Next = styled.View`
+        ${Card} + & {
+          color: red;
+        }
+        &:nth-child(2) {
+          margin-top: 2px;
+        }
+      `;
+
+      const tree = TestRenderer.create(
+        <Target>
+          <Card testID="card" />
+          <Next testID="next" />
+        </Target>
+      );
+      const host = (id: string) =>
+        tree.root.find(node => node.type === View && node.props.testID === id);
+
+      expect(mergeStyle(host('card').props.style)).toEqual({});
+      expect(mergeStyle(host('next').props.style)).toEqual({ color: 'red', marginTop: 2 });
+    });
+
+    it("gives useParentContext the parent's published value inside a styled child, not the child's position", () => {
+      const seen: ParentContextValue[] = [];
+      const Parent = styled.View``;
+      const Child = styled.View`
+        color: ${() => {
+          seen.push(useParentContext());
+          return 'red';
+        }};
+      `;
+
+      TestRenderer.create(
+        <Parent>
+          <View />
+          <Child />
+        </Parent>
+      );
+
+      expect(seen).toHaveLength(1);
+      expect(seen[0]).toMatchObject({
+        parentId: Parent.styledComponentId,
+        prevSiblingId: null,
+        siblingIndex: -1,
+        totalSiblings: 0,
+      });
+    });
+  });
+
+  describe('the parent slot prop', () => {
+    const received: Array<Record<string, unknown>> = [];
+    const Probe = (props: Record<string, unknown>) => {
+      received.push(props);
+      return <View />;
+    };
+    const Parent = styled.View``;
+
+    beforeEach(() => {
+      received.length = 0;
+    });
+
+    it('never reaches the target of a static styled child', () => {
+      const Child = styled(Probe as React.ComponentType<any>)`
+        padding-top: 4px;
+      `;
+      expect(Child.nativeStyle.staticEligible).toBe(true);
+
+      TestRenderer.create(
+        <Parent>
+          <Child testID="child" />
+        </Parent>
+      );
+
+      expect(received.map(props => PARENT_SLOT_PROP in props)).toEqual([false]);
+      expect(received[0].testID).toBe('child');
+    });
+
+    it('never reaches attrs, an interpolation, shouldForwardProp or the target of a dynamic styled child', () => {
+      const attrsProps: Array<Record<string, unknown>> = [];
+      const interpolationProps: Array<Record<string, unknown>> = [];
+      const forwarded: string[] = [];
+      const Child = styled(Probe as React.ComponentType<any>)
+        .withConfig({
+          shouldForwardProp: prop => {
+            forwarded.push(prop);
+            return true;
+          },
+        })
+        .attrs((props: Record<string, unknown>) => {
+          attrsProps.push(props);
+          return {};
+        })`
+        color: ${(props: Record<string, unknown>) => {
+          interpolationProps.push(props);
+          return 'blue';
+        }};
+        &:first-child {
+          color: red;
+        }
+      `;
+      expect(Child.nativeStyle.staticEligible).toBe(false);
+
+      TestRenderer.create(
+        <Parent>
+          <Child testID="child" />
+        </Parent>
+      );
+
+      expect(attrsProps.map(props => PARENT_SLOT_PROP in props)).toEqual([false]);
+      expect(interpolationProps.map(props => PARENT_SLOT_PROP in props)).toEqual([false]);
+      expect(forwarded).not.toContain(PARENT_SLOT_PROP);
+      expect(received.map(props => PARENT_SLOT_PROP in props)).toEqual([false]);
+      // The position it carried was still read.
+      expect(mergeStyle(received[0].style).color).toBe('red');
+    });
   });
 });

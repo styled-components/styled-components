@@ -49,7 +49,6 @@ import {
   type AnimationAdapter,
 } from '../animation/types';
 import { applyResolvers, buildResolver } from '../transform/polyfills/resolvers';
-import { describeOnRnWeb } from '../transform/describeOnRnWeb';
 
 const stubStyleSheet = {
   create: <T extends object>(styles: T) => styles,
@@ -182,14 +181,6 @@ describe('anchor-name compilation (CSS Anchor Positioning §2.1)', () => {
     const r = toNativeStyles('position-anchor: --hero;', stubStyleSheet);
     expect(r.positionAnchor).toBe('--hero');
     expect((r.base as any).positionAnchor).toBeUndefined();
-  });
-
-  describeOnRnWeb('on rn-web', () => {
-    it('passes the declarations through for the browser', () => {
-      const r = toNativeStyles('anchor-name: --hero;', stubStyleSheet);
-      expect(r.anchorName).toBeUndefined();
-      expect((r.base as any).anchorName).toBe('--hero');
-    });
   });
 });
 

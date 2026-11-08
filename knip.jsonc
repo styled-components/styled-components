@@ -51,6 +51,7 @@
         // Entries of the type-surface project (tsconfig.test-types.json).
         "src/test/types.tsx",
         "src/test/types.native.tsx",
+        "src/test/types.web-bridge-parity.tsx",
         // Entry of the template-index augmentation project (tsconfig.test-template-index.json).
         "test-types/template-index-signature.tsx",
         // Entry of the IntrinsicElements index-signature project (tsconfig.test-intrinsic-index-signature.json).

@@ -254,6 +254,13 @@ describe('compiler', () => {
       }
     );
 
+    // The string path emits with an empty parent selector, so no element takes an added name.
+    it('adds no container name or view-transition-class on the string path', () => {
+      expect(
+        createCompiler().compile('container-type: size; view-transition-name: card;', '.a')
+      ).toEqual(['.a{container-type:size;view-transition-name:card;}']);
+    });
+
     it('handles valid CSS unchanged (fast path)', () => {
       expect(
         runCssCompile(`

@@ -15,32 +15,7 @@
 
 import * as React from 'react';
 import { splitTopLevelCommas } from '../parser/parser';
-
-// ──────────────────────────────────────────────────────────────────
-//  Platform detection
-// ──────────────────────────────────────────────────────────────────
-
-let isWebCached: boolean | null = null;
-
-/**
- * Single source of truth for "are we running under react-native-web?".
- * Cached after first call. Platform.OS doesn't change at runtime.
- */
-export function isWebPlatform(): boolean {
-  if (isWebCached !== null) return isWebCached;
-  try {
-    const rn: { Platform?: { OS?: string } } = require('react-native');
-    isWebCached = rn.Platform?.OS === 'web';
-  } catch {
-    isWebCached = false;
-  }
-  return isWebCached;
-}
-
-/** Test-only: clear the cached platform result. */
-export function __resetPlatformCacheForTesting(): void {
-  isWebCached = null;
-}
+import { substituteBackgroundSizeKeywordsForNative } from './transform/passthrough';
 
 /**
  * The props these polyfills pass, not RN's full prop types: the style
@@ -90,11 +65,16 @@ function getRNComponents(): RNComponentRefs {
  * Run all native-side polyfills against the resolved element props
  * just before `React.createElement`. Each polyfill returns the input
  * reference unchanged on miss, so the chain is cheap on the hot path.
+ *
+ * `layerSlot` marks a component that renders, or may later render, blend layers:
+ * its children then always sit in the slot after them, whether or not a layer
+ * is present, so the layers appearing never moves the children.
  */
 export function applyStylePolyfills(
-  elementProps: Record<string, unknown>
+  elementProps: Record<string, unknown>,
+  layerSlot = false
 ): Record<string, unknown> {
-  return applyBackgroundBlendModePolyfill(elementProps);
+  return applyBackgroundBlendModePolyfill(elementProps, layerSlot);
 }
 
 // ── background-blend-mode ─────────────────────────────────────────
@@ -146,28 +126,33 @@ export function applyStylePolyfills(
  * buffer fills with bgColor before drawChild runs the per-child blend.
  */
 export function applyBackgroundBlendModePolyfill(
-  elementProps: Record<string, unknown>
+  elementProps: Record<string, unknown>,
+  layerSlot = false
 ): Record<string, unknown> {
-  if (!hasBackgroundBlendMode(elementProps.style)) return elementProps;
+  if (!hasBackgroundBlendMode(elementProps.style)) return unlayered(elementProps, layerSlot);
 
   const flat: Record<string, unknown> = {};
   flatten(elementProps.style, flat);
   const blendMode = flat.backgroundBlendMode;
-  if (typeof blendMode !== 'string') return elementProps;
+  if (typeof blendMode !== 'string') return unlayered(elementProps, layerSlot);
   const bgImage =
     typeof flat.experimental_backgroundImage === 'string'
       ? flat.experimental_backgroundImage
       : typeof flat.backgroundImage === 'string'
         ? flat.backgroundImage
         : null;
-  if (bgImage === null) return elementProps;
+  if (bgImage === null) return unlayered(elementProps, layerSlot);
 
   const { View, Image } = getRNComponents();
-  if (View === null) return elementProps;
+  if (View === null) return unlayered(elementProps, layerSlot);
 
   const images = splitTopLevelCommas(bgImage, true);
   const modes = splitTopLevelCommas(blendMode, true);
-  const sizes = readLayered(flat, 'experimental_backgroundSize', 'backgroundSize');
+  // The standard key carries the authored `cover` / `contain` for a url()
+  // layer's resizeMode; a gradient layer's experimental key gets them folded
+  // to `auto` again, as the transform emits, since RN's native parser drops
+  // the bare keywords there.
+  const sizes = readLayered(flat, 'backgroundSize', 'experimental_backgroundSize');
   const positions = readLayered(flat, 'experimental_backgroundPosition', 'backgroundPosition');
   const repeats = readLayered(flat, 'experimental_backgroundRepeat', 'backgroundRepeat');
 
@@ -210,11 +195,16 @@ export function applyBackgroundBlendModePolyfill(
       backgroundImage: image,
     };
     applyLayered(layerStyle, sizes, i, 'experimental_backgroundSize', 'backgroundSize');
+    if (typeof layerStyle.backgroundSize === 'string') {
+      layerStyle.experimental_backgroundSize = substituteBackgroundSizeKeywordsForNative(
+        layerStyle.backgroundSize
+      );
+    }
     applyLayered(layerStyle, positions, i, 'experimental_backgroundPosition', 'backgroundPosition');
     applyLayered(layerStyle, repeats, i, 'experimental_backgroundRepeat', 'backgroundRepeat');
     layers.push(createBlendLayer(View, key, blend, layerStyle));
   }
-  if (layers.length === 0) return elementProps;
+  if (layers.length === 0) return unlayered(elementProps, layerSlot);
 
   const wrapperStyle: Record<string, unknown> = {};
   for (const k in flat) {
@@ -230,14 +220,48 @@ export function applyBackgroundBlendModePolyfill(
     );
   }
 
-  const origChildren = elementProps.children;
-  const newChildren: React.ReactNode = !Array.isArray(origChildren)
-    ? origChildren == null
-      ? layers
-      : [...layers, origChildren as React.ReactNode]
-    : [...layers, ...(origChildren as React.ReactNode[])];
+  return { ...elementProps, style: wrapperStyle, children: slotChildren(layers, elementProps) };
+}
 
-  return { ...elementProps, style: wrapperStyle, children: newChildren };
+/**
+ * The props with `backgroundBlendMode` removed from the style, for a target that
+ * cannot hold blend layers. Call after {@link hasBackgroundBlendMode} says it is there.
+ */
+export function withoutBackgroundBlendMode(
+  elementProps: Record<string, unknown>
+): Record<string, unknown> {
+  const flat: Record<string, unknown> = {};
+  flatten(elementProps.style, flat);
+  delete flat.backgroundBlendMode;
+  return { ...elementProps, style: flat };
+}
+
+/**
+ * The props of a component with no layer to render. Asking for a layer slot gives
+ * the children the position they hold when layers are present.
+ */
+function unlayered(
+  elementProps: Record<string, unknown>,
+  layerSlot: boolean
+): Record<string, unknown> {
+  return layerSlot ? { ...elementProps, children: slotChildren(null, elementProps) } : elementProps;
+}
+
+/**
+ * The `[layers, children]` pair. A function child (Pressable's render prop) stays a
+ * function so its target still calls it; the pair wraps what it returns.
+ */
+function slotChildren(layers: React.ReactNode, elementProps: Record<string, unknown>): unknown {
+  const { children } = elementProps;
+  if (typeof children === 'function') {
+    return (state: unknown) => [layers, keyedChildren(children(state) as React.ReactNode)];
+  }
+  return [layers, keyedChildren(children as React.ReactNode)];
+}
+
+/** A keyed Fragment, since an unkeyed element inside the `[layers, children]` array draws React's missing-key warning. */
+function keyedChildren(children: React.ReactNode): React.ReactElement {
+  return React.createElement(React.Fragment, { key: '__sc_bg_children' }, children);
 }
 
 const BG_BLEND_STRIP_KEYS: ReadonlySet<string> = new Set([
@@ -337,7 +361,7 @@ function flatten(style: unknown, out: Record<string, unknown>): void {
  * the first hit. The hot path for components without
  * `backgroundBlendMode` pays roughly one property-existence check.
  */
-function hasBackgroundBlendMode(style: unknown): boolean {
+export function hasBackgroundBlendMode(style: unknown): boolean {
   if (style === null || style === undefined || typeof style === 'function') {
     return false;
   }
@@ -352,16 +376,16 @@ function hasBackgroundBlendMode(style: unknown): boolean {
 }
 
 /**
- * Read a `background-*` value (preferring the `experimental_*` form
- * when both are present) and split it on top-level commas. Returns
- * `null` when the value isn't a string the polyfill can consume.
+ * Read a `background-*` value (`preferredKey` when both keys are present)
+ * and split it on top-level commas. Returns `null` when the value isn't a
+ * string the polyfill can consume.
  */
 function readLayered(
   flat: Record<string, unknown>,
-  experimentalKey: string,
-  standardKey: string
+  preferredKey: string,
+  fallbackKey: string
 ): string[] | null {
-  const v = flat[experimentalKey] ?? flat[standardKey];
+  const v = flat[preferredKey] ?? flat[fallbackKey];
   return typeof v === 'string' ? splitTopLevelCommas(v, true) : null;
 }
 

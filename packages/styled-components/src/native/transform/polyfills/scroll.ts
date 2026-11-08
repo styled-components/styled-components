@@ -16,11 +16,6 @@ function overscrollBehaviorShorthand(tokens: Token[]): Dict<unknown> | null {
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
   if (!OVERSCROLL_KEYWORDS.has(name)) return null;
-  if (__NATIVE_WEB__) {
-    // Browser ships overscroll-behavior; `auto` is the initial value so
-    // emitting nothing defers to the ScrollView defaults.
-    return name === 'auto' ? {} : { overscrollBehavior: name };
-  }
   const suppress = name === 'contain' || name === 'none';
   return {
     bounces: !suppress,
@@ -34,11 +29,6 @@ function scrollbarWidthHandler(tokens: Token[]): Dict<unknown> | null {
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
   if (!SCROLLBAR_WIDTH_KEYWORDS.has(name)) return null;
-  if (__NATIVE_WEB__) {
-    // Browser ships scrollbar-width; `auto` is the initial value so
-    // emitting nothing defers to the ScrollView defaults.
-    return name === 'auto' ? {} : { scrollbarWidth: name };
-  }
   const hide = name === 'none';
   return {
     showsVerticalScrollIndicator: !hide,
@@ -70,30 +60,18 @@ function scrollSnapTypeShorthand(tokens: Token[]): Dict<unknown> | null {
   const first = stream.consume();
   if (!first || first.kind !== TokenKind.Ident) return null;
 
-  if (first.name === 'none') {
-    if (!stream.eof()) return null;
-    if (__NATIVE_WEB__) return { scrollSnapType: 'none' };
-    return {};
-  }
+  if (first.name === 'none') return stream.eof() ? {} : null;
 
   if (!SNAP_AXIS_KEYWORDS.has(first.name)) return null;
   const axis = first.name;
 
   let strictness = 'proximity';
-  let raw = axis;
   if (!stream.eof()) {
     const second = stream.consume();
     if (!second || second.kind !== TokenKind.Ident) return null;
     if (!SNAP_STRICTNESS_KEYWORDS.has(second.name)) return null;
     strictness = second.name;
-    raw = `${axis} ${strictness}`;
     if (!stream.eof()) return null;
-  }
-
-  if (__NATIVE_WEB__) {
-    // The browser implements CSS scroll snap; pass the authored shorthand
-    // through and lift no ScrollView props.
-    return { scrollSnapType: raw };
   }
 
   const out: Dict<unknown> = { decelerationRate: 'fast' };
@@ -134,8 +112,7 @@ function scrollSnapTypeShorthand(tokens: Token[]): Dict<unknown> | null {
  * RN configures snapping on the scroller, not per child, so the native
  * build emits a sentinel the compiler extracts; at render the child
  * registers its measured layout with the nearest styled scroll container,
- * which derives `snapToOffsets` from the aligned children. rn-web passes
- * the raw value through to the browser.
+ * which derives `snapToOffsets` from the aligned children.
  */
 function scrollSnapAlignHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
@@ -152,10 +129,6 @@ function scrollSnapAlignHandler(tokens: Token[]): Dict<unknown> | null {
     raw = `${first.name} ${second.name}`;
   }
 
-  if (__NATIVE_WEB__) {
-    return { scrollSnapAlign: raw };
-  }
-
   if (raw === 'none' || raw === 'none none') return {};
   return { __scSnapAlign: raw };
 }
@@ -164,7 +137,7 @@ function scrollSnapAlignHandler(tokens: Token[]): Dict<unknown> | null {
  * `scroll-snap-stop: normal | always` (on children). `always` rides the
  * same registration as scroll-snap-align: the scroll container sets
  * `disableIntervalMomentum` so a fling cannot skip past the target.
- * `normal` is the initial value (no props). rn-web passes through.
+ * `normal` is the initial value (no props).
  */
 function scrollSnapStopHandler(tokens: Token[]): Dict<unknown> | null {
   const stream = new TokenStream(tokens);
@@ -172,9 +145,6 @@ function scrollSnapStopHandler(tokens: Token[]): Dict<unknown> | null {
   if (!t || t.kind !== TokenKind.Ident || !stream.eof()) return null;
   const name = t.name;
   if (name !== 'normal' && name !== 'always') return null;
-  if (__NATIVE_WEB__) {
-    return { scrollSnapStop: name };
-  }
   return name === 'always' ? { __scSnapStop: true } : {};
 }
 

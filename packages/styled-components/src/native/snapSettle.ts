@@ -59,7 +59,7 @@ export function useSnapSettle(
     elementProps.ref,
     []
   );
-  if (!active || __NATIVE_WEB__ || entry === null) return elementProps;
+  if (!active || entry === null) return elementProps;
   if (stateRef.current === null) stateRef.current = { offX: 0, offY: 0, timer: null };
   const s = stateRef.current;
 

@@ -7,10 +7,13 @@
  *
  * Run: pnpm --filter styled-components test:native -- memo-tree
  */
-import * as React from 'react';
-import { Text, View } from 'react-native';
+import React from 'react';
+import { Pressable, Text, View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
-import styled from '../';
+import { withHookRecorder } from '../../test/hookRecorder';
+import { createCascadeProbe, sizeByState, watchWindowChange } from '../../test/nativeHarness';
+import styled, { NativeStyleContext } from '../';
+import { DEFAULT_NATIVE_STYLE } from '../NativeStyleContext';
 
 // Per-test render counters. Reset before each `it`.
 const counts: Record<string, number> = {};
@@ -314,6 +317,259 @@ describe('memo behavior with deep trees', () => {
       // and the consumer above it (not memo'd) does the context read.
       expect(counts).toEqual({ provider: 1, 'consumer-1': 1 });
       expect(counts.reader ?? 0).toBe(0);
+    });
+  });
+
+  describe('published cascade identity', () => {
+    const { log: published, Probe } = createCascadeProbe();
+
+    beforeEach(() => {
+      published.length = 0;
+    });
+
+    /** Both elements are built once and reused, so only a context change can re-render them. */
+    const probedKids = (
+      <>
+        <StyledLeaf $name="leaf" />
+        <Probe />
+      </>
+    );
+
+    /**
+     * Re-renders the parent twice with a prop that does not touch its style. The
+     * parent's body runs each time, and the descendants render again only when the
+     * value it publishes changes.
+     */
+    function rerenderParentTwice(
+      Parent: React.ComponentType<React.PropsWithChildren<{ testID?: string }>>
+    ) {
+      let renderer!: TestRenderer.ReactTestRenderer;
+      TestRenderer.act(() => {
+        renderer = TestRenderer.create(<Parent testID="0">{probedKids}</Parent>);
+      });
+      for (const key of Object.keys(counts)) delete counts[key];
+      TestRenderer.act(() => renderer.update(<Parent testID="1">{probedKids}</Parent>));
+      TestRenderer.act(() => renderer.update(<Parent testID="2">{probedKids}</Parent>));
+    }
+
+    const Sized = styled(View)`
+      font-size: 20px;
+      ${() => ''}
+    `;
+    const WithCustomProperty = styled(View)`
+      --brand: hotpink;
+      ${() => ''}
+    `;
+    const SizedContainer = styled(View)`
+      container-type: inline-size;
+      font-size: 20px;
+    `;
+    const SizedGrid = styled(View)`
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      font-size: 20px;
+    `;
+    const StaticWithStyle = styled(View)`
+      color: red;
+    `;
+    const SizedPressable = styled(Pressable)`
+      font-size: 20px;
+      &:active {
+        font-size: 30px;
+      }
+    `;
+
+    test.each<[string, React.ComponentType<React.PropsWithChildren<{ testID?: string }>>, number]>([
+      ['a dynamic parent with a font size', Sized, 20],
+      ['a parent with a custom property', WithCustomProperty, 16],
+      ['a container with a font size', SizedContainer, 20],
+      ['a grid with a font size', SizedGrid, 20],
+      [
+        'a Pressable with an :active font size, at rest',
+        ({ children, testID }) => <SizedPressable testID={testID}>{children}</SizedPressable>,
+        20,
+      ],
+      [
+        'a static parent with a fresh style object each render',
+        ({ children, testID }) => (
+          <StaticWithStyle style={{ fontSize: 20 }} testID={testID}>
+            {children}
+          </StaticWithStyle>
+        ),
+        20,
+      ],
+    ])('%s: descendants render again for none of its re-renders', (_name, Parent, fontSize) => {
+      rerenderParentTwice(Parent);
+
+      expect(counts.leaf ?? 0).toBe(0);
+      expect(published).toEqual([{ direction: 'ltr', fontSize, lineHeight: 24 }]);
+    });
+
+    it('re-renders a consumer once, with the new value, when the font size changes', () => {
+      const Resizable = styled(View)<{ $size: number }>`
+        font-size: ${p => p.$size}px;
+      `;
+      let renderer!: TestRenderer.ReactTestRenderer;
+      const render = (size: number) => <Resizable $size={size}>{probedKids}</Resizable>;
+      TestRenderer.act(() => {
+        renderer = TestRenderer.create(render(20));
+      });
+      for (const key of Object.keys(counts)) delete counts[key];
+      published.length = 0;
+
+      TestRenderer.act(() => renderer.update(render(30)));
+
+      expect(counts.leaf).toBe(1);
+      expect(published).toEqual([{ direction: 'ltr', fontSize: 30, lineHeight: 24 }]);
+    });
+  });
+
+  /**
+   * A hook on one side of a data-dependent branch breaks React's ordering rule, so
+   * every update of a styled component must call the hooks its mount called, whichever
+   * source supplies a font size, line height or direction. The recording wraps React's
+   * own `use*` exports, so it sees a hook the library calls as `React.useX` (such as
+   * `useContext`, `useRef` and `useMediaEnv`'s `useSyncExternalStore`) and not one
+   * reached through a named import (React Native's own Pressable hooks). The subjects'
+   * children are plain hosts, so no other hook-calling component renders.
+   */
+  describe('hook sequence across cascade sources', () => {
+    type Step = (render: () => void) => void;
+
+    /** Runs `scenario`, whose first step mounts and whose later steps update; returns the hooks each step called. */
+    function recordHookSequences(scenario: (step: Step) => void): string[][] {
+      return withHookRecorder(({ record }) => {
+        const sequences: string[][] = [];
+
+        scenario(render => {
+          const [, calls] = record(() => TestRenderer.act(render));
+          sequences.push(calls);
+        });
+
+        return sequences;
+      });
+    }
+
+    const Subject = styled(View)<{ $on?: boolean }>`
+      ${() => ''}
+    `;
+    const SizedByMedia = styled(View)`
+      @media (min-width: 1000px) {
+        font-size: 20px;
+      }
+    `;
+    const SizedByVar = styled(View)`
+      font-size: var(--s);
+    `;
+    const SizedByAttrs = styled(View).attrs<{ $on?: boolean }>(p =>
+      p.$on ? { style: { fontSize: 20 } } : {}
+    )``;
+    const PressByActive = styled(Pressable)`
+      &:active {
+        font-size: 20px;
+      }
+    `;
+    const hostKids = <Text>x</Text>;
+
+    const scenarios: Array<[string, (step: Step) => void]> = [
+      [
+        'a caller style that appears and leaves',
+        step => {
+          let tree!: TestRenderer.ReactTestRenderer;
+          step(() => {
+            tree = TestRenderer.create(<Subject>{hostKids}</Subject>);
+          });
+          step(() => tree.update(<Subject style={{ fontSize: 20 }}>{hostKids}</Subject>));
+          step(() => tree.update(<Subject>{hostKids}</Subject>));
+        },
+      ],
+      [
+        'an @media font size across a window change',
+        step => {
+          const { emitWindowChange, restore } = watchWindowChange();
+          try {
+            step(() => {
+              TestRenderer.create(<SizedByMedia>{hostKids}</SizedByMedia>);
+            });
+            for (const width of [1200, 750]) step(() => emitWindowChange(width));
+          } finally {
+            restore();
+          }
+        },
+      ],
+      [
+        'an ancestor custom property that changes',
+        step => {
+          let tree!: TestRenderer.ReactTestRenderer;
+          const under = (value: string) => (
+            <NativeStyleContext.Provider
+              value={{
+                ...DEFAULT_NATIVE_STYLE,
+                cascade: {
+                  ...DEFAULT_NATIVE_STYLE.cascade,
+                  customProperties: new Map([['--s', value]]),
+                },
+              }}
+            >
+              <SizedByVar>{hostKids}</SizedByVar>
+            </NativeStyleContext.Provider>
+          );
+          step(() => {
+            tree = TestRenderer.create(under('20px'));
+          });
+          step(() => tree.update(under('30px')));
+          step(() => tree.update(under('20px')));
+        },
+      ],
+      [
+        'an attrs style that appears and leaves',
+        step => {
+          let tree!: TestRenderer.ReactTestRenderer;
+          step(() => {
+            tree = TestRenderer.create(<SizedByAttrs>{hostKids}</SizedByAttrs>);
+          });
+          step(() => tree.update(<SizedByAttrs $on>{hostKids}</SizedByAttrs>));
+          step(() => tree.update(<SizedByAttrs>{hostKids}</SizedByAttrs>));
+        },
+      ],
+      [
+        'a Pressable that is pressed and released',
+        step => {
+          let tree!: TestRenderer.ReactTestRenderer;
+          step(() => {
+            tree = TestRenderer.create(
+              <PressByActive testOnly_pressed={false}>{hostKids}</PressByActive>
+            );
+          });
+          step(() => tree.update(<PressByActive testOnly_pressed>{hostKids}</PressByActive>));
+          step(() =>
+            tree.update(<PressByActive testOnly_pressed={false}>{hostKids}</PressByActive>)
+          );
+        },
+      ],
+      [
+        'a Pressable style that is an object, then a function, then an object',
+        step => {
+          let tree!: TestRenderer.ReactTestRenderer;
+          step(() => {
+            tree = TestRenderer.create(
+              <PressByActive style={{ opacity: 1 }}>{hostKids}</PressByActive>
+            );
+          });
+          step(() => tree.update(<PressByActive style={sizeByState}>{hostKids}</PressByActive>));
+          step(() => tree.update(<PressByActive style={{ opacity: 1 }}>{hostKids}</PressByActive>));
+        },
+      ],
+    ];
+
+    test.each(scenarios)('%s: every update calls the hooks the mount called', (_name, scenario) => {
+      const [mount, ...updates] = recordHookSequences(scenario);
+
+      // The recording sees the library's hooks at all, so an empty match is a broken probe.
+      expect(mount).toContain('useContext');
+      expect(mount).toContain('useRef');
+      expect(updates).toHaveLength(2);
+      for (const update of updates) expect(update).toEqual(mount);
     });
   });
 });

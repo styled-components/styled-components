@@ -5,10 +5,20 @@ import { warnOnce } from '../dev';
 import { isSafeThemePath } from '../sanitize';
 import { tokenize, tokenizeFunctionArgs } from '../tokenize';
 import { Token, TokenKind } from '../tokens';
+import { fifoSet } from '../../../utils/fifoMap';
 import { getCssPropertyRegistration } from '../../propertyRegistry';
 import { buildAnchorResolver } from './anchorFns';
 import { hasRelativeFromPrefix, staticColorFunctionToHex } from './colorMath';
-import { identToNumeric, NumericResult, resolveStaticMathFunction, unifyUnits } from './mathFns';
+import {
+  clampToRange,
+  identToNumeric,
+  MathRange,
+  mathRangeOf,
+  NumericResult,
+  resolveStaticMathFunction,
+  scaleUnit,
+  unifyUnits,
+} from './mathFns';
 
 /**
  * Environment passed to each {@link Resolver} at render time. Composes
@@ -158,8 +168,7 @@ const CQ_UNIT_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(cqw|cqh|cqmin|cqmax|cqi|cqb)$/i
 // Font-relative lengths. `rem` and `rlh` anchor at the root; `em` and
 // `lh` at the parent. RN has no DOM cascade; values come from
 // {@link ResolveEnv.rootFontSize / fontSize / lineHeight}, populated by
-// NativeStyleContext at render time. rn-web passes them through to the
-// browser unchanged.
+// NativeStyleContext at render time.
 //
 // `rem` / `rlh` must come BEFORE `em` / `lh` in the alternation so
 // Font-relative units: cascade-anchored (em / lh, parent) or root-anchored
@@ -196,11 +205,8 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
     if (c1 === 0x2d /* - */) return env => relativeSize(env.fontSize, -1);
   }
 
-  // createTheme sentinel; `\0<prefix>:<path>:<fallback>`. Full-value single
-  // sentinel goes to themeResolver (preserves native return type). A
-  // sentinel followed by more tokens (e.g. shorthand-like `\0sc:width:1px
-  // solid \0sc:color:#000` if it ever lands undivided) falls through to
-  // the post-dispatch templateResolver below.
+  // createTheme placeholder; `\0<prefix>:<path>:<fallback>`. A whole-value
+  // placeholder reaches here only when its theme value is not text.
   if (c0 === 0 && findSentinelTerminator(value, 0) === value.length) {
     return themeResolver(value);
   }
@@ -210,21 +216,13 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
   // which dominate real-world base-dict contents.
   if ((c0 >= $.DIGIT_0 && c0 <= $.DIGIT_9) || c0 === $.HYPHEN || c0 === $.DOT || c0 === $.PLUS) {
     const vp = VP_UNIT_RE.exec(value);
-    if (vp !== null) {
-      // The browser distinguishes dvh / svh / lvh against the real URL-bar
-      // state; a JS resolver would collapse them to one number. Leave the
-      // authored unit on the value so rn-web forwards it to CSS unchanged.
-      if (__NATIVE_WEB__) return null;
-      return viewportResolver(parseFloat(vp[1]), vp[2].toLowerCase());
-    }
+    if (vp !== null) return viewportResolver(parseFloat(vp[1]), vp[2].toLowerCase());
     const cq = CQ_UNIT_RE.exec(value);
     if (cq !== null) return containerResolver(parseFloat(cq[1]), cq[2].toLowerCase());
     const rem = REM_UNIT_RE.exec(value);
     if (rem !== null) {
       return fontRelativeResolver(parseFloat(rem[1]), rem[2].toLowerCase());
     }
-    // Numeric-prefixed values fall through to templateResolver if they
-    // contain a sentinel (e.g. `0 1px 2px \0sc:colors.shadow:#000`).
   }
 
   // Math functions (`calc`, `clamp`, `min`, `max`);when arms are entirely
@@ -234,9 +232,8 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
   // • Web: static-mixed-unit expressions (e.g. `calc(33% - 5px)`) pass
   //   through to the browser's CSS engine, which resolves `%` against the
   //   real containing block at paint time;strictly more accurate than
-  //   anything we could compute. Dynamic-arm calcs (sentinels, env(),
-  //   viewport units) fully evaluate via `mathFnResolver` because the
-  //   sentinels need substitution.
+  //   anything we could compute. Dynamic-arm calcs (env(), viewport
+  //   units) fully evaluate via `mathFnResolver`.
   // • Native: Yoga can't parse calc strings, so `mathFnResolver` always
   //   evaluates with `NATIVE_MATH_OPTS`, which resolves each `%` against
   //   the nearest container's width (`env.container.width`) or the
@@ -259,28 +256,22 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
 
   // Color functions (`oklch`, `oklab`, `lch`, `lab`);same shape: static
   // fold in transformDecl handles fully-literal channels; dynamic arms
-  // (sentinels) defer to colorFnResolver which substitutes + re-converts.
+  // (sibling-index(), env()) defer to colorFnResolver which substitutes + re-converts.
   if (c0 === 0x6f /* o */ && (value.startsWith('oklch(') || value.startsWith('oklab('))) {
     return colorFnResolver(value);
   }
 
   // Non-numeric prefix; `light-dark(` and `lch`/`lab` color fns share `l`.
   if (c0 === 0x6c /* l */) {
-    if (value.startsWith('light-dark(')) {
-      // Pure-static light-dark survives as authored text on rn-web so the
-      // CSS indirection path (`--sc-ld-*` + `var()`) reaches the browser;
-      // sentinel-bearing branches still need render-time substitution.
-      if (__NATIVE_WEB__ && value.indexOf('\0') === -1) return null;
-      return lightDarkResolver(value);
-    }
+    if (value.startsWith('light-dark(')) return lightDarkResolver(value, prop);
     if (value.startsWith('lch(') || value.startsWith('lab(')) return colorFnResolver(value);
   }
-  if (c0 === 0x65 /* e */ && value.startsWith('env(')) return envResolver(value);
+  if (c0 === 0x65 /* e */ && value.startsWith('env(')) return envResolver(value, prop);
 
   // round(line-width, A) defers to a runtime resolver because the device
   // pixel ratio isn't known at compile time. The relative from-forms of
   // rgb()/rgba() also start with `r`; route them to colorFnResolver so a
-  // sentinel (theme-token) origin folds at render time. Absolute rgb()
+  // runtime-dependent origin folds at render time. Absolute rgb()
   // stays un-resolved (RN normalizeColor handles it).
   if (c0 === 0x72 /* r */) {
     if (value.startsWith('round(line-width,')) return lineWidthRoundResolver(value);
@@ -306,8 +297,8 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
 
   if (c0 === 0x61 /* a */) {
     if (value.startsWith('attr(')) {
-      const r = attrResolver(value);
-      if (r !== null) return r;
+      const r = attrResolver(value, prop);
+      if (r !== null) return r.resolve;
     }
     // anchor() / anchor-size() need the destination property for the
     // spec's axis rules, so they only resolve when the caller knows it.
@@ -319,14 +310,6 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
       if (r !== null) return r;
     }
   }
-
-  // Multi-token values containing one or more clean sentinels: assemble
-  // the resolved string at render time. Catches pass-through props with
-  // theme tokens embedded mid-value (`box-shadow: 0 1px 2px ${t.colors.x}`,
-  // `transform: translateY(${t.space.x}px)`, gradient stops, etc.). Bails
-  // when a sentinel is glued to a non-boundary character, which is the
-  // JS-concat-leak case that `warnIfSentinelLeak` flags downstream.
-  if (value.indexOf('\0') !== -1) return templateResolver(value);
 
   // Multi-token values containing an embedded `light-dark(...)` call
   // (e.g. `box-shadow: 0 4px 8px light-dark(rgba(0,0,0,.2), rgba(255,255,255,.1))`).
@@ -350,6 +333,11 @@ export function buildResolver(value: unknown, prop?: string): Resolver | null {
  */
 const UNSUPPORTED_MATH_KEYWORD_RE = /(?:^|[^a-z0-9_-])(-?infinity|nan)(?![a-z0-9_-])/i;
 
+/** True when the value names `infinity`, `-infinity` or `NaN`, which the math resolver warns about on its own. */
+export function mentionsUnsupportedMathKeyword(value: string): boolean {
+  return UNSUPPORTED_MATH_KEYWORD_RE.test(value);
+}
+
 function bailOnUnsupportedKeyword(value: string): boolean {
   const m = UNSUPPORTED_MATH_KEYWORD_RE.exec(value);
   if (m === null) return false;
@@ -369,41 +357,23 @@ function resolveMathFn(value: string, prop?: string): Resolver | null {
   // doesn't emit Paren tokens; the cheapest path to grouping support is
   // to rewrite bare `(...)` as `calc(...)` before tokenization so the
   // existing nested-calc support handles them.
-  const opts =
-    prop !== undefined && value.indexOf('anchor') !== -1
-      ? { ...NATIVE_MATH_OPTS, prop }
-      : NATIVE_MATH_OPTS;
+  const opts = prop !== undefined ? { ...NATIVE_MATH_OPTS, prop } : NATIVE_MATH_OPTS;
   const r = mathFnResolver(expandBareParens(value), opts);
   if (r === null) return null;
-  // Static-mixed-unit math passes through to the browser's CSS engine,
-  // which resolves `%` and friends against the real containing block at
-  // paint time; strictly more accurate than anything computed here. The
-  // resolver above still gates validity (malformed math must not reach
-  // CSS); only operands the browser cannot know (theme sentinels and our
-  // polyfilled attr() / anchor() / tree-counting / container units) force
-  // JS evaluation on rn-web.
-  if (__NATIVE_WEB__ && !rnWebMathNeedsJsResolution(value)) {
-    return () => value;
+  // The range lookup runs once here, so a property without one adds nothing per render.
+  const range = prop === undefined ? undefined : mathRangeOf(prop);
+  if (range === undefined) return r;
+  return env => clampMathResult(r(env), range);
+}
+
+/** A resolved math value held to the property's range; a percentage string holds to the lower bound, the only bound a length-percentage property has. */
+function clampMathResult(v: number | string | null, range: MathRange): number | string | null {
+  if (typeof v === 'number') return clampToRange(v, range);
+  if (v !== null && v.charCodeAt(v.length - 1) === $.PERCENT && parseFloat(v) < range.min) {
+    return range.min + '%';
   }
-  return r;
+  return v;
 }
-
-/** True when a math expression contains an operand only our JS runtime can
- *  substitute (rn-web passthrough must not strand these in CSS text). */
-function rnWebMathNeedsJsResolution(value: string): boolean {
-  return (
-    value.indexOf('\0') !== -1 ||
-    value.indexOf('attr(') !== -1 ||
-    value.indexOf('anchor') !== -1 ||
-    value.indexOf('sibling-') !== -1 ||
-    CQ_UNIT_ANYWHERE_RE.test(value)
-  );
-}
-
-// Container-query units anywhere in the expression (CQ_UNIT_RE is anchored
-// to a whole value). Containers are polyfilled on rn-web, so cq* lengths
-// always need the JS resolver.
-const CQ_UNIT_ANYWHERE_RE = /\d(?:cqw|cqh|cqi|cqb|cqmin|cqmax)\b/i;
 
 /**
  * Convert bare grouping parentheses inside a math expression to a nested
@@ -686,11 +656,11 @@ function containerResolver(n: number, unit: string): Resolver {
  * → first arg.
  *
  * Branches are parsed through {@link buildResolver} so they can
- * contain sentinels (theme tokens), env(), nested light-dark, or any
- * other render-time-resolvable expression. Argument-count and empty-
+ * contain env(), viewport units, nested light-dark, or any other
+ * render-time-resolvable expression. Argument-count and empty-
  * branch validation reject 0 / 1 / 3+ args and empty branches.
  */
-function lightDarkResolver(value: string): Resolver | null {
+function lightDarkResolver(value: string, prop?: string): Resolver | null {
   const inner = value.slice('light-dark('.length, -1).trim();
   const commaIdx = singleTopLevelCommaIdx(inner);
   if (commaIdx === -1) return null;
@@ -699,9 +669,9 @@ function lightDarkResolver(value: string): Resolver | null {
   if (light.length === 0 || dark.length === 0) return null;
   // Mixing image + color forms is a parse-time error.
   if (isImageBranch(light) !== isImageBranch(dark)) return null;
-  const lightR = buildResolver(light);
-  const darkR = buildResolver(dark);
-  // Dynamic branches (theme sentinels, env(), nested resolvers) evaluate
+  const lightR = buildResolver(light, prop);
+  const darkR = buildResolver(dark, prop);
+  // Dynamic branches (env(), viewport units, nested resolvers) evaluate
   // at render time; the OS color-scheme change re-renders via the
   // Appearance listener.
   return env => {
@@ -717,7 +687,7 @@ function lightDarkResolver(value: string): Resolver | null {
  * CSS Image type: `url()`, gradient functions (linear / radial / conic,
  * plus repeating-*), `image-set()`, `image()`, `cross-fade()`,
  * `element()`, `paint()`. Any other value (named color, hex, rgb,
- * sentinel, calc, etc.) is treated as the color form.
+ * calc, etc.) is treated as the color form.
  *
  * Nested `light-dark()` calls are currently classified as color form
  * (the common case); a nested light-dark whose own branches are
@@ -753,8 +723,7 @@ function isImageBranch(s: string): boolean {
  *
  * Boundary detection: only treats `light-dark(` as a function call when
  * the preceding char is whitespace, comma, slash, paren, or
- * start-of-string;same boundary set used by the sentinel scanner so
- * `mylight-dark(...)` (an identifier ending in `light-dark`) doesn't
+ * start-of-string, so `mylight-dark(...)` (an identifier ending in `light-dark`) doesn't
  * trigger. Returns null when no calls are found or any call's body is
  * malformed (caller drops the decl).
  */
@@ -812,7 +781,7 @@ function embeddedLightDarkResolver(value: string): Resolver | null {
  * family. Falls back to the literal fallback (if provided) or null for
  * everything else, which the caller interprets as "drop".
  */
-function envResolver(value: string): Resolver | null {
+function envResolver(value: string, prop?: string): Resolver | null {
   const inner = value.slice('env('.length, -1).trim();
   const commaIdx = topLevelCommaIdx(inner);
   const name = (commaIdx === -1 ? inner : inner.slice(0, commaIdx)).trim();
@@ -823,10 +792,10 @@ function envResolver(value: string): Resolver | null {
   let fallback = commaIdx === -1 ? null : inner.slice(commaIdx + 1).trim();
   if (fallback === '') fallback = null;
 
-  // The fallback may itself be a sentinel, another env(), light-dark(),
+  // The fallback may itself be another env(), light-dark(),
   // viewport unit, or static literal. Build a resolver if it's dynamic;
   // otherwise pre-parse the static literal.
-  const fallbackR = fallback === null ? null : buildResolver(fallback);
+  const fallbackR = fallback === null ? null : buildResolver(fallback, prop);
   const fallbackValue: number | string | null =
     fallbackR !== null ? null : fallback === null ? null : parseLengthLiteral(fallback);
 
@@ -852,6 +821,22 @@ function envResolver(value: string): Resolver | null {
  */
 const NO_THEME_SEEN: object = {};
 
+/** The own-property value at a split dot path of the theme, or `undefined` when any step is missing. */
+function readThemePath(theme: ResolveEnv['theme'] | undefined, keys: string[]): unknown {
+  let v: unknown = theme;
+  for (let i = 0; i < keys.length; i++) {
+    if (v == null || typeof v !== 'object' || !Object.prototype.hasOwnProperty.call(v, keys[i])) {
+      return undefined;
+    }
+    v = Reflect.get(v, keys[i]);
+  }
+  return v;
+}
+
+/**
+ * Resolves a createTheme placeholder whose theme value is not text (a
+ * `PlatformColor` object): substitution leaves those in the style.
+ */
 function themeResolver(value: string): Resolver | null {
   const firstColon = value.indexOf(':', 1);
   if (firstColon === -1) return null;
@@ -860,10 +845,10 @@ function themeResolver(value: string): Resolver | null {
     secondColon === -1 ? value.slice(firstColon + 1) : value.slice(firstColon + 1, secondColon);
   const rawFallback = secondColon === -1 ? '' : value.slice(secondColon + 1);
   if (!isSafeThemePath(path)) return null;
-  const segments = path.split('.');
   // Decode escape sequences once at construction. The resolver is the only
   // consumer of fallback at render time, so this never re-runs per render.
   const fallback = unescapeSentinelFallback(rawFallback);
+  const keys = path.split('.');
 
   // Single-slot identity cache. Theme is the only env field this resolver
   // reads, so caching `(theme identity → resolved value)` short-circuits the
@@ -871,28 +856,172 @@ function themeResolver(value: string): Resolver | null {
   // Within a typical app theme is allocated once per createTheme + persists
   // across renders, so the hit rate is dominated by re-renders.
   let lastTheme: object = NO_THEME_SEEN;
-  let lastResult: number | string = fallback;
+  let lastResult: number | string | null = fallback;
 
   return env => {
     if (env.theme === lastTheme) return lastResult;
-    let v: unknown = env.theme;
-    for (let i = 0; i < segments.length; i++) {
-      if (
-        v == null ||
-        typeof v !== 'object' ||
-        !Object.prototype.hasOwnProperty.call(v, segments[i])
-      ) {
-        v = undefined;
-        break;
-      }
-      v = Reflect.get(v, segments[i]);
-    }
+    const v = readThemePath(env.theme, keys);
     // Known gap: the public `Resolver` type is narrower than what a ThemeProvider override can supply (a `PlatformColor` object, for example).
     const out = v === undefined || v === null ? fallback : (v as number | string);
     lastTheme = env.theme;
     lastResult = out;
     return out;
   };
+}
+
+/** `;`, `{`, or `}`: what ends a declaration or opens a rule. */
+const isDeclarationBreak = (c: number): boolean => c === 0x3b || c === 0x7b || c === 0x7d;
+
+/** Where a createTheme placeholder ends, or where a theme value breaks into a second declaration. */
+function findValueEnd(text: string, start: number, inAtom: boolean): number {
+  let depth = 0;
+  let quote = 0;
+  for (let i = start; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    // A placeholder's fallback escapes these, so any raw one ends it, quoted or not.
+    if (
+      inAtom &&
+      (c === 0x20 || c === 0x09 || c === 0x0a || c === 0x0d || c === 0x2c || c === 0x2f)
+    ) {
+      return i;
+    }
+    if (quote !== 0) {
+      if (c === 0x5c /* \ */) i++;
+      else if (c === quote) quote = 0;
+    } else if (c === 0x22 /* " */ || c === 0x27 /* ' */) {
+      quote = c;
+    } else if (c === 0x28 /* ( */ || c === 0x5b /* [ */) {
+      depth++;
+    } else if (c === 0x29 /* ) */ || c === 0x5d /* ] */) {
+      if (depth > 0) depth--;
+      else if (inAtom) return i;
+    } else if (depth === 0 && isDeclarationBreak(c)) {
+      return i;
+    }
+  }
+  return text.length;
+}
+
+const BARE_NUMBER_RE = /^-?(?:\d+(?:\.\d+)?|\.\d+)$/;
+const VALUE_BREAK_RE = /[;{}]/;
+
+/**
+ * Replace each createTheme placeholder (`\0<prefix>:<path>:<fallback>`) in
+ * `text` with the theme's value read as text, so the declaration reads as if
+ * that text were authored in the template. A missing, `null`, or non-finite
+ * value reads as the fallback; a text that holds a second declaration or a rule
+ * does too (with a dev warning). Any other non-text value (a `PlatformColor`
+ * object) leaves its placeholder for {@link themeResolver}.
+ *
+ * `joined` marks text another interpolation built around the placeholder
+ * (`${t.space}px` returned from a function): the placeholder then swallowed
+ * the text after it, and a bare number re-takes the unit the fallback ends in.
+ */
+export function substituteThemeText(
+  text: string,
+  theme: ResolveEnv['theme'] | undefined,
+  joined: boolean
+): string {
+  if (text.indexOf('\0') === -1) return text;
+  let read = themeTextReads.get(text);
+  if (read === undefined) {
+    read = parseThemeText(text);
+    fifoSet(themeTextReads, text, read, THEME_TEXT_CACHE_LIMIT);
+  }
+  if (read === null) return text;
+  if (read.lastTheme === theme && read.lastJoined === joined) return read.lastText;
+
+  const parts = read.parts;
+  let out = '';
+  let copied = 0;
+  for (let i = 0; i < parts.length; i++) {
+    const { end, fallback, keys, start, unit } = parts[i];
+    const v = readThemePath(theme, keys);
+    let replacement: string;
+    if (typeof v === 'string' && v.charCodeAt(0) !== 0) {
+      if (VALUE_BREAK_RE.test(v) && findValueEnd(v, 0, false) !== v.length) {
+        if (__DEV__) {
+          const path = keys.join('.');
+          warnOnce(
+            'native-theme-value-not-single',
+            `The theme value at \`${path}\` holds more than one declaration or a rule, so its default is used. A theme value must be a single CSS value, such as "12px" or "red".`,
+            path
+          );
+        }
+        replacement = fallback;
+      } else {
+        replacement = joined && BARE_NUMBER_RE.test(v) ? v + unit : v;
+      }
+    } else if (typeof v === 'number' && Number.isFinite(v)) {
+      replacement = joined ? String(v) + unit : String(v);
+    } else if (v === undefined || v === null || typeof v === 'number' || typeof v === 'string') {
+      replacement = fallback;
+    } else {
+      continue;
+    }
+
+    out += text.slice(copied, start) + replacement;
+    copied = end;
+  }
+  const result = copied === 0 ? text : out + text.slice(copied);
+  read.lastJoined = joined;
+  read.lastText = result;
+  read.lastTheme = theme;
+  return result;
+}
+
+/** One createTheme placeholder found in a text: its span, its default text, and its theme path. */
+export interface ThemeTextPart {
+  end: number;
+  fallback: string;
+  keys: string[];
+  start: number;
+  unit: string;
+}
+
+interface ThemeTextRead {
+  lastJoined: boolean;
+  lastText: string;
+  lastTheme: object | undefined;
+  parts: ThemeTextPart[];
+}
+
+/**
+ * The placeholders found in each text {@link substituteThemeText} has seen
+ * (`null` for a text with none), each with the theme it last read, so a repeat
+ * render under the same theme reuses the finished text. Placeholder texts come
+ * from the code; the limit bounds the ones a function interpolation builds from props.
+ */
+const themeTextReads = new Map<string, ThemeTextRead | null>();
+const THEME_TEXT_CACHE_LIMIT = 200;
+
+function parseThemeText(text: string): ThemeTextRead | null {
+  const parts = findThemePlaceholders(text);
+  return parts.length === 0
+    ? null
+    : { lastJoined: false, lastText: text, lastTheme: NO_THEME_SEEN, parts };
+}
+
+/** The createTheme placeholders in `text`, in order. Other NUL markers (`\0+`, `\0-`, a server reference) are skipped. */
+export function findThemePlaceholders(text: string): ThemeTextPart[] {
+  const parts: ThemeTextPart[] = [];
+  let at = text.indexOf('\0');
+  while (at !== -1) {
+    const end = findValueEnd(text, at + 1, true);
+    const firstColon = text.indexOf(':', at + 1);
+    const secondColon = firstColon === -1 ? -1 : text.indexOf(':', firstColon + 1);
+    const pathEnd = secondColon === -1 || secondColon > end ? end : secondColon;
+    const path = firstColon > at + 1 && firstColon < end ? text.slice(firstColon + 1, pathEnd) : '';
+    if (path === '' || !isSafeThemePath(path)) {
+      at = text.indexOf('\0', at + 1);
+      continue;
+    }
+
+    const fallback = unescapeSentinelFallback(pathEnd === end ? '' : text.slice(pathEnd + 1, end));
+    parts.push({ end, fallback, keys: path.split('.'), start: at, unit: fallbackUnit(fallback) });
+    at = text.indexOf('\0', end);
+  }
+  return parts;
 }
 
 /**
@@ -911,23 +1040,6 @@ function findSentinelTerminator(value: string, start: number): number {
 }
 
 /**
- * Substitute sentinel atoms inside a multi-token CSS value at render time.
- * Used for pass-through props (`boxShadow`, `transform`, `filter`,
- * `backgroundImage`, …) where the value reaches RN as a CSS string and a
- * theme token sits in the middle of it.
- *
- * Each sentinel must sit at a CSS-token boundary;start of the value, or
- * preceded by whitespace, comma, paren, or slash. A sentinel preceded by a
- * non-boundary char is the JS concat-leak case (`'47\0sc:…'`) and we
- * deliberately bail to null so `warnIfSentinelLeak` can fire downstream.
- *
- * Paren depth is tracked so a sentinel inside `translateY(\0sc:x:Npx)` is
- * correctly bounded by the enclosing function's closing paren;the
- * tokenizer relies on function-aware paren-matching for the same reason,
- * but we don't run the full tokenizer here (raw-string scan is enough and
- * keeps the path allocation-free for the common case).
- */
-/**
  * Extract the unit suffix from a sentinel fallback like `'55px'` so we
  * can re-attach it when the theme provides the unit-less numeric form.
  * Returns `''` for fallbacks that don't end in an alpha-or-percent unit
@@ -936,93 +1048,6 @@ function findSentinelTerminator(value: string, start: number): number {
 function fallbackUnit(fallback: string): string {
   const m = FALLBACK_UNIT_RE.exec(fallback);
   return m === null ? '' : m[1];
-}
-
-function templateResolver(value: string): Resolver | null {
-  const segments: Array<{ start: number; end: number; resolver: Resolver; unit: string }> = [];
-  let i = 0;
-  let depth = 0;
-  while (i < value.length) {
-    const c = value.charCodeAt(i);
-    if (c === 0x28 /* ( */) {
-      depth++;
-      i++;
-      continue;
-    }
-    if (c === 0x29 /* ) */) {
-      depth--;
-      i++;
-      continue;
-    }
-    if (c !== 0) {
-      i++;
-      continue;
-    }
-    if (i > 0) {
-      const prev = value.charCodeAt(i - 1);
-      const isBoundary =
-        prev === 0x20 || // space
-        prev === 0x09 || // tab
-        prev === 0x0a || // \n
-        prev === 0x0d || // \r
-        prev === 0x2c || // ,
-        prev === 0x28 || // (
-        prev === 0x29 || // )
-        prev === 0x2f; // /
-      if (!isBoundary) return null;
-    }
-    // Scan for the sentinel terminator. Mirrors the tokenizer's
-    // `findSentinelEnd` (whitespace, comma, slash, end-of-string) and adds
-    // `)` when it would close the paren level we entered the sentinel at ;
-    // i.e. the function whose args carry this sentinel.
-    const startDepth = depth;
-    let end = i + 1;
-    let scanDepth = depth;
-    while (end < value.length) {
-      const ec = value.charCodeAt(end);
-      if (ec === 0x20 || ec === 0x09 || ec === 0x0a || ec === 0x0d || ec === 0x2c || ec === 0x2f) {
-        break;
-      }
-      if (ec === 0x28) {
-        scanDepth++;
-      } else if (ec === 0x29) {
-        if (scanDepth === startDepth) break;
-        scanDepth--;
-      }
-      end++;
-    }
-    const segment = value.substring(i, end);
-    const r = themeResolver(segment);
-    if (r === null) return null;
-    // Fallback often carries the original unit (e.g. `${t.x}px` is
-    // serialized as `\0sc:x:55px`). When the theme provides the bare
-    // numeric form we re-attach the unit so the assembled string still
-    // means what the user wrote.
-    const lastColon = segment.lastIndexOf(':');
-    const fb = lastColon === -1 ? '' : segment.slice(lastColon + 1);
-    segments.push({ start: i, end, resolver: r, unit: fallbackUnit(fb) });
-    depth = scanDepth;
-    i = end;
-  }
-  if (segments.length === 0) return null;
-  return env => {
-    let out = '';
-    let pos = 0;
-    for (let i = 0; i < segments.length; i++) {
-      const s = segments[i];
-      if (pos < s.start) out += value.substring(pos, s.start);
-      const v = s.resolver(env);
-      if (v === null) return null;
-      if (typeof v === 'number') {
-        out += s.unit === '' ? String(v) : String(v) + s.unit;
-      } else {
-        out += String(v);
-      }
-      pos = s.end;
-    }
-    if (pos < value.length) out += value.substring(pos);
-    return out;
-  };
 }
 
 const siblingIndexResolver: Resolver = env => env.siblingIndex ?? 1;
@@ -1140,9 +1165,19 @@ function normalizeAttrValue(s: string): number | string {
  * attribute-selector matcher. Returns `null` for malformed heads
  * (namespaced names, empty args); type/value mismatches resolve to the
  * fallback per spec, and a missing fallback on a typed attr() drops the
- * declaration (guaranteed-invalid).
+ * declaration (guaranteed-invalid). `prop` is the destination property
+ * of the whole declaration, which a fallback expression's range check reads.
+ * `operand` is the value as a math operand: a number result carries `px`
+ * for a <length> type and no unit for a <number> or untyped one, and a
+ * fallback is typed by its own text, like any other operand.
  */
-function attrResolver(value: string): Resolver | null {
+function attrResolver(
+  value: string,
+  prop?: string
+): {
+  operand: (env: ResolveEnv) => NumericResult | null;
+  resolve: (env: ResolveEnv) => number | string | null;
+} | null {
   const toks = tokenize(value);
   if (toks.length !== 1 || toks[0].kind !== TokenKind.Function || toks[0].name !== 'attr') {
     return null;
@@ -1194,7 +1229,7 @@ function attrResolver(value: string): Resolver | null {
   // fallback (light-dark(), viewport units, math fns) gets its own
   // nested resolver, built once here.
   const fallbackResolver =
-    fallbackRaw !== null && fallbackRaw !== '' ? buildResolver(fallbackRaw) : null;
+    fallbackRaw !== null && fallbackRaw !== '' ? buildResolver(fallbackRaw, prop) : null;
   const staticFallback: number | string | null =
     fallbackRaw !== null
       ? fallbackRaw === ''
@@ -1204,11 +1239,20 @@ function attrResolver(value: string): Resolver | null {
         ? ''
         : null;
 
-  return env => {
-    // Fallback construction is a pure env read (no subscription side
-    // effects), so it's deferred to only the paths that actually need
-    // it; the common present-and-valid-prop cases never touch it.
-    const getFallback = () => (fallbackResolver !== null ? fallbackResolver(env) : staticFallback);
+  const operandUnit =
+    (type.kind === 'unit' && type.unit === 'px') ||
+    (type.kind === 'syntax' && type.syntax === 'length')
+      ? 'px'
+      : '';
+  // A fallback substitutes its own tokens, so as a math operand it has the type
+  // of the expression those tokens build (an empty or absent fallback has none).
+  const fallbackOperand =
+    fallbackRaw !== null && fallbackRaw !== '' ? buildExpression(tokenize(fallbackRaw)) : null;
+
+  // Fallback construction is a pure env read (no subscription side effects), so
+  // `getFallback` runs only on the paths that need it; the common
+  // present-and-valid-prop cases never touch it.
+  const resolveWith = (env: ResolveEnv, getFallback: () => number | string | null) => {
     const props = env.props;
     const raw = props == null ? undefined : props[name];
     if (raw === undefined || raw === null) return getFallback();
@@ -1231,6 +1275,21 @@ function attrResolver(value: string): Resolver | null {
         return resolveAttrSyntax(type.syntax, raw, getFallback);
     }
   };
+
+  const resolve = (env: ResolveEnv) =>
+    resolveWith(env, () => (fallbackResolver !== null ? fallbackResolver(env) : staticFallback));
+
+  const operand = (env: ResolveEnv): NumericResult | null => {
+    let fellBack = false;
+    const v = resolveWith(env, () => {
+      fellBack = true;
+      return null;
+    });
+    if (!fellBack) return valueToNumeric(v, operandUnit);
+    return fallbackOperand === null ? null : fallbackOperand(env);
+  };
+
+  return { operand, resolve };
 }
 
 function resolveAttrSyntax(
@@ -1326,7 +1385,7 @@ interface BuildOpts {
 
 /**
  * Runtime resolver for `calc()` / `min()` / `max()` / `clamp()`. Used
- * for both dynamic-arm cases (sentinels, env(), viewport / container
+ * for both dynamic-arm cases (env(), viewport / container
  * units, light-dark(), nested math fns) and the native static-mixed
  * path (where `opts.resolvePercent` does the % → px conversion the
  * layout engine would normally do).
@@ -1347,18 +1406,141 @@ function mathFnResolver(value: string, opts?: BuildOpts): Resolver | null {
   if (opts !== undefined && opts.resolvePercent !== undefined && isPurePercentMathFn(fn)) {
     effOpts = opts.prop !== undefined ? { prop: opts.prop } : undefined;
   }
-  if (name === 'calc') return calcResolverFromFn(fn, effOpts);
-  if (name === 'min' || name === 'max' || name === 'clamp') {
-    return minMaxClampResolverFromFn(name, fn, effOpts);
+  const isMinMaxClamp = name === 'min' || name === 'max' || name === 'clamp';
+  if (name !== 'calc' && !isMinMaxClamp) return null;
+  const unit = staticMathUnit(fn);
+  if (unit === null) return null;
+  // A style key takes a number, a length or a percentage; a color channel (no `prop`) may take an angle.
+  if (opts?.prop !== undefined && unit !== '' && unit !== 'px' && unit !== UNKNOWN_UNIT)
+    return null;
+  return isMinMaxClamp
+    ? minMaxClampResolverFromFn(name, fn, effOpts)
+    : calcResolverFromFn(fn, effOpts);
+}
+
+/** The unit of an operand whose type only render time can tell. */
+const UNKNOWN_UNIT = '?';
+
+/**
+ * The unit a `calc()` / `min()` / `max()` / `clamp()` call produces, found from its
+ * operands' types alone: `''` for a number, `px` for a length or percentage, another
+ * unit for an angle, {@link UNKNOWN_UNIT} when an operand's type is known only at
+ * render, and `null` when operands that must agree do not. Runs when the resolver is
+ * built, so a mismatch the text shows never reaches render.
+ */
+function staticMathUnit(fn: Token): string | null {
+  if (fn.name === 'calc') return expressionUnit(tokenizeFunctionArgs(fn));
+  return minMaxClampUnit(fn);
+}
+
+function minMaxClampUnit(fn: Token): string | null {
+  const args = tokenizeFunctionArgs(fn);
+  const isClamp = fn.name === 'clamp';
+  let unit = UNKNOWN_UNIT;
+  let current: Token[] = [];
+  let arm = 0;
+  for (let i = 0; i <= args.length; i++) {
+    const t = args[i];
+    if (t !== undefined && t.kind !== TokenKind.Comma) {
+      current.push(t);
+      continue;
+    }
+    const isNone =
+      isClamp &&
+      (arm === 0 || arm === 2) &&
+      current.length === 1 &&
+      current[0].kind === TokenKind.Ident &&
+      current[0].name === 'none';
+    if (!isNone) {
+      const armUnit = expressionUnit(current);
+      if (armUnit === null) return null;
+      if (unit === UNKNOWN_UNIT) unit = armUnit;
+      else if (armUnit !== UNKNOWN_UNIT && armUnit !== unit) return null;
+    }
+    current = [];
+    arm++;
   }
-  return null;
+  return unit;
+}
+
+/** The unit of one operand token, or `null` when the math function nested in it is invalid. */
+function operandUnit(t: Token): string | null {
+  switch (t.kind) {
+    case TokenKind.Number:
+      return '';
+    case TokenKind.Length:
+      return t.unit === '' ? '' : 'px';
+    case TokenKind.Percent:
+      return 'px';
+    case TokenKind.Angle:
+      return 'deg';
+    case TokenKind.Ident:
+      return t.name === 'pi' || t.name === 'e' ? '' : UNKNOWN_UNIT;
+    case TokenKind.Function: {
+      const name = t.name || '';
+      if (name === 'sibling-index' || name === 'sibling-count') return '';
+      if (name === 'calc' || name === 'min' || name === 'max' || name === 'clamp') {
+        return staticMathUnit(t);
+      }
+      const folded = resolveStaticMathFunction(t);
+      if (folded === null) return UNKNOWN_UNIT;
+      return folded.unit === '%' ? 'px' : folded.unit;
+    }
+    default:
+      return UNKNOWN_UNIT;
+  }
+}
+
+/** Sequence form of {@link staticMathUnit}: operands joined by `+ - * /`, with `*` and `/` first. */
+function expressionUnit(tokens: Token[]): string | null {
+  const units: string[] = [];
+  const ops: string[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (i % 2 === 0) {
+      const unit = operandUnit(t);
+      if (unit === null) return null;
+      units.push(unit);
+    } else if (t.kind === TokenKind.Slash) {
+      ops.push('/');
+    } else if (t.kind === TokenKind.Op) {
+      ops.push(t.op);
+    } else {
+      return UNKNOWN_UNIT;
+    }
+  }
+  if (units.length !== ops.length + 1) return UNKNOWN_UNIT;
+
+  for (let i = 0; i < ops.length; ) {
+    const op = ops[i];
+    if (op !== '*' && op !== '/') {
+      i++;
+      continue;
+    }
+    const a = units[i];
+    const b = units[i + 1];
+    const unit =
+      a === UNKNOWN_UNIT || b === UNKNOWN_UNIT
+        ? UNKNOWN_UNIT
+        : scaleUnit(op, { unit: a, value: 0 }, { unit: b, value: 0 });
+    if (unit === null) return null;
+    units.splice(i, 2, unit);
+    ops.splice(i, 1);
+  }
+  let unit = units[0];
+  for (let i = 1; i < units.length; i++) {
+    const next = units[i];
+    if (unit === UNKNOWN_UNIT) unit = next;
+    else if (next !== UNKNOWN_UNIT && next !== unit) return null;
+  }
+  return unit;
 }
 
 /**
  * True when a math function's operand tree contains at least one percent
  * and no other dimensional operand: numbers, arithmetic, and
  * number-valued functions (nested math, sibling-index() /
- * sibling-count()) are fine; any length, sentinel, or env-dependent
+ * sibling-count()) are fine; any length or env-dependent
  * length function makes the expression mixed.
  */
 function isPurePercentMathFn(fn: Token): boolean {
@@ -1400,8 +1582,7 @@ function scanPurePercent(fn: Token): 0 | 1 | -1 {
 }
 
 function calcResolverFromFn(fn: Token, opts?: BuildOpts): Resolver | null {
-  const args = tokenizeFunctionArgs(fn);
-  const armEval = buildExpression(args, opts);
+  const armEval = buildExpression(tokenizeFunctionArgs(fn), opts);
   if (armEval === null) return null;
   return env => {
     const r = armEval(env);
@@ -1411,6 +1592,21 @@ function calcResolverFromFn(fn: Token, opts?: BuildOpts): Resolver | null {
 }
 
 function minMaxClampResolverFromFn(name: string, fn: Token, opts?: BuildOpts): Resolver | null {
+  const evalFn = minMaxClampEvalFromFn(name, fn, opts);
+  if (evalFn === null) return null;
+  return env => {
+    const r = evalFn(env);
+    if (r === null) return null;
+    return numericToCss(r);
+  };
+}
+
+/** Like {@link minMaxClampResolverFromFn}, keeping the result's unit for an enclosing expression. */
+function minMaxClampEvalFromFn(
+  name: string,
+  fn: Token,
+  opts?: BuildOpts
+): ((env: ResolveEnv) => NumericResult | null) | null {
   const args = tokenizeFunctionArgs(fn);
   const groups: Token[][] = [];
   let current: Token[] = [];
@@ -1479,7 +1675,14 @@ function minMaxClampResolverFromFn(name: string, fn: Token, opts?: BuildOpts): R
       realOperands.push(r);
     }
     const unit = unifyUnits(realOperands);
-    if (unit === null) return null;
+    if (unit === null) {
+      if (__DEV__) {
+        const first = realOperands[0].unit;
+        const other = realOperands.find(o => o.unit !== first);
+        warnMixedTypes(first, other === undefined ? first : other.unit);
+      }
+      return null;
+    }
 
     let result: number;
     if (name === 'min') {
@@ -1504,7 +1707,7 @@ function minMaxClampResolverFromFn(name: string, fn: Token, opts?: BuildOpts): R
       if (lo !== null && v < lo.value) v = lo.value;
       result = v;
     }
-    return numericToCss({ value: result, unit });
+    return { value: result, unit };
   };
 }
 
@@ -1523,10 +1726,14 @@ function buildExpression(
 
   // Type checking: `<number> + <length|percent>` is invalid (unitless 0
   // lengths aren't supported in math functions). Catch statically-typed
-  // mismatches at construction time. Sentinels and nested function
-  // tokens can resolve to either kind, so they defer to runtime where
-  // the produced NumericResult's unit fights it out.
-  for (let i = 0; i < tokens.length; i++) {
+  // mismatches at construction time. Nested function tokens can resolve
+  // to either kind, so they defer to runtime where the produced
+  // NumericResult's unit fights it out. With a `*` or `/` present, the
+  // token beside a `+` is only part of its operand, so `reduceMath` decides.
+  const scaled = tokens.some(
+    t => t.kind === TokenKind.Slash || (t.kind === TokenKind.Op && (t.op === '*' || t.op === '/'))
+  );
+  for (let i = 0; !scaled && i < tokens.length; i++) {
     const t = tokens[i];
     if (t.kind !== TokenKind.Op) continue;
     if (t.op !== '+' && t.op !== '-') continue;
@@ -1591,8 +1798,7 @@ function buildExpression(
       if (r === null) return null;
       if (rp !== undefined && r.unit === '%') {
         // Native path: any operand surfacing as `%` (literal Percent
-        // token, sentinel resolving to '10%', nested calc returning a
-        // percent string) converts to px against the container/viewport
+        // token, nested calc returning a percent string) converts to px against the container/viewport
         // base. Centralising the conversion here covers every operand
         // shape with one rule.
         const base = rp(env);
@@ -1635,11 +1841,6 @@ function buildOperand(
     const v = t.value;
     return () => ({ value: v, unit: '%' });
   }
-  if (t.kind === TokenKind.Sentinel) {
-    const r = buildResolver(t.raw);
-    if (r === null) return null;
-    return env => valueToNumeric(r(env), '');
-  }
   if (t.kind === TokenKind.Ident) {
     // Math-context numeric constants. `pi` / `e` are <number>s.
     // `infinity` / `-infinity` / `NaN` warn + drop.
@@ -1653,20 +1854,15 @@ function buildOperand(
     if (num !== null) return () => num;
     // Otherwise build a runtime resolver from the function's raw form.
     const inner = t.name || '';
-    if (inner === 'calc') {
-      const r = calcResolverFromFn(t, opts);
-      if (r === null) return null;
-      return env => valueToNumeric(r(env), '');
-    }
+    // Nested math keeps the unit its own expression produced.
+    if (inner === 'calc') return buildExpression(tokenizeFunctionArgs(t), opts);
     if (inner === 'min' || inner === 'max' || inner === 'clamp') {
-      const r = minMaxClampResolverFromFn(inner, t, opts);
-      if (r === null) return null;
-      return env => valueToNumeric(r(env), '');
+      return minMaxClampEvalFromFn(inner, t, opts);
     }
     if (inner === 'env' || inner === 'light-dark') {
       const r = buildResolver(t.raw);
       if (r === null) return null;
-      return env => valueToNumeric(r(env), '');
+      return env => valueToNumeric(r(env), 'px');
     }
     if (inner === 'sibling-index' || inner === 'sibling-count') {
       if ((t.args || '').trim() !== '') return null;
@@ -1678,8 +1874,7 @@ function buildOperand(
     }
     if (inner === 'attr') {
       const r = attrResolver(t.raw);
-      if (r === null) return null;
-      return env => valueToNumeric(r(env), '');
+      return r === null ? null : r.operand;
     }
     if ((inner === 'anchor' || inner === 'anchor-size') && opts?.prop !== undefined) {
       const r = buildAnchorResolver(t.raw, opts.prop, inner === 'anchor-size');
@@ -1693,8 +1888,8 @@ function buildOperand(
 /**
  * True when a token statically resolves to a CSS <number>. Numeric
  * constants `pi` / `e` count; `infinity` / `-infinity` / `NaN` are
- * caught earlier and never reach this check. Sentinels and nested
- * function tokens defer to runtime.
+ * caught earlier and never reach this check. Nested function tokens
+ * defer to runtime.
  */
 function isStaticNumberKind(t: Token): boolean {
   if (t.kind === TokenKind.Number) return true;
@@ -1707,7 +1902,7 @@ function isStaticNumberKind(t: Token): boolean {
 
 /**
  * True when a token statically resolves to a CSS <length> or
- * <percentage>. Sentinels and nested function tokens defer to runtime.
+ * <percentage>. Nested function tokens defer to runtime.
  */
 function isStaticDimensionKind(t: Token): boolean {
   return t.kind === TokenKind.Length || t.kind === TokenKind.Percent;
@@ -1729,7 +1924,11 @@ function reduceMath(items: Array<NumericResult | string>): NumericResult | null 
     if (op === '*' || op === '/') {
       const a = items[i - 1] as NumericResult;
       const b = items[i + 1] as NumericResult;
-      const unit = op === '*' ? a.unit || b.unit : a.unit;
+      const unit = scaleUnit(op, a, b);
+      if (unit === null) {
+        if (__DEV__) warnMixedTypes(a.unit, b.unit);
+        return null;
+      }
       const v = op === '*' ? a.value * b.value : a.value / b.value;
       if (!Number.isFinite(v)) return null;
       items.splice(i - 1, 3, { value: v, unit });
@@ -1743,21 +1942,29 @@ function reduceMath(items: Array<NumericResult | string>): NumericResult | null 
     if (op === '+' || op === '-') {
       const a = items[i - 1] as NumericResult;
       const b = items[i + 1] as NumericResult;
-      // Runtime relaxation (deviating from strict type checking): a
-      // sentinel-derived operand often surfaces unitless because the
-      // theme value doesn't carry a CSS unit. Tolerate `<unitless> +/-
-      // <typed>` here so `calc(${t.space.xl} + 47px)` still works at
-      // runtime; literal `calc(0 + 5px)` is rejected at construction
-      // time in `buildExpression` before reaching here.
-      if (a.unit && b.unit && a.unit !== b.unit) return null;
+      if (a.unit !== b.unit) {
+        if (__DEV__) warnMixedTypes(a.unit, b.unit);
+        return null;
+      }
       const v = op === '+' ? a.value + b.value : a.value - b.value;
-      items.splice(i - 1, 3, { value: v, unit: a.unit || b.unit });
+      items.splice(i - 1, 3, { value: v, unit: a.unit });
     } else {
       i++;
     }
   }
   if (items.length !== 1) return null;
   return items[0] as NumericResult;
+}
+
+const TYPE_LABELS: Record<string, string> = { '': 'number', '%': 'percentage', px: 'length' };
+
+/** Dev warning for operands whose types only render time showed to disagree. */
+function warnMixedTypes(a: string, b: string): void {
+  warnOnce(
+    'native-math-mixed-types',
+    `a math function combines a "${TYPE_LABELS[a] ?? a}" with a "${TYPE_LABELS[b] ?? b}", which CSS does not allow, so the declaration was ignored. Give every operand the same type.`,
+    a + '|' + b
+  );
 }
 
 function numericToCss(r: NumericResult): number | string {
@@ -1800,16 +2007,12 @@ function isIdentChar(c: number): boolean {
  * `lab()` / `color-mix()` / `color()` / relative forms) when one or more
  * channel arms are dynamic. The static fold in `staticColorFunctionToHex`
  * (colorMath.ts) bails the moment a channel isn't a literal; we land
- * here, substitute the dynamic arms at render time (theme sentinels plus
- * env-dependent math: calc()/min()/max()/clamp() and bare
- * sibling-index()/sibling-count()), then run the assembled string back
- * through the static converter to produce a hex. Without the math
- * substitution the raw function string reached React Native, whose color
- * parser rejects it and paints transparent.
+ * here, substitute the dynamic arms at render time (env-dependent math:
+ * calc()/min()/max()/clamp() and bare sibling-index()/sibling-count()),
+ * then run the assembled string back through the static converter to
+ * produce a hex. Without the substitution the raw function string reached
+ * React Native, whose color parser rejects it and paints transparent.
  *
- * Like {@link templateResolver}, but for color-function strings: splices
- * BOTH theme sentinels and env-dependent math segments. Math segments may
- * themselves carry sentinels (the math operand machinery resolves them).
  * Returns null when the string has no dynamic segment this recognizes.
  */
 function colorFnResolver(value: string): Resolver | null {
@@ -1817,72 +2020,12 @@ function colorFnResolver(value: string): Resolver | null {
     start: number;
     end: number;
     resolver: Resolver;
-    unit: string;
   }
   const segments: Seg[] = [];
   let i = 0;
-  let depth = 0;
   const len = value.length;
   while (i < len) {
     const c = value.charCodeAt(i);
-    if (c === 0x28 /* ( */) {
-      depth++;
-      i++;
-      continue;
-    }
-    if (c === 0x29 /* ) */) {
-      depth--;
-      i++;
-      continue;
-    }
-    if (c === 0) {
-      // Sentinel atom; same boundary + terminator rules as templateResolver.
-      if (i > 0) {
-        const prev = value.charCodeAt(i - 1);
-        const isBoundary =
-          prev === 0x20 ||
-          prev === 0x09 ||
-          prev === 0x0a ||
-          prev === 0x0d ||
-          prev === 0x2c ||
-          prev === 0x28 ||
-          prev === 0x29 ||
-          prev === 0x2f;
-        if (!isBoundary) return null;
-      }
-      const startDepth = depth;
-      let end = i + 1;
-      let scanDepth = depth;
-      while (end < len) {
-        const ec = value.charCodeAt(end);
-        if (
-          ec === 0x20 ||
-          ec === 0x09 ||
-          ec === 0x0a ||
-          ec === 0x0d ||
-          ec === 0x2c ||
-          ec === 0x2f
-        ) {
-          break;
-        }
-        if (ec === 0x28) {
-          scanDepth++;
-        } else if (ec === 0x29) {
-          if (scanDepth === startDepth) break;
-          scanDepth--;
-        }
-        end++;
-      }
-      const segment = value.substring(i, end);
-      const r = themeResolver(segment);
-      if (r === null) return null;
-      const lastColon = segment.lastIndexOf(':');
-      const fb = lastColon === -1 ? '' : segment.slice(lastColon + 1);
-      segments.push({ start: i, end, resolver: r, unit: fallbackUnit(fb) });
-      depth = scanDepth;
-      i = end;
-      continue;
-    }
     if (isIdentChar(c)) {
       const prev = i > 0 ? value.charCodeAt(i - 1) : -1;
       const isBoundary =
@@ -1903,7 +2046,7 @@ function colorFnResolver(value: string): Resolver | null {
           const seg = value.substring(i, close + 1);
           const r = head === 'sibling' ? buildResolver(seg) : resolveMathFn(seg);
           if (r !== null) {
-            segments.push({ start: i, end: close + 1, resolver: r, unit: '' });
+            segments.push({ start: i, end: close + 1, resolver: r });
             i = close + 1;
             continue;
           }
@@ -1926,20 +2069,12 @@ function colorFnResolver(value: string): Resolver | null {
       if (pos < s.start) out += value.substring(pos, s.start);
       const v = s.resolver(env);
       if (v === null) return null;
-      if (typeof v === 'number') {
-        out += s.unit === '' ? String(v) : String(v) + s.unit;
-      } else {
-        out += String(v);
-      }
+      out += String(v);
       pos = s.end;
     }
     if (pos < value.length) out += value.substring(pos);
     const tokens = tokenize(out);
     if (tokens.length !== 1 || tokens[0].kind !== TokenKind.Function) return null;
-    // Wide-gamut color functions stay authored CSS text on rn-web; the
-    // sentinels only splice resolved numbers into the string and the
-    // browser parses the function (and its color space) natively.
-    if (__NATIVE_WEB__) return out;
     return staticColorFunctionToHex(tokens[0]);
   };
 }

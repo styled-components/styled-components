@@ -23,6 +23,7 @@ The New Architecture (Fabric + TurboModules + bridgeless) is mandatory from RN 0
 - `gap` / `row-gap` / `column-gap`: accept percentage values. RN 0.75+.
 - `cursor`: `auto`, `pointer` (iOS 17+).
 - `experimental_backgroundImage` (gradients as a raw string, experimental): the two gradient types landed four minors apart despite sharing the prop. `linear-gradient()` and `repeating-linear-gradient()` in RN 0.76.0; `radial-gradient()` only in RN 0.80.0. A matrix stating "gradients: 0.76+" over-claims radial on 0.76-0.79 where there is none.
+- Standard background names: RN registers `backgroundImage` from 0.87 and `backgroundSize` / `backgroundPosition` / `backgroundRepeat` from 0.88, where the `experimental_*` forms turn `@deprecated`; 0.85-0.86 drop the standard names silently. Across the peer range, every background declaration emits both keys carrying the full layered declaration (`PASSTHROUGH_PROPS` in `src/native/transform/passthrough.ts`). The experimental key differs in two places: `cover` / `contain` fold to `auto` there, because RN's native parser drops the bare keywords and an empty size list crashes the Android drawable (`substituteBackgroundSizeKeywordsForNative`); and `experimental_backgroundImage` may carry system-color stops expanded to an object array.
 
 ### `filter` on Android: hard API-31 cliff, applied per filter list
 
@@ -60,8 +61,14 @@ RN ships a vendored Yoga whose `flex-shrink` default is `0`, not CSS's `1`. This
 - `Style.h` defines `DefaultFlexShrink = 0.0f` and `WebDefaultFlexShrink = 1.0f`. The web-aligned value applies only when `config->useWebDefaults()` is true. RN ships no call to `setUseWebDefaults(true)`, so the effective RN default is `0`.
 - The same `useWebDefaults` gate also flips `align-content` (RN default `flex-start` vs web `stretch`) and the `min-width` / `min-height` semantics on flex items.
 
-This is a load-bearing invariant for any layout polyfill or rn-web parity test. RN baseline is `flex-shrink: 0`, so web-style layouts that rely on items shrinking need an explicit `flex-shrink: 1`, and a parity test that assumes the CSS default will diverge from native. When debugging "items not wrapping" versus "items shrinking inappropriately," check which side of this default the consumer expects.
+This is a load-bearing invariant for any layout polyfill. RN baseline is `flex-shrink: 0`, so web-style layouts that rely on items shrinking need an explicit `flex-shrink: 1`, and a test that assumes the CSS default will diverge from native. When debugging "items not wrapping" versus "items shrinking inappropriately," check which side of this default the consumer expects.
 
 ## The declaration transform is in-house
 
 The native compile pipeline owns its final `[property, value]` to RN-style transform (`src/native/transform/`); it does not depend on `css-to-react-native`. Keep it that way: a tight character-walk over CSS values fast-paths the common cases (color strings, numeric lengths, simple keywords) far cheaper than a general value-parser, and owning the transform means RN-accepted shapes the old dependency mishandled (`matrix()`, RTL logical properties like `marginStart`, `currentcolor`, multi-shadow and `inset` in `boxShadow`, comma-separated quoted font families) are ours to fix rather than blocked upstream.
+
+## Every styled component renders its style context provider
+
+- Every styled component outside server components renders a `NativeStyleContext` provider. An idle one passes its parent's own value object, so consumers do not re-render and the tree keeps its shape when a font size, line height or direction appears or leaves. A provider added only when a value changes would remount every descendant at that moment, losing its state.
+- A styled `Pressable` adds a second provider inside its children, holding what its style function gives at the current press state. Its children turn into a function only when React Native already tracks presses (the style or the children are a function), so a fixed style costs no press tracking.
+- The cost of the always-present provider is measured in the PR that added it (#5869); re-measure with `packages/ios-benchmark` before moving it.

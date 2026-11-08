@@ -4,7 +4,7 @@ import createTheme from '../constructors/createTheme.native';
 import css from '../constructors/css';
 import withTheme from '../hoc/withTheme';
 import { astToNativeStyles, toNativeStyles } from '../models/compileNative';
-import _NativeStyle from '../models/NativeStyle';
+import _NativeStyle, { substituteThemeSlots } from '../models/NativeStyle';
 import _StyledNativeComponent from '../models/StyledNativeComponent';
 import ThemeProvider, { ThemeConsumer, ThemeContext, useTheme } from '../models/ThemeProvider';
 import { evaluateForFastPath, FastPathFragment, fillAst } from '../parser/compile';
@@ -128,6 +128,8 @@ const toStyleSheet = (rules: RuleSet<object>) => {
     const fragments: (FastPathFragment | null)[] = [];
     const filled = evaluateForFastPath(source, {}, undefined, undefined, fragments);
     if (filled !== null) {
+      // No provider outside a render: theme values read as their defaults.
+      substituteThemeSlots(filled, source.kinds, fragments, undefined);
       return astToNativeStyles(fillAst(source.ast, filled, fragments), reactNative.StyleSheet).base;
     }
   }

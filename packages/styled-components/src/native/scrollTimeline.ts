@@ -9,9 +9,9 @@ import type {
 } from './animation/types';
 import { resolveRangeBoundary, type NamedRangeRect } from './animation/range';
 import { useComposedRef, type ElementProps } from './composeRef';
+import { NativeStyleContext, type NativeStyleContextValue } from './NativeStyleContext';
 import { warnOnce } from './transform/dev';
 import { getRN } from './responsive';
-import { isWebPlatform } from './polyfills';
 import { isDebugEnabled } from './animation/debug';
 
 /**
@@ -24,8 +24,8 @@ function dbg(tag: string, ...args: unknown[]): void {
 }
 
 /**
- * Imperative surface of a scroll host. ScrollView, FlatList, and
- * rn-web expose different subsets, so every member is optional.
+ * Imperative surface of a scroll host. ScrollView and FlatList
+ * expose different subsets, so every member is optional.
  */
 export interface ScrollHost {
   getNativeScrollRef?: () => unknown;
@@ -205,7 +205,7 @@ export function createScrollTimelineEntry(axis: TimelineAxis): ScrollTimelineEnt
   if (!Animated) return null;
   const offsetX = new Animated.Value(0);
   const offsetY = new Animated.Value(0);
-  const nativeDriven = !isWebPlatform() && typeof Animated.attachNativeEvent === 'function';
+  const nativeDriven = typeof Animated.attachNativeEvent === 'function';
   return {
     offsetX,
     offsetY,
@@ -692,24 +692,19 @@ export function useScrollTimelinePublisher(
   };
   if (augmented.scrollEventThrottle === undefined) augmented.scrollEventThrottle = 16;
 
-  // The browser implements position: sticky itself on rn-web (the
-  // declaration passes through at compile time), so the overlay host
-  // tree-shakes out of that bundle.
   const wrap = (inner: React.ReactElement): React.ReactElement =>
     React.createElement(
       ScrollTimelineContext.Provider,
       { value: contextValue },
-      __NATIVE_WEB__
-        ? inner
-        : React.createElement(
-            React.Fragment,
-            null,
-            inner,
-            React.createElement(StickyOverlayHost, {
-              frame: state.frame,
-              registry: entry.stickyClones,
-            })
-          )
+      React.createElement(
+        React.Fragment,
+        null,
+        inner,
+        React.createElement(StickyOverlayHost, {
+          frame: state.frame,
+          registry: entry.stickyClones,
+        })
+      )
     );
   return [augmented, wrap, entry];
 }
@@ -874,7 +869,7 @@ export function useSnapTargetRegistration(
     elementProps.ref,
     [key]
   );
-  if (target === undefined || __NATIVE_WEB__) return elementProps;
+  if (target === undefined) return elementProps;
   const entry = parent.nearest;
   if (entry === null) return elementProps;
   const registry = entry.snapTargets;
@@ -945,7 +940,7 @@ export function useSnapOffsets(
   // (Paper deep-diffs it per commit; Fabric re-serializes on change).
   const cache = React.useRef<{ key: string; offsets: number[]; stop: boolean } | null>(null);
 
-  if (!active || __NATIVE_WEB__ || entry === null) return elementProps;
+  if (!active || entry === null) return elementProps;
   const registry = entry.snapTargets;
   if (registry.targets.size === 0) return elementProps;
   if (elementProps.snapToOffsets !== undefined || elementProps.snapToInterval !== undefined) {
@@ -1052,8 +1047,14 @@ export interface StickyPosition {
   layer: { opacity: AnimatedInterpolationNode } | null;
   /** Publish the layout-pinned twin of the final rendered element into
    *  the scroller's overlay. `style` is the element's resolved style
-   *  WITHOUT the in-flow fade layer. */
-  register: (type: NativeTarget, props: Dict<unknown>, style: unknown) => void;
+   *  WITHOUT the in-flow fade layer; `value` is the context value the
+   *  element publishes to its own descendants. */
+  register: (
+    type: NativeTarget,
+    props: Dict<unknown>,
+    style: unknown,
+    value: NativeStyleContextValue
+  ) => void;
 }
 
 function noopRegister(): void {}
@@ -1208,29 +1209,38 @@ export function useStickyPosition(active: boolean): StickyPosition {
     return out;
   };
 
-  const register = (type: NativeTarget, props: Dict<unknown>, style: unknown): void => {
+  const register = (
+    type: NativeTarget,
+    props: Dict<unknown>,
+    style: unknown,
+    value: NativeStyleContextValue
+  ): void => {
     if (entry === null || layout === null || fades === null) {
       cloneRef.current = null;
       return;
     }
     const { onLayout: _onLayout, ref: _ref, style: _style, ...rest } = props;
-    cloneRef.current = React.createElement(type, {
-      ...rest,
-      accessibilityElementsHidden: !stuck,
-      importantForAccessibility: stuck ? 'auto' : 'no-hide-descendants',
-      key: 'sc-sticky-' + idRef.current,
-      pointerEvents: stuck ? 'auto' : 'none',
-      style: [
-        style,
-        {
-          left: layout.x,
-          opacity: fades.cloneOpacity,
-          position: 'absolute',
-          top: 0,
-          width: layout.width,
-        },
-      ],
-    });
+    // The overlay host sits outside the element's subtree, so the twin carries the element's own context value to its descendants.
+    cloneRef.current = React.createElement(
+      NativeStyleContext.Provider,
+      { key: 'sc-sticky-' + idRef.current, value },
+      React.createElement(type, {
+        ...rest,
+        accessibilityElementsHidden: !stuck,
+        importantForAccessibility: stuck ? 'auto' : 'no-hide-descendants',
+        pointerEvents: stuck ? 'auto' : 'none',
+        style: [
+          style,
+          {
+            left: layout.x,
+            opacity: fades.cloneOpacity,
+            position: 'absolute',
+            top: 0,
+            width: layout.width,
+          },
+        ],
+      })
+    );
   };
 
   return { compose, layer, register };

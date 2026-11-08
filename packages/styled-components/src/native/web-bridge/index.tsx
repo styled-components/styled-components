@@ -1,12 +1,11 @@
 /**
- * Experimental rn-web bridge. Routes `styled-components/native` consumers
+ * rn-web bridge. Routes `styled-components/native` consumers
  * running under react-native-web through the web pipeline (CSSOM
- * insertRule, hashed className output) instead of building an RN style
- * object that react-native-web then re-tokenizes back into atomic CSS.
+ * insertRule, hashed className output); no RN style object is built for
+ * react-native-web to re-tokenize into atomic CSS.
  *
- * Two pipelines doing the same work was the win to delete; the small
- * trick that makes it possible is styleq's `$$css` escape hatch. We
- * wrap each rn-web primitive in a shim that converts the className
+ * The mechanism is styleq's `$$css` escape hatch. Each rn-web primitive
+ * is wrapped in a shim that converts the className
  * the web `styled` factory hands it into a `{ $$css: true, sc: cls }`
  * style entry; rn-web composes that into its DOM className alongside
  * its own atomic classes.
@@ -84,10 +83,11 @@ import isStyledComponent from '../../utils/isStyledComponent';
 import { warnOnce } from '../../utils/warnOnce';
 import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager';
 import ServerStyleSheet from '../../models/ServerStyleSheet';
-import { camelize } from '../transform';
+import { camelize } from '../camelize';
 import { useEndEventRef } from './endEvents';
 import type { Styled } from '../../constructors/constructWithOptions';
 import type { WebTarget } from '../../types';
+import type { SafeAreaInsetsProviderProps } from '../safeArea';
 
 type BridgedProps = {
   className?: string;
@@ -366,10 +366,9 @@ const baselineCss: Partial<Record<KnownAlias, string>> = {
  * away (Image renders as `<div>` with background-image, Switch as a
  * custom div/span tree), so declarations like `object-fit` or
  * `accent-color` reach the CSSOM but have no visual effect on the
- * rendered output. The lift mirrors what the native engine's
- * `SPECIAL_CASE_PROPS` mechanism did at compile time: pull the value
- * out of the authored CSS, hand it to rn-web as the component prop
- * that the component actually consumes.
+ * rendered output. The lift pulls the value out of the authored CSS and
+ * hands it to rn-web as the component prop that the component actually
+ * consumes.
  *
  * Limitations:
  * - Static values only. Dynamic interpolations (e.g.
@@ -728,14 +727,13 @@ function rewriteBareMathFn(input: string): string {
  * `vertical-align: top|middle|bottom` is inert on rn-web's Text because
  * `Text` renders as a block-laying-out element and `vertical-align`
  * only applies to inline-level content in an inline formatting
- * context. The native engine on rn-web translated these keywords to
- * a flex container with `align-items: <flex-keyword>` so the Text
- * glyphs land at the requested edge of the parent box.
+ * context. The bridge translates these keywords to a flex container
+ * with `align-items: <flex-keyword>` so the Text glyphs land at the
+ * requested edge of the parent box.
  *
  * Two scoped companion rules cover the two interpretations:
  * - non form-control elements get `display: flex; align-items: <flex>`
- *   so their child content lands at the requested edge (matches the
- *   native engine's TextBlock alignment behavior).
+ *   so their child content lands at the requested edge.
  * - `<textarea>` / `<input>` get `align-content: <flex>` so the input
  *   text itself lands at the requested edge inside the control. Block
  *   `align-content` is the standards-compliant way to vertically
@@ -777,16 +775,14 @@ function verticalAlignCompanions(input: string): string[] {
 }
 
 // Patches `mainCompiler.emit` and `.compile` so every emitted CSS rule
-// runs through the var()+unit and bare-math rewrites. Bridge import is
-// the trigger; pure-web consumers that never import the bridge see the
-// unmodified compiler. Documented in
-// feedback_bridge_maincompiler_global_mutation.
+// runs through the var()+unit and bare-math rewrites. Importing the
+// bridge triggers the patch; pure-web consumers that never import the
+// bridge see the unmodified compiler.
 //
 // `:not(...)` chains carry CSS-spec specificity each (`(0,n,0)` for n
 // simple selectors), which beats a sibling `.cls[attr]` rule's (0,1,0)
 // regardless of source order. Wrapping the chain in `:where(...)`
-// zeroes the specificity and restores the native engine's source-order
-// cascade.
+// zeroes the specificity so source order decides the cascade.
 const NOT_CHAIN_AFTER_CLASS_RE = /(^\.[a-zA-Z0-9_-]+)((?::not\([^()]*\))+)/;
 
 function applyBridgeRewritesToRules(rules: string[]): void {
@@ -1062,5 +1058,17 @@ export type {
   StyledObject,
   StyledOptions,
 } from '../../types';
+
+/**
+ * Accepts the native entry's props and renders its children unchanged:
+ * on web `env(safe-area-inset-*)` is the browser's own value, so there is
+ * no inset context to feed.
+ */
+export function SafeAreaInsetsProvider({
+  children,
+}: SafeAreaInsetsProviderProps): React.ReactElement {
+  return React.createElement(React.Fragment, null, children);
+}
+export type { SafeAreaInsets, SafeAreaInsetsProviderProps } from '../safeArea';
 
 export const __testOnly_verticalAlignCompanions = verticalAlignCompanions;

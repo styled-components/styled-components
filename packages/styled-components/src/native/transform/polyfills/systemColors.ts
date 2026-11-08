@@ -1,4 +1,4 @@
-// CSS Color 4 system keywords → RN PlatformColor; rn-web preserves the authored keyword string.
+// CSS Color 4 system keywords → RN PlatformColor.
 
 import { getReactNativePlatformOS } from '../dev';
 
@@ -129,11 +129,6 @@ export function isCssSystemColorKeyword(ident: string): boolean {
 export function getSystemColorPlatformColor(keyword: string): unknown | null {
   const key = keyword.toLowerCase();
   if (!ALL_SYSTEM_COLOR_KEYS.has(key)) return null;
-  // rn-web's color normalizer strips bare system keywords (its allowlist is
-  // @react-native/normalize-colors), but forwards `var()` expressions to the
-  // DOM untouched; the browser then resolves the authored keyword natively
-  // from the fallback slot. `--sc-unset` is intentionally never defined.
-  if (__NATIVE_WEB__) return 'var(--sc-unset, ' + keyword + ')';
   const alias = DEPRECATED_SYSTEM_COLOR_ALIAS[key];
   const canonical = alias ?? key;
   const os = getPlatformOS();

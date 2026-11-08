@@ -20,10 +20,31 @@
  */
 
 import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { resolve } from 'node:path';
 
 const args = process.argv.slice(2);
+const VALID_FLAGS = ['--bundle', '--help', '--libs', '--tag', '-h'];
+
+if (args.includes('--help') || args.includes('-h')) {
+  const header = readFileSync(import.meta.filename, 'utf8').split('*/')[0];
+  console.log(
+    header
+      .replace(/^#!.*\n/, '')
+      .replace(/^\/\*\*\n|^ \* ?|^ \*\/?/gm, '')
+      .trim()
+  );
+  process.exit(0);
+}
+
+for (const arg of args) {
+  if (arg.startsWith('-') && !VALID_FLAGS.includes(arg)) {
+    console.error(`[run-bench] unknown flag ${arg}; valid flags: ${VALID_FLAGS.join(', ')}`);
+    process.exit(2);
+  }
+}
+
 const flag = (name, dflt = '') => {
   const i = args.indexOf(name);
   return i >= 0 ? (args[i + 1] ?? dflt) : dflt;

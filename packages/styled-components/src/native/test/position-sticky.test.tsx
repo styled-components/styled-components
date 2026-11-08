@@ -37,13 +37,12 @@
  *   the declaration passes through and no overlay machinery mounts.
  */
 import React from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 import styled from '../';
 import { resetResponsiveCache } from '../responsive';
 import { resetNativeStyleCache, toNativeStyles } from '../../models/compileNative';
 import { resetWarningsForTest } from '../transform/dev';
-import { describeOnRnWeb } from '../transform/describeOnRnWeb';
 
 const stubStyleSheet = {
   create: <T extends object>(styles: T) => styles,
@@ -152,14 +151,6 @@ describe('position: sticky spec compliance (CSS Position 3 §3.4)', () => {
       const out = toNativeStyles('position: absolute;', stubStyleSheet);
       expect(out.sticky).toBeUndefined();
       expect((out.base as any).position).toBe('absolute');
-    });
-
-    describeOnRnWeb('on rn-web', () => {
-      it('passes position: sticky through for the browser', () => {
-        const out = toNativeStyles('position: sticky;', stubStyleSheet);
-        expect(out.sticky).toBeUndefined();
-        expect((out.base as any).position).toBe('sticky');
-      });
     });
   });
 
@@ -272,6 +263,88 @@ describe('position: sticky spec compliance (CSS Position 3 §3.4)', () => {
       expect(texts.length).toBeGreaterThanOrEqual(2);
     });
 
+    // CSS Cascade 5, "The inherited value of a property on an element is the computed value of
+    // the property on the element's parent element." The clone's descendants inherit from the
+    // sticky element exactly as the in-flow element's do, so both twins read its values.
+    describe('the twin passes the element its own cascade to its descendants', () => {
+      const Reader = styled.View`
+        color: var(--c, blue);
+        font-size: 1em;
+      `;
+      const StickyPress = styled(Pressable).withConfig({ displayName: 'StickyPress' })`
+        position: sticky;
+        height: 40px;
+        &:active {
+          font-size: 30px;
+        }
+      `;
+      const Sized = styled.View.withConfig({ displayName: 'StickySized' })`
+        position: sticky;
+        height: 40px;
+        font-size: 20px;
+      `;
+      const WithVariable = styled.View.withConfig({ displayName: 'StickyVariable' })`
+        position: sticky;
+        height: 40px;
+        --c: red;
+      `;
+
+      /** The readers' host styles: the in-flow reader, then the clone's. */
+      function readerStyles(tree: TestRenderer.ReactTestRenderer) {
+        return tree.root
+          .findAll(n => typeof n.type === 'string' && n.props.testID === 'reader')
+          .map(n => Object.assign({}, ...flatStyle(n)));
+      }
+
+      it('resolves a child em against the sticky element font size', () => {
+        const tree = mount(
+          <Sized testID="subject">
+            <Reader testID="reader" />
+          </Sized>
+        );
+        measure(tree, 'subject', 100);
+
+        expect(readerStyles(tree)).toEqual([
+          { color: 'blue', fontSize: 20 },
+          { color: 'blue', fontSize: 20 },
+        ]);
+      });
+
+      it('resolves a custom property the sticky element declares, without a warning', () => {
+        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        try {
+          const tree = mount(
+            <WithVariable testID="subject">
+              <Reader testID="reader" />
+            </WithVariable>
+          );
+          measure(tree, 'subject', 100);
+
+          expect(readerStyles(tree)).toEqual([
+            { color: 'red', fontSize: 16 },
+            { color: 'red', fontSize: 16 },
+          ]);
+          expect(warnSpy).not.toHaveBeenCalled();
+        } finally {
+          warnSpy.mockRestore();
+        }
+      });
+
+      it('publishes the pressed size of a sticky Pressable to the clone', () => {
+        const tree = mount(
+          <StickyPress testID="subject" testOnly_pressed>
+            <Reader testID="reader" />
+          </StickyPress>
+        );
+        measure(tree, 'subject', 100);
+
+        expect(readerStyles(tree)).toEqual([
+          { color: 'blue', fontSize: 30 },
+          { color: 'blue', fontSize: 30 },
+        ]);
+      });
+    });
+
     it('the clone carries no ref or layout listener', () => {
       const tree = mount(<Header testID="subject" />);
       measure(tree, 'subject', 100);
@@ -366,33 +439,6 @@ describe('position: sticky spec compliance (CSS Position 3 §3.4)', () => {
         )
       );
       expect(tree.root.findByType(ScrollView).props.stickyHeaderIndices).toEqual([1]);
-    });
-
-    describeOnRnWeb('on rn-web', () => {
-      it('mounts no overlay machinery; the browser handles sticking', () => {
-        const WebScroller = styled.ScrollView``;
-        const WebHeader = styled.View`
-          position: sticky;
-        `;
-        const tree = track(
-          TestRenderer.create(
-            <WebScroller testID="scroller">
-              <WebHeader testID="subject" />
-            </WebScroller>
-          )
-        );
-        act(() => {
-          findScroller(tree).props.onLayout(layoutEvent(0, 500, 0, 300));
-          findScroller(tree).props.onScroll(scrollEvent(150));
-        });
-        expect(findOverlayHosts(tree).length).toBe(0);
-        const nodes = tree.root.findAllByProps({ testID: 'subject' });
-        expect(nodes.length).toBeGreaterThan(0);
-        const flat = flatStyle(nodes[nodes.length - 1]);
-        // The raw declaration reaches the browser; no fade layer attaches.
-        expect(flat.some((l: any) => l.position === 'sticky')).toBe(true);
-        expect(flat.some((l: any) => l.opacity !== undefined)).toBe(false);
-      });
     });
   });
 });
