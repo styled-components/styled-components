@@ -224,6 +224,19 @@ export function applyBackgroundBlendModePolyfill(
 }
 
 /**
+ * The props with `backgroundBlendMode` removed from the style, for a target that
+ * cannot hold blend layers. Call after {@link hasBackgroundBlendMode} says it is there.
+ */
+export function withoutBackgroundBlendMode(
+  elementProps: Record<string, unknown>
+): Record<string, unknown> {
+  const flat: Record<string, unknown> = {};
+  flatten(elementProps.style, flat);
+  delete flat.backgroundBlendMode;
+  return { ...elementProps, style: flat };
+}
+
+/**
  * The props of a component with no layer to render. Asking for a layer slot gives
  * the children the position they hold when layers are present.
  */

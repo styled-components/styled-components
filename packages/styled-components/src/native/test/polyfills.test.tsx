@@ -886,6 +886,27 @@ describe('background-blend-mode on a target that clones its only child', () => {
     }
   );
 
+  it.each(touchables)(
+    'drops the blend mode from the style a styled %s receives, leaving the rest',
+    (_name, Touchable) => {
+      const Blended = styled(Touchable as React.ComponentType<any>)`
+        ${blendCss.layers}
+      `;
+      const Plain = styled(Touchable as React.ComponentType<any>)`
+        background-color: red;
+        background-image: linear-gradient(transparent, black);
+      `;
+      const styleOf = (Target: React.ComponentType<any>) =>
+        TestRenderer.create(
+          <Target onPress={() => {}}>
+            <View />
+          </Target>
+        ).root.findByType(Touchable as React.ComponentType<any>).props.style;
+
+      expect(styleOf(Blended)).toEqual(styleOf(Plain));
+    }
+  );
+
   it('stays silent on a styled TouchableHighlight with no blend mode', () => {
     const Target = styled(TouchableHighlight)`
       background-color: red;
@@ -921,6 +942,6 @@ describe('background-blend-mode on a target that clones its only child', () => {
       </Card>
     );
 
-    expect(tree.root.findAllByProps({ testID: 'label' }).length).toBeGreaterThan(0);
+    expect(tree.root.findAllByType(Text)).toHaveLength(1);
   });
 });

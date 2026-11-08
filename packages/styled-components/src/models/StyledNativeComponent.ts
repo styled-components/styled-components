@@ -33,7 +33,11 @@ import {
   subscribeAnchors,
   useAnchorNamePublisher,
 } from '../native/anchorRegistry';
-import { applyStylePolyfills, hasBackgroundBlendMode } from '../native/polyfills';
+import {
+  applyStylePolyfills,
+  hasBackgroundBlendMode,
+  withoutBackgroundBlendMode,
+} from '../native/polyfills';
 import { useSnapSettle } from '../native/snapSettle';
 import { matchSupports } from '../native/supports';
 import {
@@ -210,6 +214,8 @@ interface StyledComponentImplProps extends ExecutionProps {
 /** The props without the parent's slot value, so neither user code nor the target receives it. */
 function withoutParentSlot<Props extends StyledComponentImplProps>(props: Props): Props {
   const { [PARENT_SLOT_PROP]: _slot, ...rest } = props;
+
+  // The slot is optional in `Props`, so a bag without it is a `Props`; TS cannot prove that for a generic `Omit`.
   return rest as Props;
 }
 
@@ -1282,14 +1288,15 @@ function applyPolyfillsWithLayerSlot(
   leaf: string | undefined
 ): Dict<unknown> {
   if (leaf !== undefined && SINGLE_CHILD_CLONING_TARGETS.has(leaf)) {
-    if (__DEV__ && hasBackgroundBlendMode(elementProps.style)) {
+    if (!hasBackgroundBlendMode(elementProps.style)) return elementProps;
+    if (__DEV__) {
       warnOnce(
         'native-background-blend-mode-single-child-target',
         `\`background-blend-mode\` cannot be applied to a styled <${leaf}>, which passes its props to its single child. Put \`background-blend-mode\` on a <View> inside the <${leaf}> instead.`,
         leaf
       );
     }
-    return elementProps;
+    return withoutBackgroundBlendMode(elementProps);
   }
   const layerSlot = cache.blendLayerSlot || compiled.blendLayerSlot === true;
   const out = applyStylePolyfills(elementProps, layerSlot);

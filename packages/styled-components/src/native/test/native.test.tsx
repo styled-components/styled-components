@@ -16,7 +16,7 @@ import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider, css, toStyleSheet } from '../';
 import { resetStyleCache, RN_UNSUPPORTED_VALUES } from '../../models/NativeStyle';
 import hoistNonReactStatics from '../../utils/hoist';
-import { PARENT_SLOT_PROP } from '../ParentContext';
+import { PARENT_SLOT_PROP, type ParentContextValue, useParentContext } from '../ParentContext';
 import { resetWarningsForTest } from '../transform/dev';
 
 // NOTE: These tests are like the ones for Web but a "light-version" of them
@@ -3136,6 +3136,32 @@ describe('a styled child of a target that clones its only child', () => {
 
       expect(mergeStyle(host('card').props.style)).toEqual({});
       expect(mergeStyle(host('next').props.style)).toEqual({ color: 'red', marginTop: 2 });
+    });
+
+    it("gives useParentContext the parent's published value inside a styled child, not the child's position", () => {
+      const seen: ParentContextValue[] = [];
+      const Parent = styled.View``;
+      const Child = styled.View`
+        color: ${() => {
+          seen.push(useParentContext());
+          return 'red';
+        }};
+      `;
+
+      TestRenderer.create(
+        <Parent>
+          <View />
+          <Child />
+        </Parent>
+      );
+
+      expect(seen).toHaveLength(1);
+      expect(seen[0]).toMatchObject({
+        parentId: Parent.styledComponentId,
+        prevSiblingId: null,
+        siblingIndex: -1,
+        totalSiblings: 0,
+      });
     });
   });
 
