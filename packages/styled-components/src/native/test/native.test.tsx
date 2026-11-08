@@ -1,12 +1,14 @@
 import React, { PropsWithChildren } from 'react';
 import {
   Animated,
-  Dimensions,
   Image,
   Pressable,
+  type PressableProps,
+  type StyleProp,
   Switch,
   Text,
   TextInput,
+  type TextStyle,
   TouchableHighlight,
   TouchableNativeFeedback,
   TouchableWithoutFeedback,
@@ -14,12 +16,16 @@ import {
   ViewProps,
 } from 'react-native';
 import TestRenderer from 'react-test-renderer';
-import styled, { ThemeProvider, css, toStyleSheet, useNativeStyleContext } from '../';
+import styled, { ThemeProvider, css, toStyleSheet } from '../';
 import { resetStyleCache, RN_UNSUPPORTED_VALUES } from '../../models/NativeStyle';
+import {
+  createCascadeProbe,
+  type PublishedValues,
+  sizeByState,
+  watchWindowChange,
+} from '../../test/nativeHarness';
 import hoistNonReactStatics from '../../utils/hoist';
-import type { NativeCascadeValues } from '../NativeStyleContext';
 import { PARENT_SLOT_PROP, type ParentContextValue, useParentContext } from '../ParentContext';
-import { resetResponsiveCache } from '../responsive';
 import { resetWarningsForTest } from '../transform/dev';
 
 // NOTE: These tests are like the ones for Web but a "light-version" of them
@@ -42,13 +48,19 @@ function functionStyleOf(element: React.ReactElement): (state: { pressed?: boole
   return holders[holders.length - 1].props.style;
 }
 
-type PublishedValues = Pick<NativeCascadeValues, 'direction' | 'fontSize' | 'lineHeight'>;
-
 /** An ancestor that declares 12px / 18px, so every expected value is relative to a size it set. */
 const CascadeAncestor = styled.View`
   font-size: 12px;
   line-height: 18px;
 `;
+
+/**
+ * A custom component that forwards its props to a host, as one wrapping a Pressable does:
+ * its `style` may be a state function, which the library resolves for it.
+ */
+const StateStyleView = (props: Omit<ViewProps, 'style'> & { style?: PressableProps['style'] }) => (
+  <View {...props} style={undefined} />
+);
 
 /** A function interpolation that adds no CSS and sends a component down the dynamic render path. */
 const forceDynamic = () => '';
@@ -59,24 +71,14 @@ const forceDynamic = () => '';
  * returned last, so the assertion goes through the public hook.
  */
 function mountCascadeProbe(subject: (probe: React.ReactElement) => React.ReactElement) {
-  const log: PublishedValues[] = [];
-
-  function Probe() {
-    const { cascade } = useNativeStyleContext();
-    log.push({
-      direction: cascade.direction,
-      fontSize: cascade.fontSize,
-      lineHeight: cascade.lineHeight,
-    });
-    return null;
-  }
+  const { log, Probe, read } = createCascadeProbe();
 
   const render = (next: typeof subject) => <CascadeAncestor>{next(<Probe />)}</CascadeAncestor>;
   const tree = TestRenderer.create(render(subject));
 
   return {
     log,
-    read: () => log[log.length - 1],
+    read,
     rerender: (next: typeof subject) => TestRenderer.act(() => tree.update(render(next))),
     unmount: () => TestRenderer.act(() => tree.unmount()),
   };
@@ -1650,59 +1652,72 @@ describe('native', () => {
 
     // CSS Cascade 5, "The cascaded value represents the result of the cascade: it is the
     // declared value that wins the cascade (is sorted first in the output of the cascade)."
-    // A static component publishes the winner among its own CSS and the caller's `style`.
-    describe('static component publishes its cascade', () => {
-      const Plain = styled.View`
-        color: red;
-      `;
-      const Sized = styled.View`
-        font-size: 30px;
-      `;
-      const Contained = styled.View`
-        container-type: inline-size;
-      `;
+    // A component publishes the winner among its own CSS and the caller's `style`, whether it
+    // renders on the static path or, with a function interpolation, the dynamic one.
+    describe('a component publishes its cascade', () => {
+      const staticSubjects = {
+        Contained: styled.View`
+          container-type: inline-size;
+        `,
+        Plain: styled.View`
+          color: red;
+        `,
+        Sized: styled.View`
+          font-size: 30px;
+        `,
+      };
+      const dynamicSubjects: typeof staticSubjects = {
+        Contained: styled.View`
+          container-type: inline-size;
+          ${forceDynamic}
+        `,
+        Plain: styled.View`
+          color: red;
+          ${forceDynamic}
+        `,
+        Sized: styled.View`
+          font-size: 30px;
+          ${forceDynamic}
+        `,
+      };
+      const TWENTY: PublishedValues = { direction: 'ltr', fontSize: 20, lineHeight: 18 };
 
-      it('takes the static path for every subject below', () => {
-        expect([Plain, Sized, Contained].map(c => c.nativeStyle.staticEligible)).toEqual([
-          true,
-          true,
-          true,
-        ]);
-      });
+      describe.each<[string, typeof staticSubjects, boolean]>([
+        ['static', staticSubjects, true],
+        ['dynamic', dynamicSubjects, false],
+      ])('on the %s path', (_path, subjects, staticEligible) => {
+        it.each<
+          [string, keyof typeof staticSubjects, StyleProp<TextStyle> | undefined, PublishedValues]
+        >([
+          [
+            'its own font-size',
+            'Sized',
+            undefined,
+            { direction: 'ltr', fontSize: 30, lineHeight: 18 },
+          ],
+          ['a caller style object', 'Plain', { fontSize: 20 }, TWENTY],
+          [
+            'the last of a caller style array',
+            'Plain',
+            [{ fontSize: 10 }, { fontSize: 20 }],
+            TWENTY,
+          ],
+          ['a caller style over its CSS', 'Sized', { fontSize: 20 }, TWENTY],
+          [
+            'the ancestor font-size when the winning layer holds undefined',
+            'Sized',
+            { fontSize: undefined },
+            PUBLISHED_BY_ANCESTOR,
+          ],
+          ['a caller font-size on a container', 'Contained', { fontSize: 20 }, TWENTY],
+        ])('publishes %s', (_name, subject, style, expected) => {
+          const Subject = subjects[subject];
 
-      it.each<[string, (probe: React.ReactElement) => React.ReactElement, PublishedValues]>([
-        [
-          'its own font-size',
-          probe => <Sized>{probe}</Sized>,
-          { direction: 'ltr', fontSize: 30, lineHeight: 18 },
-        ],
-        [
-          'a caller style object',
-          probe => <Plain style={{ fontSize: 20 }}>{probe}</Plain>,
-          { direction: 'ltr', fontSize: 20, lineHeight: 18 },
-        ],
-        [
-          'the last of a caller style array',
-          probe => <Plain style={[{ fontSize: 10 }, { fontSize: 20 }]}>{probe}</Plain>,
-          { direction: 'ltr', fontSize: 20, lineHeight: 18 },
-        ],
-        [
-          'a caller style over its CSS',
-          probe => <Sized style={{ fontSize: 20 }}>{probe}</Sized>,
-          { direction: 'ltr', fontSize: 20, lineHeight: 18 },
-        ],
-        [
-          'the ancestor font-size when the winning layer holds undefined',
-          probe => <Sized style={{ fontSize: undefined }}>{probe}</Sized>,
-          PUBLISHED_BY_ANCESTOR,
-        ],
-        [
-          'a caller font-size on a container',
-          probe => <Contained style={{ fontSize: 20 }}>{probe}</Contained>,
-          { direction: 'ltr', fontSize: 20, lineHeight: 18 },
-        ],
-      ])('publishes %s', (_name, subject, expected) => {
-        expect(mountCascadeProbe(subject).read()).toEqual(expected);
+          expect(Subject.nativeStyle.staticEligible).toBe(staticEligible);
+          expect(
+            mountCascadeProbe(probe => <Subject style={style}>{probe}</Subject>).read()
+          ).toEqual(expected);
+        });
       });
     });
   });
@@ -1838,35 +1853,23 @@ describe('native', () => {
         TWENTY,
       ],
       [
-        'the ancestor font-size when the winning layer holds undefined',
-        probe => {
-          const S = styled.View`
-            font-size: 20px;
-            ${forceDynamic}
-          `;
-          return <S style={{ fontSize: undefined }}>{probe}</S>;
-        },
-        PUBLISHED_BY_ANCESTOR,
-      ],
-      [
         'the CSS font-size under an animated caller font-size',
         probe => {
-          const S = styled.View`
+          const S = styled(Animated.Text)`
             font-size: 20px;
             ${forceDynamic}
           `;
-          return <S style={{ fontSize: new Animated.Value(30) as any }}>{probe}</S>;
+          return <S style={{ fontSize: new Animated.Value(30) }}>{probe}</S>;
         },
         TWENTY,
       ],
       [
         'the resting font-size of a custom component with a function style',
         probe => {
-          const Custom = (props: any) => <View {...props} />;
-          const S = styled(Custom)`
+          const S = styled(StateStyleView)`
             ${forceDynamic}
           `;
-          return <S style={(state: any) => ({ fontSize: state.pressed ? 30 : 20 })}>{probe}</S>;
+          return <S style={sizeByState}>{probe}</S>;
         },
         TWENTY,
       ],
@@ -1876,17 +1879,6 @@ describe('native', () => {
 
     // Guards: each passes before the change, and keeps passing.
     it.each<[string, (probe: React.ReactElement) => React.ReactElement, PublishedValues]>([
-      [
-        'a base font-size',
-        probe => {
-          const S = styled.View`
-            font-size: 20px;
-            ${forceDynamic}
-          `;
-          return <S>{probe}</S>;
-        },
-        TWENTY,
-      ],
       [
         'a font-size inside a matching @media',
         probe => {
@@ -1918,43 +1910,12 @@ describe('native', () => {
         TWENTY,
       ],
       [
-        'a caller style object',
-        probe => {
-          const S = styled.View`
-            ${forceDynamic}
-          `;
-          return <S style={{ fontSize: 20 }}>{probe}</S>;
-        },
-        TWENTY,
-      ],
-      [
-        'the last of a caller style array',
-        probe => {
-          const S = styled.View`
-            ${forceDynamic}
-          `;
-          return <S style={[{ fontSize: 10 }, { fontSize: 20 }]}>{probe}</S>;
-        },
-        TWENTY,
-      ],
-      [
         'a caller style array nested with null and false entries',
         probe => {
           const S = styled.View`
             ${forceDynamic}
           `;
           return <S style={[null, [false, { fontSize: 20 }], null]}>{probe}</S>;
-        },
-        TWENTY,
-      ],
-      [
-        'a caller style over its CSS',
-        probe => {
-          const S = styled.View`
-            font-size: 30px;
-            ${forceDynamic}
-          `;
-          return <S style={{ fontSize: 20 }}>{probe}</S>;
         },
         TWENTY,
       ],
@@ -2019,7 +1980,7 @@ describe('native', () => {
         ${forceDynamic}
       `;
       const ByAttrsStyle = styled(Pressable).attrs({
-        style: (state: any) => ({ fontSize: state.pressed ? 30 : 20 }),
+        style: sizeByState,
       })``;
       const ByActive = styled(Pressable)`
         &:active {
@@ -2035,16 +1996,13 @@ describe('native', () => {
       const StaticByFunctionStyle = styled(Pressable)`
         color: red;
       `;
-      const sizeByState = (state: any) => ({ fontSize: state.pressed ? 30 : 20 });
       const PRESSED: PublishedValues = { direction: 'ltr', fontSize: 30, lineHeight: 18 };
-
-      it('is static for the static row below', () => {
-        expect(StaticByFunctionStyle.nativeStyle.staticEligible).toBe(true);
-      });
 
       it.each<
         [
           string,
+          { nativeStyle: { staticEligible: boolean } },
+          boolean,
           (probe: React.ReactElement, pressed: boolean) => React.ReactElement,
           PublishedValues,
           PublishedValues,
@@ -2052,6 +2010,8 @@ describe('native', () => {
       >([
         [
           'a function style',
+          ByFunctionStyle,
+          false,
           (probe, pressed) => (
             <ByFunctionStyle testOnly_pressed={pressed} style={sizeByState}>
               {probe}
@@ -2062,18 +2022,24 @@ describe('native', () => {
         ],
         [
           'an attrs style function',
+          ByAttrsStyle,
+          true,
           (probe, pressed) => <ByAttrsStyle testOnly_pressed={pressed}>{probe}</ByAttrsStyle>,
           TWENTY,
           PRESSED,
         ],
         [
           'an :active font-size',
+          ByActive,
+          false,
           (probe, pressed) => <ByActive testOnly_pressed={pressed}>{probe}</ByActive>,
           PUBLISHED_BY_ANCESTOR,
           PRESSED,
         ],
         [
           'a base font-size with an :active opacity',
+          ByBaseAndActiveOpacity,
+          false,
           (probe, pressed) => (
             <ByBaseAndActiveOpacity testOnly_pressed={pressed}>{probe}</ByBaseAndActiveOpacity>
           ),
@@ -2082,6 +2048,8 @@ describe('native', () => {
         ],
         [
           'a function style on a static component',
+          StaticByFunctionStyle,
+          true,
           (probe, pressed) => (
             <StaticByFunctionStyle testOnly_pressed={pressed} style={sizeByState}>
               {probe}
@@ -2090,10 +2058,14 @@ describe('native', () => {
           TWENTY,
           PRESSED,
         ],
-      ])('publishes %s at rest and while pressed', (_name, subject, atRest, whilePressed) => {
-        expect(mountCascadeProbe(probe => subject(probe, false)).read()).toEqual(atRest);
-        expect(mountCascadeProbe(probe => subject(probe, true)).read()).toEqual(whilePressed);
-      });
+      ])(
+        'publishes %s at rest and while pressed',
+        (_name, Subject, staticEligible, subject, atRest, whilePressed) => {
+          expect(Subject.nativeStyle.staticEligible).toBe(staticEligible);
+          expect(mountCascadeProbe(probe => subject(probe, false)).read()).toEqual(atRest);
+          expect(mountCascadeProbe(probe => subject(probe, true)).read()).toEqual(whilePressed);
+        }
+      );
 
       it('publishes the pressed size to a child of a function children Pressable', () => {
         const probed = mountCascadeProbe(probe => (
@@ -3459,17 +3431,7 @@ describe('tree shape stability', () => {
           font-size: 20px;
         }
       `;
-      // The subscription is made once per cache; reset it so this mount makes it under the spy.
-      resetResponsiveCache();
-      const changeSpy = jest.spyOn(Dimensions, 'addEventListener');
-      const resize = (width: number) =>
-        TestRenderer.act(() => {
-          const listener = changeSpy.mock.calls.find(c => c[0] === 'change')?.[1];
-          listener!({
-            window: { width, height: 800, scale: 2, fontScale: 1 },
-            screen: { width, height: 800, scale: 2, fontScale: 1 },
-          } as any);
-        });
+      const { emitWindowChange, restore } = watchWindowChange();
 
       try {
         TestRenderer.create(
@@ -3477,14 +3439,13 @@ describe('tree shape stability', () => {
             <Leaf />
           </Form>
         );
-        resize(1200);
-        resize(750);
+        emitWindowChange(1200);
+        emitWindowChange(750);
 
         expect(counter.mounts).toBe(1);
         expect(errorSpy).not.toHaveBeenCalled();
       } finally {
-        changeSpy.mockRestore();
-        resetResponsiveCache();
+        restore();
       }
     });
 
@@ -3538,19 +3499,20 @@ describe('tree shape stability', () => {
           font-size: 20px;
         }
       `;
-      const byState = (state: { pressed?: boolean }) => ({ fontSize: state.pressed ? 30 : 20 });
 
       it('keeps a child mounted while the style is an object, then a function, then an object', () => {
         const { counter, Leaf } = mountCounter();
-        const render = (style: unknown) => (
-          <Press style={style as object}>
+        const render = (style: PressableProps['style']) => (
+          <Press style={style}>
             <Leaf />
           </Press>
         );
 
-        const tree = TestRenderer.create(render({ fontSize: 20 }));
-        tree.update(render(byState));
-        tree.update(render({ fontSize: 20 }));
+        const sized = (): TextStyle => ({ fontSize: 20 });
+
+        const tree = TestRenderer.create(render(sized()));
+        tree.update(render(sizeByState));
+        tree.update(render(sized()));
 
         expect(counter.mounts).toBe(1);
         expect(errorSpy).not.toHaveBeenCalled();
@@ -3580,7 +3542,7 @@ describe('tree shape stability', () => {
         `;
 
         const tree = TestRenderer.create(
-          <Press style={byState}>
+          <Press style={sizeByState}>
             <Row />
             <Row />
           </Press>

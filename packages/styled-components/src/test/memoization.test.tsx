@@ -12,6 +12,7 @@
 import { act, fireEvent, render } from '@testing-library/react';
 import React, { useState } from 'react';
 import { LIMIT as TOO_MANY_CLASSES_LIMIT } from '../utils/createWarnTooManyClasses';
+import { withHookRecorder } from './hookRecorder';
 import { getCSS, resetStyled } from './utils';
 
 let styled: ReturnType<typeof resetStyled>;
@@ -397,34 +398,6 @@ describe('memoization correctness', () => {
    * `React.useX`; a named `import { useX } from 'react'` is invisible here.
    */
   it('runs a hook called inside an interpolation on every render pass (#5788)', () => {
-    // React's module namespace, typed as what it is here: a bag of hook
-    // functions keyed by name. Spelling it once keeps the casts out of the body.
-    const reactHooks = React as unknown as Record<string, (...args: unknown[]) => unknown>;
-    const hookNames = Object.keys(React).filter(
-      key => key.startsWith('use') && typeof reactHooks[key] === 'function'
-    );
-    // React still exports hooks under `use*` names, so there is something to
-    // wrap. That the wrapping actually intercepts the component's calls is a
-    // separate question, answered by the non-empty segment assertion below.
-    expect(hookNames).toContain('useRef');
-
-    let recording: string[] | null = null;
-    // Restored in `finally`, which the install loop is inside: a throw partway
-    // through installation must not leave React half-patched for later tests.
-    const originals = new Map<string, (...args: unknown[]) => unknown>();
-
-    function record<T>(renderFn: () => T): [T, string[]] {
-      const calls: string[] = [];
-      recording = calls;
-      try {
-        return [renderFn(), calls];
-      } finally {
-        // Cleared even when the render throws, so a later render cannot append
-        // to a dead array and turn one failure into a confusing second one.
-        recording = null;
-      }
-    }
-
     /**
      * The styled component renders before `StyleInjector`, so everything up to
      * the injector's first hook belongs to the component, across both StrictMode
@@ -446,15 +419,12 @@ describe('memoization correctness', () => {
       return [own.slice(0, own.length / 2), own.slice(own.length / 2)];
     }
 
-    try {
-      for (const name of hookNames) {
-        const original = reactHooks[name];
-        originals.set(name, original);
-        reactHooks[name] = (...args) => {
-          if (recording) recording.push(name);
-          return original(...args);
-        };
-      }
+    withHookRecorder(({ hookNames, record }) => {
+      // React still exports hooks under `use*` names, so there is something to
+      // wrap. That the wrapping actually intercepts the component's calls is a
+      // separate question, answered by the non-empty segment assertion in
+      // `splitStrictModePasses`.
+      expect(hookNames).toContain('useRef');
 
       const ColorContext = React.createContext('red');
       const Comp = styled.div`
@@ -488,9 +458,7 @@ describe('memoization correctness', () => {
       expect(updateMiss).toEqual(mountMiss);
 
       unmount();
-    } finally {
-      for (const [name, original] of originals) reactHooks[name] = original;
-    }
+    });
   });
 
   /**

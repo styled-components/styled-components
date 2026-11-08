@@ -225,11 +225,27 @@ describe('styled parent re-render with children', () => {
     TestRenderer.act(() => tree.unmount());
   }
 
+  /** A prop that differs between updates, so the parent's body runs each time. */
+  const tag = (i: number) => ({ testID: i % 2 === 0 ? 'b' : 'a' });
+
+  const makeItem = () => styled.View`
+    margin: 1px;
+  `;
+
+  /** `count` keyed elements of `Item`; `keyPrefix` keeps two lists in one tree from sharing keys. */
+  function itemsOf(Item: any, count: number, keyPrefix = '') {
+    return Array.from({ length: count }, (_, i) =>
+      React.createElement(Item, { key: `${keyPrefix}${i}` })
+    );
+  }
+
+  const twentyItems = () => itemsOf(makeItem(), 20);
+
   function benchRerender(name: string, iterations: number, build: () => any) {
     const Parent = styled.View`
       padding: 1px;
     `;
-    benchUpdate(name, iterations, Parent, build(), i => ({ testID: i % 2 === 0 ? 'b' : 'a' }));
+    benchUpdate(name, iterations, Parent, build(), tag);
   }
 
   test('5 plain children', () => {
@@ -239,54 +255,42 @@ describe('styled parent re-render with children', () => {
   });
 
   test('5 styled children', () => {
-    const Item = styled.View`
-      margin: 1px;
-    `;
-    benchRerender('5 styled children', 20_000, () =>
-      Array.from({ length: 5 }, (_, i) => React.createElement(Item, { key: i }))
-    );
+    benchRerender('5 styled children', 20_000, () => itemsOf(makeItem(), 5));
   });
 
   test('3 + 2 styled children and a nested map of 20', () => {
-    const Item = styled.View`
-      margin: 1px;
-    `;
+    const Item = makeItem();
     benchRerender('3 + 2 styled children and a nested map of 20', 5_000, () => [
       React.createElement(Item, { key: 'a' }),
       React.createElement(Item, { key: 'b' }),
       React.createElement(Item, { key: 'c' }),
       [React.createElement(Item, { key: 'd' }), React.createElement(Item, { key: 'e' })],
-      Array.from({ length: 20 }, (_, i) => React.createElement(Item, { key: `m${i}` })),
+      itemsOf(Item, 20, 'm'),
     ]);
   });
 
   describe('where a font size, line height or direction can come from', () => {
-    function twentyItems() {
-      const Item = styled.View`
-        margin: 1px;
-      `;
-      return Array.from({ length: 20 }, (_, i) => React.createElement(Item, { key: i }));
-    }
-
-    const tag = (i: number) => ({ testID: i % 2 === 0 ? 'b' : 'a' });
+    const makeDynamicParent = () => styled.View`
+      padding: ${(p: { $pad: number }) => p.$pad}px;
+    `;
 
     test('dynamic parent, no cascade source, 20 reused styled children', () => {
-      const Parent = styled.View`
-        padding: ${(p: { $pad: number }) => p.$pad}px;
-      `;
-      benchUpdate('dynamic parent, no source, 20 children', 20_000, Parent, twentyItems(), i => ({
-        $pad: i % 2,
-      }));
+      benchUpdate(
+        'dynamic parent, no source, 20 children',
+        20_000,
+        makeDynamicParent(),
+        twentyItems(),
+        i => ({
+          $pad: i % 2,
+        })
+      );
     });
 
     test('dynamic parent with a fresh style object that sets no font size', () => {
-      const Parent = styled.View`
-        padding: ${(p: { $pad: number }) => p.$pad}px;
-      `;
       benchUpdate(
         'dynamic parent, fresh {opacity}, 20 children',
         20_000,
-        Parent,
+        makeDynamicParent(),
         twentyItems(),
         i => ({
           $pad: i % 2,

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Appearance, Dimensions, Text, View } from 'react-native';
+import { Appearance, Text, View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
+import { watchWindowChange } from '../../test/nativeHarness';
 import styled, { NativeStyleContext } from '../';
 import { DEFAULT_CASCADE } from '../NativeStyleContext';
 import { resetResponsiveCache } from '../responsive';
@@ -301,7 +302,7 @@ describe('modern CSS on React Native', () => {
     it('re-renders when Dimensions.change fires', () => {
       // Capture the listener at subscribe time;must spy BEFORE mount, since
       // useMediaEnv's useEffect wires it up during the initial commit.
-      const addEventListenerSpy = jest.spyOn(Dimensions, 'addEventListener');
+      const { emitWindowChange, restore } = watchWindowChange();
       try {
         const Comp = styled.View`
           color: red;
@@ -313,15 +314,7 @@ describe('modern CSS on React Native', () => {
         const tree = TestRenderer.create(<Comp />);
         expect(tree.root.findByType(View).props.style).toEqual({ color: 'red' });
 
-        const listener = addEventListenerSpy.mock.calls.find(c => c[0] === 'change')?.[1];
-        expect(listener).toBeDefined();
-
-        TestRenderer.act(() => {
-          listener!({
-            window: { width: 1200, height: 800, scale: 2, fontScale: 1 },
-            screen: { width: 1200, height: 800, scale: 2, fontScale: 1 },
-          } as any);
-        });
+        emitWindowChange(1200);
 
         expect(tree.root.findByType(View).props.style).toMatchInlineSnapshot(`
           [
@@ -334,7 +327,7 @@ describe('modern CSS on React Native', () => {
           ]
         `);
       } finally {
-        addEventListenerSpy.mockRestore();
+        restore();
       }
     });
 

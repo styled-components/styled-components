@@ -7,13 +7,13 @@
  *
  * Run: pnpm --filter styled-components test:native -- memo-tree
  */
-// The default import is the object the library calls `React.useX` on; a namespace import is a private copy under Babel's interop, so patching it would record nothing.
 import React from 'react';
-import { Dimensions, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
-import styled, { NativeStyleContext, useNativeStyleContext } from '../';
+import { withHookRecorder } from '../../test/hookRecorder';
+import { createCascadeProbe, sizeByState, watchWindowChange } from '../../test/nativeHarness';
+import styled, { NativeStyleContext } from '../';
 import { DEFAULT_NATIVE_STYLE } from '../NativeStyleContext';
-import { resetResponsiveCache } from '../responsive';
 
 // Per-test render counters. Reset before each `it`.
 const counts: Record<string, number> = {};
@@ -321,26 +321,14 @@ describe('memo behavior with deep trees', () => {
   });
 
   describe('published cascade identity', () => {
-    type Published = { direction: string; fontSize: number; lineHeight: number };
-
-    const published: Published[] = [];
+    const { log: published, Probe } = createCascadeProbe();
 
     beforeEach(() => {
       published.length = 0;
     });
 
-    function Probe() {
-      const { cascade } = useNativeStyleContext();
-      published.push({
-        direction: cascade.direction,
-        fontSize: cascade.fontSize,
-        lineHeight: cascade.lineHeight,
-      });
-      return null;
-    }
-
     /** Both elements are built once and reused, so only a context change can re-render them. */
-    const kids = (
+    const probedKids = (
       <>
         <StyledLeaf $name="leaf" />
         <Probe />
@@ -357,11 +345,11 @@ describe('memo behavior with deep trees', () => {
     ) {
       let renderer!: TestRenderer.ReactTestRenderer;
       TestRenderer.act(() => {
-        renderer = TestRenderer.create(<Parent testID="0">{kids}</Parent>);
+        renderer = TestRenderer.create(<Parent testID="0">{probedKids}</Parent>);
       });
       for (const key of Object.keys(counts)) delete counts[key];
-      TestRenderer.act(() => renderer.update(<Parent testID="1">{kids}</Parent>));
-      TestRenderer.act(() => renderer.update(<Parent testID="2">{kids}</Parent>));
+      TestRenderer.act(() => renderer.update(<Parent testID="1">{probedKids}</Parent>));
+      TestRenderer.act(() => renderer.update(<Parent testID="2">{probedKids}</Parent>));
     }
 
     const Sized = styled(View)`
@@ -422,7 +410,7 @@ describe('memo behavior with deep trees', () => {
         font-size: ${p => p.$size}px;
       `;
       let renderer!: TestRenderer.ReactTestRenderer;
-      const render = (size: number) => <Resizable $size={size}>{kids}</Resizable>;
+      const render = (size: number) => <Resizable $size={size}>{probedKids}</Resizable>;
       TestRenderer.act(() => {
         renderer = TestRenderer.create(render(20));
       });
@@ -448,41 +436,18 @@ describe('memo behavior with deep trees', () => {
   describe('hook sequence across cascade sources', () => {
     type Step = (render: () => void) => void;
 
-    const reactHooks = React as unknown as Record<string, (...args: unknown[]) => unknown>;
-
     /** Runs `scenario`, whose first step mounts and whose later steps update; returns the hooks each step called. */
     function recordHookSequences(scenario: (step: Step) => void): string[][] {
-      const hookNames = Object.keys(reactHooks).filter(
-        key => key.startsWith('use') && typeof reactHooks[key] === 'function'
-      );
-      const originals = new Map<string, (...args: unknown[]) => unknown>();
-      const sequences: string[][] = [];
-      let recording: string[] | null = null;
-
-      try {
-        for (const name of hookNames) {
-          const original = reactHooks[name];
-          originals.set(name, original);
-          reactHooks[name] = (...args) => {
-            if (recording !== null) recording.push(name);
-            return original(...args);
-          };
-        }
+      return withHookRecorder(({ record }) => {
+        const sequences: string[][] = [];
 
         scenario(render => {
-          const calls: string[] = [];
-          recording = calls;
-          try {
-            TestRenderer.act(render);
-          } finally {
-            recording = null;
-          }
+          const [, calls] = record(() => TestRenderer.act(render));
           sequences.push(calls);
         });
-      } finally {
-        for (const [name, original] of originals) reactHooks[name] = original;
-      }
-      return sequences;
+
+        return sequences;
+      });
     }
 
     const Subject = styled(View)<{ $on?: boolean }>`
@@ -504,8 +469,7 @@ describe('memo behavior with deep trees', () => {
         font-size: 20px;
       }
     `;
-    const kids = <Text>x</Text>;
-    const sizeByState = (state: { pressed?: boolean }) => ({ fontSize: state.pressed ? 30 : 20 });
+    const hostKids = <Text>x</Text>;
 
     const scenarios: Array<[string, (step: Step) => void]> = [
       [
@@ -513,35 +477,23 @@ describe('memo behavior with deep trees', () => {
         step => {
           let tree!: TestRenderer.ReactTestRenderer;
           step(() => {
-            tree = TestRenderer.create(<Subject>{kids}</Subject>);
+            tree = TestRenderer.create(<Subject>{hostKids}</Subject>);
           });
-          step(() => tree.update(<Subject style={{ fontSize: 20 }}>{kids}</Subject>));
-          step(() => tree.update(<Subject>{kids}</Subject>));
+          step(() => tree.update(<Subject style={{ fontSize: 20 }}>{hostKids}</Subject>));
+          step(() => tree.update(<Subject>{hostKids}</Subject>));
         },
       ],
       [
         'an @media font size across a window change',
         step => {
-          resetResponsiveCache();
-          const changeSpy = jest.spyOn(Dimensions, 'addEventListener');
+          const { emitWindowChange, restore } = watchWindowChange();
           try {
-            let tree!: TestRenderer.ReactTestRenderer;
             step(() => {
-              tree = TestRenderer.create(<SizedByMedia>{kids}</SizedByMedia>);
+              TestRenderer.create(<SizedByMedia>{hostKids}</SizedByMedia>);
             });
-            const listener = changeSpy.mock.calls.find(c => c[0] === 'change')?.[1];
-            for (const width of [1200, 750]) {
-              step(() =>
-                listener?.({
-                  window: { width, height: 800, scale: 2, fontScale: 1 },
-                  screen: { width, height: 800, scale: 2, fontScale: 1 },
-                })
-              );
-            }
-            expect(tree).toBeDefined();
+            for (const width of [1200, 750]) step(() => emitWindowChange(width));
           } finally {
-            changeSpy.mockRestore();
-            resetResponsiveCache();
+            restore();
           }
         },
       ],
@@ -559,7 +511,7 @@ describe('memo behavior with deep trees', () => {
                 },
               }}
             >
-              <SizedByVar>{kids}</SizedByVar>
+              <SizedByVar>{hostKids}</SizedByVar>
             </NativeStyleContext.Provider>
           );
           step(() => {
@@ -574,10 +526,10 @@ describe('memo behavior with deep trees', () => {
         step => {
           let tree!: TestRenderer.ReactTestRenderer;
           step(() => {
-            tree = TestRenderer.create(<SizedByAttrs>{kids}</SizedByAttrs>);
+            tree = TestRenderer.create(<SizedByAttrs>{hostKids}</SizedByAttrs>);
           });
-          step(() => tree.update(<SizedByAttrs $on>{kids}</SizedByAttrs>));
-          step(() => tree.update(<SizedByAttrs>{kids}</SizedByAttrs>));
+          step(() => tree.update(<SizedByAttrs $on>{hostKids}</SizedByAttrs>));
+          step(() => tree.update(<SizedByAttrs>{hostKids}</SizedByAttrs>));
         },
       ],
       [
@@ -586,11 +538,13 @@ describe('memo behavior with deep trees', () => {
           let tree!: TestRenderer.ReactTestRenderer;
           step(() => {
             tree = TestRenderer.create(
-              <PressByActive testOnly_pressed={false}>{kids}</PressByActive>
+              <PressByActive testOnly_pressed={false}>{hostKids}</PressByActive>
             );
           });
-          step(() => tree.update(<PressByActive testOnly_pressed>{kids}</PressByActive>));
-          step(() => tree.update(<PressByActive testOnly_pressed={false}>{kids}</PressByActive>));
+          step(() => tree.update(<PressByActive testOnly_pressed>{hostKids}</PressByActive>));
+          step(() =>
+            tree.update(<PressByActive testOnly_pressed={false}>{hostKids}</PressByActive>)
+          );
         },
       ],
       [
@@ -599,11 +553,11 @@ describe('memo behavior with deep trees', () => {
           let tree!: TestRenderer.ReactTestRenderer;
           step(() => {
             tree = TestRenderer.create(
-              <PressByActive style={{ opacity: 1 }}>{kids}</PressByActive>
+              <PressByActive style={{ opacity: 1 }}>{hostKids}</PressByActive>
             );
           });
-          step(() => tree.update(<PressByActive style={sizeByState}>{kids}</PressByActive>));
-          step(() => tree.update(<PressByActive style={{ opacity: 1 }}>{kids}</PressByActive>));
+          step(() => tree.update(<PressByActive style={sizeByState}>{hostKids}</PressByActive>));
+          step(() => tree.update(<PressByActive style={{ opacity: 1 }}>{hostKids}</PressByActive>));
         },
       ],
     ];
