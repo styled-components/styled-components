@@ -17,6 +17,10 @@ it('does not add a px prefix for unitless properties', () => {
     ['flex', 2],
     ['fontWeight', 400],
     ['--tooltip-z-index', 1000],
+    ['fontSizeAdjust', 0.5],
+    ['initialLetter', 3],
+    ['mathDepth', 2],
+    ['shapeImageThreshold', 0.5],
   ];
   pairs.forEach(([key, value]) => expect(addUnitIfNeeded(key, value)).toEqual(String(value)));
 });
