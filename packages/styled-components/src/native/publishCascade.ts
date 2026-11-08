@@ -1,6 +1,5 @@
 import { createElement, type ReactNode } from 'react';
 import type { Dict } from '../types';
-import isFunction from '../utils/isFunction';
 import {
   type ContainerContextValue,
   type NativeCascadeValues,
@@ -11,8 +10,23 @@ import {
 /** The leaf name React Native's `Pressable` goes by, the one host that hands interaction state to a `style` function. */
 export const PRESSABLE_TARGET = 'Pressable';
 
+/** The interaction state React Native's `Pressable` hands to a `style` or `children` function. */
+export type InteractionState = {
+  disabled?: boolean;
+  focused?: boolean;
+  hovered?: boolean;
+  pressed?: boolean;
+};
+
+/** A function React Native calls with a `Pressable`'s interaction state: its `style` (returns a style) or its `children` (returns a node). */
+export function isStateFunction<Result = unknown>(
+  test: unknown
+): test is (state: InteractionState) => Result {
+  return typeof test === 'function';
+}
+
 /** The state a `Pressable` is in before any press: what a custom component's function style publishes. */
-export const REST_STATE: Readonly<{ pressed: boolean }> = Object.freeze({ pressed: false });
+export const REST_STATE: Readonly<InteractionState> = Object.freeze({ pressed: false });
 
 /**
  * Per-instance scratch and identity caches for the cascade a component
@@ -115,14 +129,10 @@ function walkLayers(style: unknown, slot: CascadeSlot, base: NativeCascadeValues
 
 /**
  * Walk `style` and leave the winning font size, line height and direction on
- * `slot`; a key no layer sets takes `base`'s value. Stays at three arguments:
- * a fourth, boolean one measured 25% slower through inline-cache polymorphism.
+ * `slot`; a key no layer sets takes `base`'s value. The publish gate lives at
+ * the call site (`cascadeWalkStyle`), which keeps this three-argument call monomorphic.
  */
-export function resolveCascadeKeys(
-  slot: CascadeSlot,
-  base: NativeCascadeValues,
-  style: unknown
-): void {
+function resolveCascadeKeys(slot: CascadeSlot, base: NativeCascadeValues, style: unknown): void {
   slot.seen = 0;
   slot.fontSize = base.fontSize;
   slot.lineHeight = base.lineHeight;
@@ -136,7 +146,7 @@ export function resolveCascadeKeys(
  * for equal values (a caller passing a fresh `{ fontSize: 20 }` each render
  * keeps the same one). Custom properties and the grid entry carry over from `base`.
  */
-export function cascadeWith(slot: CascadeSlot, base: NativeCascadeValues): NativeCascadeValues {
+function cascadeWith(slot: CascadeSlot, base: NativeCascadeValues): NativeCascadeValues {
   const { direction, fontSize, lineHeight } = slot;
   if (
     fontSize === base.fontSize &&
@@ -212,35 +222,42 @@ export function contextValueFor(
 function stateValue(
   holder: CascadeHolder,
   here: NativeStyleContextValue,
-  stateStyle: unknown,
-  state: unknown
+  stateStyle: StateStyle | null,
+  state: InteractionState
 ): NativeStyleContextValue {
-  if (!isFunction(stateStyle)) return here;
+  if (stateStyle === null) return here;
   return contextValueFor(holder, here, publishCascade(holder, here.cascade, stateStyle(state)));
 }
+
+/** A `Pressable`'s function `style`. */
+export type StateStyle = (state: InteractionState) => unknown;
 
 /**
  * Put a `NativeStyleContext` provider between a `Pressable` and its children, so
  * the descendants read what its `style` function publishes at the current press
  * state. `stateStyle` is that function, or null when the style cannot change with
- * state. `holder` is the wrap's own, so the values it builds at rest and pressed
- * never replace the body's cached ones.
+ * state. `owner` holds the wrap's own cascade holder (allocated on first use), so
+ * the values it builds at rest and pressed never replace the body's cached ones.
  *
  * The children become a function only when React Native already tracks presses
  * (the style or the children are one already), so a style that cannot change
  * with state costs no press tracking. Either way the slot holds the same element
  * type, so a caller's style flipping between an object and a function keeps
  * every descendant mounted. The provider builds on the value above it, so a
- * container or grid entry published there survives.
+ * container or grid entry published there survives. With no children there is
+ * nothing to keep mounted, so `props` return unchanged.
  */
 export function withStateCascade(
   props: Dict<unknown>,
-  holder: CascadeHolder,
-  stateStyle: unknown
+  owner: { stateHolder: CascadeHolder | null },
+  stateStyle: StateStyle | null
 ): Dict<unknown> {
   const original = props.children;
+  if (original == null) return props;
 
-  if (!isFunction(original) && !isFunction(stateStyle)) {
+  const renderOriginal = isStateFunction<ReactNode>(original) ? original : null;
+
+  if (renderOriginal === null && stateStyle === null) {
     return {
       ...props,
       children: createElement(NativeStyleContext.Consumer, {
@@ -253,11 +270,12 @@ export function withStateCascade(
     };
   }
 
-  const children = (state: unknown) =>
+  const holder = owner.stateHolder ?? (owner.stateHolder = { cascadeSlot: null });
+  const children = (state: InteractionState) =>
     createElement(NativeStyleContext.Consumer, {
       children: here =>
         createElement(NativeStyleContext.Provider, {
-          children: isFunction(original) ? original(state) : (original as ReactNode),
+          children: renderOriginal === null ? (original as ReactNode) : renderOriginal(state),
           value: stateValue(holder, here, stateStyle, state),
         }),
     });

@@ -150,6 +150,22 @@ describe('flex pin when a styled scroller declares an explicit dimension', () =>
     expect(compiled.scrollerFlexPin).toBe(true);
   });
 
+  it.each(['inline-size', 'block-size'])(
+    'a var() %s with no flex factor compiles the grow pin',
+    prop => {
+      const compiled = toNativeStyles(`--w: 240px; ${prop}: var(--w);`, StyleSheet as never);
+      expect(compiled.scrollerFlexPin).toBe(true);
+    }
+  );
+
+  it('a width declared only inside an @media bucket does not compile the grow pin', () => {
+    const compiled = toNativeStyles(
+      '@media (min-width: 100px) { width: 240px; }',
+      StyleSheet as never
+    );
+    expect(compiled.scrollerFlexPin).toBeUndefined();
+  });
+
   it('an authored flex-shrink overrides the baseline', () => {
     const Scroller = styled.ScrollView`
       flex-shrink: 1;

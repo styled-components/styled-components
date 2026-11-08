@@ -326,8 +326,9 @@ export interface NativeStyles {
    * render path appends `flexGrow: 0` so the declared size holds: RN's
    * ScrollView base style ships `flexGrow: 1`, which stretches declared
    * dimensions with the flex parent, while CSS elements default
-   * `flex-grow: 0`. Computed from base + render-time resolver keys
-   * (declarations inside @media buckets do not set it).
+   * `flex-grow: 0`. Computed from the base, `!important` layer, render-time
+   * resolver keys and `var()` deferrals (declarations inside @media buckets
+   * do not set it).
    */
   scrollerFlexPin?: true;
   /**
@@ -673,8 +674,7 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
     pseudoEntries,
     keyframes,
     hasPseudo,
-    // Filled below after every optional field is attached so the scan
-    // can see startingStyle / resolvers / animations / transitions.
+    // Filled below, once the scan can read the resolvers, `!important` layers and `var()` deferrals.
     publishesCascade: false,
   };
   if (specialCases !== null) out.specialCases = specialCases;

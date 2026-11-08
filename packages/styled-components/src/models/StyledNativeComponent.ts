@@ -40,9 +40,12 @@ import {
 } from '../native/polyfills';
 import {
   contextValueFor,
+  type InteractionState,
+  isStateFunction,
   PRESSABLE_TARGET,
   publishCascade,
   REST_STATE,
+  type StateStyle,
   withStateCascade,
 } from '../native/publishCascade';
 import { useSnapSettle } from '../native/snapSettle';
@@ -910,14 +913,14 @@ function cascadeWalkStyle(
   leaf: string | undefined
 ): unknown {
   if (!gate) return null;
-  if (!isFunction(composedStyle)) return composedStyle;
+  if (!isStateFunction(composedStyle)) return composedStyle;
   if (leaf === PRESSABLE_TARGET || dropsFunctionStyle(leaf)) return null;
   return composedStyle(REST_STATE);
 }
 
 /** The function style a `Pressable` evaluates per press state when it can publish from one; null otherwise. */
-function pressableStateStyle(gate: boolean, composedStyle: unknown, leaf: string | undefined) {
-  return gate && leaf === PRESSABLE_TARGET && isFunction(composedStyle) ? composedStyle : null;
+function pressableStateStyle(gate: boolean, composedStyle: unknown): StateStyle | null {
+  return gate && isStateFunction(composedStyle) ? composedStyle : null;
 }
 
 const PSEUDO_TO_SELECTOR: Record<PseudoState, string> = {
@@ -973,14 +976,6 @@ const PSEUDO_TO_STATE_KEY: Record<PseudoState, 'pressed' | 'hovered' | 'focused'
   hover: 'hovered',
   focus: 'focused',
   disabled: 'disabled',
-};
-
-/** The interaction state React Native's `Pressable` hands to a `style` callback. */
-type InteractionState = {
-  pressed?: boolean;
-  hovered?: boolean;
-  focused?: boolean;
-  disabled?: boolean;
 };
 
 function pseudoActive(pseudo: PseudoState, state: InteractionState): boolean {
@@ -1126,7 +1121,7 @@ function StaticContainerPublisherDispatch({
     elementType,
     name,
     parent,
-  } as ContainerPublisherProps);
+  });
 }
 
 // Eligibility is frozen at construction (INativeStyle.staticEligible) so hook
@@ -1233,8 +1228,8 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
     leaf === PRESSABLE_TARGET
       ? withStateCascade(
           layeredProps,
-          publishCache.stateHolder ?? (publishCache.stateHolder = { cascadeSlot: null }),
-          pressableStateStyle(publishGate, composedStyle, leaf)
+          publishCache,
+          pressableStateStyle(publishGate, composedStyle)
         )
       : layeredProps;
   const host =
@@ -1250,7 +1245,7 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
           elementType: elementToBeCreated,
           name: containerName,
           parent: nativeStyleCtx,
-        } as ContainerPublisherProps);
+        });
 
   return createElement(ParentContext.Provider, { value: publishedValue }, wrapScrollTimeline(host));
 }
@@ -1298,10 +1293,11 @@ function applyPolyfillsWithLayerSlot(
  * reference-stable, and the bailout on equal props is the wrapping React.memo.
  *
  * Components with provably-static CSS (no responsive features, no
- * animations, no cascade-significant declarations) bypass this path
- * entirely and use `useStaticImpl`, which reads `ParentContext` and a
- * memoization ref but skips theme / env / container subscription and
- * the full assembly pipeline.
+ * animations) bypass this path entirely and use `useStaticImpl`, which
+ * reads `ParentContext` and a memoization ref but skips theme / env /
+ * container subscription and the full assembly pipeline. A static
+ * component's own font-size, line-height and direction still publish
+ * through `useStaticImpl`.
  */
 function useDynamicImpl<Props extends StyledComponentImplProps>(
   forwardedComponent: IStyledComponent<'native', Props>,
@@ -1660,8 +1656,8 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   if (!IS_RSC && leaf === PRESSABLE_TARGET) {
     effectiveProps = withStateCascade(
       effectiveProps,
-      publishCache.stateHolder ?? (publishCache.stateHolder = { cascadeSlot: null }),
-      pressableStateStyle(publishGate, composedStyle, leaf)
+      publishCache,
+      pressableStateStyle(publishGate, composedStyle)
     );
   }
   sticky.register(renderType, effectiveProps, stickyTwinStyle, ownValue);
@@ -1683,7 +1679,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
       ownerId: forwardedComponent.styledComponentId,
       parent: nativeStyleCtx,
       rowGap: gutters.rowGap,
-    } as GridPublisherProps);
+    });
   } else if (containerName !== undefined) {
     inner = createElement(ContainerPublisher, {
       cascade: published,
@@ -1691,7 +1687,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
       elementType: renderType,
       name: containerName,
       parent: nativeStyleCtx,
-    } as ContainerPublisherProps);
+    });
   } else {
     inner = createElement(renderType, effectiveProps);
     if (animOut.isolate3d) {
