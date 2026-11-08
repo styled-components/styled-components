@@ -156,6 +156,44 @@ describe('__DEV__ substitution in built output', () => {
     expect(readNative(file)).not.toContain('!process.env.NODE_ENV');
   });
 
+  /**
+   * A bundler that replaces only `process.env.NODE_ENV` textually (Vite) leaves any other
+   * `process` reference in place, and a browser has no `process` global. A dead property read
+   * terser reduces to a bare `process;` statement throws a ReferenceError at module load.
+   * Flagged: `process` standing alone as a statement (after `;`, `{`, `}` or a line start, before `;`).
+   * Allowed forms, none of which match:
+   * - `typeof process`: the guard that makes the member reads safe.
+   * - `process.env` and `process?.env` member reads: only emitted behind that guard.
+   * - `a||process)`: terser's reduction of a guarded `process.env.X` read inside that guard.
+   * - the word in prose (error text, comments), which never follows `;`, `{` or `}`.
+   * A looser identifier match is not practical: the standalone UMD file keeps prose comments.
+   */
+  const deadProcessRead = /(?:^|[;{}])process;/g;
+  const unguardedProcessReads = (source: string) =>
+    source
+      .replaceAll('process.env.NODE_ENV', '"production"')
+      .split('\n')
+      .flatMap((line, index) =>
+        [...line.matchAll(deadProcessRead)].map(
+          match =>
+            `${index + 1}:${match.index}: ${line.slice(Math.max(0, match.index - 30), match.index + 30)}`
+        )
+      );
+
+  it.each(jsFiles(distDir))(
+    'never reads the process global once NODE_ENV is replaced in %s',
+    file => {
+      expect(unguardedProcessReads(read(file))).toEqual([]);
+    }
+  );
+
+  it.each(jsFiles(nativeDistDir))(
+    'never reads the process global once NODE_ENV is replaced in native/%s',
+    file => {
+      expect(unguardedProcessReads(readNative(file))).toEqual([]);
+    }
+  );
+
   it('throws readable errors outside production', () => {
     const { ServerStyleSheet } = require(path.join(distDir, 'styled-components.cjs.js'));
     const sheet = new ServerStyleSheet();
