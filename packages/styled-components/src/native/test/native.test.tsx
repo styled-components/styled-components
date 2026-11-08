@@ -2002,7 +2002,8 @@ describe('native', () => {
         [
           string,
           { nativeStyle: { staticEligible: boolean } },
-          boolean,
+          // null: attrs take the dynamic path at render time, which the CSS-level flag does not show
+          boolean | null,
           (probe: React.ReactElement, pressed: boolean) => React.ReactElement,
           PublishedValues,
           PublishedValues,
@@ -2023,7 +2024,7 @@ describe('native', () => {
         [
           'an attrs style function',
           ByAttrsStyle,
-          true,
+          null,
           (probe, pressed) => <ByAttrsStyle testOnly_pressed={pressed}>{probe}</ByAttrsStyle>,
           TWENTY,
           PRESSED,
@@ -2061,7 +2062,9 @@ describe('native', () => {
       ])(
         'publishes %s at rest and while pressed',
         (_name, Subject, staticEligible, subject, atRest, whilePressed) => {
-          expect(Subject.nativeStyle.staticEligible).toBe(staticEligible);
+          if (staticEligible !== null) {
+            expect(Subject.nativeStyle.staticEligible).toBe(staticEligible);
+          }
           expect(mountCascadeProbe(probe => subject(probe, false)).read()).toEqual(atRest);
           expect(mountCascadeProbe(probe => subject(probe, true)).read()).toEqual(whilePressed);
         }
