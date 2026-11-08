@@ -9,7 +9,6 @@ import {
   ContainerContextValue,
   ContainerEntry,
   DEFAULT_CASCADE,
-  DEFAULT_NATIVE_STYLE,
   NativeCascadeValues,
   NativeStyleContext,
   NativeStyleContextValue,
@@ -94,7 +93,6 @@ import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
-import { IS_RSC } from '../utils/isRsc';
 import isStyledComponent from '../utils/isStyledComponent';
 import { warnOnce } from '../utils/warnOnce';
 import type {
@@ -1082,48 +1080,6 @@ function appendStyle(composed: unknown, extra: object): object {
   return Array.isArray(composed) ? [...composed, extra] : [composed, extra];
 }
 
-function createFastElement(
-  elementToBeCreated: NativeTarget,
-  elementProps: Dict<unknown>,
-  containerName: string | undefined
-): React.ReactElement {
-  if (containerName) {
-    return createElement(StaticContainerPublisherDispatch, {
-      name: containerName,
-      elementType: elementToBeCreated,
-      elementProps,
-    });
-  }
-  return createElement(elementToBeCreated, elementProps);
-}
-
-interface StaticContainerPublisherDispatchProps {
-  name: string;
-  elementType: NativeTarget;
-  elementProps: Dict<unknown>;
-}
-
-/**
- * Container-publish dispatch for the static path. `NativeStyleContext`
- * is read only when the rendered component declares `container-type`
- * in its CSS, so the common case of a non-container component pays no
- * useContext for the container/cascade pair.
- */
-function StaticContainerPublisherDispatch({
-  name,
-  elementType,
-  elementProps,
-}: StaticContainerPublisherDispatchProps): React.ReactElement {
-  const parent = React.useContext(NativeStyleContext);
-  return createElement(ContainerPublisher, {
-    cascade: parent.cascade,
-    elementProps,
-    elementType,
-    name,
-    parent,
-  });
-}
-
 // Eligibility is frozen at construction (INativeStyle.staticEligible) so hook
 // ordering stays stable. Reads ParentContext so descendants of this
 // element see it as an ancestor under Tier 2 combinator selectors
@@ -1142,25 +1098,12 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   if (compiled === null) throw new Error(MISSING_STATIC_STYLES);
   const elementToBeCreated: NativeTarget = (props.as as NativeTarget) || target;
   const containerName = resolveContainerName(compiled.containerInfo, styledComponentId);
-  if (IS_RSC) {
-    const elementProps = finalizeElementProps(
-      props,
-      elementToBeCreated,
-      undefined,
-      composeBase(compiled.base, props.style),
-      compiled.specialCases,
-      forwardedRef,
-      forwardedComponent
-    );
-    return createFastElement(elementToBeCreated, applyStylePolyfills(elementProps), containerName);
-  }
   const leaf = leafName(resolveLeafTarget(elementToBeCreated));
   // A static-eligible component can still be a grid item: an empty or
   // purely-static child placed inside a `display: grid` container. The
   // parent decides this at runtime, so the static path reads the cascade
   // and applies the computed width when this component is a direct child
   // of the grid that published the entry.
-  // biome-ignore-start lint/correctness/useHookAtTopLevel: this static render path is reached only past an `if (IS_RSC)` early return above, and IS_RSC is a load-time constant, so a given bundle always runs all of these hooks or none of them
   const nativeStyleCtx = React.useContext(NativeStyleContext);
   const contextParent = React.useContext(ParentContext);
   const parentCtx = slotValue ?? contextParent;
@@ -1215,7 +1158,6 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
     timelineEntry,
     scrollProps
   );
-  // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the IS_RSC-gated static render path
   const publishCache = publishCacheRef.current;
   const publishGate = compiled.publishesCascade || props.style != null;
   const walkStyle = cascadeWalkStyle(publishGate, composedStyle, leaf);
@@ -1308,8 +1250,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   const props = slotValue === undefined ? ownProps : withoutParentSlot(ownProps);
   const { attrs: componentAttrs, nativeStyle, shouldForwardProp, target } = forwardedComponent;
 
-  // biome-ignore-start lint/correctness/useHookAtTopLevel: every gate in this block is IS_RSC, a load-time constant, so a given bundle always takes the same side. The one exception is the anchor gate below, which is noted separately.
-  const contextTheme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
+  const contextTheme = React.useContext(ThemeContext);
   const theme = determineTheme(props, contextTheme) || EMPTY_OBJECT;
 
   const env = useMediaEnv();
@@ -1318,9 +1259,9 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // changes reach consumers through one context reference. Tier 2 selectors
   // (`>`, `+`, `~`, `:nth-child`, `:has`) read sibling / ancestor info from
   // ParentContext.
-  const nativeStyleCtx = !IS_RSC ? React.useContext(NativeStyleContext) : DEFAULT_NATIVE_STYLE;
+  const nativeStyleCtx = React.useContext(NativeStyleContext);
   const containerCtx = nativeStyleCtx.container;
-  const contextParent = !IS_RSC ? React.useContext(ParentContext) : DEFAULT_PARENT_CONTEXT;
+  const contextParent = React.useContext(ParentContext);
   const parentCtx = slotValue ?? contextParent;
   // Anchor-rect reactivity: components whose CSS uses anchor() / anchor-size()
   // subscribe so any anchor's rect change re-renders them; the always-run
@@ -1328,31 +1269,30 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // version keys the ResolveEnv reuse below, whose env-keyed resolver caches
   // would otherwise replay the old rects.
   //
-  // This anchor gate and the safe-area gate below are the two here that are
-  // not build constants. `nativeStyle` is fixed when the styled component is
+  //
+  // This anchor gate and the safe-area gate below are the two conditional
+  // hooks here. `nativeStyle` is fixed when the styled component is
   // constructed, so `usesAnchorFunctions` (like `usesSafeAreaInsets`) cannot
   // change across renders of a given component and the hook branch is stable
   // for its whole lifetime. Anything that made either depend on props or state
-  // would be a genuine rules-of-hooks violation, and the enclosing
-  // `biome-ignore-start` would hide it, so keep both derived from `nativeStyle`.
-  const anchorVersion =
-    !IS_RSC && nativeStyle.usesAnchorFunctions
-      ? React.useSyncExternalStore(subscribeAnchors, getAnchorVersion)
-      : 0;
+  // would be a genuine rules-of-hooks violation, and the `biome-ignore` would
+  // hide it, so keep both derived from `nativeStyle`.
+  // biome-ignore-start lint/correctness/useHookAtTopLevel: `usesAnchorFunctions` and `usesSafeAreaInsets` are fixed at construction, so each branch is stable for the component's lifetime
+  const anchorVersion = nativeStyle.usesAnchorFunctions
+    ? React.useSyncExternalStore(subscribeAnchors, getAnchorVersion)
+    : 0;
   // Safe-area reactivity for env(safe-area-inset-*). `usesSafeAreaInsets`
   // is fixed at construction (same lifetime-constant rule as the anchor
   // gate above), so this hook branch is stable for the component.
   // Pass the static-usage flag so the hook warns (once, in dev, when no inset
   // source is present) only for components that literally wrote
   // env(safe-area-inset-*), not the conservative function-interpolation opt-in.
-  const safeAreaInsets =
-    !IS_RSC && nativeStyle.usesSafeAreaInsets
-      ? useSafeAreaInsets(nativeStyle.usesSafeAreaInsetsStatically)
-      : EMPTY_SAFE_AREA_INSETS;
+  const safeAreaInsets = nativeStyle.usesSafeAreaInsets
+    ? useSafeAreaInsets(nativeStyle.usesSafeAreaInsetsStatically)
+    : EMPTY_SAFE_AREA_INSETS;
+  // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the two construction-fixed hook gates
 
-  const publishCacheRef = (
-    !IS_RSC ? React.useRef<ParentPublishCache | null>(null) : { current: null }
-  ) as { current: ParentPublishCache | null };
+  const publishCacheRef = React.useRef<ParentPublishCache | null>(null);
   let publishCache = publishCacheRef.current;
   if (publishCache === null) {
     publishCache = createParentPublishCache();
@@ -1364,13 +1304,8 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // it once per render and reuse when both inputs reference-match.
   // Stable-input renders thus avoid a Map allocation + descendant
   // re-renders triggered by a spurious cascade identity change.
-  const mergedCascadeCacheRef = (
-    !IS_RSC ? React.useRef<MergedCascadeCache>(null) : { current: null }
-  ) as { current: MergedCascadeCache };
-  const resolveEnvCacheRef = (
-    !IS_RSC ? React.useRef<ResolveEnvCache>(null) : { current: null }
-  ) as { current: ResolveEnvCache };
-  // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the IS_RSC-gated region
+  const mergedCascadeCacheRef = React.useRef<MergedCascadeCache>(null);
+  const resolveEnvCacheRef = React.useRef<ResolveEnvCache>(null);
 
   // Interpolations and attrs are the component's own render-body user code: they
   // run every render so a hook called inside one keeps a stable hook count, and
@@ -1544,9 +1479,9 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // so the timeline can place them within the scroller; the composed
   // onLayout lands on the element props below. Hook order is
   // unconditional inside.
-  const isViewSubject = !IS_RSC && animationsUseViewTimeline(compiled.animations);
+  const isViewSubject = animationsUseViewTimeline(compiled.animations);
   const [viewSubjectLayout, withViewSubjectLayout] = useViewTimelineSubject(isViewSubject);
-  const sticky = useStickyPosition(!IS_RSC && compiled.sticky === true);
+  const sticky = useStickyPosition(compiled.sticky === true);
   const animInput: AnimatedStyleInput = {
     compiled,
     resolved: composedStyle,
@@ -1631,29 +1566,26 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // Scroll progress timelines: styled scroll containers publish their
   // offset/extent so descendants' `animation-timeline: scroll()` /
   // named references resolve. Hook order is unconditional inside.
-  const isScroller = !IS_RSC && isScrollableTargetName(leaf);
+  const isScroller = isScrollableTargetName(leaf);
   const [scrollProps, wrapScrollTimeline, timelineEntry] = useScrollTimelinePublisher(
-    isScroller || (!IS_RSC && compiled.scrollTimeline !== undefined),
+    isScroller || compiled.scrollTimeline !== undefined,
     compiled.scrollTimeline,
     effectiveProps
   );
   effectiveProps = useScrollerSnapProps(
     isScroller,
     compiled,
-    !IS_RSC ? compiled.snapTarget : undefined,
+    compiled.snapTarget,
     timelineEntry,
     scrollProps
   );
   // anchor-name publishers report their parent-relative rect for
   // anchor() / anchor-size() consumers.
-  effectiveProps = useAnchorNamePublisher(
-    !IS_RSC ? compiled.anchorName : undefined,
-    effectiveProps
-  );
+  effectiveProps = useAnchorNamePublisher(compiled.anchorName, effectiveProps);
   effectiveProps = withViewSubjectLayout(effectiveProps);
   effectiveProps = sticky.compose(effectiveProps);
   // After every props-composing hook, so none sees the wrapped children.
-  if (!IS_RSC && leaf === PRESSABLE_TARGET) {
+  if (leaf === PRESSABLE_TARGET) {
     effectiveProps = withStateCascade(
       effectiveProps,
       publishCache,
@@ -1695,7 +1627,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     }
     // An idle Provider passes the parent's own value, so consumers never re-render for it
     // and the tree keeps its shape when a published value appears or leaves.
-    if (!IS_RSC) inner = createElement(NativeStyleContext.Provider, { value: ownValue }, inner);
+    inner = createElement(NativeStyleContext.Provider, { value: ownValue }, inner);
   }
 
   inner = wrapScrollTimeline(inner);
@@ -1768,7 +1700,6 @@ function useScrollerSnapProps(
     compiled.specialCases !== undefined &&
     (compiled.specialCases.pagingEnabled === true ||
       compiled.specialCases.snapToAlignment !== undefined);
-  // biome-ignore-start lint/correctness/useHookAtTopLevel: these three are called unconditionally here. The rule reports them as "indirect and conditional" because the one caller sits past an IS_RSC-gated early return, and IS_RSC is a load-time constant. Each takes its own enable flag as an argument rather than being called behind a branch, which is what keeps the sequence fixed.
   out = useSnapTargetRegistration(snapTarget, out);
   out = useSnapOffsets(isScroller && snapTypeDeclared, timelineEntry, out);
   return useSnapSettle(
@@ -1778,7 +1709,6 @@ function useScrollerSnapProps(
     timelineEntry,
     out
   );
-  // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the snap-props hook sequence
 }
 
 /** The slice of React Native's `onLayout` event these publishers read. */

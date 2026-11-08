@@ -242,6 +242,8 @@ const browserConfig = {
 };
 
 // Shared between the Hermes-target native bundle and the rn-web variant.
+// The replace makes `IS_RSC` (`utils/isRsc.ts`) literal false here: the native modules call
+// `React.createContext` at import, so a react-server build cannot load them.
 const nativeBasePlugins = [
   nativeTypescriptPlugin,
   ...basePlugins,
