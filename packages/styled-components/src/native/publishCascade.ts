@@ -33,7 +33,7 @@ export const REST_STATE: Readonly<InteractionState> = Object.freeze({ pressed: f
  * publishes. Allocated on first use, so a component that never publishes
  * allocates nothing.
  */
-export interface CascadeSlot {
+interface CascadeSlot {
   /** The object last built for `cascadeBase`; reused while its three values still equal the walk's. */
   cascade: NativeCascadeValues | null;
   cascadeBase: NativeCascadeValues | null;
