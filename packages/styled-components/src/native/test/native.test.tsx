@@ -1709,6 +1709,26 @@ describe('native', () => {
             { fontSize: undefined },
             PUBLISHED_BY_ANCESTOR,
           ],
+          // React Native's types reject null in these keys, but JavaScript callers pass it, and
+          // `flattenStyle` keeps a later null, so the host has no value of its own and inherits.
+          [
+            'the ancestor font-size when the winning layer holds null',
+            'Sized',
+            { fontSize: null } as unknown as TextStyle,
+            PUBLISHED_BY_ANCESTOR,
+          ],
+          [
+            'the ancestor line-height when a later layer holds null',
+            'Plain',
+            [{ lineHeight: 30 }, { lineHeight: null }] as unknown as TextStyle[],
+            PUBLISHED_BY_ANCESTOR,
+          ],
+          [
+            'the ancestor direction when a later layer holds null',
+            'Plain',
+            [{ direction: 'rtl' }, { direction: null }] as unknown as TextStyle[],
+            PUBLISHED_BY_ANCESTOR,
+          ],
           ['a caller font-size on a container', 'Contained', { fontSize: 20 }, TWENTY],
         ])('publishes %s', (_name, subject, style, expected) => {
           const Subject = subjects[subject];

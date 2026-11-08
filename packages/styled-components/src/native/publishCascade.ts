@@ -76,8 +76,8 @@ function createCascadeSlot(): CascadeSlot {
 /**
  * Settle each key from the last layer that sets it, walking right to left so a
  * later array entry wins (React Native's merge order). A number sets a size, and
- * a present `undefined` unsets it to `base`'s value, as `flattenStyle` leaves the
- * host with no value of its own. Anything else (an animated value, a string) is
+ * a present `undefined` or `null` unsets it to `base`'s value, as `flattenStyle`
+ * keeps either and leaves the host with no value of its own. Anything else (an animated value, a string) is
  * not a layer's answer, so a layer underneath can still win. Returns true when
  * every key is settled.
  */
@@ -96,7 +96,7 @@ function walkLayers(style: unknown, slot: CascadeSlot, base: NativeCascadeValues
     if (typeof value === 'number') {
       slot.fontSize = value;
       slot.seen |= FONT_SIZE;
-    } else if (value === undefined) {
+    } else if (value == null) {
       slot.fontSize = base.fontSize;
       slot.seen |= FONT_SIZE;
     }
@@ -107,7 +107,7 @@ function walkLayers(style: unknown, slot: CascadeSlot, base: NativeCascadeValues
     if (typeof value === 'number') {
       slot.lineHeight = value;
       slot.seen |= LINE_HEIGHT;
-    } else if (value === undefined) {
+    } else if (value == null) {
       slot.lineHeight = base.lineHeight;
       slot.seen |= LINE_HEIGHT;
     }
@@ -118,7 +118,7 @@ function walkLayers(style: unknown, slot: CascadeSlot, base: NativeCascadeValues
     if (value === 'ltr' || value === 'rtl') {
       slot.direction = value;
       slot.seen |= DIRECTION;
-    } else if (value === undefined || value === 'inherit') {
+    } else if (value == null || value === 'inherit') {
       slot.direction = base.direction;
       slot.seen |= DIRECTION;
     }
