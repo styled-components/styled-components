@@ -66,3 +66,9 @@ This is a load-bearing invariant for any layout polyfill. RN baseline is `flex-s
 ## The declaration transform is in-house
 
 The native compile pipeline owns its final `[property, value]` to RN-style transform (`src/native/transform/`); it does not depend on `css-to-react-native`. Keep it that way: a tight character-walk over CSS values fast-paths the common cases (color strings, numeric lengths, simple keywords) far cheaper than a general value-parser, and owning the transform means RN-accepted shapes the old dependency mishandled (`matrix()`, RTL logical properties like `marginStart`, `currentcolor`, multi-shadow and `inset` in `boxShadow`, comma-separated quoted font families) are ours to fix rather than blocked upstream.
+
+## Every styled component renders its style context provider
+
+- Every styled component outside server components renders a `NativeStyleContext` provider. An idle one passes its parent's own value object, so consumers do not re-render and the tree keeps its shape when a font size, line height or direction appears or leaves. A provider added only when a value changes would remount every descendant at that moment, losing its state.
+- A styled `Pressable` adds a second provider inside its children, holding what its style function gives at the current press state. Its children turn into a function only when React Native already tracks presses (the style or the children are a function), so a fixed style costs no press tracking.
+- The cost of the always-present provider is measured in the PR that added it (#5869); re-measure with `packages/ios-benchmark` before moving it.

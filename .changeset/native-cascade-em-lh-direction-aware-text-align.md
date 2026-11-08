@@ -6,4 +6,4 @@ React Native: `em`, `lh`, and `rlh` length units are supported. Values like `pad
 
 `text-align: start`, `text-align: end`, and `text-align: match-parent` resolve under both left-to-right and right-to-left writing directions on React Native, matching the direction-aware behavior on the web.
 
-Components whose CSS declares `font-size`, `line-height`, or `direction` pass the resolved value to descendants, so one text size at the top of a card can drive the relative spacing inside it.
+A component's font size, line height and direction reach its descendants from wherever they are set: its CSS (including `@media`, `!important` and `var()`), `attrs`, and the `style` prop as an object, an array or a `Pressable` style function. One text size at the top of a card can drive the relative spacing inside it. A `Pressable`'s `:active` font size and line height reach its descendants while it is pressed. Descendants keep their state when one of these values appears or changes, and memoized descendants re-render only when a value changes. A custom component that wraps `Pressable` passes its resting values only.
