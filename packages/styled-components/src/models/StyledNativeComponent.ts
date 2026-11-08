@@ -1269,7 +1269,6 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // version keys the ResolveEnv reuse below, whose env-keyed resolver caches
   // would otherwise replay the old rects.
   //
-  //
   // This anchor gate and the safe-area gate below are the two conditional
   // hooks here. `nativeStyle` is fixed when the styled component is
   // constructed, so `usesAnchorFunctions` (like `usesSafeAreaInsets`) cannot
