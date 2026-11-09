@@ -15,12 +15,8 @@ export const IS_BROWSER = typeof window !== 'undefined' && typeof document !== '
 
 export const KEYFRAMES_ID_PREFIX = 'sc-keyframes-';
 
-/**
- * A development warning fires once a single styled component or global style
- * emits this many `<style>` tags in one server render. Set well above any
- * hand-written page, so only generated lists reach it.
- */
-export const RSC_REDUNDANT_EMIT_WARN_THRESHOLD = 1000;
+/** Prefix of every `createGlobalStyle` id. */
+export const GLOBAL_ID_PREFIX = 'sc-global-';
 
 // Shared empty execution context when generating static styles
 export const STATIC_EXECUTION_CONTEXT = {};
