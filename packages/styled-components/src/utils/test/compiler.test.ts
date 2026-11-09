@@ -2,7 +2,6 @@ import { emitWeb } from '../../parser/emit-web';
 import { parse } from '../../parser/parser';
 import createCompiler, { ICreateCompiler, normalize } from '../compiler';
 import rtl from '../../plugins/rtl';
-import rscPlugin from '../../plugins/rsc';
 
 function runCssCompile(css: string, options: ICreateCompiler = {}): string[] {
   const compiler = createCompiler(options);
@@ -1928,17 +1927,6 @@ background-color: green;`)
       ).toMatchInlineSnapshot(`
         [
           ".a{margin-right:8px;padding-right:4px;}",
-        ]
-      `);
-    });
-
-    it('runs selector rewrite from rscPlugin', () => {
-      const compiler = createCompiler({ plugins: [rscPlugin] });
-      expect(
-        compiler.compile(`color: red;`, '.a:hover:first-child', undefined, 'a')
-      ).toMatchInlineSnapshot(`
-        [
-          ".a:hover:nth-child(1 of :not(style[data-styled])){color:red;}",
         ]
       `);
     });

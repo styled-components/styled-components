@@ -1,6 +1,7 @@
 import { KEYFRAMES_ID_PREFIX } from '../constants';
 import StyleSheet from '../sheet';
 import { groupForId } from '../sheet/GroupIDAllocator';
+import type { Placement } from '../sheet/Order';
 import { Compiler, Keyframes as KeyframesType } from '../types';
 import styledError from '../utils/error';
 import generateAlphabeticName from '../utils/generateAlphabeticName';
@@ -32,10 +33,9 @@ export default class Keyframes implements KeyframesType {
     this.id = KEYFRAMES_ID_PREFIX + name;
     this.rules = rules;
 
-    // Eagerly register the group so keyframes defined before components
-    // get a lower group ID and appear before them in the stylesheet.
-    // Uses groupForId directly (not StyleSheet.registerId) because
-    // GroupIDAllocator is pure JS; safe for native builds.
+    // Registered at definition, so keyframes follow definition order among the global tier,
+    // which sorts before every component. Uses groupForId directly (not StyleSheet.registerId)
+    // because GroupIDAllocator is pure JS; safe for native builds.
     groupForId(this.id);
   }
 
@@ -68,11 +68,15 @@ export default class Keyframes implements KeyframesType {
  * `hasNameForId`. Shared by `WebStyle.inject` and `WebGlobalStyle.renderStyles`
  * so both callers route through one bytecode path.
  */
-export function flushKeyframes(styleSheet: StyleSheet, compiled: CompiledKeyframes[]): void {
+export function flushKeyframes(
+  styleSheet: StyleSheet,
+  compiled: ReadonlyArray<CompiledKeyframes>,
+  placement?: Placement
+): void {
   for (let i = 0; i < compiled.length; i++) {
     const kf = compiled[i];
     if (!styleSheet.hasNameForId(kf.id, kf.name)) {
-      styleSheet.insertRules(kf.id, kf.name, kf.rules);
+      styleSheet.insertRules(kf.id, kf.name, kf.rules, placement);
     }
   }
 }

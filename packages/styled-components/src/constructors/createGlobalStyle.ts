@@ -1,18 +1,17 @@
 import React from 'react';
-import {
-  IS_BROWSER,
-  RSC_REDUNDANT_EMIT_WARN_THRESHOLD,
-  STATIC_EXECUTION_CONTEXT,
-} from '../constants';
+import { ScGlobalStyle } from 'styled-components/server-styles';
+import { GLOBAL_ID_PREFIX, STATIC_EXECUTION_CONTEXT } from '../constants';
 import { IS_RSC } from '../utils/isRsc';
-import WebGlobalStyle, { deleteInstance, getInstance } from '../models/WebGlobalStyle';
+import { rscKeyframes } from '../models/rscStyle';
+import WebGlobalStyle, { getInstance } from '../models/WebGlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { ThemeContext } from '../models/ThemeProvider';
+import { groupForId } from '../sheet/GroupIDAllocator';
 import { ExecutionContext, ExecutionProps, Interpolation, Styles } from '../types';
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
-import { joinKeyframes, joinRules, stripSplitter } from '../utils/joinStrings';
-import { getRscRequestState, noteRscEmit } from '../utils/rscCache';
+import { joinKeyframes, joinRules } from '../utils/joinStrings';
+import { getRscRequestState } from '../utils/rscCache';
 import { warnOnce } from '../utils/warnOnce';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import css from './css';
@@ -34,7 +33,7 @@ export default function createGlobalStyle<Props extends object>(
   ...interpolations: Array<Interpolation<Props>>
 ) {
   const rules = css<Props>(strings, ...interpolations);
-  const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
+  const styledComponentId = `${GLOBAL_ID_PREFIX}${generateComponentId(JSON.stringify(rules))}`;
   const globalStyle = new WebGlobalStyle<Props>(rules, styledComponentId);
 
   const hasImport =
@@ -69,17 +68,19 @@ export default function createGlobalStyle<Props extends object>(
     // Not `__SERVER__`: the server build has no insertion effects below, so a
     // write here under jsdom would pile up with no cleanup. A sheet forced into
     // server mode under a build where `__SERVER__` is false needs the runtime
-    // flag too.
-    const writesInRender = IS_RSC || ssc.styleSheet.server;
+    // flag too. A server component writes nothing: its rules travel in the element it renders (see docs/react.md "Server component styles").
+    const writesInRender = !IS_RSC && ssc.styleSheet.server;
 
     // A server render with no sheet to collect the result has no use for it.
-    if (__SERVER__ && !writesInRender) return null;
+    if (__SERVER__ && !IS_RSC && !writesInRender) return null;
 
     // Interpolations are this component's render body and may call hooks, so
     // they run on every render that writes. Only the sheet write waits. A
     // static global has none, so it keeps the entry it registered.
     const entry =
-      (globalStyle.isStatic && getInstance(ssc.styleSheet, styledComponentId, instance)) ||
+      (!IS_RSC &&
+        globalStyle.isStatic &&
+        getInstance(ssc.styleSheet, styledComponentId, instance)) ||
       globalStyle.computeRules(
         instance,
         (globalStyle.isStatic
@@ -124,53 +125,35 @@ export default function createGlobalStyle<Props extends object>(
       // biome-ignore-end lint/correctness/useHookAtTopLevel: end of the build-constant-gated region
     }
 
-    // RSC: one plain tag per instance, no `precedence`; see docs/react.md "RSC style emission and Suspense".
-    if (IS_RSC) {
-      // Keyframes last: `@import` and `@namespace` only count ahead of every other rule in a tag.
-      const css = !IS_BROWSER ? joinRules(entry.rules) + joinKeyframes(entry.keyframes) : '';
+    // RSC: `ScGlobalStyle` carries the rules into the registry sheet; see docs/react.md "Server component styles".
+    if (IS_RSC && (entry.rules.length > 0 || entry.keyframes.length > 0)) {
+      const requestState = getRscRequestState ? getRscRequestState() : null;
 
-      // The RSC branch renders into the long-lived default sheet, so its entry is freed here.
-      if (!IS_BROWSER) {
-        deleteInstance(ssc.styleSheet, styledComponentId, instance);
+      // Repeats of identical CSS share one element object so the
+      // server-component payload writes the props once and refers back to
+      // them; the key carries the global's ID, so two globals with the same
+      // rules, or one under different StyleSheetManager settings
+      // (different CSS), never share.
+      const sharedElements = requestState !== null ? requestState.styleElements : null;
+      const sharedKey =
+        styledComponentId + '\n' + joinRules(entry.rules) + joinKeyframes(entry.keyframes);
+      let scElement = sharedElements ? sharedElements.get(sharedKey) : undefined;
+      if (scElement === undefined) {
+        scElement = React.createElement(ScGlobalStyle, {
+          id: styledComponentId,
+          key: styledComponentId,
+          keyframes: rscKeyframes(entry.keyframes),
+          rules: entry.rules,
+          seq: groupForId(styledComponentId),
+        });
+        if (sharedElements) sharedElements.set(sharedKey, scElement);
       }
 
-      if (css) {
-        const requestState = getRscRequestState ? getRscRequestState() : null;
-
-        if (__DEV__ && requestState !== null) {
-          const emitted = noteRscEmit(requestState, styledComponentId);
-          if (emitted === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
-            warnOnce(
-              'rsc-redundant-emit',
-              `${emitted} instances of the global style ${styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML. A global style is normally mounted once, at the root of the app. Move it higher in the tree so it renders only once per page.`,
-              styledComponentId
-            );
-          }
-        }
-
-        // Repeats of identical CSS share one element object so the
-        // server-component payload writes the style once and refers back to
-        // it; the key carries the global's ID, so two globals with the same
-        // rules, or one under different StyleSheetManager settings
-        // (different CSS), never share.
-        const sharedElements = requestState !== null ? requestState.styleElements : null;
-        const sharedKey = styledComponentId + '\n' + css;
-        let styleElement = sharedElements ? sharedElements.get(sharedKey) : undefined;
-        if (styleElement === undefined) {
-          styleElement = React.createElement('style', {
-            key: styledComponentId,
-            'data-styled-global': styledComponentId,
-            children: stripSplitter(css),
-          });
-          if (sharedElements) sharedElements.set(sharedKey, styleElement);
-        }
-
-        // Array-wrapped: React's server-component serializer writes a repeat
-        // of a bare element as a reference to its props only, repeating the
-        // element's type and key, but references a whole element inside an
-        // array.
-        return [styleElement];
-      }
+      // Array-wrapped: React's server-component serializer writes a repeat
+      // of a bare element as a reference to its props only, repeating the
+      // element's type and key, but references a whole element inside an
+      // array.
+      return [scElement];
     }
 
     return null;

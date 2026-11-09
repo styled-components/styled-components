@@ -1,11 +1,18 @@
 import { evaluateForFastPath, FastPathFragment, hasAnyFragment } from '../parser/compile';
 import { getSource, synthesizeSourceForRuleSet } from '../parser/source';
 import StyleSheet from '../sheet';
+import { type Placement, SERVER_PLACEMENT } from '../sheet/Order';
 import { Compiler, ExecutionContext, RuleSet } from '../types';
 import isStaticRules from '../utils/isStaticRules';
 import { flushKeyframes, type CompiledKeyframes } from './Keyframes';
 
-type InstanceEntry = { keyframes: CompiledKeyframes[]; name: string; rules: string[] };
+type InstanceEntry = {
+  keyframes: CompiledKeyframes[];
+  name: string;
+  /** Where the id's group sorts on its first insert; every rebuild of the group carries it. */
+  placement?: Placement | undefined;
+  rules: string[];
+};
 
 type InstanceMap = Map<string, InstanceEntry>;
 
@@ -58,6 +65,94 @@ function instancesFor(styleSheet: StyleSheet, componentId: string): InstanceMap 
   return instances;
 }
 
+/**
+ * Clear the id's group on the sheet and re-insert every surviving instance in
+ * mount order (docs/global-styles.md "Rebuild order"). Must run
+ * synchronously; no yielding between clear and re-insert. Only static entries
+ * are named `componentId` (dynamic ones append the instance), and their CSS is
+ * identical, so the first one is inserted alone.
+ */
+function rebuildGroup(
+  styleSheet: StyleSheet,
+  componentId: string,
+  instances: InstanceMap | undefined
+): void {
+  styleSheet.clearRules(componentId);
+
+  if (instances === undefined) return;
+
+  let staticInserted = false;
+  for (const entry of instances.values()) {
+    if (entry.name === componentId) {
+      if (staticInserted) continue;
+      staticInserted = true;
+    }
+
+    styleSheet.insertRules(componentId, entry.name, entry.rules, entry.placement);
+  }
+}
+
+/** Drop one instance's entry and rebuild the id's group from the survivors. */
+export function removeInstance(
+  styleSheet: StyleSheet,
+  componentId: string,
+  instance: string
+): void {
+  deleteInstance(styleSheet, componentId, instance);
+  rebuildGroup(styleSheet, componentId, registry.get(styleSheet)?.get(componentId));
+}
+
+/** Write an instance's entry to the sheet: its keyframes first, then its rules. */
+export function writeInstance(
+  styleSheet: StyleSheet,
+  componentId: string,
+  instance: string,
+  entry: InstanceEntry
+): void {
+  const { placement } = entry;
+  const instances = instancesFor(styleSheet, componentId);
+  const prev = instances.get(instance);
+
+  // Static globals share identical CSS across mounts, so the registered name
+  // is `componentId` alone; dedups multi-mount and decouples rehydration
+  // from React's useId format.
+  const sharesName = entry.name === componentId;
+  const known = sharesName && styleSheet.hasNameForId(componentId, componentId);
+  if (known && prev) return;
+
+  // Keyframes take the global tier of the graph that defined them, not the global's definition order.
+  flushKeyframes(styleSheet, entry.keyframes, placement?.server ? SERVER_PLACEMENT : undefined);
+  instances.set(instance, entry);
+
+  if (sharesName) {
+    // A rehydrated or sibling-mounted style only records its entry, so
+    // rebuildGroup can restore survivors if another instance unmounts.
+    if (!known) styleSheet.insertRules(componentId, entry.name, entry.rules, placement);
+    return;
+  }
+
+  // A server sheet's first render appends: a rebuild would re-emit siblings' rules a stream
+  // already flushed. Its entries live as long as the sheet, so a repeat render can rebuild.
+  const appendsToCollection = styleSheet.server && prev === undefined;
+
+  if (appendsToCollection) {
+    styleSheet.insertRules(componentId, entry.name, entry.rules, placement);
+    return;
+  }
+
+  // Skip the rebuild when the CSS is unchanged, on the client only: a server
+  // sheet's tag can be cleared (clearTag) while its entries survive.
+  if (!styleSheet.server && prev) {
+    const a = prev.rules;
+    const b = entry.rules;
+    let same = a.length === b.length;
+    for (let i = 0; same && i < a.length; i++) same = a[i] === b[i];
+    if (same) return;
+  }
+
+  rebuildGroup(styleSheet, componentId, instances);
+}
+
 export default class WebGlobalStyle<Props extends object> {
   componentId: string;
   /** @internal */
@@ -73,60 +168,18 @@ export default class WebGlobalStyle<Props extends object> {
     // / test fixtures). No-op when source is already attached.
     synthesizeSourceForRuleSet(rules);
 
-    // Pre-register the shared group so global styles defined before
-    // components always appear before them in the stylesheet.
+    // Registered at definition, so a global's group number follows definition order
+    // among globals (every global sits before every component, by tier).
     StyleSheet.registerId(this.componentId);
   }
 
   removeStyles(instance: string, styleSheet: StyleSheet): void {
-    deleteInstance(styleSheet, this.componentId, instance);
-    this.rebuildGroup(styleSheet, registry.get(styleSheet)?.get(this.componentId));
+    removeInstance(styleSheet, this.componentId, instance);
   }
 
   /** Write what `computeRules` returned to the sheet. */
   renderStyles(instance: string, entry: InstanceEntry, styleSheet: StyleSheet): void {
-    const id = this.componentId;
-    const instances = instancesFor(styleSheet, id);
-    const prev = instances.get(instance);
-
-    // Static globals share identical CSS across mounts, so the registered name
-    // is `componentId` alone; dedups multi-mount and decouples rehydration
-    // from React's useId format.
-    const known = this.isStatic && styleSheet.hasNameForId(id, id);
-    if (known && prev) return;
-
-    // Keyframes sort ahead of the global rules in the sheet (group IDs were
-    // claimed at construction time).
-    flushKeyframes(styleSheet, entry.keyframes);
-    instances.set(instance, entry);
-
-    if (this.isStatic) {
-      // A rehydrated or sibling-mounted style only records its entry, so
-      // rebuildGroup can restore survivors if another instance unmounts.
-      if (!known) styleSheet.insertRules(id, entry.name, entry.rules);
-      return;
-    }
-
-    // A server sheet's first render appends: a rebuild would re-emit siblings' rules a stream
-    // already flushed. Its entries live as long as the sheet, so a repeat render can rebuild.
-    const appendsToCollection = styleSheet.server && prev === undefined;
-
-    if (appendsToCollection) {
-      styleSheet.insertRules(id, entry.name, entry.rules);
-      return;
-    }
-
-    // Skip the rebuild when the CSS is unchanged, on the client only: a server
-    // sheet's tag can be cleared (clearTag) while its entries survive.
-    if (!styleSheet.server && prev) {
-      const a = prev.rules;
-      const b = entry.rules;
-      let same = a.length === b.length;
-      for (let i = 0; same && i < a.length; i++) same = a[i] === b[i];
-      if (same) return;
-    }
-
-    this.rebuildGroup(styleSheet, instances);
+    writeInstance(styleSheet, this.componentId, instance, entry);
   }
 
   /**
@@ -170,30 +223,5 @@ export default class WebGlobalStyle<Props extends object> {
       name: this.isStatic ? this.componentId : this.componentId + instance,
       rules,
     };
-  }
-
-  /**
-   * Clear the id's group on the sheet and re-insert every surviving instance in
-   * mount order (docs/global-styles.md "Rebuild order"). Must run
-   * synchronously; no yielding between clear and re-insert. Only static entries
-   * are named `componentId` (dynamic ones append the instance), and their CSS is
-   * identical, so the first one is inserted alone.
-   * @internal
-   */
-  private rebuildGroup(styleSheet: StyleSheet, instances: InstanceMap | undefined): void {
-    const id = this.componentId;
-    styleSheet.clearRules(id);
-
-    if (instances === undefined) return;
-
-    let staticInserted = false;
-    for (const entry of instances.values()) {
-      if (entry.name === id) {
-        if (staticInserted) continue;
-        staticInserted = true;
-      }
-
-      styleSheet.insertRules(id, entry.name, entry.rules);
-    }
   }
 }

@@ -23,6 +23,7 @@
         "**",
         "!**/test/**",
         "!**/*.test.*",
+        "!**/models/ScStyle.ts",
         "!**/models/StyledComponent.ts",
         "!**/constructors/createGlobalStyle.ts"
       ]

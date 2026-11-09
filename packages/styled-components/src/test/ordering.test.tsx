@@ -47,9 +47,8 @@ describe('CSS injection ordering', () => {
       `);
     });
 
-    it('should follow definition order: component defined first appears before global defined second', () => {
-      // Group IDs are allocated at definition time (styled() or createGlobalStyle()).
-      // Whichever is defined first gets the lower group ID and appears first in CSS.
+    it('should inject a global defined after a component before it (globals-first)', () => {
+      // A global sorts before every component of its sheet, whatever the definition order.
       const Heading = styled.h1`
         color: red;
       `;
@@ -62,9 +61,35 @@ describe('CSS injection ordering', () => {
         </>
       );
 
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        "body {
+          background: papayawhip;
+        }
+        .a {
+          color: red;
+        }"
+      `);
+    });
+
+    it('should inject a global defined after two components of one element before both, keeping the components in definition order (globals-first)', () => {
+      const Base = styled.div`
+        color: red;
+      `;
+      const Extended = styled(Base)`
+        color: blue;
+      `;
+      const GlobalStyle = createGlobalStyle`div { color: green; }`;
+
+      render(
+        <>
+          <GlobalStyle />
+          <Extended />
+        </>
+      );
+
       const css = getRenderedCSS();
-      // Heading was defined first → lower group → appears first
-      expect(posIn(css, 'color: red')).toBeLessThan(posIn(css, 'background: papayawhip'));
+      expect(posIn(css, 'color: green')).toBeLessThan(posIn(css, 'color: red'));
+      expect(posIn(css, 'color: red')).toBeLessThan(posIn(css, 'color: blue'));
     });
 
     it('should inject multiple globals and components in definition order', () => {
@@ -673,7 +698,7 @@ describe('CSS injection ordering', () => {
         `);
       });
 
-      it('should maintain definition order when GlobalB is added after initial mount', () => {
+      it('should place GlobalB, defined after Comp, before Comp when it is added after initial mount (globals-first)', () => {
         const GlobalA = createGlobalStyle`html { font-size: 16px; }`;
         const Comp = styled.div`
           color: blue;
@@ -695,11 +720,11 @@ describe('CSS injection ordering', () => {
         let css = getRenderedCSS();
         expect(posIn(css, 'font-size: 16px')).toBeLessThan(posIn(css, 'color: blue'));
 
-        // Now add GlobalB;definition order is GlobalA, Comp, GlobalB
+        // Now add GlobalB: globals sort in definition order, all before components
         rerender(<App showB={true} />);
         css = getRenderedCSS();
-        expect(posIn(css, 'font-size: 16px')).toBeLessThan(posIn(css, 'color: blue'));
-        expect(posIn(css, 'color: blue')).toBeLessThan(posIn(css, 'margin: 0'));
+        expect(posIn(css, 'font-size: 16px')).toBeLessThan(posIn(css, 'margin: 0'));
+        expect(posIn(css, 'margin: 0')).toBeLessThan(posIn(css, 'color: blue'));
       });
     });
 
@@ -929,7 +954,7 @@ describe('CSS injection ordering', () => {
     });
 
     describe('interleaved global + component mount/unmount', () => {
-      it('should maintain definition order when mounting in non-definition order', () => {
+      it('should keep globals in definition order before components when mounting in non-definition order (globals-first)', () => {
         const GlobalA = createGlobalStyle`html { font-size: 16px; }`;
         const CompA = styled.div`
           color: red;
@@ -953,19 +978,18 @@ describe('CSS injection ordering', () => {
 
         const { rerender } = render(<App showAll={false} />);
         let css = getRenderedCSS();
-        // CompA defined before GlobalB → CompA appears first (definition order)
-        expect(posIn(css, 'color: red')).toBeLessThan(posIn(css, 'margin: 0'));
+        // GlobalB sorts before CompA although CompA was defined first
+        expect(posIn(css, 'margin: 0')).toBeLessThan(posIn(css, 'color: red'));
 
-        // Now add GlobalA and CompB
+        // Now add GlobalA and CompB: globals (GlobalA, GlobalB) then components (CompA, CompB)
         rerender(<App showAll={true} />);
         css = getRenderedCSS();
-        // Definition order: GlobalA → CompA → GlobalB → CompB
-        expect(posIn(css, 'font-size: 16px')).toBeLessThan(posIn(css, 'color: red'));
-        expect(posIn(css, 'color: red')).toBeLessThan(posIn(css, 'margin: 0'));
-        expect(posIn(css, 'margin: 0')).toBeLessThan(posIn(css, 'color: blue'));
+        expect(posIn(css, 'font-size: 16px')).toBeLessThan(posIn(css, 'margin: 0'));
+        expect(posIn(css, 'margin: 0')).toBeLessThan(posIn(css, 'color: red'));
+        expect(posIn(css, 'color: red')).toBeLessThan(posIn(css, 'color: blue'));
       });
 
-      it('should keep GlobalB before CompB after unmounting GlobalA', () => {
+      it('should keep GlobalB before CompA and CompB after unmounting GlobalA (globals-first)', () => {
         const GlobalA = createGlobalStyle`html { font-size: 16px; }`;
         const CompA = styled.div`
           color: red;
@@ -994,20 +1018,19 @@ describe('CSS injection ordering', () => {
         rerender(<App showA={false} />);
         css = getRenderedCSS();
         expect(css).toMatchInlineSnapshot(`
-          ".a {
-            color: red;
-          }
-          body {
+          "body {
             margin: 0;
+          }
+          .a {
+            color: red;
           }
           .b {
             color: blue;
           }"
         `);
-        // GlobalB (definition order before CompB) should still appear before CompB
+        // A global sorts before every component, so GlobalB stays before both
+        expect(posIn(css, 'margin: 0')).toBeLessThan(posIn(css, 'color: red'));
         expect(posIn(css, 'margin: 0')).toBeLessThan(posIn(css, 'color: blue'));
-        // CompA was defined before GlobalB, so CompA still before GlobalB
-        expect(posIn(css, 'color: red')).toBeLessThan(posIn(css, 'margin: 0'));
       });
     });
 

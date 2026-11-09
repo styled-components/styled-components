@@ -7,10 +7,12 @@ import isPropValid from '../utils/isPropValid';
  *  single object literal keeps every styled component on a single hidden
  *  class. */
 const REACT_MEMO_TYPE = Symbol.for('react.memo');
-import { RSC_REDUNDANT_EMIT_WARN_THRESHOLD, SC_ATTR, SC_VERSION } from '../constants';
-import { BACKSLASH, CR, DOUBLE_QUOTE, FF, LF, SINGLE_QUOTE, urlTokenEnd } from '../utils/charCodes';
+import { ScStyle } from 'styled-components/server-styles';
+import { SC_VERSION } from '../constants';
 import { IS_RSC } from '../utils/isRsc';
 import type StyleSheet from '../sheet';
+import { getRegisterVersion, registerLabel } from '../sheet/GroupIDAllocator';
+import { hasUnadoptedServerTags } from '../sheet/Rehydration';
 import type {
   AnyComponent,
   Attrs,
@@ -19,7 +21,6 @@ import type {
   ExecutionContext,
   ExecutionProps,
   IStyledComponent,
-  Compiler,
   IStyledComponentFactory,
   IStyledStatics,
   OmitNever,
@@ -40,10 +41,7 @@ import {
   type PostAttrsPlan,
 } from '../utils/postAttrs';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
-import createWarnTooManyClasses, {
-  LIMIT as TOO_MANY_CLASSES_LIMIT,
-} from '../utils/createWarnTooManyClasses';
-import { fifoSet } from '../utils/fifoMap';
+import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import escape from '../utils/escape';
@@ -54,14 +52,11 @@ import hyphenateStyleName from '../utils/hyphenateStyleName';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
-import { joinKeyframes, joinRules, joinStrings, stripSplitter } from '../utils/joinStrings';
-import {
-  getRscRequestState,
-  noteRscEmit,
-  recallRscRules,
-  type RscRequestState,
-} from '../utils/rscCache';
+import { joinStrings } from '../utils/joinStrings';
+import { registeredIdsIn } from '../utils/registeredIds';
+import { getRscRequestState } from '../utils/rscCache';
 import { warnOnce } from '../utils/warnOnce';
+import { rscChain, rscFlush, rscKeyframes } from './rscStyle';
 import WebStyle, { GeneratedStyle } from './WebStyle';
 import { type IStyleSheetContext, useStyleSheetContext } from './StyleSheetManager';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
@@ -70,33 +65,39 @@ declare const __SERVER__: boolean;
 
 const identifiers: { [key: string]: number } = {};
 
+/** What `generatedStyle` holds outside a server component, where nothing reads it. */
+const NO_GENERATED_STYLE: GeneratedStyle = { className: '', keyframes: [], levels: [] };
+
 const subscribeNoop = (): (() => void) => () => {};
 const getFalse = (): boolean => false;
 const getTrue = (): boolean => true;
 
 /**
- * Writes one render's generated CSS into the sheet from an insertion effect,
- * so a committed render's rules land before paint and a discarded render
- * writes nothing. Mounted only when a render still has unwritten rules.
+ * Writes one render's generated CSS into the sheet, and teaches it which components wrap this
+ * one, from an insertion effect, so a committed render's rules land before paint and a discarded
+ * render writes nothing. Mounted only when a render still has unwritten rules or an unlearned
+ * outer.
  */
 function StyleInjector({
   generated,
+  outers,
   sheet,
   webStyle,
 }: {
-  generated: GeneratedStyle;
+  generated: GeneratedStyle | null;
+  outers: readonly string[] | null;
   sheet: StyleSheet;
   webStyle: WebStyle;
 }): null {
   if (__DEV__) {
-    // getServerSnapshot runs under renderToString; getSnapshot under createRoot.
-    // Distinguishes the jsdom-without-ServerStyleSheet footgun (buffered path,
-    // insertion effects never fire) from a normal client mount, without the
-    // false positives a post-render microtask probe would raise on discarded
-    // concurrent renders.
+    // getServerSnapshot runs under renderToString and while hydrating; getSnapshot under
+    // createRoot. A sheet that adopted no server tags and finds none waiting marks the
+    // jsdom-without-ServerStyleSheet footgun (buffered path, insertion effects never fire), which a
+    // hydration of server-rendered styles is not, and a post-render microtask probe would raise
+    // false positives on discarded concurrent renders.
     // biome-ignore lint/correctness/useHookAtTopLevel: __DEV__ is a build-time constant, so a given bundle always runs this hook or never does
     const isServerRender = React.useSyncExternalStore(subscribeNoop, getFalse, getTrue);
-    if (isServerRender) {
+    if (isServerRender && sheet.names.size === 0 && !hasUnadoptedServerTags(sheet)) {
       warnOnce(
         'buffered-ssr-without-sheet',
         'this tree is rendered with renderToString / renderToStaticMarkup without ServerStyleSheet, so its styles are missing from the output. Wrap the tree in ServerStyleSheet#collectStyles.'
@@ -104,9 +105,82 @@ function StyleInjector({
     }
   }
   React.useInsertionEffect(() => {
-    webStyle.inject(sheet, generated);
+    if (generated !== null) webStyle.inject(sheet, generated);
+    if (outers !== null) learnOuters(sheet, outers, webStyle.componentId);
   });
   return null;
+}
+
+/** Teaches `sheet` that each of `outers` wraps the component `id`. */
+function learnOuters(sheet: StyleSheet, outers: readonly string[], id: string): void {
+  for (let i = 0; i < outers.length; i++) sheet.learn(outers[i], id);
+}
+
+/**
+ * The registered ids in `className` outside the component's own chain: the styled components up
+ * the tree that passed their classes down.
+ */
+function outersIn(className: string, webStyle: WebStyle): readonly string[] {
+  const hits = registeredIdsIn(className);
+  if (hits.length === 0) return hits;
+
+  let outers: string[] | null = null;
+  for (let i = 0; i < hits.length; i++) {
+    let own = false;
+    for (let w: WebStyle | null | undefined = webStyle; w; w = w.baseStyle) {
+      if (w.componentId === hits[i]) own = true;
+    }
+
+    if (own) outers ??= hits.slice(0, i);
+    else if (outers !== null) outers.push(hits[i]);
+  }
+
+  return outers ?? hits;
+}
+
+/**
+ * An instance's last scan: the `className` it scanned, the register version it ran against, and
+ * the outers found.
+ */
+type RememberedScan = { className: string; outers: readonly string[]; version: number };
+
+/**
+ * `outersIn`, skipped when this instance already scanned the same `className` against the same
+ * register (a new id since then can turn a miss into a hit). The sheet is not part of the memo: the
+ * caller still asks the current sheet which outers it has settled.
+ */
+function rememberedOutersIn(
+  memo: { current: RememberedScan | null },
+  className: string,
+  webStyle: WebStyle
+): readonly string[] {
+  const version = getRegisterVersion();
+  const last = memo.current;
+  if (last !== null && last.version === version && last.className === className) {
+    return last.outers;
+  }
+
+  const outers = outersIn(className, webStyle);
+  memo.current = { className, outers, version };
+
+  return outers;
+}
+
+/** The outers the sheet has not settled against the component `id`, or null when it knows them all. */
+function unsettledOuters(
+  sheet: StyleSheet,
+  outers: readonly string[],
+  id: string
+): readonly string[] | null {
+  let unsettled: string[] | null = null;
+  for (let i = 0; i < outers.length; i++) {
+    if (sheet.isSettled(outers[i], id)) continue;
+
+    if (unsettled === null) unsettled = [outers[i]];
+    else unsettled.push(outers[i]);
+  }
+
+  return unsettled;
 }
 
 /** True when `generated` carries rules or keyframes the sheet has not emitted. */
@@ -167,92 +241,12 @@ function generateId(
     name +
     '-' +
     generateComponentId(
-      // Isolate multiple styled-components runtimes on one page.
-      SC_VERSION + name + identifiers[name]
+      // Isolate multiple styled-components runtimes on one page, and the server component graph
+      // from the server-rendering and browser graphs, which count the same names apart.
+      SC_VERSION + (IS_RSC ? 'rsc' : '') + name + identifiers[name]
     );
 
   return parentComponentId ? parentComponentId + '-' + componentId : componentId;
-}
-
-/**
- * RSC counterpart to `webStyle.flush`. Runs `generate()` to produce the
- * inheritance chain's compiled CSS without writing to the tag; registers
- * each new class name so repeat renders of the same component/props skip
- * compilation. Returns both the class name (for the element) and the
- * generated levels (consumed by the inline <style> emission).
- */
-function rscFlush<T extends ExecutionContext>(
-  webStyle: WebStyle,
-  resolvedAttrs: T,
-  styleSheet: StyleSheet,
-  compiler: Compiler
-): GeneratedStyle {
-  const generated = webStyle.generate(resolvedAttrs, styleSheet, compiler);
-  for (let i = 0; i < generated.levels.length; i++) {
-    const level = generated.levels[i];
-    if (level.isNew) styleSheet.registerName(level.componentId, level.name);
-  }
-  return generated;
-}
-
-/**
- * A level whose name another instance registered first arrives empty; its rules
- * come from the process-wide cache (docs/react.md "RSC style emission and
- * Suspense"), or are compiled again when the cache has evicted them.
- */
-function rscLevelRules(
-  webStyle: WebStyle,
-  level: GeneratedStyle['levels'][number],
-  context: ExecutionContext,
-  ssc: IStyleSheetContext
-): string[] {
-  if (level.rules.length > 0) return level.rules;
-
-  for (let w: WebStyle | null | undefined = webStyle; w; w = w.baseStyle) {
-    if (w.componentId !== level.componentId) continue;
-
-    const recalled = recallRscRules(w, level.name);
-    if (recalled !== undefined) return recalled;
-
-    const regenerated = webStyle.generate(context, ssc.styleSheet, ssc.compiler, {
-      recompile: true,
-    }).levels;
-    for (let i = 0; i < regenerated.length; i++) {
-      if (regenerated[i].componentId === level.componentId && regenerated[i].name === level.name) {
-        return regenerated[i].rules;
-      }
-    }
-    break;
-  }
-  return level.rules;
-}
-
-/**
- * The CSS one RSC instance emits: referenced keyframes, then each level of its
- * chain with every base level wrapped in :where() for zero specificity, so any
- * extension overrides it without !important.
- */
-function buildRscStyleCss(
-  webStyle: WebStyle,
-  generatedStyle: GeneratedStyle,
-  context: ExecutionContext,
-  ssc: IStyleSheetContext
-): string {
-  const levels = generatedStyle.levels;
-  const lastIdx = levels.length - 1;
-  let css = '';
-
-  for (let i = 0; i < levels.length; i++) {
-    const level = levels[i];
-    const rules = rscLevelRules(webStyle, level, context, ssc);
-    if (rules.length === 0) continue;
-
-    let levelCss = joinRules(rules);
-    if (i !== lastIdx) levelCss = wrapLevelInWhere(levelCss, level.name);
-    css += levelCss;
-  }
-
-  return stripSplitter(joinKeyframes(generatedStyle.keyframes) + css);
 }
 
 function resolveContext<Props extends BaseObject>(
@@ -290,72 +284,6 @@ function resolveContext<Props extends BaseObject>(
 }
 
 let seenUnknownProps: Set<string> | undefined;
-
-/**
- * Cache RegExp objects for :where() wrapping to avoid recompilation per
- * render. Bounded with FIFO eviction at the same threshold the
- * warn-too-many-classes machinery uses; without the cap, RSC SSR with
- * unbounded class-name variation would leak a regex per unique class.
- */
-const whereRegExpCache = new Map<string, RegExp>();
-function getWhereRegExp(name: string): RegExp {
-  let re = whereRegExpCache.get(name);
-  if (!re) {
-    re = new RegExp('\\.' + name + '(?![a-zA-Z0-9_-])', 'g');
-    fifoSet(whereRegExpCache, name, re, TOO_MANY_CLASSES_LIMIT);
-  }
-  return re;
-}
-
-/**
- * A url token ends at its first `)`, so the `(` of `:where(` inside one would end it there and
- * turn the text after into real rules. Only the text around url tokens is wrapped. A `(` inside a
- * string is not a url token, so strings are skipped whole.
- */
-function wrapLevelInWhere(levelCss: string, name: string): string {
-  const re = getWhereRegExp(name);
-  const wrapped = ':where(.' + name + ')';
-  const len = levelCss.length;
-  let out = '';
-  let from = 0;
-  let escape = -1;
-  let nextEscape = levelCss.indexOf('\\');
-  /** Everything before this index is read: outside a string, or skipped as one. */
-  let read = 0;
-  for (let open = levelCss.indexOf('('); open !== -1; open = levelCss.indexOf('(', open + 1)) {
-    while (nextEscape !== -1 && nextEscape < open) {
-      escape = nextEscape;
-      nextEscape = levelCss.indexOf('\\', escape + 1);
-    }
-    if (escape === open - 1) continue;
-
-    while (read < open) {
-      const code = levelCss.charCodeAt(read++);
-      if (code === BACKSLASH) {
-        read++;
-      } else if (code === DOUBLE_QUOTE || code === SINGLE_QUOTE) {
-        // A raw newline ends a string.
-        while (read < len) {
-          const inner = levelCss.charCodeAt(read);
-          if (inner === code) {
-            read++;
-            break;
-          }
-          if (inner === LF || inner === CR || inner === FF) break;
-          read += inner === BACKSLASH ? 2 : 1;
-        }
-      }
-    }
-    if (read > open) continue;
-
-    const urlEnd = urlTokenEnd(levelCss, open, len, escape);
-    if (urlEnd !== -1) {
-      out += levelCss.substring(from, open).replace(re, wrapped) + levelCss.substring(open, urlEnd);
-      from = open = read = urlEnd;
-    }
-  }
-  return out + levelCss.substring(from).replace(re, wrapped);
-}
 
 /**
  * Merge an attrs-resolved dict into the execution context: `className` joins,
@@ -546,12 +474,13 @@ function useImpl<Props extends BaseObject>(
   const theme = determineTheme(props, contextTheme) || (IS_RSC ? undefined : EMPTY_OBJECT);
 
   let generatedClassName: string;
-  let generatedStyle: GeneratedStyle | null = null;
-  let rscState: RscRequestState | null = null;
+  let generatedStyle = NO_GENERATED_STYLE;
   let popOverrides: Dict<string> | null = null;
   const postAttrsPlans = forwardedComponent.postAttrsPlans;
   /** The CSSOM write to schedule in the insertion effect (buffered path only). */
   let pendingInject: GeneratedStyle | null = null;
+  /** The outers the sheet has yet to learn, for the insertion effect (buffered path only). */
+  let pendingOuters: readonly string[] | null = null;
 
   // Interpolations and arity-2 attrs are the component's own render-body user
   // code: they run every render so a hook called inside one keeps a stable hook
@@ -564,19 +493,34 @@ function useImpl<Props extends BaseObject>(
   if (postAttrsPlans !== undefined) {
     popOverrides = applyPostAttrsWeb<Props>(context, componentAttrs, postAttrsPlans, webStyle);
   }
+
+  // A styled component up the tree passes its classes down in `className`; its id in them makes it
+  // an outer of this component (docs/react.md "Server component styles").
+  const incomingClassName = context.className;
+  // biome-ignore lint/correctness/useHookAtTopLevel: __SERVER__ and IS_RSC are build and load-time constants, so this branch is fixed for the whole bundle
+  const scanMemo = !__SERVER__ && !IS_RSC ? React.useRef<RememberedScan | null>(null) : null;
+  const outers = !incomingClassName
+    ? EMPTY_ARRAY
+    : scanMemo === null
+      ? outersIn(incomingClassName, webStyle)
+      : rememberedOutersIn(scanMemo, incomingClassName, webStyle);
+
   if (IS_RSC) {
-    rscState = getRscRequestState ? getRscRequestState() : null;
     generatedStyle = rscFlush(webStyle, context, ssc.styleSheet, ssc.compiler);
     generatedClassName = generatedStyle.className;
   } else if (__SERVER__ || ssc.styleSheet.server) {
     // ServerStyleSheet SSR (in either a server or a browser build) never runs
     // insertion effects, so the CSSOM write must stay synchronous.
     generatedClassName = webStyle.flush(context, ssc.styleSheet, ssc.compiler);
+    learnOuters(ssc.styleSheet, outers, styledComponentId);
   } else {
     // Browser path: generate during render and inject via StyleInjector.
     const generated = webStyle.generate(context, ssc.styleSheet, ssc.compiler);
     generatedClassName = generated.className;
     pendingInject = generatedNeedsSheetWrite(generated, ssc.styleSheet) ? generated : null;
+    if (outers.length > 0) {
+      pendingOuters = unsettledOuters(ssc.styleSheet, outers, styledComponentId);
+    }
   }
 
   if (__DEV__ && !IS_RSC) {
@@ -590,6 +534,7 @@ function useImpl<Props extends BaseObject>(
 
   const elementToBeCreated: WebTarget = context.as || target;
   const isDOMTarget = isTag(elementToBeCreated);
+
   const elementProps = buildPropsForElement(
     context,
     elementToBeCreated,
@@ -608,8 +553,8 @@ function useImpl<Props extends BaseObject>(
   if (generatedClassName) {
     classString += ' ' + generatedClassName;
   }
-  if (context.className) {
-    classString += ' ' + context.className;
+  if (incomingClassName) {
+    classString += ' ' + incomingClassName;
   }
 
   elementProps[isDOMTarget && elementToBeCreated.includes('-') ? 'class' : 'className'] =
@@ -621,7 +566,7 @@ function useImpl<Props extends BaseObject>(
 
   // Client path: stable Fragment shape so the host element keeps identity
   // when the injector mounts or unmounts across commits. Only instances that
-  // still need a CSSOM write mount StyleInjector.
+  // still need a CSSOM write or an outer learned mount StyleInjector.
   const injectsAfterCommit = !__SERVER__ && !IS_RSC && !ssc.styleSheet.server;
 
   if (injectsAfterCommit) {
@@ -634,10 +579,11 @@ function useImpl<Props extends BaseObject>(
     return createElement(
       React.Fragment,
       null,
-      pendingInject
+      pendingInject !== null || pendingOuters !== null
         ? createElement(StyleInjector, {
             key: 'sc-inject',
             generated: pendingInject,
+            outers: pendingOuters,
             sheet: ssc.styleSheet,
             webStyle,
           })
@@ -646,41 +592,53 @@ function useImpl<Props extends BaseObject>(
     );
   }
 
-  // RSC: one plain tag per instance, shared element objects; see docs/react.md "RSC style emission and Suspense".
-  if (IS_RSC && generatedStyle) {
-    const sharedElements = rscState !== null ? rscState.styleElements : null;
-    const sharedKey = webStyle.componentId + ' ' + generatedClassName;
-    let styleElement = sharedElements ? sharedElements.get(sharedKey) : undefined;
+  // RSC: `ScStyle` carries the instance's rules into the registry sheet; see docs/react.md "Server component styles".
+  if (IS_RSC) {
+    const styleElement = rscStyleElement(webStyle, generatedStyle, outers, context, ssc);
 
-    if (styleElement === undefined) {
-      const combined = buildRscStyleCss(webStyle, generatedStyle, context, ssc);
-      if (combined) {
-        styleElement = React.createElement('style', {
-          [SC_ATTR]: '',
-          key: 'sc-' + webStyle.componentId,
-          children: combined,
-        });
-        if (sharedElements) sharedElements.set(sharedKey, styleElement);
-      }
-    }
-
-    if (styleElement !== undefined) {
-      if (__DEV__ && rscState !== null) {
-        const emitted = noteRscEmit(rscState, webStyle.componentId);
-        if (emitted === RSC_REDUNDANT_EMIT_WARN_THRESHOLD) {
-          warnOnce(
-            'rsc-redundant-emit',
-            `${emitted} instances of the styled component ${forwardedComponent.displayName || styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML. This is fine at normal sizes. To trim a very large list, style the items from one styled parent element (for example a \`& > li\` selector) and render plain children, so the whole list emits a single tag.`,
-            webStyle.componentId
-          );
-        }
-      }
-
-      return React.createElement(React.Fragment, null, styleElement, element);
-    }
+    if (styleElement !== null) return createElement(React.Fragment, null, styleElement, element);
   }
 
   return element;
+}
+
+/**
+ * The `ScStyle` element for one server instance, shared per request with every instance of the
+ * same component, class names and outers so the payload writes its props once. Null when the
+ * instance has no rules and no keyframes.
+ */
+function rscStyleElement(
+  webStyle: WebStyle,
+  generated: GeneratedStyle,
+  outerIds: readonly string[],
+  context: ExecutionContext,
+  ssc: IStyleSheetContext
+): React.ReactElement | null {
+  if (generated.levels.length === 0 && generated.keyframes.length === 0) return null;
+
+  const state = getRscRequestState ? getRscRequestState() : null;
+  const sharedKey =
+    webStyle.componentId +
+    ' ' +
+    generated.className +
+    (outerIds.length > 0 ? ' ' + outerIds.join(',') : '');
+  const shared = state !== null ? state.styleElements.get(sharedKey) : undefined;
+  if (shared !== undefined) return shared;
+
+  const chain = rscChain({ context, generated, ssc, webStyle });
+  const keyframes = rscKeyframes(generated.keyframes);
+  if (chain.length === 0 && keyframes.length === 0) return null;
+
+  const styleElement = createElement(ScStyle, {
+    chain,
+    key: 'sc-' + webStyle.componentId,
+    keyframes,
+    // A fresh empty array: Flight sends a shared one as a reference longer than `[]`.
+    outers: outerIds.length > 0 ? outerIds : [],
+  });
+  if (state !== null) state.styleElements.set(sharedKey, styleElement);
+
+  return styleElement;
 }
 
 function createStyledComponent<
@@ -786,6 +744,8 @@ function createStyledComponent<
   } as unknown as IStyledComponent<'web', OuterProps> & Statics;
 
   if (__DEV__) {
+    if (options.displayName) registerLabel(styledComponentId, options.displayName);
+
     checkDynamicCreation(displayName, styledComponentId);
 
     WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(
