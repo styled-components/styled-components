@@ -110,6 +110,19 @@ Server rendering on an edge runtime is unsupported. Next.js applies the `browser
 
 Both messages tell the reader to use the Node.js runtime. Guard 1 is gated `!__SERVER__ && !__NATIVE__`, so only the bundles where it can fire carry it. Neither guard spells `typeof React.createContext === 'undefined'`, which every non-server bundle replaces with `false`.
 
+## Server component shim
+
+`styled-components/server-styles` is the client-component module a server component host loads for `ScStyle` and `ScGlobalStyle` (see [react.md](react.md) "Server component styles"). The rules that keep it working:
+
+- The shim re-exports both elements from the package's own name, which stays external, so the host's client graph resolves its own copy of the main entry (the browser build in a browser) and no second copy ships.
+- `'use client';` is terser's `format.preamble`: rollup drops a source directive and terser drops a banner, and a preamble keeps sourcemap columns correct.
+- Only the server build imports the shim, by name. `treeshake.moduleSideEffects` marks it side-effect free, so a build whose binding tree-shakes away keeps no bare `import 'styled-components/server-styles'`; the standalone UMD lists it as external for the same reason.
+- The shim and the server and browser builds are minified apart, so both element names and their wire props stay out of the mangle list (`scripts/internalPropertyNames.cjs`).
+- The native TypeScript plugin excludes the shim source, so no shim declaration ships under `native/`.
+- Inside the repo the package's own name resolves to source for the type checker and Jest (`tsconfig.json` `paths`, the Jest base `moduleNameMapper`), and to `dist` for `test:build` through the root `workspace:*` link.
+
+The "server component shim" blocks in `treeshake.test.ts` and `dist-behavior.test.js` lock each rule against the built files.
+
 ## Published files
 
 The package's `files` list includes `native`, and the workspace install puts dependencies in `native/node_modules`, so `files` excludes `!native/node_modules`. `test-utils` stays out of `files`: its Jest setup imports `jest-fail-on-console` and `../src`, neither of which ships, so only the repo's own Jest configs can load it. CI publishes through `pnpm release` (`changeset publish`, which packs with pnpm and honors `files`). The "published package contents" block in `src/test/treeshake.test.ts` (run by `test:build`) fails if the packed list holds any `node_modules` or `test-utils` path, or drops a native entry point. It reads `npm pack --dry-run`, whose list matches pnpm's, because the pinned pnpm has no dry-run pack.

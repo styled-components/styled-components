@@ -69,8 +69,8 @@ sequenceDiagram
         WebStyle->>StyleSheet: insertRules
         StyleSheet->>Tag: rules.push(rule)
     else RSC Mode
-        useImpl->>useImpl: rscFlush + emit Fragment with inline style tag
-        Note over useImpl: No precedence attr,<br/>avoids React 19 Float hoisting
+        useImpl->>useImpl: render ScStyle (chain, outers, keyframes) beside the element
+        Note over useImpl: ScStyle is a client reference: SSR inserts its rules<br/>into the registry sheet, which flushes them in order
     end
 
     Note over useImpl,DOM: 5. ELEMENT CREATION

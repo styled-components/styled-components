@@ -55,7 +55,7 @@ The mechanism behind the effect ban in AGENTS.md (React 19.2, `react-dom` develo
 
 ### renderToString does not encode CSS characters
 
-R19 emits `:where(.x)>span` inside `<style>` text, since `>`, `'`, and `"` are not special in a CSS text context. This shapes SSR and `extractCSS()` output. Tests assert the raw character inside CSS text, never `&gt;`, `&#x27;`, or related HTML entities.
+R19 emits `.x>span` inside `<style>` text, since `>`, `'`, and `"` are not special in a CSS text context. This shapes SSR and `extractCSS()` output. Tests assert the raw character inside CSS text, never `&gt;`, `&#x27;`, or related HTML entities.
 
 ### react-test-renderer requires act()
 
@@ -87,18 +87,6 @@ Jest sets `global.IS_REACT_ACT_ENVIRONMENT`; an ad-hoc script does not. Without 
 ### Raw element snapshots
 
 R19 elements carry `$$typeof: Symbol(react.transitional.element)` plus internal `_owner` / `_store` props, so an inline snapshot of a raw element array is unstable. Render to a string (or a DOM) before snapshotting.
-
-## RSC :nth-child hazard for injected style tags
-
-Under React Server Components there is no client runtime to manage a stylesheet, so styles inject as real `<style>` elements that land as DOM siblings of the styled elements. Structural pseudo-classes count those tags: `:first-child`, `:last-child`, and `:nth-child()` see indices shifted by the injected `<style>` tags, and rules target the wrong element or nothing. Observable under the Next.js App Router and any `react-server-dom-*` renderer.
-
-Two fixes, in order of preference:
-
-1. Switch to type-filtered pseudos: `:first-of-type`, `:last-of-type`, `:nth-of-type()`. They match by element type, so `<style>` tags (a different type than `div` / `li` / etc.) are not counted. No tooling, works in every browser. Prefer this whenever the intent is "the first button" rather than literally "the first child regardless of type."
-
-2. If real `:nth-child()` counting is needed, rewrite the selector to exclude the library's own style tags with `rscPlugin` from `styled-components/plugins`, passed app-wide through `configureServerStyles({ plugins })` or to one subtree through the `plugins` prop on `StyleSheetManager` (see "StyleSheetManager and configureServerStyles in server components"). The rewrite uses CSS Selectors Level 4 `:nth-child(An+B of S)` to count only matching elements.
-
-Browser-support cliff for fix 2: `:nth-child(... of S)` needs Chrome 111+, Firefox 113+, Safari 9+ (caniuse `css-nth-child-of-s`). An unsupported browser reads the whole rule as an invalid selector and drops it, so the styles vanish silently rather than degrade. Opt into the plugin only when the audience clears those versions; otherwise rewrite to `:nth-of-type()` by hand.
 
 ## StyleSheetManager and configureServerStyles in server components
 
@@ -143,9 +131,79 @@ A `'use client'` export reaches a server component as a client reference, and a 
 - Every interpolation still evaluates; only the emitted CSS loses the node.
 - Server components only (`CAN_HOLD_REFERENCE` in `utils/serverReference.ts`): references exist only under the `react-server` condition, so plain server rendering of a client tree skips every check, and native has no server components (`docs/react-native.md` "RSC on native").
 
-## RSC style emission and Suspense
+## Server component styles
 
-Every server-rendered instance emits its own inline `<style data-styled>` holding exactly the rules its render needs: its own class, each base level, and any keyframes it references. Global styles from `createGlobalStyle` do the same. Nothing is skipped because an earlier instance in the request already emitted it.
+Server component styles reach the page only through a style registry (a `ServerStyleSheet` reachable through `StyleSheetManager`, as in the FAQ's Next.js recipe). No server component renders a `<style>`, so `& + &`, child-index selectors and SVG children see only the author's elements.
+
+### Transport
+
+1. RSC graph: a styled render returns `Fragment(ScStyle, element)`; a `createGlobalStyle` render returns `ScGlobalStyle`. Neither touches a sheet.
+2. SSR graph: each renders as a client component and, in render, registers ids, places groups, inserts missing rules and learns edges in the registry sheet.
+3. Registry flush: `<style data-styled>` tags with markers, before `</head>` and before each later chunk.
+4. Browser: rehydration and late adoption read the tags; each `ScStyle` and `ScGlobalStyle` inserts and learns in its insertion effect.
+
+- A server styled instance renders `Fragment(ScStyle, element)`, `ScStyle` first, keyed `sc-<componentId>`; the element carries the full class string. `ScStyle` props: `chain` (`[componentId, name, rules[], seq][]`, base first), `keyframes` (`[id, name, rules[]][]`), `outers` (`componentId[]`). `ScGlobalStyle` props: `id`, `keyframes`, `rules`, `seq`. Both render `null`.
+- Each level keeps its own generated name and group, as on the client.
+- `ScStyle` and `ScGlobalStyle` are `@internal` exports of the package entry (`index.ts`, never `base.ts`, so the standalone build carries neither). The `styled-components/server-styles` subpath re-exports them from a `'use client'` module, so the SSR and browser graphs each reach them through one instance of the package and its `mainSheet`. The server build imports the subpath by name and keeps it external; the browser, rn-web and native builds never import it. See [bundling.md](bundling.md).
+- Wire prop names cross from the server bundle to the browser bundle, which terser mangles apart, so none is on the mangle list.
+- Every instance renders its own `ScStyle` ("Why there is no per-request ledger"). Element objects are shared per request on component id, generated names and the `outers` signature, so Flight writes repeated props once.
+- `generateId` salts ids under `IS_RSC`, so a generated RSC-graph id never equals an SSR or browser id. Build-plugin, global and keyframes ids are shared across graphs; a shared group takes its key from its first arrival in each sheet.
+
+### Keys and placement
+
+Each sheet owns an `Order`: the group positions (output order), each group's key, edges, contested pairs and refused edges. Group numbers are local identifiers; `outputSheet`, `extractCSS` and CSSOM offsets follow positions.
+
+- Key order: server globals, client globals, server components, client components; each tier by seq (its graph's definition order). Keyframes take their graph's global tier.
+  - Server seq: the RSC-graph group number, carried in props and markers. Client seq: the SSR-graph number on a server sheet; on a browser sheet, the marker's number for a group that arrived in a server tag, else the browser number.
+- Default placement: a group with no edge goes right after the positioned group with the greatest position among those with a smaller key.
+- Flush-aware placement: on a server sheet that has flushed, a component group also goes after the last flushed group, so positions equal HTML order. A global keeps key placement and pays a suffix re-emit ("Streaming").
+- Edges (wrapper after wrapped) override keys. `learn(outer, inner)` skips a self edge and a settled pair (stored, refused, or contested); stores the edge; moves `outer` and every transitive outer positioned at or before `inner` to just after `inner`, keeping their relative order. A CSSOM move reads the group's rules, deletes its range and reinserts it.
+- Pins: a chain level's edge to its base is learned before any other edge touches the level (its first edge or first insert), base first. A pin never closes a cycle and never meets a contested pair.
+
+### Learning edges
+
+- Client scan, every styled render with a non-empty `className`: each token found in the group register that is not one of the component's own chain ids is an outer. Results are cached per `className` string in a bounded FIFO stamped with a register version that bumps on each new id.
+  - Every build but the server build: each instance also remembers its last `className`, register version and outers in a ref, so a list with more distinct strings than the FIFO holds skips the scan while its strings stay put. The memo holds only the scan result; settledness is always asked of the current sheet.
+  - Server sheet: `learn` in render.
+  - Browser: a read-only `isSettled` check in render; an unsettled outer mounts `StyleInjector` with `outers`, and its insertion effect learns. `useImpl`'s hook sequence is the same on every render, whatever the scan finds.
+- RSC scan: the same against the RSC graph's register; hits travel as `outers`. Covers `as={X}`, plain intermediates, nested server wrappers, hand-passed `className`, and a `"use cache"` component that receives `className`.
+- `ScStyle` registers its chain ids in render, before its element renders, so a same-pass inner sees a server outer the browser never saw.
+- Only a server component can wrap a client one: a client module cannot import a server component, and server `children` never receive a client parent's `className`.
+
+### Cycles
+
+Two components that wrap each other in both directions close a cycle.
+
+- A cycle through pinned edges only: refuse the new edge; nothing is contested.
+- Otherwise: refuse the new edge, drop the learned edges on the cycle's paths, and contest every pair of its members that no pinned-only path orders. Contest order is key order, kept where a pin inside the cycle runs against keys. Pairs apply in contest order: the second member moves after the first with its carry set (its transitive outers and contested partners).
+- While `contested` is non-empty, a learned edge that would order a contested pair, directly or through a path, or whose move would carry a pair's first member past its second, is refused.
+- Every refused learned edge is recorded so no injector retries it. Development warns once per contested pair and once per refused edge, naming both components.
+- Contested pairs last as long as the sheet's `Order`: one request on a server sheet; until a non-server `clearTag()` in the browser.
+
+### Streaming
+
+- A server sheet keeps names, `Order` and the rules already flushed across `clearTag()`.
+- A later flush walks positions. Seeds: groups with new rules, plus the inner of each edge learned between two flushed groups and the first member of each pair contested between two flushed groups. Re-emit set: for each seed, every flushed group after it that is its transitive outer, a contested partner, or a global; with any global in play, every flushed group after the earliest one. Keyframes never seed or join it.
+- A re-emitted group writes all its rules as one block marked full. Globals sit before every component, so only a global first rendered in a late boundary causes a suffix re-emit.
+- Two groups share an element only through an edge chain or a contested pair, except globals, so the re-emit set restores HTML order for every pair on an element already visible.
+- A rule that reaches another element (`& > *`, `& + div`) can tie with that element's own component with no edge between them; flush-aware placement keeps their order equal to first-render order. That holds for a full page load only: a client navigation streams a payload, not HTML, so the browser places such a pair by key (definition order). The sandbox's `late-child-selector` page records it with `hardLoadOnly`.
+
+### Markers and the browser
+
+- Markers keep `data-styled.g<number>[id="..."]`, so the forged-marker guard still drops imitations, and add optional server seq and full-block fields that hold no `"`. `MARKER_RE` reads one explicit optional group per field (no lazy quantifier); old markers still parse. Tier comes from the seq field and the id prefix (`sc-global-` or a keyframes id): seq and global id, server global; global id alone, client global; seq alone, server; neither, client.
+- `adoptGroupForId` maps a marker to a browser number: the id's existing number, else the marker's number if free, else a fresh one. The allocator pointer never moves.
+- Blocks in document order: an unpositioned group appends at the first rehydration; in late adoption a global takes key placement and a component group appends; a full block moves its group and carry set to the end. A block whose marker names are all registered inserts nothing; otherwise its whole block appends to the group (a rule is not linked to its name). No block removes or replaces a rule.
+- Late adoption: while `document.readyState === 'loading'`, the first sheet write in each microtask adopts unadopted server tags (`querySelectorAll`), and one final pass runs on `DOMContentLoaded`. Adopted tags are removed, except a tag whose next element sibling is neither another server tag nor the end of `body`: removing one between hydratable siblings breaks hydration (error #418). A kept tag is emptied, since a live copy later in the page would outrank rules the sheet adds after adoption; the two-graph harness tests in `rscStream.test.tsx` hydrate with kept tags and no recoverable error.
+- `ScStyle`'s browser half inserts with key `(server, seq)` and learns chain and `outers` edges in its insertion effect; component rules stay after unmount. `ScGlobalStyle` removes its instance's rules on unmount. A browser `reconstructWithOptions` sheet starts with a copy of its parent's `Order`.
+
+### Registry reach
+
+- A `StyleSheetManager` with `target` or `nonce` under a server sheet keeps the parent sheet during SSR, so its styles flush through the registry's tag with the registry's nonce; both apply in the browser. A `sheet` prop still replaces the sheet.
+- No registry, or outside it (a styled `<html>` or `<body>` around it, a sibling of it, `global-error.tsx`, which Next renders only in the browser): SSR inserts nothing and development warns once, naming the registry recipe and a second copy of the library as causes. Styles apply when each `ScStyle` mounts.
+- The registry can wrap `<html>` in the root layout.
+- Supported hosts: Next.js with webpack or Turbopack; Vite with `@vitejs/plugin-rsc` with the registry in the SSR entry. `styled-components` in Next's `serverExternalPackages` is unsupported (Turbopack fails the render; webpack ignores it).
+- Partial prerender: the resume renders with a fresh registry sheet, so it repeats rules the prelude sent. Hydrated, all-registered blocks are skipped; with JavaScript off, a prelude element whose inner the resume repeats can lose that tie.
+- Cascade layers: a move can change layer order when the moved group holds a layer's first appearance. An up-front `@layer a, b;` in a global fixes it; development warns when a move changes first-appearance order.
 
 ### Why there is no per-request ledger
 
@@ -155,22 +213,20 @@ Every server-rendered instance emits its own inline `<style data-styled>` holdin
 - A synchronous fallback never reaches the HTML at all, so the global is missing even with JavaScript disabled.
 - An async layout and its page both render the global: the page wins the ledger, and a client navigation to a sibling page removes the only tag while the layout that needs it never re-renders.
 
-The stylesheet's name registry lives on one sheet shared by every request in the process, reset when a request starts, so a claim fails whenever an earlier instance or a concurrent request registered the name first. Emission therefore reads each name's compiled rules from a process-wide cache keyed by component and name, never from the claim result. Caching across requests is safe because a name's rules are fixed: the name hashes the CSS and the stylis configuration. A later request reuses a cached name's rules without recompiling. The cache per component holds the same number of names as the component's other dynamic-name caches; a name evicted mid-request is recompiled when an instance needs it.
+The registry sheet's name dedupe is not that ledger: rules enter the request sheet in render and never leave it during the request, and the registry writes its tags where React never removes them (head, or before a chunk). A Suspense attempt that is discarded, retried or switched to client rendering leaves extra rules, never missing ones.
+
+The RSC graph's name registry lives on one sheet shared by every request in the process, reset when a request starts, so a claim fails whenever an earlier instance or a concurrent request registered the name first. `ScStyle` props therefore carry each name's compiled rules from a process-wide cache keyed by component and name, never from the claim result. Caching across requests is safe because a name's rules are fixed: the name hashes the CSS and the stylis configuration. The cache per component holds the same number of names as the component's other dynamic-name caches; a name evicted mid-request is recompiled when an instance needs it.
 
 ### Why not `precedence`
 
-React Float only takes over a `<style>` carrying both `precedence` and `href`; a plain one renders as an ordinary host element with its attributes intact, and the client renders the same element from the server-component payload, so it hydrates without a mismatch. `precedence` would dedup and survive a reveal, but it fails four ways:
+React Float only takes over a `<style>` carrying both `precedence` and `href`; a plain one renders as an ordinary host element with its attributes intact, and the client renders the same element from the server-component payload, so it hydrates without a mismatch. `precedence` would dedup and survive a reveal, but it fails three ways:
 
 - Bucket order: Float inserts a new bucket after the last `[data-precedence]` node, or at `head.firstChild` when none exists, so server-component styles land ahead of the client registry and an RSC extension of a client component loses to its base (#5672).
 - Permanence: a precedence style is a resource that never unmounts (#5641, #5649, #5670).
 - Attribute loss: when Fizz merges a style into a bucket it keeps only `children`, so `data-styled` is dropped on the server too.
-- Position: `rscPlugin`'s child-index rewrite depends on the tag staying an inline sibling.
 
-### Cost of the repeats
+### Costs
 
-- DOM: Chromium style recalculation measured 1.0 ms versus 1.5 ms at 1000 identical tags, 4.6 ms versus 7.3 ms at 5000; linear.
-- Server render time: every repeat renders and escapes its own `<style>` host element, so render time grows with the instance count. The cost is inherent to one tag per instance; skipping the CSS build on a shared-element hit does not recover it.
-- HTML: within gzip's 32 KB window a repeat costs about a byte; farther apart, roughly the gzipped size of the CSS. Brotli's larger window keeps repeats cheap at any distance.
-- Server-component payload: every emission site reuses one `<style>` element object per key from a request-scoped `React.cache` Map, keyed on the component ID plus what fixes its CSS (different CSS, components, or `StyleSheetManager` settings never share; the React key stays fixed per component). Styled components key on the generated class string, whose hash folds in each level's CSS and the stylis configuration, so a hit skips building the CSS; the component ID keeps an extension with no rules of its own from sharing its base's element. `createGlobalStyle` keys on the exact CSS text and returns the element wrapped in an array, because Flight references a repeated element whole only inside an array (a bare returned element repeats its type and key). React 19's Flight serializer writes each repeat as a path reference such as `"$0:props:children:0"`, about 15 characters per nesting level. No size threshold applies: measured on a production Next.js 16 app (React 19.2), references ran 22 to 104 characters, always shorter than the smallest style element (129 bytes), and sharing everything was smallest or within 3 bytes in 15 of 16 compressed measurements. HTML and final DOM are byte-identical with and without sharing, and each instance still renders its own tag, so a reveal never strands an element.
-
-A development-only warning fires once one component emits `RSC_REDUNDANT_EMIT_WARN_THRESHOLD` tags in a render, pointing very large lists at styling items from one styled parent.
+- Server-component payload: React 19's Flight serializer writes a repeated element object as a path reference such as `"$0:props:children:0"`, about 15 characters per nesting level, so shared `ScStyle` elements cost a reference per repeat. `createGlobalStyle` returns its `ScGlobalStyle` element wrapped in an array, because Flight references a repeated element whole only inside an array.
+- Browser: one hydrated fiber and one insertion effect per server instance.
+- Late adoption's query, per 1,000 late boundaries: about 9 ms of main-thread time in two of the three major browser engines; the third grows quadratically, about 2 ms at 100 boundaries and about 235 ms at 1,000. A `MutationObserver` measured linear everywhere but slower than the query in the first two.
