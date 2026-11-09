@@ -2,1998 +2,584 @@
  * @jest-environment node
  */
 
-// React 19's client `cache` is a pass-through, so tests mock a request-scoped one.
-const mockCacheStore = new Map<Function, any>();
-
-jest.mock('react', () => {
-  const actual = jest.requireActual('react');
-  return {
-    ...actual,
-    cache: (fn: Function) => () => {
-      if (!mockCacheStore.has(fn)) mockCacheStore.set(fn, fn());
-      return mockCacheStore.get(fn);
-    },
-  };
-});
-
-// Mock IS_RSC before importing the module
-jest.mock('../../utils/isRsc', () => ({ IS_RSC: true }));
-
 import React, { Suspense } from 'react';
-import ReactDOMServer from 'react-dom/server';
-import { RSC_REDUNDANT_EMIT_WARN_THRESHOLD } from '../../constants';
-import { LIMIT as TOO_MANY_CLASSES_LIMIT } from '../../utils/createWarnTooManyClasses';
-import * as rscCache from '../../utils/rscCache';
+import rtlPlugin from '../../plugins/rtl';
 import {
-  countStyleTags,
-  extractStyleContents,
-  itWarnsOnRedundantEmits,
-  renderInProbe,
-  renderStreamed,
-  tick,
+  classesOf,
+  computedValue,
+  generatedClass,
+  loadSsrGraph,
+  renderPage,
+  serverRules,
 } from '../../test/rscStream';
-import { resetIdentifiers } from '../../models/StyledComponent';
-import { mainCompiler, mainSheet, useStyleSheetContext } from '../../models/StyleSheetManager';
-import { resetGroupIds } from '../../sheet/GroupIDAllocator';
-import styled, { css, keyframes } from '../../index';
-import { StyleSheetManager } from '../../models/StyleSheetManager';
-import rscPlugin from '../../plugins/rsc';
+import type { Library } from '../../test/rscStream';
+import { extensionScenarios, wrapperScenarios } from '../../test/rscScenarios';
 
-describe('styled RSC mode', () => {
-  beforeEach(() => {
-    mockCacheStore.clear();
-    resetGroupIds();
-    resetIdentifiers();
+/**
+ * https://drafts.csswg.org/css-color-4/#serializing-sRGB-values: "For the computed and used value,
+ * the corresponding sRGB value is used." A named color computes to its `rgb()` form.
+ */
+const RED = 'rgb(255, 0, 0)';
+
+/** The page's own markup: everything after the registry's tags. */
+const rootOf = (html: string): string => html.slice(html.indexOf('<div id="root">'));
+
+/** Runs `load` with `rscScenarios` bound to `library`, the way a graph's own copy of the file would be. */
+function scenariosFor(library: Library): typeof import('../../test/rscScenarios') {
+  const loaded: Array<typeof import('../../test/rscScenarios')> = [];
+
+  jest.isolateModules(() => {
+    jest.doMock('../../index', () => library);
+    loaded.push(require('../../test/rscScenarios'));
   });
+  jest.dontMock('../../index');
 
-  describe('RSC style tag emission (#5672)', () => {
-    it('should emit inline style tags without precedence', () => {
-      const Button = styled.button`
-        padding: 8px;
-      `;
+  return loaded[0];
+}
 
-      const html = ReactDOMServer.renderToString(<Button />);
+describe('styled in server components', () => {
+  describe('what the server render carries', () => {
+    it('sends a style component with the chain as props and writes no style tag into the page', async () => {
+      const page = await renderPage({
+        server: ({ library: { styled } }) => {
+          const Button = styled.button`
+            padding: 8px;
+          `;
 
-      // Inline <style> tag emitted (no precedence;server component output
-      // isn't hydrated, so no mismatch; inline body styles come after
-      // registry <head> styles for correct cascade ordering)
-      expect(html).toMatchInlineSnapshot(`
-        <style data-styled>
-          .dkAAnv{padding:8px;}
-        </style>
-        <button class="sc-kqxcKS dkAAnv">
-        </button>
-      `);
-      expect(html).not.toContain('precedence');
-      expect(html).not.toContain('data-styled-rsc');
-    });
+          return <Button id="a" />;
+        },
+      });
+      const [componentId, name] = classesOf(page.streamed, 'a');
 
-    it('should emit base and extension CSS in one tag with :where() on base (#5672)', () => {
-      const Base = styled.div`
-        display: flex;
-      `;
-      const Extended = styled(Base)`
-        color: red;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatchInlineSnapshot(`":where(.jYQgFj){display:flex;}.inzFhn{color:red;}"`);
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
-    });
-
-    // A url token ends at its first `)`: https://drafts.csswg.org/css-syntax/#consume-url-token
-    // A `(` written into one would end it there and turn the text after into real rules.
-    it('leaves the text of a url token in a base component out of the :where() wrap', () => {
-      const Base = styled.div`
-        ${() => 'url(&{}html{display:none})'} {
-          top: 0;
-        }
-      `;
-      const Extended = styled(Base)`
-        color: red;
-      `;
-
-      const allCSS = extractStyleContents(ReactDOMServer.renderToString(<Extended />));
-
-      expect(allCSS.replace(/\.[a-zA-Z]{5,7}\b/g, '.X')).toBe(
-        'url(.X{}html{display:none}){top:0;}.X{color:red;}'
+      expect(page.flight.errors).toEqual([]);
+      expect(page.flight.clientProps).toEqual([
+        { chain: [[componentId, name, [`.${name}{padding:8px;}`], 1]], keyframes: [], outers: [] },
+      ]);
+      expect(serverRules(page.streamed)).toEqual([`.${name}{padding:8px;}`]);
+      expect(rootOf(page.streamed)).toBe(
+        `<div id="root"><button id="a" class="${componentId} ${name}"></button></div>`
       );
+    });
+
+    it('lists an extension chain base first, each level on its own class', async () => {
+      const page = await renderPage({
+        server: ({ library: { styled } }) => {
+          const Base = styled.div`
+            display: flex;
+          `;
+          const Extended = styled(Base)`
+            color: red;
+          `;
+
+          return <Extended id="a" />;
+        },
+      });
+      const [baseId, extendedId, baseName, extendedName] = classesOf(page.streamed, 'a');
+
+      expect(page.flight.clientProps).toEqual([
+        {
+          chain: [
+            [baseId, baseName, [`.${baseName}{display:flex;}`], 1],
+            [extendedId, extendedName, [`.${extendedName}{color:red;}`], 2],
+          ],
+          keyframes: [],
+          outers: [],
+        },
+      ]);
+      expect(serverRules(page.streamed)).toEqual([
+        `.${baseName}{display:flex;}`,
+        `.${extendedName}{color:red;}`,
+      ]);
+    });
+
+    it('writes the props of many instances of one component once into the payload and the rules once into the page', async () => {
+      const page = await renderPage({
+        server: ({ library: { styled } }) => {
+          const Cell = styled.span`
+            padding: 3px;
+          `;
+
+          return (
+            <>
+              {Array.from({ length: 25 }, (_, index) => (
+                <Cell key={index} />
+              ))}
+            </>
+          );
+        },
+      });
+
+      expect(page.flight.payload.split('{padding:3px;}')).toHaveLength(2);
+      expect(serverRules(page.streamed)).toHaveLength(1);
+    });
+
+    it('writes a variant of a dynamic component for each distinct value, each once', async () => {
+      const page = await renderPage({
+        server: ({ library: { styled } }) => {
+          const Box = styled.div<{ $color: string }>`
+            color: ${p => p.$color};
+          `;
+
+          return (
+            <>
+              <Box id="a" $color="red" />
+              <Box id="b" $color="blue" />
+              <Box id="c" $color="red" />
+            </>
+          );
+        },
+      });
+      const [, red] = classesOf(page.streamed, 'a');
+      const [, blue] = classesOf(page.streamed, 'b');
+
+      expect(serverRules(page.streamed)).toEqual([`.${red}{color:red;}`, `.${blue}{color:blue;}`]);
+      expect(computedValue(page.streamed, '#c', 'color')).toBe(RED);
     });
 
     it.each([
       [
-        'url(x',
-        '"url(x"',
-        styled.div`
-          content: "url(x";
-          &:hover { top: 1px; }
-          &:focus { background: rgb(0,0,0); }
-          &:active { top: 2px; }
-        `,
+        'a dynamic interpolation',
+        ['border-radius:8px;overflow:hidden;', 'border-left:4px solid #dc3545;'],
+        ({ styled }: Library) => {
+          const Card = styled.div`
+            border-radius: 8px;
+            overflow: hidden;
+          `;
+          const Status = styled(Card)<{ $status: 'success' | 'error' }>`
+            border-left: 4px solid ${p => (p.$status === 'success' ? '#28a745' : '#dc3545')};
+          `;
+
+          return <Status id="a" $status="error" />;
+        },
       ],
       [
-        'url(x from a value',
-        '"url(x"',
-        styled.div`
-          content: "${'url(x'}";
-          &:hover { top: 1px; }
-          &:focus { background: rgb(0,0,0); }
-          &:active { top: 2px; }
-        `,
+        'the css helper',
+        ['font-size:14px;overflow:hidden;white-space:nowrap;', 'padding:2px 8px;'],
+        ({ css, styled }: Library) => {
+          const truncate = css`
+            overflow: hidden;
+            white-space: nowrap;
+          `;
+          const Label = styled.span`
+            font-size: 14px;
+            ${truncate}
+          `;
+          const Badge = styled(Label)`
+            padding: 2px 8px;
+          `;
+
+          return <Badge id="a" />;
+        },
       ],
-      [
-        'url( x',
-        '"url( x"',
-        styled.div`
-          content: "url( x";
-          &:hover { top: 1px; }
-          &:focus { background: rgb(0,0,0); }
-          &:active { top: 2px; }
-        `,
-      ],
-      [
-        'an escaped quote before url(x',
-        '"\\"url(x"',
-        styled.div`
-          content: "\\"url(x";
-          &:hover { top: 1px; }
-          &:focus { background: rgb(0,0,0); }
-          &:active { top: 2px; }
-        `,
-      ],
-    ])('wraps every base class next to a string holding %s', (_label, content, Base) => {
-      const Extended = styled(Base)`
-        color: red;
-      `;
+    ])(
+      'carries the base chain when only the extension renders, through %s (#5663)',
+      async (_label, [baseBody, extendedBody], build) => {
+        const page = await renderPage({ server: ({ library }) => build(library) });
+        const [, , baseName, extendedName] = classesOf(page.streamed, 'a');
 
-      const allCSS = extractStyleContents(ReactDOMServer.renderToString(<Extended />));
-
-      expect(allCSS.replace(/\.[a-zA-Z]{5,7}\b/g, '.X')).toBe(
-        `:where(.X){content:${content};}:where(.X):hover{top:1px;}:where(.X):focus{background:rgb(0,0,0);}:where(.X):active{top:2px;}.X{color:red;}`
-      );
-    });
-
-    it('wraps a base class next to a function and an escaped paren', () => {
-      const Base = styled.div`
-        &:not(.b) { top: 0; }
-        &.c\\(d { left: 0; }
-        background: url(x.png);
-      `;
-      const Extended = styled(Base)`
-        color: red;
-      `;
-
-      const allCSS = extractStyleContents(ReactDOMServer.renderToString(<Extended />));
-
-      expect(allCSS.replace(/\.[a-zA-Z]{5,7}\b/g, '.X')).toBe(
-        ':where(.X){background:url(x.png);}:where(.X):not(.b){top:0;}:where(.X).c\\(d{left:0;}.X{color:red;}'
-      );
-    });
-  });
-
-  describe('extending a ruleless component (#5727)', () => {
-    // The reporter flagged this as "might be only in RSC context"; pair
-    // the basic-suite check (`src/test/basic.test.tsx`) with a server-
-    // rendered round trip so the fix stays locked across both paths.
-    it('applies the new rules when wrapping an empty styled component', () => {
-      const Inner = styled(({ className }: { className?: string }) => (
-        <span data-testid="inner" className={className}>
-          inner
-        </span>
-      ))``;
-      const Outer = styled(Inner)`
-        color: red;
-        width: 100px;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Outer />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toContain('color:red');
-      expect(allCSS).toContain('width:100px');
-    });
-  });
-
-  describe('base component CSS in RSC output (#5663)', () => {
-    // In RSC mode, each component's CSS is retrieved via getGroup() which only
-    // returns rules for that component's own group. When extending a base component,
-    // the base's CSS is injected into the sheet but never output in a <style> tag
-    // unless the base is also rendered independently. This causes missing styles.
-
-    it('should include base component CSS when only the extended component renders', () => {
-      // This is the core bug from #5663: IconWrapper's width/height lost
-      // when only the extended component is rendered in RSC mode.
-      const IconWrapper = styled.svg`
-        width: 24px;
-        height: 24px;
-        display: inline-block;
-        vertical-align: middle;
-      `;
-      const BrandIcon = styled(IconWrapper)`
-        fill: currentColor;
-        color: #007bff;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <BrandIcon viewBox="0 0 24 24">
-          <path d="M12 2L2 22h20z" />
-        </BrandIcon>
-      );
-      const allCSS = extractStyleContents(html);
-
-      // All CSS from both base and extended must be present in the RSC output.
-      // The element has class names for both, so both rulesets must exist.
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.draMCs){width:24px;height:24px;display:inline-block;vertical-align:middle;}.hlyRni{fill:currentColor;color:#007bff;}"`
-      );
-    });
-
-    it('should include all ancestor CSS across a three-level inheritance chain', () => {
-      const BaseText = styled.span`
-        font-family: system-ui, sans-serif;
-        line-height: 1.5;
-      `;
-      const Heading = styled(BaseText).attrs({ as: 'h2' })`
-        font-weight: 700;
-        font-size: 24px;
-      `;
-      const PageTitle = styled(Heading)`
-        color: #1a1a2e;
-        margin-bottom: 16px;
-      `;
-
-      const html = ReactDOMServer.renderToString(<PageTitle>Hello World</PageTitle>);
-      const allCSS = extractStyleContents(html);
-
-      // Every level in the chain must contribute its CSS rules
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.dTCrO){font-family:system-ui,sans-serif;line-height:1.5;}:where(.isoHEi){font-weight:700;font-size:24px;}.iaATuJ{color:#1a1a2e;margin-bottom:16px;}"`
-      );
-    });
-
-    it('should preserve base CSS with dynamic interpolations in the extended component', () => {
-      const Card = styled.div`
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-      `;
-      const StatusCard = styled(Card)<{ $status: 'success' | 'error' }>`
-        border-left: 4px solid ${p => (p.$status === 'success' ? '#28a745' : '#dc3545')};
-        padding: 16px;
-      `;
-
-      const html = ReactDOMServer.renderToString(<StatusCard $status="error" />);
-      const allCSS = extractStyleContents(html);
-
-      // Base Card styles must be present even though only StatusCard renders
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.inSLbN){border-radius:8px;box-shadow:0 2px 4px rgba(0, 0, 0, 0.1);overflow:hidden;}.jfizpo{border-left:4px solid #dc3545;padding:16px;}"`
-      );
-    });
-
-    it('should include base CSS with the css helper used in interpolation', () => {
-      const truncate = css`
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      `;
-      const BaseLabel = styled.span`
-        font-size: 14px;
-        ${truncate}
-      `;
-      const BadgeLabel = styled(BaseLabel)`
-        background: #e9ecef;
-        border-radius: 12px;
-        padding: 2px 8px;
-      `;
-
-      const html = ReactDOMServer.renderToString(<BadgeLabel>Status</BadgeLabel>);
-      const allCSS = extractStyleContents(html);
-
-      // Base CSS (including interpolated css`` helper) and extended styles
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.hMkIFL){font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.jAjRbw{background:#e9ecef;border-radius:12px;padding:2px 8px;}"`
-      );
-    });
-
-    it('should correctly output CSS when base and extended render on the same page', () => {
-      const Avatar = styled.img`
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        object-fit: cover;
-      `;
-      const LargeAvatar = styled(Avatar)`
-        width: 96px;
-        height: 96px;
-        border: 3px solid #fff;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <div>
-          <Avatar src="/small.jpg" alt="small" />
-          <LargeAvatar src="/large.jpg" alt="large" />
-        </div>
-      );
-      const allCSS = extractStyleContents(html);
-
-      // Avatar's own tag, then LargeAvatar's tag carrying the :where()-wrapped
-      // Avatar chain plus its own styles
-      expect(allCSS).toMatchInlineSnapshot(
-        `".gA-dcpr{width:48px;height:48px;border-radius:50%;object-fit:cover;}:where(.gA-dcpr){width:48px;height:48px;border-radius:50%;object-fit:cover;}.bmhOVL{width:96px;height:96px;border:3px solid #fff;}"`
-      );
-    });
-
-    it('should carry the base CSS in each instance when base and extended render on the same page', () => {
-      const Base = styled.div`
-        display: flex;
-        padding: 16px;
-      `;
-      const Extended = styled(Base)`
-        color: red;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <div>
-          <Base />
-          <Extended />
-        </div>
-      );
-
-      // Each instance owns a <style> tag; Extended's tag carries the
-      // :where()-wrapped base CSS in addition to its own.
-      expect(countStyleTags(html)).toBe(2);
-
-      const allCSS = extractStyleContents(html);
-      expect(allCSS).toMatchInlineSnapshot(
-        `".lluOde{display:flex;padding:16px;}:where(.lluOde){display:flex;padding:16px;}.inzFhn{color:red;}"`
-      );
-    });
-
-    it('should preserve CSS for multiple siblings extending the same base', () => {
-      const BaseButton = styled.button`
-        padding: 8px 16px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-      `;
-      const PrimaryButton = styled(BaseButton)`
-        background: #007bff;
-        color: #fff;
-      `;
-      const DangerButton = styled(BaseButton)`
-        background: #dc3545;
-        color: #fff;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <div>
-          <PrimaryButton>Save</PrimaryButton>
-          <DangerButton>Delete</DangerButton>
-        </div>
-      );
-      const allCSS = extractStyleContents(html);
-
-      // Each variant's tag carries the base styles and its own styles
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.jZzqsQ){padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;}.dqxjmS{background:#007bff;color:#fff;}:where(.jZzqsQ){padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;}.gffCwu{background:#dc3545;color:#fff;}"`
-      );
-    });
-
-    it('should not lose CSS when a dynamic base renders with different props', () => {
-      // Each prop variant emits its own tag with its own base variant, so no
-      // variant's CSS depends on another instance's tag surviving.
-      const DynamicBase = styled.div<{ $bg: string }>`
-        background: ${p => p.$bg};
-        padding: 16px;
-      `;
-      const Extended = styled(DynamicBase)`
-        border: 1px solid #ccc;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <div>
-          <Extended $bg="red" />
-          <Extended $bg="blue" />
-        </div>
-      );
-      const allCSS = extractStyleContents(html);
-
-      // Both dynamic variants must be present, each with the extension's rule
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.UggJu){background:red;padding:16px;}.gMmhUh{border:1px solid #ccc;}:where(.ezOOCn){background:blue;padding:16px;}.gMmhUh{border:1px solid #ccc;}"`
-      );
-    });
-  });
-
-  describe(':where() wrapping', () => {
-    /** Assert every :where() in the CSS contains a valid, complete class selector */
-    function assertValidWhereSelectors(allCSS: string) {
-      const whereMatches = [...allCSS.matchAll(/:where\((\.[^)]+)\)/g)];
-      expect(whereMatches.length).toBeGreaterThan(0);
-      for (const match of whereMatches) {
-        expect(match[1]).toMatch(/^\.\w[\w-]*$/);
+        expect(serverRules(page.streamed)).toEqual([
+          `.${baseName}{${baseBody}}`,
+          `.${extendedName}{${extendedBody}}`,
+        ]);
       }
-    }
+    );
 
-    it('should wrap base selectors and keep extension selectors normal (#5672)', () => {
-      const Base = styled.div`
-        width: 100px;
-      `;
-      const Extended = styled(Base)`
-        width: 200px;
-      `;
+    it('applies the rules of an extension of a component with no rules (#5727)', async () => {
+      const page = await renderPage({
+        server: ({ library: { styled } }) => {
+          const Inner = styled(({ className }: { className?: string }) => (
+            <span id="a" className={className}>
+              inner
+            </span>
+          ))``;
+          const Outer = styled(Inner)`
+            color: red;
+            width: 100px;
+          `;
 
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
+          return <Outer />;
+        },
+      });
 
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*width:100px/);
-      expect(allCSS).toMatch(/\.\w+\{[^}]*width:200px/);
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*width:200px/);
-      expect(allCSS).not.toMatch(/\.(\w+)\.\1/);
+      expect(computedValue(page.streamed, '#a', 'color')).toBe(RED);
+      expect(computedValue(page.streamed, '#a', 'width')).toBe('100px');
     });
 
-    it('should wrap pseudo-class selectors on the base', () => {
-      const Base = styled.button`
-        color: blue;
-        &:hover {
-          color: darkblue;
-        }
-        &:focus {
-          outline: 2px solid blue;
-        }
-      `;
-      const Extended = styled(Base)`
-        background: white;
-      `;
+    it('keeps a base selector that holds a url token whole', async () => {
+      const page = await renderPage({
+        server: ({ library: { styled } }) => {
+          const Base = styled.div`
+            ${() => 'url(&{}html{display:none})'} {
+              top: 0;
+            }
+          `;
+          const Extended = styled(Base)`
+            color: red;
+          `;
 
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
+          return <Extended id="a" />;
+        },
+      });
+      const [, , baseName, extendedName] = classesOf(page.streamed, 'a');
 
-      // Base hover/focus selectors should be :where()-wrapped
-      expect(allCSS).toMatch(/:where\(\.\w+\):hover/);
-      expect(allCSS).toMatch(/:where\(\.\w+\):focus/);
-      // Base root selector also wrapped
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*color:blue/);
-      // Extension CSS not wrapped
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*background:white/);
+      expect(serverRules(page.streamed)).toEqual([
+        `url(.${baseName}{}html{display:none}){top:0;}`,
+        `.${extendedName}{color:red;}`,
+      ]);
+    });
+  });
+
+  describe('keyframes', () => {
+    it('carries keyframes in the props and writes them ahead of the components', async () => {
+      const page = await renderPage({
+        server: ({ library: { keyframes, styled } }) => {
+          const pulse = keyframes`
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+          `;
+          const Dot = styled.div`
+            animation: ${pulse} 2s infinite;
+          `;
+
+          return <Dot id="a" />;
+        },
+      });
+      const [componentId, name] = classesOf(page.streamed, 'a');
+      const [{ keyframes }] = page.flight.clientProps;
+      const [[keyframesId, keyframesName]] = keyframes as string[][];
+
+      expect(keyframes).toEqual([
+        [
+          keyframesId,
+          keyframesName,
+          [`@keyframes ${keyframesName}{0%{opacity:1;}100%{opacity:0;}}`],
+        ],
+      ]);
+      expect(serverRules(page.streamed)).toEqual([
+        `@keyframes ${keyframesName}{0%{opacity:1;}100%{opacity:0;}}`,
+        `.${name}{animation:${keyframesName} 2s infinite;}`,
+      ]);
+      expect(componentId).toMatch(/^sc-/);
     });
 
-    it('should wrap pseudo-element selectors on the base', () => {
-      const Base = styled.div`
-        &::before {
-          content: '';
-          display: block;
-        }
-        &::after {
-          content: '';
-          clear: both;
-        }
-      `;
-      const Extended = styled(Base)`
-        overflow: hidden;
-      `;
+    it('lists a keyframes name once when a base and its extension both reference it', async () => {
+      const page = await renderPage({
+        server: ({ library: { keyframes, styled } }) => {
+          const fade = keyframes`
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+          `;
+          const Base = styled.div`
+            animation: ${fade} 1s;
+          `;
+          const Extended = styled(Base)`
+            animation: ${fade} 2s;
+          `;
 
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
+          return <Extended />;
+        },
+      });
+      const [{ keyframes }] = page.flight.clientProps;
 
-      expect(allCSS).toMatch(/:where\(\.\w+\)::before/);
-      expect(allCSS).toMatch(/:where\(\.\w+\)::after/);
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*overflow:hidden/);
-    });
-
-    it('should wrap base selectors inside media queries', () => {
-      const Base = styled.div`
-        font-size: 14px;
-        @media (min-width: 768px) {
-          font-size: 16px;
-        }
-      `;
-      const Extended = styled(Base)`
-        color: red;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      // Both the root and media query base selectors should be wrapped
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.dHlnpC){font-size:14px;}@media (min-width: 768px){:where(.dHlnpC){font-size:16px;}}.inzFhn{color:red;}"`
-      );
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
-    });
-
-    it('should wrap nested descendant selectors on the base', () => {
-      const Base = styled.div`
-        & > span {
-          font-weight: bold;
-        }
-        & .child {
-          margin: 4px;
-        }
-      `;
-      const Extended = styled(Base)`
-        padding: 8px;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      // Descendant/child combinators should have base class wrapped.
-      // R19's renderToString doesn't over-encode `>` in <style> text content
-      // (it's only special in attribute context).
-      expect(allCSS).toMatch(/:where\(\.\w+\)>span/);
-      expect(allCSS).toMatch(/:where\(\.\w+\) \.child/);
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*padding:8px/);
-    });
-
-    it('should wrap all levels in a 3-deep chain except the leaf', () => {
-      const A = styled.div`
-        color: red;
-      `;
-      const B = styled(A)`
-        color: green;
-      `;
-      const C = styled(B)`
-        color: blue;
-      `;
-
-      const html = ReactDOMServer.renderToString(<C />);
-      const allCSS = extractStyleContents(html);
-
-      // A (grandparent) and B (parent) are base levels → :where()
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*color:green/);
-      // C (leaf) is the component being rendered → normal selector
-      expect(allCSS).toMatch(/\.\w+\{[^}]*color:blue/);
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:blue/);
-    });
-
-    it('should not wrap period-prefixed strings inside CSS values', () => {
-      const Base = styled.div`
-        &::before {
-          content: '.item';
-        }
-        background: url('./bg.png');
-      `;
-      const Extended = styled(Base)`
-        color: red;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      // renderToString HTML-encodes quotes (&#x27;)
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.gpbfiF){background:url('./bg.png');}:where(.gpbfiF)::before{content:'.item';}.inzFhn{color:red;}"`
-      );
-      expect(allCSS).not.toMatch(/:where\([^)]*\.item/);
-      expect(allCSS).not.toMatch(/:where\([^)]*\.\/bg/);
-      assertValidWhereSelectors(allCSS);
-    });
-
-    it('should not corrupt longer class names that share a prefix with shorter ones', () => {
-      const DynamicBase = styled.div<{ $color: string }>`
-        color: ${p => p.$color};
-      `;
-      const Extended = styled(DynamicBase)`
-        font-size: 16px;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <div>
-          <Extended $color="red" />
-          <Extended $color="blue" />
-        </div>
-      );
-      const allCSS = extractStyleContents(html);
-
-      assertValidWhereSelectors(allCSS);
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.YKVKw){color:red;}.bYbnUR{font-size:16px;}:where(.jDUPMZ){color:blue;}.bYbnUR{font-size:16px;}"`
+      expect(keyframes).toHaveLength(1);
+      expect(serverRules(page.streamed).filter(rule => rule.startsWith('@keyframes'))).toHaveLength(
+        1
       );
     });
 
-    it('should handle siblings extending the same base with overriding properties', () => {
-      const BaseBox = styled.div`
-        display: flex;
-        padding: 16px;
-        background: white;
-      `;
-      const RedBox = styled(BaseBox)`
-        background: red;
-      `;
-      const BlueBox = styled(BaseBox)`
-        background: blue;
-      `;
+    it('writes the keyframes two components share once', async () => {
+      const page = await renderPage({
+        server: ({ library: { keyframes, styled } }) => {
+          const fade = keyframes`
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+          `;
+          const A = styled.div`
+            animation: ${fade} 1s;
+          `;
+          const B = styled.span`
+            animation: ${fade} 2s;
+          `;
 
-      const html = ReactDOMServer.renderToString(
-        <div>
-          <RedBox />
-          <BlueBox />
-        </div>
-      );
-      const allCSS = extractStyleContents(html);
+          return (
+            <>
+              <A />
+              <B />
+            </>
+          );
+        },
+      });
 
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.bHuNuc){display:flex;padding:16px;background:white;}.fDRrJU{background:red;}:where(.bHuNuc){display:flex;padding:16px;background:white;}.hpcalM{background:blue;}"`
-      );
-      // Both extension selectors must NOT be wrapped
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*background:red/);
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*background:blue/);
-    });
-
-    it('should wrap base with compound selectors (multiple pseudo-classes)', () => {
-      const Base = styled.input`
-        border: 1px solid gray;
-        &:focus:not(:disabled) {
-          border-color: blue;
-        }
-        &:disabled {
-          opacity: 0.5;
-        }
-      `;
-      const Extended = styled(Base)`
-        padding: 8px;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      // Compound pseudo-class selectors should be wrapped
-      expect(allCSS).toMatch(/:where\(\.\w+\):focus:not\(:disabled\)/);
-      expect(allCSS).toMatch(/:where\(\.\w+\):disabled/);
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*padding:8px/);
-    });
-
-    it('should wrap base selectors with attribute selectors', () => {
-      const Base = styled.div`
-        &[data-active] {
-          background: yellow;
-        }
-        &[role='button'] {
-          cursor: pointer;
-        }
-      `;
-      const Extended = styled(Base)`
-        display: inline;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended data-active role="button" />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatch(/:where\(\.\w+\)\[data-active\]/);
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*display:inline/);
-    });
-
-    it('should wrap base with multiple comma-separated selectors', () => {
-      const Base = styled.div`
-        &:hover,
-        &:focus {
-          outline: 2px solid blue;
-        }
-      `;
-      const Extended = styled(Base)`
-        color: black;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      // Both selectors in the comma list should be wrapped
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.iYWuUt):hover,:where(.iYWuUt):focus{outline:2px solid blue;}.bSLHjz{color:black;}"`
+      expect(serverRules(page.streamed).filter(rule => rule.startsWith('@keyframes'))).toHaveLength(
+        1
       );
     });
+  });
 
-    it('should wrap dynamic base that changes class names across renders', () => {
-      const DynamicBase = styled.div<{ $size: string }>`
-        width: ${p => p.$size};
-        height: ${p => p.$size};
-      `;
-      const Card = styled(DynamicBase)`
-        border: 1px solid gray;
-      `;
+  describe('across a Suspense boundary (#5808)', () => {
+    it('keeps the resolved instance styled after React discards the fallback', async () => {
+      const page = await renderPage({
+        server: ({ gates, library: { styled } }) => {
+          const Panel = styled.div`
+            color: crimson;
+          `;
+          const Resolved = async () => {
+            await gates.wait('late');
 
-      const html = ReactDOMServer.renderToString(
-        <div>
-          <Card $size="100px" />
-          <Card $size="200px" />
-          <Card $size="300px" />
-        </div>
-      );
-      const allCSS = extractStyleContents(html);
+            return <Panel>loaded</Panel>;
+          };
 
-      // All three base variants should be :where()-wrapped
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*width:100px/);
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*width:200px/);
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*width:300px/);
-      // Extension CSS not wrapped
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*border:1px solid gray/);
-      // All :where() selectors must be valid
-      assertValidWhereSelectors(allCSS);
+          return (
+            <div>
+              <Suspense fallback={<Panel>skeleton</Panel>}>
+                <Resolved />
+              </Suspense>
+            </div>
+          );
+        },
+      });
+      const name = generatedClass(page.revealed);
+
+      expect(page.revealed).toContain('loaded');
+      expect(page.revealed).not.toContain('skeleton');
+      expect(serverRules(page.revealed)).toEqual([`.${name}{color:crimson;}`]);
     });
 
-    it('should wrap base with nested @supports queries', () => {
-      const Base = styled.div`
-        display: flex;
-        @supports (display: grid) {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-        }
-      `;
-      const Extended = styled(Base)`
-        gap: 16px;
-      `;
+    it('keeps the full base chain and the keyframes of a resolved extension', async () => {
+      const page = await renderPage({
+        server: ({ gates, library: { keyframes, styled } }) => {
+          const spin = keyframes`
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          `;
+          const Base = styled.div`
+            animation: ${spin} 1s linear infinite;
+          `;
+          const Extended = styled(Base)`
+            color: red;
+          `;
+          const Resolved = async () => {
+            await gates.wait('late');
 
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
+            return <Extended id="late">loaded</Extended>;
+          };
 
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.JZrQb){display:flex;}@supports (display: grid){:where(.JZrQb){display:grid;grid-template-columns:1fr 1fr;}}.hYdMwg{gap:16px;}"`
-      );
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*gap:16px/);
-    });
+          return (
+            <div>
+              <Suspense fallback={<Extended>skeleton</Extended>}>
+                <Resolved />
+              </Suspense>
+            </div>
+          );
+        },
+      });
+      const [, , baseName, extendedName] = classesOf(page.revealed, 'late');
+      const [{ keyframes }] = page.flight.clientProps;
+      const [[, keyframesName]] = keyframes as string[][];
 
-    it('should only wrap the top-most component when rendering mid-chain', () => {
-      const A = styled.div`
-        color: red;
-      `;
-      const B = styled(A)`
-        color: green;
-      `;
-
-      // Render B directly (not C extending B);A is base, B is leaf
-      const html = ReactDOMServer.renderToString(<B />);
-      const allCSS = extractStyleContents(html);
-
-      // A (base) is wrapped
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
-      // B (leaf being rendered) is NOT wrapped
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:green/);
-    });
-
-    it('should not wrap a standalone component with no base', () => {
-      const Solo = styled.div`
-        color: purple;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Solo />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatchInlineSnapshot(`".ecMQEt{color:purple;}"`);
-      // No :where() at all;no base to wrap
-      expect(allCSS).not.toContain(':where(');
+      expect(serverRules(page.revealed)).toEqual([
+        `@keyframes ${keyframesName}{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}`,
+        `.${baseName}{animation:${keyframesName} 1s linear infinite;}`,
+        `.${extendedName}{color:red;}`,
+      ]);
     });
   });
 
   describe('cross-boundary extension (#5672)', () => {
-    // Simulates the RSC boundary: styled(ClientComponent) where the target
-    // is a non-styled React component (like an RSC client reference proxy).
-    // isStyledComponent(target) returns false, baseStyle is undefined,
-    // but the extension should still produce correct CSS.
+    it('extends a client component, passing the classes down and keeping its own rules in the page', async () => {
+      const page = await renderPage({
+        clients: ({ react }) => ({
+          Button: (props: object) => react.createElement('button', props),
+        }),
+        server: ({ clients, library: { styled } }) => {
+          const Danger = styled(clients.Button)`
+            background: #dc2626;
+            color: white;
+          `;
 
-    it('should generate CSS when extending a non-styled component', () => {
-      const ClientButton = (props: React.JSX.IntrinsicElements['button']) => <button {...props} />;
+          expect(Reflect.get(Danger, '$$typeof')).not.toBe(Symbol.for('react.client.reference'));
+          expect(Reflect.get(Danger, '$$id')).toBeUndefined();
 
-      const DangerButton = styled(ClientButton)`
-        background: #dc2626;
-        color: white;
-      `;
+          return <Danger id="a">Delete</Danger>;
+        },
+      });
+      const [componentId, name] = classesOf(page.streamed, 'a');
 
-      const html = ReactDOMServer.renderToString(<DangerButton>Delete</DangerButton>);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatchInlineSnapshot(`".yAbnp{background:#dc2626;color:white;}"`);
-    });
-
-    it('should pass className through to the wrapped component', () => {
-      const ClientButton = (props: React.JSX.IntrinsicElements['button']) => <button {...props} />;
-
-      const ExtButton = styled(ClientButton)`
-        padding: 12px;
-      `;
-
-      const html = ReactDOMServer.renderToString(<ExtButton>Click</ExtButton>);
-
-      expect(html).toMatchInlineSnapshot(`
-        <style data-styled>
-          .bzGVaY{padding:12px;}
-        </style>
-        <button class="sc-kqxcKS bzGVaY">
-          Click
-        </button>
-      `);
-    });
-
-    it('should not use precedence on cross-boundary style tags', () => {
-      const ClientComp = (props: React.JSX.IntrinsicElements['div']) => <div {...props} />;
-      const Extended = styled(ClientComp)`
-        margin: 8px;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-
-      // No precedence;inline style tags avoid Float merging/stripping
-      expect(html).toMatchInlineSnapshot(`
-        <style data-styled>
-          .wgyXc{margin:8px;}
-        </style>
-        <div class="sc-kqxcKS wgyXc">
-        </div>
-      `);
-      expect(html).not.toContain('precedence');
-    });
-
-    it('should handle multiple cross-boundary extensions of different components', () => {
-      const ClientCard = (props: React.JSX.IntrinsicElements['div']) => <div {...props} />;
-      const ClientButton = (props: React.JSX.IntrinsicElements['button']) => <button {...props} />;
-
-      const DangerCard = styled(ClientCard)`
-        border: 2px solid red;
-      `;
-      const PrimaryButton = styled(ClientButton)`
-        background: blue;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <DangerCard>
-          <PrimaryButton>Click</PrimaryButton>
-        </DangerCard>
+      expect(rootOf(page.streamed)).toBe(
+        `<div id="root"><button id="a" class="${componentId} ${name}">Delete</button></div>`
       );
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatchInlineSnapshot(
-        `".fIlHpe{border:2px solid red;}.cavwPd{background:blue;}"`
-      );
+      expect(serverRules(page.streamed)).toEqual([`.${name}{background:#dc2626;color:white;}`]);
     });
 
-    // hoistNonReactStatics must not copy React's internal type discriminators ($$typeof,
-    // $$id, $$async, $$bound) from a client- or server-reference target onto the wrapping
-    // styled component. React would see the wrapper itself as a reference and skip calling
-    // its body, so every styled(ClientComponent) extension would produce no CSS. See
-    // hoist.ts KNOWN_STATICS for the protection list.
-    it('does not inherit React reference discriminators from a client-reference target', () => {
-      const ClientButton = Object.assign(
-        (props: React.JSX.IntrinsicElements['button']) => <button {...props} />,
-        {
-          $$typeof: Symbol.for('react.client.reference'),
-          $$id: 'app/components/client-button#default',
-          $$async: false,
-        }
-      );
+    it('does not inherit the discriminators of a server-reference target', async () => {
+      await renderPage({
+        server: ({ library: { styled } }) => {
+          const ServerAction = Object.assign(
+            (props: React.JSX.IntrinsicElements['form']) => <form {...props} />,
+            {
+              $$bound: null,
+              $$id: 'app/actions/save#default',
+              $$typeof: Symbol.for('react.server.reference'),
+            }
+          );
+          const StyledForm = styled(ServerAction)`
+            padding: 16px;
+          `;
 
-      const DangerButton = styled(ClientButton)`
-        background: #dc2626;
-      `;
+          expect(Reflect.get(StyledForm, '$$typeof')).not.toBe(
+            Symbol.for('react.server.reference')
+          );
+          expect(Reflect.get(StyledForm, '$$id')).toBeUndefined();
+          expect(Reflect.get(StyledForm, '$$bound')).toBeUndefined();
 
-      // The wrapper must not have inherited the client-reference markers,
-      // otherwise React serializes it as a reference and skips our render.
-      expect((DangerButton as any).$$typeof).not.toBe(Symbol.for('react.client.reference'));
-      expect((DangerButton as any).$$id).toBeUndefined();
-      expect((DangerButton as any).$$async).toBeUndefined();
-
-      const html = ReactDOMServer.renderToString(<DangerButton>Delete</DangerButton>);
-      const allCSS = extractStyleContents(html);
-      // Extension CSS must be emitted;proving the wrapper actually rendered.
-      expect(allCSS).toContain('background:#dc2626;');
-      // The element class must include the extension's generated class.
-      expect(html).toMatch(/class="sc-[\w-]+ \w+"/);
+          return <div />;
+        },
+      });
     });
 
-    it('does not inherit React reference discriminators from a server-reference target', () => {
-      const ServerAction = Object.assign(
-        (props: React.JSX.IntrinsicElements['form']) => <form {...props} />,
-        {
-          $$typeof: Symbol.for('react.server.reference'),
-          $$id: 'app/actions/save#default',
-          $$bound: null,
-        }
+    it('forwards props, attrs and dynamic values through an extension of a client component', async () => {
+      const page = await renderPage({
+        clients: ({ react }) => ({
+          Input: (props: object) => react.createElement('input', props),
+        }),
+        server: ({ clients, library: { styled } }) => {
+          const Field = styled(clients.Input).attrs({ type: 'email' })<{ $bg: string }>`
+            background: ${p => p.$bg};
+          `;
+
+          return (
+            <>
+              <Field id="a" $bg="red" placeholder="you@example.com" />
+              <Field id="b" $bg="blue" />
+            </>
+          );
+        },
+      });
+      const [componentId, red] = classesOf(page.streamed, 'a');
+      const [, blue] = classesOf(page.streamed, 'b');
+
+      expect(rootOf(page.streamed)).toBe(
+        `<div id="root"><input id="a" placeholder="you@example.com" type="email" class="${componentId} ${red}"/><input id="b" type="email" class="${componentId} ${blue}"/></div>`
       );
-
-      const StyledForm = styled(ServerAction)`
-        padding: 16px;
-      `;
-
-      expect((StyledForm as any).$$typeof).not.toBe(Symbol.for('react.server.reference'));
-      expect((StyledForm as any).$$id).toBeUndefined();
-      expect((StyledForm as any).$$bound).toBeUndefined();
-
-      const html = ReactDOMServer.renderToString(<StyledForm />);
-      expect(extractStyleContents(html)).toContain('padding:16px;');
-    });
-
-    it('should forward props through cross-boundary extensions', () => {
-      const ClientInput = (props: React.JSX.IntrinsicElements['input']) => <input {...props} />;
-
-      const StyledInput = styled(ClientInput)`
-        border: 1px solid gray;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <StyledInput type="email" placeholder="test@example.com" />
-      );
-
-      expect(html).toMatchInlineSnapshot(`
-        <style data-styled>
-          .TlAtb{border:1px solid gray;}
-        </style>
-        <input type="email"
-               placeholder="test@example.com"
-               class="sc-kqxcKS TlAtb"
-        >
-      `);
-    });
-
-    it('should support dynamic interpolations in cross-boundary extensions', () => {
-      const ClientBox = (props: React.JSX.IntrinsicElements['div']) => <div {...props} />;
-
-      const ColorBox = styled(ClientBox)<{ $bg: string }>`
-        background: ${p => p.$bg};
-        padding: 16px;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <div>
-          <ColorBox $bg="red">Red</ColorBox>
-          <ColorBox $bg="blue">Blue</ColorBox>
-        </div>
-      );
-      const allCSS = extractStyleContents(html);
-
-      // Both dynamic variants should have their CSS emitted
-      expect(allCSS).toMatchInlineSnapshot(
-        `".UggJu{background:red;padding:16px;}.ezOOCn{background:blue;padding:16px;}"`
-      );
-    });
-
-    it('should support attrs on cross-boundary extensions', () => {
-      const ClientButton = (props: React.JSX.IntrinsicElements['button']) => <button {...props} />;
-
-      const SubmitButton = styled(ClientButton).attrs({ type: 'submit' })`
-        font-weight: bold;
-      `;
-
-      const html = ReactDOMServer.renderToString(<SubmitButton>Submit</SubmitButton>);
-
-      expect(html).toMatchInlineSnapshot(`
-        <style data-styled>
-          .hKzoNx{font-weight:bold;}
-        </style>
-        <button type="submit"
-                class="sc-kqxcKS hKzoNx"
-        >
-          Submit
-        </button>
-      `);
-    });
-
-    it('should produce each style tag before its component element for correct source ordering', () => {
-      const ClientBase = (props: React.JSX.IntrinsicElements['div']) => <div {...props} />;
-
-      const Extended = styled(ClientBase)`
-        color: red;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-
-      // The <style> tag should appear before the element in the HTML
-      // (Fragment renders style first, then element) so it's available
-      // before the element that references it
-      const styleIdx = html.indexOf('<style');
-      const divIdx = html.indexOf('<div');
-      expect(styleIdx).toBeGreaterThan(-1);
-      expect(divIdx).toBeGreaterThan(-1);
-      expect(styleIdx).toBeLessThan(divIdx);
+      expect(serverRules(page.streamed)).toEqual([
+        `.${red}{background:red;}`,
+        `.${blue}{background:blue;}`,
+      ]);
     });
   });
 
-  describe(':where() adversarial CSS fuzzing', () => {
-    /** Assert every :where() in the CSS contains a valid, complete class selector */
-    function assertValidWhereSelectors(allCSS: string) {
-      const whereMatches = [...allCSS.matchAll(/:where\((\.[^)]+)\)/g)];
-      for (const match of whereMatches) {
-        expect(match[1]).toMatch(/^\.\w[\w-]*$/);
-      }
+  describe('StyleSheetManager', () => {
+    it('applies a plugin to the rules a server component sends', async () => {
+      const page = await renderPage({
+        server: ({ library: { StyleSheetManager, styled } }) => {
+          const Item = styled.li`
+            margin-left: 8px;
+          `;
+
+          return (
+            <StyleSheetManager plugins={[rtlPlugin]}>
+              <Item id="a" />
+            </StyleSheetManager>
+          );
+        },
+      });
+      const [, name] = classesOf(page.streamed, 'a');
+
+      expect(serverRules(page.streamed)).toEqual([`.${name}{margin-right:8px;}`]);
+    });
+  });
+
+  describe('sibling combinators', () => {
+    it('matches an extension among its base siblings through the base class, in the server HTML and after hydration', async () => {
+      const page = await renderPage({
+        server: ({ library: { styled } }) => {
+          const Base = styled.div`
+            & + & {
+              margin-left: 8px;
+            }
+          `;
+          const Extended = styled(Base)`
+            color: red;
+          `;
+
+          return (
+            <main>
+              <Base id="a" />
+              <Extended id="b" />
+              <Base id="c" />
+            </main>
+          );
+        },
+      });
+      const marginOf = (source: string | Document, id: string) =>
+        computedValue(source, `#${id}`, 'margin-left');
+
+      expect(rootOf(page.streamed)).not.toContain('<style');
+      expect(['a', 'b', 'c'].map(id => marginOf(page.streamed, id))).toEqual(['', '8px', '8px']);
+
+      const browser = await page.hydrate();
+
+      expect(browser.recoverableErrors).toEqual([]);
+      expect(['a', 'b', 'c'].map(id => marginOf(browser.document, id))).toEqual(['', '8px', '8px']);
+
+      browser.close();
+    });
+  });
+
+  describe('cascade', () => {
+    const scenarios = [...extensionScenarios, ...wrapperScenarios];
+    const names = scenarios.map(scenario => scenario.name);
+
+    const PROPERTIES = ['background-color', 'color', 'margin-left', 'padding-top'];
+
+    const probesIn = (html: string): string[] =>
+      Array.from(html.matchAll(/data-probe="([^"]*)"/g), match => match[1]);
+
+    /** The winning value of each property on each probe, in the order the probes appear. */
+    const winnersIn = (source: string | Document, probes: string[]): string[][] =>
+      probes.map(probe =>
+        PROPERTIES.map(property => computedValue(source, `[data-probe="${probe}"]`, property))
+      );
+
+    /** The tree of the scenario `name`, built from `library`. */
+    function treeFor(library: Library, name: string): React.ReactElement {
+      const { extensionScenarios, wrapperScenarios } = scenariosFor(library);
+      const found = [...extensionScenarios, ...wrapperScenarios].find(
+        scenario => scenario.name === name
+      );
+      if (found === undefined) throw new Error(`no scenario named ${name}`);
+
+      return found.tree();
     }
 
-    it('should not corrupt CSS content property with class-name-like strings', () => {
-      const Base = styled.div`
-        &::before {
-          content: '.sc-something';
-        }
-        padding: 8px;
-      `;
-      const Extended = styled(Base)`
-        color: red;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.fizcbf){padding:8px;}:where(.fizcbf)::before{content:'.sc-something';}.inzFhn{color:red;}"`
-      );
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
-      assertValidWhereSelectors(allCSS);
-    });
-
-    it('should not corrupt CSS url() values with dots', () => {
-      const Base = styled.div`
-        background: url(./../image.png);
-        display: block;
-      `;
-      const Extended = styled(Base)`
-        color: green;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.iSnWzg){background:url(./../image.png);display:block;}.kqSrCH{color:green;}"`
-      );
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:green/);
-      assertValidWhereSelectors(allCSS);
-    });
-
-    it('should not corrupt attribute selectors with dot-prefixed values', () => {
-      const Base = styled.div`
-        &[data-value='.foo'] {
-          background: yellow;
-        }
-        margin: 4px;
-      `;
-      const Extended = styled(Base)`
-        color: blue;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.cyCrZY){margin:4px;}:where(.cyCrZY)[data-value='.foo']{background:yellow;}.gnVozW{color:blue;}"`
-      );
-      assertValidWhereSelectors(allCSS);
-    });
-
-    it('should not double-wrap user CSS that already contains :where()', () => {
-      const Base = styled.div`
-        :where(.other) {
-          color: red;
-        }
-        padding: 12px;
-      `;
-      const Extended = styled(Base)`
-        margin: 8px;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.iyjGWD){padding:12px;}:where(.iyjGWD) :where(.other){color:red;}.kFKQqj{margin:8px;}"`
-      );
-      expect(allCSS).not.toContain(':where(:where(');
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*margin:8px/);
-    });
-
-    it('should not corrupt @supports selector() at-rules', () => {
-      const Base = styled.div`
-        display: flex;
-        @supports selector(.test) {
-          display: grid;
-        }
-      `;
-      const Extended = styled(Base)`
-        gap: 8px;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.bWeA-do){display:flex;}@supports selector(.test){:where(.bWeA-do){display:grid;}}.cPvrSb{gap:8px;}"`
-      );
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*gap:8px/);
-      assertValidWhereSelectors(allCSS);
-    });
-
-    it('should handle @container queries with nested selectors', () => {
-      const Base = styled.div`
-        container-type: inline-size;
-        @container (min-width: 300px) {
-          & {
-            font-size: 18px;
-          }
-        }
-      `;
-      const Extended = styled(Base)`
-        color: navy;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.dxtSss){container-type:inline-size;container-name:sc-kqxcKS;}@container (min-width: 300px){:where(.dxtSss){font-size:18px;}}.eMUjUY{color:navy;}"`
-      );
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:navy/);
-      assertValidWhereSelectors(allCSS);
-    });
-
-    it('should not corrupt CSS custom properties with class-name-like values', () => {
-      const Base = styled.div`
-        --my-var: .something;
-        color: var(--my-var);
-      `;
-      const Extended = styled(Base)`
-        font-size: 14px;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.ehNKcK){--my-var:.something;color:var(--my-var);}.bSVMP{font-size:14px;}"`
-      );
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*font-size:14px/);
-      assertValidWhereSelectors(allCSS);
-    });
-
-    it('should handle many comma-separated selectors on the base', () => {
-      const Base = styled.div`
-        &:hover,
-        &:focus,
-        &:active,
-        &:visited,
-        &:first-child,
-        &:last-child,
-        &:nth-child(2),
-        &:nth-child(3),
-        &:nth-child(4),
-        &:nth-child(5),
-        &:not(:disabled) {
-          outline: none;
-        }
-      `;
-      const Extended = styled(Base)`
-        border: 1px solid black;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.fTuHSW):hover,:where(.fTuHSW):focus,:where(.fTuHSW):active,:where(.fTuHSW):visited,:where(.fTuHSW):first-child,:where(.fTuHSW):last-child,:where(.fTuHSW):nth-child(2),:where(.fTuHSW):nth-child(3),:where(.fTuHSW):nth-child(4),:where(.fTuHSW):nth-child(5),:where(.fTuHSW):not(:disabled){outline:none;}.hBUEPu{border:1px solid black;}"`
-      );
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*border:1px solid black/);
-    });
-
-    it('should not corrupt animation-name that looks like a class prefix', () => {
-      const Base = styled.div`
-        animation-name: sc-keyframes-abc;
-        animation-duration: 1s;
-      `;
-      const Extended = styled(Base)`
-        opacity: 1;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.hUpqPn){animation-name:sc-keyframes-abc;animation-duration:1s;}.iMUrup{opacity:1;}"`
-      );
-      expect(allCSS).not.toContain(':where(sc-keyframes-abc)');
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*opacity:1/);
-      assertValidWhereSelectors(allCSS);
-    });
-
-    it('should wrap base class at all nesting levels in deep at-rule nesting', () => {
-      const Base = styled.div`
-        color: black;
-        @media (min-width: 768px) {
-          color: gray;
-          @supports (display: grid) {
-            display: grid;
-          }
-        }
-      `;
-      const Extended = styled(Base)`
-        font-weight: bold;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.iVldws){color:black;}@media (min-width: 768px){:where(.iVldws){color:gray;}@supports (display: grid){:where(.iVldws){display:grid;}}}.gEYtIK{font-weight:bold;}"`
-      );
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*font-weight:bold/);
-    });
-
-    it('should not interfere with !important declarations', () => {
-      const Base = styled.div`
-        color: red !important;
-        display: flex;
-      `;
-      const Extended = styled(Base)`
-        color: blue;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      // !important should be preserved on the :where()-wrapped base rule
-      // (minified output omits the space before !important)
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*color:red\s?!important/);
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*display:flex/);
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:blue/);
-    });
-
-    it('should handle unicode escapes near class references', () => {
-      const Base = styled.div`
-        &::before {
-          content: '\\2022';
-        }
-        margin: 0;
-      `;
-      const Extended = styled(Base)`
-        padding: 4px;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.iOeQph){margin:0;}:where(.iOeQph)::before{content:'\\2022';}.esjoNE{padding:4px;}"`
-      );
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*padding:4px/);
-      assertValidWhereSelectors(allCSS);
-    });
-
-    it('should wrap all base levels correctly in A -> B -> C chain', () => {
-      const A = styled.div`
-        font-size: 12px;
-        &:hover {
-          font-size: 14px;
-        }
-      `;
-      const B = styled(A)`
-        font-size: 16px;
-        &:hover {
-          font-size: 18px;
-        }
-      `;
-      const C = styled(B)`
-        font-size: 20px;
-        &:hover {
-          font-size: 22px;
-        }
-      `;
-
-      const html = ReactDOMServer.renderToString(<C />);
-      const allCSS = extractStyleContents(html);
-
-      // A and B are base levels -> :where()
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*font-size:12px/);
-      expect(allCSS).toMatch(/:where\(\.\w+\):hover\{[^}]*font-size:14px/);
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*font-size:16px/);
-      expect(allCSS).toMatch(/:where\(\.\w+\):hover\{[^}]*font-size:18px/);
-      // C is the leaf -> NOT wrapped
-      expect(allCSS).toMatch(/\.\w+\{[^}]*font-size:20px/);
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*font-size:20px/);
-      expect(allCSS).not.toMatch(/:where\(\.\w+\):hover\{[^}]*font-size:22px/);
-    });
-
-    it('should handle component selector interpolation in base CSS', () => {
-      const OtherComponent = styled.span`
-        color: purple;
-      `;
-      const Base = styled.div`
-        ${OtherComponent} {
-          font-weight: bold;
-        }
-        padding: 8px;
-      `;
-      const Extended = styled(Base)`
-        margin: 16px;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      expect(allCSS).toMatchInlineSnapshot(
-        `":where(.kqrYEI){padding:8px;}:where(.kqrYEI) .sc-kqxcKS{font-weight:bold;}.bZWURN{margin:16px;}"`
-      );
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*margin:16px/);
-      assertValidWhereSelectors(allCSS);
-    });
-
-    it('should handle base with empty/whitespace-only CSS', () => {
-      const Base = styled.div``;
-      const Extended = styled(Base)`
-        color: red;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Extended />);
-      const allCSS = extractStyleContents(html);
-
-      // Extension CSS should be present and not wrapped
-      expect(allCSS).toMatchInlineSnapshot(`".inzFhn{color:red;}"`);
-      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
-    });
-  });
-
-  describe('RSC per-instance style emission', () => {
-    // Each server-rendered instance emits its own inline <style> so a rule is
-    // never left recorded-but-absent when React discards a Suspense fallback
-    // that emitted it (#5808). Byte-identical duplicates compress away under
-    // gzip; they are not merged in the DOM.
-    it('should emit a style tag for each instance of the same static component', () => {
-      const Button = styled.button`
-        padding: 8px;
-        color: blue;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <div>
-          <Button>A</Button>
-          <Button>B</Button>
-          <Button>C</Button>
-          <Button>D</Button>
-          <Button>E</Button>
-        </div>
-      );
-
-      expect(countStyleTags(html)).toBe(5);
-      expect(extractStyleContents(html)).toBe('.iIYYsP{padding:8px;color:blue;}'.repeat(5));
-    });
-
-    it('should emit a style tag per instance for dynamic components with identical props', () => {
-      const Box = styled.div<{ $color: string }>`
-        color: ${p => p.$color};
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <div>
-          <Box $color="red" />
-          <Box $color="red" />
-          <Box $color="red" />
-        </div>
-      );
-
-      expect(countStyleTags(html)).toBe(3);
-      expect(extractStyleContents(html)).toBe('.YKVKw{color:red;}'.repeat(3));
-    });
-
-    it('should emit separate style tags for dynamic components with different props', () => {
-      const Box = styled.div<{ $color: string }>`
-        color: ${p => p.$color};
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <div>
-          <Box $color="red" />
-          <Box $color="blue" />
-          <Box $color="green" />
-        </div>
-      );
-
-      expect(countStyleTags(html)).toBe(3);
-      const allCSS = extractStyleContents(html);
-      expect(allCSS).toMatchInlineSnapshot(
-        `".YKVKw{color:red;}.jDUPMZ{color:blue;}.jygOGE{color:green;}"`
-      );
-    });
-
-    it('should emit a tag per instance of an extended component, base chain included each time', () => {
-      const Base = styled.div`
-        display: flex;
-      `;
-      const Extended = styled(Base)`
-        color: red;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <div>
-          <Extended />
-          <Extended />
-          <Extended />
-        </div>
-      );
-
-      // Each instance emits its own base(:where()) plus extension pair.
-      expect(countStyleTags(html)).toBe(3);
-      expect(extractStyleContents(html)).toBe(
-        ':where(.jYQgFj){display:flex;}.inzFhn{color:red;}'.repeat(3)
-      );
-    });
-
-    it('should emit only this render’s base variant, never a sibling variant', () => {
-      const DynamicBase = styled.div<{ $v: string }>`
-        color: ${p => p.$v};
-      `;
-      const Extended = styled(DynamicBase)`
-        font-weight: bold;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <div>
-          <DynamicBase $v="red" />
-          <DynamicBase $v="blue" />
-          <Extended $v="red" />
-        </div>
-      );
-
-      const styles = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]);
-      expect(styles[styles.length - 1]).toBe(
-        ':where(.YKVKw){color:red;}.gEYtIK{font-weight:bold;}'
-      );
-    });
-
-    it('should emit separate tags for base and extended rendered together', () => {
-      const Base = styled.div`
-        display: flex;
-      `;
-      const Extended = styled(Base)`
-        color: red;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <div>
-          <Base />
-          <Extended />
-        </div>
-      );
-
-      // Base emits its own CSS, Extended emits base(:where())+extension
-      // These are different CSS strings, so both get their own tag
-      expect(countStyleTags(html)).toBe(2);
-    });
-
-    describe('across concurrent requests', () => {
-      /** Run one render inside its own request: a separate `React.cache` store over the shared module-level sheet. */
-      const inRequest = (store: Map<Function, any>, render: () => string): string => {
-        mockCacheStore.clear();
-        store.forEach((value, key) => mockCacheStore.set(key, value));
-        const html = render();
-        store.clear();
-        mockCacheStore.forEach((value, key) => store.set(key, value));
-
-        return html;
-      };
-
-      it('emits the full rule when another request registered the name first', async () => {
-        const Box = styled.div`
-          color: red;
-        `;
-        const Other = styled.span`
-          color: blue;
-        `;
-        const requestA = new Map<Function, any>();
-        const requestB = new Map<Function, any>();
-
-        // A starts (and resets the shared sheet), B registers Box, then A reaches Box.
-        inRequest(requestA, () => ReactDOMServer.renderToString(<Other />));
-        const htmlB = inRequest(requestB, () => ReactDOMServer.renderToString(<Box />));
-        await tick();
-        const htmlA = inRequest(requestA, () => ReactDOMServer.renderToString(<Box />));
-
-        expect(extractStyleContents(htmlB)).toBe('.jnDZvI{color:red;}');
-        expect(extractStyleContents(htmlA)).toBe('.jnDZvI{color:red;}');
-      });
-
-      it('compiles a name once for every request that renders it', async () => {
-        const Box = styled.div`
-          color: red;
-        `;
-        const emit = jest.spyOn(mainCompiler, 'emit');
-        const requestA = new Map<Function, any>();
-        const requestB = new Map<Function, any>();
-
-        try {
-          const htmlA = inRequest(requestA, () => ReactDOMServer.renderToString(<Box />));
-          await tick();
-          const htmlB = inRequest(requestB, () => ReactDOMServer.renderToString(<Box />));
-
-          expect(emit).toHaveBeenCalledTimes(1);
-          expect(extractStyleContents(htmlB)).toBe(extractStyleContents(htmlA));
-          expect(extractStyleContents(htmlB)).not.toBe('');
-        } finally {
-          emit.mockRestore();
-        }
-      });
-
-      it('emits the full rule for a name another request registered and the cache has since evicted', async () => {
-        const Dynamic = styled.div<{ $level: number }>`
-          z-index: ${p => p.$level};
-        `;
-        const Other = styled.span`
-          color: blue;
-        `;
-        const requestA = new Map<Function, any>();
-        const requestB = new Map<Function, any>();
-        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-
-        try {
-          // A starts (and resets the shared sheet). B then renders the name
-          // under test followed by enough other names to evict it.
-          inRequest(requestA, () => ReactDOMServer.renderToString(<Other />));
-          const htmlB = inRequest(requestB, () =>
-            ReactDOMServer.renderToString(
-              <>
-                {Array.from({ length: TOO_MANY_CLASSES_LIMIT + 5 }, (_, i) => (
-                  <Dynamic key={i} $level={i} />
-                ))}
-              </>
-            )
-          );
-          await tick();
-          const htmlA = inRequest(requestA, () =>
-            ReactDOMServer.renderToString(<Dynamic $level={0} />)
-          );
-
-          const expected = extractStyleContents(htmlB).match(/\.\w+\{z-index:0;\}/)?.[0];
-          expect(expected).toBeDefined();
-          expect(extractStyleContents(htmlA)).toBe(expected);
-        } finally {
-          warn.mockRestore();
-        }
-      });
-
-      it('holds at most one warning-threshold of class names per component', () => {
-        const Box = styled.div`
-          color: red;
-        `;
-        const limit = TOO_MANY_CLASSES_LIMIT;
-
-        for (let i = 0; i < limit + 5; i++) {
-          rscCache.rememberRscRules(Box.webStyle, 'name' + i, ['.name' + i + '{}']);
-        }
-
-        expect(rscCache.recallRscRules(Box.webStyle, 'name0')).toBeUndefined();
-        expect(rscCache.recallRscRules(Box.webStyle, 'name4')).toBeUndefined();
-        expect(rscCache.recallRscRules(Box.webStyle, 'name5')).toEqual(['.name5{}']);
-        expect(rscCache.recallRscRules(Box.webStyle, 'name' + (limit + 4))).toEqual([
-          '.name' + (limit + 4) + '{}',
-        ]);
-      });
-
-      it('emits the base chain of an extension when another request registered it first', async () => {
-        const Base = styled.div`
-          display: flex;
-        `;
-        const Extended = styled(Base)`
-          color: red;
-        `;
-        const Other = styled.span`
-          color: blue;
-        `;
-        const requestA = new Map<Function, any>();
-        const requestB = new Map<Function, any>();
-
-        inRequest(requestA, () => ReactDOMServer.renderToString(<Other />));
-        inRequest(requestB, () => ReactDOMServer.renderToString(<Extended />));
-        await tick();
-        const htmlA = inRequest(requestA, () => ReactDOMServer.renderToString(<Extended />));
-
-        expect(extractStyleContents(htmlA)).toBe(
-          ':where(.CHpGf){display:flex;}.itptxn{color:red;}'
-        );
-      });
-    });
-
-    describe('across a Suspense boundary (#5808)', () => {
-      it('keeps the resolved instance styled after React discards the fallback', async () => {
-        const Panel = styled.div`
-          color: crimson;
-        `;
-        const Resolved = async () => {
-          await tick();
-          return <Panel>loaded</Panel>;
-        };
-
-        const { revealed, streamed } = await renderStreamed(
-          <div>
-            <Suspense fallback={<Panel>skeleton</Panel>}>
-              <Resolved />
-            </Suspense>
-          </div>
-        );
-
-        // The fallback and the resolved content each stream their own full rule.
-        expect(extractStyleContents(streamed)).toBe('.bMsfmI{color:crimson;}'.repeat(2));
-        // The reveal discards the fallback's tag; the resolved tag stays.
-        expect(countStyleTags(revealed)).toBe(1);
-        expect(extractStyleContents(revealed)).toBe('.bMsfmI{color:crimson;}');
-        expect(revealed).toContain('loaded');
-        expect(revealed).not.toContain('skeleton');
-      });
-
-      it('keeps a referenced keyframe with the resolved instance', async () => {
-        const spin = keyframes`
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        `;
-        const Spinner = styled.div`
-          animation: ${spin} 1s linear infinite;
-        `;
-        const Resolved = async () => {
-          await tick();
-          return <Spinner>loaded</Spinner>;
-        };
-
-        const { revealed } = await renderStreamed(
-          <div>
-            <Suspense fallback={<Spinner>skeleton</Spinner>}>
-              <Resolved />
-            </Suspense>
-          </div>
-        );
-
-        expect(countStyleTags(revealed)).toBe(1);
-        expect(extractStyleContents(revealed)).toBe(
-          '@keyframes feWufh{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}' +
-            '.hQnbLm{animation:feWufh 1s linear infinite;}'
-        );
-      });
-
-      it('keeps the full base chain on the resolved instance of an extended component', async () => {
-        const Base = styled.div`
-          display: flex;
-        `;
-        const Extended = styled(Base)`
-          color: red;
-        `;
-        const Resolved = async () => {
-          await tick();
-          return <Extended>loaded</Extended>;
-        };
-
-        const { revealed } = await renderStreamed(
-          <div>
-            <Suspense fallback={<Extended>skeleton</Extended>}>
-              <Resolved />
-            </Suspense>
-          </div>
-        );
-
-        expect(extractStyleContents(revealed)).toBe(
-          ':where(.CHpGf){display:flex;}.itptxn{color:red;}'
-        );
-      });
-    });
-  });
-
-  describe('RSC keyframe emission', () => {
-    it('should emit keyframes merged with component CSS in a single style tag', () => {
-      const pulse = keyframes`
-        0% { opacity: 1; }
-        100% { opacity: 0; }
-      `;
-
-      const Dot = styled.div`
-        animation: ${pulse} 2s infinite;
-      `;
-
-      const html = ReactDOMServer.renderToString(<Dot />);
-
-      expect(extractStyleContents(html)).toMatchInlineSnapshot(
-        `"@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}.dRFKIK{animation:gZZrBJ 2s infinite;}"`
-      );
-      expect(countStyleTags(html)).toBe(1);
-    });
-
-    it('should emit the referenced keyframes alongside each component that uses them', () => {
-      const fade = keyframes`
-        0% { opacity: 1; }
-        100% { opacity: 0; }
-      `;
-
-      const A = styled.div`
-        animation: ${fade} 1s;
-      `;
-      const B = styled.span`
-        animation: ${fade} 2s;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <>
-          <A />
-          <B />
-        </>
-      );
-
-      // Each component carries the @keyframes it references in its own tag.
-      expect(extractStyleContents(html)).toBe(
-        '@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}.eGskDT{animation:gZZrBJ 1s;}' +
-          '@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}.ctTFiD{animation:gZZrBJ 2s;}'
-      );
-      expect(countStyleTags(html)).toBe(2);
-    });
-
-    it('should emit a keyframe once per tag when a base and its extension both reference it', () => {
-      const fade = keyframes`
-        0% { opacity: 1; }
-        100% { opacity: 0; }
-      `;
-
-      const Base = styled.div`
-        animation: ${fade} 1s;
-      `;
-      const Extended = styled(Base)`
-        animation: ${fade} 2s;
-      `;
-
-      const css = extractStyleContents(ReactDOMServer.renderToString(<Extended />));
-
-      expect(css.split('@keyframes').length - 1).toBe(1);
-    });
-
-    it('should emit the keyframes for every instance so none is lost to a discarded fallback', () => {
-      const spin = keyframes`
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      `;
-
-      const Spinner = styled.div`
-        animation: ${spin} 1s linear infinite;
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        <>
-          <Spinner />
-          <Spinner />
-        </>
-      );
-
-      // Both instances carry their own keyframe and rule, so a Suspense reveal
-      // that discards one instance never strips the other's animation (#5808).
-      expect(extractStyleContents(html)).toBe(
-        (
-          '@keyframes dnfVul{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}' +
-          '.gjRflG{animation:dnfVul 1s linear infinite;}'
-        ).repeat(2)
-      );
-      expect(countStyleTags(html)).toBe(2);
-    });
-  });
-
-  describe('redundant-emit warning', () => {
-    itWarnsOnRedundantEmits({
-      marker: 'instances of the styled component',
-      renderMany: count => {
-        const Cell = styled.span`
-          color: red;
-        `;
-
-        ReactDOMServer.renderToString(
-          <div>
-            {Array.from({ length: count }, (_, i) => (
-              <Cell key={i} />
-            ))}
-          </div>
-        );
-
-        return `${RSC_REDUNDANT_EMIT_WARN_THRESHOLD} instances of the styled component styled.span were rendered on one server-rendered page, so its styles repeat that many times in the HTML. This is fine at normal sizes. To trim a very large list, style the items from one styled parent element (for example a \`& > li\` selector) and render plain children, so the whole list emits a single tag.`;
-      },
-    });
-  });
-
-  describe('RSC shared style elements', () => {
-    // Every instance still renders its own <style> tag; what is shared is the
-    // element object behind it, so the server-component payload carries each
-    // distinct style once and refers back to it for every repeat.
-    it('returns the same element object for identical CSS from one component', () => {
-      const Box = styled.div<{ $color: string }>`
-        color: ${p => p.$color};
-      `;
-      const seen: React.ReactElement[] = [];
-
-      ReactDOMServer.renderToString(
-        <>
-          {renderInProbe(Box, { $color: 'red' }, seen)}
-          {renderInProbe(Box, { $color: 'red' }, seen)}
-          {renderInProbe(Box, { $color: 'red' }, seen)}
-        </>
-      );
-
-      expect(seen).toHaveLength(3);
-      expect(seen[1]).toBe(seen[0]);
-      expect(seen[2]).toBe(seen[0]);
-    });
-
-    it('keeps one fixed React key per component', () => {
-      const Box = styled.div<{ $color: string }>`
-        color: ${p => p.$color};
-      `;
-      const seen: React.ReactElement[] = [];
-
-      ReactDOMServer.renderToString(
-        <>
-          {renderInProbe(Box, { $color: 'red' }, seen)}
-          {renderInProbe(Box, { $color: 'blue' }, seen)}
-        </>
-      );
-
-      expect(seen[0].key).toBe(`sc-${Box.styledComponentId}`);
-      expect(seen[1].key).toBe(seen[0].key);
-    });
-
-    it('returns distinct elements for different CSS from one component', () => {
-      const Box = styled.div<{ $color: string }>`
-        color: ${p => p.$color};
-      `;
-      const seen: React.ReactElement[] = [];
-
-      ReactDOMServer.renderToString(
-        <>
-          {renderInProbe(Box, { $color: 'red' }, seen)}
-          {renderInProbe(Box, { $color: 'blue' }, seen)}
-        </>
-      );
-
-      expect(seen[1]).not.toBe(seen[0]);
-    });
-
-    it('never shares an element between two components with identical rules', () => {
-      const First = styled.div`
-        color: red;
-      `;
-      const Second = styled.div`
-        color: red;
-      `;
-      const seen: React.ReactElement[] = [];
-
-      ReactDOMServer.renderToString(
-        <>
-          {renderInProbe(First, {}, seen)}
-          {renderInProbe(Second, {}, seen)}
-        </>
-      );
-
-      expect(seen[1]).not.toBe(seen[0]);
-    });
-
-    it('never shares an element between a base and an extension with no rules of its own', () => {
-      // An extension with an empty template returns its base's exact class
-      // string, so only the component ID tells the two apart.
-      const Base = styled.div`
-        display: flex;
-      `;
-      const Ext = styled(Base).attrs({})``;
-
-      const renderFresh = (tree: React.ReactElement) => {
-        mockCacheStore.clear();
-        return extractStyleContents(ReactDOMServer.renderToString(tree));
-      };
-      const baseAlone = renderFresh(<Base />);
-      const extAlone = renderFresh(<Ext />);
-
-      expect(baseAlone).toBe('.jYQgFj{display:flex;}');
-      expect(extAlone).not.toBe('');
-      expect(
-        renderFresh(
-          <>
-            <Base />
-            <Ext />
-          </>
-        )
-      ).toBe(baseAlone + extAlone);
-      expect(
-        renderFresh(
-          <>
-            <Ext />
-            <Base />
-          </>
-        )
-      ).toBe(extAlone + baseAlone);
-
-      const seen: React.ReactElement[] = [];
-      mockCacheStore.clear();
-      ReactDOMServer.renderToString(
-        <>
-          {renderInProbe(Base, {}, seen)}
-          {renderInProbe(Ext, {}, seen)}
-        </>
-      );
-      expect(seen).toHaveLength(2);
-      expect(seen[1]).not.toBe(seen[0]);
-    });
-
-    it('never shares an element across StyleSheetManager settings that change the CSS', () => {
-      const Box = styled.div`
-        color: red;
-      `;
-      const seen: React.ReactElement[] = [];
-
-      const html = ReactDOMServer.renderToString(
-        <>
-          <StyleSheetManager namespace="first">{renderInProbe(Box, {}, seen)}</StyleSheetManager>
-          <StyleSheetManager namespace="second">{renderInProbe(Box, {}, seen)}</StyleSheetManager>
-        </>
-      );
-
-      expect(seen[1]).not.toBe(seen[0]);
-      expect(extractStyleContents(html)).toBe(
-        'first .dBBIlU{color:red;}second .bDqllf{color:red;}'
-      );
-    });
-  });
-
-  describe('StyleSheetManager in RSC', () => {
-    it('useStyleSheetContext returns a valid default context', () => {
-      let ctx: ReturnType<typeof useStyleSheetContext> | undefined;
-
-      function Probe() {
-        ctx = useStyleSheetContext();
-        return React.createElement('div', null, 'probe');
+    /** What a client-only server render of the same tree produces. */
+    function clientRender(name: string): { html: string; probes: string[] } {
+      const ssr = loadSsrGraph();
+      const sheet = new ssr.library.ServerStyleSheet();
+      const html = ssr.server.renderToString(sheet.collectStyles(treeFor(ssr.library, name)));
+
+      return { html: sheet.getStyleTags() + html, probes: probesIn(html) };
+    }
+
+    // The same tree must cascade the same whether styled components run as server components or as client ones.
+    it.each(names)(
+      'gives every element the winners of a client render, in the server HTML and after hydration, in the %s scenario',
+      async name => {
+        const expected = clientRender(name);
+        const page = await renderPage({ server: ({ library }) => treeFor(library, name) });
+        const expectedWinners = winnersIn(expected.html, expected.probes);
+
+        expect(expected.probes.length).toBeGreaterThan(0);
+        expect(probesIn(page.streamed)).toEqual(expected.probes);
+        expect(winnersIn(page.streamed, expected.probes)).toEqual(expectedWinners);
+
+        const browser = await page.hydrate();
+
+        expect(browser.recoverableErrors).toEqual([]);
+        expect(winnersIn(browser.document, expected.probes)).toEqual(expectedWinners);
+
+        browser.close();
       }
-
-      ReactDOMServer.renderToString(React.createElement(Probe));
-
-      expect(ctx).toBeDefined();
-      expect(ctx!.styleSheet).toBe(mainSheet);
-      expect(ctx!.compiler).toBeDefined();
-      expect(typeof ctx!.compiler.compile).toBe('function');
-      expect(typeof ctx!.compiler.emit).toBe('function');
-      expect(ctx!.shouldForwardProp).toBeUndefined();
-    });
-
-    it('should apply plugins to RSC output', () => {
-      const Item = styled.li`
-        &:first-child {
-          color: red;
-        }
-        &:last-child {
-          color: blue;
-        }
-        &:nth-child(2) {
-          color: green;
-        }
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        React.createElement(
-          StyleSheetManager,
-          { plugins: [rscPlugin] },
-          React.createElement(
-            'ul',
-            null,
-            React.createElement(Item, null, 'First'),
-            React.createElement(Item, null, 'Second'),
-            React.createElement(Item, null, 'Third')
-          )
-        )
-      );
-
-      const allCSS = extractStyleContents(html);
-      expect(allCSS).toMatchInlineSnapshot(
-        `".hvGsXB:nth-child(1 of :not(style[data-styled])){color:red;}.hvGsXB:nth-last-child(1 of :not(style[data-styled])){color:blue;}.hvGsXB:nth-child(2 of :not(style[data-styled])){color:green;}.hvGsXB:nth-child(1 of :not(style[data-styled])){color:red;}.hvGsXB:nth-last-child(1 of :not(style[data-styled])){color:blue;}.hvGsXB:nth-child(2 of :not(style[data-styled])){color:green;}.hvGsXB:nth-child(1 of :not(style[data-styled])){color:red;}.hvGsXB:nth-last-child(1 of :not(style[data-styled])){color:blue;}.hvGsXB:nth-child(2 of :not(style[data-styled])){color:green;}"`
-      );
-      expect(allCSS).not.toContain(':first-child');
-      expect(allCSS).not.toContain(':last-child');
-    });
-
-    it('should omit RSC child-index rewrite when no plugins are provided', () => {
-      const Item = styled.li`
-        &:first-child {
-          color: red;
-        }
-      `;
-
-      const html = ReactDOMServer.renderToString(
-        React.createElement('ul', null, React.createElement(Item, null, 'First'))
-      );
-
-      const allCSS = extractStyleContents(html);
-      expect(allCSS).toMatchInlineSnapshot(`".dnGtrT:first-child{color:red;}"`);
-      expect(allCSS).not.toContain(':not(style');
-    });
+    );
   });
 });

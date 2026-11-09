@@ -2,81 +2,65 @@
  * @jest-environment node
  */
 
-jest.mock('../../utils/isRsc', () => ({ IS_RSC: true }));
-
 import React from 'react';
-import ReactDOMServer from 'react-dom/server';
-import styled from '../../constructors/styled';
-import withTheme from '../../hoc/withTheme';
-import { mainSheet } from '../StyleSheetManager';
-import { resetGroupIds } from '../../sheet/GroupIDAllocator';
+import { classesOf, renderPage, serverRules } from '../../test/rscStream';
 
-describe('ThemeProvider RSC mode', () => {
-  beforeEach(() => {
-    resetGroupIds();
-    mainSheet.names = new Map();
-    mainSheet.clearTag();
+describe('ThemeProvider in server components', () => {
+  it('renders a styled component that reads props.theme without a ThemeProvider', async () => {
+    const page = await renderPage({
+      server: ({ library: { styled } }) => {
+        const Box = styled.div<{ theme?: { color?: string } }>`
+          color: ${p => (p.theme && p.theme.color ? p.theme.color : 'black')};
+        `;
+
+        return <Box id="a" />;
+      },
+    });
+    const [, name] = classesOf(page.streamed, 'a');
+
+    expect(serverRules(page.streamed)).toEqual([`.${name}{color:black;}`]);
   });
 
-  it('styled components accessing props.theme render without a ThemeProvider', () => {
-    const Box = styled.div<{ theme?: { color?: string } }>`
-      color: ${p => (p.theme && p.theme.color ? p.theme.color : 'black')};
-    `;
+  it('hands interpolations an undefined theme, not an error', async () => {
+    const captured: unknown[] = ['sentinel'];
 
-    const html = ReactDOMServer.renderToString(React.createElement(Box));
+    await renderPage({
+      server: ({ library: { styled } }) => {
+        const Probe = styled.div`
+          color: ${p => {
+            captured[0] = p.theme;
 
-    expect(html).toContain('color:black');
-  });
+            return 'red';
+          }};
+        `;
 
-  it('theme fallback produces undefined, not an error', () => {
-    let capturedTheme: unknown = 'sentinel';
-
-    const Probe = styled.div`
-      color: ${p => {
-        capturedTheme = p.theme;
-        return 'red';
-      }};
-    `;
-
-    ReactDOMServer.renderToString(React.createElement(Probe));
-
-    // In RSC mode, theme context returns undefined since there's no context support
-    expect(capturedTheme).toBeUndefined();
-  });
-
-  describe('withTheme in RSC', () => {
-    it('renders without errors in RSC mode', () => {
-      const Inner = (props: { theme?: unknown; label: string }) =>
-        React.createElement('span', null, props.label);
-
-      const Themed = withTheme(Inner);
-
-      const html = ReactDOMServer.renderToString(React.createElement(Themed, { label: 'hello' }));
-
-      expect(html).toMatchInlineSnapshot(`
-        <span>
-          hello
-        </span>
-      `);
+        return <Probe />;
+      },
     });
 
-    it('receives undefined as theme in RSC mode', () => {
-      let capturedTheme: unknown = 'sentinel';
+    expect(captured).toEqual([undefined]);
+  });
 
-      const Inner = (props: { theme?: unknown }) => {
-        capturedTheme = props.theme;
-        return React.createElement('div', null, 'probe');
-      };
+  describe('withTheme', () => {
+    it('renders the wrapped component and passes it an undefined theme', async () => {
+      const captured: unknown[] = ['sentinel'];
+      const page = await renderPage({
+        server: ({ library: { withTheme } }) => {
+          const Inner = (props: { label: string; theme?: unknown }) => {
+            captured[0] = props.theme;
 
-      const Themed = withTheme(Inner);
+            return <span id="a">{props.label}</span>;
+          };
+          const Themed = withTheme(Inner);
 
-      const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+          return <Themed label="hello" />;
+        },
+      });
 
-      ReactDOMServer.renderToString(React.createElement(Themed));
-
-      expect(capturedTheme).toBeUndefined();
-
-      spy.mockRestore();
+      expect(captured).toEqual([undefined]);
+      expect(page.streamed.slice(page.streamed.indexOf('<div id="root">'))).toBe(
+        '<div id="root"><span id="a">hello</span></div>'
+      );
     });
   });
 });
