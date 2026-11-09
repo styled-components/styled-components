@@ -604,7 +604,6 @@ describe('plugin API boundary (minified)', () => {
 
     expect(Object.keys(plugins.prefixPlugin).sort()).toEqual(['decl', 'name', 'rw']);
     expect(Object.keys(plugins.rtlPlugin).sort()).toEqual(['decl', 'name']);
-    expect(Object.keys(plugins.rscPlugin).sort()).toEqual(['name', 'rw']);
     expect(plugins.prefixPlugin.decl('user-select', 'none')).toEqual([
       { prop: '-webkit-user-select', value: 'none' },
       { prop: '-moz-user-select', value: 'none' },
@@ -664,5 +663,79 @@ describe('web bridge build (minified)', () => {
       .filter(cssText => /padding-(left|right)/.test(cssText));
 
     expect(rulesOf(ownRules.join('/*!sc*/'))).toEqual(['.c1 {padding-right: 1px;}']);
+  });
+});
+
+// The server build renders `ScStyle` and `ScGlobalStyle`, which a server component host only
+// reaches through the `'use client'` shim. Each bundle is minified apart, so the shim, the
+// server build and the browser build must agree on every name and wire prop by source spelling.
+describe('server component shim (minified)', () => {
+  /** Props of `ScStyle` and `ScGlobalStyle` as the server component payload carries them (docs/react.md). */
+  const WIRE_PROPS = ['chain', 'id', 'keyframes', 'outers', 'rules', 'seq'];
+
+  /** The server build serves the RSC graph, the browser build the browser graph. */
+  const loadBuilt = graph =>
+    require(path.join(distDir, graph === 'browser' ? CJS_BUNDLES.browser : CJS_BUNDLES.server));
+
+  beforeEach(() => {
+    document.head.replaceChildren();
+    document.body.replaceChildren();
+  });
+
+  test.each([
+    ['CommonJS', 'server-styles.cjs.js'],
+    ['ES module', 'server-styles.esm.js'],
+  ])('%s shim re-exports the package entry elements by identity', (_, file) => {
+    let loaded;
+
+    jest.isolateModules(() => {
+      loaded = {
+        main: require('styled-components'),
+        shim: require(path.join(distDir, file)),
+      };
+    });
+
+    expect(typeof loaded.main.ScStyle).toBe('function');
+    expect(typeof loaded.main.ScGlobalStyle).toBe('function');
+    expect(loaded.shim.ScStyle).toBe(loaded.main.ScStyle);
+    expect(loaded.shim.ScGlobalStyle).toBe(loaded.main.ScGlobalStyle);
+  });
+
+  it('resolves the package name and the subpath to the built files', () => {
+    expect(require.resolve('styled-components')).toBe(
+      path.join(distDir, 'styled-components.cjs.js')
+    );
+    expect(require.resolve('styled-components/server-styles')).toBe(
+      path.join(distDir, 'server-styles.cjs.js')
+    );
+  });
+
+  it('keeps the elements and their wire props out of the mangle list', () => {
+    const { browser, server } = load();
+
+    expect(typeof server.ScStyle).toBe('function');
+    expect(typeof browser.ScStyle).toBe('function');
+    expect(WIRE_PROPS.filter(name => mangledNames.includes(name))).toEqual([]);
+  });
+
+  it('renders a server component page into the browser sheet in cascade order', async () => {
+    const { renderInBrowser } = require('./rscStream');
+
+    const { container, flight, graph } = await renderInBrowser({
+      loadLibrary: loadBuilt,
+      server: ({ library, react }) => {
+        const Base = library.default.div`color: blue;`;
+        const Extended = library.default(Base)`color: red;`;
+
+        return react.createElement(Extended, { id: 'probe' });
+      },
+    });
+
+    expect(flight.errors).toEqual([]);
+    expect(container.querySelector('#probe')).not.toBeNull();
+    expect(rulesOf(graph.library.extractCSS())).toEqual([
+      '.c1 {color: blue;}',
+      '.c2 {color: red;}',
+    ]);
   });
 });

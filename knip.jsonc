@@ -18,7 +18,9 @@
       "entry": ["scripts/**/*.ts", "babel.config.cjs", "babel-preset.cjs"],
       // Referenced by string from babel-preset.cjs but declared by
       // packages/styled-components, the workspace that runs the preset.
-      "ignoreDependencies": ["@babel/preset-env"]
+      // `styled-components` (workspace link) serves resolution of the package's own name from
+      // its build output, not an import.
+      "ignoreDependencies": ["@babel/preset-env", "styled-components"]
     },
     "packages/benchmarks": {
       // Headless runners are executed directly.
@@ -73,7 +75,10 @@
         "@babel/preset-typescript",
         "@react-native/babel-preset",
         "babel-jest",
-        "babel-plugin-add-module-exports"
+        "babel-plugin-add-module-exports",
+        // The two-graph test harness loads the copy that jest-environment-jsdom resolves
+        // (src/test/rscStream.ts), so the package declares no dependency of its own on it.
+        "jsdom"
       ]
     },
     "packages/styled-components/native": {
