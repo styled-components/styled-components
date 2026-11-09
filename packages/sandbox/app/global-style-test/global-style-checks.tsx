@@ -45,11 +45,17 @@ export function GlobalStyleChecks() {
   const allPass = totals.passed === totals.total;
 
   return (
-    <Summary $pass={allPass}>
+    <Summary
+      $pass={allPass}
+      data-check={received < RESULT_SOURCES ? undefined : allPass ? 'pass' : 'fail'}
+    >
       {totals.passed}/{totals.total} passing
     </Summary>
   );
 }
+
+/** The layout checks above and the autopilot each report once. */
+const RESULT_SOURCES = 2;
 
 const fadeIn = keyframes`
   from { opacity: 0; }
