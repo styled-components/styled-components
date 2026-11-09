@@ -6,26 +6,24 @@ Plugins moved to a dedicated `styled-components/plugins` subpath, and first-part
 
 ```tsx
 import { StyleSheetManager } from 'styled-components';
-import { rtlPlugin, rscPlugin } from 'styled-components/plugins';
+import { rtlPlugin } from 'styled-components/plugins';
 
 <StyleSheetManager plugins={[rtlPlugin]}>
   <App />
 </StyleSheetManager>;
 ```
 
-The `stylisPlugins` prop on `<StyleSheetManager>` is now `plugins`, the top-level `stylisPluginRSC` export has moved into the new subpath as `rscPlugin`, and the `enableVendorPrefixes` prop has been removed in favor of the opt-in `prefixPlugin`.
+The `stylisPlugins` prop on `<StyleSheetManager>` is now `plugins`, and the `enableVendorPrefixes` prop has been removed in favor of the opt-in `prefixPlugin`.
 
 Migration:
 
 ```diff
--import { rtl, stylisPluginRSC } from 'styled-components';
-+import { prefixPlugin, rtlPlugin, rscPlugin } from 'styled-components/plugins';
+-import { rtl } from 'styled-components';
++import { prefixPlugin, rtlPlugin } from 'styled-components/plugins';
 
--<StyleSheetManager stylisPlugins={[rtl, stylisPluginRSC]} enableVendorPrefixes>
-+<StyleSheetManager plugins={[prefixPlugin, rtlPlugin, rscPlugin]}>
+-<StyleSheetManager stylisPlugins={[rtl]} enableVendorPrefixes>
++<StyleSheetManager plugins={[prefixPlugin, rtlPlugin]}>
 ```
-
-In server components, placing this manager in a Next.js layout to style every page has been removed in favor of `configureServerStyles({ plugins: [rscPlugin] })`, called at the top of the root layout file.
 
 `rtlPlugin` replaces `stylis-plugin-rtl` for users coming from v6: it swaps physical side properties (`padding-left` / `padding-right`), flips `left` / `right` keyword values on `float` / `clear` / `text-align` / `caption-side`, and mirrors 4-value shorthand positions. Logical properties like `margin-inline-start` pass through unchanged.
 
