@@ -3,21 +3,13 @@
  * cost for a grid of bridged primitives against the same grid rendered
  * through `styled-components/native` (the rn-web variant of today's
  * native path that hands an RN style object to react-native-web for
- * re-atomization).
- *
- * Numbers from 2026-05-18 (V8, jsdom, NODE_ENV=production, 4 runs each):
- *   static-CSS grid (1 decl/cell, 200 cells)   : -12% to +3%   (slight bridge edge)
- *   heavier-CSS grid (8 decls/cell, 200 cells) : -8% to +21%   (high MAD, no signal)
- *
- * React reconciliation dominates the workload; the CSS-pipeline delta
- * lives below the noise floor of an end-to-end render bench. The
- * bridge's value is bundle savings and a single CSS pipeline on
- * rn-web, not raw render-time wins. The bench here is a guardrail
- * (bridge stays competitive within order-of-magnitude), not the
- * justification.
+ * re-atomization). Every mount runs inside `flushSync`, so each row
+ * times a committed render. The bench is a guardrail (the bridge stays
+ * competitive with today's path), not a justification for the bridge.
  */
 
 import React from 'react';
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
 import styledBridge from '../native/web-bridge';
@@ -37,6 +29,7 @@ const styledNativeMod = require('../native') as typeof import('../native');
 const styledNative = styledNativeMod.default;
 
 const GRID_SIZE = 200;
+const FRESH_COMPONENTS = 50;
 
 const BridgedBox = styledBridge.View`
   background-color: rgb(40, 80, 120);
@@ -72,7 +65,8 @@ function renderArm(Component: React.ComponentType): () => void {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
-    root.render(<Component />);
+    // Without `flushSync` the render is only scheduled, and unmount cancels it before it runs.
+    flushSync(() => root.render(<Component />));
     root.unmount();
     host.remove();
   };
@@ -129,6 +123,159 @@ describe('rn-web bridge vs. current path', () => {
       { name: 'native (today)', fn: renderArm(HeavyGridNative) },
       { name: 'web-bridge', fn: renderArm(HeavyGridBridge) },
       { runs: 5, warmupMax: 5 }
+    );
+  });
+
+  it('compares cold-mount cost for a grid of Pressables with :disabled', () => {
+    const DisabledBridged = styledBridge.Pressable`
+      padding: 8px;
+      &:disabled {
+        opacity: 0.4;
+      }
+    `;
+    const DisabledNative = styledNative.Pressable`
+      padding: 8px;
+      &:disabled {
+        opacity: 0.4;
+      }
+    `;
+    function DisabledGridBridge(): React.ReactElement {
+      const cells: React.ReactNode[] = [];
+      for (let i = 0; i < GRID_SIZE; i++)
+        cells.push(<DisabledBridged key={i} disabled={i % 2 === 0} />);
+      return <>{cells}</>;
+    }
+    function DisabledGridNative(): React.ReactElement {
+      const cells: React.ReactNode[] = [];
+      for (let i = 0; i < GRID_SIZE; i++)
+        cells.push(<DisabledNative key={i} disabled={i % 2 === 0} />);
+      return <>{cells}</>;
+    }
+    compareBench(
+      `mount ${GRID_SIZE} Pressables with :disabled`,
+      20,
+      { name: 'native (today)', fn: renderArm(DisabledGridNative) },
+      { name: 'web-bridge', fn: renderArm(DisabledGridBridge) },
+      { runs: 5, warmupMax: 5 }
+    );
+  });
+
+  // Each iteration defines its components anew and mounts them inside `flushSync`, so every rule
+  // compiles each time and the selector scanners run per component, not once per process.
+  type Template = (styled: typeof styledBridge) => React.ComponentType<{ disabled?: boolean }>;
+
+  function defineAndMount(
+    styled: typeof styledBridge | typeof styledNative,
+    template: Template,
+    alternateDisabled: boolean
+  ): () => void {
+    return () => {
+      const cells: React.ReactNode[] = [];
+      for (let i = 0; i < FRESH_COMPONENTS; i++) {
+        const Cell = template(styled as typeof styledBridge);
+        cells.push(<Cell key={i} disabled={alternateDisabled ? i % 2 === 0 : undefined} />);
+      }
+
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      flushSync(() => root.render(<>{cells}</>));
+      root.unmount();
+      host.remove();
+    };
+  }
+
+  /** Runs one template through both pipelines, defining and mounting it per iteration. */
+  function compareDefine(
+    title: string,
+    template: Template,
+    { alternateDisabled = false } = {}
+  ): void {
+    compareBench(
+      `define and mount ${FRESH_COMPONENTS} components with ${title}`,
+      20,
+      { name: 'native (today)', fn: defineAndMount(styledNative, template, alternateDisabled) },
+      { name: 'web-bridge', fn: defineAndMount(styledBridge, template, alternateDisabled) },
+      { runs: 5, warmupMax: 5 }
+    );
+  }
+
+  it('compares defining and mounting components with :not chains', () => {
+    compareDefine(
+      ':not chains',
+      s => s.View`
+        padding: 8px;
+        &:not([data-tone='pass']):not([data-tone='fail']) {
+          opacity: 0.8;
+        }
+        &:not([data-a]):not([data-b]):not([data-c]) {
+          margin: 2px;
+        }
+      `
+    );
+  });
+
+  it('compares defining and mounting components with no :not', () => {
+    compareDefine(
+      'no :not',
+      s => s.View`
+        padding: 8px;
+        &:hover {
+          opacity: 0.8;
+        }
+        & .child {
+          margin: 2px;
+        }
+      `
+    );
+  });
+
+  it('compares defining and mounting components with :not in selector lists and at-rules', () => {
+    compareDefine(
+      ':not in lists and at-rules',
+      s => s.View`
+        padding: 8px;
+        &:hover,
+        &:not([data-a]):not([data-b]),
+        & .child {
+          opacity: 0.8;
+        }
+        @media (min-width: 100px) {
+          &:not([data-c]) {
+            margin: 2px;
+          }
+        }
+      `
+    );
+  });
+
+  it('compares defining and mounting components with :disabled and :enabled heads', () => {
+    compareDefine(
+      ':disabled and :enabled',
+      s => s.Pressable`
+        padding: 8px;
+        &:disabled {
+          opacity: 0.4;
+        }
+        &:enabled {
+          opacity: 0.9;
+        }
+      `,
+      { alternateDisabled: true }
+    );
+  });
+
+  it('compares defining and mounting components with vertical-align in a state and an at-rule', () => {
+    compareDefine(
+      'vertical-align',
+      s => s.Text`
+        padding: 8px;
+        @media (min-width: 1px) {
+          &:hover {
+            vertical-align: top;
+          }
+        }
+      `
     );
   });
 });

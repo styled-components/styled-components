@@ -48,6 +48,19 @@ jest.mock('react-native', () => ({
   ),
   StyleSheet: { create: (styles: unknown) => styles, flatten: (style: unknown) => style },
   Text: 'Text',
+  TextInput: Object.assign(
+    function TextInput(props: Record<string, any>) {
+      return require('react').createElement('View', props);
+    },
+    { displayName: 'TextInput' }
+  ),
+  // Stands in for React Native's TouchableOpacity: a plain `style` and children pass through to the host.
+  TouchableOpacity: Object.assign(
+    function TouchableOpacity({ children, ...rest }: Record<string, any>) {
+      return require('react').createElement('View', rest, children);
+    },
+    { displayName: 'TouchableOpacity' }
+  ),
   View: 'View',
 }));
 
@@ -79,6 +92,7 @@ const flatCompiled: NativeStyles = {
   conditional: [],
   nonPseudoEntries: [],
   pseudoEntries: [],
+  pseudoReads: 0,
   hasPseudo: false,
   keyframes: [],
   publishesCascade: false,
@@ -98,6 +112,7 @@ const responsiveCompiled: NativeStyles = {
   // it here. Keep this in sync with the shape `compileNative` emits.
   nonPseudoEntries: [mediaBucket],
   pseudoEntries: [],
+  pseudoReads: 0,
   hasPseudo: false,
   keyframes: [],
   publishesCascade: false,
@@ -379,6 +394,78 @@ describe('styled parent re-render with children', () => {
           testOnly_pressed: i % 2 === 0,
         })
       );
+    });
+
+    test('styled Pressable with only a :disabled rule, enabled', () => {
+      const Press = styled(require('react-native').Pressable)`
+        padding: 1px;
+        &:disabled {
+          font-size: 30px;
+        }
+      `;
+      benchUpdate(
+        'Pressable :disabled only, enabled, 20 children',
+        20_000,
+        Press,
+        twentyItems(),
+        tag
+      );
+    });
+
+    test('styled Pressable with :active and :disabled rules, disabled flips', () => {
+      const Press = styled(require('react-native').Pressable)`
+        padding: 1px;
+        &:active {
+          font-size: 30px;
+        }
+        &:disabled {
+          font-size: 20px;
+        }
+      `;
+      benchUpdate(
+        'Pressable :active and :disabled, disabled flips, 20 children',
+        20_000,
+        Press,
+        twentyItems(),
+        i => ({
+          disabled: i % 2 === 0,
+        })
+      );
+    });
+
+    test('styled TouchableOpacity with a :disabled rule, at rest', () => {
+      const Touch = styled(require('react-native').TouchableOpacity)`
+        padding: 1px;
+        &:disabled {
+          font-size: 20px;
+        }
+      `;
+      benchUpdate(
+        'TouchableOpacity :disabled at rest, 20 children',
+        20_000,
+        Touch,
+        twentyItems(),
+        tag
+      );
+    });
+
+    test('styled TextInput with disabled and no state rules', () => {
+      const Input = styled(require('react-native').TextInput)`
+        padding: 1px;
+      `;
+      benchUpdate('TextInput disabled, no rules, 20 children', 20_000, Input, twentyItems(), i => ({
+        disabled: i % 2 === 0,
+      }));
+    });
+
+    test('styled TextInput with a :read-write rule', () => {
+      const Input = styled(require('react-native').TextInput)`
+        padding: 1px;
+        &:read-write {
+          font-size: 20px;
+        }
+      `;
+      benchUpdate('TextInput :read-write, 20 children', 20_000, Input, twentyItems(), tag);
     });
 
     function benchMount(name: string, Box: any) {
