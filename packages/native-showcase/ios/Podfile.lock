@@ -81,7 +81,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - ExpoModulesJSI (56.0.12):
+  - ExpoModulesJSI (56.0.14):
     - React-Core
     - ReactCommon
   - ExpoModulesWorklets (56.0.23):
@@ -3311,7 +3311,7 @@ SPEC CHECKSUMS:
   ExpoLinking: 58d1cc05b96ead9e921353464ad03651eeb71ab9
   ExpoLogBox: cdad5c9402a186574fb5924ea91df1f08ba9a98a
   ExpoModulesCore: c5c7df4dfe139614c3bdf650bbdb5c6cf5e4d017
-  ExpoModulesJSI: e62656cfaffb5aeb3fdc1dd2bc49f77e87ed2261
+  ExpoModulesJSI: be5366379de5036c554db5f6478fc994da8f5ece
   ExpoModulesWorklets: 40fe3862230a3d967899ff29211480efc5daf4e2
   ExpoModulesWorkletsAdapter: 68529fca1dfcb17fd06815daa8f9009f50887126
   ExpoRouter: fc7a05eee579d54869806f9f95c799020c7800fc
