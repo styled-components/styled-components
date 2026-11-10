@@ -50,7 +50,20 @@ export const DYN: unique symbol = Symbol();
 export const NATIVE_RULE_CLASS: unique symbol = Symbol('nativeRuleClass');
 export const NATIVE_AT_CLASS: unique symbol = Symbol('nativeAtClass');
 
-export type PseudoState = 'hover' | 'focus' | 'pressed' | 'disabled';
+export type PseudoState =
+  | 'hover'
+  | 'focus'
+  | 'pressed'
+  | 'disabled'
+  | 'enabled'
+  | 'readOnly'
+  | 'readWrite';
+
+/** One further pseudo-class of a compound such as `&:hover:not(:disabled)`; all terms must hold. */
+export interface PseudoTerm {
+  negate: boolean;
+  pseudo: PseudoState;
+}
 
 export type AttrOperator = '=' | '~=' | '|=' | '^=' | '$=' | '*=';
 
@@ -72,8 +85,12 @@ export interface ConditionalAttr {
 }
 
 export interface AttrSelector {
+  /** The pseudo-class terms after `pseudo` in `&[x]:hover:not(:disabled)`; each must also hold. */
+  and?: PseudoTerm[];
   attrs: ConditionalAttr[];
   pseudo?: PseudoState;
+  /** `pseudo` is wrapped in `:not()`. */
+  pseudoNegate?: boolean;
 }
 
 /**
@@ -103,8 +120,17 @@ export type NthOfBranch =
   | { kind: 'component'; id: string }
   | { kind: 'attr'; attr: ConditionalAttr };
 
+/**
+ * A selector list judged member by member: `members[i]` classifies the i-th selector of the rule, so
+ * an `unsupported` member is skipped without dropping the others.
+ */
 export type NativeRuleClass =
-  | { kind: 'pseudo'; pseudo: PseudoState; negate?: boolean }
+  | NativeSelectorClass
+  | { kind: 'list'; members: NativeSelectorClass[] };
+
+/** The classification of one selector (a list member, or a rule's only selector). */
+export type NativeSelectorClass =
+  | { and?: PseudoTerm[]; kind: 'pseudo'; negate?: boolean; pseudo: PseudoState }
   | { kind: 'pseudoFanOut'; pseudos: PseudoState[] }
   | {
       kind: 'attr';
@@ -140,10 +166,14 @@ export type NativeRuleClass =
        */
       kind: 'nthChild';
       spec: NthSpec;
+      /** The pseudo-class terms after `pseudo` (`&:first-child:hover:not(:disabled)`). */
+      and?: PseudoTerm[];
       /** Optional pseudo-state appended after the nth pseudo
        *  (`&:first-child:hover`). */
       pseudo?: PseudoState;
       negate?: boolean;
+      /** `pseudo` is wrapped in `:not()`. */
+      pseudoNegate?: boolean;
     }
   | {
       /**

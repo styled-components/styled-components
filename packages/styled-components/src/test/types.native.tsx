@@ -18,6 +18,7 @@ import React from 'react';
 import { Text, TextInput, View } from 'react-native';
 import type { ViewProps as RNViewProps } from 'react-native';
 import styled, { StyledComponent } from '../native';
+import bridgeStyled from '../native/web-bridge';
 
 /**
  * The `style` widening is web-only. A native `style` takes a native style
@@ -98,6 +99,40 @@ const scNativeWrap = styled(TextInput)``;
 const scNativeWrapAnnotated: StyledComponent<typeof TextInput> = scNativeWrap;
 const scNativeWrapBack: typeof scNativeWrap = scNativeWrapAnnotated;
 void scNativeWrapBack;
+
+/**
+ * `disabled` is not a prop of React Native's `TextInput`, but styled
+ * `TextInput` accepts it as a boolean (it drives `:disabled` and makes the
+ * input non-editable). Both entry spellings and `.attrs()` carry it; plain
+ * `TextInput` and every other target stay as RN declares them.
+ */
+const NativeInput = styled.TextInput``;
+const NativeInputFromRaw = styled(TextInput)``;
+const NativeInputAttrs = styled.TextInput.attrs({ editable: true })``;
+<NativeInput disabled />;
+<NativeInput disabled={false} />;
+<NativeInputFromRaw disabled />;
+<NativeInputAttrs disabled />;
+// @ts-expect-error `disabled` is a boolean
+<NativeInput disabled="x" />;
+// @ts-expect-error `disabled` is a boolean
+<NativeInputFromRaw disabled="x" />;
+// @ts-expect-error `disabled` is a boolean
+<NativeInputAttrs disabled="x" />;
+// @ts-expect-error the widening is keyed on TextInput: `View` has no `disabled`
+<NativeBox disabled />;
+// @ts-expect-error a plain `TextInput` still rejects `disabled`
+<TextInput disabled />;
+const NativeInputDeclared = styled.TextInput<{ $tone: 'warn' | 'ok' }>``;
+<NativeInputDeclared $tone="ok" disabled />;
+// @ts-expect-error declared props still constrain beside the widening
+<NativeInputDeclared $tone="nope" disabled />;
+
+/** The rn-web bridge's `styled.TextInput` takes `disabled` too. */
+const BridgeInput = bridgeStyled.TextInput``;
+<BridgeInput disabled />;
+// @ts-expect-error `disabled` is a boolean
+<BridgeInput disabled="x" />;
 
 // `.attrs()` over an already-optional prop leaves the type unchanged.
 const scNativeAttrs = styled.TextInput.attrs({ editable: true })<{ $x?: number }>``;

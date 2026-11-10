@@ -224,6 +224,9 @@ describe('toNativeStyles', () => {
         ['&:focus-visible', 'focus'],
         ['&:active', 'pressed'],
         ['&:disabled', 'disabled'],
+        ['&:enabled', 'enabled'],
+        ['&:read-only', 'readOnly'],
+        ['&:read-write', 'readWrite'],
       ];
       for (const [selector, mapped] of pseudos) {
         resetNativeStyleCache();
@@ -251,6 +254,395 @@ describe('toNativeStyles', () => {
     it('ignores pseudo rules with empty bodies', () => {
       const r = compile('&:hover { }');
       expect(r.conditional).toEqual([]);
+    });
+
+    it.each(['&:constructor', '&:READ-ONLY'])(
+      'drops %s with the complex-selector warning',
+      selector => {
+        const r = compile(`${selector} { color: red; }`);
+        expect(r.conditional).toEqual([]);
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('complex selectors'));
+      }
+    );
+
+    // https://drafts.csswg.org/selectors-4/#enableddisabled (12.1.1)
+    // "The :enabled pseudo-class represents user interface elements that are in an enabled state; such elements must have a corresponding disabled state."
+    // "Conversely, the :disabled pseudo-class represents user interface elements that are in a disabled state; such elements must have a corresponding enabled state."
+    // Deviation: here every element that isn't disabled matches `:enabled`.
+    // https://drafts.csswg.org/selectors-4/#rw-pseudos (12.1.2)
+    // "An element matches :read-write if it is user-alterable, as defined by the document language. Otherwise, it is :read-only."
+    it.each([
+      ['&:disabled { opacity: 0.5; }', 8],
+      ['&:not(:disabled) { opacity: 0.5; }', 8],
+      ['&:where(:active, :disabled) { opacity: 0.5; }', 12],
+      ['@media (min-width: 400px) { &:disabled { opacity: 0.5; } }', 8],
+      ['&[aria-pressed]:disabled { opacity: 0.5; }', 8],
+      ['&:enabled { opacity: 0.5; }', 16],
+      ['&:read-only { opacity: 0.5; }', 32],
+      ['&:read-write { opacity: 0.5; }', 64],
+      ['&:hover { opacity: 0.5; }', 1],
+      ['&:focus-visible { opacity: 0.5; }', 2],
+      ['opacity: 0.5;', 0],
+      ['&:disabled { }', 0],
+    ])('records %s in pseudoReads as %i', (css, bits) => {
+      expect(compile(css).pseudoReads).toBe(bits);
+    });
+  });
+
+  // A compound is `&` followed by two or more `:known` or `:not(:known)` terms, all of which must hold.
+  describe('pseudo-class compounds', () => {
+    // The bits column is the OR of every term's bit, negated ones included.
+    it.each([
+      [
+        '&:active:not(:disabled)',
+        12,
+        { condition: 'pressed', and: [{ pseudo: 'disabled', negate: true }] },
+      ],
+      ['&:hover:enabled', 17, { condition: 'hover', and: [{ pseudo: 'enabled', negate: false }] }],
+      [
+        '&:not(:disabled):active',
+        12,
+        { condition: 'disabled', negate: true, and: [{ pseudo: 'pressed', negate: false }] },
+      ],
+      [
+        '&:not(:hover):not(:focus)',
+        3,
+        { condition: 'hover', negate: true, and: [{ pseudo: 'focus', negate: true }] },
+      ],
+      [
+        '&:hover:focus-visible:read-write',
+        67,
+        {
+          condition: 'hover',
+          and: [
+            { pseudo: 'focus', negate: false },
+            { pseudo: 'readWrite', negate: false },
+          ],
+        },
+      ],
+      [
+        '&:enabled:read-write',
+        80,
+        { condition: 'enabled', and: [{ pseudo: 'readWrite', negate: false }] },
+      ],
+      [
+        '&:hover:focus:enabled',
+        19,
+        {
+          condition: 'hover',
+          and: [
+            { pseudo: 'focus', negate: false },
+            { pseudo: 'enabled', negate: false },
+          ],
+        },
+      ],
+    ])(
+      'records %s (pseudoReads %i) as one entry whose `and` holds the remaining terms',
+      (selector, bits, shape) => {
+        const r = compile(`${selector} { opacity: 0.5; }`);
+        expect(r.conditional).toEqual([{ type: 'pseudo', styles: { opacity: 0.5 }, ...shape }]);
+        expect(r.pseudoEntries).toEqual(r.conditional);
+        expect(r.pseudoReads).toBe(bits);
+      }
+    );
+
+    it('carries the terms onto a compound nested in an at-rule', () => {
+      const r = compile('@media (min-width: 400px) { &:hover:not(:disabled) { opacity: 0.5; } }');
+      expect(r.conditional).toEqual([
+        {
+          type: 'media',
+          condition: '(min-width: 400px)',
+          pseudo: 'hover',
+          and: [{ pseudo: 'disabled', negate: true }],
+          styles: { opacity: 0.5 },
+        },
+      ]);
+      expect(r.pseudoReads).toBe(9);
+    });
+
+    it('records the negation of a gated pseudo-class in `pseudoNegate`, not `negate`', () => {
+      const r = compile(
+        '@media (min-width: 400px) { &:not(:disabled):active { opacity: 0.5; } &:not(:hover) { opacity: 0.4; } }'
+      );
+      expect(r.conditional).toEqual([
+        {
+          type: 'media',
+          condition: '(min-width: 400px)',
+          pseudo: 'disabled',
+          pseudoNegate: true,
+          and: [{ pseudo: 'pressed', negate: false }],
+          styles: { opacity: 0.5 },
+        },
+        {
+          type: 'media',
+          condition: '(min-width: 400px)',
+          pseudo: 'hover',
+          pseudoNegate: true,
+          styles: { opacity: 0.4 },
+        },
+      ]);
+    });
+
+    it('records the negation of a gated attribute selector in `negate`', () => {
+      const r = compile('@media (min-width: 400px) { &:not([data-x]):hover { opacity: 0.5; } }');
+      expect(r.conditional).toEqual([
+        {
+          type: 'media',
+          condition: '(min-width: 400px)',
+          attrs: [{ name: 'data-x' }],
+          negate: true,
+          pseudo: 'hover',
+          styles: { opacity: 0.5 },
+        },
+      ]);
+    });
+
+    it.each([
+      '&:active:unknown',
+      '&:unknown:active',
+      '&:hover:',
+      '&:hover::enabled',
+      '&:hover :enabled',
+      '&:hover:not(:unknown)',
+      '&:hover:not(.foo)',
+      '&:hover:not(:disabled, :focus)',
+      '&:hover:constructor',
+      '&:hover:READ-ONLY',
+      '&:hover:is(:disabled)',
+    ])('drops %s with the complex-selector warning', selector => {
+      const r = compile(`${selector} { opacity: 0.5; }`);
+      expect(r.conditional).toEqual([]);
+      expect(r.pseudoReads).toBe(0);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('complex selectors'));
+    });
+  });
+
+  // https://drafts.csswg.org/selectors-4/#structure
+  // "A compound selector is a sequence of simple selectors that are not separated by a combinator, and represents a set of simultaneous conditions on a single element."
+  // "A given element is said to match a compound selector when it matches all simple selectors in the compound selector."
+  // The pseudo-class terms ride one entry: the first leads (`pseudo`, `pseudoNegate`) and any others go in `and`.
+  describe('compounds that start with an attribute or structural selector', () => {
+    it.each([
+      [
+        "&[aria-pressed='true']:hover:not(:disabled)",
+        9,
+        {
+          type: 'attr',
+          condition: 'aria-pressed=true',
+          attrs: [{ name: 'aria-pressed', value: 'true' }],
+          pseudo: 'hover',
+          and: [{ pseudo: 'disabled', negate: true }],
+        },
+      ],
+      [
+        '&[x]:hover:enabled',
+        17,
+        {
+          type: 'attr',
+          condition: 'x',
+          attrs: [{ name: 'x' }],
+          pseudo: 'hover',
+          and: [{ pseudo: 'enabled', negate: false }],
+        },
+      ],
+      [
+        '&[x]:not(:disabled)',
+        8,
+        {
+          type: 'attr',
+          condition: 'x',
+          attrs: [{ name: 'x' }],
+          pseudo: 'disabled',
+          pseudoNegate: true,
+        },
+      ],
+      [
+        '&[a][b]:not(:disabled):active',
+        12,
+        {
+          type: 'attr',
+          condition: 'a+b',
+          attrs: [{ name: 'a' }, { name: 'b' }],
+          pseudo: 'disabled',
+          pseudoNegate: true,
+          and: [{ pseudo: 'pressed', negate: false }],
+        },
+      ],
+      [
+        '&:not([x]):hover:enabled',
+        17,
+        {
+          type: 'attr',
+          condition: 'x',
+          attrs: [{ name: 'x' }],
+          negate: true,
+          pseudo: 'hover',
+          and: [{ pseudo: 'enabled', negate: false }],
+        },
+      ],
+      [
+        '&:first-child:hover:enabled',
+        17,
+        {
+          type: 'nthChild',
+          condition: 'nth:Fc:0n+1',
+          nthSpec: { a: 0, b: 1, fromEnd: false, ofType: false },
+          pseudo: 'hover',
+          and: [{ pseudo: 'enabled', negate: false }],
+        },
+      ],
+      [
+        '&:last-child:hover:not(:disabled)',
+        9,
+        {
+          type: 'nthChild',
+          condition: 'nth:Lc:0n+1',
+          nthSpec: { a: 0, b: 1, fromEnd: true, ofType: false },
+          pseudo: 'hover',
+          and: [{ pseudo: 'disabled', negate: true }],
+        },
+      ],
+      [
+        '&:nth-child(2n+1):not(:disabled)',
+        8,
+        {
+          type: 'nthChild',
+          condition: 'nth:Fc:2n+1',
+          nthSpec: { a: 2, b: 1, fromEnd: false, ofType: false },
+          pseudo: 'disabled',
+          pseudoNegate: true,
+        },
+      ],
+      [
+        '&:nth-child(2 of [data-x]):hover:focus:enabled',
+        19,
+        {
+          type: 'nthChild',
+          condition: 'nth:Fc:0n+2|ofa:data-x=',
+          nthSpec: {
+            a: 0,
+            b: 2,
+            fromEnd: false,
+            ofType: false,
+            of: { kind: 'attr', attr: { name: 'data-x' } },
+          },
+          pseudo: 'hover',
+          and: [
+            { pseudo: 'focus', negate: false },
+            { pseudo: 'enabled', negate: false },
+          ],
+        },
+      ],
+    ])('records %s (pseudoReads %i) as one gated entry', (selector, bits, shape) => {
+      const r = compile(`${selector} { opacity: 0.5; }`);
+      expect(r.conditional).toEqual([{ styles: { opacity: 0.5 }, ...shape }]);
+      expect(r.pseudoEntries).toEqual(r.conditional);
+      expect(r.pseudoReads).toBe(bits);
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      '&[x]:hover:unknown',
+      '&[x]:hover:not(:unknown)',
+      '&[x]:hover:not(.foo)',
+      '&[x]:hover:not(:disabled, :focus)',
+      '&[x]:hover::enabled',
+      '&[x]:hover :enabled',
+      '&[x]:hover:constructor',
+      '&[x]:hover:READ-ONLY',
+      '&:first-child:hover:unknown',
+      '&:first-child:hover:not(.foo)',
+      '&:first-child:hover :enabled',
+      '&:nth-child(2n+1):hover:',
+      '&:hover:first-child',
+    ])('drops %s with the complex-selector warning', selector => {
+      const r = compile(`${selector} { opacity: 0.5; }`);
+      expect(r.conditional).toEqual([]);
+      expect(r.pseudoReads).toBe(0);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('complex selectors'));
+    });
+
+    it('carries the terms onto a chained attribute compound nested in an at-rule', () => {
+      const r = compile(
+        '@media (min-width: 400px) { &[x]:hover:not(:disabled) { opacity: 0.5; } }'
+      );
+      expect(r.conditional).toEqual([
+        {
+          type: 'media',
+          condition: '(min-width: 400px)',
+          attrs: [{ name: 'x' }],
+          pseudo: 'hover',
+          and: [{ pseudo: 'disabled', negate: true }],
+          styles: { opacity: 0.5 },
+        },
+      ]);
+    });
+  });
+
+  // https://drafts.csswg.org/selectors-4/#selector-list
+  // "A comma-separated list of selectors represents the union of all elements selected by each of the individual selectors in the selector list."
+  // https://drafts.csswg.org/selectors-4/#invalid
+  // "a selector list containing an invalid selector is invalid."
+  // Deviation: native judges each member alone, so a supported member applies and an unsupported one is skipped with a warning naming it.
+  describe('selector lists are judged member by member', () => {
+    const warnedMembers = () =>
+      warnSpy.mock.calls.map(call => /\(received: (.*?)\)\. Only/.exec(String(call[0]))?.[1]);
+
+    it('applies a pseudo-class member and skips a descendant member', () => {
+      const r = compile('&:hover, & .icon { opacity: 0.5; }');
+      expect(r.conditional).toEqual([
+        { type: 'pseudo', condition: 'hover', styles: { opacity: 0.5 } },
+      ]);
+      expect(warnedMembers()).toEqual(['& .icon']);
+    });
+
+    it('applies an attribute member and a pseudo-class member in source order', () => {
+      const r = compile("&[x], &:hover:enabled, &[a='b']:focus { opacity: 0.5; }");
+      expect(r.conditional).toEqual([
+        { type: 'attr', condition: 'x', attrs: [{ name: 'x' }], styles: { opacity: 0.5 } },
+        {
+          type: 'pseudo',
+          condition: 'hover',
+          and: [{ pseudo: 'enabled', negate: false }],
+          styles: { opacity: 0.5 },
+        },
+        {
+          type: 'attr',
+          condition: 'a=b',
+          attrs: [{ name: 'a', value: 'b' }],
+          pseudo: 'focus',
+          styles: { opacity: 0.5 },
+        },
+      ]);
+      expect(r.pseudoReads).toBe(19);
+      expect(warnedMembers()).toEqual([]);
+    });
+
+    it('applies a structural member and a chained attribute member beside an unsupported member', () => {
+      const r = compile(
+        '&:first-child:hover, &[x]:hover:not(:disabled), .a > .b { opacity: 0.5; }'
+      );
+      expect(r.conditional.map(entry => entry.type)).toEqual(['nthChild', 'attr']);
+      expect(warnedMembers()).toEqual(['.a > .b']);
+    });
+
+    it('names each unsupported member in its own warning and drops a list of only those', () => {
+      const r = compile('& .a, &:unknown, & .b { opacity: 0.5; }');
+      expect(r.conditional).toEqual([]);
+      expect(warnedMembers()).toEqual(['& .a', '&:unknown', '& .b']);
+    });
+
+    it('skips an unsupported member inside an at-rule without a warning', () => {
+      const r = compile('@media (min-width: 400px) { &:hover, & .icon { opacity: 0.5; } }');
+      expect(r.conditional).toEqual([
+        {
+          type: 'media',
+          condition: '(min-width: 400px)',
+          pseudo: 'hover',
+          styles: { opacity: 0.5 },
+        },
+      ]);
+      expect(warnedMembers()).toEqual([]);
     });
   });
 
@@ -459,14 +851,14 @@ describe('toNativeStyles', () => {
       expect(r.conditional[0].styles).toEqual(r.conditional[1].styles);
     });
 
-    it('top-level comma fanout falls through when any selector is not a known pseudo', () => {
+    it('top-level comma fanout keeps the known pseudo and warns for a member that is not one', () => {
       const r = compile(`
         &:hover, .child {
           opacity: 0.5;
         }
       `);
-      expect(r.conditional).toHaveLength(0);
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('complex selectors'));
+      expect(r.conditional).toMatchObject([{ type: 'pseudo', condition: 'hover' }]);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('(received: .child)'));
     });
   });
 
@@ -640,6 +1032,56 @@ describe('toNativeStyles', () => {
       ['no declarations', 'color: red;'],
     ])('publishesCascade is false for %s', (_name, css) => {
       expect(compile(css).publishesCascade).toBe(false);
+    });
+  });
+
+  describe('a special-case declaration inside a conditional rule', () => {
+    const SOURCE = 'line-clamp / text-wrap: nowrap';
+
+    test.each([
+      ['&:active { line-clamp: 2; }', ':active'],
+      ['&:not(:read-only) { line-clamp: 2; }', ':not(:read-only)'],
+      ['&:read-write { line-clamp: 2; }', ':read-write'],
+      ['&:active:not(:disabled) { line-clamp: 2; }', ':active:not(:disabled)'],
+      ['&[data-on]:hover { line-clamp: 2; }', '[data-on]:hover'],
+      ['&:not([data-on]):hover { line-clamp: 2; }', ':not([data-on]):hover'],
+      ['&[data-on] { line-clamp: 2; }', '[data-on]'],
+      ['&[data-on^="a" i]:hover { line-clamp: 2; }', '[data-on^="a" i]:hover'],
+      ['&:not([data-on]) { line-clamp: 2; }', ':not([data-on])'],
+      [
+        '@media (min-width: 0px) { &[data-on]:hover { line-clamp: 2; } }',
+        '@media (min-width: 0px) [data-on]:hover',
+      ],
+      ['@media (min-width: 0px) { line-clamp: 2; }', '@media (min-width: 0px)'],
+      [
+        '@media (min-width: 0px) { &:not(:active) { line-clamp: 2; } }',
+        '@media (min-width: 0px) :not(:active)',
+      ],
+      ['&:first-child { line-clamp: 2; }', ':first-child'],
+      ['&:last-of-type { line-clamp: 2; }', ':last-of-type'],
+      ['&:only-child { line-clamp: 2; }', ':only-child'],
+      ['&:nth-child(2n+1) { line-clamp: 2; }', ':nth-child(2n+1)'],
+      ['&:nth-last-child(-n+3):hover { line-clamp: 2; }', ':nth-last-child(-n+3):hover'],
+      ['&:nth-of-type(3) { line-clamp: 2; }', ':nth-of-type(3)'],
+      ['&:nth-child(2n of [data-on]) { line-clamp: 2; }', ':nth-child(2n of [data-on])'],
+      ['&:has([data-on]) { line-clamp: 2; }', ':has([data-on])'],
+      ['&:has(.sc-abc) { line-clamp: 2; }', ':has(.sc-abc)'],
+      ['.sc-abc & { line-clamp: 2; }', '.sc-abc &'],
+      ['.sc-abc > &:active { line-clamp: 2; }', '.sc-abc > &:active'],
+      ['.sc-abc + & { line-clamp: 2; }', '.sc-abc + &'],
+      ['.sc-abc ~ & { line-clamp: 2; }', '.sc-abc ~ &'],
+    ])('names %s as `%s` in the warning and drops the declaration', (css, described) => {
+      const compiled = compile(css);
+      expect(compiled.conditional.filter(entry => 'numberOfLines' in entry.styles)).toEqual([]);
+      expect(warnSpy.mock.calls.map(call => String(call[0]))).toEqual([
+        '[sc] `' +
+          SOURCE +
+          '` is not supported inside `' +
+          described +
+          '` on React Native. Move `' +
+          SOURCE +
+          '` to the top level of your styled component.',
+      ]);
     });
   });
 

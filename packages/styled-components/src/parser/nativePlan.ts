@@ -1,3 +1,4 @@
+import { KNOWN_PSEUDOS } from '../native/pseudoBits';
 import * as $ from '../utils/charCodes';
 import {
   AtRuleNode,
@@ -7,9 +8,11 @@ import {
   NATIVE_RULE_CLASS,
   NativeAtClass,
   NativeRuleClass,
+  NativeSelectorClass,
   NthOfBranch,
   NthSpec,
   PseudoState,
+  PseudoTerm,
   RuleNode,
 } from './ast';
 import { isKeyframesName } from './atRuleNames';
@@ -19,6 +22,7 @@ export type {
   ConditionalAttr,
   NativeAtClass,
   NativeRuleClass,
+  NativeSelectorClass,
   NthOfBranch,
   NthSpec,
   PseudoState,
@@ -42,14 +46,6 @@ export type {
  * parse time; the render path falls through to the legacy inline classifier
  * once values are filled in (rare in practice).
  */
-
-const KNOWN_PSEUDOS: Record<string, PseudoState> = {
-  hover: 'hover',
-  focus: 'focus',
-  'focus-visible': 'focus',
-  active: 'pressed',
-  disabled: 'disabled',
-};
 
 /**
  * Stamp a freshly-constructed RuleNode with parse-time native
@@ -127,36 +123,45 @@ export function stampAtClass(node: AtRuleNode): void {
 /**
  * Render-time fallback when parse-time classification was skipped because
  * the selectors contained interpolation sentinels. Operates on the
- * (filled) selectors string array; never mutates the node.
+ * (filled) selectors string array; never mutates the node. A selector
+ * list is classified member by member, so one unsupported member leaves
+ * the others usable.
  */
 export function classifyRuleNow(selectors: string[]): NativeRuleClass {
-  const direct = detectPseudo(selectors);
-  if (direct !== null) return { kind: 'pseudo', pseudo: direct };
-  const fanOut = detectIsWhereStates(selectors) || detectMultiPseudo(selectors);
+  if (selectors.length === 1) return classifySelector(selectors[0]);
+  const members: NativeSelectorClass[] = [];
+  for (let i = 0; i < selectors.length; i++) members.push(classifySelector(selectors[i]));
+  return { kind: 'list', members };
+}
+
+function classifySelector(sel: string): NativeSelectorClass {
+  const terms = detectPseudoTerms(sel);
+  if (terms !== null) return terms;
+  const fanOut = detectIsWhereStates(sel);
   if (fanOut) return { kind: 'pseudoFanOut', pseudos: fanOut };
-  const attrSels = detectAttrSelectors(selectors);
-  if (attrSels) return { kind: 'attr', selectors: attrSels };
+  const attrSel = parseAttrChain(sel);
+  if (attrSel !== null) return { kind: 'attr', selectors: [attrSel] };
   // `:not(<simple-selector>)`. Current scope is simple-arg only;
   // complex/compound arguments fall through to the generic
   // complex-selector warn.
-  const notCls = detectNot(selectors);
+  const notCls = detectNot(sel);
   if (notCls !== null) return notCls;
   // Descendant / child / adjacent-sibling / general-sibling combinator
   // against an interpolated styled component reference. `${Foo} &` /
   // `> &` / `+ &` / `~ &` compile to `.sc-FooId &` / `.sc-FooId > &` /
   // `.sc-FooId + &` / `.sc-FooId ~ &` after
   // `${StyledComponent}.toString()`.
-  const combinator = detectCombinator(selectors);
+  const combinator = detectCombinator(sel);
   if (combinator !== null) return combinator;
   // Tree-structural pseudo-classes that match by sibling position.
   // `&:first-child`, `&:last-child`, `&:only-child`,
   // `&:nth-child(an+b)`, `&:nth-last-child(...)`, `&:nth-of-type(...)`,
   // `&:nth-last-of-type(...)`.
-  const nth = detectNthChild(selectors);
+  const nth = detectNthChild(sel);
   if (nth !== null) return nth;
   // `&:has(<simple>)`. Inner restricted to a single class selector
   // (`${Component}`) or a single attribute selector; anything else is unsupported.
-  const has = detectHas(selectors);
+  const has = detectHas(sel);
   if (has !== null) return has;
   return { kind: 'unsupported' };
 }
@@ -199,9 +204,7 @@ function parseSimpleInner(inner: string): NthOfBranch | null {
  * reference (post-fillAst class selector `.sc-FooId`) or a single
  * attribute selector. Compound / complex inner forms fall through.
  */
-function detectHas(selectors: string[]): NativeRuleClass | null {
-  if (selectors.length !== 1) return null;
-  const sel = selectors[0];
+function detectHas(sel: string): NativeSelectorClass | null {
   const prefix = '&:has(';
   if (!sel.startsWith(prefix) || sel.charCodeAt(sel.length - 1) !== $.CLOSE_PAREN) return null;
   const inner = sel.substring(prefix.length, sel.length - 1).trim();
@@ -315,39 +318,28 @@ function parseNthInner(
  * / `&:nth-last-child(...)` / `&:nth-of-type(...)` /
  * `&:nth-last-of-type(...)` and optional trailing pseudo-state.
  */
-function detectNthChild(selectors: string[]): NativeRuleClass | null {
-  if (selectors.length !== 1) return null;
-  const sel = selectors[0];
+function detectNthChild(sel: string): NativeSelectorClass | null {
   if (sel.length < 3 || sel.charCodeAt(0) !== $.AMPERSAND || sel.charCodeAt(1) !== $.COLON) {
     return null;
   }
-  // Split into nth-pseudo head and optional trailing `:pseudo` tail
-  // (`&:first-child:hover`). Find the second colon AFTER any
-  // parenthesized argument list closes.
-  let head = sel.substring(2);
-  let tailPseudo: PseudoState | undefined;
-  const openParen = head.indexOf('(');
-  if (openParen !== -1) {
-    const closeParen = findClosingParen(head, openParen);
+  // The nth pseudo ends at its closing paren, or at the next `:` when it takes no argument; whatever
+  // follows is the run of trailing pseudo-classes (`&:first-child:hover:not(:disabled)`).
+  let headEnd = 2;
+  while (headEnd < sel.length) {
+    const c = sel.charCodeAt(headEnd);
+    if (c === $.COLON || c === $.OPEN_PAREN) break;
+    headEnd++;
+  }
+  if (sel.charCodeAt(headEnd) === $.OPEN_PAREN) {
+    const closeParen = findClosingParen(sel, headEnd);
     if (closeParen === -1) return null;
-    const tail = head.substring(closeParen + 1);
-    if (tail.length > 0) {
-      if (tail.charCodeAt(0) !== $.COLON) return null;
-      const p = KNOWN_PSEUDOS[tail.substring(1)];
-      if (!p) return null;
-      tailPseudo = p;
-    }
-    head = head.substring(0, closeParen + 1);
-  } else {
-    // Parameterless nth pseudos: look for a trailing `:pseudo`.
-    const secondColon = head.indexOf(':');
-    if (secondColon !== -1) {
-      const tail = head.substring(secondColon);
-      const p = KNOWN_PSEUDOS[tail.substring(1)];
-      if (!p) return null;
-      tailPseudo = p;
-      head = head.substring(0, secondColon);
-    }
+    headEnd = closeParen + 1;
+  }
+  const head = sel.substring(2, headEnd);
+  let tailTerms: PseudoTerm[] | null = null;
+  if (headEnd < sel.length) {
+    tailTerms = parsePseudoRun(sel, headEnd);
+    if (tailTerms === null) return null;
   }
 
   let spec: NthSpec | null = null;
@@ -384,9 +376,22 @@ function detectNthChild(selectors: string[]): NativeRuleClass | null {
   }
 
   if (spec === null) return null;
-  return tailPseudo === undefined
-    ? { kind: 'nthChild', spec }
-    : { kind: 'nthChild', spec, pseudo: tailPseudo };
+  const cls: Extract<NativeSelectorClass, { kind: 'nthChild' }> = { kind: 'nthChild', spec };
+  if (tailTerms !== null) attachPseudoTerms(cls, tailTerms);
+  return cls;
+}
+
+/**
+ * Records a run of pseudo-class terms on a gated selector: the first leads (`pseudo`, `pseudoNegate`)
+ * and any others go in `and`, the shape the matcher reads off an entry.
+ */
+function attachPseudoTerms(
+  target: { and?: PseudoTerm[]; pseudo?: PseudoState; pseudoNegate?: boolean },
+  terms: PseudoTerm[]
+): void {
+  target.pseudo = terms[0].pseudo;
+  if (terms[0].negate) target.pseudoNegate = true;
+  if (terms.length > 1) target.and = terms.slice(1);
 }
 
 function findClosingParen(s: string, openIdx: number): number {
@@ -403,62 +408,89 @@ function findClosingParen(s: string, openIdx: number): number {
 }
 
 /**
- * `&:not(<simple-selector>)`: fire the bucket when the inner selector
- * does NOT match. Supports a single pseudo-state (`&:not(:hover)`), a
- * single attribute selector (`&:not([disabled])`), and the compound
- * trailing-pseudo form `&:not([attr]):pseudo`. Complex / multi-arg
- * forms (`&:not(:hover, :focus)`, `&:not(.foo .bar)`) fall through.
+ * `&:not([attr])`: fire the bucket when the inner attribute selector does NOT match, with optional
+ * trailing pseudo-classes (`&:not([attr]):hover:enabled`). A negated pseudo-class (`&:not(:hover)`) is a
+ * {@link detectPseudoTerms} term; complex / multi-arg forms (`&:not(:hover, :focus)`,
+ * `&:not(.foo .bar)`) fall through.
  */
-function detectNot(selectors: string[]): NativeRuleClass | null {
-  if (selectors.length !== 1) return null;
-  const sel = selectors[0];
+function detectNot(sel: string): NativeSelectorClass | null {
   const prefix = '&:not(';
   if (!sel.startsWith(prefix)) return null;
   const innerStart = prefix.length;
   const innerEnd = findClosingParen(sel, innerStart - 1);
   if (innerEnd === -1) return null;
   const inner = sel.substring(innerStart, innerEnd).trim();
-  if (inner.length === 0) return null;
+  if (inner.charCodeAt(0) !== $.OPEN_BRACKET) return null;
 
-  let tailPseudo: PseudoState | undefined;
+  let tailTerms: PseudoTerm[] | null = null;
   if (innerEnd + 1 < sel.length) {
-    if (sel.charCodeAt(innerEnd + 1) !== $.COLON) return null;
-    const p = KNOWN_PSEUDOS[sel.substring(innerEnd + 2)];
-    if (!p) return null;
-    tailPseudo = p;
+    tailTerms = parsePseudoRun(sel, innerEnd + 1);
+    if (tailTerms === null) return null;
   }
 
-  // Pseudo-state inversion: `&:not(:hover)`.
-  if (inner.charCodeAt(0) === $.COLON) {
-    if (tailPseudo !== undefined) return null;
-    const name = inner.substring(1);
-    const pseudo = KNOWN_PSEUDOS[name];
-    if (!pseudo) return null;
-    return { kind: 'pseudo', pseudo, negate: true };
-  }
-
-  // Attribute selector inversion: `&:not([disabled])`, `&:not([a='b'])`,
-  // `&:not([disabled]):hover`.
-  if (inner.charCodeAt(0) === $.OPEN_BRACKET) {
-    const end = findClosingBracket(inner, 0);
-    if (end !== inner.length - 1) return null;
-    const attr = parseAttrInner(inner.substring(1, end));
-    if (attr === null) return null;
-    const selector: AttrSelector = { attrs: [attr] };
-    if (tailPseudo !== undefined) selector.pseudo = tailPseudo;
-    return { kind: 'attr', selectors: [selector], negate: true };
-  }
-
-  return null;
+  const end = findClosingBracket(inner, 0);
+  if (end !== inner.length - 1) return null;
+  const attr = parseAttrInner(inner.substring(1, end));
+  if (attr === null) return null;
+  const selector: AttrSelector = { attrs: [attr] };
+  if (tailTerms !== null) attachPseudoTerms(selector, tailTerms);
+  return { kind: 'attr', selectors: [selector], negate: true };
 }
 
-function detectPseudoSelector(sel: string): PseudoState | null {
-  // Match `&:<pseudo>`; the only supported pseudo-state selector shape.
-  if (sel.length < 3 || sel.charCodeAt(0) !== $.AMPERSAND || sel.charCodeAt(1) !== $.COLON) {
-    return null;
+/**
+ * The terms of `&:hover`, `&:not(:hover)`, `&:hover:not(:disabled)`: one or more known pseudo-classes,
+ * each optionally wrapped in `:not(...)`, or null when the selector is anything else.
+ */
+function parsePseudoTerms(sel: string): PseudoTerm[] | null {
+  if (sel.charCodeAt(0) !== $.AMPERSAND || sel.charCodeAt(1) !== $.COLON) return null;
+  return parsePseudoRun(sel, 1);
+}
+
+/**
+ * The pseudo-class terms `sel` holds from index `start` (a `:`) to its end: each a known pseudo-class,
+ * optionally wrapped in `:not(...)`, or null when anything else is there. A single scan with
+ * `indexOf`, so cost is linear in the selector length.
+ */
+function parsePseudoRun(sel: string, start: number): PseudoTerm[] | null {
+  const terms: PseudoTerm[] = [];
+  let i = start;
+  while (i < sel.length) {
+    if (sel.charCodeAt(i) !== $.COLON) return null;
+    const negate = sel.startsWith(':not(', i);
+    let name: string;
+    if (negate) {
+      const close = findClosingParen(sel, i + 4);
+      if (close === -1) return null;
+      const inner = sel.substring(i + 5, close).trim();
+      if (inner.charCodeAt(0) !== $.COLON) return null;
+      name = inner.substring(1);
+      i = close + 1;
+    } else {
+      const next = sel.indexOf(':', i + 1);
+      const end = next === -1 ? sel.length : next;
+      name = sel.substring(i + 1, end);
+      i = end;
+    }
+    const pseudo = KNOWN_PSEUDOS.get(name);
+    if (!pseudo) return null;
+    terms.push({ negate, pseudo });
   }
-  const name = sel.substring(2);
-  return KNOWN_PSEUDOS[name] || null;
+  return terms.length > 0 ? terms : null;
+}
+
+/**
+ * A rule led by pseudo-classes that must all hold: the first term leads the entry and any others go
+ * in `and`.
+ */
+function detectPseudoTerms(sel: string): NativeSelectorClass | null {
+  const terms = parsePseudoTerms(sel);
+  if (terms === null) return null;
+
+  const [first, ...rest] = terms;
+  const cls: NativeSelectorClass = { kind: 'pseudo', pseudo: first.pseudo };
+  if (first.negate) cls.negate = true;
+  if (rest.length > 0) cls.and = rest;
+  return cls;
 }
 
 /**
@@ -475,9 +507,7 @@ function detectPseudoSelector(sel: string): PseudoState | null {
  * static impls publish ParentContext, so a static styled intermediary
  * stays visible to the chain as an ancestor.
  */
-function detectCombinator(selectors: string[]): NativeRuleClass | null {
-  if (selectors.length !== 1) return null;
-  const sel = selectors[0];
+function detectCombinator(sel: string): NativeSelectorClass | null {
   if (sel.charCodeAt(0) !== $.DOT) return null;
   // Walk the styled-component id (`sc-` + ident chars + digits).
   let i = 1;
@@ -520,34 +550,13 @@ function detectCombinator(selectors: string[]): NativeRuleClass | null {
   if (j < sel.length) {
     if (sel.charCodeAt(j) !== $.COLON) return null;
     const name = sel.substring(j + 1);
-    const p = KNOWN_PSEUDOS[name];
+    const p = KNOWN_PSEUDOS.get(name);
     if (!p) return null;
     pseudo = p;
   }
   return pseudo === undefined
     ? { kind: 'combinator', combinator, ancestorId }
     : { kind: 'combinator', combinator, ancestorId, pseudo };
-}
-
-function detectPseudo(selectors: string[]): PseudoState | null {
-  if (selectors.length !== 1) return null;
-  return detectPseudoSelector(selectors[0]);
-}
-
-/**
- * Top-level comma-separated pseudo selectors (`&:focus, &:focus-visible`) are
- * sugar for `&:is(:focus, :focus-visible)`. Fan out when every comma-fragment
- * is a known pseudo state.
- */
-function detectMultiPseudo(selectors: string[]): PseudoState[] | null {
-  if (selectors.length < 2) return null;
-  const states: PseudoState[] = [];
-  for (let i = 0; i < selectors.length; i++) {
-    const s = detectPseudoSelector(selectors[i]);
-    if (s === null) return null;
-    states.push(s);
-  }
-  return states;
 }
 
 /**
@@ -561,9 +570,7 @@ function detectMultiPseudo(selectors: string[]): PseudoState[] | null {
  * we can emit N parallel pseudo buckets with the same decls, which is
  * semantically equivalent (union-of-states in the state-predicate sense).
  */
-function detectIsWhereStates(selectors: string[]): PseudoState[] | null {
-  if (selectors.length !== 1) return null;
-  const sel = selectors[0];
+function detectIsWhereStates(sel: string): PseudoState[] | null {
   if (sel.charCodeAt(0) !== $.AMPERSAND || sel.charCodeAt(1) !== $.COLON) {
     return null;
   }
@@ -585,7 +592,7 @@ function detectIsWhereStates(selectors: string[]): PseudoState[] | null {
     const p = parts[i].trim();
     if (p.charCodeAt(0) !== $.COLON) return null;
     const name = p.substring(1);
-    const mapped = KNOWN_PSEUDOS[name];
+    const mapped = KNOWN_PSEUDOS.get(name);
     if (!mapped) return null;
     states.push(mapped);
   }
@@ -593,34 +600,17 @@ function detectIsWhereStates(selectors: string[]): PseudoState[] | null {
 }
 
 /**
- * Parse one or more comma-separated selectors, each consisting of an
- * attribute-selector chain plus an optional trailing pseudo state.
+ * Parse one selector made of an attribute-selector chain plus optional trailing pseudo-classes.
  *
  * Supports:
  * - Single: `&[attr]`, `&[attr=value]`
  * - Compound (AND): `&[a][b]`, `&[a=x][b=y]`
- * - Attr + pseudo: `&[attr]:active`, `&[a][b]:focus`
- * - Comma-grouped (fan-out): `&[a], &[b]`;each emits its own bucket
- * - Mixed: `&[a][b]:active, &[c]`
+ * - Attr + pseudo-classes: `&[attr]:active`, `&[a][b]:focus`, `&[attr]:hover:not(:disabled)`
  *
- * Returns one selector per input string, or `null` if any selector
- * isn't a pure attribute-(plus-optional-pseudo) chain;so the caller
- * can fall through to the "complex selector" warning instead of
- * silently dropping a partially-parseable rule.
- *
- * `=` is the only supported operator. `~=`, `^=`, `$=`, `*=`, `|=`
- * fall through to null.
+ * Returns `null` if the selector isn't a pure attribute chain with optional pseudo-classes, so the
+ * caller can fall through to the "complex selector" warning instead of silently dropping a
+ * partially-parseable rule.
  */
-function detectAttrSelectors(selectors: string[]): AttrSelector[] | null {
-  const out: AttrSelector[] = [];
-  for (let i = 0; i < selectors.length; i++) {
-    const sel = parseAttrChain(selectors[i]);
-    if (sel === null) return null;
-    out.push(sel);
-  }
-  return out.length > 0 ? out : null;
-}
-
 function parseAttrChain(sel: string): AttrSelector | null {
   if (sel.length < 4 || sel.charCodeAt(0) !== $.AMPERSAND || sel.charCodeAt(1) !== $.OPEN_BRACKET) {
     return null;
@@ -637,11 +627,11 @@ function parseAttrChain(sel: string): AttrSelector | null {
   }
   if (attrs.length === 0) return null;
   if (i === sel.length) return { attrs };
-  if (sel.charCodeAt(i) !== $.COLON) return null;
-  const pseudoName = sel.substring(i + 1);
-  const pseudo = KNOWN_PSEUDOS[pseudoName];
-  if (!pseudo) return null;
-  return { attrs, pseudo };
+  const terms = parsePseudoRun(sel, i);
+  if (terms === null) return null;
+  const selector: AttrSelector = { attrs };
+  attachPseudoTerms(selector, terms);
+  return selector;
 }
 
 /**

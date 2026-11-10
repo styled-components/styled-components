@@ -11,6 +11,7 @@ import { evaluateForFastPath, FastPathFragment, fillAst } from '../parser/compil
 import { getSource, synthesizeSourceForRuleSet } from '../parser/source';
 import { NativeTarget, RuleSet, TargetProps } from '../types';
 import isStyledComponent from '../utils/isStyledComponent';
+import type { NativeTargetProps, StyledTextInputProps } from './textInputTypes';
 
 // Side-effect: registers the default Animated-based animation adapter.
 // Replace by importing `styled-components/native/reanimated` from the
@@ -32,7 +33,7 @@ const StyledNativeComponent = _StyledNativeComponent(NativeStyle);
  * ```
  */
 const baseStyled = <Target extends NativeTarget>(tag: Target) =>
-  constructWithOptions<'native', Target>(StyledNativeComponent, tag);
+  constructWithOptions<'native', Target, NativeTargetProps<Target>>(StyledNativeComponent, tag);
 
 const aliases = [
   'ActivityIndicator',
@@ -71,11 +72,15 @@ type RNComponents = {
 };
 
 const styled = baseStyled as typeof baseStyled & {
-  // `TargetProps<'native', …>` rather than `ComponentProps`: the runtime
-  // argument is what keeps the web-only `style` widening off this entry, since a
-  // native `style` takes a native style object and accepts neither web CSS nor
-  // custom properties.
-  [E in KnownComponents]: Styled<'native', RNComponents[E], TargetProps<'native', RNComponents[E]>>;
+  // `TargetProps<'native', …>` keeps the web-only `style` widening off this entry, since a native
+  // `style` takes a native style object and accepts neither web CSS nor custom properties.
+  [E in KnownComponents]: Styled<
+    'native',
+    RNComponents[E],
+    E extends 'TextInput'
+      ? TargetProps<'native', RNComponents[E]> & StyledTextInputProps
+      : TargetProps<'native', RNComponents[E]>
+  >;
 };
 
 // Scroller baseline. RN's ScrollView-family base style ships

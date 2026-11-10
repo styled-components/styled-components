@@ -73,3 +73,71 @@ describe('a styled Pressable with no children', () => {
     expect(seen).toEqual([20, DEFAULT_NATIVE_STYLE.cascade.fontSize]);
   });
 });
+
+describe('a styled Pressable whose rules read the disabled state', () => {
+  const PressDisabled = styled(Pressable)`
+    &:disabled {
+      font-size: 20px;
+    }
+  `;
+  const PressDisabledAndActive = styled(Pressable)`
+    &:active {
+      color: red;
+    }
+    &:disabled {
+      font-size: 20px;
+    }
+  `;
+  const PressEnabled = styled(Pressable)`
+    &:enabled {
+      font-size: 20px;
+    }
+  `;
+  const DEFAULT_SIZE = DEFAULT_NATIVE_STYLE.cascade.fontSize;
+
+  it.each([
+    ['a :disabled rule', PressDisabled, 20, DEFAULT_SIZE],
+    ['a :disabled rule beside an :active rule', PressDisabledAndActive, 20, DEFAULT_SIZE],
+    ['an :enabled rule', PressEnabled, DEFAULT_SIZE, 20],
+  ])(
+    'publishes the size of %s to a child, keeping the child mounted as `disabled` toggles',
+    (_name, Subject, whenDisabled, whenEnabled) => {
+      let mounts = 0;
+      let size = 0;
+      function Probe() {
+        React.useState(() => ++mounts);
+        size = useNativeStyleContext().cascade.fontSize;
+        return null;
+      }
+
+      let tree!: TestRenderer.ReactTestRenderer;
+      TestRenderer.act(() => {
+        tree = TestRenderer.create(
+          <Subject disabled>
+            <Probe />
+          </Subject>
+        );
+      });
+      expect(size).toBe(whenDisabled);
+
+      TestRenderer.act(() =>
+        tree.update(
+          <Subject disabled={false}>
+            <Probe />
+          </Subject>
+        )
+      );
+      expect(size).toBe(whenEnabled);
+
+      TestRenderer.act(() =>
+        tree.update(
+          <Subject disabled>
+            <Probe />
+          </Subject>
+        )
+      );
+      expect(size).toBe(whenDisabled);
+      expect(mounts).toBe(1);
+    }
+  );
+});

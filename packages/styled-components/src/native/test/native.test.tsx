@@ -3061,6 +3061,15 @@ describe('native', () => {
       expect(input.props.editable).toBe(false);
     });
 
+    it('TextInput that is inert and disabled is uneditable and unfocusable', () => {
+      const Locked = styled.TextInput`
+        interactivity: inert;
+      `;
+      const input = TestRenderer.create(<Locked disabled editable />).root.findByType(TextInput);
+      expect(input.props.editable).toBe(false);
+      expect(input.props.focusable).toBe(false);
+    });
+
     it('interactivity: auto does not lift any prop', () => {
       const Free = styled.View`
         interactivity: auto;

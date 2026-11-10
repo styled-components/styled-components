@@ -1,5 +1,5 @@
 import React from 'react';
-import { Appearance, Text, View } from 'react-native';
+import { Appearance, Pressable, Text, View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import { watchWindowChange } from '../../test/nativeHarness';
 import styled, { NativeStyleContext } from '../';
@@ -12,7 +12,9 @@ import { resetWarningsForTest } from '../transform/dev';
 // style form. Plain styled.View / styled.Text now resolve pseudo styles
 // statically (see the "non-pressable targets" block).
 const StateView = (props: any) => <View {...props} />;
-const StateText = (props: any) => <Text {...props} />;
+
+const flatOf = (style: unknown) =>
+  Object.assign({}, ...[style].flat(Infinity).filter(Boolean)) as Record<string, any>;
 
 describe('modern CSS on React Native', () => {
   beforeEach(() => {
@@ -708,7 +710,7 @@ describe('modern CSS on React Native', () => {
         const tree = TestRenderer.create(<Comp />);
         const style = tree.root.findByType(View).props.style;
         expect(typeof style).not.toBe('function');
-        const flat = Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
+        const flat = flatOf(style);
         expect(flat.width).toBe(146);
         expect(flat.height).toBe(146);
         expect(flat.alignItems).toBe('center');
@@ -742,8 +744,7 @@ describe('modern CSS on React Native', () => {
         const tree = TestRenderer.create(<Comp />);
         const style = tree.root.findByType(View).props.style;
         expect(typeof style).not.toBe('function');
-        const flat = Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
-        expect(flat.width).toBe(146);
+        expect(flatOf(style).width).toBe(146);
         expect(warnSpy).not.toHaveBeenCalled();
       });
 
@@ -755,15 +756,12 @@ describe('modern CSS on React Native', () => {
           }
         `;
         const tree = TestRenderer.create(<Comp />);
-        // The styled element receives the function; Pressable resolves it
-        // with live state. Find the outermost element carrying it.
-        const el = tree.root.findAllByProps({ testID: undefined })[0] ?? tree.root;
+        // The styled element receives the function; Pressable resolves it with live state.
         const styledEl = tree.root.find(
           n => typeof n.props.style === 'function' && n.type !== Comp
         );
         expect(typeof styledEl.props.style).toBe('function');
         expect(warnSpy).not.toHaveBeenCalled();
-        void el;
       });
 
       it('custom component targets keep the state-function style (may wrap a Pressable)', () => {
@@ -780,194 +778,6 @@ describe('modern CSS on React Native', () => {
         expect(style({ pressed: true })).toEqual([{ width: 10 }, { opacity: 0.5 }]);
         expect(warnSpy).not.toHaveBeenCalled();
       });
-    });
-
-    it('produces a function style that resolves pressed state from &:active', () => {
-      const Comp = styled(StateView)`
-        background-color: white;
-        &:active {
-          opacity: 0.5;
-        }
-      `;
-      const tree = TestRenderer.create(<Comp />);
-      const pressable = tree.root.findByType(View);
-      expect(typeof pressable.props.style).toBe('function');
-
-      expect(pressable.props.style({ pressed: false })).toMatchInlineSnapshot(`
-        [
-          {
-            "backgroundColor": "white",
-          },
-        ]
-      `);
-      expect(pressable.props.style({ pressed: true })).toMatchInlineSnapshot(`
-        [
-          {
-            "backgroundColor": "white",
-          },
-          {
-            "opacity": 0.5,
-          },
-        ]
-      `);
-    });
-
-    it('resolves hover state (&:hover)', () => {
-      const Comp = styled(StateView)`
-        color: black;
-        &:hover {
-          color: purple;
-        }
-      `;
-      const tree = TestRenderer.create(<Comp />);
-      const pressable = tree.root.findByType(View);
-      expect(pressable.props.style({ hovered: true })).toMatchInlineSnapshot(`
-        [
-          {
-            "color": "black",
-          },
-          {
-            "color": "purple",
-          },
-        ]
-      `);
-      expect(pressable.props.style({ hovered: false })).toMatchInlineSnapshot(`
-        [
-          {
-            "color": "black",
-          },
-        ]
-      `);
-    });
-
-    it('aliases :focus-visible to :focus on native (web parity for portable code)', () => {
-      const Comp = styled(StateView)`
-        color: black;
-        &:focus-visible {
-          color: orange;
-        }
-      `;
-      const tree = TestRenderer.create(<Comp />);
-      const pressable = tree.root.findByType(View);
-      expect(pressable.props.style({ focused: true })).toMatchInlineSnapshot(`
-        [
-          {
-            "color": "black",
-          },
-          {
-            "color": "orange",
-          },
-        ]
-      `);
-      expect(pressable.props.style({ focused: false })).toMatchInlineSnapshot(`
-        [
-          {
-            "color": "black",
-          },
-        ]
-      `);
-    });
-
-    // https://drafts.csswg.org/selectors-4/#the-is-pseudo
-    // https://drafts.csswg.org/selectors-4/#the-where-pseudo
-    describe('CSS Selectors 4 :is() / :where() on native (pseudo-state lists)', () => {
-      // "The matches-any pseudo-class, :is(), ... is a functional pseudo-class taking
-      // a selector list as its argument."
-      // On RN we only expand lists of supported pseudo-classes (see nativePlan).
-      it('&:is(:hover, :focus) applies when either pseudo state matches', () => {
-        const Comp = styled(StateView)`
-          opacity: 1;
-          &:is(:hover, :focus) {
-            opacity: 0.5;
-          }
-        `;
-        const tree = TestRenderer.create(<Comp />);
-        const style = tree.root.findByType(View).props.style as (s: any) => any[];
-        expect(style({ hovered: true, focused: false })).toMatchInlineSnapshot(`
-          [
-            {
-              "opacity": 1,
-            },
-            {
-              "opacity": 0.5,
-            },
-          ]
-        `);
-        expect(style({ hovered: false, focused: true })).toMatchInlineSnapshot(`
-          [
-            {
-              "opacity": 1,
-            },
-            {
-              "opacity": 0.5,
-            },
-          ]
-        `);
-        expect(style({ hovered: false, focused: false })).toMatchInlineSnapshot(`
-          [
-            {
-              "opacity": 1,
-            },
-          ]
-        `);
-      });
-
-      it('&:where(:active, :disabled) fans out like separate pseudo rules', () => {
-        const Comp = styled(StateView)`
-          opacity: 1;
-          &:where(:active, :disabled) {
-            opacity: 0.4;
-          }
-        `;
-        const tree = TestRenderer.create(<Comp />);
-        const style = tree.root.findByType(View).props.style as (s: any) => any[];
-        expect(style({ pressed: true })).toMatchInlineSnapshot(`
-          [
-            {
-              "opacity": 1,
-            },
-            {
-              "opacity": 0.4,
-            },
-          ]
-        `);
-        expect(style({ disabled: true })).toMatchInlineSnapshot(`
-          [
-            {
-              "opacity": 1,
-            },
-            {
-              "opacity": 0.4,
-            },
-          ]
-        `);
-      });
-    });
-
-    it('merges user style function under pseudo state', () => {
-      const Comp = styled(StateView)<{ style?: any }>`
-        background-color: white;
-        &:active {
-          opacity: 0.5;
-        }
-      `;
-      const userStyle = ({ pressed }: any) => ({ borderWidth: pressed ? 2 : 0 });
-      const tree = TestRenderer.create(<Comp style={userStyle} />);
-      const pressable = tree.root.findByType(View);
-
-      expect(pressable.props.style({ pressed: true })).toMatchInlineSnapshot(`
-        [
-          {
-            "backgroundColor": "white",
-          },
-          {
-            "opacity": 0.5,
-          },
-          {
-            "borderWidth": 2,
-          },
-        ]
-      `);
     });
   });
 
@@ -1798,7 +1608,9 @@ s] { color: white; }`,
         ]
       `);
 
-      expect(style({ disabled: true })).toMatchInlineSnapshot(`
+      const disabledTree = TestRenderer.create(<Comp disabled />);
+      const disabledStyle = disabledTree.root.findByType(View).props.style as (state: any) => any[];
+      expect(disabledStyle({})).toMatchInlineSnapshot(`
         [
           {
             "color": "black",
@@ -2045,6 +1857,33 @@ s] { color: white; }`,
       const inner = tree.root.findAllByType(View)[1];
       expect(inner.props.style).toEqual([{ color: 'green' }, { color: 'red' }]);
     });
+
+    // A selector list is judged member by member, so each combinator member applies under its own ancestor.
+    it.each(['first', 'second'])(
+      'a list of combinator members applies under the %s ancestor',
+      which => {
+        const Foo = styled.View.withConfig({ displayName: 'CombListFoo' })`
+        background: blue;
+      `;
+        const Baz = styled.View.withConfig({ displayName: 'CombListBaz' })`
+        background: blue;
+      `;
+        const Bar = styled.View.withConfig({ displayName: 'CombListBar' })`
+        color: green;
+        ${Foo} &, ${Baz} & {
+          color: red;
+        }
+      `;
+        const Ancestor = which === 'first' ? Foo : Baz;
+        const tree = TestRenderer.create(
+          <Ancestor>
+            <Bar />
+          </Ancestor>
+        );
+        const inner = tree.root.findAllByType(View)[1];
+        expect(inner.props.style).toEqual([{ color: 'green' }, { color: 'red' }]);
+      }
+    );
 
     it('descendant combinator keeps a value before it with no semicolon of its own', () => {
       const Foo = styled.View.withConfig({ displayName: 'CombMixinFoo' })`
@@ -3382,6 +3221,25 @@ s] { color: white; }`,
       expect(ok.root.findByType(View).props.style).toEqual({ color: 'black' });
     });
 
+    // §4.3 negation keeps its meaning inside a matching at-rule.
+    it('&:not([data-active]) inside @media still inverts attribute presence', () => {
+      const Btn = styled.View<{ 'data-active'?: boolean }>`
+        color: black;
+        @media (min-width: 0px) {
+          &:not([data-active]) {
+            color: red;
+          }
+        }
+      `;
+      const absent = TestRenderer.create(<Btn />);
+      expect(absent.root.findByType(View).props.style).toEqual([
+        { color: 'black' },
+        { color: 'red' },
+      ]);
+      const present = TestRenderer.create(<Btn data-active />);
+      expect(present.root.findByType(View).props.style).toEqual({ color: 'black' });
+    });
+
     // §4.3 composed with a trailing pseudo-state; the bucket should
     // fire only when the element is NOT represented by the inner
     // selector AND the trailing pseudo-state holds.
@@ -3406,6 +3264,209 @@ s] { color: white; }`,
       expect(withAttrStyle({ hovered: true })).toEqual([{ color: 'black' }]);
       // 4. active + not hovered → does not fire.
       expect(withAttrStyle({ hovered: false })).toEqual([{ color: 'black' }]);
+    });
+
+    // https://drafts.csswg.org/selectors-4/#structure
+    // "A given element is said to match a compound selector when it matches all simple selectors in the compound selector."
+    describe('a compound that starts with an attribute or structural selector applies only when every term holds', () => {
+      /** The first element below the styled component that received a `style`: the one the library styled. */
+      const hostOf = (element: React.ReactElement) =>
+        TestRenderer.create(element).root.findAll(
+          node =>
+            node.props.style !== undefined &&
+            !String((node.type as { displayName?: string }).displayName).startsWith('Styled(')
+        )[0];
+
+      const resolved = (element: React.ReactElement, state: object) => {
+        const style = hostOf(element).props.style;
+        return flatOf(typeof style === 'function' ? style(state) : style);
+      };
+
+      it.each([
+        [
+          "&[aria-pressed='true']:hover:not(:disabled)",
+          { 'aria-pressed': 'true' },
+          { hovered: true },
+          true,
+        ],
+        [
+          "&[aria-pressed='true']:hover:not(:disabled)",
+          { 'aria-pressed': 'true' },
+          { hovered: false },
+          false,
+        ],
+        [
+          "&[aria-pressed='true']:hover:not(:disabled)",
+          { 'aria-pressed': 'false' },
+          { hovered: true },
+          false,
+        ],
+        ["&[aria-pressed='true']:hover:not(:disabled)", {}, { hovered: true }, false],
+        [
+          "&[aria-pressed='true']:hover:not(:disabled)",
+          { 'aria-pressed': 'true', disabled: true },
+          { hovered: true },
+          false,
+        ],
+        ['&[data-on]:hover:enabled', { 'data-on': true }, { hovered: true }, true],
+        ['&[data-on]:hover:enabled', { 'data-on': true, disabled: true }, { hovered: true }, false],
+        ['&[data-on]:not(:disabled)', { 'data-on': true }, {}, true],
+        ['&[data-on]:not(:disabled)', { 'data-on': true, disabled: true }, {}, false],
+        ['&[data-on]:not(:disabled):active', { 'data-on': true }, { pressed: true }, true],
+        ['&[data-on]:not(:disabled):active', { 'data-on': true }, { pressed: false }, false],
+        ['&:not([data-on]):hover:enabled', {}, { hovered: true }, true],
+        ['&:not([data-on]):hover:enabled', { 'data-on': true }, { hovered: true }, false],
+        ['&:not([data-on]):hover:enabled', { disabled: true }, { hovered: true }, false],
+      ])('applies %s with props %j at press state %j: %s', (selector, props, state, applies) => {
+        const Comp = styled(Pressable)`
+          opacity: 1;
+          ${selector} {
+            opacity: 0.5;
+          }
+        `;
+        expect(resolved(<Comp {...props} />, state).opacity).toBe(applies ? 0.5 : 1);
+      });
+
+      it.each([
+        ['&:first-child:hover:enabled', 0, {}, { hovered: true }, 0.5],
+        ['&:first-child:hover:enabled', 0, {}, { hovered: false }, 1],
+        ['&:first-child:hover:enabled', 0, { disabled: true }, { hovered: true }, 1],
+        ['&:first-child:hover:enabled', 1, {}, { hovered: true }, 1],
+        ['&:last-child:hover:not(:disabled)', 1, {}, { hovered: true }, 0.5],
+        ['&:last-child:hover:not(:disabled)', 1, { disabled: true }, { hovered: true }, 1],
+        ['&:last-child:hover:not(:disabled)', 0, {}, { hovered: true }, 1],
+        ['&:nth-child(2n):not(:disabled)', 1, {}, {}, 0.5],
+        ['&:nth-child(2n):not(:disabled)', 1, { disabled: true }, {}, 1],
+        ['&:nth-child(2n):not(:disabled)', 0, {}, {}, 1],
+      ])(
+        'applies %s to child %i with props %j at press state %j as opacity %d',
+        (selector, index, props, state, opacity) => {
+          const Parent = styled.View`
+            flex: 1;
+          `;
+          const Item = styled(StateView)`
+            opacity: 1;
+            ${selector} {
+              opacity: 0.5;
+            }
+          `;
+          const tree = TestRenderer.create(
+            <Parent>
+              <Item {...(index === 0 ? props : {})} />
+              <Item {...(index === 1 ? props : {})} />
+            </Parent>
+          );
+          // The Parent's own View is first, then one View per Item.
+          const style = tree.root.findAllByType(View)[index + 1].props.style;
+          const out = flatOf(typeof style === 'function' ? style(state) : style);
+          expect(out.opacity).toBe(opacity);
+        }
+      );
+
+      it('layers a chained attribute rule after a plain attribute rule written later', () => {
+        const Comp = styled(Pressable)`
+          &[data-on]:hover:enabled {
+            color: blue;
+          }
+          &[data-on] {
+            color: green;
+          }
+        `;
+        expect(resolved(<Comp data-on />, { hovered: true }).color).toBe('blue');
+        expect(resolved(<Comp data-on />, { hovered: false }).color).toBe('green');
+      });
+
+      it('gives an attribute chain with only element states a plain style, and one with an interaction term a function', () => {
+        const Forwarder = (props: any) => <View {...props} />;
+        const Plain = styled(Forwarder)`
+          opacity: 1;
+          &[data-on]:not(:disabled):read-write {
+            opacity: 0.5;
+          }
+        `;
+        const plain = TestRenderer.create(<Plain data-on readOnly={false} />).root.findByType(View)
+          .props.style;
+        expect(typeof plain).not.toBe('function');
+        expect(flatOf(plain).opacity).toBe(0.5);
+
+        const Interactive = styled(Forwarder)`
+          &[data-on]:not(:disabled):hover {
+            opacity: 0.5;
+          }
+        `;
+        const interactive = TestRenderer.create(<Interactive data-on />).root.findByType(View).props
+          .style;
+        expect(typeof interactive).toBe('function');
+        expect(interactive({ hovered: true })).toEqual([{}, { opacity: 0.5 }]);
+      });
+    });
+
+    // https://drafts.csswg.org/selectors-4/#selector-list
+    // "A comma-separated list of selectors represents the union of all elements selected by each of the individual selectors in the selector list."
+    // https://drafts.csswg.org/selectors-4/#invalid
+    // "a selector list containing an invalid selector is invalid."
+    // Deviation: native judges each member alone, so a supported member applies and an unsupported one is skipped with a warning naming it.
+    describe('a selector list applies each supported member and warns for each unsupported one', () => {
+      let warnSpy: jest.SpyInstance;
+
+      beforeEach(() => {
+        resetWarningsForTest();
+        warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      });
+
+      afterEach(() => {
+        warnSpy.mockRestore();
+      });
+
+      const receivedMembers = () =>
+        warnSpy.mock.calls.map(call => /\(received: (.*?)\)\. Only/.exec(String(call[0]))?.[1]);
+
+      it('applies &:hover and warns for & .icon in `&:hover, & .icon`', () => {
+        const Comp = styled(StateView)`
+          opacity: 1;
+          &:hover,
+          & .icon {
+            opacity: 0.5;
+          }
+        `;
+        const style = TestRenderer.create(<Comp />).root.findByType(View).props.style;
+        expect(flatOf(style({ hovered: true })).opacity).toBe(0.5);
+        expect(flatOf(style({ hovered: false })).opacity).toBe(1);
+        expect(receivedMembers()).toEqual(['& .icon']);
+      });
+
+      it('applies an attribute member and a chained pseudo member of one list independently', () => {
+        const Comp = styled(StateView)`
+          opacity: 1;
+          &[data-on],
+          &:hover:enabled {
+            opacity: 0.5;
+          }
+        `;
+        const attrOnly = TestRenderer.create(<Comp data-on />).root.findByType(View).props.style;
+        expect(flatOf(attrOnly({ hovered: false })).opacity).toBe(0.5);
+
+        const hovered = TestRenderer.create(<Comp />).root.findByType(View).props.style;
+        expect(flatOf(hovered({ hovered: true })).opacity).toBe(0.5);
+        expect(flatOf(hovered({ hovered: false })).opacity).toBe(1);
+
+        const disabled = TestRenderer.create(<Comp disabled />).root.findByType(View).props.style;
+        expect(flatOf(disabled({ hovered: true })).opacity).toBe(1);
+        expect(receivedMembers()).toEqual([]);
+      });
+
+      it('warns for each member of a list with none supported and applies nothing', () => {
+        const Comp = styled.View`
+          opacity: 1;
+          & .a,
+          & .b {
+            opacity: 0.5;
+          }
+        `;
+        const style = TestRenderer.create(<Comp />).root.findByType(View).props.style;
+        expect(flatOf(style).opacity).toBe(1);
+        expect(receivedMembers()).toEqual(['& .a', '& .b']);
+      });
     });
 
     // §4.3: "However, unlike other pseudo-classes, the negation
