@@ -10,11 +10,60 @@
 
 import React from 'react';
 import { render } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 
-import styled, { ThemeProvider as BridgeThemeProvider } from '../native/web-bridge';
+import styled, {
+  createGlobalStyle,
+  keyframes,
+  ServerStyleSheet,
+  StyleSheetManager,
+  ThemeProvider as BridgeThemeProvider,
+} from '../native/web-bridge';
 import createTheme from '../constructors/createTheme';
 import ThemeProvider from '../models/ThemeProvider';
 import { resetWarnOnce } from '../utils/warnOnce';
+
+// The bridge rewrites run inside every compiler behind the build constant, which
+// is true only in the bridge bundle; the suite stands in for that bundle.
+beforeAll(() => {
+  globalThis.__NATIVE_WEB__ = true;
+});
+
+afterAll(() => {
+  globalThis.__NATIVE_WEB__ = false;
+});
+
+/**
+ * Server-renders `element` into a fresh sheet and returns only that render's CSS, one rule per
+ * line, with the generated class of each component written as `.c`. jsdom's CSSOM writes each
+ * rule, so spacing inside a rule is jsdom's.
+ */
+function renderedCss(element: React.ReactElement): string {
+  const sheet = new ServerStyleSheet();
+
+  try {
+    const html = renderToString(sheet.collectStyles(element));
+    let css = sheet
+      .getStyleTags()
+      .replace(/^<style[^>]*>/, '')
+      .replace(/<\/style>$/, '')
+      .split('/*!sc*/')
+      .map(rule => rule.trim())
+      .filter(rule => rule !== '' && !rule.startsWith('data-styled.g'))
+      .join('\n');
+
+    for (const [, classes] of html.matchAll(/class="([^"]*)"/g)) {
+      for (const name of classes.split(' ')) {
+        if (/^[a-zA-Z][a-zA-Z0-9-]*$/.test(name))
+          css = css.replace(new RegExp('\\.' + name + '(?![\\w-])', 'g'), '.c');
+      }
+    }
+
+    return css.trim();
+  } finally {
+    sheet.seal();
+  }
+}
 
 function readAllCss(): string {
   const buf: string[] = [];
@@ -1468,188 +1517,113 @@ describe('rn-web bridge: parity gaps surfaced from native-showcase', () => {
     });
   });
 
-  describe(':not() catchall specificity neutralization via :where()', () => {
-    // CSS specificity: each `:not(<simple>)` contributes the simple's
-    // weight, so `:not([a]):not([b]):not([c])` adds (0,3,0) — beating
-    // a simple `[data-channel]` rule (weight (0,1,0)) regardless of
-    // source order. The bridge wraps :not chains in :where() to zero
-    // them out so source order decides the cascade.
-    it('wraps .cls:not(...) chains in :where(...) so simple [attr] rules win', () => {
-      const Pill = styled.View`
-        border: 2px solid blue;
-        &[data-channel='ux'] {
-          border-left-width: 4px;
-          border-left-color: green;
-        }
-        &:not([data-tone='pass']):not([data-tone='fail']) {
-          border-color: gray;
-        }
-      `;
-      const { container } = render(
-        <Pill testID="pill-spec" {...({ 'data-channel': 'ux' } as object)} />
-      );
-      const node = container.querySelector('[data-testid="pill-spec"]') as HTMLElement;
-      const cls = (node.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
-      const ourCls = cls.find(
-        c => /^[a-zA-Z]+$/.test(c) && !c.startsWith('css-') && !c.startsWith('r-')
-      );
-      const css = readAllCss();
-      // The :not chain should be wrapped in :where(...). The
-      // computed-style verification of cascade winners is browser-
-      // dependent (jsdom's specificity model is not full) so we
-      // assert only on the emitted CSS.
-      expect(css).toMatch(
-        new RegExp('\\.' + ourCls + ':where\\(:not\\([^)]*\\):not\\([^)]*\\)\\)')
-      );
-    });
-  });
-
-  describe('vertical-align flex-keyword rewrite', () => {
-    // rn-web's Text is `display: inline` and authoring CSS with
-    // `vertical-align: middle` is inert (vertical-align only applies
-    // to inline-level content in an inline formatting context). The
-    // bridge rewrites the rule to also emit a flex container with
-    // align-items: <flex-keyword> so the visual lands.
-    const cases: ReadonlyArray<[string, string]> = [
-      ['top', 'flex-start'],
-      ['middle', 'center'],
-      ['bottom', 'flex-end'],
-    ];
-    for (const [keyword, flex] of cases) {
-      it(`emits a companion rule with display:flex + align-items:${flex}, scoped to non-form-control elements`, () => {
-        const Label = styled.Text`
-          height: 120px;
-          vertical-align: ${keyword};
-        `;
-        render(<Label testID={'va-' + keyword}>Hello</Label>);
-        const css = readAllCss();
-        // Original vertical-align preserved
-        expect(css).toMatch(new RegExp('vertical-align:\\s*' + keyword));
-        // Companion rule guarded by :not(textarea):not(input)
-        expect(css).toMatch(
-          new RegExp(':not\\(textarea\\):not\\(input\\)\\s*\\{[^}]*align-items:\\s*' + flex)
-        );
-        expect(css).toMatch(/:not\(textarea\):not\(input\)\s*\{[^}]*display:\s*flex/);
-        // Second companion targets form controls via align-content so
-        // textarea/input vertically position their text content per
-        // CSS Box Alignment L3 §5.
-        expect(css).toMatch(
-          new RegExp(':is\\(textarea,\\s*input\\)\\s*\\{[^}]*align-content:\\s*' + flex)
-        );
-      });
-    }
-
-    it('does not apply the flex polyfill to a textarea (rn-web TextInput multiline)', () => {
-      // For a styled.TextInput (renders as <textarea>) with
-      // vertical-align: middle, the companion rule's :not(textarea)
-      // selector exempts the element so its native layout is preserved.
-      // The second companion (`:is(textarea, input)`) routes through
-      // `align-content` instead, which is the standards-compliant way
-      // to vertically position input text per CSS Box Alignment L3.
+  /*
+   * CSS Box Alignment 3 (https://drafts.csswg.org/css-align-3/), quoted from the editor's draft.
+   *
+   * 5.1.1 Block Containers (Including Table Cells)
+   *   "For table cells, the behavior of align-content: normal depends on the computed value of
+   *   vertical-align: top makes it behave as start and bottom makes it behave as end; otherwise
+   *   middle makes it behave as center, and all other values make it behave as baseline."
+   *   "All values other than normal force the block container to establish an independent
+   *   formatting context."
+   *
+   * CSS Flexible Box Layout 1 (https://drafts.csswg.org/css-flexbox-1/), quoted from the editor's
+   * draft.
+   *
+   * 9.4 Cross Axis Alignment
+   *   "In a single-line flex container, the cross size of the line is the cross size of the flex
+   *   container, and align-content has no effect."
+   *
+   * `vertical-align` is inert on a block container such as a rn-web Text inside a View, so the
+   * bridge writes `align-content` before the rule's authored declarations on the component's own
+   * element. The declaration lands in the same rule, so it never outweighs an authored
+   * `align-content`, `display` or `align-items`, and a single line flex View is unaffected.
+   */
+  describe('vertical-align on the component element', () => {
+    it('writes it for a TextInput, which renders a textarea', () => {
       const Field = styled.TextInput`
         height: 120px;
         vertical-align: middle;
       `;
       const { container } = render(<Field testID="va-input" multiline defaultValue="x" />);
       const node = container.querySelector('[data-testid="va-input"]') as HTMLElement;
-      expect(node.tagName.toLowerCase()).toBe('textarea');
-      // The element should NOT pick up display: flex from the first
-      // companion rule (selector is `:not(textarea):not(input)`).
-      const cs = getComputedStyle(node);
-      expect(cs.display).not.toBe('flex');
-    });
 
-    it('leaves numeric and length values alone', () => {
-      // `vertical-align: <length>` and superscript keywords aren't
-      // remapped — they have their own semantics.
-      const Label = styled.Text`
-        vertical-align: 0.5em;
-      `;
-      render(<Label testID="va-len">x</Label>);
-      const css = readAllCss();
-      expect(css).toMatch(/vertical-align:\s*0\.5em/);
-      // No flex polyfill added.
-      expect(css).not.toMatch(/vertical-align:\s*0\.5em\s*;\s*display:\s*flex/i);
+      expect(node.tagName.toLowerCase()).toBe('textarea');
+      expect(renderedCss(<Field />)).toBe(
+        '.c {align-content: center; height: 120px; vertical-align: middle;}'
+      );
     });
   });
 
-  describe('bare-arg math functions in length-context props', () => {
-    // CSS Values 4 math fns (`abs`, `hypot`, `pow`, `mod`, `rem`,
-    // trig family) return `<number>` when all args are unitless.
-    // The browser then drops the declaration on length-context props
-    // because `width: 180` (a number) isn't `<length>`. The bridge
-    // wraps unitless math-fn values in `calc(<fn>(...) * 1px)` so
-    // the result types as a length.
-    const cases: ReadonlyArray<[string, RegExp]> = [
-      ['width: abs(-180);', /width:\s*calc\(abs\(-180\)\s*\*\s*1px\)/i],
-      ['width: hypot(60, 80);', /width:\s*calc\(hypot\(60,\s*80\)\s*\*\s*1px\)/i],
-      ['width: pow(8, 2);', /width:\s*calc\(pow\(8,\s*2\)\s*\*\s*1px\)/i],
-      ['width: mod(127, 30);', /width:\s*calc\(mod\(127,\s*30\)\s*\*\s*1px\)/i],
-      ['height: sqrt(2);', /height:\s*calc\(sqrt\(2\)\s*\*\s*1px\)/i],
-    ];
-    for (const [decl, expected] of cases) {
-      it(`wraps ${decl}`, () => {
-        const Box = styled.View`
-          ${decl}
-        `;
-        render(<Box testID={'m-' + decl} />);
-        expect(readAllCss()).toMatch(expected);
-      });
-    }
-
-    it('leaves bare math functions in non-length contexts alone', () => {
-      // `opacity` takes <number>; bare-arg math should pass through.
+  /*
+   * CSS Values 4 (https://drafts.csswg.org/css-values-4/), quoted from the editor's draft.
+   *
+   * 10.9 Type Checking
+   *   "A math function can be many possible types, such as <length>, <number>, etc., depending on
+   *   the calculations it contains, as defined below. It can be used anywhere a value of that type
+   *   is allowed."
+   *   "Note: Although there are a few properties in which a bare <number> becomes a <length> at
+   *   used-value time (specifically, line-height and tab-size), <number>s never become
+   *   "length-like" in calc(). They always stay as <number>s."
+   *
+   * A math function on unitless arguments is a `<number>`, so the browser drops it from a length
+   * property, as standard CSS has it. The bridge leaves the value as authored and repairs only a
+   * `var()` joined to a unit.
+   */
+  describe('math functions on unitless arguments', () => {
+    test.each(['width: abs(-180)', 'opacity: pow(0.5, 2)'])('emits %s as authored', decl => {
       const Box = styled.View`
-        opacity: pow(0.5, 2);
+        ${decl};
       `;
-      render(<Box testID="opa" />);
-      const css = readAllCss();
-      expect(css).toMatch(/opacity:\s*pow\(0\.5,\s*2\)/);
-      expect(css).not.toMatch(/opacity:\s*calc\(pow/);
+
+      expect(renderedCss(<Box />)).toBe('.c {' + decl + ';}');
     });
 
-    // BARE_MATH_FN_RE anchors its inner body on non-whitespace so a
-    // malformed whitespace-padded input stays linear-time; the budget
-    // below catches nested-whitespace backtracking.
-    it('rejects whitespace-padded malformed math fns within a wall-clock budget', () => {
-      const attack = 'width: abs(' + ' '.repeat(2000) + '1' + ' '.repeat(2000) + ') X';
-      const t0 = Date.now();
+    it('repairs a var() unit in a nested rule inside an at-rule', () => {
       const Box = styled.View`
-        ${attack}
+        @media (min-width: 100px) {
+          & .child {
+            padding: var(--s, 4)px;
+          }
+        }
       `;
-      render(<Box testID="bare-math-attack" />);
-      readAllCss();
-      const elapsed = Date.now() - t0;
-      expect(elapsed).toBeLessThan(100);
+
+      expect(renderedCss(<Box />)).toBe(
+        '@media (min-width: 100px) {.c .child {padding: calc(var(--s, 4) * 1px);}}'
+      );
     });
 
-    it('leaves already-typed math functions alone', () => {
-      // `hypot(60px, 80px)` already returns length; don't double-wrap.
-      const Box = styled.View`
-        width: hypot(60px, 80px);
+    it('repairs a var() unit in keyframes', () => {
+      const grow = keyframes`
+        to {
+          margin-left: var(--s, 4)px;
+        }
       `;
-      render(<Box testID="typed" />);
-      const css = readAllCss();
-      expect(css).toMatch(/width:\s*hypot\(60px,\s*80px\)/);
-      expect(css).not.toMatch(/calc\(hypot\(60px/);
+      const Box = styled.View`
+        animation: ${grow} 1s;
+      `;
+
+      // jsdom writes a keyframes rule over several lines; the name is generated.
+      const css = renderedCss(<Box />).replace(/\s+/g, ' ');
+      const name = /@keyframes (\S+)/.exec(css)?.[1] ?? '';
+
+      expect(css.replaceAll(name, 'grow')).toBe(
+        '@keyframes grow { to {margin-left: calc(var(--s, 4) * 1px);} } .c {animation: grow 1s;}'
+      );
     });
 
-    // Regression guard: the previous VERT_ALIGN_RULE_RE had adjacent
-    // greedy `[^{}]*` + lazy `[^{}]*?` flanking the `\{`, which on
-    // adversarial input like `.cls<40k chars> vertical-align: top`
-    // produced 1.6s of polynomial backtracking. The indexOf-bounded
-    // rewrite keeps each step O(n).
-    it('vertical-align rewriter handles long class-prefix input within a wall-clock budget', () => {
-      const bridge = require('../native/web-bridge') as {
-        __testOnly_verticalAlignCompanions: (s: string) => string[];
-      };
-      const adversarial = '.cls' + 'a'.repeat(40000) + ' vertical-align: top';
-      const t0 = Date.now();
-      const result = bridge.__testOnly_verticalAlignCompanions(adversarial);
-      const elapsed = Date.now() - t0;
-      // Adversarial input lacks `{` after the class so no companions emit.
-      expect(result).toEqual([]);
-      expect(elapsed).toBeLessThan(50);
+    it('repairs a var() unit in a global style inside an at-rule', () => {
+      const Global = createGlobalStyle`
+        @media (min-width: 100px) {
+          .icon {
+            letter-spacing: var(--s, 4)px;
+          }
+        }
+      `;
+
+      expect(renderedCss(<Global />)).toBe(
+        '@media (min-width: 100px) {.icon {letter-spacing: calc(var(--s, 4) * 1px);}}'
+      );
     });
   });
 
@@ -1809,5 +1783,623 @@ describe('rn-web bridge: createTheme integration', () => {
     // references it via var(). Both should appear in the CSSOM.
     expect(css).toContain('rgb(77, 88, 99)');
     expect(css).toMatch(/var\(--sc-colors-bg/);
+  });
+});
+
+describe('rn-web bridge: rewrites run in every compiler', () => {
+  const sentinel = 'var(--x, 4)';
+
+  it('rewrites a var() unit suffix under a plugin', () => {
+    const Box = styled.View`
+      padding: ${sentinel}px;
+    `;
+
+    expect(
+      renderedCss(
+        <StyleSheetManager plugins={[{ name: 'noop', decl: () => undefined }]}>
+          <Box />
+        </StyleSheetManager>
+      )
+    ).toBe('.c {padding: calc(var(--x, 4) * 1px);}');
+  });
+
+  it('repairs the declarations a plugin writes, after the plugin ran', () => {
+    const Box = styled.View`
+      size: 4;
+    `;
+    const size = {
+      name: 'size',
+      decl: (prop: string, value: string) =>
+        prop === 'size'
+          ? [
+              { prop: 'width', value: 'var(--y, ' + value + ')px' },
+              { prop: 'height', value: 'var(--x, 4)px' },
+            ]
+          : undefined,
+    };
+
+    expect(
+      renderedCss(
+        <StyleSheetManager plugins={[size]}>
+          <Box />
+        </StyleSheetManager>
+      )
+    ).toBe('.c {width: calc(var(--y, 4) * 1px); height: calc(var(--x, 4) * 1px);}');
+  });
+
+  it('rewrites a var() unit suffix under a namespace', () => {
+    const Box = styled.View`
+      padding: ${sentinel}px;
+    `;
+
+    expect(
+      renderedCss(
+        <StyleSheetManager namespace=".app">
+          <Box />
+        </StyleSheetManager>
+      )
+    ).toBe('.app .c {padding: calc(var(--x, 4) * 1px);}');
+  });
+
+  it('writes align-content before vertical-align on a namespaced component, behind the namespace', () => {
+    const Label = styled.Text`
+      vertical-align: middle;
+    `;
+
+    expect(
+      renderedCss(
+        <StyleSheetManager namespace=".app">
+          <Label />
+        </StyleSheetManager>
+      )
+    ).toBe('.app .c {align-content: center; vertical-align: middle;}');
+  });
+
+  it('wraps a :not run whose string holds a paren, which the browser reads as part of the string', () => {
+    const Field = styled.View`
+      &:not([data-x='a)b']) {
+        color: red;
+      }
+      &:not([data-y='ok']) {
+        color: blue;
+      }
+    `;
+
+    expect(renderedCss(<Field />)).toBe(
+      [
+        ".c:where(:not([data-x='a)b'])) {color: red;}",
+        ".c:where(:not([data-y='ok'])) {color: blue;}",
+      ].join('\n')
+    );
+  });
+});
+
+/*
+ * Selectors Level 4 (https://drafts.csswg.org/selectors-4/), quoted from the editor's draft.
+ *
+ * 4.3 The Negation (Matches-None) Pseudo-class: :not()
+ *   "Note: The specificity of the :not() pseudo-class is replaced by the specificity of the most
+ *   specific selector in its argument; thus it has the exact behavior of :not(:is(argument))."
+ *
+ * 4.4 The Specificity-adjustment Pseudo-class: :where()
+ *   "The Specificity-adjustment pseudo-class, :where(), is a functional pseudo-class with the
+ *   same syntax and functionality as :is()."
+ *
+ * 15 Calculating a selector's specificity
+ *   "The specificity of a :where() pseudo-class is replaced by zero."
+ *
+ * A `:not()` on the component's own compound adds (0,1,0) per group, so a run of them outweighs a
+ * later `&[data-x]` rule; inside `:where()` it weighs nothing and source order decides. The wrap
+ * applies to every own comma member, inside at-rules and under a namespace, and leaves a selector
+ * that only holds the component beyond a combinator, global styles and a `:not()` on a context
+ * compound as authored.
+ */
+describe('rn-web bridge: :where() wrap of :not() on the component selector', () => {
+  it('wraps the rule in an at-rule', () => {
+    const Field = styled.View`
+      @media (min-width: 100px) {
+        &:not([data-a]) {
+          color: red;
+        }
+      }
+    `;
+
+    expect(renderedCss(<Field />)).toBe(
+      '@media (min-width: 100px) {.c:where(:not([data-a])) {color: red;}}'
+    );
+  });
+
+  it('wraps behind a namespace', () => {
+    const Field = styled.View`
+      &:not([data-a]) {
+        color: red;
+      }
+    `;
+
+    expect(
+      renderedCss(
+        <StyleSheetManager namespace=".app">
+          <Field />
+        </StyleSheetManager>
+      )
+    ).toBe('.app .c:where(:not([data-a])) {color: red;}');
+  });
+
+  it('wraps every own member of a selector list', () => {
+    const Field = styled.View`
+      &:hover,
+      &:not([data-a]),
+      & .child,
+      &:not([data-b]):not([data-c]) {
+        color: red;
+      }
+    `;
+
+    expect(renderedCss(<Field />)).toBe(
+      '.c:hover,.c:where(:not([data-a])),.c .child,.c:where(:not([data-b]):not([data-c])) {color: red;}'
+    );
+  });
+
+  it('wraps a :not() in any letter case', () => {
+    const Field = styled.View`
+      &:NOT([data-a]) {
+        color: red;
+      }
+    `;
+
+    expect(renderedCss(<Field />)).toBe('.c:where(:NOT([data-a])) {color: red;}');
+  });
+
+  it('wraps before a pseudo-element', () => {
+    const Field = styled.View`
+      &:not([data-a])::before {
+        color: red;
+      }
+    `;
+
+    expect(renderedCss(<Field />)).toBe('.c:where(:not([data-a]))::before {color: red;}');
+  });
+
+  it('leaves a global style as authored', () => {
+    const Global = createGlobalStyle`
+      .x:not([data-y]) {
+        color: red;
+      }
+    `;
+
+    expect(renderedCss(<Global />)).toBe('.x:not([data-y]) {color: red;}');
+  });
+
+  it.each([
+    ['a context compound', '.dark:not(.x) &', '.dark:not(.x) .c'],
+    ['a descendant', '& .child:not([data-a])', '.c .child:not([data-a])'],
+    ['a child combinator', '&:not([data-a]) > *', '.c:not([data-a])>*'],
+    ['a general sibling', '&:not([data-a]) ~ &:not([data-b])', '.c:not([data-a])~.c:not([data-b])'],
+    ['an adjacent sibling', '&:not([data-a]) + &', '.c:not([data-a])+.c'],
+  ])('leaves %s as authored', (_name, authored, emitted) => {
+    const Field = styled.View`
+      ${authored} {
+        color: red;
+      }
+    `;
+
+    expect(renderedCss(<Field />)).toBe(emitted + ' {color: red;}');
+  });
+});
+
+/*
+ * Selectors Level 4 (https://drafts.csswg.org/selectors-4/), quoted from the editor's draft.
+ *
+ * 12.1.1 The :enabled and :disabled Pseudo-classes
+ *   "The :enabled pseudo-class represents user interface elements that are in an enabled state;
+ *   such elements must have a corresponding disabled state. Conversely, the :disabled
+ *   pseudo-class represents user interface elements that are in a disabled state; such elements
+ *   must have a corresponding enabled state."
+ *   "What constitutes an enabled state, a disabled state, and a user interface element is
+ *   host-language-dependent."
+ *
+ * 4.3 The Negation (Matches-None) Pseudo-class: :not()
+ *   "Note: The specificity of the :not() pseudo-class is replaced by the specificity of the most
+ *   specific selector in its argument; thus it has the exact behavior of :not(:is(argument))."
+ *
+ * 15 Calculating a selector's specificity
+ *   "The specificity of an :is(), :not(), or :has() pseudo-class is replaced by the specificity of
+ *   the most specific complex selector in its selector list argument."
+ *
+ * The browser decides what `:disabled` matches (a form control with the `disabled` attribute), so
+ * the bridge adds `[aria-disabled=true]`, which react-native-web sets on a disabled primitive.
+ */
+describe('rn-web bridge: :disabled and :enabled', () => {
+  const DISABLED_HEAD = ':is(:disabled,[aria-disabled=true])';
+  const ENABLED_HEAD = ':not(:is(:disabled,[aria-disabled=true]))';
+
+  describe('emitted rules', () => {
+    it('writes :disabled and :enabled as the browser-matched forms, :not(:disabled) as :enabled', () => {
+      const Box = styled.View`
+        &:disabled {
+          color: red;
+        }
+        &:enabled {
+          color: blue;
+        }
+        &:not(:disabled) {
+          color: green;
+        }
+      `;
+
+      expect(renderedCss(<Box />)).toBe(
+        [
+          '.c' + DISABLED_HEAD + ' {color: red;}',
+          '.c' + ENABLED_HEAD + ' {color: blue;}',
+          '.c' + ENABLED_HEAD + ' {color: green;}',
+        ].join('\n')
+      );
+    });
+
+    it('rewrites the token inside a media query', () => {
+      const Box = styled.View`
+        @media (min-width: 10px) {
+          &:disabled {
+            color: red;
+          }
+          &:enabled {
+            color: blue;
+          }
+        }
+      `;
+
+      expect(renderedCss(<Box />)).toBe(
+        '@media (min-width: 10px) {' +
+          ['.c' + DISABLED_HEAD + ' {color: red;}', '.c' + ENABLED_HEAD + ' {color: blue;}'].join(
+            ''
+          ) +
+          '}'
+      );
+    });
+
+    it('rewrites the token behind a namespace', () => {
+      const Box = styled.View`
+        &:disabled {
+          color: red;
+        }
+      `;
+
+      expect(
+        renderedCss(
+          <StyleSheetManager namespace=".app">
+            <Box />
+          </StyleSheetManager>
+        )
+      ).toBe('.app .c' + DISABLED_HEAD + ' {color: red;}');
+    });
+
+    it('hands a plugin the authored token and rewrites what the plugin returns', () => {
+      const Box = styled.View`
+        &:disabled {
+          color: red;
+        }
+      `;
+      const seen: string[] = [];
+      const record = {
+        name: 'record-heads',
+        rw: (selector: string) => {
+          seen.push(selector.replace(/^\.[a-zA-Z]+/, '.c'));
+          return selector + ':focus';
+        },
+      };
+
+      expect(
+        renderedCss(
+          <StyleSheetManager plugins={[record]}>
+            <Box />
+          </StyleSheetManager>
+        )
+      ).toBe('.c' + DISABLED_HEAD + ':focus {color: red;}');
+      expect(seen).toEqual(['.c:disabled']);
+    });
+
+    it('rewrites the token in a global rule, where :enabled reaches every element', () => {
+      const Global = createGlobalStyle`
+        input:enabled {
+          color: red;
+        }
+      `;
+
+      expect(renderedCss(<Global />)).toBe('input' + ENABLED_HEAD + ' {color: red;}');
+    });
+
+    // Both rules weigh (0,2,0), so on the web the later rule wins: the attribute rule when it
+    // comes second, the pseudo-class rule when it does. Native applies the pseudo-class layer
+    // last, so the pseudo-class rule wins in either order.
+    const pseudoRule = '.c' + ENABLED_HEAD + ' {color: red;}';
+    const attributeRule = '.c[data-x] {color: blue;}';
+
+    it.each([
+      [
+        'enabled, then the attribute rule: the attribute rule wins on the web',
+        styled.View`
+          &:enabled {
+            color: red;
+          }
+          &[data-x] {
+            color: blue;
+          }
+        `,
+        [pseudoRule, attributeRule],
+      ],
+      [
+        'the attribute rule, then enabled: the pseudo-class rule wins on the web',
+        styled.View`
+          &[data-x] {
+            color: blue;
+          }
+          &:enabled {
+            color: red;
+          }
+        `,
+        [attributeRule, pseudoRule],
+      ],
+      [
+        'not-disabled, then the attribute rule: the attribute rule wins on the web',
+        styled.View`
+          &:not(:disabled) {
+            color: red;
+          }
+          &[data-x] {
+            color: blue;
+          }
+        `,
+        [pseudoRule, attributeRule],
+      ],
+      [
+        'the attribute rule, then not-disabled: the pseudo-class rule wins on the web',
+        styled.View`
+          &[data-x] {
+            color: blue;
+          }
+          &:not(:disabled) {
+            color: red;
+          }
+        `,
+        [attributeRule, pseudoRule],
+      ],
+    ])('keeps source order between the rules: %s', (_name, Box, expected) => {
+      expect(renderedCss(<Box />)).toBe(expected.join('\n'));
+    });
+  });
+
+  describe('matching in the DOM', () => {
+    /** The element carrying the component's class, and the two heads its sheet holds. */
+    function findCarrier(container: HTMLElement) {
+      const heads: string[] = [];
+      for (const sheet of Array.from(document.styleSheets)) {
+        for (const rule of Array.from(sheet.cssRules)) {
+          if (rule instanceof CSSStyleRule) heads.push(rule.selectorText);
+        }
+      }
+
+      for (const element of Array.from(container.querySelectorAll('*'))) {
+        for (const name of Array.from(element.classList)) {
+          if (heads.includes('.' + name + DISABLED_HEAD)) {
+            return {
+              disabledHead: '.' + name + DISABLED_HEAD,
+              element,
+              enabledHead: '.' + name + ENABLED_HEAD,
+            };
+          }
+        }
+      }
+
+      return null;
+    }
+
+    const rules = `
+      &:disabled {
+        color: red;
+      }
+      &:enabled {
+        color: blue;
+      }
+    `;
+
+    type ProbeProps = {
+      accessibilityState?: { disabled?: boolean };
+      'aria-disabled'?: boolean;
+      'aria-readonly'?: boolean;
+      children?: React.ReactNode;
+      disabled?: boolean;
+    };
+    type Probe = React.ComponentType<ProbeProps>;
+
+    const Child = styled.View``;
+    const { Switch: RawSwitch }: { Switch: Probe } = require('react-native-web');
+    // The bridge's View turns the forwarded className into the DOM class; rn-web's own View drops it.
+    const ForwardingView = (props: ProbeProps) => <Child {...props} />;
+    type Primitive = { child: boolean; make: () => Probe; name: string };
+    const primitives = {
+      Pressable: { child: false, make: () => styled.Pressable`${rules}`, name: 'Pressable' },
+      TouchableOpacity: {
+        child: false,
+        make: () => styled.TouchableOpacity`${rules}`,
+        name: 'TouchableOpacity',
+      },
+      // rn-web's TouchableHighlight clones its single child.
+      TouchableHighlight: {
+        child: true,
+        make: () => styled.TouchableHighlight`${rules}`,
+        name: 'TouchableHighlight',
+      },
+      TextInput: { child: false, make: () => styled.TextInput`${rules}`, name: 'TextInput' },
+      Text: { child: false, make: () => styled.Text`${rules}`, name: 'Text' },
+      Switch: { child: false, make: () => styled.Switch`${rules}`, name: 'Switch' },
+      StyledSwitch: {
+        child: false,
+        make: () => styled(RawSwitch)`${rules}`,
+        name: 'styled(Switch)',
+      },
+    } satisfies Record<string, Primitive>;
+    const viewBacked = {
+      View: { child: false, make: () => styled.View`${rules}`, name: 'View' },
+      ForwardingView: {
+        child: false,
+        make: () => styled(ForwardingView)`${rules}`,
+        name: 'styled(custom component forwarding to View)',
+      },
+    } satisfies Record<string, Primitive>;
+
+    /** Renders `primitive` with `props` and returns the element carrying the component's class. */
+    function carrierOf({ child, make, name }: Primitive, props: ProbeProps) {
+      const Component = make();
+      const { container } = render(
+        <Component {...props}>{child ? <Child /> : undefined}</Component>
+      );
+      const carrier = findCarrier(container);
+      if (carrier === null) throw new Error(name + ' rendered no element holding its class');
+
+      return carrier;
+    }
+
+    function matchesOf(
+      primitive: Primitive,
+      props: ProbeProps
+    ): { disabled: boolean; enabled: boolean } {
+      const { disabledHead, element, enabledHead } = carrierOf(primitive, props);
+
+      return { disabled: element.matches(disabledHead), enabled: element.matches(enabledHead) };
+    }
+
+    // rn-web's TouchableOpacity hands its View a deprecated pointerEvents prop while disabled.
+    let warn: jest.SpyInstance;
+    beforeEach(() => {
+      warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+    afterEach(() => {
+      const messages = warn.mock.calls.map(call => call[0]);
+      warn.mockRestore();
+
+      expect(
+        messages.filter(m => m !== 'props.pointerEvents is deprecated. Use style.pointerEvents')
+      ).toEqual([]);
+    });
+
+    test.each(
+      Object.values(primitives).flatMap(primitive => [
+        { disabled: true, primitive },
+        { disabled: false, primitive },
+        { disabled: undefined, primitive },
+      ])
+    )(
+      '$primitive.name with disabled=$disabled matches the form its state names',
+      ({ disabled, primitive }) => {
+        expect(matchesOf(primitive, { disabled })).toEqual({
+          disabled: disabled === true,
+          enabled: disabled !== true,
+        });
+      }
+    );
+
+    // The browser matches `[aria-disabled=true]` on any element, so these differ from native.
+    it('does not match a Pressable given aria-disabled alone, as native ignores it', () => {
+      expect(matchesOf(primitives.Pressable, { 'aria-disabled': true })).toEqual({
+        disabled: false,
+        enabled: true,
+      });
+    });
+
+    test.each([primitives.TouchableHighlight, viewBacked.ForwardingView])(
+      'matches :disabled for $name given aria-disabled alone, which native ignores',
+      primitive => {
+        expect(matchesOf(primitive, { 'aria-disabled': true })).toEqual({
+          disabled: true,
+          enabled: false,
+        });
+      }
+    );
+
+    it('carries aria-disabled=true on the DOM element of a TextInput given aria-disabled alone', () => {
+      const { element } = carrierOf(primitives.TextInput, { 'aria-disabled': true });
+
+      // rn-web writes both the attribute and the native `disabled` attribute for a TextInput.
+      expect({
+        ariaDisabled: element.getAttribute('aria-disabled'),
+        disabled: element.hasAttribute('disabled'),
+        tag: element.tagName,
+      }).toEqual({ ariaDisabled: 'true', disabled: true, tag: 'INPUT' });
+      expect(matchesOf(primitives.TextInput, { 'aria-disabled': true })).toEqual({
+        disabled: true,
+        enabled: false,
+      });
+    });
+
+    // rn-web writes nothing from a Text's `disabled`, so the bridge sets aria-disabled for `true`.
+    test.each([
+      [{ disabled: true }, 'true'],
+      [{ disabled: false }, null],
+      [{}, null],
+    ])('Text with %j carries aria-disabled=%s', (props, expected) => {
+      expect(carrierOf(primitives.Text, props).element.getAttribute('aria-disabled')).toBe(
+        expected
+      );
+    });
+
+    // rn-web makes any non-null aria-readonly read-only, while native treats `false` as editable.
+    test.each([
+      [{ 'aria-readonly': true }, true],
+      [{ 'aria-readonly': false }, false],
+      [{}, false],
+    ])(
+      'TextInput with %j is readOnly=%s and matches :read-write accordingly',
+      (props, readOnly) => {
+        const { element } = carrierOf(primitives.TextInput, props);
+
+        expect(element instanceof HTMLInputElement && element.readOnly).toBe(readOnly);
+        expect(element.matches(':read-write')).toBe(!readOnly);
+      }
+    );
+
+    // Native's :disabled reads the `disabled` prop only, so the legacy accessibilityState does not match.
+    test.each([primitives.Pressable, viewBacked.View])(
+      'does not match :disabled for $name given accessibilityState={{ disabled: true }}',
+      primitive => {
+        expect(matchesOf(primitive, { accessibilityState: { disabled: true } })).toEqual({
+          disabled: false,
+          enabled: true,
+        });
+      }
+    );
+
+    it('matches a TouchableOpacity given aria-disabled beside disabled={false}', () => {
+      expect(
+        matchesOf(primitives.TouchableOpacity, { 'aria-disabled': true, disabled: false })
+      ).toEqual({
+        disabled: true,
+        enabled: false,
+      });
+    });
+
+    describe.each([primitives.Switch, primitives.StyledSwitch])('$name root', primitive => {
+      // rn-web gives a Switch's `disabled` to its inner checkbox only; the root View takes
+      // aria-disabled, so the bridge sets it from `disabled`. rn-web writes the attribute for
+      // `true` only.
+      test.each([
+        [{ disabled: true }, 'true'],
+        [{ disabled: false }, null],
+        [{}, null],
+        [{ 'aria-disabled': true, disabled: true }, 'true'],
+        [{ 'aria-disabled': false, disabled: true }, 'true'],
+        [{ 'aria-disabled': false, disabled: false }, null],
+        [{ 'aria-disabled': true }, 'true'],
+        [{ 'aria-disabled': false }, null],
+      ])('with %j carries aria-disabled=%s', (props, expected) => {
+        expect(carrierOf(primitive, props).element.getAttribute('aria-disabled')).toBe(expected);
+      });
+
+      it('matches :disabled for aria-disabled alone, which native ignores', () => {
+        expect(matchesOf(primitive, { 'aria-disabled': true })).toEqual({
+          disabled: true,
+          enabled: false,
+        });
+      });
+    });
   });
 });

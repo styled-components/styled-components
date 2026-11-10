@@ -3,7 +3,7 @@ This file is the repo's only agent instructions file; there is no CLAUDE.md. It 
 ## CSS surface
 
 - styled-components supports only standards-compliant CSS in authored styles.
-- The native layer exists to map idiomatic CSS to equivalent platform primitives and polyfill what is possible until React Native catches up.
+- The goal is a rendering substrate that feels equivalent on native and web: the same styles mean the same thing on both. Where one platform lacks a behavior, the library adds carefully planned emulation (on native, or on the web bridge), and documents what still differs.
 - Do not add authored property names or spellings that are not real CSS (no inventing kebab-case aliases for React Native-only props). Standard properties and values only; platform-specific RN style keys belong in `style={{}}` or upstream RN CSS support, not in the template DSL.
 
 ## Basics
@@ -150,7 +150,7 @@ The `packages/native-showcase` app is the visual QA surface for v7 native polyfi
 - TypeScript type-instantiation budget, measured type constraints, and type-surface testing: [docs/typescript-performance.md](docs/typescript-performance.md)
 - React 19 behaviors that hit the render hot path and SSR/RSC output: [docs/react.md](docs/react.md)
 - `StyleSheetManager` namespace placement, inheritance, and the server default: [docs/namespace.md](docs/namespace.md)
-- React Native substrate: CSS capability by RN version, Yoga divergences, the in-house declaration transform: [docs/react-native.md](docs/react-native.md)
+- React Native substrate: CSS capability by RN version, Yoga divergences, the in-house declaration transform, interaction and element state matching, the web bridge's compiler-seam transforms: [docs/react-native.md](docs/react-native.md)
 - Jest + jsdom: jsdom's modern-CSS ceiling and how the web suite reads injected CSS: [docs/jest.md](docs/jest.md)
 - Bundling: per-bundle build-constant substitution, terser DCE traps, testing tree-shaking, bundle size and property mangling, dts/TS2742, edge runtime, published files: [docs/bundling.md](docs/bundling.md)
 - Web rendering sequence diagram: [docs/rendering-flow.md](docs/rendering-flow.md) (web flow only)

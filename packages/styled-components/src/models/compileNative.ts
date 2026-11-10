@@ -5,9 +5,12 @@ import {
   NATIVE_AT_CLASS,
   NATIVE_RULE_CLASS,
   NativeRuleClass,
+  NativeSelectorClass,
   NodeKind,
+  NthOfBranch,
   NthSpec,
   PseudoState,
+  PseudoTerm,
   StaticAtRuleNode,
   StaticDeclNode,
   StaticNode,
@@ -16,6 +19,8 @@ import {
 } from '../parser/ast';
 import { classifyAtRuleNow, classifyRuleNow } from '../parser/nativePlan';
 import { camelize } from '../native/camelize';
+import type { SiblingInfo } from '../native/ParentContext';
+import { PSEUDO_BIT, PSEUDO_TO_SELECTOR } from '../native/pseudoBits';
 import { transformDecl } from '../native/transform';
 import { warnIfNativeCssVar, warnOnce } from '../native/transform/dev';
 import { getPrimaryPassthroughKey } from '../native/transform/passthrough';
@@ -75,23 +80,30 @@ export type ConditionType =
 
 export type { PseudoState, ConditionalAttr, NthSpec };
 
-export interface ConditionalStyle {
-  type: ConditionType;
+/**
+ * The `:nth-child(an+b of S)` filter over one parent's children, cached on its entry and rebuilt when
+ * the siblings array changes.
+ * @internal
+ */
+interface NthOfPlan {
+  entriesRef: ReadonlyArray<SiblingInfo> | null;
+  /** Highest `index` value seen in the most recent build (lookup bound). */
+  maxIndex: number;
+  /** `posByIndex[fullListIndex]` = 1-based filter position, 0 if not in the filter. */
+  posByIndex: Int32Array;
+  /** Total siblings matching the inner selector. */
+  total: number;
+}
+
+interface ConditionalStyleFields {
   /**
-   * For media/container/supports: the raw prelude (e.g. `(min-width: 400px)`).
-   * For pseudo: the pseudo-state name (`hover`, `pressed`, etc.) from {@link PseudoState}.
-   * For attr: the attribute name (mirrored from {@link attribute}; render-time
-   * logic reads `attribute`).
-   * When type is `container`, {@link containerName} holds the optional named-container.
+   * For an `:nth-child(an+b of S)` entry: the filter cache the matcher fills on first use.
+   * @internal
    */
-  condition: string;
+  __ofCache?: NthOfPlan;
+  /** The remaining terms of a pseudo-class compound (`&:hover:not(:disabled)`); each must also hold. */
+  and?: PseudoTerm[];
   containerName?: string;
-  /**
-   * When set, the bucket is ALSO gated on a pseudo-state (from `&:hover` nested
-   * inside a `@media`/`@container`/`@supports` rule). The render path merges
-   * the bucket only when BOTH the outer condition AND the pseudo-state hold.
-   */
-  pseudo?: PseudoState;
   /**
    * For type 'attr': one or more (name, value?) pairs that ALL must
    * match for the bucket to apply. Single-attr selectors produce a
@@ -101,11 +113,14 @@ export interface ConditionalStyle {
    */
   attrs?: ConditionalAttr[];
   /**
-   * Inversion flag for `&:not(<simple-selector>)`. When true, the
-   * matcher inverts the result of the pseudo / attr predicate so the
-   * bucket fires when the inner selector does NOT match.
+   * Inversion flag for `&:not(:hover)` and the structural / `:has()` selectors: the matcher inverts
+   * the predicate so the bucket fires when it does NOT match. A negated attribute carries its own
+   * flag on the {@link ConditionalAttr}. On an entry that also carries `pseudo`, it inverts the
+   * structural gate; {@link pseudoNegate} inverts the pseudo-class.
    */
   negate?: boolean;
+  /** On an entry with another gate (`@media &:not(:active)`, `&[x]:not(:active)`): the `pseudo` term is negated. */
+  pseudoNegate?: boolean;
   /** For type 'combinator': `descendant` matches anywhere on the
    *  ancestor chain; `child` matches only the immediate parent;
    *  `adjacent-sibling` matches when the previous sibling is the
@@ -145,10 +160,45 @@ export interface ConditionalStyle {
   varDeferred?: ReadonlyArray<readonly [string, string, boolean]>;
 }
 
-/** Partition slice for {@link NativeStyles.nonPseudoEntries}: never `type: 'pseudo'`. */
-export type NonPseudoConditionalStyle = Omit<ConditionalStyle, 'type'> & {
+/**
+ * `&:hover` and friends: the bucket applies while the pseudo-state named by
+ * `condition` ({@link PseudoState}) holds.
+ */
+export interface PseudoConditionalStyle extends ConditionalStyleFields {
+  condition: PseudoState;
+  pseudo?: undefined;
+  type: 'pseudo';
+}
+
+/**
+ * A non-pseudo bucket that is ALSO gated on a pseudo-state (from `&:hover`
+ * nested inside a `@media`/`@container`/`@supports` rule, or compounded with
+ * an attribute or structural selector). The render path merges the bucket
+ * only when BOTH its own condition AND `pseudo` hold.
+ */
+export interface GatedConditionalStyle extends ConditionalStyleFields {
+  /**
+   * For media/container/supports: the raw prelude (e.g. `(min-width: 400px)`).
+   * For attr: the attribute name list. For combinator: the referenced id.
+   * For nthChild/has: the structural key. When type is `container`,
+   * {@link containerName} holds the optional named-container.
+   */
+  condition: string;
+  pseudo: PseudoState;
   type: Exclude<ConditionType, 'pseudo'>;
-};
+}
+
+/** Partition slice for {@link NativeStyles.nonPseudoEntries}: no pseudo-state gate. */
+export interface NonPseudoConditionalStyle extends ConditionalStyleFields {
+  condition: string;
+  pseudo?: undefined;
+  type: Exclude<ConditionType, 'pseudo'>;
+}
+
+/** Partition slice for {@link NativeStyles.pseudoEntries}: every entry reads a pseudo-state. */
+export type PseudoBearingConditionalStyle = PseudoConditionalStyle | GatedConditionalStyle;
+
+export type ConditionalStyle = PseudoBearingConditionalStyle | NonPseudoConditionalStyle;
 
 function isNonPseudoConditionalStyle(entry: ConditionalStyle): entry is NonPseudoConditionalStyle {
   return entry.type !== 'pseudo' && !entry.pseudo;
@@ -188,18 +238,25 @@ export interface NativeStyles {
   nonPseudoEntries: NonPseudoConditionalStyle[];
   /**
    * Subset of `conditional` containing only pseudo-bearing buckets
-   * (`:hover` / `:focus` / `:pressed` / `:disabled`, including compound
+   * (`:hover` / `:focus` / `:active` / `:disabled` / `:enabled` / `:read-only` /
+   * `:read-write`, including compound
    * `&[attr]:hover` and `&:nth-child(...):hover` forms). The state
    * callback iterates this slice instead of re-scanning all conditional
    * entries on every state transition.
    */
-  pseudoEntries: ConditionalStyle[];
+  pseudoEntries: PseudoBearingConditionalStyle[];
   /**
    * `true` when {@link pseudoEntries} is non-empty; convenience alias so
    * the render path can check a single boolean to decide whether to
    * emit the state-callback branch.
    */
   hasPseudo: boolean;
+  /**
+   * OR of the {@link PSEUDO_BIT} of every pseudo-class any entry reads, negated ones included.
+   * Always set; the render path computes only the states whose bits are present.
+   * @internal
+   */
+  pseudoReads: number;
   /** Keyframes collected for animation-adapter handoff. */
   keyframes: CompiledKeyframes[];
   /**
@@ -656,15 +713,21 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
   const base = hasBaseStyleDecls ? styleSheet.create({ generated: resolvedBase }).generated : {};
   // Single pass: partition conditional into pseudo-bearing and non-pseudo
   // subsets, so neither matchConditionals nor pseudoStylesForState
-  // re-scans the other class on every render. Alias `conditional` when
-  // it's all-one-kind to avoid empty-vs-clone allocations for the
-  // overwhelmingly common shapes (all media / all pseudo).
-  const pseudoEntries: ConditionalStyle[] = [];
+  // re-scans the other class on every render.
+  const pseudoEntries: PseudoBearingConditionalStyle[] = [];
   const nonPseudoEntries: NonPseudoConditionalStyle[] = [];
+  let pseudoReads = 0;
   for (let i = 0; i < conditional.length; i++) {
     const e = conditional[i];
-    if (isNonPseudoConditionalStyle(e)) nonPseudoEntries.push(e);
-    else pseudoEntries.push(e);
+    if (isNonPseudoConditionalStyle(e)) {
+      nonPseudoEntries.push(e);
+    } else {
+      pseudoEntries.push(e);
+      pseudoReads |= PSEUDO_BIT[e.type === 'pseudo' ? e.condition : e.pseudo];
+      if (e.and !== undefined) {
+        for (let j = 0; j < e.and.length; j++) pseudoReads |= PSEUDO_BIT[e.and[j].pseudo];
+      }
+    }
   }
   const hasPseudo = pseudoEntries.length > 0;
   const out: NativeStyles = {
@@ -672,6 +735,7 @@ export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): Nati
     conditional,
     nonPseudoEntries,
     pseudoEntries,
+    pseudoReads,
     keyframes,
     hasPseudo,
     // Filled below, once the scan can read the resolvers, `!important` layers and `var()` deferrals.
@@ -1106,16 +1170,81 @@ function pickCycled(list: unknown[] | null, i: number, fallback: unknown): unkno
   return list[i % list.length];
 }
 
-function describeCondition(entry: ConditionalStyle): string {
-  if (entry.type === 'pseudo') return ':' + entry.condition;
-  if (entry.type === 'attr') {
-    if (!entry.attrs) return '[?]';
-    return entry.attrs
-      .map(a => (a.value !== undefined ? `[${a.name}="${a.value}"]` : `[${a.name}]`))
-      .join('');
+function negated(selector: string, negate: boolean | undefined): string {
+  return negate === true ? ':not(' + selector + ')' : selector;
+}
+
+function describePseudo(pseudo: PseudoState, negate: boolean | undefined): string {
+  return negated(PSEUDO_TO_SELECTOR[pseudo], negate);
+}
+
+function describeAttr(a: ConditionalAttr): string {
+  const text =
+    a.value === undefined
+      ? `[${a.name}]`
+      : `[${a.name}${a.operator ?? '='}"${a.value}"${a.caseFlag === undefined ? '' : ' ' + a.caseFlag}]`;
+  return negated(text, a.negate);
+}
+
+function describeSimple(inner: NthOfBranch): string {
+  return inner.kind === 'component' ? '.' + inner.id : describeAttr(inner.attr);
+}
+
+const COMBINATOR_TEXT = {
+  'adjacent-sibling': ' + ',
+  child: ' > ',
+  descendant: ' ',
+  'general-sibling': ' ~ ',
+} as const satisfies Record<NonNullable<ConditionalStyle['combinator']>, string>;
+
+/** `:first-child`, `:nth-last-of-type(2n+1)`, `:nth-child(2n of [x])` and kin. */
+function describeNth(spec: NthSpec): string {
+  const kind = spec.ofType ? 'of-type' : 'child';
+  if (spec.onlyChild === true) return ':only-' + kind;
+  if (spec.a === 0 && spec.b === 1 && spec.of === undefined) {
+    return (spec.fromEnd ? ':last-' : ':first-') + kind;
   }
+  let formula = spec.a === 0 ? '' : spec.a === 1 ? 'n' : spec.a === -1 ? '-n' : spec.a + 'n';
+  if (spec.b !== 0 || spec.a === 0) {
+    formula += spec.a !== 0 && spec.b > 0 ? '+' + spec.b : String(spec.b);
+  }
+  const of = spec.of === undefined ? '' : ' of ' + describeSimple(spec.of);
+  return ':nth-' + (spec.fromEnd ? 'last-' : '') + kind + '(' + formula + of + ')';
+}
+
+function describeAndTerms(and: PseudoTerm[] | undefined): string {
+  let out = '';
+  if (and !== undefined) {
+    for (let i = 0; i < and.length; i++) out += describePseudo(and[i].pseudo, and[i].negate);
+  }
+  return out;
+}
+
+/** The entry's condition as the author wrote it, for warnings. */
+function describeCondition(entry: ConditionalStyle): string {
+  if (entry.type === 'pseudo') {
+    return describePseudo(entry.condition, entry.negate) + describeAndTerms(entry.and);
+  }
+  const pseudoTerms =
+    entry.pseudo === undefined
+      ? ''
+      : describePseudo(entry.pseudo, entry.pseudoNegate) + describeAndTerms(entry.and);
+  const attrs = entry.attrs === undefined ? '' : entry.attrs.map(describeAttr).join('');
+  const selector = attrs + pseudoTerms;
+  if (entry.type === 'attr') return selector;
+  if (entry.type === 'nthChild' && entry.nthSpec !== undefined) {
+    return negated(describeNth(entry.nthSpec), entry.negate) + pseudoTerms;
+  }
+  if (entry.type === 'has' && entry.hasInner !== undefined) {
+    return negated(':has(' + describeSimple(entry.hasInner) + ')', entry.negate) + pseudoTerms;
+  }
+  if (entry.type === 'combinator' && entry.combinator !== undefined) {
+    return '.' + entry.condition + COMBINATOR_TEXT[entry.combinator] + '&' + pseudoTerms;
+  }
+
   // media / container / supports: type + prelude
-  return `@${entry.type} ${entry.condition}`;
+  const gate = `@${entry.type} ${entry.condition}`;
+  return selector === '' ? gate : gate + ' ' + selector;
 }
 
 /**
@@ -1555,13 +1684,43 @@ function handleRootRule(node: StaticRuleNode, conditional: ConditionalStyle[]): 
   applyRuleClass(node, cls, conditional, undefined);
 }
 
+/** Dev warning for a selector the native matcher cannot express; `selector` is the offending member's text. */
+function warnComplexSelector(selector: string): void {
+  warnOnce(
+    'native-complex-selector',
+    `complex selectors are not supported yet (received: ${selector}). Only pseudo-state selectors (\`&:hover\`, \`&:focus\`, \`&:focus-visible\`, \`&:active\`, \`&:disabled\`, \`&:enabled\`, \`&:read-only\`, \`&:read-write\`, and combinations such as \`&:hover:not(:disabled)\`), attribute selectors (\`&[aria-pressed]\`, \`&[aria-pressed='true']\`, and the same followed by pseudo-states such as \`&[aria-pressed='true']:hover:not(:disabled)\`), and \`&:is(...)\` / \`&:where(...)\` enumerations of pseudo states are supported on native. Each member of a selector list is judged on its own. The selector was ignored.`,
+    selector
+  );
+}
+
+/** Warns once per unsupported member: the whole selector of a single-selector rule, else each list member alone. */
+function warnUnsupportedSelectors(node: StaticRuleNode, cls: NativeRuleClass): void {
+  if (cls.kind === 'unsupported') {
+    warnComplexSelector(node.selectors.join(', '));
+  } else if (cls.kind === 'list') {
+    for (let i = 0; i < cls.members.length; i++) {
+      if (cls.members[i].kind === 'unsupported') warnComplexSelector(node.selectors[i]);
+    }
+  }
+}
+
+/** Whether a rule has a selector to apply: a list is applicable when any member is supported. */
+function hasSupportedSelector(cls: NativeRuleClass): boolean {
+  if (cls.kind !== 'list') return cls.kind !== 'unsupported';
+  for (let i = 0; i < cls.members.length; i++) {
+    if (cls.members[i].kind !== 'unsupported') return true;
+  }
+  return false;
+}
+
 /**
  * Apply a classified rule's children into a conditional bucket. When
  * `outerType` is set, the bucket is gated on an enclosing at-rule
  * (`outerType` + `outerCondition` + optional `outerContainerName`); the
  * pseudo / attr classification then layers as a second gate. When
  * `outerType` is undefined the bucket is a top-level conditional
- * (pseudo or attr only).
+ * (pseudo or attr only). A selector list applies each supported member
+ * as if written alone.
  */
 function applyRuleClass(
   node: StaticRuleNode,
@@ -1569,48 +1728,44 @@ function applyRuleClass(
   conditional: ConditionalStyle[],
   outer: OuterGate | undefined
 ): void {
-  if (cls.kind === 'unsupported') {
-    if (__DEV__ && outer === undefined) {
-      const sels = node.selectors.join(', ');
-      warnOnce(
-        'native-complex-selector',
-        `complex selectors are not supported yet (received: ${sels}). Only pseudo-state selectors (\`&:hover\`, \`&:focus\`, \`&:focus-visible\`, \`&:active\`, \`&:disabled\`), attribute selectors (\`&[aria-pressed]\`, \`&[aria-pressed='true']\`), and \`&:is(...)\` / \`&:where(...)\` enumerations of pseudo states are supported on native. The rule was ignored.`,
-        sels
-      );
-    }
-    return;
-  }
+  if (__DEV__ && outer === undefined) warnUnsupportedSelectors(node, cls);
+  if (!hasSupportedSelector(cls)) return;
   const decls = collectDecls(node.children);
   if (decls.length === 0) return;
-  const { base, resolvers, important, importantResolvers, varDeferred } = processDecls(decls);
+  const payload = processDecls(decls);
+
+  if (cls.kind !== 'list') {
+    pushSelectorBuckets(conditional, payload, cls, outer);
+    return;
+  }
+  for (let i = 0; i < cls.members.length; i++) {
+    pushSelectorBuckets(conditional, payload, cls.members[i], outer);
+  }
+}
+
+/** Materialize the buckets of one supported selector from a rule's processed declarations. */
+function pushSelectorBuckets(
+  conditional: ConditionalStyle[],
+  payload: ReturnType<typeof processDecls>,
+  cls: NativeSelectorClass,
+  outer: OuterGate | undefined
+): void {
+  if (cls.kind === 'unsupported') return;
+  const { base, resolvers, important, importantResolvers, varDeferred } = payload;
 
   if (cls.kind === 'pseudo') {
-    pushBucket(
-      conditional,
-      base,
-      resolvers,
-      important,
-      importantResolvers,
-      varDeferred,
+    pushBucket(conditional, base, resolvers, important, importantResolvers, varDeferred, {
+      and: cls.and,
+      negate: cls.negate,
       outer,
-      cls.pseudo,
-      undefined,
-      cls.negate
-    );
+      pseudo: cls.pseudo,
+    });
   } else if (cls.kind === 'pseudoFanOut') {
     for (let i = 0; i < cls.pseudos.length; i++) {
-      pushBucket(
-        conditional,
-        base,
-        resolvers,
-        important,
-        importantResolvers,
-        varDeferred,
+      pushBucket(conditional, base, resolvers, important, importantResolvers, varDeferred, {
         outer,
-        cls.pseudos[i],
-        undefined,
-        undefined
-      );
+        pseudo: cls.pseudos[i],
+      });
     }
   } else if (cls.kind === 'combinator') {
     pushCombinatorBucket(
@@ -1648,18 +1803,14 @@ function applyRuleClass(
   } else {
     // attr
     for (let i = 0; i < cls.selectors.length; i++) {
-      pushBucket(
-        conditional,
-        base,
-        resolvers,
-        important,
-        importantResolvers,
-        varDeferred,
+      const attrSel = cls.selectors[i];
+      pushBucket(conditional, base, resolvers, important, importantResolvers, varDeferred, {
+        and: attrSel.and,
+        attrSel,
         outer,
-        cls.selectors[i].pseudo,
-        cls.selectors[i],
-        cls.negate
-      );
+        pseudo: attrSel.pseudo,
+        pseudoNegate: attrSel.pseudoNegate,
+      });
     }
   }
 }
@@ -1678,7 +1829,13 @@ function pushNthChildBucket(
   importantResolvers: Array<[string, Resolver]> | null,
   varDeferred: Array<[string, string, boolean]> | null,
   outer: OuterGate | undefined,
-  cls: { spec: NthSpec; pseudo?: PseudoState; negate?: boolean }
+  cls: {
+    and?: PseudoTerm[];
+    negate?: boolean;
+    pseudo?: PseudoState;
+    pseudoNegate?: boolean;
+    spec: NthSpec;
+  }
 ): void {
   if (outer !== undefined) return;
   const entry: ConditionalStyle = {
@@ -1686,16 +1843,17 @@ function pushNthChildBucket(
     condition: nthSpecKey(cls.spec),
     nthSpec: cls.spec,
     styles: base,
+    ...(cls.pseudo ? { pseudo: cls.pseudo } : undefined),
   };
-  if (cls.pseudo) entry.pseudo = cls.pseudo;
   if (cls.negate === true) entry.negate = true;
+  if (cls.pseudoNegate === true) entry.pseudoNegate = true;
+  if (cls.and !== undefined) entry.and = cls.and;
+  entry.styles = stripSpecialCasesFromConditional(base, entry);
   attachBucketExtras(entry, resolvers, important, importantResolvers, varDeferred);
   conditional.push(entry);
 }
 
-/** Stable cache-key string for an NthSpec (used as `condition` so
- *  describeCondition and dedup paths have a single source-of-truth
- *  string identity). */
+/** Stable key string for an NthSpec, stored as the entry's `condition`. */
 function nthSpecKey(spec: NthSpec): string {
   const dir = spec.fromEnd ? 'L' : 'F';
   const ot = spec.ofType ? 't' : 'c';
@@ -1741,9 +1899,10 @@ function pushHasBucket(
     condition,
     hasInner: inner,
     styles: base,
+    ...(cls.pseudo ? { pseudo: cls.pseudo } : undefined),
   };
-  if (cls.pseudo) entry.pseudo = cls.pseudo;
   if (cls.negate === true) entry.negate = true;
+  entry.styles = stripSpecialCasesFromConditional(base, entry);
   attachBucketExtras(entry, resolvers, important, importantResolvers, varDeferred);
   conditional.push(entry);
 }
@@ -1778,10 +1937,24 @@ function pushCombinatorBucket(
     condition: cls.ancestorId,
     combinator: cls.combinator,
     styles: base,
+    ...(cls.pseudo ? { pseudo: cls.pseudo } : undefined),
   };
-  if (cls.pseudo) entry.pseudo = cls.pseudo;
+  entry.styles = stripSpecialCasesFromConditional(base, entry);
   attachBucketExtras(entry, resolvers, important, importantResolvers, varDeferred);
   conditional.push(entry);
+}
+
+/** The gates of a {@link pushBucket} bucket: any combination of outer at-rule, pseudo-class and attribute selector. */
+interface BucketGates {
+  /** The remaining terms of a pseudo-class compound. */
+  and?: PseudoTerm[] | undefined;
+  attrSel?: AttrSelector | undefined;
+  /** Inverts the leading pseudo-class. */
+  negate?: boolean | undefined;
+  outer?: OuterGate | undefined;
+  pseudo?: PseudoState | undefined;
+  /** Inverts `pseudo` on an entry that has an attribute selector. */
+  pseudoNegate?: boolean | undefined;
 }
 
 /**
@@ -1797,33 +1970,47 @@ function pushBucket(
   important: Dict<unknown> | null,
   importantResolvers: Array<[string, Resolver]> | null,
   varDeferred: Array<[string, string, boolean]> | null,
-  outer: OuterGate | undefined,
-  pseudo: PseudoState | undefined,
-  attrSel: AttrSelector | undefined,
-  negate: boolean | undefined
+  { and, attrSel, negate, outer, pseudo, pseudoNegate }: BucketGates
 ): void {
+  // A pseudo-class riding an at-rule gate records its negation in `pseudoNegate`.
+  const negation = negate !== true ? undefined : outer ? { pseudoNegate: true } : { negate: true };
+  const terms = {
+    ...negation,
+    ...(pseudoNegate === true ? { pseudoNegate } : undefined),
+    ...(and !== undefined ? { and } : undefined),
+  };
+
   let entry: ConditionalStyle;
   if (outer) {
-    entry = { type: outer.type, condition: outer.condition, styles: base };
-    if (outer.containerName) entry.containerName = outer.containerName;
-    if (pseudo) entry.pseudo = pseudo;
-    if (attrSel) entry.attrs = attrSel.attrs;
+    entry = {
+      type: outer.type,
+      condition: outer.condition,
+      styles: base,
+      ...(pseudo ? { pseudo } : undefined),
+      ...(outer.containerName ? { containerName: outer.containerName } : undefined),
+      ...(attrSel ? { attrs: attrSel.attrs } : undefined),
+      ...terms,
+    };
   } else if (attrSel) {
     entry = {
       type: 'attr',
       condition: attrSel.attrs
-        .map(a => (a.value !== undefined ? `${a.name}=${a.value}` : a.name))
+        .map(
+          a =>
+            (a.negate === true ? '!' : '') +
+            (a.value !== undefined ? `${a.name}=${a.value}` : a.name)
+        )
         .join('+'),
       attrs: attrSel.attrs,
       styles: base,
+      ...(pseudo ? { pseudo } : undefined),
+      ...terms,
     };
-    if (pseudo) entry.pseudo = pseudo;
   } else if (pseudo) {
-    entry = { type: 'pseudo', condition: pseudo, styles: base };
+    entry = { type: 'pseudo', condition: pseudo, styles: base, ...terms };
   } else {
     return;
   }
-  if (negate === true) entry.negate = true;
   entry.styles = stripSpecialCasesFromConditional(base, entry);
   attachBucketExtras(entry, resolvers, important, importantResolvers, varDeferred);
   conditional.push(entry);
@@ -1996,18 +2183,9 @@ function handleAtRule(
     const decls = collectDecls(node.children);
     if (decls.length > 0) {
       const { base, resolvers, important, importantResolvers, varDeferred } = processDecls(decls);
-      pushBucket(
-        conditional,
-        base,
-        resolvers,
-        important,
-        importantResolvers,
-        varDeferred,
+      pushBucket(conditional, base, resolvers, important, importantResolvers, varDeferred, {
         outer,
-        undefined,
-        undefined,
-        undefined
-      );
+      });
     }
 
     // Nested rules inside the at-rule body. Emit one bucket per

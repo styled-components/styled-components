@@ -1,5 +1,5 @@
 import React, { createElement, Ref } from 'react';
-import { getRN, matchMedia, MediaQueryEnv, useMediaEnv } from '../native/responsive';
+import { getRN, MediaQueryEnv, useMediaEnv } from '../native/responsive';
 import {
   getAnimationAdapter,
   NOOP_ADAPTER,
@@ -18,7 +18,6 @@ import {
   PARENT_SLOT_PROP,
   ParentContext,
   ParentContextValue,
-  SiblingInfo,
 } from '../native/ParentContext';
 import {
   buildPublishedParentValue,
@@ -47,8 +46,16 @@ import {
   type StateStyle,
   withStateCascade,
 } from '../native/publishCascade';
+import { EMPTY_MATCHED, type MatchedLayers, matchConditionals } from '../native/conditionMatching';
+import { ELEMENT_STATE_BITS, INTERACTION_BITS } from '../native/pseudoBits';
+import {
+  elementStates,
+  normalizeDisabledProps,
+  pseudoStylesForState,
+  STATELESS_PSEUDO_MASKS,
+  warnInertPseudoStates,
+} from '../native/pseudoState';
 import { useSnapSettle } from '../native/snapSettle';
-import { matchSupports } from '../native/supports';
 import {
   getAnimatedComponentCached,
   isScrollableTargetName,
@@ -95,14 +102,8 @@ import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import { warnOnce } from '../utils/warnOnce';
-import type {
-  NativeStyles,
-  ConditionalStyle,
-  ConditionalAttr,
-  NthSpec,
-  PseudoState,
-} from './compileNative';
-import { NodeKind, type NthOfBranch, type Root } from '../parser/ast';
+import type { NativeStyles } from './compileNative';
+import { NodeKind, type Root } from '../parser/ast';
 import { applyVarDeferred, hasResponsiveOutput, SPECIAL_CASE_PROPS } from './compileNative';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
@@ -284,6 +285,53 @@ function leafName(leaf: LeafTarget): string | undefined {
   return name;
 }
 
+let reactNativeExports: Dict<unknown> | null | undefined;
+
+/** `null` when `react-native` is absent, so identity then matches nothing. */
+function getReactNativeExports(): Dict<unknown> | null {
+  if (reactNativeExports !== undefined) return reactNativeExports;
+
+  let loaded: Dict<unknown> | null;
+  try {
+    loaded = require('react-native');
+  } catch {
+    loaded = null;
+  }
+  reactNativeExports = loaded;
+  return loaded;
+}
+
+/** `null` records a leaf that is no built-in, so the answer costs one lookup per render. */
+const hostNames = new WeakMap<object, string | null>();
+
+/**
+ * The React Native built-in a leaf is, for the element-state and function-style rules that
+ * belong to one component. A leaf matches only when it is that `react-native` export itself or an
+ * `Animated` wrapper named after one, so a component that shares a built-in's name
+ * keeps the rules of a custom component. `leafName` stays name-based for `validOn` and scrollers.
+ */
+function hostName(leaf: LeafTarget): string | undefined {
+  if (typeof leaf === 'string') return leaf;
+  if (leaf == null) return undefined;
+
+  const cached = hostNames.get(leaf);
+  if (cached !== undefined) return cached === null ? undefined : cached;
+
+  const name = leaf.displayName || leaf.name;
+  let resolved: string | null = null;
+  if (name !== undefined) {
+    const wrapped = ANIMATED_WRAPPER_NAME_RE.exec(name);
+    if (wrapped !== null) {
+      resolved = wrapped[1];
+    } else if (name === PRESSABLE_TARGET || STATELESS_PSEUDO_MASKS.has(name)) {
+      // Only names the element-state rules know are read: other exports can be lazy getters that throw.
+      resolved = getReactNativeExports()?.[name] === leaf ? name : null;
+    }
+  }
+  hostNames.set(leaf, resolved);
+  return resolved === null ? undefined : resolved;
+}
+
 function targetMatchesValidOn(target: unknown, validOn: ReadonlyArray<string>): boolean {
   const name = leafName(resolveLeafTarget(target));
   if (name === undefined) return false;
@@ -293,24 +341,30 @@ function targetMatchesValidOn(target: unknown, validOn: ReadonlyArray<string>): 
 
 const specialCaseWarned = new WeakSet<object>();
 
+/** Inputs of `finalizeElementProps` besides the element; every call site passes both keys. */
+interface FinalizeElementPropsOptions {
+  forwardedRef: Ref<unknown> | undefined;
+  specialCases: Dict<unknown> | undefined;
+}
+
 /**
  * Single owner of the trailing prop-finalization sequence shared by
- * useStaticImpl / useDynamicImpl. Builds the forwarded prop bag,
- * attaches the assembled style, lifts compiled special-case keys onto
- * the bag (e.g. `numberOfLines` from `line-clamp`), and forwards the ref.
+ * useStaticImpl / useDynamicImpl. Takes the forwarded prop bag (the one the
+ * element states were read from), attaches the assembled style, lifts compiled
+ * special-case keys onto the bag (e.g. `numberOfLines` from `line-clamp`),
+ * translates a disabled TextInput's props, and forwards the ref.
  */
-function finalizeElementProps<Source extends object>(
-  source: Source,
+function finalizeElementProps(
+  elementProps: Dict<unknown>,
   elementToBeCreated: NativeTarget,
-  shouldForwardProp: ((prop: string, el: NativeTarget) => boolean) | undefined,
+  host: string | undefined,
   style: unknown,
-  specialCases: Dict<unknown> | undefined,
-  forwardedRef: Ref<unknown> | undefined,
-  forwardedComponent: object
+  forwardedComponent: object,
+  { forwardedRef, specialCases }: FinalizeElementPropsOptions
 ): Dict<unknown> {
-  const elementProps = buildPropsForElement(source, elementToBeCreated, shouldForwardProp);
   elementProps.style = style;
   applySpecialCases(elementProps, specialCases, elementToBeCreated, forwardedComponent);
+  normalizeDisabledProps(host, elementProps);
   if (forwardedRef) elementProps.ref = forwardedRef;
   return elementProps;
 }
@@ -441,448 +495,6 @@ function mergeCustomPropertiesIntoCascade(
   return next;
 }
 
-// Mutable scratch env reused across container-query evaluations.
-// matchMedia reads only `width`/`height` for container queries; the
-// other fields are fixed defaults that never matter to the parser. We
-// rewrite width/height in place rather than allocating a fresh object
-// per condition per render.
-const CONTAINER_ENV: MediaQueryEnv = {
-  width: 0,
-  height: 0,
-  colorScheme: undefined,
-  reduceMotion: false,
-  fontScale: 1,
-  pixelRatio: 1,
-};
-
-function conditionMatches(
-  entry: ConditionalStyle,
-  env: MediaQueryEnv,
-  containerCtx: Pick<ContainerContextValue, 'named' | 'nearest'>
-): boolean {
-  if (entry.type === 'media') {
-    return matchMedia(entry.condition, env);
-  }
-  if (entry.type === 'supports') {
-    // Feature queries have their own grammar (declarations, not media
-    // features); routing them through the media matcher silently
-    // mismatches every condition.
-    return matchSupports(entry.condition);
-  }
-  if (entry.type === 'container') {
-    // CSS spec: anonymous `@container (…)` matches the nearest
-    // container ancestor; named queries match the most-recent
-    // container with that name. Fall back to `nearest` when no name
-    // was written so users get sensible defaults without having to
-    // declare `container-name`.
-    const name = entry.containerName;
-    const container = name ? containerCtx.named[name] : containerCtx.nearest;
-    if (!container) return false;
-    CONTAINER_ENV.width = container.width;
-    CONTAINER_ENV.height = container.height;
-    return matchMedia(entry.condition, CONTAINER_ENV);
-  }
-  return false;
-}
-
-// Pseudo-gated buckets are owned by the state callback; this walker
-// is fed a precomputed `nonPseudoEntries` subset from compileNative so
-// the per-render loop never iterates pseudo entries.
-interface MatchedLayers {
-  normal: object[];
-  /** Important overlay produced by matched buckets that carry an
-   *  `!important` declaration. Lazily allocated on first push so the
-   *  common case (no bucket has importance) costs no extra array. */
-  important: object[] | null;
-}
-
-const EMPTY_MATCHED: MatchedLayers = {
-  normal: EMPTY_ARRAY as unknown as object[],
-  important: null,
-};
-
-function pushMatched(out: MatchedLayers, entry: ConditionalStyle, env: ResolveEnv): void {
-  // varDeferred resolves at match time against the cascade map and may
-  // contribute to either the normal or important layer depending on
-  // each entry's importance flag.
-  let varOut: { normal: Dict<unknown> | null; important: Dict<unknown> | null } | null = null;
-  if (entry.varDeferred !== undefined) {
-    varOut = applyVarDeferred(entry.varDeferred, env.customProperties, null, env);
-  }
-  out.normal.push(resolveBucket(entry, env, varOut !== null ? varOut.normal : null));
-  if (
-    entry.important !== undefined ||
-    entry.importantResolvers !== undefined ||
-    (varOut !== null && varOut.important !== null)
-  ) {
-    if (out.important === null) out.important = [];
-    out.important.push(
-      resolveImportantBucket(entry, env, varOut !== null ? varOut.important : null)
-    );
-  }
-}
-
-function resolveImportantBucket(
-  entry: ConditionalStyle,
-  env: ResolveEnv,
-  varImportant: Dict<unknown> | null
-): object {
-  const imp = entry.important ?? EMPTY_OBJECT;
-  const resolved = entry.importantResolvers
-    ? applyResolvers(imp, entry.importantResolvers, env)
-    : imp;
-  return varImportant !== null ? { ...resolved, ...varImportant } : resolved;
-}
-
-function matchConditionals(
-  entries: ConditionalStyle[],
-  env: MediaQueryEnv,
-  containerCtx: Pick<ContainerContextValue, 'named' | 'nearest'>,
-  props: Record<string, unknown>,
-  resolveEnv: ResolveEnv,
-  parentCtx: ParentContextValue
-): MatchedLayers {
-  const out: MatchedLayers = { normal: [], important: null };
-  for (let i = 0; i < entries.length; i++) {
-    const entry = entries[i];
-    if (entry.type === 'attr') {
-      const matches = attrMatches(entry, props);
-      if (entry.negate ? !matches : matches) pushMatched(out, entry, resolveEnv);
-      continue;
-    }
-    if (entry.type === 'combinator') {
-      if (!combinatorMatches(entry, parentCtx)) continue;
-      pushMatched(out, entry, resolveEnv);
-      continue;
-    }
-    if (entry.type === 'nthChild') {
-      const matches = nthChildMatches(entry, parentCtx);
-      if (entry.negate ? !matches : matches) pushMatched(out, entry, resolveEnv);
-      continue;
-    }
-    if (entry.type === 'has') {
-      const matches = hasMatches(entry, props.children as React.ReactNode);
-      if (entry.negate ? !matches : matches) pushMatched(out, entry, resolveEnv);
-      continue;
-    }
-    // media / container / supports;optionally gated on attrs too
-    // when the at-rule body contained a nested attribute selector.
-    if (!conditionMatches(entry, env, containerCtx)) continue;
-    if (entry.attrs && !attrMatches(entry, props)) continue;
-    pushMatched(out, entry, resolveEnv);
-  }
-  return out;
-}
-
-/**
- * Combinator selector match against ParentContext. Non-styled intermediaries are
- * transparent to both the descendant and the child combinator, since only styled
- * components publish ParentContext: the nearest styled ancestor is the "parent".
- */
-function combinatorMatches(entry: ConditionalStyle, parentCtx: ParentContextValue): boolean {
-  const ancestorId = entry.condition;
-  if (entry.combinator === 'child') return parentCtx.parentId === ancestorId;
-  if (entry.combinator === 'adjacent-sibling') return parentCtx.prevSiblingId === ancestorId;
-  if (entry.combinator === 'general-sibling') {
-    const prev = parentCtx.prevSiblings;
-    const cap = parentCtx.prevSiblingsCount;
-    for (let i = 0; i < cap; i++) {
-      if (prev[i] === ancestorId) return true;
-    }
-    return false;
-  }
-  // descendant; match the immediate parent OR any further ancestor.
-  if (parentCtx.parentId === ancestorId) return true;
-  const ancestors = parentCtx.ancestors;
-  for (let i = 0; i < ancestors.length; i++) {
-    if (ancestors[i] === ancestorId) return true;
-  }
-  return false;
-}
-
-/**
- * `&:has(<simple>)` match against `props.children`. Only React-element descendants
- * are inspected; descendants emitted inside a child's render body are invisible
- * because the walk reads pre-render children.
- */
-function hasMatches(entry: ConditionalStyle, children: React.ReactNode): boolean {
-  const inner = entry.hasInner;
-  if (!inner) return false;
-  return walkForHas(children, inner);
-}
-
-/**
- * Arrays and elements only: an iterable such as a generator is never iterated,
- * since reading it here would consume it before React renders it.
- */
-function walkForHas(
-  children: React.ReactNode,
-  inner: { kind: 'component'; id: string } | { kind: 'attr'; attr: ConditionalAttr }
-): boolean {
-  if (Array.isArray(children)) {
-    for (let i = 0; i < children.length; i++) {
-      if (walkForHas(children[i], inner)) return true;
-    }
-    return false;
-  }
-  if (!React.isValidElement(children)) return false;
-  if (matchesHasInner(children, inner)) return true;
-  const grand = (children.props as { children?: React.ReactNode }).children;
-  return grand !== undefined && grand !== null && walkForHas(grand, inner);
-}
-
-function matchesHasInner(
-  el: React.ReactElement,
-  inner: { kind: 'component'; id: string } | { kind: 'attr'; attr: ConditionalAttr }
-): boolean {
-  if (inner.kind === 'component') {
-    const type = el.type as { styledComponentId?: string } | string;
-    return typeof type !== 'string' && type.styledComponentId === inner.id;
-  }
-  // attr
-  const attr = inner.attr;
-  const props = el.props as Record<string, unknown>;
-  const raw = props[attr.name];
-  if (raw === undefined) return false;
-  if (attr.value === undefined) return true;
-  const str = typeof raw === 'boolean' ? (raw ? 'true' : 'false') : String(raw);
-  const actual = attr.caseFlag === 'i' ? str.toLowerCase() : str;
-  const expected = attr.caseFlag === 'i' ? attr.value.toLowerCase() : attr.value;
-  return evaluateAttrOperator(attr.operator, actual, expected);
-}
-
-function nthChildMatches(entry: ConditionalStyle, parentCtx: ParentContextValue): boolean {
-  const spec = entry.nthSpec;
-  if (spec === undefined) return false;
-  if (spec.of !== undefined) return nthChildOfSelectorMatches(entry, spec, spec.of, parentCtx);
-  const idx = spec.ofType ? parentCtx.siblingIndexOfType : parentCtx.siblingIndex;
-  if (idx < 0) return false;
-  const tot = spec.ofType ? parentCtx.totalSiblingsOfType : parentCtx.totalSiblings;
-  if (spec.onlyChild && tot !== 1) return false;
-  // 1-based position from start or end.
-  const pos = spec.fromEnd ? tot - idx : idx + 1;
-  if (pos < 1) return false;
-  if (spec.a === 0) return pos === spec.b;
-  const k = (pos - spec.b) / spec.a;
-  return k >= 0 && Math.floor(k) === k;
-}
-
-/**
- * `:nth-child(an+b of S)` and `:nth-last-child(an+b of S)`. Filters
- * `parentCtx.siblings` against the inner simple selector, finds self's
- * 1-based position in the filter via `parentCtx.siblingIndex`, applies
- * the formula. Result is cached on the entry keyed by the siblings array
- * reference so each subsequent sibling evaluating the same rule reuses
- * the precomputed filter (O(N) per parent render, not O(N²)).
- */
-function nthChildOfSelectorMatches(
-  entry: ConditionalStyle,
-  spec: NthSpec,
-  of: NthOfBranch,
-  parentCtx: ParentContextValue
-): boolean {
-  const entries = parentCtx.siblings.entries;
-  const selfIdx = parentCtx.siblingIndex;
-  if (entries.length === 0 || selfIdx < 0) return false;
-
-  // Persistent single-slot cache on the entry. The `Int32Array` is
-  // indexed directly by a sibling's full-list position, so lookup is
-  // O(1) (typed-array indexing, no Map hashing). The buffer is grown
-  // by doubling when a parent's child count exceeds capacity and
-  // reused across renders; only the touched range gets zeroed on
-  // cache miss. Microbench across N=10..1000: -32% to -64% vs the
-  // prior `Map<number, number>` plan at all densities.
-  const cache = (entry as unknown as { __ofCache?: NthOfPlan }).__ofCache;
-  let plan: NthOfPlan;
-  if (cache !== undefined) {
-    plan = cache;
-  } else {
-    plan = {
-      entriesRef: null,
-      posByIndex: new Int32Array(NTH_OF_INITIAL_CAP),
-      maxIndex: 0,
-      total: 0,
-    };
-    (entry as unknown as { __ofCache?: NthOfPlan }).__ofCache = plan;
-  }
-  if (plan.entriesRef !== entries) {
-    let max = 0;
-    for (let i = 0; i < entries.length; i++) {
-      const idx = entries[i].index;
-      if (idx > max) max = idx;
-    }
-    const need = max + 1;
-    if (plan.posByIndex.length < need) {
-      let cap = plan.posByIndex.length;
-      while (cap < need) cap *= 2;
-      plan.posByIndex = new Int32Array(cap);
-    } else {
-      // Reuse buffer; clear only the range previously touched OR the
-      // new active range, whichever is larger (positions outside the
-      // active range never get read so leaving stale data there is OK,
-      // but we cover the union to keep the invariant simple).
-      const oldMax = plan.maxIndex;
-      const limit = oldMax >= max ? oldMax + 1 : need;
-      plan.posByIndex.fill(0, 0, limit);
-    }
-    plan.maxIndex = max;
-    let total = 0;
-    for (let i = 0; i < entries.length; i++) {
-      if (matchNthOfInner(entries[i], of)) {
-        total++;
-        plan.posByIndex[entries[i].index] = total;
-      }
-    }
-    plan.total = total;
-    plan.entriesRef = entries;
-  }
-  if (plan.total === 0) return false;
-  if (spec.onlyChild && plan.total !== 1) return false;
-  if (selfIdx > plan.maxIndex) return false;
-  const filterPos = plan.posByIndex[selfIdx];
-  if (filterPos === 0) return false;
-  // 1-based position from start (filterPos) or end.
-  const pos = spec.fromEnd ? plan.total - filterPos + 1 : filterPos;
-  if (pos < 1) return false;
-  if (spec.a === 0) return pos === spec.b;
-  const k = (pos - spec.b) / spec.a;
-  return k >= 0 && Math.floor(k) === k;
-}
-
-interface NthOfPlan {
-  entriesRef: ReadonlyArray<SiblingInfo> | null;
-  /** posByIndex[fullListIndex] = 1-based filter position, 0 if not in filter. */
-  posByIndex: Int32Array;
-  /** Highest `index` value seen in the most recent build (lookup bound). */
-  maxIndex: number;
-  /** Total siblings matching the inner selector. */
-  total: number;
-}
-
-/** Initial capacity for the per-entry posByIndex pool. Doubles as needed.
- *  16 covers the typical small-list case without re-alloc. */
-const NTH_OF_INITIAL_CAP = 16;
-
-/**
- * Evaluate the inner branch of `:nth-child(of S)` against a sibling.
- * Mirrors `matchesHasInner` semantics: component-ref matches the
- * sibling's `styledComponentId`; attr selectors evaluate against the
- * sibling's props bag with the existing operator + case-flag rules.
- */
-function matchNthOfInner(sibling: SiblingInfo, of: NthOfBranch): boolean {
-  if (of.kind === 'component') return sibling.id === of.id;
-  const attr = of.attr;
-  const raw = sibling.props[attr.name];
-  if (raw === undefined) return false;
-  if (attr.value === undefined) return true;
-  const str = typeof raw === 'boolean' ? (raw ? 'true' : 'false') : String(raw);
-  const actual = attr.caseFlag === 'i' ? str.toLowerCase() : str;
-  const expected = attr.caseFlag === 'i' ? attr.value.toLowerCase() : attr.value;
-  return evaluateAttrOperator(attr.operator, actual, expected);
-}
-
-function resolveBucket(
-  entry: ConditionalStyle,
-  env: ResolveEnv,
-  varNormal: Dict<unknown> | null = null
-): object {
-  const resolved = entry.resolvers
-    ? applyResolvers(entry.styles, entry.resolvers, env)
-    : entry.styles;
-  return varNormal !== null ? { ...resolved, ...varNormal } : resolved;
-}
-
-/**
- * AND-evaluate every (name, value?) pair in the bucket's chain. Boolean coercion
- * lets `aria-pressed={true}` and `aria-pressed="true"` both satisfy `value: 'true'`.
- */
-function attrMatches(entry: ConditionalStyle, props: Record<string, unknown>): boolean {
-  const attrs = entry.attrs;
-  if (!attrs || attrs.length === 0) return false;
-  for (let i = 0; i < attrs.length; i++) {
-    const attr = attrs[i];
-    const raw = props[attr.name];
-    if (raw === undefined) return false;
-    if (attr.value !== undefined) {
-      const stringified = typeof raw === 'boolean' ? (raw ? 'true' : 'false') : String(raw);
-      const actual = attr.caseFlag === 'i' ? stringified.toLowerCase() : stringified;
-      const expected = attr.caseFlag === 'i' ? attr.value.toLowerCase() : attr.value;
-      if (!evaluateAttrOperator(attr.operator, actual, expected)) return false;
-    }
-  }
-  return true;
-}
-
-/**
- * Evaluate an attribute selector operator against the actual prop value. Default is
- * `=`. The caller pre-lowercases both operands when the `i` flag is present.
- */
-function evaluateAttrOperator(
-  operator: '=' | '~=' | '|=' | '^=' | '$=' | '*=' | undefined,
-  actual: string,
-  expected: string
-): boolean {
-  switch (operator) {
-    case undefined:
-    case '=':
-      return actual === expected;
-    case '~=': {
-      // Whitespace-separated list contains `expected` as a complete word.
-      if (expected.length === 0) return false;
-      // Reject expected values with whitespace (per spec: matches nothing).
-      for (let i = 0; i < expected.length; i++) {
-        const c = expected.charCodeAt(i);
-        if (c === 0x20 || c === 0x09 || c === 0x0a || c === 0x0d) return false;
-      }
-      const tokens = actual.split(/\s+/);
-      return tokens.indexOf(expected) !== -1;
-    }
-    case '|=':
-      // Equals `expected` exactly OR begins with `expected-`.
-      return actual === expected || actual.startsWith(expected + '-');
-    case '^=':
-      return expected.length > 0 && actual.startsWith(expected);
-    case '$=':
-      return expected.length > 0 && actual.endsWith(expected);
-    case '*=':
-      return expected.length > 0 && actual.indexOf(expected) !== -1;
-  }
-}
-
-/**
- * RN host components whose `style` prop rejects the function (state
- * callback) form. Pressable is the one host that invokes a function
- * style with interaction state; everything else silently drops a
- * function style, taking the component's ENTIRE rule with it. Mirrors
- * the alias list in native/index.ts (kept local to avoid an import
- * cycle); custom component targets are intentionally absent so wrappers
- * that forward style to a Pressable keep the function form.
- */
-const STATELESS_STYLE_TARGETS = new Set([
-  'ActivityIndicator',
-  'Button',
-  'FlatList',
-  'Image',
-  'ImageBackground',
-  'InputAccessoryView',
-  'KeyboardAvoidingView',
-  'Modal',
-  'RefreshControl',
-  'SafeAreaView',
-  'ScrollView',
-  'SectionList',
-  'StatusBar',
-  'Switch',
-  'Text',
-  'TextInput',
-  'TouchableHighlight',
-  'TouchableNativeFeedback',
-  'TouchableOpacity',
-  'TouchableWithoutFeedback',
-  'View',
-  'VirtualizedList',
-]);
-
 /**
  * RN components that clone their single child to attach handlers, style and a
  * ref, so they cannot hold the extra children `background-blend-mode` layers add.
@@ -893,9 +505,9 @@ const SINGLE_CHILD_CLONING_TARGETS = new Set([
   'TouchableWithoutFeedback',
 ]);
 
-/** True when the leaf target drops a function style. */
-function dropsFunctionStyle(leaf: string | undefined): leaf is string {
-  return leaf !== undefined && STATELESS_STYLE_TARGETS.has(leaf);
+/** True when the built-in drops a function style. */
+function dropsFunctionStyle(host: string | undefined): host is string {
+  return host !== undefined && STATELESS_PSEUDO_MASKS.has(host);
 }
 
 /**
@@ -908,123 +520,17 @@ function dropsFunctionStyle(leaf: string | undefined): leaf is string {
 function cascadeWalkStyle(
   gate: boolean,
   composedStyle: unknown,
-  leaf: string | undefined
+  host: string | undefined
 ): unknown {
   if (!gate) return null;
   if (!isStateFunction(composedStyle)) return composedStyle;
-  if (leaf === PRESSABLE_TARGET || dropsFunctionStyle(leaf)) return null;
+  if (host === PRESSABLE_TARGET || dropsFunctionStyle(host)) return null;
   return composedStyle(REST_STATE);
 }
 
 /** The function style a `Pressable` evaluates per press state when it can publish from one; null otherwise. */
 function pressableStateStyle(gate: boolean, composedStyle: unknown): StateStyle | null {
   return gate && isStateFunction(composedStyle) ? composedStyle : null;
-}
-
-const PSEUDO_TO_SELECTOR: Record<PseudoState, string> = {
-  pressed: ':active',
-  hover: ':hover',
-  focus: ':focus',
-  disabled: ':disabled',
-};
-
-/**
- * Dev warning for pseudo-state buckets that can never fire because the
- * target cannot receive interaction state. Skips buckets whose
- * environmental gate (media / container / supports) does not currently
- * match, so a web-only rule fenced behind `@media (hover: hover)` stays
- * silent on touch platforms.
- */
-function warnInertPseudoStates(
-  entries: ConditionalStyle[],
-  env: MediaQueryEnv,
-  containerCtx: Pick<ContainerContextValue, 'named' | 'nearest'>,
-  targetName: string
-): void {
-  for (let i = 0; i < entries.length; i++) {
-    const entry = entries[i];
-    const pseudo = entry.type === 'pseudo' ? (entry.condition as PseudoState) : entry.pseudo;
-    if (pseudo === undefined) continue;
-    if (
-      entry.type !== 'pseudo' &&
-      entry.type !== 'attr' &&
-      entry.type !== 'combinator' &&
-      entry.type !== 'nthChild' &&
-      entry.type !== 'has' &&
-      !conditionMatches(entry, env, containerCtx)
-    ) {
-      continue;
-    }
-    warnOnce(
-      'native-pseudo-state-inert',
-      '`' +
-        PSEUDO_TO_SELECTOR[pseudo] +
-        '` styles on a styled ' +
-        targetName +
-        ' never apply on React Native: only `Pressable` provides interaction state to its style. Use `styled.Pressable` for press / hover / focus styling, or fence a web-only rule behind `@media (hover: hover)`.',
-      targetName + ':' + PSEUDO_TO_SELECTOR[pseudo]
-    );
-    return;
-  }
-}
-
-// Maps our pseudo-state names to the field RN's `style` callback exposes.
-const PSEUDO_TO_STATE_KEY: Record<PseudoState, 'pressed' | 'hovered' | 'focused' | 'disabled'> = {
-  pressed: 'pressed',
-  hover: 'hovered',
-  focus: 'focused',
-  disabled: 'disabled',
-};
-
-function pseudoActive(pseudo: PseudoState, state: InteractionState): boolean {
-  return !!state[PSEUDO_TO_STATE_KEY[pseudo]];
-}
-
-function pseudoStylesForState(
-  entries: ConditionalStyle[],
-  state: InteractionState,
-  env: MediaQueryEnv,
-  containerCtx: Pick<ContainerContextValue, 'named' | 'nearest'>,
-  props: Record<string, unknown>,
-  resolveEnv: ResolveEnv,
-  parentCtx: ParentContextValue
-): MatchedLayers {
-  // Caller passes the precomputed `pseudoEntries` subset; every entry
-  // is guaranteed pseudo-bearing (either `type==='pseudo'` or a
-  // compound carrying `entry.pseudo`), so the inner branches skip the
-  // membership re-check.
-  const out: MatchedLayers = { normal: [], important: null };
-  for (let i = 0; i < entries.length; i++) {
-    const entry = entries[i];
-    if (entry.type === 'pseudo') {
-      const active = pseudoActive(entry.condition as PseudoState, state);
-      if (entry.negate ? !active : active) pushMatched(out, entry, resolveEnv);
-      continue;
-    }
-    // Compound: every non-`pseudo` entry in this slice carries `entry.pseudo`.
-    if (entry.pseudo === undefined || !pseudoActive(entry.pseudo, state)) continue;
-    // Attrs AND-gate for compound forms like `&[disabled]:hover`.
-    if (entry.attrs) {
-      const attrOk = attrMatches(entry, props);
-      if (entry.negate ? attrOk : !attrOk) continue;
-    }
-    // Structural AND-gate for Tier 2 combinations like
-    // `&:nth-child(2):hover` or `${Foo} > &:active`.
-    if (entry.type === 'combinator') {
-      if (!combinatorMatches(entry, parentCtx)) continue;
-    } else if (entry.type === 'nthChild') {
-      const matches = nthChildMatches(entry, parentCtx);
-      if (entry.negate ? matches : !matches) continue;
-    } else if (entry.type === 'has') {
-      const matches = hasMatches(entry, props.children as React.ReactNode);
-      if (entry.negate ? matches : !matches) continue;
-    } else if (entry.type !== 'attr' && !conditionMatches(entry, env, containerCtx)) {
-      // media / container / supports environmental gate.
-      continue;
-    }
-    pushMatched(out, entry, resolveEnv);
-  }
-  return out;
 }
 
 /**
@@ -1098,7 +604,8 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   if (compiled === null) throw new Error(MISSING_STATIC_STYLES);
   const elementToBeCreated: NativeTarget = (props.as as NativeTarget) || target;
   const containerName = resolveContainerName(compiled.containerInfo, styledComponentId);
-  const leaf = leafName(resolveLeafTarget(elementToBeCreated));
+  const leafTarget = resolveLeafTarget(elementToBeCreated);
+  const host = hostName(leafTarget);
   // A static-eligible component can still be a grid item: an empty or
   // purely-static child placed inside a `display: grid` container. The
   // parent decides this at runtime, so the static path reads the cascade
@@ -1116,13 +623,12 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
     composedStyle = appendStyle(composedStyle, { width: computeGridItemWidth(grid, 1) });
   }
   const elementProps = finalizeElementProps(
-    props,
+    buildPropsForElement(props, elementToBeCreated, undefined),
     elementToBeCreated,
-    undefined,
+    host,
     composedStyle,
-    compiled.specialCases,
-    forwardedRef,
-    forwardedComponent
+    forwardedComponent,
+    { forwardedRef, specialCases: compiled.specialCases }
   );
   const publishCacheRef = React.useRef<ParentPublishCache | null>(null);
   if (publishCacheRef.current === null) publishCacheRef.current = createParentPublishCache();
@@ -1145,7 +651,7 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   // Static-eligible scroll containers still publish their timeline so
   // descendants' `animation-timeline: scroll()` resolves, and lift
   // sticky children onto stickyHeaderIndices.
-  const isScroller = isScrollableTargetName(leaf);
+  const isScroller = isScrollableTargetName(leafName(leafTarget));
   const [scrollProps, wrapScrollTimeline, timelineEntry] = useScrollTimelinePublisher(
     isScroller || compiled.scrollTimeline !== undefined,
     compiled.scrollTimeline,
@@ -1160,21 +666,21 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
   );
   const publishCache = publishCacheRef.current;
   const publishGate = compiled.publishesCascade || props.style != null;
-  const walkStyle = cascadeWalkStyle(publishGate, composedStyle, leaf);
+  const walkStyle = cascadeWalkStyle(publishGate, composedStyle, host);
   const published =
     walkStyle === null
       ? nativeStyleCtx.cascade
       : publishCascade(publishCache, nativeStyleCtx.cascade, walkStyle);
-  const layeredProps = applyPolyfillsWithLayerSlot(publishCache, compiled, effectiveProps, leaf);
+  const layeredProps = applyPolyfillsWithLayerSlot(publishCache, compiled, effectiveProps, host);
   const polyfilledProps =
-    leaf === PRESSABLE_TARGET
+    host === PRESSABLE_TARGET
       ? withStateCascade(
           layeredProps,
           publishCache,
           pressableStateStyle(publishGate, composedStyle)
         )
       : layeredProps;
-  const host =
+  const hostElement =
     containerName === undefined
       ? createElement(
           NativeStyleContext.Provider,
@@ -1189,7 +695,11 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
           parent: nativeStyleCtx,
         });
 
-  return createElement(ParentContext.Provider, { value: publishedValue }, wrapScrollTimeline(host));
+  return createElement(
+    ParentContext.Provider,
+    { value: publishedValue },
+    wrapScrollTimeline(hostElement)
+  );
 }
 
 /**
@@ -1204,15 +714,15 @@ function applyPolyfillsWithLayerSlot(
   cache: ParentPublishCache,
   compiled: NativeStyles,
   elementProps: Dict<unknown>,
-  leaf: string | undefined
+  host: string | undefined
 ): Dict<unknown> {
-  if (leaf !== undefined && SINGLE_CHILD_CLONING_TARGETS.has(leaf)) {
+  if (host !== undefined && SINGLE_CHILD_CLONING_TARGETS.has(host)) {
     if (!hasBackgroundBlendMode(elementProps.style)) return elementProps;
     if (__DEV__) {
       warnOnce(
         'native-background-blend-mode-single-child-target',
-        `\`background-blend-mode\` cannot be applied to a styled <${leaf}>, which passes its props to its single child. Put \`background-blend-mode\` on a <View> inside the <${leaf}> instead.`,
-        leaf
+        `\`background-blend-mode\` cannot be applied to a styled <${host}>, which passes its props to its single child. Put \`background-blend-mode\` on a <View> inside the <${host}> instead.`,
+        host
       );
     }
     return withoutBackgroundBlendMode(elementProps);
@@ -1318,7 +828,8 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // resolveContext spreads props before applying attrs, so context.as already
   // covers props.as; no separate fallback needed.
   const elementToBeCreated: NativeTarget = (context.as as NativeTarget | undefined) || target;
-  const leaf = leafName(resolveLeafTarget(elementToBeCreated));
+  const leafTarget = resolveLeafTarget(elementToBeCreated);
+  const host = hostName(leafTarget);
 
   // Post-compile attrs phase: clone `compiled.base` (canonical, must stay
   // intact for reuse by later renders sharing this compiled output) and run
@@ -1346,6 +857,13 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   } else {
     effectiveBase = compiled.base;
   }
+
+  // The props the element receives, built once after every attrs phase has run: the element
+  // states match against them and the finalized props are them, so a state and the prop
+  // translation agree by construction.
+  const forwardedProps = buildPropsForElement(context, elementToBeCreated, shouldForwardProp);
+  const states =
+    (compiled.pseudoReads & ELEMENT_STATE_BITS) !== 0 ? elementStates(host, forwardedProps) : 0;
 
   // Merged custom-property cascade: the same merged Map drives buildResolveEnv
   // (own var() resolution + conditional bucket resolvers) AND descendant
@@ -1448,12 +966,15 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
           // Generic Props can't structurally satisfy `Record<string, unknown>`
           // (TS lacks unsealed-object covariance); normalize at the boundary.
           props as Record<string, unknown>,
-          baseOverride,
-          renderCascade,
-          parentCtx,
-          varImportant,
-          compiled.hasPseudo && dropsFunctionStyle(leaf) ? leaf : null,
-          safeAreaInsets
+          {
+            baseOverride,
+            cascade: renderCascade,
+            inertStateTarget: compiled.hasPseudo && dropsFunctionStyle(host) ? host : undefined,
+            insets: safeAreaInsets,
+            parentCtx,
+            states,
+            varImportant,
+          }
         )
       : composeBase(effectiveBase, context.style);
   let composedStyle = baseComposed;
@@ -1517,13 +1038,12 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
     animOut.elementType
   );
   const finalizedProps = finalizeElementProps(
-    context,
+    forwardedProps,
     renderType,
-    shouldForwardProp,
+    host,
     renderStyle,
-    compiled.specialCases,
-    forwardedRef,
-    forwardedComponent
+    forwardedComponent,
+    { forwardedRef, specialCases: compiled.specialCases }
   );
   const elementProps = applyPolyfillsWithLayerSlot(
     publishCache,
@@ -1532,7 +1052,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
       finalizedProps,
       indexStyledChildren(publishCache, finalizedProps.children as React.ReactNode, publishedValue)
     ),
-    leaf
+    host
   );
 
   // `field-sizing: content` dev guard. The polyfill lifts `multiline:
@@ -1555,7 +1075,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // Skip the walk when the compile-time scan found no cascade key and no
   // `style` (the caller's or attrs') could supply one.
   const publishGate = compiled.publishesCascade || context.style != null;
-  const walkStyle = cascadeWalkStyle(publishGate, composedStyle, leaf);
+  const walkStyle = cascadeWalkStyle(publishGate, composedStyle, host);
   const published =
     walkStyle === null ? renderCascade : publishCascade(publishCache, renderCascade, walkStyle);
   const ownValue = contextValueFor(publishCache, nativeStyleCtx, published);
@@ -1565,7 +1085,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // Scroll progress timelines: styled scroll containers publish their
   // offset/extent so descendants' `animation-timeline: scroll()` /
   // named references resolve. Hook order is unconditional inside.
-  const isScroller = isScrollableTargetName(leaf);
+  const isScroller = isScrollableTargetName(leafName(leafTarget));
   const [scrollProps, wrapScrollTimeline, timelineEntry] = useScrollTimelinePublisher(
     isScroller || compiled.scrollTimeline !== undefined,
     compiled.scrollTimeline,
@@ -1584,7 +1104,7 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   effectiveProps = withViewSubjectLayout(effectiveProps);
   effectiveProps = sticky.compose(effectiveProps);
   // After every props-composing hook, so none sees the wrapped children.
-  if (leaf === PRESSABLE_TARGET) {
+  if (host === PRESSABLE_TARGET) {
     effectiveProps = withStateCascade(
       effectiveProps,
       publishCache,
@@ -2034,6 +1554,22 @@ function GridPublisher({
   );
 }
 
+/** Optional inputs of `assembleFinalStyle`; an omitted key takes the default of its destructure. */
+interface AssembleFinalStyleOptions {
+  /** Post-attrs base (clone with pops applied); the compiled base when absent. */
+  baseOverride?: Dict<unknown> | undefined;
+  cascade?: NativeCascadeValues | undefined;
+  /** Host name that drops function styles; absent keeps the function form. */
+  inertStateTarget?: string | undefined;
+  insets?: SafeAreaInsets | undefined;
+  parentCtx?: ParentContextValue | undefined;
+  /** The element-state `PSEUDO_BIT` bits the target's props put it in; 0 when no rule reads one. */
+  states?: number | undefined;
+  varImportant?: Dict<unknown> | undefined;
+}
+
+const NO_ASSEMBLE_OPTIONS: AssembleFinalStyleOptions = {};
+
 /**
  * Assemble the final `style` value passed to the underlying RN element.
  * A pure function of its inputs, so the render path can call it on every
@@ -2048,12 +1584,15 @@ export function assembleFinalStyle(
   theme: ResolveEnv['theme'],
   userStyle: unknown,
   props: Record<string, unknown>,
-  baseOverride?: Dict<unknown>,
-  cascade: NativeCascadeValues = DEFAULT_CASCADE,
-  parentCtx: ParentContextValue = DEFAULT_PARENT_CONTEXT,
-  varImportant?: Dict<unknown>,
-  inertStateTarget?: string | null,
-  insets: SafeAreaInsets = EMPTY_SAFE_AREA_INSETS
+  {
+    baseOverride,
+    cascade = DEFAULT_CASCADE,
+    inertStateTarget,
+    insets = EMPTY_SAFE_AREA_INSETS,
+    parentCtx = DEFAULT_PARENT_CONTEXT,
+    states = 0,
+    varImportant,
+  }: AssembleFinalStyleOptions = NO_ASSEMBLE_OPTIONS
 ): object {
   const nonPseudoEntries = compiled.nonPseudoEntries;
   const pseudoEntries = compiled.pseudoEntries;
@@ -2102,6 +1641,7 @@ export function assembleFinalStyle(
       const matched = pseudoStylesForState(
         pseudoEntries,
         state || EMPTY_OBJECT,
+        states,
         env,
         containerCtx,
         props,
@@ -2136,10 +1676,14 @@ export function assembleFinalStyle(
     // the WHOLE style. For those targets, evaluate once with empty state
     // so the base + matched conditional layers still apply and the
     // pseudo buckets are simply inert.
-    if (inertStateTarget !== undefined && inertStateTarget !== null) {
-      if (__DEV__) {
-        warnInertPseudoStates(pseudoEntries, env, containerCtx, inertStateTarget);
-      }
+    if (__DEV__ && inertStateTarget !== undefined) {
+      warnInertPseudoStates(pseudoEntries, env, containerCtx, inertStateTarget);
+    }
+    // Rules that read only element states resolve from the props, so a custom wrapper that spreads
+    // `style` onto a View keeps every style. A caller's function style needs the press state.
+    const resolvesWithoutPressState =
+      (compiled.pseudoReads & INTERACTION_BITS) === 0 && !isFunction(userStyle);
+    if (inertStateTarget !== undefined || resolvesWithoutPressState) {
       return stateStyle(EMPTY_OBJECT);
     }
     return stateStyle;

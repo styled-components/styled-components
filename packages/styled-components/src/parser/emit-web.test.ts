@@ -648,6 +648,228 @@ describe('web emitter', () => {
     });
   });
 
+  /*
+   * CSS Box Alignment 3 (https://drafts.csswg.org/css-align-3/), quoted from the editor's draft.
+   *
+   * 5.1 The justify-content and align-content Properties
+   *   "Applies to: block containers, multicol containers, flex containers, and grid containers"
+   *
+   * 5.1.1 Block Containers (Including Table Cells)
+   *   "For table cells, the behavior of align-content: normal depends on the computed value of
+   *   vertical-align: top makes it behave as start and bottom makes it behave as end; otherwise
+   *   middle makes it behave as center, and all other values make it behave as baseline."
+   *
+   * CSS Flexible Box Layout 1 (https://drafts.csswg.org/css-flexbox-1/), quoted from the editor's
+   * draft.
+   *
+   * 9.4 Cross Axis Alignment
+   *   "In a single-line flex container, the cross size of the line is the cross size of the flex
+   *   container, and align-content has no effect."
+   *
+   * The bridge writes `align-content` right after an authored `vertical-align` that sits on the
+   * component's own element, in any state or condition of it, so the element places its content
+   * as a table cell does. A pseudo-element, a descendant, a sibling, a mixed list, global styles,
+   * keyframes and `compile()` have no such element and get none.
+   */
+  describe('align-content for vertical-align on the rn-web bridge', () => {
+    const options: EmitOptions = { componentId: 'sc-id' };
+
+    beforeEach(() => {
+      globalThis.__NATIVE_WEB__ = true;
+    });
+
+    afterEach(() => {
+      globalThis.__NATIVE_WEB__ = false;
+    });
+
+    it.each([
+      [
+        'a root declaration',
+        'vertical-align: top;',
+        ['.a{align-content:start;vertical-align:top;}'],
+      ],
+      [
+        'a root declaration beside others',
+        'color: red; vertical-align: middle; top: 0;',
+        ['.a{align-content:center;color:red;vertical-align:middle;top:0;}'],
+      ],
+      ['`&`', '& { vertical-align: bottom; }', ['.a{align-content:end;vertical-align:bottom;}']],
+      ['`&&`', '&& { vertical-align: top; }', ['.a.a{align-content:start;vertical-align:top;}']],
+      [
+        '`&` inside `&`',
+        '& { & { vertical-align: top; } }',
+        ['.a{align-content:start;vertical-align:top;}'],
+      ],
+      [
+        '`&:hover`',
+        '&:hover { vertical-align: middle; }',
+        ['.a:hover{align-content:center;vertical-align:middle;}'],
+      ],
+      [
+        '`&[data-x]`',
+        '&[data-x] { vertical-align: top; }',
+        ['.a[data-x]{align-content:start;vertical-align:top;}'],
+      ],
+      [
+        'a list of the element in states',
+        '&:hover, &:focus { vertical-align: top; }',
+        ['.a:hover,.a:focus{align-content:start;vertical-align:top;}'],
+      ],
+      [
+        'a root declaration in `@media`',
+        '@media print { vertical-align: top; }',
+        ['@media print{.a{align-content:start;vertical-align:top;}}'],
+      ],
+      [
+        '`&` in `@media`',
+        '@media print { & { vertical-align: bottom; } }',
+        ['@media print{.a{align-content:end;vertical-align:bottom;}}'],
+      ],
+      [
+        '`&:hover` in `@media`',
+        '@media print { &:hover { vertical-align: top; } }',
+        ['@media print{.a:hover{align-content:start;vertical-align:top;}}'],
+      ],
+      [
+        'a priority',
+        'vertical-align: top !important;',
+        ['.a{align-content:start !important;vertical-align:top !important;}'],
+      ],
+    ])('adds align-content before the declarations on %s', (_label, css, rules) => {
+      expect(emitWeb(parse(css), '.a', options)).toEqual(rules);
+    });
+
+    it.each([
+      [
+        'before',
+        'align-content: end; vertical-align: middle;',
+        '.a{align-content:center;align-content:end;vertical-align:middle;}',
+      ],
+      [
+        'after',
+        'vertical-align: middle; align-content: end;',
+        '.a{align-content:center;vertical-align:middle;align-content:end;}',
+      ],
+    ])('lets an authored align-content written %s vertical-align win', (_label, css, rule) => {
+      expect(emitWeb(parse(css), '.a', options)).toEqual([rule]);
+    });
+
+    it('keeps the later vertical-align companion last among the companions', () => {
+      expect(
+        emitWeb(parse('vertical-align: top; color: red; vertical-align: bottom;'), '.a', options)
+      ).toEqual([
+        '.a{align-content:start;align-content:end;vertical-align:top;color:red;vertical-align:bottom;}',
+      ]);
+    });
+
+    it.each([
+      ['`&::before`', '&::before { vertical-align: top; }', '.a::before{vertical-align:top;}'],
+      ['`&:before`', '&:before { vertical-align: top; }', '.a:before{vertical-align:top;}'],
+      ['`&:after`', '&:after { vertical-align: top; }', '.a:after{vertical-align:top;}'],
+      [
+        '`&:first-line`',
+        '&:first-line { vertical-align: top; }',
+        '.a:first-line{vertical-align:top;}',
+      ],
+      [
+        '`&:hover::before`',
+        '&:hover::before { vertical-align: top; }',
+        '.a:hover::before{vertical-align:top;}',
+      ],
+      [
+        'a pseudo-element in a list with the element',
+        '&, &::before { vertical-align: top; }',
+        '.a,.a::before{vertical-align:top;}',
+      ],
+      [
+        'a rule inside a pseudo-element rule',
+        '&::before { &:hover { vertical-align: top; } }',
+        '.a::before:hover{vertical-align:top;}',
+      ],
+      [
+        '`&::before` in `@media`',
+        '@media print { &::before { vertical-align: top; } }',
+        '@media print{.a::before{vertical-align:top;}}',
+      ],
+      ['a descendant', '& .child { vertical-align: top; }', '.a .child{vertical-align:top;}'],
+      ['a bare nested rule', '.child { vertical-align: top; }', '.a .child{vertical-align:top;}'],
+      [
+        'a state rule inside a descendant rule',
+        '& .child { &:hover { vertical-align: top; } }',
+        '.a .child:hover{vertical-align:top;}',
+      ],
+      ['a sibling', '& + & { vertical-align: top; }', '.a+.a{vertical-align:top;}'],
+      [
+        'a list with a descendant',
+        '&, & .child { vertical-align: top; }',
+        '.a,.a .child{vertical-align:top;}',
+      ],
+      [
+        'a descendant in `@media`',
+        '@media print { & .child { vertical-align: top; } }',
+        '@media print{.a .child{vertical-align:top;}}',
+      ],
+      ['`@font-face`', '@font-face { vertical-align: top; }', '@font-face{vertical-align:top;}'],
+      [
+        'keyframes',
+        '@keyframes spin { from { vertical-align: top; } }',
+        '@keyframes spin{from{vertical-align:top;}}',
+      ],
+    ])('adds nothing for vertical-align on %s', (_label, css, expected) => {
+      expect(emitWeb(parse(css), '.a', options)[0]).toBe(expected);
+    });
+
+    it('adds nothing without a parent selector, for global styles and a root `compile()` wrapped', () => {
+      expect(emitWeb(parse('.x { vertical-align: top; }'), '', options)).toEqual([
+        '.x{vertical-align:top;}',
+      ]);
+      expect(emitWeb(wrapAst(parse('vertical-align: top;'), '.a'), '', options)).toEqual([
+        '.a{vertical-align:top;}',
+      ]);
+    });
+
+    it('adds nothing when no component id is given', () => {
+      expect(emitWeb(parse('vertical-align: top;'), '.a')).toEqual(['.a{vertical-align:top;}']);
+    });
+
+    it('adds nothing when the bridge flag is off', () => {
+      globalThis.__NATIVE_WEB__ = false;
+
+      expect(emitWeb(parse('vertical-align: top;'), '.a', options)).toEqual([
+        '.a{vertical-align:top;}',
+      ]);
+    });
+
+    it('passes the added declaration through the declaration plugin', () => {
+      const decl: NonNullable<EmitOptions['decl']> = (prop, value) =>
+        prop === 'align-content' ? { prop, value: value.toUpperCase() } : undefined;
+
+      expect(emitWeb(parse('vertical-align: top;'), '.a', { ...options, decl })).toEqual([
+        '.a{align-content:START;vertical-align:top;}',
+      ]);
+    });
+
+    it('reads the authored vertical-align, not a plugin rewrite of it', () => {
+      const decl: NonNullable<EmitOptions['decl']> = (prop, value) =>
+        prop === 'vertical-align' ? { prop, value: 'baseline' } : undefined;
+
+      expect(emitWeb(parse('vertical-align: top;'), '.a', { ...options, decl })).toEqual([
+        '.a{align-content:start;vertical-align:baseline;}',
+      ]);
+    });
+
+    it('adds nothing when the plugin drops the authored declaration', () => {
+      resetWarnOnce();
+      jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const decl: NonNullable<EmitOptions['decl']> = (prop, value) =>
+        prop === 'vertical-align' ? { prop, value: value + '}' } : undefined;
+
+      expect(
+        emitWeb(parse('color: red; vertical-align: top;'), '.a', { ...options, decl })
+      ).toEqual(['.a{color:red;}']);
+    });
+  });
+
   describe('dot removal in identifier lists', () => {
     // `${Component}` stringifies as a class selector (`.sc-abc`).
     it.each([

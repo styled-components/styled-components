@@ -2,6 +2,7 @@ import { emitWeb, namespaceForm } from '../parser/emit-web';
 import { parse, wrapAst } from '../parser/parser';
 import { compileWebFilled, dropMarked } from '../parser/compile';
 import type { Compiler } from '../types';
+import { rewriteBridgeValue, rewriteDisabledTokens, wrapComponentNots } from './bridgeRewrites';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
 import { SEED, phash } from './hash';
@@ -160,7 +161,41 @@ export default function createCompiler({
     }
   }
 
+  // Built on first bridge call: the bridge flag can flip after this compiler is created.
+  let bridgeSelector: SelectorTransform | undefined;
+  /** The bridge selector rewrite; a `head` (the component as selectors spell it, `''` for none) also wraps the `:not()` runs behind it. */
+  const bridgeRw = (head: string): SelectorTransform => {
+    if (bridgeSelector === undefined) {
+      bridgeSelector = postProcessSelector
+        ? composeRw(postProcessSelector, rewriteDisabledTokens)
+        : rewriteDisabledTokens;
+    }
+    const base = bridgeSelector;
+    if (head === '') return base;
+
+    // One closure rather than `composeRw(base, wrap)`: measured 7-8% faster per emit.
+    return selector => {
+      const first = base(selector);
+      if (typeof first === 'string') return wrapComponentNots(first, head);
+
+      const out: string[] = [];
+      for (let i = 0; i < first.length; i++) out.push(wrapComponentNots(first[i], head));
+      return out.length === 1 ? out[0] : out;
+    };
+  };
+
+  let bridgeDeclTransform: DeclTransform | undefined;
+  const bridgeDecl = (): DeclTransform => {
+    if (bridgeDeclTransform === undefined) {
+      bridgeDeclTransform = postProcessDecl
+        ? composeDecl(postProcessDecl, rewriteBridgeValue)
+        : rewriteBridgeValue;
+    }
+    return bridgeDeclTransform;
+  };
+
   const namespace = options.namespace ? namespaceForm(options.namespace) : undefined;
+  const headPrefix = namespace ? namespace.prefix : '';
 
   const compileString = (css: string, selector = '', prefix = '', componentId = '&'): string[] => {
     // The author's CSS parses as the root block, so the parser's brace repair
@@ -173,8 +208,8 @@ export default function createCompiler({
       selfRefSelector: selector,
       componentId,
       namespace,
-      rw: postProcessSelector,
-      decl: postProcessDecl,
+      rw: __NATIVE_WEB__ ? bridgeRw('') : postProcessSelector,
+      decl: __NATIVE_WEB__ ? bridgeDecl() : postProcessDecl,
     });
   };
 
@@ -183,8 +218,8 @@ export default function createCompiler({
   const compiler: Compiler = {
     hash: h !== SEED ? h.toString() : '',
     compile: compileString,
-    emit: (source, filled, parentSelector, { componentId, fragments, ids }) =>
-      compileWebFilled(
+    emit: (source, filled, parentSelector, { componentId, fragments, ids }) => {
+      return compileWebFilled(
         source,
         filled,
         parentSelector,
@@ -193,11 +228,14 @@ export default function createCompiler({
           componentId,
           ids,
           namespace,
-          rw: postProcessSelector,
-          decl: postProcessDecl,
+          rw: __NATIVE_WEB__
+            ? bridgeRw(parentSelector ? headPrefix + parentSelector : '')
+            : postProcessSelector,
+          decl: __NATIVE_WEB__ ? bridgeDecl() : postProcessDecl,
         },
         fragments
-      ),
+      );
+    },
   };
 
   return compiler;

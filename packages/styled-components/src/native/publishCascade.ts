@@ -12,7 +12,6 @@ export const PRESSABLE_TARGET = 'Pressable';
 
 /** The interaction state React Native's `Pressable` hands to a `style` or `children` function. */
 export type InteractionState = {
-  disabled?: boolean;
   focused?: boolean;
   hovered?: boolean;
   pressed?: boolean;

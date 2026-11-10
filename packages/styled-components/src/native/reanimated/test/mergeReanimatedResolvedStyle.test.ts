@@ -27,6 +27,7 @@ describe('mergeReanimatedResolvedStyle', () => {
       conditional: [],
       nonPseudoEntries: [],
       pseudoEntries: [],
+      pseudoReads: 0,
       hasPseudo: false,
       keyframes: [],
       startingStyle: { opacity: 0 },

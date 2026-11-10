@@ -8,6 +8,7 @@
  */
 import { resetNativeStyleCache, toNativeStyles } from '../../../models/compileNative';
 import { resetWarningsForTest } from '../../transform/dev';
+import '../'; // registers the default animation adapter
 
 const stubStyleSheet = {
   create: <T extends object>(styles: T) => styles,

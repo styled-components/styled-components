@@ -20,7 +20,7 @@ xcrun simctl openurl booted "native-showcase:///?focus=<slug>"
 
 The intent is delivered live to the foreground instance (no app restart). Slugs come from `src/widgets/registry.ts` (e.g. `container-query-card`, `viewport-units-ribbon`, `keyframe-orchestra`). Much more reliable than swipe-and-screenshot for QA loops.
 
-After a JS reload (double-R or Fast Refresh of the catalog), `?focus` intents can stop scrolling the catalog even though the activity receives them; bouncing between two different slugs does not recover it. Fall back to `adb shell input swipe` navigation, or cold-restart the app to restore deep-link handling.
+A link to the running app jumps only when its slug differs from the current `focus` param: re-sending the same slug is not a route change, so it does nothing. Send a different slug in between to return to one.
 
 ## Nested scrollers on Android
 

@@ -9,7 +9,7 @@ import { Markdown } from '@/components/Markdown';
  * `abs`, `sign`). Each row renders a single bar whose `width` is the
  * formula in question; the bar's rendered length IS the proof of the
  * computed value. Labels stay outside the bar so narrow results
- * (`mod(125, 7) → 6`) don't squeeze their captions.
+ * (`mod(125px, 7px) → 6px`) don't squeeze their captions.
  */
 
 const Stack = styled.View`
@@ -63,16 +63,16 @@ const TrigFold = styled(Bar)`
   width: calc(sin(45deg) * 200px);
 `;
 const PowFold = styled(Bar)`
-  width: pow(8, 2);
+  width: calc(pow(8, 2) * 1px);
 `;
 const HypotFold = styled(Bar)`
-  width: hypot(60, 80);
+  width: hypot(60px, 80px);
 `;
 const AbsFold = styled(Bar)`
-  width: abs(-180);
+  width: abs(-180px);
 `;
 const ModFold = styled(Bar)`
-  width: mod(127, 30);
+  width: mod(127px, 30px);
 `;
 
 // Runtime - re-resolves against viewport on each render.
@@ -119,13 +119,13 @@ export function MathFunctionsLab() {
         <Baseline>
           <Row formula="calc(120px + 80px)" result="200px" Bar={SumFold} />
           <Row formula="max(32px, 200px)" result="200px" Bar={MaxFold} />
-          <Row formula="abs(-180)" result="180px" Bar={AbsFold} />
+          <Row formula="abs(-180px)" result="180px" Bar={AbsFold} />
           <Row formula="clamp(80px, 160px, 240px)" result="160px" Bar={ClampFold} />
           <Row formula="round(157.4px, 5px)" result="155px" Bar={RoundFold} />
           <Row formula="calc(sin(45deg) * 200px)" result="≈ 141px" Bar={TrigFold} />
-          <Row formula="hypot(60, 80)" result="100px" Bar={HypotFold} />
-          <Row formula="pow(8, 2)" result="64px" Bar={PowFold} />
-          <Row formula="mod(127, 30)" result="7px" Bar={ModFold} />
+          <Row formula="hypot(60px, 80px)" result="100px" Bar={HypotFold} />
+          <Row formula="calc(pow(8, 2) * 1px)" result="64px" Bar={PowFold} />
+          <Row formula="mod(127px, 30px)" result="7px" Bar={ModFold} />
         </Baseline>
       </Section>
 

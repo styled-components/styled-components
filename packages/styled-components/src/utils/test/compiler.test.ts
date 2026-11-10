@@ -1,5 +1,6 @@
 import { emitWeb } from '../../parser/emit-web';
 import { parse } from '../../parser/parser';
+import { parseSource } from '../../parser/source';
 import createCompiler, { ICreateCompiler, normalize } from '../compiler';
 import rtl from '../../plugins/rtl';
 import rscPlugin from '../../plugins/rsc';
@@ -2035,6 +2036,193 @@ background-color: green;`)
       expect(compiler.compile(`margin-left: 8px; appearance: none;`, '.a', undefined, 'a')).toEqual(
         ['.a{margin-right:8px;-webkit-appearance:none;appearance:none;}']
       );
+    });
+  });
+
+  describe('rn-web bridge rewrites follow __NATIVE_WEB__ at call time', () => {
+    afterEach(() => {
+      globalThis.__NATIVE_WEB__ = false;
+    });
+
+    type Run = (compiler: ReturnType<typeof createCompiler>) => string[];
+
+    const compileAs =
+      (css: string): Run =>
+      compiler =>
+        compiler.compile(css, '.a', undefined, 'a');
+
+    const sizePlugin: ICreateCompiler = {
+      plugins: [
+        {
+          name: 'size',
+          decl: (prop, value) =>
+            prop === 'size' ? { prop: 'width', value: 'var(--s, ' + value + ')px' } : undefined,
+        },
+      ],
+    };
+
+    it.each<[string, ICreateCompiler, Run, string[], string[]]>([
+      [
+        'a var() unit suffix',
+        {},
+        compileAs('width: var(--s, 1)px;'),
+        ['.a{width:var(--s, 1)px;}'],
+        ['.a{width:calc(var(--s, 1) * 1px);}'],
+      ],
+      [
+        'the align-content before vertical-align, on emit',
+        {},
+        compiler =>
+          compiler.emit(parseSource(['vertical-align: middle;'], []), [], '.a', {
+            componentId: 'a',
+          }),
+        ['.a{vertical-align:middle;}'],
+        ['.a{align-content:center;vertical-align:middle;}'],
+      ],
+      [
+        'what a plugin declaration writes',
+        sizePlugin,
+        compileAs('size: 4;'),
+        ['.a{width:var(--s, 4)px;}'],
+        ['.a{width:calc(var(--s, 4) * 1px);}'],
+      ],
+      [
+        ':disabled and :enabled',
+        {},
+        compileAs('&:disabled{color:red;} &:enabled{color:blue;}'),
+        ['.a:disabled{color:red;}', '.a:enabled{color:blue;}'],
+        [
+          '.a:is(:disabled,[aria-disabled=true]){color:red;}',
+          '.a:not(:is(:disabled,[aria-disabled=true])){color:blue;}',
+        ],
+      ],
+    ])(
+      'applies %s only while the flag is set, on the same compiler',
+      (_name, options, run, off, on) => {
+        const compiler = createCompiler(options);
+
+        expect(run(compiler)).toEqual(off);
+
+        globalThis.__NATIVE_WEB__ = true;
+
+        expect(run(compiler)).toEqual(on);
+      }
+    );
+
+    it('rewrites a var() unit under a namespace and a plugin', () => {
+      globalThis.__NATIVE_WEB__ = true;
+
+      const compiler = createCompiler({
+        options: { namespace: '.app' },
+        plugins: [{ name: 'noop' }],
+      });
+
+      expect(compiler.compile('width: var(--s, 1)px;', '.a', undefined, 'a')).toEqual([
+        '.app .a{width:calc(var(--s, 1) * 1px);}',
+      ]);
+    });
+
+    it('wraps the :not() of the component head on every bridge emit, with the head each call names', () => {
+      const compiler = createCompiler();
+      const component = parseSource(['&:not([x]){color:red;}'], []);
+      const global = parseSource(['.g:not([x]){color:red;}'], []);
+      const emit = (source: typeof component, head: string) =>
+        compiler.emit(source, [], head, { componentId: 'a' });
+
+      expect(emit(component, '.a')).toEqual(['.a:not([x]){color:red;}']);
+
+      globalThis.__NATIVE_WEB__ = true;
+
+      expect(emit(component, '.a')).toEqual(['.a:where(:not([x])){color:red;}']);
+      expect(emit(global, '')).toEqual(['.g:not([x]){color:red;}']);
+      expect(compiler.compile('&:not([x]){color:red;}', '.a', undefined, 'a')).toEqual([
+        '.a:not([x]){color:red;}',
+      ]);
+      expect(emit(component, '.b')).toEqual(['.b:where(:not([x])){color:red;}']);
+    });
+
+    it.each([
+      ['.app', '&:not([x]){color:red;}', '.app .a:where(:not([x])){color:red;}'],
+      ['.app', ':root &:not([x]){color:red;}', ':root.app .a:not([x]){color:red;}'],
+      ['.app', 'html &:not([x]){color:red;}', 'html.app .a:not([x]){color:red;}'],
+      [
+        '.app',
+        '&:not([x]),:root &:not([y]){color:red;}',
+        '.app .a:where(:not([x])),:root.app .a:not([y]){color:red;}',
+      ],
+      [':root', '&:not([x]){color:red;}', ':root .a:where(:not([x])){color:red;}'],
+      [':root', ':root &:not([x]){color:red;}', ':root:root .a:not([x]){color:red;}'],
+    ])(
+      'under namespace %s wraps only the component own :not(), not a root-anchored one: %s',
+      (namespace, css, expected) => {
+        globalThis.__NATIVE_WEB__ = true;
+
+        const compiler = createCompiler({ options: { namespace } });
+        const source = parseSource([css], []);
+
+        expect(compiler.emit(source, [], '.a', { componentId: 'a' })).toEqual([expected]);
+      }
+    );
+
+    it('wraps after a plugin selector rewrite and the :disabled rewrite, in every entry', () => {
+      globalThis.__NATIVE_WEB__ = true;
+
+      const compiler = createCompiler({
+        plugins: [{ name: 'double', rw: selector => [selector, selector.replace('.a', '.a.a')] }],
+      });
+      const source = parseSource(['&:disabled:not([x]){color:red;}'], []);
+
+      expect(compiler.emit(source, [], '.a', { componentId: 'a' })).toEqual([
+        '.a:is(:disabled,[aria-disabled=true]):where(:not([x])){color:red;}',
+        '.a.a:is(:disabled,[aria-disabled=true]):where(:not([x])){color:red;}',
+      ]);
+    });
+
+    it.each([false, true])(
+      'hands a plugin the authored :disabled head and emits the plugin output (flag %s)',
+      flag => {
+        globalThis.__NATIVE_WEB__ = flag;
+
+        const seen: string[] = [];
+        const compiler = createCompiler({
+          plugins: [
+            {
+              name: 'record',
+              rw: selector => {
+                seen.push(selector);
+                return selector + ':focus';
+              },
+            },
+          ],
+        });
+
+        expect(compiler.compile('&:disabled{color:red;}', '.a', undefined, 'a')).toEqual([
+          flag
+            ? '.a:is(:disabled,[aria-disabled=true]):focus{color:red;}'
+            : '.a:disabled:focus{color:red;}',
+        ]);
+        expect(seen).toEqual(['.a:disabled']);
+      }
+    );
+
+    it('adds no align-content to a keyframes block, a global emit, or any compile', () => {
+      globalThis.__NATIVE_WEB__ = true;
+
+      const compiler = createCompiler();
+      const global = parseSource(['.icon{vertical-align:middle;}'], []);
+
+      expect(
+        compiler.compile('from{vertical-align:middle;} to{width:var(--s, 1)px;}', 'k', '@keyframes')
+      ).toEqual(['@keyframes k{from{vertical-align:middle;}to{width:calc(var(--s, 1) * 1px);}}']);
+      expect(compiler.compile('.icon{vertical-align:middle;}')).toEqual([
+        '.icon{vertical-align:middle;}',
+      ]);
+      expect(compiler.compile('vertical-align:middle;', '.a', undefined, 'a')).toEqual([
+        '.a{vertical-align:middle;}',
+      ]);
+      expect(compiler.emit(global, [], '', { componentId: 'a' })).toEqual([
+        '.icon{vertical-align:middle;}',
+      ]);
     });
   });
 });

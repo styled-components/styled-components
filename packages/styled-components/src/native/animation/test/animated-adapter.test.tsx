@@ -7,7 +7,7 @@
  * output;the rendered tree shows the resolved primitive.
  */
 import React from 'react';
-import { Animated } from 'react-native';
+import { Animated, Pressable, View } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 import createTheme from '../../../constructors/createTheme';
 import ThemeProvider from '../../../models/ThemeProvider';
@@ -74,6 +74,28 @@ describe('Animated adapter;transitions', () => {
     const config = timingSpy.mock.calls[0][1];
     expect(config.duration).toBe(280);
     expect(config.toValue).toBe(1);
+  });
+
+  it('hands shouldForwardProp the styled target while a transition runs, as on the web', () => {
+    const seen = new Set<unknown>();
+    const Card = styled.View.withConfig({
+      shouldForwardProp: (prop, el) => {
+        seen.add(el);
+        return prop !== 'tone';
+      },
+    })<{ $bg: string; tone?: string }>`
+      background-color: ${p => p.$bg};
+      transition: background-color 280ms ease-out;
+    `;
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = track(TestRenderer.create(<Card $bg="red" tone="x" />));
+    });
+    act(() => {
+      renderer.update(<Card $bg="blue" tone="x" />);
+    });
+    expect(timingSpy).toHaveBeenCalledTimes(1);
+    expect([...seen]).toEqual([View]);
   });
 
   it('auto-promotes a pure-eligible cycle to the native driver', () => {
@@ -170,6 +192,33 @@ describe('Animated adapter;transitions', () => {
       renderer.update(<Card $bg="red" />);
     });
     // Same prop value across two renders should not animate.
+    expect(timingSpy).not.toHaveBeenCalled();
+  });
+
+  // A transition diffs the base values only, so the value a `:disabled` rule sets appears at once
+  // instead of animating.
+  it('snaps the value a :disabled rule sets without starting a timing', () => {
+    const Card = styled(Pressable)`
+      opacity: 1;
+      transition: opacity 200ms;
+      &:disabled {
+        opacity: 0.4;
+      }
+    `;
+    const opacityOf = (renderer: TestRenderer.ReactTestRenderer) => {
+      const style = renderer.toJSON()!.props.style;
+      return Object.assign({}, ...[style].flat(Infinity).filter(Boolean)).opacity;
+    };
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = track(TestRenderer.create(<Card disabled={false} />));
+    });
+    expect(opacityOf(renderer)).toBe(1);
+
+    act(() => {
+      renderer.update(<Card disabled />);
+    });
+    expect(opacityOf(renderer)).toBe(0.4);
     expect(timingSpy).not.toHaveBeenCalled();
   });
 

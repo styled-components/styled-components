@@ -1,5 +1,6 @@
 import React, { useContext, useMemo } from 'react';
 import type { ColorSchemeName, EmitterSubscription, NativeEventSubscription } from 'react-native';
+import { isWS } from '../utils/charCodes';
 import { fifoSet } from '../utils/fifoMap';
 import type { AnimatedApi, ReactNativeModule } from './animation/animatedTypes';
 
@@ -12,6 +13,7 @@ type RNApis = {
   Appearance: ReactNativeModule['Appearance'] | undefined;
   Dimensions: ReactNativeModule['Dimensions'] | undefined;
   PixelRatio: ReactNativeModule['PixelRatio'] | undefined;
+  Platform: ReactNativeModule['Platform'] | undefined;
   processColor: ReactNativeModule['processColor'] | undefined;
 };
 
@@ -26,6 +28,7 @@ export function getRN(): RNApis {
         Appearance: rn.Appearance,
         Dimensions: rn.Dimensions,
         PixelRatio: rn.PixelRatio,
+        Platform: rn.Platform,
         processColor: rn.processColor,
       };
     } catch {
@@ -35,6 +38,7 @@ export function getRN(): RNApis {
         Appearance: undefined,
         Dimensions: undefined,
         PixelRatio: undefined,
+        Platform: undefined,
         processColor: undefined,
       };
     }
@@ -296,8 +300,8 @@ function splitTopLevel(s: string, sep: string): string[] {
       lower.charCodeAt(i) === 0x61 /* a */ &&
       lower.charCodeAt(i + 1) === 0x6e /* n */ &&
       lower.charCodeAt(i + 2) === 0x64 /* d */ &&
-      (i === 0 || isSpace(s.charCodeAt(i - 1))) &&
-      (i + 3 === len || isSpace(s.charCodeAt(i + 3)))
+      (i === 0 || isWS(s.charCodeAt(i - 1))) &&
+      (i + 3 === len || isWS(s.charCodeAt(i + 3)))
     ) {
       out.push(s.substring(start, i).trim());
       start = i + 3;
@@ -306,10 +310,6 @@ function splitTopLevel(s: string, sep: string): string[] {
   }
   out.push(s.substring(start).trim());
   return out;
-}
-
-function isSpace(c: number): boolean {
-  return c === 0x20 || c === 0x09 || c === 0x0a || c === 0x0d;
 }
 
 export function matchMedia(query: string, env: MediaQueryEnv): boolean {

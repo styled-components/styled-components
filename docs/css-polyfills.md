@@ -24,7 +24,7 @@ On web, `styled-components/native` resolves to the rn-web bridge, which compiles
 
 - A polyfill has no rn-web branch and no rn-web test. Its spec block covers iOS and Android only.
 - What works on rn-web is what the browser supports. The compatibility doc's rn-web statements describe browser support and the bridge, never polyfill output.
-- Bridge behavior (prop mapping, `$$css` composition, end events, the 16-element matrix rewrite) is tested in `src/test/web-bridge.test.tsx`; the bridge bundle's contents in `treeshake.test.ts` "rn-web bridge build".
+- Bridge behavior (prop mapping, `$$css` composition, end events, the 16-element matrix rewrite, and the compiler-seam transforms in [react-native.md](react-native.md) "The web bridge transforms at the compiler seams") is tested in `src/test/web-bridge.test.tsx`; the bridge bundle's contents in `treeshake.test.ts` "rn-web bridge build".
 
 Notes:
 

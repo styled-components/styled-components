@@ -68,6 +68,7 @@ import type {
 } from 'react-native';
 const reactNativeWeb = require('react-native-web') as Record<string, unknown>;
 
+import type { StyledTextInputProps } from '../textInputTypes';
 import styledWeb from '../../constructors/styled';
 import createTheme from '../../constructors/createTheme';
 import RawThemeProvider, {
@@ -81,7 +82,7 @@ import createGlobalStyle from '../../constructors/createGlobalStyle';
 import withTheme from '../../hoc/withTheme';
 import isStyledComponent from '../../utils/isStyledComponent';
 import { warnOnce } from '../../utils/warnOnce';
-import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager';
+import { StyleSheetManager } from '../../models/StyleSheetManager';
 import ServerStyleSheet from '../../models/ServerStyleSheet';
 import { camelize } from '../camelize';
 import { useEndEventRef } from './endEvents';
@@ -180,6 +181,21 @@ function collectDataProps(rest: Record<string, unknown>): {
   return { dataSet, other };
 }
 
+/** Per-alias prop fix `bridgePrimitive` applies after the props are built; one value per alias. */
+const PrimitiveFix = {
+  DisabledOnRoot: 1,
+  None: 0,
+  ReadOnlyFalseOmitted: 2,
+} as const;
+
+type PrimitiveFixKind = (typeof PrimitiveFix)[keyof typeof PrimitiveFix];
+
+const primitiveFixes: Partial<Record<KnownAlias, PrimitiveFixKind>> = {
+  Switch: PrimitiveFix.DisabledOnRoot,
+  Text: PrimitiveFix.DisabledOnRoot,
+  TextInput: PrimitiveFix.ReadOnlyFalseOmitted,
+};
+
 /**
  * Wrap a rn-web primitive so the web pipeline's `className` prop becomes a
  * styleq `$$css` entry in `style`. rn-web's createDOMProps reads `style`
@@ -188,7 +204,8 @@ function collectDataProps(rest: Record<string, unknown>): {
  */
 function bridgePrimitive(
   Component: React.ComponentType<BridgedProps>,
-  displayName: string
+  displayName: string,
+  fix: PrimitiveFixKind
 ): React.FunctionComponent<BridgedProps & React.RefAttributes<unknown>> {
   // React 19 ref-as-prop; no `React.forwardRef` wrapper, matching
   // StyledComponent and StyledNativeComponent. The ref arrives in props
@@ -238,6 +255,17 @@ function bridgePrimitive(
     const base = other !== null ? other : rest;
     const finalProps: Record<string, unknown> = { ...base, ref: hostRef, style: finalStyle };
     if (dataSet !== undefined) finalProps.dataSet = dataSet;
+    if (fix !== PrimitiveFix.None) {
+      // rn-web gives a Switch's `disabled` to its inner checkbox and writes nothing from a Text's,
+      // so the element that carries the class would otherwise never match `:disabled`.
+      if (fix === PrimitiveFix.DisabledOnRoot && props.disabled === true) {
+        finalProps['aria-disabled'] = true;
+      }
+      // rn-web makes an input read-only for any non-null `aria-readonly`, `false` included.
+      if (fix === PrimitiveFix.ReadOnlyFalseOmitted && finalProps['aria-readonly'] === false) {
+        delete finalProps['aria-readonly'];
+      }
+    }
     return React.createElement(Component, finalProps);
   };
   Bridged.displayName = displayName;
@@ -320,7 +348,11 @@ type BridgedNamespace = {
   StatusBar: Styled<'web', typeof RNStatusBar, React.ComponentPropsWithRef<typeof RNStatusBar>>;
   Switch: Styled<'web', typeof RNSwitch, React.ComponentPropsWithRef<typeof RNSwitch>>;
   Text: Styled<'web', typeof RNText, React.ComponentPropsWithRef<typeof RNText>>;
-  TextInput: Styled<'web', typeof RNTextInput, React.ComponentPropsWithRef<typeof RNTextInput>>;
+  TextInput: Styled<
+    'web',
+    typeof RNTextInput,
+    React.ComponentPropsWithRef<typeof RNTextInput> & StyledTextInputProps
+  >;
   TouchableHighlight: Styled<
     'web',
     typeof RNTouchableHighlight,
@@ -605,242 +637,6 @@ function wrapBridgeFactory(target: Factoryish, lifts?: CssLiftMap): Factoryish {
 }
 
 /**
- * Showcase + idiomatic consumer pattern is `padding: ${t.space.sm}px`
- * where `t.space.sm` is a `createTheme` sentinel `var(--sc-space-sm, 13)`.
- * After interpolation that becomes `padding: var(--sc-space-sm, 13)px`,
- * which the CSS parser drops because the `px` suffix lands outside the
- * var() boundary and the fallback isn't typed as a length.
- *
- * Rewrite the form `var(--<name>, <num>)<unit>` → `calc(var(--<name>, <num>) * 1<unit>)`
- * so the value parses as a valid <length-percentage> after substitution.
- * Only fires on var() refs with a bare-number fallback followed by a
- * known CSS unit identifier; pure color / string / unitless var()s pass
- * through untouched.
- *
- * Applied at the compiler's emit boundary so it sees the FULL CSS
- * source after all template interpolations are resolved (the var() and
- * the unit suffix live in different template segments at the
- * tagged-template level, so the rewrite can't run on the raw input).
- */
-const VAR_WITH_UNIT_RE = /var\(\s*(--[a-zA-Z0-9_-]+)\s*,\s*([-+\d.]+)\s*\)([a-zA-Z%]+)/g;
-
-/**
- * CSS Values 4 math functions return `<number>` when all arguments are
- * unitless. The showcase + idiomatic consumer pattern is `width:
- * abs(-180)` expecting a pixel value (mirrors RN's number-as-DIP
- * convention); the browser drops the declaration because `width`
- * needs `<length-percentage>`.
- *
- * Wrap bare-arg math function calls in `calc(<fn> * 1px)` so they
- * type as length. Only fires when the value consists entirely of a
- * single math function with unitless numeric arguments — any embedded
- * unit anywhere in the arg list signals the author already typed
- * the expression and we leave it alone.
- */
-// Inner arg class anchored so the last char is non-whitespace, denying
-// the trailing `\)\s*$` any backtracking room. Without this, a long
-// run of inner whitespace can drag the engine into polynomial work on
-// failed-tail inputs like `abs(<spaces>1<spaces>) X` (the trailing
-// `X` defeats the anchored `$`, then the engine retries every split
-// between the body and the closing `)`).
-const BARE_MATH_BODY_SRC =
-  '(abs|hypot|pow|mod|rem|sin|cos|tan|asin|acos|atan|atan2|exp|log|sqrt|sign)\\(\\s*([-+\\d.,/*()](?:[-+\\d.,\\s/*()]*[-+\\d.,/*()])?)\\s*\\)';
-const KNOWN_UNITS = new Set([
-  'px',
-  'em',
-  'rem',
-  'lh',
-  'rlh',
-  'ch',
-  'cap',
-  'ex',
-  'ic',
-  'rch',
-  'rcap',
-  'rex',
-  'ric',
-  '%',
-  'vh',
-  'vw',
-  'vmin',
-  'vmax',
-  'svh',
-  'svw',
-  'lvh',
-  'lvw',
-  'dvh',
-  'dvw',
-  'cqh',
-  'cqw',
-  'cqmin',
-  'cqmax',
-  'cqi',
-  'cqb',
-  'in',
-  'cm',
-  'mm',
-  'q',
-  'pt',
-  'pc',
-  'fr',
-  'deg',
-  'rad',
-  'grad',
-  'turn',
-  's',
-  'ms',
-]);
-function rewriteVarUnitSuffix(input: string): string {
-  if (input.indexOf('var(') < 0) return input;
-  return input.replace(VAR_WITH_UNIT_RE, (match, name: string, fallback: string, unit: string) => {
-    if (!KNOWN_UNITS.has(unit.toLowerCase())) return match;
-    return 'calc(var(' + name + ', ' + fallback + ') * 1' + unit + ')';
-  });
-}
-
-/**
- * Match a CSS declaration whose value is a bare-arg math function in
- * a length-context property. The capture lets the replacement keep
- * the prop name and only wrap the value.
- *
- * Length-context allowlist is conservative; properties that take
- * `<number>` (`opacity`, `z-index`, `flex-grow`, etc.) aren't
- * rewritten so `opacity: pow(0.5, 2)` remains valid.
- */
-const LENGTH_CONTEXT_PROP_RE =
-  '(?:width|height|min-width|max-width|min-height|max-height|top|left|right|bottom|inset(?:-[a-z]+)?|margin(?:-[a-z]+)?|padding(?:-[a-z]+)?|gap|row-gap|column-gap|border(?:-[a-z]+)?-width|outline-width|outline-offset|font-size|letter-spacing|word-spacing|text-indent|line-height|flex-basis|background-size)';
-const BARE_MATH_IN_LENGTH_PROP_RE = new RegExp(
-  '(\\b' + LENGTH_CONTEXT_PROP_RE + '\\s*:\\s*)' + BARE_MATH_BODY_SRC + '(?=\\s*[;}])',
-  'gi'
-);
-function rewriteBareMathFn(input: string): string {
-  if (input.indexOf('(') < 0) return input;
-  return input.replace(
-    BARE_MATH_IN_LENGTH_PROP_RE,
-    (_match, head: string, fn: string, args: string) => {
-      return head + 'calc(' + fn + '(' + args.trim() + ') * 1px)';
-    }
-  );
-}
-
-/**
- * `vertical-align: top|middle|bottom` is inert on rn-web's Text because
- * `Text` renders as a block-laying-out element and `vertical-align`
- * only applies to inline-level content in an inline formatting
- * context. The bridge translates these keywords to a flex container
- * with `align-items: <flex-keyword>` so the Text glyphs land at the
- * requested edge of the parent box.
- *
- * Two scoped companion rules cover the two interpretations:
- * - non form-control elements get `display: flex; align-items: <flex>`
- *   so their child content lands at the requested edge.
- * - `<textarea>` / `<input>` get `align-content: <flex>` so the input
- *   text itself lands at the requested edge inside the control. Block
- *   `align-content` is the standards-compliant way to vertically
- *   position text inside a textarea.
- *
- * The original `vertical-align` declaration is kept so consumers
- * authoring CSS that runs in a non-rn-web context still see it.
- */
-const CLASS_HEAD_RE = /^\.[a-zA-Z0-9_-]+/;
-const VERT_ALIGN_DECL_RE = /vertical-align\s*:\s*(top|middle|bottom)\b/i;
-const VERT_ALIGN_TO_FLEX: Record<string, string> = {
-  top: 'flex-start',
-  middle: 'center',
-  bottom: 'flex-end',
-};
-/**
- * Returns companion rules for a class that uses `vertical-align: top
- * | middle | bottom`. Empty array if no match. CSSOM `insertRule`
- * accepts a single rule per call so companions are inserted as
- * separate entries by the caller. indexOf bounds the body slice so
- * neither regex can backtrack across the full input.
- */
-function verticalAlignCompanions(input: string): string[] {
-  const classMatch = CLASS_HEAD_RE.exec(input);
-  if (!classMatch) return [];
-  const braceOpen = input.indexOf('{', classMatch[0].length);
-  if (braceOpen < 0) return [];
-  const braceClose = input.indexOf('}', braceOpen + 1);
-  if (braceClose < 0) return [];
-  const declMatch = VERT_ALIGN_DECL_RE.exec(input.slice(braceOpen + 1, braceClose));
-  if (!declMatch) return [];
-  const flexValue = VERT_ALIGN_TO_FLEX[declMatch[1].toLowerCase()];
-  if (!flexValue) return [];
-  const cls = classMatch[0];
-  return [
-    cls + ':not(textarea):not(input) { display: flex; align-items: ' + flexValue + '; }',
-    cls + ':is(textarea, input) { align-content: ' + flexValue + '; }',
-  ];
-}
-
-// Patches `mainCompiler.emit` and `.compile` so every emitted CSS rule
-// runs through the var()+unit and bare-math rewrites. Importing the
-// bridge triggers the patch; pure-web consumers that never import the
-// bridge see the unmodified compiler.
-//
-// `:not(...)` chains carry CSS-spec specificity each (`(0,n,0)` for n
-// simple selectors), which beats a sibling `.cls[attr]` rule's (0,1,0)
-// regardless of source order. Wrapping the chain in `:where(...)`
-// zeroes the specificity so source order decides the cascade.
-const NOT_CHAIN_AFTER_CLASS_RE = /(^\.[a-zA-Z0-9_-]+)((?::not\([^()]*\))+)/;
-
-function applyBridgeRewritesToRules(rules: string[]): void {
-  let extras: Array<{ index: number; rule: string }> | null = null;
-  for (let i = 0; i < rules.length; i++) {
-    const before = rules[i];
-    const hasVar = before.indexOf('var(') >= 0;
-    const hasParen = before.indexOf('(') >= 0;
-    const hasNot = before.indexOf(':not(') >= 0;
-    const hasVertAlign = before.indexOf('vertical-align') >= 0;
-    if (!hasVar && !hasParen && !hasNot && !hasVertAlign) continue;
-
-    let after = before;
-    if (hasVar) after = rewriteVarUnitSuffix(after);
-    if (hasParen) after = rewriteBareMathFn(after);
-    if (hasNot) after = after.replace(NOT_CHAIN_AFTER_CLASS_RE, '$1:where($2)');
-    if (after !== before) rules[i] = after;
-    if (!hasVertAlign) continue;
-
-    const companions = verticalAlignCompanions(after);
-    if (companions.length === 0) continue;
-    if (extras === null) extras = [];
-    for (let j = 0; j < companions.length; j++) {
-      // Same `index` for every companion of the source rule; the reverse
-      // splice below lands them in pushed order right after the source.
-      extras.push({ index: i + 1, rule: companions[j] });
-    }
-  }
-  if (extras === null) return;
-  for (let i = extras.length - 1; i >= 0; i--) {
-    const { index, rule } = extras[i];
-    rules.splice(index, 0, rule);
-  }
-}
-function withBridgeRewrites<
-  F extends (this: typeof mainCompiler, ...args: never[]) => string[] | null,
->(original: F): F {
-  const patched = function patched(this: typeof mainCompiler, ...args: Parameters<F>) {
-    const rules = original.apply(this, args);
-    if (rules !== null) applyBridgeRewritesToRules(rules);
-    return rules;
-  } as F & { __scBridgePatched?: true };
-  patched.__scBridgePatched = true;
-  return patched;
-}
-// Guard against the bridge module being evaluated more than once (duplicate
-// copies in a monorepo, mixed ESM/CJS resolution, test isolation). Without
-// the marker, re-wrapping an already-patched function runs every rewrite
-// pass twice, duplicating `vertical-align` companion rules.
-type Patchable = ((...args: never[]) => string[] | null) & { __scBridgePatched?: true };
-if (!(mainCompiler.emit as Patchable).__scBridgePatched) {
-  mainCompiler.emit = withBridgeRewrites(mainCompiler.emit);
-}
-if (!(mainCompiler.compile as Patchable).__scBridgePatched) {
-  mainCompiler.compile = withBridgeRewrites(mainCompiler.compile);
-}
-
-/**
  * Walk the static string segments of a tagged template and extract
  * any CSS declarations matching the lift map. Dynamic segments
  * (interpolated args) are skipped because we can't statically evaluate
@@ -879,7 +675,11 @@ aliases.forEach(alias => {
   if (primitive) {
     rawToBridged.set(
       primitive as object,
-      bridgePrimitive(primitive as React.ComponentType<BridgedProps>, 'Bridged' + alias)
+      bridgePrimitive(
+        primitive as React.ComponentType<BridgedProps>,
+        'Bridged' + alias,
+        primitiveFixes[alias] ?? PrimitiveFix.None
+      )
     );
   }
 });
@@ -1070,5 +870,3 @@ export function SafeAreaInsetsProvider({
   return React.createElement(React.Fragment, null, children);
 }
 export type { SafeAreaInsets, SafeAreaInsetsProviderProps } from '../safeArea';
-
-export const __testOnly_verticalAlignCompanions = verticalAlignCompanions;
