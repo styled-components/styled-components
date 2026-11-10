@@ -19,8 +19,10 @@ const Button = styled.Pressable`
   }
 
   &:disabled {
-    background-color: ${t.colors.surfaceMuted};
-    border-color: ${t.colors.border};
+    background-color: ${t.colors.ink};
+    border-width: 4px;
+    border-style: dashed;
+    border-color: light-dark(#c8243a, #ff6b80);
   }
 `;
 
@@ -36,7 +38,7 @@ const Label = styled.Text`
   }
 
   &[data-disabled='true'] {
-    color: ${t.colors.fgFaint};
+    color: ${t.colors.bg};
   }
 `;
 

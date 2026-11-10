@@ -312,10 +312,11 @@ const STYLE_HIDDEN = { opacity: 0 } as const;
 const VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 1 } as const;
 
 /**
- * How many estimate-hop-then-retry rounds restoration gets before it
- * settles wherever it reached. Each round mounts another band of rows, so
- * a deep index needs several; the ceiling stops a target that can never
- * resolve (a saved index past the end of a shrunken list) from spinning.
+ * How many estimate-hop-then-retry rounds without new measured rows
+ * restoration gets before it settles wherever it reached. A round that
+ * measures further down resets the count; the ceiling stops a target that
+ * can never resolve (a saved index past the end of a shrunken list) from
+ * spinning.
  */
 const MAX_SCROLL_RETRIES = 6;
 
@@ -363,11 +364,27 @@ export function ScreenScaffold<Item>({
   const lastIndexRef = React.useRef(0);
   const writeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   // Persist + scroll-target suppression. Two states:
-  //   number - a category-nav scrollToIndex is in flight; suppress
-  //            persist and gate `onScrollToIndexFailed` retry until
-  //            the target appears in viewable items.
+  //   number - `aimAt` set a jump target (restore, category nav, slug
+  //            jump) that is in flight; suppress persist and gate
+  //            `onScrollToIndexFailed` retry until the target appears in
+  //            viewable items.
   //   null - idle; persist live.
   const restoreTargetRef = React.useRef<number | null>(null);
+  // Retry bookkeeping for `onScrollToIndexFailed`, reset per jump so one
+  // deep jump does not spend the next one's budget.
+  const failedAttemptsRef = React.useRef(0);
+  const highestMeasuredRef = React.useRef(-1);
+  const retryTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const aimAt = React.useCallback((index: number) => {
+    restoreTargetRef.current = index;
+    failedAttemptsRef.current = 0;
+    highestMeasuredRef.current = -1;
+    // An earlier jump's pending retry would pull the list back to its index.
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  }, []);
   const storageKey = STORAGE_PREFIX + title;
 
   // Restoration is a two-step dance: read AsyncStorage, then once the
@@ -468,7 +485,7 @@ export function ScreenScaffold<Item>({
       if (top.index == null) return;
       const target = restoreTargetRef.current;
       if (target !== null) {
-        if (typeof target === 'number' && viewableItems.some(v => v.index === target)) {
+        if (viewableItems.some(v => v.index === target)) {
           restoreTargetRef.current = null;
           restorationSettledRef.current = true;
           // Reveal the FlatList now that the target is on-screen.
@@ -524,7 +541,7 @@ export function ScreenScaffold<Item>({
       return;
     }
     restoreFiredRef.current = true;
-    restoreTargetRef.current = idx;
+    aimAt(idx);
     setHidden(true);
     const rafId = requestAnimationFrame(() => {
       listRef.current?.scrollToIndex({ index: idx, animated: false, viewPosition: 0 });
@@ -574,67 +591,78 @@ export function ScreenScaffold<Item>({
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
   }, []);
 
-  const handleCategoryPress = React.useCallback((index: number) => {
-    // Reuse the deep-link restoration target: if the target index isn't
-    // laid out yet (virtualization), `onScrollToIndexFailed` reads this
-    // ref to drive the offset-then-retry fallback. Setting it to null
-    // here would short-circuit that path and the scroll would silently
-    // no-op for indices outside the rendered window.
-    restoreTargetRef.current = index;
-    listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0 });
-  }, []);
-
   const jumpRevealTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   React.useEffect(
     () => () => {
       if (jumpRevealTimerRef.current) clearTimeout(jumpRevealTimerRef.current);
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     },
     []
+  );
+
+  // Safety net for a jump whose destination is already on screen: no
+  // viewability change fires, so nothing else clears the target and
+  // persistence would stay suppressed until a drag. A retry still pending
+  // means the jump is resolving; the viewability callback owns that case.
+  const armJumpSettle = React.useCallback((index: number) => {
+    if (jumpRevealTimerRef.current) clearTimeout(jumpRevealTimerRef.current);
+    jumpRevealTimerRef.current = setTimeout(() => {
+      jumpRevealTimerRef.current = null;
+      setHidden(false);
+      if (retryTimerRef.current || restoreTargetRef.current !== index) return;
+      restoreTargetRef.current = null;
+      restorationSettledRef.current = true;
+    }, 450);
+  }, []);
+
+  const handleCategoryPress = React.useCallback(
+    (index: number) => {
+      // Reuse the deep-link restoration target: if the target index isn't
+      // laid out yet (virtualization), `onScrollToIndexFailed` reads this
+      // ref to drive the offset-then-retry fallback. Setting it to null
+      // here would short-circuit that path and the scroll would silently
+      // no-op for indices outside the rendered window.
+      aimAt(index);
+      armJumpSettle(index);
+      listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0 });
+    },
+    [aimAt, armJumpSettle]
   );
 
   const handleSlugJump = React.useCallback(
     (slug: string) => {
       const idx = anchorIndex?.get(slug);
       if (idx === undefined) return;
-      restoreTargetRef.current = idx;
+      aimAt(idx);
       // Far targets aren't measured under virtualization, so the jump
       // resolves as estimate-hop + measured retry over a few frames,
       // which reads as a rapid scrub. Hide the list for the hop
       // sequence; the viewability callback reveals the moment the
       // target row is on-screen, so the jump reads as a teleport. The
-      // timer is the safety reveal for the already-on-target no-op
-      // case, where no viewability change ever fires.
+      // settle timer is the safety reveal for the already-on-target
+      // no-op case, where no viewability change ever fires.
       setHidden(true);
-      if (jumpRevealTimerRef.current) clearTimeout(jumpRevealTimerRef.current);
-      jumpRevealTimerRef.current = setTimeout(() => setHidden(false), 450);
+      armJumpSettle(idx);
       listRef.current?.scrollToIndex({ index: idx, animated: false, viewPosition: 0 });
     },
-    [anchorIndex]
+    [aimAt, anchorIndex, armJumpSettle]
   );
 
   // FlatList's `scrollToIndex` only succeeds once the target index has
   // been measured, but virtualization only mounts a few viewports past
   // the visible area. On cold mount with a deeply saved index, a naive
   // retry loop spins forever because no scroll motion reaches the
-  // target. Workaround: jump to an estimated offset (target index
-  // multiplied by the reported average item length); that motion
-  // mounts items in the target region, after which the precise
-  // `scrollToIndex` call succeeds.
-  // Bounded because each attempt mounts another band of rows; an
-  // unbounded loop against a target that can never resolve (stale saved
-  // index, data shrunk under us) would spin forever.
-  const failedAttemptsRef = React.useRef(0);
-  const retryTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  React.useEffect(
-    () => () => {
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-    },
-    []
-  );
-
+  // target.
   const onScrollToIndexFailed = React.useCallback(
-    (info: { index: number; averageItemLength: number }) => {
+    (info: { index: number; averageItemLength: number; highestMeasuredFrameIndex: number }) => {
       if (restoreTargetRef.current === null) return;
+      // A round that measured further down the list than the last one is
+      // converging (web mounts only a few rows per frame, so a deep target
+      // needs many rounds); only rounds without progress spend the budget.
+      if (info.highestMeasuredFrameIndex > highestMeasuredRef.current) {
+        highestMeasuredRef.current = info.highestMeasuredFrameIndex;
+        failedAttemptsRef.current = 0;
+      }
       // One retry is not enough after a reload: the list re-mounts cold,
       // so the first estimated hop often lands short and the second
       // measurement is still mid-flight. Giving up here is what surfaced
@@ -647,13 +675,16 @@ export function ScreenScaffold<Item>({
         return;
       }
       failedAttemptsRef.current += 1;
+      // Hop to an estimated offset (target index times the reported average
+      // item length); that motion mounts rows in the target region, after
+      // which the retry's precise `scrollToIndex` succeeds.
       listRef.current?.scrollToOffset({
         offset: info.averageItemLength * info.index,
         animated: false,
       });
       if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-      // Back off a little each round; later attempts are waiting on more
-      // rows to measure than the first one was.
+      // Back off while rounds make no progress; later attempts are waiting
+      // on more rows to measure than the first one was.
       retryTimerRef.current = setTimeout(() => {
         retryTimerRef.current = null;
         if (restoreTargetRef.current === null) return;

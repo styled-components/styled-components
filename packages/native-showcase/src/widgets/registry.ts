@@ -47,6 +47,7 @@ import { StandaloneTransforms } from './StandaloneTransforms';
 import { SystemColorsBoard } from './SystemColorsBoard';
 import { TextDecorationAlignment } from './TextDecorationAlignment';
 import { TextInputAlignment } from './TextInputAlignment';
+import { TextInputStates } from './TextInputStates';
 import { TextOverflowBoard } from './TextOverflowBoard';
 import { TextWrapShelf } from './TextWrapShelf';
 import { ThemeOverrides } from './ThemeOverrides';
@@ -498,6 +499,15 @@ export const fidgets: ReadonlyArray<FidgetEntry> = [
     feature: ':hover / :active / :disabled',
     category: 'Selectors & state',
     Widget: PressInteractive,
+  },
+  {
+    slug: 'text-input-states',
+    title: 'TextInput states',
+    summary:
+      '`:read-write`, `:read-only`, `:disabled` on one TextInput. `disabled` makes it non-editable and unfocusable; `readOnly` only blocks typing.',
+    feature: ':disabled / :read-only / :read-write',
+    category: 'Selectors & state',
+    Widget: TextInputStates,
   },
   {
     slug: 'attribute-variants',
