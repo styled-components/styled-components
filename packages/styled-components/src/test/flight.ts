@@ -6,8 +6,10 @@
  *   @jest-environment node
  *   @jest-environment-options {"customExportConditions": ["react-server", "node", "node-addons"]}
  */
-import type { ReactNode } from 'react';
+import { createElement, type ReactNode } from 'react';
 import { Writable } from 'stream';
+// Node's own: a jsdom test environment has no global `TextDecoder`.
+import { TextDecoder } from 'util';
 
 type FlightServer = {
   createClientModuleProxy: (moduleId: string) => Record<string, unknown>;
@@ -25,7 +27,14 @@ type FlightServer = {
   ) => { pipe: (sink: Writable) => void };
 };
 
-const flight: FlightServer = require('react-server-dom-webpack/server.node');
+/** Loaded on first use: the server entry throws unless `react` resolves to its server build, and the two-graph harness imports this file without that. */
+const flightServer = (): FlightServer => require('react-server-dom-webpack/server.node');
+
+/** The start of every client-reference module id the harness makes. */
+export const CLIENT_MODULE_PREFIX = 'client/';
+
+/** The `styled-components/server-styles` exports, which a host's bundler serves as client references. */
+export const SERVER_STYLES_EXPORTS = ['ScGlobalStyle', 'ScStyle'] as const;
 
 /** A component Flight serializes as a reference to client code (the body never runs on the server). */
 export function clientComponent<Props extends object>(name: string): (props: Props) => ReactNode {
@@ -33,16 +42,42 @@ export function clientComponent<Props extends object>(name: string): (props: Pro
     throw new Error(`client component "${name}" was called on the server`);
   };
 
-  return flight.registerClientReference(proxy, `client/${name}`, 'default');
+  return flightServer().registerClientReference(proxy, CLIENT_MODULE_PREFIX + name, 'default');
+}
+
+/** A `jest.mock('styled-components/server-styles', …)` factory: every export as a client reference. */
+export function serverStylesAsClientReferences(): Record<string, unknown> {
+  return Object.fromEntries(SERVER_STYLES_EXPORTS.map(name => [name, clientComponent(name)]));
 }
 
 /** What a bundler hands a server component for an import of a `'use client'` module: an object whose named properties are that module's client references. */
 export function clientModule(moduleId: string): Record<string, unknown> {
-  return flight.createClientModuleProxy(moduleId);
+  return flightServer().createClientModuleProxy(moduleId);
 }
+
+/** How many paragraphs {@link Filler} renders. */
+export const FILLER_PARAGRAPHS = 150;
+
+/**
+ * Renders far more than the 3200 bytes after which Flight defers the remaining elements of a row,
+ * so an element placed after it lands in a later row.
+ */
+export const Filler = (): ReactNode =>
+  createElement(
+    'div',
+    null,
+    Array.from({ length: FILLER_PARAGRAPHS }, (_, index) =>
+      createElement(
+        'p',
+        { key: index },
+        `Filler paragraph number ${index} of lorem ipsum dolor sit amet`
+      )
+    )
+  );
 
 /** A temporary reference as a server-action reply delivers one: a value from the client that the server can only pass back. */
 export async function temporaryReference(): Promise<unknown> {
+  const flight = flightServer();
   const decoded = await flight.decodeReply(
     '{"value":"$T"}',
     {},
@@ -54,11 +89,14 @@ export async function temporaryReference(): Promise<unknown> {
   return typeof decoded === 'object' && decoded !== null ? Reflect.get(decoded, 'value') : decoded;
 }
 
-/** What a probe element carried: the rule text of the style tag rendered right before it. */
+/** What a probe element carried. */
 export type Probe = {
   /** The probe element's whole `className`. */
   className: string;
-  /** Text of the style tag rendered right before the probe element, or null when there is none. */
+  /**
+   * The rule text the `ScStyle` rendered right before the probe carries: referenced keyframes, then
+   * each level of its chain, base first. Null when no `ScStyle` precedes the probe or it carries no rules.
+   */
   css: string | null;
   /** Props of the probe element as serialized (what reached the host element). */
   props: Record<string, unknown>;
@@ -71,7 +109,7 @@ export type FlightResult = {
   clientProps: Record<string, unknown>[];
   /** Every error Flight reported while rendering. */
   errors: string[];
-  /** Rule text of every global style tag, in payload order. */
+  /** The rule text each `ScGlobalStyle` carries (its rules, then its keyframes), in payload order. */
   globals: string[];
   /** The raw payload text. */
   payload: string;
@@ -130,7 +168,7 @@ function isElementModel(value: unknown): value is ElementModel {
   return Array.isArray(value) && value[0] === '$' && typeof value[3] === 'object';
 }
 
-/** Follows every reference in the payload from the root row, collecting probes and client elements. */
+/** Follows every reference in the payload from the root row, collecting probes, client elements and globals. */
 function collect(
   rows: Map<string, unknown>
 ): Pick<FlightResult, 'clientProps' | 'globals' | 'probes'> {
@@ -153,11 +191,53 @@ function collect(
     return { row: match[1], target };
   };
 
+  /** A value as sent, or the value a reference to an earlier part of the payload stands for. */
+  const resolve = (value: unknown): unknown => {
+    const found = deref(value);
+
+    return found ? resolve(found.target) : value;
+  };
+
+  /** The joined text of a rules array. */
+  const rulesText = (value: unknown): string => {
+    const rules = resolve(value);
+
+    return Array.isArray(rules) ? rules.map(resolve).join('') : '';
+  };
+
+  /** The joined rules of each `[id, name, rules, ...]` entry of a chain or keyframes list, in order. */
+  const levelsText = (value: unknown): string => {
+    const levels = resolve(value);
+
+    return Array.isArray(levels)
+      ? levels
+          .map(level => {
+            const fields = resolve(level);
+
+            return Array.isArray(fields) ? rulesText(fields[2]) : '';
+          })
+          .join('')
+      : '';
+  };
+
+  /** The props of an element carrying `prop`, where the element may be a reference to one sent earlier. */
+  const propsWith = (value: unknown, prop: string): Record<string, unknown> | undefined => {
+    const element = resolve(value);
+
+    return isElementModel(element) && prop in element[3] ? element[3] : undefined;
+  };
+
   const visit = (value: unknown, row: string): void => {
     if (typeof value === 'string') {
       const found = deref(value);
-      if (!found || (!value.includes(':') && seenRows.has(found.row))) return;
-      seenRows.add(found.row);
+      if (!found) return;
+
+      // Only a reference to a whole row marks it seen; a path into a row visits just that part.
+      if (!value.includes(':')) {
+        if (seenRows.has(found.row)) return;
+        seenRows.add(found.row);
+      }
+
       visit(found.target, found.row);
       return;
     }
@@ -169,28 +249,25 @@ function collect(
       value.forEach((item, index) => {
         const label = isElementModel(item) ? item[3]['data-probe'] : undefined;
         if (typeof label === 'string') {
-          const previous = value[index - 1];
-          const before = typeof previous === 'string' ? deref(previous)?.target : previous;
-          const style = isElementModel(before) && before[1] === 'style' ? before[3].children : null;
+          // A server styled instance renders its `ScStyle` right before its element.
+          const style = index > 0 ? propsWith(value[index - 1], 'chain') : undefined;
+          const css = style ? levelsText(style.keyframes) + levelsText(style.chain) : '';
+
           probes[label] = {
             className: String(item[3].className),
-            css: typeof style === 'string' ? style : null,
+            css: css === '' ? null : css,
             props: item[3],
             row,
           };
-        }
-        if (
-          isElementModel(item) &&
-          item[1] === 'style' &&
-          item[3]['data-styled-global'] !== undefined &&
-          typeof item[3].children === 'string'
-        ) {
-          globals.push(item[3].children);
         }
         visit(item, row);
       });
       if (isElementModel(value) && typeof value[1] === 'string' && value[1].startsWith('$L')) {
         clientProps.push(value[3]);
+
+        // Of the style elements, only `ScGlobalStyle` carries `seq` at the top of its props.
+        const props = value[3];
+        if ('seq' in props) globals.push(rulesText(props.rules) + levelsText(props.keyframes));
       }
       return;
     }
@@ -201,6 +278,54 @@ function collect(
   visit(rows.get('0'), '0');
 
   return { clientProps, globals, probes };
+}
+
+/** Reads a whole payload: its probes, client elements and global styles. */
+export function readFlightPayload(payload: Buffer, errors: string[]): FlightResult {
+  return { errors, payload: payload.toString('utf8'), ...collect(parseRows(payload)) };
+}
+
+/** The props of one `ScStyle` element in a payload. */
+export type StyleProps = {
+  chain: Array<[string, string, string[], number]>;
+  keyframes: unknown[];
+  outers: string[];
+};
+
+/**
+ * The props of every style component the payload sends, ordered so a test need not know Flight's
+ * row order. A rules array Flight already sent is a reference to its row on the next level that
+ * carries it; it is read back as the array.
+ */
+export function styleProps({ clientProps }: FlightResult): StyleProps[] {
+  type Sent = { chain: Array<[string, string, string[] | string, number]> } & Omit<
+    StyleProps,
+    'chain'
+  >;
+
+  const all = clientProps.filter(
+    (props): props is Sent & Record<string, unknown> => 'chain' in props
+  );
+  const sent = new Map<string, string[]>();
+
+  for (const { chain } of all) {
+    for (const [id, name, rules] of chain) {
+      if (Array.isArray(rules)) sent.set(id + ' ' + name, rules);
+    }
+  }
+
+  return all
+    .map(({ chain, keyframes, outers }) => ({
+      chain: chain.map(([id, name, rules, seq]): StyleProps['chain'][number] => [
+        id,
+        name,
+        Array.isArray(rules) ? rules : (sent.get(id + ' ' + name) ?? []),
+        seq,
+      ]),
+      keyframes,
+      outers,
+    }))
+    .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
 }
 
 /** Renders `tree` with the real Flight server and returns the probes found in the payload. */
@@ -221,15 +346,10 @@ export function renderFlight(tree: ReactNode): Promise<FlightResult> {
     );
 
     sink.on('finish', () => {
-      const payload = Buffer.concat(chunks);
-      resolve({
-        errors,
-        payload: payload.toString('utf8'),
-        ...collect(parseRows(payload)),
-      });
+      resolve(readFlightPayload(Buffer.concat(chunks), errors));
     });
 
-    flight
+    flightServer()
       .renderToPipeableStream(tree, manifest, {
         onError: error => {
           errors.push(error instanceof Error ? error.message : String(error));

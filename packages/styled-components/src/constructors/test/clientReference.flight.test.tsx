@@ -7,7 +7,13 @@
 // action received from the client) interpolated into a server component's styles has no class
 // on the server and throws on almost any property read. The node holding it is dropped and
 // nothing widens. Each row renders through the real Flight server with real references from
-// react-server-dom-webpack. See docs/react.md "Client references in server styles".
+// react-server-dom-webpack. See docs/react.md "Client references in server styles". The style
+// components are client references, as a host's bundler makes them, and a row reads the rules
+// from their props.
+jest.mock('styled-components/server-styles', () =>
+  jest.requireActual('../../test/flight').serverStylesAsClientReferences()
+);
+
 import React from 'react';
 import styled, {
   createGlobalStyle,
@@ -39,7 +45,7 @@ type Probed = React.ElementType;
 
 type Row = {
   build: (slot: Slot) => Probed;
-  /** The probe's style text with its class and component id as placeholders; null for no style tag. */
+  /** The probe's rule text with its class and component id as placeholders; null for no rules. */
   css: string | null;
   name: string;
 };
@@ -107,9 +113,9 @@ const FORMS = [
 ];
 
 /**
- * The text of a probe's style tag with each generated class as `X` (`Y`, `Z` for an extension's
- * base levels) and each component id as `ID`, so a row states what it emits and not its hashes.
- * `null` when the element has no style tag.
+ * The rule text a probe's `ScStyle` carries with each generated class as `X`, `Y`, `Z` in class-name
+ * order (an extension's base first) and each component id as `ID`, so a row states what it emits and
+ * not its hashes. `null` when the element carries no rules.
  */
 const shown = (probe: Probe | undefined): string | null => {
   if (probe === undefined || probe.css === null) return null;
@@ -264,7 +270,7 @@ const RULE_ROWS: Row[] = [
       }
     `,
     css: null,
-    name: 'emits no style tag when everything the template wrote holds "${R}"',
+    name: 'emits no rules when everything the template wrote holds "${R}"',
   },
   {
     build: r => styled.div`
@@ -642,7 +648,7 @@ describe.each(SHAPES)('$name interpolated into a server component', shape => {
         `;
 
         expect(await outcome(Extended)).toEqual({
-          css: ':where(.X){color:blue;}.Y{top:0;}',
+          css: '.X{color:blue;}.Y{top:0;}',
           errors: [],
           warnings: [shape.warning],
         });
@@ -662,7 +668,7 @@ describe.each(SHAPES)('$name interpolated into a server component', shape => {
         `;
 
         expect(await outcome(Extended)).toEqual({
-          css: ':where(.X){color:blue;}.Y{top:0;}',
+          css: '.X{color:blue;}.Y{top:0;}',
           errors: [],
           warnings: [shape.warning],
         });
@@ -763,7 +769,7 @@ describe.each(SHAPES)('$name interpolated into a server component', shape => {
           warnings: seen,
         }).toEqual({
           color: 'blue',
-          css: ':where(.X){color:blue;}',
+          css: '.X{color:blue;}',
           errors: [],
           warnings: [shape.warning],
         });

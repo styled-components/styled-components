@@ -289,7 +289,7 @@ describe('rehydration', () => {
       `);
     });
 
-    it('should inject new global styles at the end', () => {
+    it('should inject new global styles right after the rehydrated globals, before the components (globals-first)', () => {
       const Component = createGlobalStyle`
         body { color: tomato; }
       `;
@@ -298,16 +298,16 @@ describe('rehydration', () => {
         "body {
           background: papayawhip;
         }
-        .a {
-          color: red;
-        }
         body {
           color: tomato;
+        }
+        .a {
+          color: red;
         }"
       `);
     });
 
-    it('should interleave global and local styles', () => {
+    it('should keep new global styles before every component, rehydrated or new (globals-first)', () => {
       const Component = createGlobalStyle`
         body { color: tomato; }
       `;
@@ -320,17 +320,17 @@ describe('rehydration', () => {
       render(<Component />);
       render(<A />);
 
-      // although `<Component />` is rendered before `<A />`, the global style isn't registered until render time
-      // compared to typical component styles which are registered at creation time
+      // A global sorts before every component of the sheet, so the new global follows the
+      // rehydrated one, and the new component follows the rehydrated component.
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         "body {
           background: papayawhip;
         }
-        .a {
-          color: red;
-        }
         body {
           color: tomato;
+        }
+        .a {
+          color: red;
         }
         .b {
           color: blue;

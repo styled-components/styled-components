@@ -23,9 +23,11 @@ import { escapeCssForStyleTag } from './escapeStyleSink';
 export default function extractCSS(sheet: StyleSheet = mainSheet): string {
   const tag = sheet.getTag();
   const sizes = tag.groupSizes;
+  const { positions } = sheet.order;
   let css = '';
-  for (let group = 0; group < tag.length; group++) {
-    if (sizes[group] === 0) continue;
+  for (let i = 0; i < positions.length; i++) {
+    const group = positions[i];
+    if ((sizes[group] | 0) === 0) continue;
     if (idForGroup(group) === undefined) continue;
     css += tag.getGroup(group);
   }

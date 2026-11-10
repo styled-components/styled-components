@@ -4,16 +4,17 @@ Every mount of a `createGlobalStyle` component with the same `componentId` share
 
 ## Registry
 
-- Lives in `WebGlobalStyle.ts`: `WeakMap<StyleSheet, Map<componentId, Map<instance, { keyframes, name, rules }>>>`. One entry per mount, whichever `WebGlobalStyle` object produced it. A rebuild reads only the registry.
+- Lives in `WebGlobalStyle.ts`: `WeakMap<StyleSheet, Map<componentId, Map<instance, { keyframes, name, placement?, rules }>>>`. One entry per mount, whichever `WebGlobalStyle` object produced it. A rebuild reads only the registry.
 - Keyed by sheet first: each sheet owns its own tag, and a per-request sheet's entries are collected with it.
 - `instance` is the mount's `React.useId()`.
-- Names: a dynamic entry is `componentId + instance`. A static entry is `componentId` alone, because same-id static globals have identical CSS (no functions), so a rebuild inserts the first static entry only. Values that serialize alike but print differently, such as `NaN` and `Infinity`, break that assumption and the first one wins.
+- Names: a dynamic entry is `componentId + instance`. A static entry is `componentId` alone, because same-id static globals have identical CSS (no functions), so a rebuild inserts the first static entry only. The name alone tells a write which path an entry takes. Values that serialize alike but print differently, such as `NaN` and `Infinity`, break that assumption and the first one wins.
 - An id's map is deleted with its last instance. Each write resolves the per-sheet, per-id map once and reuses it.
 
 ## Rebuild order
 
 - `rebuildGroup()` clears the group and re-inserts every surviving entry for the id on that sheet, synchronously (nothing may yield between the clear and the re-insert).
-- Order: mount order, the registry map's insertion order, so the most recent mount wins a same-property conflict. A mount adds its entry at the end; an update replaces the entry in place, so a prop or theme change never moves a global. A global that unmounts and mounts again goes to the end. On first render this matches tree order, because globals render nothing and their effects fire in tree order. Globals with distinct ids are ordered by their groups, which are registered at definition.
+- Every insert of a global's rules, a rebuild's included, passes the entry's `placement`: a server global's first write in the browser can be a rebuild, and a group keeps the key of its first insert until a browser sheet's `clearTag()` resets its order.
+- Order: mount order, the registry map's insertion order, so the most recent mount wins a same-property conflict. A mount adds its entry at the end; an update replaces the entry in place, so a prop or theme change never moves a global. A global that unmounts and mounts again goes to the end. On first render this matches tree order, because globals render nothing and their effects fire in tree order. Every global sits before every component, server globals before client globals; globals of one tier follow definition order (see [react.md](react.md) "Server component styles").
 
 ## Static and dynamic paths
 
@@ -25,7 +26,7 @@ Every mount of a `createGlobalStyle` component with the same `componentId` share
 ## Server
 
 - No cleanup effect runs on the server. A server sheet's entries stay until the sheet itself is collected (the registry is keyed by sheet, and a server sheet lives for one request), so a rebuild there sees every instance.
-- RSC renders into the process-wide default sheet, so the RSC branch deletes each entry right after reading it; one tag per instance holding its rules then its keyframes (so `@import` and `@namespace` stay first), see [react.md](react.md) "RSC style emission and Suspense".
+- An RSC render writes nothing to a sheet: it renders `ScGlobalStyle` with the instance's rules and keyframes, and that client component writes them into the registry sheet in SSR and into the browser sheet on mount, through the registry above, under the `server global` tier. It writes every instance as dynamic (`componentId + instance`), so each instance holds its own copy and an instance React throws away, such as a Suspense fallback, takes only its copy with it. See [react.md](react.md) "Server component styles".
 - An instance's first render into a server sheet appends: a rebuild would re-emit siblings' rules that a stream already flushed (`clearTag` empties the tag after each chunk but keeps the names). A repeat render of the same instance (a client re-render against a server sheet, or a second render into one collection) rebuilds, so its earlier rules are replaced and its siblings' rules stay.
 - Only a sheet constructed with `isServer: true` (`ServerStyleSheet`, or a sheet derived from one) takes this path. The process-wide default sheet is never a server sheet, even on a server: `StyleSheet` reads `server` from its constructor argument, not from its defaults.
 

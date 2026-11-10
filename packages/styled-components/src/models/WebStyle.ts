@@ -33,7 +33,7 @@ const EMPTY_KEYFRAMES: CompiledKeyframes[] = [];
 const MAX_DYNAMIC_NAME_CACHE = TOO_MANY_CLASSES_LIMIT;
 
 /** Per-level output of `generate()`; one entry per link in the inheritance chain. */
-type GeneratedLevel = {
+export type GeneratedLevel = {
   componentId: string;
   name: string;
   rules: string[];
@@ -116,7 +116,7 @@ export default class WebStyle {
     this.ids = baseStyle ? baseStyle.ids + ' ' + componentId : componentId;
     this.baseHash = phash(SEED, componentId);
     this.baseStyle = baseStyle;
-    StyleSheet.registerId(componentId);
+    StyleSheet.registerId(componentId, baseStyle?.componentId);
   }
 
   /**

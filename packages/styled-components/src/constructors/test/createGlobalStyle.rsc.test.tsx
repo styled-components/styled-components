@@ -2,503 +2,341 @@
  * @jest-environment node
  */
 
-// React 19's client `cache` is a pass-through, so tests mock a request-scoped one.
-const mockCacheStore = new Map<Function, any>();
-
-jest.mock('react', () => {
-  const actual = jest.requireActual('react');
-  return {
-    ...actual,
-    cache: (fn: Function) => () => {
-      if (!mockCacheStore.has(fn)) mockCacheStore.set(fn, fn());
-      return mockCacheStore.get(fn);
-    },
-  };
-});
-
-// Mock IS_RSC before importing the module
-jest.mock('../../utils/isRsc', () => ({ IS_RSC: true }));
-
 import React, { Suspense } from 'react';
-import ReactDOMServer from 'react-dom/server';
-import { RSC_REDUNDANT_EMIT_WARN_THRESHOLD } from '../../constants';
-import { StyleSheetManager } from '../../models/StyleSheetManager';
-import {
-  countStyleTags,
-  itWarnsOnRedundantEmits,
-  renderGlobalInProbe,
-  renderStreamed,
-  tick,
-} from '../../test/rscStream';
-import createGlobalStyle from '../createGlobalStyle';
-import css from '../css';
-import keyframes from '../keyframes';
+import { renderPage, serverRules } from '../../test/rscStream';
 
-describe('createGlobalStyle RSC mode', () => {
-  beforeEach(() => {
-    mockCacheStore.clear();
-  });
-  it('renders style tag without precedence so it can be unmounted', () => {
-    const GlobalStyle = createGlobalStyle`
-      body { background: red; }
-    `;
+/** The page's own markup: everything after the registry's tags. */
+const rootOf = (html: string): string => html.slice(html.indexOf('<div id="root">'));
 
-    const html = ReactDOMServer.renderToString(<GlobalStyle />);
+const unique = (rules: string[]): string[] => [...new Set(rules)];
 
-    // Global styles must NOT use `precedence` because React 19 treats
-    // precedence styles as permanent resources that persist after unmount.
-    // This would break conditional global styles (e.g. body lock on modal).
-    expect(html).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-khwQqP">
-        body{background:red;}
-      </style>
-    `);
+describe('createGlobalStyle in server components', () => {
+  it('sends a global as a style component carrying its id, rules and definition order, and writes no style tag into the page', async () => {
+    let id = '';
+    const page = await renderPage({
+      server: ({ library: { createGlobalStyle } }) => {
+        const GlobalStyle = createGlobalStyle`
+          body { background: red; }
+        `;
+        id = GlobalStyle.styledComponentId;
+
+        return <GlobalStyle />;
+      },
+    });
+
+    expect(page.flight.errors).toEqual([]);
+    expect(page.flight.clientProps).toEqual([
+      { id, keyframes: [], rules: ['body{background:red;}'], seq: 1 },
+    ]);
+    expect(serverRules(page.streamed)).toEqual(['body{background:red;}']);
+    expect(rootOf(page.streamed)).toBe('<div id="root"></div>');
   });
 
   it.each<[string, string | (() => string)]>([
     ['a static global style', 'red'],
     ['a dynamic global style', () => 'red'],
-  ])('renders the keyframes %s references in its own tag, once each', (_label, color) => {
-    const fade = keyframes`from { opacity: 0; }`;
-    const GlobalStyle = createGlobalStyle`
-      body { animation: ${fade} 1s; color: ${color}; }
-      h1 { animation: ${fade} 2s; }
-    `;
+  ])('writes the keyframes %s references, once each', async (_label, color) => {
+    let name = '';
+    const page = await renderPage({
+      server: ({ library: { createGlobalStyle, keyframes } }) => {
+        const fade = keyframes`from { opacity: 0; }`;
+        name = fade.getName();
+        const GlobalStyle = createGlobalStyle`
+          body { animation: ${fade} 1s; color: ${color}; }
+          h1 { animation: ${fade} 2s; }
+        `;
 
-    const html = ReactDOMServer.renderToString(<GlobalStyle />);
-    const name = fade.getName();
-    expect(html).toEqual(
-      `<style data-styled-global="${GlobalStyle.styledComponentId}">body{animation:${name} 1s;color:red;}h1{animation:${name} 2s;}@keyframes ${name}{from{opacity:0;}}</style>`
-    );
-  });
-
-  it('renders dynamic global styles without precedence', () => {
-    const GlobalStyle = createGlobalStyle<{ $color: string }>`
-      body { background: ${props => props.$color}; }
-    `;
-
-    const html1 = ReactDOMServer.renderToString(<GlobalStyle $color="red" />);
-    const html2 = ReactDOMServer.renderToString(<GlobalStyle $color="blue" />);
-
-    // Same component should produce same key even with different prop values
-    expect(html1).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-kVtqfD">
-        body{background:red;}
-      </style>
-    `);
-    expect(html2).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-kVtqfD">
-        body{background:blue;}
-      </style>
-    `);
-  });
-
-  it('renders one tag per instance of the same static global style in one tree', () => {
-    const GlobalStyle = createGlobalStyle`
-      body { margin: 0; }
-    `;
-
-    // Two instances in one render simulate a non-hydrating RSC page where the
-    // same global style appears in multiple server components. Each carries
-    // its own tag so React discarding one (a Suspense fallback, a layout
-    // swapped on navigation) never strips the other.
-    const html = ReactDOMServer.renderToString(
-      <>
-        <GlobalStyle />
-        <GlobalStyle />
-      </>
-    );
-
-    expect(html).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-yXuMc">
-        body{margin:0;}
-      </style>
-      <style data-styled-global="sc-global-yXuMc">
-        body{margin:0;}
-      </style>
-    `);
-  });
-
-  it('renders one tag per instance of a dynamic global style even with identical props', () => {
-    const GlobalStyle = createGlobalStyle<{ $bg: string }>`
-      body { background: ${props => props.$bg}; }
-    `;
-
-    const html = ReactDOMServer.renderToString(
-      <>
-        <GlobalStyle $bg="red" />
-        <GlobalStyle $bg="red" />
-      </>
-    );
-
-    expect(html).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-kVtqfD">
-        body{background:red;}
-      </style>
-      <style data-styled-global="sc-global-kVtqfD">
-        body{background:red;}
-      </style>
-    `);
-  });
-
-  describe('across React rendering boundaries (#5808)', () => {
-    it('keeps the global style after React reveals content behind a Suspense boundary', async () => {
-      const GlobalStyle = createGlobalStyle`
-        body { background: papayawhip; }
-      `;
-      const Resolved = async () => {
-        await tick();
         return <GlobalStyle />;
-      };
-
-      const { revealed, streamed } = await renderStreamed(
-        <div>
-          <Suspense fallback={<GlobalStyle />}>
-            <Resolved />
-          </Suspense>
-        </div>
-      );
-
-      // The fallback and the resolved content each stream their own tag; the
-      // reveal discards the fallback's, leaving the resolved one.
-      expect(countStyleTags(streamed)).toBe(2);
-      expect(countStyleTags(revealed)).toBe(1);
-      expect(revealed).toContain('body{background:papayawhip;}');
+      },
     });
 
-    it('emits the tag for content rendered after a fallback that never reaches the HTML', () => {
-      const GlobalStyle = createGlobalStyle`
-        body { background: papayawhip; }
-      `;
+    expect(page.flight.clientProps[0].keyframes).toHaveLength(1);
+    expect(unique(serverRules(page.streamed)).sort()).toEqual(
+      [
+        `@keyframes ${name}{from{opacity:0;}}`,
+        `body{animation:${name} 1s;color:red;}`,
+        `h1{animation:${name} 2s;}`,
+      ].sort()
+    );
+  });
 
-      // A fallback React renders but elides from the HTML (its content did
-      // not suspend) still ran in the same request, so a shared record of
-      // "already emitted" would leave the real content without a tag.
-      ReactDOMServer.renderToString(<GlobalStyle />);
-      const html = ReactDOMServer.renderToString(<GlobalStyle />);
+  it('writes the rules of each distinct prop value a dynamic global renders with', async () => {
+    const page = await renderPage({
+      server: ({ library: { createGlobalStyle } }) => {
+        const GlobalStyle = createGlobalStyle<{ $bg: string }>`
+          body { background: ${props => props.$bg}; }
+        `;
 
-      expect(countStyleTags(html)).toBe(1);
-      expect(html).toContain('body{background:papayawhip;}');
-    });
-
-    it('keeps the layout global style when a page below it renders the same global first', async () => {
-      const GlobalStyle = createGlobalStyle`
-        body { background: papayawhip; }
-      `;
-      const Page = () => (
-        <>
-          <GlobalStyle />
-          <p>page</p>
-        </>
-      );
-      // The layout places its global after its children, so the page renders
-      // (and records) its copy first.
-      const Layout = async ({ children }: { children: React.ReactNode }) => {
-        await tick();
         return (
           <>
-            <main>{children}</main>
-            <GlobalStyle />
+            <GlobalStyle $bg="red" />
+            <GlobalStyle $bg="blue" />
+            <GlobalStyle $bg="red" />
           </>
         );
-      };
-
-      const { revealed } = await renderStreamed(
-        <div>
-          <Suspense fallback={<i>loading</i>}>
-            <Layout>
-              <Page />
-            </Layout>
-          </Suspense>
-        </div>
-      );
-
-      // A client navigation to a sibling page replaces everything inside
-      // <main>; the layout's own tag has to survive that.
-      const afterNavigation = revealed.replace(/<main>[\s\S]*<\/main>/, '<main></main>');
-      expect(countStyleTags(afterNavigation)).toBe(1);
-      expect(afterNavigation).toContain('body{background:papayawhip;}');
+      },
     });
+
+    expect(unique(serverRules(page.streamed))).toEqual([
+      'body{background:red;}',
+      'body{background:blue;}',
+    ]);
   });
 
-  describe('redundant-emit warning', () => {
-    itWarnsOnRedundantEmits({
-      marker: 'instances of the global style',
-      renderMany: count => {
+  it('writes the props of a global rendered many times once into the payload', async () => {
+    const page = await renderPage({
+      server: ({ library: { createGlobalStyle } }) => {
         const GlobalStyle = createGlobalStyle`
           body { margin: 0; }
         `;
 
-        ReactDOMServer.renderToString(
-          <div>
-            {Array.from({ length: count }, (_, i) => (
-              <GlobalStyle key={i} />
+        return (
+          <>
+            {Array.from({ length: 25 }, (_, index) => (
+              <GlobalStyle key={index} />
             ))}
-          </div>
+          </>
         );
-
-        return `${RSC_REDUNDANT_EMIT_WARN_THRESHOLD} instances of the global style ${GlobalStyle.styledComponentId} were rendered on one server-rendered page, so its styles repeat that many times in the HTML. A global style is normally mounted once, at the root of the app. Move it higher in the tree so it renders only once per page.`;
       },
     });
+
+    expect(page.flight.payload.split('body{margin:0;}')).toHaveLength(2);
+    expect(unique(serverRules(page.streamed))).toEqual(['body{margin:0;}']);
   });
 
-  describe('shared style elements', () => {
-    // Every instance still renders its own tag; the element object behind it
-    // is shared so the server-component payload carries each distinct global
-    // once and refers back to it for the repeats.
-    it('returns the same element object for identical static CSS', () => {
-      const GlobalStyle = createGlobalStyle`
-        body { margin: 0; }
-      `;
-      const seen: React.ReactElement[] = [];
+  it('renders a themed global with no theme gracefully', async () => {
+    const page = await renderPage({
+      server: ({ library: { createGlobalStyle } }) => {
+        const GlobalStyle = createGlobalStyle`
+          body { color: ${props => (props.theme && props.theme.color) || 'black'}; }
+        `;
 
-      const html = ReactDOMServer.renderToString(
-        <>
-          {renderGlobalInProbe(GlobalStyle, {}, seen)}
-          {renderGlobalInProbe(GlobalStyle, {}, seen)}
-        </>
-      );
-
-      expect(seen).toHaveLength(2);
-      expect(seen[1]).toBe(seen[0]);
-      expect(countStyleTags(html)).toBe(2);
+        return <GlobalStyle />;
+      },
     });
 
-    it('returns the same element object for identical dynamic CSS and a distinct one for different CSS', () => {
-      const GlobalStyle = createGlobalStyle<{ $bg: string }>`
-        body { background: ${props => props.$bg}; }
-      `;
-      const seen: React.ReactElement[] = [];
-
-      ReactDOMServer.renderToString(
-        <>
-          {renderGlobalInProbe(GlobalStyle, { $bg: 'red' }, seen)}
-          {renderGlobalInProbe(GlobalStyle, { $bg: 'red' }, seen)}
-          {renderGlobalInProbe(GlobalStyle, { $bg: 'blue' }, seen)}
-        </>
-      );
-
-      expect(seen[1]).toBe(seen[0]);
-      expect(seen[2]).not.toBe(seen[0]);
-    });
-
-    it('keeps one fixed React key per global style', () => {
-      const GlobalStyle = createGlobalStyle<{ $bg: string }>`
-        body { background: ${props => props.$bg}; }
-      `;
-      const seen: React.ReactElement[] = [];
-
-      ReactDOMServer.renderToString(
-        <>
-          {renderGlobalInProbe(GlobalStyle, { $bg: 'red' }, seen)}
-          {renderGlobalInProbe(GlobalStyle, { $bg: 'blue' }, seen)}
-        </>
-      );
-
-      expect(seen[0].key).toBe(GlobalStyle.styledComponentId);
-      expect(seen[1].key).toBe(seen[0].key);
-    });
-
-    it('never shares an element between two global styles that emit identical CSS', () => {
-      // Different source text gives each its own ID; both compile to the same
-      // `body{margin:0;}`.
-      const First = createGlobalStyle`
-        body { margin: 0; }
-      `;
-      const Second = createGlobalStyle`body{margin:0;}`;
-      const seen: React.ReactElement[] = [];
-
-      ReactDOMServer.renderToString(
-        <>
-          {renderGlobalInProbe(First, {}, seen)}
-          {renderGlobalInProbe(Second, {}, seen)}
-        </>
-      );
-
-      expect(seen[1]).not.toBe(seen[0]);
-    });
-
-    it('never shares an element across StyleSheetManager settings that change the CSS', () => {
-      const GlobalStyle = createGlobalStyle`
-        body { margin: 0; }
-      `;
-      const seen: React.ReactElement[] = [];
-
-      const html = ReactDOMServer.renderToString(
-        <>
-          <StyleSheetManager namespace="first">
-            {renderGlobalInProbe(GlobalStyle, {}, seen)}
-          </StyleSheetManager>
-          <StyleSheetManager namespace="second">
-            {renderGlobalInProbe(GlobalStyle, {}, seen)}
-          </StyleSheetManager>
-        </>
-      );
-
-      expect(seen[1]).not.toBe(seen[0]);
-      expect(html).toContain('first body{margin:0;}');
-      expect(html).toContain('second body{margin:0;}');
-    });
+    expect(serverRules(page.streamed)).toEqual(['body{color:black;}']);
   });
 
-  it('renders multiple instances with different dynamic props in one tree', () => {
-    const GlobalStyle = createGlobalStyle<{ $bg: string }>`
-      body { background: ${props => props.$bg}; }
-    `;
+  it('keeps a global ahead of the components of the same page', async () => {
+    const page = await renderPage({
+      server: ({ library: { createGlobalStyle, styled } }) => {
+        const Heading = styled.h1`
+          color: red;
+        `;
+        const GlobalStyle = createGlobalStyle`
+          body { margin: 0; }
+        `;
 
-    const html = ReactDOMServer.renderToString(
-      <>
-        <GlobalStyle $bg="red" />
-        <GlobalStyle $bg="blue" />
-      </>
-    );
+        return (
+          <>
+            <Heading id="a">Hello</Heading>
+            <GlobalStyle />
+          </>
+        );
+      },
+    });
+    const [, name] = /class="[^ "]* ([^ "]*)"/.exec(page.streamed) ?? [];
 
-    expect(html).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-kVtqfD">
-        body{background:red;}
-      </style>
-      <style data-styled-global="sc-global-kVtqfD">
-        body{background:blue;}
-      </style>
-    `);
+    expect(serverRules(page.streamed)).toEqual(['body{margin:0;}', `.${name}{color:red;}`]);
   });
 
-  it('emits correct CSS across independent RSC render passes (no hydration)', () => {
-    const GlobalStyle = createGlobalStyle<{ $size: string }>`
-      html { font-size: ${props => props.$size}; }
-    `;
+  it('puts a server global ahead of a client global that rendered before it', async () => {
+    const page = await renderPage({
+      clients: ({ library: { createGlobalStyle } }) => ({
+        ClientGlobal: createGlobalStyle`
+          body { padding: 1px; }
+        `,
+      }),
+      server: ({ clients, library: { createGlobalStyle } }) => {
+        const ServerGlobal = createGlobalStyle`
+          body { margin: 0; }
+        `;
 
-    // Simulate three separate RSC requests;none will hydrate
-    const html1 = ReactDOMServer.renderToString(<GlobalStyle $size="14px" />);
-    const html2 = ReactDOMServer.renderToString(<GlobalStyle $size="16px" />);
-    const html3 = ReactDOMServer.renderToString(<GlobalStyle $size="18px" />);
+        return (
+          <>
+            <clients.ClientGlobal />
+            <ServerGlobal />
+          </>
+        );
+      },
+    });
 
-    expect(html1).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-fLdnMX">
-        html{font-size:14px;}
-      </style>
-    `);
-    expect(html2).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-fLdnMX">
-        html{font-size:16px;}
-      </style>
-    `);
-    expect(html3).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-fLdnMX">
-        html{font-size:18px;}
-      </style>
-    `);
+    expect(unique(serverRules(page.streamed))).toEqual(['body{margin:0;}', 'body{padding:1px;}']);
   });
 
-  it('renders themed global style gracefully in RSC (theme is undefined)', () => {
-    const GlobalStyle = createGlobalStyle`
-      body { color: ${props => (props.theme && props.theme.color) || 'black'}; }
-    `;
+  it('writes the namespaced rules of globals under different StyleSheetManager settings apart', async () => {
+    const page = await renderPage({
+      server: ({ library: { createGlobalStyle, StyleSheetManager } }) => {
+        const GlobalStyle = createGlobalStyle`
+          body { margin: 0; }
+        `;
 
-    // No ThemeProvider in RSC;theme is undefined, should not crash
-    const html = ReactDOMServer.renderToString(<GlobalStyle />);
-    expect(html).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-ekSA-DU">
-        body{color:black;}
-      </style>
-    `);
+        return (
+          <>
+            <StyleSheetManager namespace="first">
+              <GlobalStyle />
+            </StyleSheetManager>
+            <StyleSheetManager namespace="second">
+              <GlobalStyle />
+            </StyleSheetManager>
+          </>
+        );
+      },
+    });
+
+    expect(unique(serverRules(page.streamed))).toEqual([
+      'first body{margin:0;}',
+      'second body{margin:0;}',
+    ]);
   });
 
-  it('renders global style and styled component in the same RSC tree', () => {
-    const styled = require('../styled').default;
+  describe('across a Suspense boundary (#5808)', () => {
+    it('keeps the global after React reveals the content behind the boundary', async () => {
+      const page = await renderPage({
+        server: ({ gates, library: { createGlobalStyle } }) => {
+          const GlobalStyle = createGlobalStyle`
+            body { background: papayawhip; }
+          `;
+          const Resolved = async () => {
+            await gates.wait('late');
 
-    const GlobalStyle = createGlobalStyle`
-      body { margin: 0; }
-    `;
-    const Heading = styled.h1`
-      color: red;
-    `;
+            return <GlobalStyle />;
+          };
 
-    const html = ReactDOMServer.renderToString(
-      <>
-        <GlobalStyle />
-        <Heading>Hello</Heading>
-      </>
-    );
+          return (
+            <div>
+              <Suspense fallback={<GlobalStyle />}>
+                <Resolved />
+              </Suspense>
+            </div>
+          );
+        },
+      });
 
-    expect(html).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-yXuMc">
-        body{margin:0;}
-      </style>
-      <style data-styled>
-        .eBSjvc{color:red;}
-      </style>
-      <h1 class="sc-kqxcKS eBSjvc">
-        Hello
-      </h1>
-    `);
+      expect(unique(serverRules(page.revealed))).toEqual(['body{background:papayawhip;}']);
+    });
+
+    it('keeps the layout global when a page below it renders the same global first', async () => {
+      const page = await renderPage({
+        server: ({ gates, library: { createGlobalStyle } }) => {
+          const GlobalStyle = createGlobalStyle`
+            body { background: papayawhip; }
+          `;
+          const Page = () => (
+            <>
+              <GlobalStyle />
+              <p>page</p>
+            </>
+          );
+          const Layout = async ({ children }: { children: React.ReactNode }) => {
+            await gates.wait('layout');
+
+            return (
+              <>
+                <main>{children}</main>
+                <GlobalStyle />
+              </>
+            );
+          };
+
+          return (
+            <div>
+              <Suspense fallback={<i>loading</i>}>
+                <Layout>
+                  <Page />
+                </Layout>
+              </Suspense>
+            </div>
+          );
+        },
+      });
+
+      expect(unique(serverRules(page.revealed))).toEqual(['body{background:papayawhip;}']);
+    });
   });
 
   describe('global styles whose rules contain a function', () => {
-    function renderPair(
-      First: React.ComponentType<Record<string, never>>,
-      Second: React.ComponentType<Record<string, never>>
-    ) {
-      return ReactDOMServer.renderToString(
-        <>
-          <First />
-          <Second />
-        </>
-      );
-    }
+    it.each([
+      [
+        'function-only globals',
+        ({ createGlobalStyle }: Library) => [
+          createGlobalStyle`${() => 'html { --a: 1; }'}`,
+          createGlobalStyle`${() => 'html { --b: 1; }'}`,
+        ],
+        ['html{--a:1;}', 'html{--b:1;}'],
+      ],
+      [
+        'function-argument globals',
+        ({ createGlobalStyle }: Library) => [
+          createGlobalStyle(() => 'html { --fn-a: 1; }'),
+          createGlobalStyle(() => 'html { --fn-b: 1; }'),
+        ],
+        ['html{--fn-a:1;}', 'html{--fn-b:1;}'],
+      ],
+      [
+        'nested function css helpers',
+        ({ createGlobalStyle, css }: Library) => [
+          createGlobalStyle`${css`${() => 'html { --nest-a: 1; }'}`}`,
+          createGlobalStyle`${css`${() => 'html { --nest-b: 1; }'}`}`,
+        ],
+        ['html{--nest-a:1;}', 'html{--nest-b:1;}'],
+      ],
+      [
+        'globals that share static text and differ by a function',
+        ({ createGlobalStyle }: Library) => [
+          createGlobalStyle`html { color: ${() => 'red'}; }`,
+          createGlobalStyle`html { color: ${() => 'blue'}; }`,
+        ],
+        ['html{color:red;}', 'html{color:blue;}'],
+      ],
+      [
+        'factory closures',
+        ({ createGlobalStyle }: Library) => {
+          const make = (token: string) => createGlobalStyle`${() => `html { ${token}: 1; }`}`;
 
-    it('emits both function-only global styles', () => {
-      const First = createGlobalStyle`${() => 'html { --a: 1; }'}`;
-      const Second = createGlobalStyle`${() => 'html { --b: 1; }'}`;
-      const html = renderPair(First, Second);
+          return [make('--fact-a'), make('--fact-b')];
+        },
+        ['html{--fact-a:1;}', 'html{--fact-b:1;}'],
+      ],
+    ])('writes both %s', async (_label, build, expected) => {
+      const page = await renderPage({
+        server: ({ library }) => {
+          const [First, Second] = build(library);
 
-      expect(html).toContain('--a');
-      expect(html).toContain('--b');
+          return (
+            <>
+              <First />
+              <Second />
+            </>
+          );
+        },
+      });
+
+      expect(unique(serverRules(page.streamed))).toEqual(expected);
     });
 
-    it('emits both function-argument global styles', () => {
-      const First = createGlobalStyle(() => 'html { --fn-a: 1; }');
-      const Second = createGlobalStyle(() => 'html { --fn-b: 1; }');
-      const html = renderPair(First, Second);
+    it('keeps one id for two calls with the same static text', async () => {
+      const ids: string[] = [];
+      const page = await renderPage({
+        server: ({ library: { createGlobalStyle } }) => {
+          const First = createGlobalStyle`html { --same: 1; }`;
+          const Second = createGlobalStyle`html { --same: 1; }`;
+          ids.push(First.styledComponentId, Second.styledComponentId);
 
-      expect(html).toContain('--fn-a');
-      expect(html).toContain('--fn-b');
-    });
+          return (
+            <>
+              <First />
+              <Second />
+            </>
+          );
+        },
+      });
 
-    it('emits both nested function css helpers', () => {
-      const First = createGlobalStyle`${css`${() => 'html { --nest-a: 1; }'}`}`;
-      const Second = createGlobalStyle`${css`${() => 'html { --nest-b: 1; }'}`}`;
-      const html = renderPair(First, Second);
-
-      expect(html).toContain('--nest-a');
-      expect(html).toContain('--nest-b');
-    });
-
-    it('emits both globals that share static text and differ by a function', () => {
-      const First = createGlobalStyle`html { color: ${() => 'red'}; }`;
-      const Second = createGlobalStyle`html { color: ${() => 'blue'}; }`;
-      const html = renderPair(First, Second);
-
-      expect(html).toContain('red');
-      expect(html).toContain('blue');
-    });
-
-    it('emits both factory closures', () => {
-      const make = (token: string) => createGlobalStyle`${() => `html { ${token}: 1; }`}`;
-      const html = renderPair(make('--fact-a'), make('--fact-b'));
-
-      expect(html).toContain('--fact-a');
-      expect(html).toContain('--fact-b');
-    });
-
-    it('keeps one id when two calls have the same static text', () => {
-      const First = createGlobalStyle`html { --same: 1; }`;
-      const Second = createGlobalStyle`html { --same: 1; }`;
-      const html = renderPair(First, Second);
-
-      expect(First.styledComponentId).toBe(Second.styledComponentId);
-      expect(html).toContain('--same');
-      expect(html.match(new RegExp(First.styledComponentId, 'g'))?.length).toBe(2);
+      expect(ids[0]).toBe(ids[1]);
+      expect(unique(serverRules(page.streamed))).toEqual(['html{--same:1;}']);
     });
   });
 });
+
+type Library = Parameters<Parameters<typeof renderPage>[0]['server']>[0]['library'];

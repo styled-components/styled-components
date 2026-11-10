@@ -7,9 +7,9 @@
 ```tsx
 // app/layout.tsx
 import { configureServerStyles } from 'styled-components';
-import { rscPlugin } from 'styled-components/plugins';
+import { rtlPlugin } from 'styled-components/plugins';
 
-configureServerStyles({ plugins: [rscPlugin] });
+configureServerStyles({ plugins: [rtlPlugin] });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   // ...

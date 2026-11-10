@@ -669,8 +669,8 @@ function parseAtRule(ctx: ParseContext): Node | null {
  *   - parser-side (`trim=true`): each part is trimmed and empty parts are
  *     dropped; matches the contract for selectors and keyframe stops.
  *   - emit-side (`trim=false`): substrings preserved verbatim; matches
- *     the contract for selector cross-product and the `rscPlugin` selector
- *     rewriter where downstream callers expect raw segments.
+ *     the contract for selector cross-product and selector-rewriting plugins
+ *     where downstream callers expect raw segments.
  */
 export function splitTopLevelCommas(raw: string, trim = false): string[] {
   const out: string[] = [];

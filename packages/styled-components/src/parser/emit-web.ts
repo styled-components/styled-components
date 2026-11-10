@@ -453,8 +453,9 @@ function emitNodes(
     const heads = Array.isArray(rewritten) ? rewritten : [rewritten];
     let written = 0;
     for (let i = 0; i < heads.length; i++) {
-      written += heads[i].length;
-      const rule = wholeRule(heads[i], block);
+      const head = heads[i];
+      written += head.length;
+      const rule = wholeRule(head, block);
       if (rule) result.push(rule);
     }
     // `currentSelector` is already counted; what a namespace or plugin added is not.

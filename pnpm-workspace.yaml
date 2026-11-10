@@ -8,6 +8,12 @@ allowBuilds:
   unrs-resolver: false
 autoInstallPeers: true
 minimumReleaseAge: 10080 # Wait 7 days before installing new releases
+minimumReleaseAgeExclude:
+  # Playwright 1.65 is the first release whose bundled Firefox starts on current macOS.
+  # Remove these three once 1.65.0 is older than minimumReleaseAge.
+  - '@playwright/test'
+  - playwright
+  - playwright-core
 # Type packages the published .d.ts files import without declaring. Under the
 # global store TypeScript resolves from a package's real path, so an undeclared
 # @types package is lost and the types silently become any.

@@ -23,8 +23,8 @@ export default function GlobalStyleTestPage() {
       </HintText>
       <SubHeading>Test: Client-side GlobalStyle dedup</SubHeading>
       <Text>
-        Three identical <code>&lt;ClientDedupGlobalStyle /&gt;</code> mount in a client subtree.
-        They should collapse to a single <code>&lt;style data-styled-global&gt;</code> tag.
+        Three identical <code>&lt;ClientDedupGlobalStyle /&gt;</code> mount in a client subtree. The
+        styled-components sheet holds their rule once.
       </Text>
       <ClientDedupSection />
     </Card>

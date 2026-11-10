@@ -46,6 +46,12 @@ const KNOWN_FALSE_POSITIVES = [
       '`next/types/global.d.ts` declares `server-only` as an ambient module; this entry covers a tsconfig that does not load that file.',
     specifier: 'server-only',
   },
+  ...['zod', 'zod/v3'].map(specifier => ({
+    importer: 'playwright-core',
+    reason:
+      'Only the zod-schema helpers in `playwright-core/types/types.d.ts` use these types, and the sandbox suite calls none of them; declaring zod would add a dependency the suite never runs.',
+    specifier,
+  })),
 ];
 
 const repoRoot = path.resolve(import.meta.dirname, '..');

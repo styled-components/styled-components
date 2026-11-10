@@ -2,8 +2,14 @@ import { IS_BROWSER } from '../constants';
 import { InsertionTarget } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
 import { makeGroupedTag } from './GroupedTag';
-import { groupForId } from './GroupIDAllocator';
-import { getRehydrationContainer, outputSheet, rehydrateSheet } from './Rehydration';
+import { groupForId, lookupGroup, registerBase } from './GroupIDAllocator';
+import { Order, Placement, keyFor, kindOfId } from './Order';
+import {
+  adoptServerTags,
+  getRehydrationContainer,
+  outputSheet,
+  rehydrateSheet,
+} from './Rehydration';
 import { makeTag } from './Tag';
 import { GroupedTag, Sheet, SheetOptions } from './types';
 
@@ -28,6 +34,8 @@ const defaultOptions: SheetOptions = {
 export default class StyleSheet implements Sheet {
   names: NamesAllocationMap;
   options: SheetOptions;
+  /** Where each group sits in the output: positions, keys, edges and contested pairs. */
+  order: Order;
   /**
    * Turn-scoped compiled rules keyed by `id\\0name`. The first generate for a
    * name compiles and stores here; same-turn siblings reuse the bytes so a
@@ -40,8 +48,15 @@ export default class StyleSheet implements Sheet {
   server: boolean;
   tag?: GroupedTag | undefined;
 
-  /** Register a group ID to give it an index */
-  static registerId(id: string): number {
+  /** True from the first write of a microtask until it ends, so a burst of writes adopts server tags once. */
+  private adoptedThisTurn = false;
+
+  /**
+   * Register a group ID to give it an index. `baseId` is the component a chain level extends: the
+   * sheet places the pair before any other edge touches the level.
+   */
+  static registerId(id: string, baseId?: string): number {
+    if (baseId !== undefined) registerBase(id, baseId);
     return groupForId(id);
   }
 
@@ -56,11 +71,18 @@ export default class StyleSheet implements Sheet {
 
     this.names = new Map(names);
     this.server = !!options.isServer;
+    this.order = this.withTagFollowing(new Order());
 
     // We rehydrate only once and use the sheet that is created first
     if (!this.server && IS_BROWSER && SHOULD_REHYDRATE) {
       SHOULD_REHYDRATE = false;
       rehydrateSheet(this);
+
+      // Tags that stream in after the bundle runs are adopted when the sheet is next written,
+      // and once more when parsing ends.
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => adoptServerTags(this), { once: true });
+      }
     }
   }
 
@@ -84,6 +106,9 @@ export default class StyleSheet implements Sheet {
       (withNames && this.names) || undefined
     );
 
+    // A browser sheet lays its groups out as its parent does.
+    if (!this.server) newSheet.order = newSheet.withTagFollowing(this.order.clone());
+
     // If we're reconstructing with a new target on the client, check if the container changed
     // This handles the case where StyleSheetManager's target prop changes (e.g., from undefined to shadowRoot)
     // We only rehydrate if the container (Document or ShadowRoot) actually changes
@@ -101,7 +126,7 @@ export default class StyleSheet implements Sheet {
 
   /** Lazily initialises a GroupedTag for when it's actually needed */
   getTag() {
-    return this.tag || (this.tag = makeGroupedTag(makeTag(this.options)));
+    return this.tag || (this.tag = makeGroupedTag(makeTag(this.options), this.order));
   }
 
   /** Check whether a name is permanently registered, meaning its rules have already been emitted for this sheet. */
@@ -163,10 +188,42 @@ export default class StyleSheet implements Sheet {
     return group;
   }
 
-  /** Insert new rules which also marks the name as known */
-  insertRules(id: string, name: string, rules: string[]) {
+  /**
+   * Insert new rules which also marks the name as known. The first insert into a group places it
+   * by key: client tier and its group number unless `placement` says it belongs to the server
+   * component graph (`server`) with definition order `seq` there. A global or keyframes id takes
+   * its graph's global tier.
+   */
+  insertRules(id: string, name: string, rules: string[], placement?: Placement) {
+    if (this.order.rehydrated && !this.server) this.adoptWhileLoading();
+
     const group = this.registerName(id, name);
+
+    if (!this.order.hasKey(group)) {
+      const kind = kindOfId(id);
+      this.order.place(group, keyFor(kind, group, placement), kind);
+    }
+
+    if (__DEV__) {
+      for (let i = 0; i < rules.length; i++) {
+        if (rules[i].charCodeAt(0) === 64) this.order.noteLayers(group, rules[i]);
+      }
+    }
+
     this.getTag().insertRules(group, rules);
+  }
+
+  /** True when the order holds, or refuses, `outerId` after `innerId`: nothing is left to learn. */
+  isSettled(outerId: string, innerId: string): boolean {
+    const outer = lookupGroup(outerId);
+    const inner = lookupGroup(innerId);
+
+    return outer !== undefined && inner !== undefined && this.order.isSettled(outer, inner);
+  }
+
+  /** Learn that `outerId` wraps `innerId`: the outer's group moves after the inner's when it sat before it. */
+  learn(outerId: string, innerId: string): void {
+    this.order.learn(groupForId(outerId), groupForId(innerId));
   }
 
   /** Clears all cached names for a given group ID */
@@ -177,14 +234,57 @@ export default class StyleSheet implements Sheet {
 
   /** Clears all rules for a given group ID */
   clearRules(id: string) {
-    this.getTag().clearGroup(groupForId(id));
+    const group = groupForId(id);
+
+    this.getTag().clearGroup(group);
+    this.order.flushed.delete(group);
     this.clearNames(id);
   }
 
-  /** Clears the entire tag which deletes all rules but not its names */
+  /**
+   * Clears the tag, which deletes its rules but not its names. A server sheet keeps its order and
+   * the rules the tag held, so the next flush can re-emit related groups; a browser sheet starts over.
+   */
   clearTag() {
+    const { order, tag } = this;
+
+    if (this.server) {
+      if (tag !== undefined) {
+        for (let i = 0; i < order.positions.length; i++) {
+          const group = order.positions[i];
+          const text = tag.getGroup(group);
+          if (text !== '') order.flushed.set(group, (order.flushed.get(group) ?? '') + text);
+        }
+      }
+
+      order.edgeSeeds.clear();
+    } else {
+      order.reset();
+    }
+
     // NOTE: This does not clear the names, since it's only used during SSR
     // so that we can continuously output only new rules
     this.tag = undefined;
+  }
+
+  /** Points the order's moves at whichever tag the sheet holds when a move happens. */
+  private withTagFollowing(order: Order): Order {
+    order.listener = {
+      afterMove: groups => this.tag?.attachGroups(groups),
+      beforeMove: groups => this.tag?.detachGroups(groups),
+    };
+    return order;
+  }
+
+  /** While the document still parses, the first write of each microtask adopts server tags that arrived since. */
+  private adoptWhileLoading() {
+    if (this.adoptedThisTurn || document.readyState !== 'loading') return;
+
+    this.adoptedThisTurn = true;
+    queueMicrotask(() => {
+      this.adoptedThisTurn = false;
+    });
+
+    adoptServerTags(this);
   }
 }
