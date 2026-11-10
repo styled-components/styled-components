@@ -329,6 +329,47 @@ describe('rn-web bridge build', () => {
   });
 });
 
+/**
+ * The rn-web bridge rewrites run inside the compiler behind `__NATIVE_WEB__`, which only the
+ * bridge bundle sets. Each sentinel is one literal of the rewrites: the var()-with-unit repair and
+ * the `align-content` the emitter writes for `vertical-align` (each once in the bridge), the
+ * `:disabled` token rewrite (twice: its two spellings), and `read-write`, a key of the pseudo-class
+ * map the `:not` wrap reads, which the web bundles must not pull in.
+ */
+describe('rn-web bridge rewrites', () => {
+  const onceInBridge = ['calc(var(', 'align-content'];
+  const inBridge = ['aria-disabled=true', 'read-write'];
+
+  it.each([
+    'styled-components.cjs.js',
+    'styled-components.esm.js',
+    'styled-components.browser.cjs.js',
+    'styled-components.browser.esm.js',
+    'styled-components.js',
+    'styled-components.min.js',
+  ])('%s carries no sentinel', file => {
+    const bundle = read(file);
+
+    for (const sentinel of [...onceInBridge, ...inBridge]) {
+      expect(bundle).not.toContain(sentinel);
+    }
+  });
+
+  it.each(['styled-components.web.js', 'styled-components.web.esm.js'])(
+    '%s carries each sentinel',
+    file => {
+      const bundle = readNative(file);
+
+      for (const sentinel of onceInBridge) {
+        expect(bundle.split(sentinel)).toHaveLength(2);
+      }
+      for (const sentinel of inBridge) {
+        expect(bundle).toContain(sentinel);
+      }
+    }
+  );
+});
+
 describe('Hermes native build keeps the Animated-bridge adapter', () => {
   let nativeCJS: string;
   let nativeESM: string;

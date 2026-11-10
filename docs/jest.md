@@ -17,6 +17,10 @@ Which features survive depends on the jsdom version. jsdom 29 and 30 behave alik
 - Assorted other unprefixed modern at-rules in some configurations
 - `:nth-child(N of S)` does work in 26 (it parses and matches)
 
+### jsdom 26 (nwsapi) mismatches selectors
+
+`element.matches()` goes through nwsapi, which misreads `:where(:not(...))` beside another `:not()`: `.e:where(:not([x])):not([y])` returns `false` for an element it matches, and `.e:not(:is(.z)):where([class])` throws "not a valid selector". `.e:is(:disabled,[aria-disabled=true])`, `.e:not(:is(...))` and `.e:not([x]):not(:is(...))` evaluate correctly. Assert a `:where()`-wrapped head as emitted text, not through `matches()`. An ad hoc probe outside Jest loads jsdom through `require.resolve('jsdom', {paths: [<jest-environment-jsdom dir>]})`; it does not resolve from the package root.
+
 ### jsdom 29 and 30 (css-tree) fix, but regress
 
 Fixes: block-less `@layer ...;` and `@scope` both parse and are preserved.

@@ -8,6 +8,7 @@ import {
   StaticNode,
   StaticRoot,
 } from './ast';
+import { alignContentFor } from '../utils/bridgeRewrites';
 import { warnOnce } from '../utils/warnOnce';
 import {
   NEEDS_FIELD_SCAN,
@@ -235,6 +236,36 @@ function scanState(): ScanState {
   return state;
 }
 
+/**
+ * Whether a declaration at the current point of the walk lands on the component's own element:
+ * `scanState()` finds it there, and no rule it sits in is a pseudo-element's.
+ */
+function onElement(): boolean {
+  if (!scanState()) return false;
+
+  for (let i = 0; i < scanStack.length; i++) {
+    const selectors = scanStack[i];
+    if (selectors && selectors.some(holdsPseudoElement)) return false;
+  }
+  return true;
+}
+
+/** Whether a top-level compound of the selector is a pseudo-element, in either colon spelling. */
+function holdsPseudoElement(selector: string): boolean {
+  const len = selector.length;
+  for (
+    let from = 0, stop;
+    (stop = scanQPB(selector, from, len, $.COLON, $.SPACE, $.COMMA, $.GT)) < len;
+    from = stop + 1
+  ) {
+    if (selector.charCodeAt(stop) !== $.COLON) continue;
+
+    PSEUDO_ELEMENT.lastIndex = stop;
+    if (PSEUDO_ELEMENT.test(selector)) return true;
+  }
+  return false;
+}
+
 /** Records a declaration's flags, classifying it by where it sits only when it has any. */
 function noteNames(prop: string, value: string): void {
   const bits = ownNameBits(prop, value, ScanState.Own);
@@ -337,25 +368,36 @@ function emitNodes(
   walk: WalkState
 ): string[] {
   let body = '';
+  /** Bridge-added declarations; written before the authored ones so an authored declaration wins. */
+  let companions = '';
   const other: string[] = [];
 
   const declTransform = options && options.decl;
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
     switch (node.kind) {
-      case NodeKind.Decl:
+      case NodeKind.Decl: {
         if (walk) noteNames(node.prop, node.value);
 
         // Post-fillAst invariant: `prop` and `value` are strings (any
         // TemplateValue was realized by `fillDecl`). The
         // `string | TemplateValue` AST type covers the parse-time form;
         // emit-web is only called on filled (or never-templated) ASTs.
-        body += formatDecl(
+        const authored = formatDecl(
           node.prop,
           takesBareName(node.prop) ? stripTokenDots(node.value) : node.value,
           declTransform
         );
+        body += authored;
+
+        if (__NATIVE_WEB__ && walk && authored && node.prop.length === 14) {
+          const alignContent = alignContentFor(node.prop, node.value);
+          if (alignContent && onElement()) {
+            companions += formatDecl('align-content', alignContent, declTransform);
+          }
+        }
         break;
+      }
       case NodeKind.Rule: {
         let resolved = resolveRuleSelectors(node.selectors, currentSelector);
         if (resolved === null) break;
@@ -397,6 +439,8 @@ function emitNodes(
     if ((foundNames & 3) === 2) body += formatDecl('container-name', names, declTransform);
     if ((foundNames & 12) === 8) body += formatDecl('view-transition-class', names, declTransform);
   }
+
+  if (companions) body = companions + body;
 
   const result: string[] = [];
   if (body && currentSelector) {
