@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PanResponder, useColorScheme, View } from 'react-native';
 import styled, { useMediaQuery } from 'styled-components/native';
+import { HeroVisibleContext } from '@/components/ScreenScaffold';
 
 type Vec3 = [number, number, number];
 type Quat = [number, number, number, number];
@@ -699,6 +700,7 @@ const CtrlBtn = styled.Pressable<{ $dim?: boolean }>`
 export function PlatonicLogo() {
   const [, forceTick] = useState(0);
   const reduce = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const visible = React.use(HeroVisibleContext);
   // Vector-icon color bypasses the styled-components pipeline, so the
   // light-dark() polyfill doesn't apply. Resolve in JS instead.
   const scheme = useColorScheme();
@@ -801,13 +803,13 @@ export function PlatonicLogo() {
   // (settles on whatever solid was last shown) and when the user has paused.
   // Each tick starts a collapse-expand transition; the rAF loop advances it.
   useEffect(() => {
-    if (reduce || paused) return;
+    if (reduce || paused || !visible) return;
     const id = setInterval(() => {
       if (draggingRef.current || transitionRef.current) return;
       startTransition((activeSolidRef.current + 1) % SOLIDS.length);
     }, SOLID_CYCLE_MS);
     return () => clearInterval(id);
-  }, [reduce, paused, startTransition]);
+  }, [reduce, paused, visible, startTransition]);
 
   const handlePrev = useCallback(() => {
     bumpControls();
@@ -840,7 +842,9 @@ export function PlatonicLogo() {
   // object per frame. Transition completion finalizes activeSolidRef
   // in-tick so the next render reads the new solid via the existing
   // forceTick.
+  // Off screen, the loop stops entirely: a per-frame render nobody sees competes with the list for the JS thread.
   useEffect(() => {
+    if (!visible) return;
     let last = 0;
     let cancelled = false;
     const tick = (now: number) => {
@@ -890,7 +894,7 @@ export function PlatonicLogo() {
       cancelled = true;
       cancelAnimationFrame(rafId);
     };
-  }, [reduce, paused]);
+  }, [reduce, paused, visible]);
 
   // PanResponder: drag the solid by accumulating quaternion rotations
   // proportional to pointer delta.

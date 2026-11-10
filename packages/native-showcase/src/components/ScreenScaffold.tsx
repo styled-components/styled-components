@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
 import {
   FlatList,
+  LayoutChangeEvent,
   ListRenderItem,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -242,6 +243,12 @@ const BackToTopLabel = styled.Text`
 `;
 
 const SCROLL_TOP_THRESHOLD = 480;
+
+/**
+ * Whether the `hero` is on screen. False once the list scrolls past the hero's bottom edge
+ * (phone layout only; the side rail never scrolls), so an animated hero can stop rendering.
+ */
+export const HeroVisibleContext = React.createContext(true);
 
 const ItemWrapper = styled.View`
   padding-left: ${t.space.md}px;
@@ -576,11 +583,28 @@ export function ScreenScaffold<Item>({
   // call setState 60 times per second - only on the threshold crossing.
   const showBackToTopRef = React.useRef(false);
 
+  const [heroVisible, setHeroVisible] = React.useState(true);
+  const heroVisibleRef = React.useRef(true);
+  // Rail-relative, and the rail is the list header starting at offset 0, so this is a content offset.
+  const heroBottomRef = React.useRef(Number.POSITIVE_INFINITY);
+  const onHeroLayout = React.useCallback((e: LayoutChangeEvent) => {
+    const { y, height } = e.nativeEvent.layout;
+    heroBottomRef.current = y + height;
+  }, []);
+
   const onScroll = React.useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const shouldShow = e.nativeEvent.contentOffset.y > SCROLL_TOP_THRESHOLD;
+    const y = e.nativeEvent.contentOffset.y;
+
+    const shouldShow = y > SCROLL_TOP_THRESHOLD;
     if (shouldShow !== showBackToTopRef.current) {
       showBackToTopRef.current = shouldShow;
       setShowBackToTop(shouldShow);
+    }
+
+    const heroShown = y < heroBottomRef.current;
+    if (heroShown !== heroVisibleRef.current) {
+      heroVisibleRef.current = heroShown;
+      setHeroVisible(heroShown);
     }
   }, []);
 
@@ -648,6 +672,15 @@ export function ScreenScaffold<Item>({
     [aimAt, anchorIndex, armJumpSettle]
   );
 
+  // A deep link delivered to the running app changes `focusSlug` after the single-shot
+  // mount restoration has fired, so it jumps like the feature picker does.
+  const lastFocusSlugRef = React.useRef(focusSlug);
+  React.useEffect(() => {
+    if (focusSlug === lastFocusSlugRef.current) return;
+    lastFocusSlugRef.current = focusSlug;
+    if (focusSlug && restoreFiredRef.current) handleSlugJump(focusSlug);
+  }, [focusSlug, handleSlugJump]);
+
   // FlatList's `scrollToIndex` only succeeds once the target index has
   // been measured, but virtualization only mounts a few viewports past
   // the visible area. On cold mount with a deeply saved index, a naive
@@ -701,7 +734,11 @@ export function ScreenScaffold<Item>({
   //   so it stays put while the list scrolls underneath it.
   const railNode = (
     <Rail $top={insets.top} $bottom={insets.bottom} $left={insets.left} $right={insets.right}>
-      {hero ? <RailHeroWrap>{hero}</RailHeroWrap> : null}
+      {hero ? (
+        <RailHeroWrap onLayout={onHeroLayout}>
+          <HeroVisibleContext value={railIsSide || heroVisible}>{hero}</HeroVisibleContext>
+        </RailHeroWrap>
+      ) : null}
       <Title>{title}</Title>
       {summary ? <Summary>{summary}</Summary> : null}
       {jumpList && jumpList.length > 0 ? (

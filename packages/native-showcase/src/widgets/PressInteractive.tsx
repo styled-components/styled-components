@@ -20,7 +20,6 @@ const Button = styled.Pressable`
 
   &:disabled {
     background-color: ${t.colors.ink};
-    border-width: 4px;
     border-style: dashed;
     border-color: light-dark(#c8243a, #ff6b80);
   }

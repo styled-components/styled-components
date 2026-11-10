@@ -48,7 +48,6 @@ const Field = styled.TextInput`
   }
 
   &:disabled {
-    border-width: 4px;
     border-style: dashed;
     border-color: light-dark(#c8243a, #ff6b80);
     background-color: ${t.colors.ink};
