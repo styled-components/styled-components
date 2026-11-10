@@ -121,8 +121,7 @@ export function matchConditionals(
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
     if (entry.type === 'attr') {
-      const matches = attrMatches(entry, props);
-      if (entry.negate ? !matches : matches) pushMatched(out, entry, resolveEnv);
+      if (attrMatches(entry, props)) pushMatched(out, entry, resolveEnv);
       continue;
     }
     if (entry.type === 'combinator') {
@@ -143,7 +142,7 @@ export function matchConditionals(
     // media / container / supports;optionally gated on attrs too
     // when the at-rule body contained a nested attribute selector.
     if (!conditionMatches(entry, env, containerCtx)) continue;
-    if (entry.attrs && attrMatches(entry, props) === (entry.negate === true)) continue;
+    if (entry.attrs && !attrMatches(entry, props)) continue;
     pushMatched(out, entry, resolveEnv);
   }
   return out;
@@ -347,7 +346,8 @@ export function attrMatches(entry: ConditionalStyle, props: Record<string, unkno
   const attrs = entry.attrs;
   if (!attrs || attrs.length === 0) return false;
   for (let i = 0; i < attrs.length; i++) {
-    if (!attrValueMatches(attrs[i], props[attrs[i].name])) return false;
+    const attr = attrs[i];
+    if (attrValueMatches(attr, props[attr.name]) === (attr.negate === true)) return false;
   }
   return true;
 }

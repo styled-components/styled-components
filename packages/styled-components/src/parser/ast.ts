@@ -82,6 +82,8 @@ export interface ConditionalAttr {
    * Only meaningful when `value` is set.
    */
   caseFlag?: 'i';
+  /** The attribute sits in `:not()` (`&:hover:not([x])`): it holds when the selector does not match. */
+  negate?: true;
 }
 
 export interface AttrSelector {
@@ -136,7 +138,6 @@ export type NativeSelectorClass =
       kind: 'attr';
       /** @internal */
       selectors: AttrSelector[];
-      negate?: boolean;
     }
   | {
       /**

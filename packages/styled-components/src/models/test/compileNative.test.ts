@@ -389,8 +389,7 @@ describe('toNativeStyles', () => {
         {
           type: 'media',
           condition: '(min-width: 400px)',
-          attrs: [{ name: 'data-x' }],
-          negate: true,
+          attrs: [{ name: 'data-x', negate: true }],
           pseudo: 'hover',
           styles: { opacity: 0.5 },
         },
@@ -473,9 +472,8 @@ describe('toNativeStyles', () => {
         17,
         {
           type: 'attr',
-          condition: 'x',
-          attrs: [{ name: 'x' }],
-          negate: true,
+          condition: '!x',
+          attrs: [{ name: 'x', negate: true }],
           pseudo: 'hover',
           and: [{ pseudo: 'enabled', negate: false }],
         },
@@ -576,6 +574,81 @@ describe('toNativeStyles', () => {
           styles: { opacity: 0.5 },
         },
       ]);
+    });
+  });
+
+  // https://drafts.csswg.org/selectors-4/#negation-pseudo
+  // "The negation pseudo-class, :not(), is a functional pseudo-class taking a <complex-real-selector-list> as an argument. It represents an element that is not represented by its argument."
+  // Each `:not([attr])` is a negated attribute of the rule's attribute list, ANDed with every other term wherever it stands.
+  describe('negated attributes anywhere in a compound', () => {
+    it.each([
+      [
+        '&:hover:not([data-x])',
+        {
+          condition: '!data-x',
+          attrs: [{ name: 'data-x', negate: true }],
+          pseudo: 'hover',
+        },
+      ],
+      [
+        '&[data-y]:hover:not([data-x])',
+        {
+          condition: 'data-y+!data-x',
+          attrs: [{ name: 'data-y' }, { name: 'data-x', negate: true }],
+          pseudo: 'hover',
+        },
+      ],
+      ['&[y]:not([x])', { condition: 'y+!x', attrs: [{ name: 'y' }, { name: 'x', negate: true }] }],
+      [
+        '&:not([a]):hover:not([b="1"])',
+        {
+          condition: '!a+!b=1',
+          attrs: [
+            { name: 'a', negate: true },
+            { name: 'b', value: '1', negate: true },
+          ],
+          pseudo: 'hover',
+        },
+      ],
+      [
+        '&:hover:not([x]):not(:disabled)',
+        {
+          condition: '!x',
+          attrs: [{ name: 'x', negate: true }],
+          pseudo: 'hover',
+          and: [{ pseudo: 'disabled', negate: true }],
+        },
+      ],
+      ['&:not([x])', { condition: '!x', attrs: [{ name: 'x', negate: true }] }],
+    ])('records %s as one attribute entry', (selector, shape) => {
+      const r = compile(`${selector} { opacity: 0.5; }`);
+      expect(r.conditional).toEqual([{ type: 'attr', styles: { opacity: 0.5 }, ...shape }]);
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('keeps `[x]` and `:not([x])` as distinct entries', () => {
+      const r = compile('&[x] { opacity: 0.5; } &:not([x]) { opacity: 0.4; }');
+      expect(r.conditional).toEqual([
+        { type: 'attr', condition: 'x', attrs: [{ name: 'x' }], styles: { opacity: 0.5 } },
+        {
+          type: 'attr',
+          condition: '!x',
+          attrs: [{ name: 'x', negate: true }],
+          styles: { opacity: 0.4 },
+        },
+      ]);
+    });
+
+    it.each([
+      '&:hover:not(.icon)',
+      '&[y]:hover:not(.icon)',
+      '&:hover:not([x]):not(.icon)',
+      '&:hover:not([x], [y])',
+      '&:hover:not([x] .y)',
+    ])('drops %s with the complex-selector warning', selector => {
+      const r = compile(`${selector} { opacity: 0.5; }`);
+      expect(r.conditional).toEqual([]);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('complex selectors'));
     });
   });
 
@@ -1045,6 +1118,9 @@ describe('toNativeStyles', () => {
       ['&:active:not(:disabled) { line-clamp: 2; }', ':active:not(:disabled)'],
       ['&[data-on]:hover { line-clamp: 2; }', '[data-on]:hover'],
       ['&:not([data-on]):hover { line-clamp: 2; }', ':not([data-on]):hover'],
+      // Attribute selectors print ahead of the pseudo-classes, whatever their source order.
+      ['&:hover:not([data-on]) { line-clamp: 2; }', ':not([data-on]):hover'],
+      ['&[a]:hover:not([b="c"]) { line-clamp: 2; }', '[a]:not([b="c"]):hover'],
       ['&[data-on] { line-clamp: 2; }', '[data-on]'],
       ['&[data-on^="a" i]:hover { line-clamp: 2; }', '[data-on^="a" i]:hover'],
       ['&:not([data-on]) { line-clamp: 2; }', ':not([data-on])'],

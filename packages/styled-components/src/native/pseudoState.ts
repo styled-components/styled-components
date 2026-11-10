@@ -209,7 +209,7 @@ export function warnInertPseudoStates(
       continue;
     }
 
-    // `negate` on a compound entry negates its attribute or structural gate, not the pseudo-class.
+    // `negate` on a compound entry negates its structural gate, not the pseudo-class.
     const negated = (entry.type === 'pseudo' ? entry.negate : entry.pseudoNegate) === true;
     if (!negated && (supported & PSEUDO_BIT[pseudo]) === 0) {
       warnInertPseudo(pseudo, targetName, supported);
@@ -289,10 +289,7 @@ export function pseudoStylesForState(
     if (pseudoActive(entry.pseudo, state, states) === (entry.pseudoNegate === true)) continue;
     if (entry.and !== undefined && !andTermsHold(entry.and, state, states)) continue;
     // Attrs AND-gate for compound forms like `&[disabled]:hover`.
-    if (entry.attrs) {
-      const attrOk = attrMatches(entry, props);
-      if (entry.negate ? attrOk : !attrOk) continue;
-    }
+    if (entry.attrs && !attrMatches(entry, props)) continue;
     // Structural AND-gate for Tier 2 combinations like
     // `&:nth-child(2):hover` or `${Foo} > &:active`.
     if (entry.type === 'combinator') {

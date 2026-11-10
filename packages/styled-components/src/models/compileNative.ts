@@ -113,14 +113,13 @@ interface ConditionalStyleFields {
    */
   attrs?: ConditionalAttr[];
   /**
-   * Inversion flag for `&:not(<simple-selector>)`. When true, the
-   * matcher inverts the result of the pseudo / attr predicate so the
-   * bucket fires when the inner selector does NOT match. On an entry that
-   * also carries `pseudo`, it inverts the attribute or structural gate;
-   * {@link pseudoNegate} inverts the pseudo-class.
+   * Inversion flag for `&:not(:hover)` and the structural / `:has()` selectors: the matcher inverts
+   * the predicate so the bucket fires when it does NOT match. A negated attribute carries its own
+   * flag on the {@link ConditionalAttr}. On an entry that also carries `pseudo`, it inverts the
+   * structural gate; {@link pseudoNegate} inverts the pseudo-class.
    */
   negate?: boolean;
-  /** On a gated entry (`@media &:not(:active)`): the `pseudo` term is negated. */
+  /** On an entry with another gate (`@media &:not(:active)`, `&[x]:not(:active)`): the `pseudo` term is negated. */
   pseudoNegate?: boolean;
   /** For type 'combinator': `descendant` matches anywhere on the
    *  ancestor chain; `child` matches only the immediate parent;
@@ -1180,8 +1179,11 @@ function describePseudo(pseudo: PseudoState, negate: boolean | undefined): strin
 }
 
 function describeAttr(a: ConditionalAttr): string {
-  if (a.value === undefined) return `[${a.name}]`;
-  return `[${a.name}${a.operator ?? '='}"${a.value}"${a.caseFlag === undefined ? '' : ' ' + a.caseFlag}]`;
+  const text =
+    a.value === undefined
+      ? `[${a.name}]`
+      : `[${a.name}${a.operator ?? '='}"${a.value}"${a.caseFlag === undefined ? '' : ' ' + a.caseFlag}]`;
+  return negated(text, a.negate);
 }
 
 function describeSimple(inner: NthOfBranch): string {
@@ -1227,8 +1229,7 @@ function describeCondition(entry: ConditionalStyle): string {
     entry.pseudo === undefined
       ? ''
       : describePseudo(entry.pseudo, entry.pseudoNegate) + describeAndTerms(entry.and);
-  const attrs =
-    entry.attrs === undefined ? '' : negated(entry.attrs.map(describeAttr).join(''), entry.negate);
+  const attrs = entry.attrs === undefined ? '' : entry.attrs.map(describeAttr).join('');
   const selector = attrs + pseudoTerms;
   if (entry.type === 'attr') return selector;
   if (entry.type === 'nthChild' && entry.nthSpec !== undefined) {
@@ -1806,7 +1807,6 @@ function pushSelectorBuckets(
       pushBucket(conditional, base, resolvers, important, importantResolvers, varDeferred, {
         and: attrSel.and,
         attrSel,
-        negate: cls.negate,
         outer,
         pseudo: attrSel.pseudo,
         pseudoNegate: attrSel.pseudoNegate,
@@ -1949,11 +1949,11 @@ interface BucketGates {
   /** The remaining terms of a pseudo-class compound. */
   and?: PseudoTerm[] | undefined;
   attrSel?: AttrSelector | undefined;
-  /** Inverts the attribute selector, or the pseudo-class when there is no attribute selector to invert. */
+  /** Inverts the leading pseudo-class. */
   negate?: boolean | undefined;
   outer?: OuterGate | undefined;
   pseudo?: PseudoState | undefined;
-  /** Inverts `pseudo` when `negate` is already taken by an attribute selector. */
+  /** Inverts `pseudo` on an entry that has an attribute selector. */
   pseudoNegate?: boolean | undefined;
 }
 
@@ -1972,9 +1972,8 @@ function pushBucket(
   varDeferred: Array<[string, string, boolean]> | null,
   { and, attrSel, negate, outer, pseudo, pseudoNegate }: BucketGates
 ): void {
-  // Without an attribute selector the negation belongs to the pseudo-class riding the at-rule gate.
-  const negation =
-    negate !== true ? undefined : outer && !attrSel ? { pseudoNegate: true } : { negate: true };
+  // A pseudo-class riding an at-rule gate records its negation in `pseudoNegate`.
+  const negation = negate !== true ? undefined : outer ? { pseudoNegate: true } : { negate: true };
   const terms = {
     ...negation,
     ...(pseudoNegate === true ? { pseudoNegate } : undefined),
@@ -1996,7 +1995,11 @@ function pushBucket(
     entry = {
       type: 'attr',
       condition: attrSel.attrs
-        .map(a => (a.value !== undefined ? `${a.name}=${a.value}` : a.name))
+        .map(
+          a =>
+            (a.negate === true ? '!' : '') +
+            (a.value !== undefined ? `${a.name}=${a.value}` : a.name)
+        )
         .join('+'),
       attrs: attrSel.attrs,
       styles: base,

@@ -136,6 +136,51 @@ describe('modern CSS on React Native', () => {
         });
       });
 
+      // https://drafts.csswg.org/selectors-4/#negation-pseudo
+      // "The negation pseudo-class, :not(), is a functional pseudo-class taking a <complex-real-selector-list> as an argument. It represents an element that is not represented by its argument."
+      // Each `:not([attr])` negates only its own attribute selector, wherever it stands in the compound.
+      describe.each([
+        ['no at-rule', ''],
+        ['@media', '@media (min-width: 0px)'],
+      ])('a negated attribute in a compound under %s on a Pressable', (_name, gate) => {
+        it.each([
+          ['&:hover:not([data-busy])', {}, { hovered: true }, true],
+          ['&:hover:not([data-busy])', {}, { hovered: false }, false],
+          ['&:hover:not([data-busy])', { 'data-busy': '1' }, { hovered: true }, false],
+          ['&:hover:not([data-busy="1"])', { 'data-busy': '0' }, { hovered: true }, true],
+          ['&:hover:not([data-busy="1"])', { 'data-busy': '1' }, { hovered: true }, false],
+          ['&:hover:not([data-busy="1"])', { 'data-busy': true }, { hovered: true }, true],
+          ['&[data-y]:active:not([data-x])', { 'data-y': '' }, { pressed: true }, true],
+          [
+            '&[data-y]:active:not([data-x])',
+            { 'data-y': '', 'data-x': '' },
+            { pressed: true },
+            false,
+          ],
+          ['&[data-y]:active:not([data-x])', { 'data-x': '' }, { pressed: true }, false],
+          ['&[data-y]:active:not([data-x])', {}, { pressed: true }, false],
+          ['&[data-y]:active:not([data-x])', { 'data-y': '' }, { pressed: false }, false],
+          ['&:not([a]):hover:not([b])', {}, { hovered: true }, true],
+          ['&:not([a]):hover:not([b])', { a: 1 }, { hovered: true }, false],
+          ['&:not([a]):hover:not([b])', { b: 1 }, { hovered: true }, false],
+          ['&:not([a]):hover:not([b])', { a: 1, b: 1 }, { hovered: true }, false],
+          ['&:not([a]):hover:not([b])', {}, { hovered: false }, false],
+          ['&[y]:not([x]):hover', { y: 1 }, { hovered: true }, true],
+          ['&[y]:not([x]):hover', { x: 1, y: 1 }, { hovered: true }, false],
+          ['&:hover:not([x]):not(:disabled)', {}, { hovered: true }, true],
+          ['&:hover:not([x]):not(:disabled)', { disabled: true }, { hovered: true }, false],
+        ])('applies %s with props %j at press state %j: %s', (selector, props, state, applies) => {
+          const rule = `${selector} { opacity: 0.5; }`;
+          const Comp = styled(Pressable)`
+            opacity: 1;
+            ${gate === '' ? rule : `${gate} { ${rule} }`}
+          `;
+          const style = styleOf(<Comp {...props} />);
+          const resolved = typeof style === 'function' ? style(state) : style;
+          expect(flatOf(resolved).opacity).toBe(applies ? 0.5 : 1);
+        });
+      });
+
       it('applies a compound of two element states from the props, as a plain style', () => {
         const Forwarder = (props: any) => <View {...props} />;
         const Comp = styled(Forwarder)`

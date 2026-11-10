@@ -135,17 +135,12 @@ export function classifyRuleNow(selectors: string[]): NativeRuleClass {
 }
 
 function classifySelector(sel: string): NativeSelectorClass {
-  const terms = detectPseudoTerms(sel);
-  if (terms !== null) return terms;
+  const pseudoCls = detectPseudoTerms(sel);
+  if (pseudoCls !== null) return pseudoCls;
   const fanOut = detectIsWhereStates(sel);
   if (fanOut) return { kind: 'pseudoFanOut', pseudos: fanOut };
   const attrSel = parseAttrChain(sel);
   if (attrSel !== null) return { kind: 'attr', selectors: [attrSel] };
-  // `:not(<simple-selector>)`. Current scope is simple-arg only;
-  // complex/compound arguments fall through to the generic
-  // complex-selector warn.
-  const notCls = detectNot(sel);
-  if (notCls !== null) return notCls;
   // Descendant / child / adjacent-sibling / general-sibling combinator
   // against an interpolated styled component reference. `${Foo} &` /
   // `> &` / `+ &` / `~ &` compile to `.sc-FooId &` / `.sc-FooId > &` /
@@ -338,8 +333,10 @@ function detectNthChild(sel: string): NativeSelectorClass | null {
   const head = sel.substring(2, headEnd);
   let tailTerms: PseudoTerm[] | null = null;
   if (headEnd < sel.length) {
-    tailTerms = parsePseudoRun(sel, headEnd);
-    if (tailTerms === null) return null;
+    const tailAttrs: ConditionalAttr[] = [];
+    tailTerms = parsePseudoRun(sel, headEnd, tailAttrs);
+    // A structural entry has no attribute slot, so a negated attribute after the head stays unsupported.
+    if (tailTerms === null || tailAttrs.length > 0 || tailTerms.length === 0) return null;
   }
 
   let spec: NthSpec | null = null;
@@ -408,50 +405,38 @@ function findClosingParen(s: string, openIdx: number): number {
 }
 
 /**
- * `&:not([attr])`: fire the bucket when the inner attribute selector does NOT match, with optional
- * trailing pseudo-classes (`&:not([attr]):hover:enabled`). A negated pseudo-class (`&:not(:hover)`) is a
- * {@link detectPseudoTerms} term; complex / multi-arg forms (`&:not(:hover, :focus)`,
- * `&:not(.foo .bar)`) fall through.
+ * The terms of `&:hover`, `&:not(:hover)`, `&:hover:not(:disabled)`: one or more known pseudo-classes,
+ * each optionally wrapped in `:not(...)`. A `:not([attr])` among them (`&:not([x]):hover`,
+ * `&:hover:not([x])`) turns the selector into an attribute selector with pseudo-class terms. Null when
+ * the selector is anything else; complex arguments (`&:not(:hover, :focus)`, `&:not(.foo .bar)`) are
+ * null too.
  */
-function detectNot(sel: string): NativeSelectorClass | null {
-  const prefix = '&:not(';
-  if (!sel.startsWith(prefix)) return null;
-  const innerStart = prefix.length;
-  const innerEnd = findClosingParen(sel, innerStart - 1);
-  if (innerEnd === -1) return null;
-  const inner = sel.substring(innerStart, innerEnd).trim();
-  if (inner.charCodeAt(0) !== $.OPEN_BRACKET) return null;
+function detectPseudoTerms(sel: string): NativeSelectorClass | null {
+  if (sel.charCodeAt(0) !== $.AMPERSAND || sel.charCodeAt(1) !== $.COLON) return null;
+  const attrs: ConditionalAttr[] = [];
+  const terms = parsePseudoRun(sel, 1, attrs);
+  if (terms === null) return null;
 
-  let tailTerms: PseudoTerm[] | null = null;
-  if (innerEnd + 1 < sel.length) {
-    tailTerms = parsePseudoRun(sel, innerEnd + 1);
-    if (tailTerms === null) return null;
+  if (attrs.length > 0) {
+    const selector: AttrSelector = { attrs };
+    if (terms.length > 0) attachPseudoTerms(selector, terms);
+    return { kind: 'attr', selectors: [selector] };
   }
 
-  const end = findClosingBracket(inner, 0);
-  if (end !== inner.length - 1) return null;
-  const attr = parseAttrInner(inner.substring(1, end));
-  if (attr === null) return null;
-  const selector: AttrSelector = { attrs: [attr] };
-  if (tailTerms !== null) attachPseudoTerms(selector, tailTerms);
-  return { kind: 'attr', selectors: [selector], negate: true };
-}
-
-/**
- * The terms of `&:hover`, `&:not(:hover)`, `&:hover:not(:disabled)`: one or more known pseudo-classes,
- * each optionally wrapped in `:not(...)`, or null when the selector is anything else.
- */
-function parsePseudoTerms(sel: string): PseudoTerm[] | null {
-  if (sel.charCodeAt(0) !== $.AMPERSAND || sel.charCodeAt(1) !== $.COLON) return null;
-  return parsePseudoRun(sel, 1);
+  const [first, ...rest] = terms;
+  const cls: NativeSelectorClass = { kind: 'pseudo', pseudo: first.pseudo };
+  if (first.negate) cls.negate = true;
+  if (rest.length > 0) cls.and = rest;
+  return cls;
 }
 
 /**
  * The pseudo-class terms `sel` holds from index `start` (a `:`) to its end: each a known pseudo-class,
- * optionally wrapped in `:not(...)`, or null when anything else is there. A single scan with
- * `indexOf`, so cost is linear in the selector length.
+ * optionally wrapped in `:not(...)`, or null when anything else is there. A `:not([attr])` term is
+ * pushed onto `attrs` as a negated attribute instead of returned. A single scan with `indexOf`, so
+ * cost is linear in the selector length.
  */
-function parsePseudoRun(sel: string, start: number): PseudoTerm[] | null {
+function parsePseudoRun(sel: string, start: number, attrs: ConditionalAttr[]): PseudoTerm[] | null {
   const terms: PseudoTerm[] = [];
   let i = start;
   while (i < sel.length) {
@@ -462,9 +447,17 @@ function parsePseudoRun(sel: string, start: number): PseudoTerm[] | null {
       const close = findClosingParen(sel, i + 4);
       if (close === -1) return null;
       const inner = sel.substring(i + 5, close).trim();
+      i = close + 1;
+      if (inner.charCodeAt(0) === $.OPEN_BRACKET) {
+        if (findClosingBracket(inner, 0) !== inner.length - 1) return null;
+        const attr = parseAttrInner(inner.substring(1, inner.length - 1));
+        if (attr === null) return null;
+        attr.negate = true;
+        attrs.push(attr);
+        continue;
+      }
       if (inner.charCodeAt(0) !== $.COLON) return null;
       name = inner.substring(1);
-      i = close + 1;
     } else {
       const next = sel.indexOf(':', i + 1);
       const end = next === -1 ? sel.length : next;
@@ -475,22 +468,7 @@ function parsePseudoRun(sel: string, start: number): PseudoTerm[] | null {
     if (!pseudo) return null;
     terms.push({ negate, pseudo });
   }
-  return terms.length > 0 ? terms : null;
-}
-
-/**
- * A rule led by pseudo-classes that must all hold: the first term leads the entry and any others go
- * in `and`.
- */
-function detectPseudoTerms(sel: string): NativeSelectorClass | null {
-  const terms = parsePseudoTerms(sel);
-  if (terms === null) return null;
-
-  const [first, ...rest] = terms;
-  const cls: NativeSelectorClass = { kind: 'pseudo', pseudo: first.pseudo };
-  if (first.negate) cls.negate = true;
-  if (rest.length > 0) cls.and = rest;
-  return cls;
+  return terms;
 }
 
 /**
@@ -627,10 +605,10 @@ function parseAttrChain(sel: string): AttrSelector | null {
   }
   if (attrs.length === 0) return null;
   if (i === sel.length) return { attrs };
-  const terms = parsePseudoRun(sel, i);
+  const terms = parsePseudoRun(sel, i, attrs);
   if (terms === null) return null;
   const selector: AttrSelector = { attrs };
-  attachPseudoTerms(selector, terms);
+  if (terms.length > 0) attachPseudoTerms(selector, terms);
   return selector;
 }
 
