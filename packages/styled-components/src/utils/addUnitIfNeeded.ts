@@ -3,10 +3,12 @@
  * Inlined from @emotion/unitless with IE-only entries removed
  * (boxFlex, boxFlexGroup, boxOrdinalGroup, flexPositive, flexNegative,
  * flexOrder, msGridRow, msGridRowSpan, msGridColumn, msGridColumnSpan),
- * plus gridArea and lineClamp, which React's inline styles also leave unitless.
+ * plus gridArea and lineClamp, which React's inline styles also leave unitless,
+ * as well as fontSizeAdjust, hyphenateLimitChars, initialLetter, mathDepth,
+ * shapeImageThreshold, and the maskBorder* aliases of the borderImage* entries.
  */
 const unitless = new Set(
-  'animationIterationCount aspectRatio borderImageOutset borderImageSlice borderImageWidth columnCount columns flex flexGrow flexShrink gridArea gridRow gridRowEnd gridRowSpan gridRowStart gridColumn gridColumnEnd gridColumnSpan gridColumnStart fontWeight lineClamp lineHeight opacity order orphans scale tabSize widows zIndex zoom WebkitLineClamp fillOpacity floodOpacity stopOpacity strokeDasharray strokeDashoffset strokeMiterlimit strokeOpacity strokeWidth'.split(
+  'animationIterationCount aspectRatio borderImageOutset borderImageSlice borderImageWidth columnCount columns flex flexGrow flexShrink fontSizeAdjust gridArea gridRow gridRowEnd gridRowSpan gridRowStart gridColumn gridColumnEnd gridColumnSpan gridColumnStart fontWeight hyphenateLimitChars initialLetter lineClamp lineHeight maskBorderOutset maskBorderSlice maskBorderWidth mathDepth opacity order orphans scale shapeImageThreshold tabSize widows zIndex zoom WebkitLineClamp fillOpacity floodOpacity stopOpacity strokeDasharray strokeDashoffset strokeMiterlimit strokeOpacity strokeWidth'.split(
     ' '
   )
 );
