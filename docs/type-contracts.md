@@ -48,13 +48,14 @@ add the real package as a dependency to test a type.
 
 ## Verified out of tree
 
-Four reported issues cannot be pinned in-tree, because each is a union-explosion or recursion-depth
+Five reported issues cannot be pinned in-tree, because each is a union-explosion or recursion-depth
 cliff that a simplified stub sits clear of and would pass vacuously:
 
 - antd's `Button` under `.attrs()` (#5725)
 - react-bootstrap 2.8's `Button` (#4166)
 - react-spring's `animated` with the `css` prop (#3496)
 - preact/compat (#3773)
+- react-native-reanimated's `useAnimatedRef` next to a native styled component (#5877)
 
 They are verified out of tree against the real packages at the versions reported. Re-verify them by
 hand when the polymorphic call signature or `Interpolation` changes.
