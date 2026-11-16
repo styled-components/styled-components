@@ -221,18 +221,24 @@ export type TargetProps<R extends Runtime, T> = T extends keyof React.JSX.Intrin
     : {};
 
 /**
- * True when an application has augmented `React.HTMLAttributes` with a `data-*`
- * template-literal index signature, the common pattern for allowing arbitrary
- * data attributes. Detected by testing whether {@link DataAttributes}' key is
- * already a key of a stock intrinsic element.
+ * True when an application has augmented `React.HTMLAttributes` or
+ * `React.Attributes` with a `data-*` template-literal index signature, the
+ * common pattern for allowing arbitrary data attributes. Detected by testing
+ * whether {@link DataAttributes}' key is already a key of a stock intrinsic
+ * element's `ClassAttributes` or `HTMLAttributes`. Keying the whole
+ * `React.JSX.IntrinsicElements['div']` instead makes TypeScript report TS2590
+ * at Reanimated animated refs in React Native apps (#5877).
  *
  * Scope is exactly `data-${string}`: an `aria-${string}` or other custom-prefix
  * template augmentation is not detected and still hits the {@link WithCSSVars}
  * path (#5796). `data-*` is the dominant augmentation, so the narrow probe buys
  * the common case; widening it means OR-ing another literal prefix in here.
  */
-type IntrinsicElementsHaveDataIndex =
-  keyof DataAttributes extends keyof React.JSX.IntrinsicElements['div'] ? true : false;
+type IntrinsicElementsHaveDataIndex = keyof DataAttributes extends
+  | keyof React.ClassAttributes<HTMLElement>
+  | keyof React.HTMLAttributes<HTMLElement>
+  ? true
+  : false;
 
 /**
  * {@link WithCSSVars} for the augmented intrinsic path. Identical widening, but
