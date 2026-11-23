@@ -33,6 +33,7 @@ import { joinStrings, stripSplitter } from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
 import { createRSCCache } from '../utils/rscCache';
 import { setToString } from '../utils/setToString';
+import { styleTagContent } from '../utils/styleTagContent';
 import ComponentStyle, { getCompiledCSSForName } from './ComponentStyle';
 import { useStyleSheetContext } from './StyleSheetManager';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
@@ -409,7 +410,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
         styleElement = React.createElement('style', {
           [SC_ATTR]: '',
           key: 'sc-' + componentStyle.componentId,
-          children: combined,
+          ...styleTagContent(combined),
         });
         if (styleElements) styleElements.set(styleKey, styleElement);
       }

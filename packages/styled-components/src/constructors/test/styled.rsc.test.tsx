@@ -107,6 +107,43 @@ describe('styled RSC mode', () => {
     });
   });
 
+  describe('style text on React before 19 (#5824)', () => {
+    it('keeps child combinators, quotes and ampersands as written', () => {
+      const List = styled.ul`
+        & > li {
+          color: red;
+        }
+        &::before {
+          content: 'list & more';
+        }
+      `;
+
+      const css = extractStyleContents(ReactDOMServer.renderToString(<List />));
+
+      expect(css).toMatch(/\.\w+>li\{color:red;\}/);
+      expect(css).toContain("content:'list & more';");
+      expect(css).not.toMatch(/&(gt|quot|amp);/);
+    });
+
+    it('does not let an interpolated value close the style tag', () => {
+      const Box = styled.div<{ $label: string }>`
+        &::before {
+          content: '${p => p.$label}';
+        }
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <Box $label="</style><script>alert(1)</script>" />
+      );
+
+      expect(countStyleTags(html)).toBe(1);
+      expect(html.match(/<\/style/gi)).toHaveLength(1);
+      expect(extractStyleContents(html)).toContain(
+        "content:'\\3C/style><script>alert(1)</script>';"
+      );
+    });
+  });
+
   describe('base component CSS in RSC output (#5663)', () => {
     // In RSC mode, each component's CSS is retrieved via getGroup() which only
     // returns rules for that component's own group. When extending a base component,
@@ -435,8 +472,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       // Descendant/child combinators should have base class wrapped
-      // renderToString HTML-encodes `>` as `&gt;`
-      expect(allCSS).toMatch(/:where\(\.\w+\)&gt;span/);
+      expect(allCSS).toMatch(/:where\(\.\w+\)>span/);
       expect(allCSS).toMatch(/:where\(\.\w+\) \.child/);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*padding:8px/);
     });
@@ -477,9 +513,8 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      // renderToString HTML-encodes quotes (&#x27;)
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.gpbfiF){background:url(&#x27;./bg.png&#x27;);}:where(.gpbfiF)::before{content:&#x27;.item&#x27;;}.inzFhn{color:red;}"`
+        `":where(.gpbfiF){background:url('./bg.png');}:where(.gpbfiF)::before{content:'.item';}.inzFhn{color:red;}"`
       );
       expect(allCSS).not.toMatch(/:where\([^)]*\.item/);
       expect(allCSS).not.toMatch(/:where\([^)]*\.\/bg/);
@@ -881,7 +916,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.fizcbf){padding:8px;}:where(.fizcbf)::before{content:&#x27;.sc-something&#x27;;}.inzFhn{color:red;}"`
+        `":where(.fizcbf){padding:8px;}:where(.fizcbf)::before{content:'.sc-something';}.inzFhn{color:red;}"`
       );
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
       assertValidWhereSelectors(allCSS);
@@ -921,7 +956,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.cyCrZY){margin:4px;}:where(.cyCrZY)[data-value=&#x27;.foo&#x27;]{background:yellow;}.gnVozW{color:blue;}"`
+        `":where(.cyCrZY){margin:4px;}:where(.cyCrZY)[data-value='.foo']{background:yellow;}.gnVozW{color:blue;}"`
       );
       assertValidWhereSelectors(allCSS);
     });
@@ -1116,7 +1151,7 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       expect(allCSS).toMatchInlineSnapshot(
-        `":where(.iOeQph){margin:0;}:where(.iOeQph)::before{content:&#x27;\\2022&#x27;;}.esjoNE{padding:4px;}"`
+        `":where(.iOeQph){margin:0;}:where(.iOeQph)::before{content:'\\2022';}.esjoNE{padding:4px;}"`
       );
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*padding:4px/);
       assertValidWhereSelectors(allCSS);
@@ -1387,7 +1422,7 @@ describe('styled RSC mode', () => {
     // emission".
     type StyledOutput = React.ReactElement<{
       children: [
-        React.ReactElement<{ children: string }>,
+        React.ReactElement<{ dangerouslySetInnerHTML: { __html: string } }>,
         React.ReactElement<{ className: string }>,
       ];
     }>;
@@ -1472,7 +1507,7 @@ describe('styled RSC mode', () => {
 
       const renderAlone = (Component: unknown) => {
         mockCacheStore.clear();
-        return renderStyled(Component).styleElement.props.children;
+        return renderStyled(Component).styleElement.props.dangerouslySetInnerHTML.__html;
       };
 
       it.each(['base first', 'extension first'])(
@@ -1494,8 +1529,8 @@ describe('styled RSC mode', () => {
           const [base, ext] =
             order === 'base first' ? [firstOutput, secondOutput] : [secondOutput, firstOutput];
 
-          expect(base.props.children).toBe(baseAlone);
-          expect(ext.props.children).toBe(extAlone);
+          expect(base.props.dangerouslySetInnerHTML.__html).toBe(baseAlone);
+          expect(ext.props.dangerouslySetInnerHTML.__html).toBe(extAlone);
           expect(secondOutput).not.toBe(firstOutput);
         }
       );
@@ -1547,8 +1582,8 @@ describe('styled RSC mode', () => {
         expect(a[1].styleElement).toBe(a[0].styleElement);
         expect(b[1].styleElement).toBe(b[0].styleElement);
         expect(b[0].styleElement).not.toBe(a[0].styleElement);
-        expect(a[0].styleElement.props.children).toContain(firstCSS);
-        expect(b[0].styleElement.props.children).toContain(secondCSS);
+        expect(a[0].styleElement.props.dangerouslySetInnerHTML.__html).toContain(firstCSS);
+        expect(b[0].styleElement.props.dangerouslySetInnerHTML.__html).toContain(secondCSS);
         expect(b[0].element.props.className).not.toBe(a[0].element.props.className);
       }
     );

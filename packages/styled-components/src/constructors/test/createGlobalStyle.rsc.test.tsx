@@ -150,6 +150,19 @@ describe('createGlobalStyle RSC mode', () => {
     expect(resolved).toBe(fallback);
   });
 
+  it('keeps child combinators, quotes and ampersands as written on React before 19 (#5824)', () => {
+    const GlobalStyle = createGlobalStyle`
+      body > main::before {
+        content: "a & b";
+      }
+    `;
+
+    const html = ReactDOMServer.renderToString(<GlobalStyle />);
+
+    expect(html).toContain('body>main::before{content:"a & b";}');
+    expect(html).not.toMatch(/&(gt|quot|amp);/);
+  });
+
   describe('shared style element (payload dedup)', () => {
     // The server-component payload writer encodes a repeated element object
     // once, so instances with identical CSS return one element while every
@@ -200,8 +213,8 @@ describe('createGlobalStyle RSC mode', () => {
       const blue = renderOnce(GlobalStyle, { $bg: 'blue' });
 
       expect(blue).not.toBe(red);
-      expect(red.props.children).toBe('body{background:red;}');
-      expect(blue.props.children).toBe('body{background:blue;}');
+      expect(red.props.dangerouslySetInnerHTML.__html).toBe('body{background:red;}');
+      expect(blue.props.dangerouslySetInnerHTML.__html).toBe('body{background:blue;}');
       expect(red.key).toMatch(/^sc-global-[\w-]+$/);
       expect(red.props['data-styled-global']).toBe(red.key);
       expect(blue.key).toBe(red.key);

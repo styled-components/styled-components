@@ -10,6 +10,7 @@ import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
 import { joinRules, stripSplitter } from '../utils/joinStrings';
 import { createRSCCache } from '../utils/rscCache';
+import { styleTagContent } from '../utils/styleTagContent';
 import css from './css';
 
 declare const __SERVER__: boolean;
@@ -189,7 +190,7 @@ export default function createGlobalStyle<Props extends object>(
           styleElement = React.createElement('style', {
             key: styledComponentId,
             'data-styled-global': styledComponentId,
-            children: stripSplitter(css),
+            ...styleTagContent(stripSplitter(css)),
           });
           if (styleElements) styleElements.set(styleKey, styleElement);
         }
