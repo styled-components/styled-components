@@ -75,7 +75,7 @@ export function referenceText(reference: ServerReference): string {
 
       warnOnce(
         'rsc-client-ref-style',
-        `\`${label}\` is a 'use client' export, so a server component's styles cannot reference it, and the selector, at-rule, or declaration holding it was dropped. Define the styled component in a module without 'use client' so the server can read its class.`,
+        `\`${label}\` is a 'use client' export, so a server component's styles cannot reference it, and the selector, at-rule, or declaration holding it was dropped. Define the styled component in a module without 'use client' so the server can read its class, and enable the styled-components compiler plugin (such as Next.js \`compiler: { styledComponents: true }\`) so the server and client graphs share one component id.`,
         label
       );
     }

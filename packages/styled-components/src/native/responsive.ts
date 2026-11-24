@@ -3,6 +3,9 @@ import type { ColorSchemeName, EmitterSubscription, NativeEventSubscription } fr
 import { isWS } from '../utils/charCodes';
 import { fifoSet } from '../utils/fifoMap';
 import type { AnimatedApi, ReactNativeModule } from './animation/animatedTypes';
+import type { MediaQueryEnv } from './resolverTypes';
+
+export type { MediaQueryEnv };
 
 // Resolved lazily on first call and cached, so the store subscriptions and
 // snapshot readers don't chase live module getters after Jest's environment
@@ -44,15 +47,6 @@ export function getRN(): RNApis {
     }
   }
   return rnApis;
-}
-
-export interface MediaQueryEnv {
-  width: number;
-  height: number;
-  colorScheme: 'light' | 'dark' | null | undefined;
-  reduceMotion: boolean;
-  fontScale: number;
-  pixelRatio: number;
 }
 
 type Dimension = 'width' | 'height';

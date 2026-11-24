@@ -1,6 +1,7 @@
 import React from 'react';
 import { SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
+import { attachStreamFlush } from '../sheet/serverOrder';
 import styledError from '../utils/error';
 import { escapeCssForStyleTag, escapeHtmlAttribute } from '../utils/escapeStyleSink';
 
@@ -39,6 +40,7 @@ export default class ServerStyleSheet {
 
   constructor({ nonce }: { nonce?: string } = {}) {
     this.instance = new StyleSheet({ isServer: true, nonce });
+    attachStreamFlush(this.instance);
     this.sealed = false;
   }
 

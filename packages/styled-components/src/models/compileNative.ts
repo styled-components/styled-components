@@ -1,9 +1,7 @@
 import {
   AttrSelector,
   ConditionalAttr,
-  DYN,
-  NATIVE_AT_CLASS,
-  NATIVE_RULE_CLASS,
+  NativeAtClass,
   NativeRuleClass,
   NativeSelectorClass,
   NodeKind,
@@ -627,10 +625,7 @@ export function toNativeStyles(rawCSS: string, styleSheet: StyleSheet): NativeSt
   if (cached !== undefined) return cached;
 
   const preprocessed = normalize(rawCSS);
-  // Parse stamps `[NATIVE_RULE_CLASS]` / `[NATIVE_AT_CLASS]` onto Rule
-  // and AtRule nodes inline (gated on `__NATIVE__`). The bucket router
-  // in `astToNativeStyles` reads those classifications directly.
-  const ast = parse(preprocessed, { keepCommaSpaces: true });
+  const ast = parse(preprocessed);
   const compiled = astToNativeStyles(ast, styleSheet);
 
   fifoSet(compileCache, rawCSS, compiled, CACHE_LIMIT);
@@ -645,7 +640,7 @@ export function toNativeStyles(rawCSS: string, styleSheet: StyleSheet): NativeSt
 export function astToNativeStyles(ast: StaticRoot, styleSheet: StyleSheet): NativeStyles {
   // Flat array of DeclNode references. One slot per decl (half of the
   // legacy [prop, value, prop, value, …] form) AND lets the static-decl
-  // precompile reach the node's DYN flag + WeakMap-cached partial.
+  // precompile reach the node's `dyn` flag + WeakMap-cached partial.
   const baseDecls: StaticDeclNode[] = [];
   const conditional: ConditionalStyle[] = [];
   const keyframes: CompiledKeyframes[] = [];
@@ -1292,7 +1287,7 @@ function hasOwnKeys(o: object): boolean {
  * `extractResolvers` two-walk pipeline.
  *
  * Per-decl dispatch:
- * - Static Decls (`![DYN]`): the precomputed `transformDecl` partial lives
+ * - Static Decls (no `dyn`): the precomputed `transformDecl` partial lives
  *   in `staticDeclCache` (WeakMap keyed on the AST node), populated lazily
  *   on first touch. Subsequent renders splat the cached object directly,
  *   skipping the camelize / shorthand / polyfill work.
@@ -1424,7 +1419,7 @@ function processDecls(decls: StaticDeclNode[]): {
       varDeferred.push([prop, value, isImportant]);
       continue;
     }
-    if (decl[DYN] === true) {
+    if (decl.dyn === true) {
       // Dynamic-decl path: pairCache (string-keyed, whole-flush eviction).
       // Key on the stripped value so importance is metadata, not storage.
       let inner = pairCache.get(prop);
@@ -1631,41 +1626,44 @@ function walkRoot(
     } else if (kind === NodeKind.Rule) {
       handleRootRule(node, conditional);
     } else if (kind === NodeKind.AtRule) {
-      handleAtRule(node, baseDecls, conditional, startingDecls);
-    } else if (kind === NodeKind.Keyframes) {
-      keyframes.push({
-        name: node.prelude,
-        frames: node.frames.map(frame => {
-          // Mirror the base/conditional pipeline: decls → transformDecl
-          // → split static base / resolvers in one pass. Lets
-          // `${t.colors.x}` and `env()` inside a keyframe's declarations
-          // resolve at render time when the animation adapter applies
-          // them.
-          const decls = frame.children;
-          // `!important` inside a keyframe body is invalid; processDecls
-          // strips the marker and routes to `important`, which we then
-          // discard so the frame ignores the marker entirely.
-          const { base, resolvers } =
-            decls.length > 0 ? processDecls(decls) : { base: {}, resolvers: [] };
-          const out: {
-            stops: string[];
-            decls: Dict<unknown>;
-            resolvers?: Array<[string, Resolver]>;
-            easing?: EasingDescriptor;
-          } = { stops: frame.stops, decls: base };
-          if (resolvers.length > 0) out.resolvers = resolvers;
-          if ('animationTimingFunction' in base) {
-            const atf = base.animationTimingFunction;
-            delete base.animationTimingFunction;
-            if (!isEndOnlyKeyframeStops(frame.stops)) {
-              out.easing = Array.isArray(atf) ? atf[0] : atf;
-            }
-          }
-          return out;
-        }),
-      });
+      handleAtRule(node, baseDecls, conditional, keyframes, startingDecls);
     }
   }
+}
+
+/**
+ * Compile a `@keyframes` body: each rule child is a frame, its selectors the stops and its
+ * declarations the frame body. Anything else the block parser admits has no meaning there.
+ */
+function compileKeyframes(node: StaticAtRuleNode, children: StaticNode[]): CompiledKeyframes {
+  const frames: CompiledKeyframes['frames'] = [];
+  for (let i = 0; i < children.length; i++) {
+    const frame = children[i];
+    if (frame.kind !== NodeKind.Rule) continue;
+
+    // Mirror the base/conditional pipeline: decls → transformDecl
+    // → split static base / resolvers in one pass. Lets
+    // `${t.colors.x}` and `env()` inside a keyframe's declarations
+    // resolve at render time when the animation adapter applies
+    // them.
+    const decls = collectDecls(frame.children);
+    // `!important` inside a keyframe body is invalid; processDecls
+    // strips the marker and routes to `important`, which we then
+    // discard so the frame ignores the marker entirely.
+    const { base, resolvers } =
+      decls.length > 0 ? processDecls(decls) : { base: {}, resolvers: [] };
+    const out: CompiledKeyframes['frames'][number] = { stops: frame.selectors, decls: base };
+    if (resolvers.length > 0) out.resolvers = resolvers;
+    if ('animationTimingFunction' in base) {
+      const atf = base.animationTimingFunction;
+      delete base.animationTimingFunction;
+      if (!isEndOnlyKeyframeStops(frame.selectors)) {
+        out.easing = Array.isArray(atf) ? atf[0] : atf;
+      }
+    }
+    frames.push(out);
+  }
+  return { name: node.prelude, frames };
 }
 
 /** Enclosing at-rule gate (`@media` / `@container` / `@supports`) threaded
@@ -1677,9 +1675,6 @@ type OuterGate = {
 };
 
 function handleRootRule(node: StaticRuleNode, conditional: ConditionalStyle[]): void {
-  // Read parse-time classification when present; fall back to render-time
-  // re-classification on the filled selectors when sentinels were
-  // present at parse time (rare).
   const cls = readRuleClass(node);
   applyRuleClass(node, cls, conditional, undefined);
 }
@@ -2016,16 +2011,23 @@ function pushBucket(
   conditional.push(entry);
 }
 
-/**
- * Read parse-time classification when present; otherwise re-classify
- * on the filled selectors (fallback path for selectors that carried
- * `\0I` sentinels at parse time).
- */
+/** The rule's classification: cached for a static node, computed from the filled selectors otherwise. */
 function readRuleClass(node: StaticRuleNode): NativeRuleClass {
-  const stamped = node[NATIVE_RULE_CLASS];
-  if (stamped !== undefined) return stamped;
-  return classifyRuleNow(node.selectors);
+  let cls = ruleClassCache.get(node);
+  if (cls === undefined) {
+    cls = classifyRuleNow(node.selectors);
+    // A dynamic node is rebuilt every render, so a cached entry would never be read again.
+    if (node.dyn !== true) ruleClassCache.set(node, cls);
+  }
+  return cls;
 }
+
+/**
+ * Native classifications of static rule and at-rule nodes, computed on first use. WeakMap-keyed
+ * like `staticDeclCache`, so the AST stays unmutated and an entry is freed with its node.
+ */
+const ruleClassCache = new WeakMap<StaticRuleNode, NativeRuleClass>();
+const atClassCache = new WeakMap<StaticAtRuleNode, NativeAtClass>();
 
 /**
  * `@property <custom-property-name> { ... }`: register a typed custom
@@ -2130,13 +2132,22 @@ function handleAtRule(
   node: StaticAtRuleNode,
   baseDecls: StaticDeclNode[],
   conditional: ConditionalStyle[],
+  keyframes: CompiledKeyframes[],
   startingDecls: StaticDeclNode[]
 ): void {
-  // Parser stamps `[NATIVE_AT_CLASS]` at construction time on native
-  // builds. For AST built outside that path (jsdom-test env, or future
-  // shared-AST consumers) we classify on demand: same logic, no write.
-  const cls = node[NATIVE_AT_CLASS] ?? classifyAtRuleNow(node.name, node.prelude);
+  let cls = atClassCache.get(node);
+  if (cls === undefined) {
+    cls = classifyAtRuleNow(node.name, node.prelude);
+    // A dynamic node is rebuilt every render, so a cached entry would never be read again.
+    if (node.dyn !== true) atClassCache.set(node, cls);
+  }
   const name = node.name;
+
+  if (cls.kind === 'keyframes') {
+    // A bodiless `@keyframes foo;` names no frames.
+    if (node.children !== null) keyframes.push(compileKeyframes(node, node.children));
+    return;
+  }
 
   if (cls.kind === 'starting-style') {
     if (node.children) {
@@ -2153,29 +2164,11 @@ function handleAtRule(
     return;
   }
 
-  if (cls.kind === 'media' || cls.kind === 'container' || cls.kind === 'supports') {
+  if (cls.kind !== 'unsupported') {
     if (!node.children) return;
-    // `condition` is the parse-time-cached prelude slice when the
-    // prelude was static; for sentinel-bearing preludes (`@media
-    // (min-width: ${size}px)`) it's null and we recover from the now-
-    // filled prelude string.
-    // For container at-rules, `${Component}` interpolation pre-
-    // stringifies to `.sc-aBcDeF` (selector form). The classified
-    // `containerName` strips the dot; mirror that here when computing
-    // the condition substring so they line up against the same offset.
-    const preludeForOffset =
-      cls.kind === 'container' && node.prelude.charCodeAt(0) === 0x2e
-        ? node.prelude.substring(1)
-        : node.prelude;
-    const condition =
-      cls.condition !== null
-        ? cls.condition
-        : cls.containerName
-          ? preludeForOffset.substring(cls.containerName.length).replace(/^\s+/, '')
-          : preludeForOffset;
     const outer = {
       type: cls.kind,
-      condition,
+      condition: cls.condition,
       containerName: cls.containerName,
     };
 
@@ -2204,12 +2197,6 @@ function handleAtRule(
     return;
   }
 
-  if (cls.kind === 'keyframes') {
-    // Handled as KeyframesNode, this branch is reachable only for unusual cases.
-    return;
-  }
-
-  if (cls.kind !== 'unsupported') return;
   const warnKind = cls.warn;
   if (__DEV__) {
     if (warnKind === 'web-only') {
@@ -2264,7 +2251,7 @@ function pushDecl(out: StaticDeclNode[], node: StaticDeclNode): void {
   }
   // Push the DeclNode reference directly. One slot per decl (half of the
   // legacy [prop, value] tuple form) AND lets `processDecls` reach the
-  // node's DYN flag and WeakMap-cached partial. Memory layout note: the
+  // node's `dyn` flag and WeakMap-cached partial. Memory layout note: the
   // 5-7% v7 cold-compile win held by the flat-tuple shape is preserved
   // (no per-decl allocation).
   out.push(node);
@@ -2303,7 +2290,7 @@ const staticDeclCache = new WeakMap<StaticDeclNode, Dict<unknown>>();
  */
 export function extractBaseDeclPairs(rawCSS: string): Array<[string, string]> {
   const preprocessed = normalize(rawCSS);
-  const ast = parse(preprocessed, { keepCommaSpaces: true });
+  const ast = parse(preprocessed);
   const pairs: Array<[string, string]> = [];
   for (let i = 0; i < ast.length; i++) {
     const node = ast[i];

@@ -27,8 +27,3 @@ export function joinKeyframes(list: ReadonlyArray<{ name: string; rules: string[
   }
   return css;
 }
-
-export function stripSplitter(css: string): string {
-  if (!css) return css;
-  return css.replaceAll(SPLITTER, '');
-}

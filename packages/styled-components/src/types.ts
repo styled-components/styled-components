@@ -2,7 +2,7 @@ import type * as CSS from 'csstype';
 import type React from 'react';
 import type WebStyle from './models/WebStyle';
 import type { DefaultTheme } from './models/ThemeProvider';
-import type { Resolver } from './native/transform/polyfills/resolvers';
+import type { Resolver } from './native/resolverTypes';
 import type createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 import type { SupportedHTMLElements } from './utils/domElements';
 
@@ -229,15 +229,6 @@ export interface CommonStatics<out R extends Runtime, in out Props extends BaseO
   attrs: Attrs<Props>[];
   target: StyledTarget<R>;
   shouldForwardProp?: ShouldForwardProp<R> | undefined;
-  /**
-   * Internal: pre-computed plans for arity-2 attrs (`(props, ast) => ...`
-   * post-compile callbacks), aligned in order with those entries in `attrs`.
-   * Each entry is either a static plan (output bag + popped keys) folded at
-   * construction time, or `null` to signal that the render path must invoke
-   * the original callback. `undefined` when `attrs` has no arity-2 entry.
-   * @internal
-   */
-  postAttrsPlans?: ReadonlyArray<import('./utils/postAttrs').PostAttrsPlan | null> | undefined;
 }
 
 export interface IStyledStatics<out R extends Runtime, in out OuterProps extends BaseObject>
