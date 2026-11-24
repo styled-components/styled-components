@@ -1,5 +1,57 @@
 # styled-components
 
+## 6.7.0
+
+### Minor Changes
+
+- f17f6c0: `configureServerStyles({ stylisPlugins })` sets the plugins every server component is styled with, for the whole server process. Call it once, at the top level of a module every server render loads first. In Next.js that's the root layout file:
+
+  ```tsx
+  // app/layout.tsx
+  import { configureServerStyles, stylisPluginRSC } from 'styled-components';
+
+  configureServerStyles({ stylisPlugins: [stylisPluginRSC] });
+
+  export default function RootLayout({ children }: { children: React.ReactNode }) {
+    // ...
+  }
+  ```
+
+  It reaches every server-rendered page and nested layout, including pages prerendered at build time and pages reached by client-side navigation, which a `StyleSheetManager` in a shared layout does not reach. A `StyleSheetManager` in a server component starts from these plugins; its own `stylisPlugins` prop replaces them, and `stylisPlugins={[]}` drops them.
+
+  It applies to server components only. Client components take their plugins from a `StyleSheetManager` rendered on the client, such as the one in your style registry. Make one call per app: a later call replaces an earlier one and applies to renders that start after it.
+
+### Patch Changes
+
+- 4bfc2cb: Referring to another component in a style (`${Box}:hover { ... }`) produces that component's selector for any styled component under `preact/compat`, and for a `React.memo` or function wrapper that has the styled component's statics hoisted onto it.
+- 1ddadee: Each `createGlobalStyle` applies its own CSS when two global styles differ only in what their functions return, including bodies that are only a function (`` createGlobalStyle`${() => 'html { --a: 1; }'}` ``). This is how a CSS reset and a color-mode style are often written together, for example xstyled's Preflight and ColorModeProvider. When both set the same property, the one mounted most recently wins, and a prop or theme update does not change which one that is.
+
+  When several mounts of one dynamic global style render on the server, the collected styles include every one of them, not only the last.
+
+- 4eaf66b: A `styled-components/native` component will no longer cause TypeScript to show an error of TS2590 ("Expression produces a union type that is too complex to represent") on a Reanimated `useAnimatedRef` ref, which it did from 6.5.3. However, if a DOM element or web styled component is checked earlier in the code then this error can still show, like a normal `<div>` would without styled-components.
+- 4bfc2cb: A `StyleSheetManager` in a server component honors `namespace` and `enableVendorPrefixes` when they are passed together with `stylisPlugins={[]}`, matching client components.
+- ed7b199: Server components keep their `StyleSheetManager` settings when several requests render at the same time on one server. A server component that awaited data could lose settings such as `stylisPlugins` partway through its render, so `stylisPluginRSC` selectors like `:first-child` came out unrewritten at random under load.
+
+  A `StyleSheetManager` in server components that reuses the same `stylisPlugins` array no longer picks up the `namespace` or `enableVendorPrefixes` setting of another manager rendered before it.
+
+- 7831e15: Server component styles keep child combinators (`>`), quotes, and ampersands as written on Next.js 13.5 and 14, whose bundled React 18.3 canary HTML-escaped them inside the inline `<style>` tag (for example `.a &gt; .b`), so the browser dropped those rules on first load. A style value still cannot close the `<style>` tag. Next.js 15 and later were not affected and render the same output as before.
+- f17f6c0: `stylisPluginRSC` keeps its name through a production bundle, so its class names match in development and production and it passes the plugin name check.
+- 2a285ac: A stylis plugin without a name passed to `<StyleSheetManager stylisPlugins={[...]}>` now throws the documented "not named" error (#15) again. The error was being created but never thrown, so an anonymous function was accepted silently and shared its class names with the same component rendered without plugins.
+- 6aab68b: Numbers for `fontSizeAdjust`, `hyphenateLimitChars`, `initialLetter`, `mathDepth`, `shapeImageThreshold`, `maskBorderOutset`, `maskBorderSlice`, and `maskBorderWidth` in object styles render without a unit:
+
+  ```ts
+  const Heading = styled.h1({
+    fontSizeAdjust: 0.5,
+    hyphenateLimitChars: 6,
+    initialLetter: 3,
+    mathDepth: 1,
+    shapeImageThreshold: 0.7,
+  });
+  // font-size-adjust: 0.5; hyphenate-limit-chars: 6; initial-letter: 3; math-depth: 1; shape-image-threshold: 0.7;
+  ```
+
+  Components that set any of these properties to a number get a new class name on upgrade, since the emitted CSS changes.
+
 ## 6.6.0
 
 ### Minor Changes
