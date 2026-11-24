@@ -32,7 +32,7 @@ interface ClientReference {
   name?: string;
 }
 
-function isClientReference(chunk: unknown): chunk is ClientReference {
+export function isClientReference(chunk: unknown): chunk is ClientReference {
   return (chunk as any).$$typeof === CLIENT_REFERENCE;
 }
 
@@ -92,11 +92,7 @@ export default function flatten<Props extends object>(
     }
 
     // preact/compat's forwardRef and function HOCs both carry the brand on a function.
-    if (
-      hasStyledComponentBrand(chunk) &&
-      typeof chunk.styledComponentId === 'string' &&
-      chunk.styledComponentId.length > 0
-    ) {
+    if (hasStyledComponentBrand(chunk)) {
       result.push(`.${chunk.styledComponentId}`);
       return result;
     }
@@ -107,10 +103,11 @@ export default function flatten<Props extends object>(
       if (
         process.env.NODE_ENV !== 'production' &&
         typeof fnResult === 'object' &&
+        fnResult !== null &&
         !Array.isArray(fnResult) &&
+        !isClientReference(fnResult) &&
         !isKeyframes(fnResult) &&
-        !isPlainObject(fnResult) &&
-        fnResult !== null
+        !isPlainObject(fnResult)
       ) {
         console.error(
           `${getComponentName(
@@ -133,43 +130,40 @@ export default function flatten<Props extends object>(
     return result;
   }
 
-  // Module-level client reference proxies (typeof 'object') may trap `in` and pass isPlainObject - catch first
-  if (isClientReference(chunk)) {
-    if (process.env.NODE_ENV !== 'production') warnClientReference(chunk);
-    return result;
-  }
-
-  if (
-    typeof chunk === 'object' &&
-    hasStyledComponentBrand(chunk) &&
-    typeof chunk.styledComponentId === 'string' &&
-    chunk.styledComponentId.length > 0
-  ) {
-    result.push(`.${chunk.styledComponentId}`);
-    return result;
-  }
-
-  if (isKeyframes(chunk)) {
-    if (styleSheet) {
-      chunk.inject(styleSheet, stylisInstance);
-      result.push(chunk.getName(stylisInstance));
-    } else {
-      result.push(chunk);
-    }
-    return result;
-  }
-
-  if (isPlainObject(chunk)) {
-    // A plain object that defines its own toString takes the stringification
-    // path - it's being interpolated as a value (e.g. a design token), not as
-    // a CSS-in-JS rule object. Without this, `${token}` in a tagged template
-    // would walk the object's enumerable keys as CSS declarations. (#5740)
-    if ((chunk as object).toString !== Object.prototype.toString) {
-      result.push((chunk as object).toString());
+  if (typeof chunk === 'object') {
+    // Module-level client reference proxies (typeof 'object') may trap `in` and pass isPlainObject - catch first
+    if (isClientReference(chunk)) {
+      if (process.env.NODE_ENV !== 'production') warnClientReference(chunk);
       return result;
     }
-    objToCssArrayInto(chunk as Dict<any>, result);
-    return result;
+
+    if (hasStyledComponentBrand(chunk)) {
+      result.push(`.${chunk.styledComponentId}`);
+      return result;
+    }
+
+    if (isKeyframes(chunk)) {
+      if (styleSheet) {
+        chunk.inject(styleSheet, stylisInstance);
+        result.push(chunk.getName(stylisInstance));
+      } else {
+        result.push(chunk);
+      }
+      return result;
+    }
+
+    if (isPlainObject(chunk)) {
+      // A plain object that defines its own toString takes the stringification
+      // path - it's being interpolated as a value (e.g. a design token), not as
+      // a CSS-in-JS rule object. Without this, `${token}` in a tagged template
+      // would walk the object's enumerable keys as CSS declarations. (#5740)
+      if ((chunk as object).toString !== Object.prototype.toString) {
+        result.push((chunk as object).toString());
+        return result;
+      }
+      objToCssArrayInto(chunk as Dict<any>, result);
+      return result;
+    }
   }
 
   result.push((chunk as any).toString());

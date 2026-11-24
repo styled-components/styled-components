@@ -2217,6 +2217,9 @@ describe('styled RSC mode', () => {
           ${throwingHasProxy as any} {
             font-weight: bold;
           }
+          ${() => throwingHasProxy as any} {
+            margin: 0;
+          }
           ${alwaysTrueHasProxy as any} {
             color: red;
           }
@@ -2226,7 +2229,7 @@ describe('styled RSC mode', () => {
         const css = extractStyleContents(ReactDOMServer.renderToString(<Parent />));
         expect(css).toContain('padding:8px');
         expect(css).not.toContain('.undefined');
-        expect(warnSpy).toHaveBeenCalledTimes(2);
+        expect(warnSpy).toHaveBeenCalledTimes(3);
       } finally {
         warnSpy.mockRestore();
       }

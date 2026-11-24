@@ -202,6 +202,11 @@ describe('dead-code elimination: standalone production build', () => {
     expect(minified).not.toContain('warnTooManyClasses');
     expect(minified).not.toContain('checkDynamicCreation');
   });
+
+  it('excludes configureServerStyles from standalone UMD bundles', () => {
+    expect(minified).not.toContain('configureServerStyles');
+    expect(read('styled-components.js')).not.toContain('configureServerStyles');
+  });
 });
 
 describe('native build isolation', () => {
@@ -430,7 +435,7 @@ describe('published tarball contents', () => {
   it('excludes any node_modules paths and includes the native subpath entry', () => {
     const { execFileSync } = require('child_process');
     const pkgRoot = path.resolve(__dirname, '../..');
-    const raw = execFileSync('npm', ['pack', '--dry-run', '--json'], {
+    const raw = execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
       cwd: pkgRoot,
       encoding: 'utf8',
     });
@@ -441,12 +446,8 @@ describe('published tarball contents', () => {
     expect(paths).toContain('native/package.json');
     expect(paths).toContain('native/dist/styled-components.native.cjs.js');
     expect(paths).toContain('native/dist/styled-components.native.esm.js');
-  });
-
-  it('excludes configureServerStyles from the standalone UMD bundle', () => {
-    const standalone = read('styled-components.min.js');
-    expect(standalone).not.toContain('configureServerStyles');
-  });
+    expect(paths).toContain('native/dist/native/index.d.ts');
+  }, 30000);
 });
 
 describe('ESM tree-shakeability', () => {

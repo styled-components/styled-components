@@ -2,7 +2,7 @@ import { IS_RSC, SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
 import type { AnyComponent } from '../types';
 import { ExecutionContext, RuleSet, Stringifier } from '../types';
-import flatten from '../utils/flatten';
+import flatten, { isClientReference } from '../utils/flatten';
 import generateName from '../utils/generateAlphabeticName';
 import getComponentName from '../utils/getComponentName';
 import { LIMIT as TOO_MANY_CLASSES_LIMIT } from '../utils/createWarnTooManyClasses';
@@ -114,6 +114,7 @@ export default class ComponentStyle {
                 process.env.NODE_ENV !== 'production' &&
                 typeof fnResult === 'object' &&
                 !Array.isArray(fnResult) &&
+                !isClientReference(fnResult) &&
                 !isKeyframes(fnResult) &&
                 !isPlainObject(fnResult)
               ) {

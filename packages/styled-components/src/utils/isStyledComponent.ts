@@ -17,7 +17,7 @@ export default function isStyledComponent(target: any): target is StyledComponen
     target != null &&
     (typeof target === 'object' || typeof target === 'function') &&
     target.$$typeof === REACT_FORWARD_REF_TYPE &&
-    hasStyledComponentBrand(target)
+    (hasStyledComponentBrand(target) || target.styledComponentId === true)
   );
 }
 
@@ -29,5 +29,6 @@ export default function isStyledComponent(target: any): target is StyledComponen
 export function hasStyledComponentBrand(
   target: object
 ): target is { readonly styledComponentId: string } {
-  return 'styledComponentId' in target;
+  const id = (target as { styledComponentId?: unknown }).styledComponentId;
+  return typeof id === 'string' && id.length > 0;
 }

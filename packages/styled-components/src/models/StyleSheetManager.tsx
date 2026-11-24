@@ -237,15 +237,11 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
 
       resolvedStylis = rscCachedStylis;
     } else if (hasStylisOptions) {
-      // Options without plugins of its own: build on the parent's plugins.
-      rscCachedStylis = createStylisInstance({
+      // Options without plugins of its own: build on the parent's plugins without clobbering the plugins memo.
+      resolvedStylis = createStylisInstance({
         options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
         plugins: parentOverride.stylisPlugins,
       });
-      rscLastPlugins = undefined;
-      rscLastNamespace = undefined;
-      rscLastPrefix = undefined;
-      resolvedStylis = rscCachedStylis;
     }
 
     const resolvedShouldForwardProp =
