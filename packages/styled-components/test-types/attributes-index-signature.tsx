@@ -2,6 +2,9 @@
  * Compiled by its own project (tsconfig.test-attributes-index.json): the `declare
  * module 'react'` below is program-wide, so it cannot share a program with the
  * rest of the type suite (docs/typescript-performance.md, "Testing the type surface").
+ * That tsconfig sets `"jsx": "react-jsx"` because augmenting `React.Attributes`
+ * flows into `JSX.IntrinsicAttributes`, under which classic `"jsx": "react"`
+ * fails with TS2322 on `<>...</>` fragments in imported `src/` files.
  *
  * A `data-*` template-literal index on `React.Attributes` reaches every
  * intrinsic element through its ref and key half. A probe that keys
