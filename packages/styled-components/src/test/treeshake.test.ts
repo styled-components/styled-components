@@ -95,6 +95,13 @@ describe('dead-code elimination: browser build', () => {
     expect(browserCJS).not.toContain('(s)(tyle)');
   });
 
+  it('eliminates configureServerStyles server implementation', () => {
+    const serverESM = read('styled-components.esm.js');
+    expect(serverESM).toContain('styled-components.serverStyles');
+    expect(browserESM).not.toContain('styled-components.serverStyles');
+    expect(browserCJS).not.toContain('styled-components.serverStyles');
+  });
+
   it('exports createTheme', () => {
     expect(browserESM).toContain('createTheme');
   });
@@ -406,6 +413,7 @@ describe('bundle size', () => {
       // Verify unused exports are tree-shaken
       expect(bundle).not.toContain('WithTheme');
       expect(bundle).not.toContain('stylisPluginRSC');
+      expect(bundle).not.toContain('configureServerStyles');
       expect(bundle).not.toContain('rewriteSelector');
       expect(bundle).not.toContain(':not(style[data-styled])');
       expect(bundle).not.toContain('ServerStyleSheet');
@@ -416,6 +424,29 @@ describe('bundle size', () => {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   }, 30000);
+});
+
+describe('published tarball contents', () => {
+  it('excludes any node_modules paths and includes the native subpath entry', () => {
+    const { execFileSync } = require('child_process');
+    const pkgRoot = path.resolve(__dirname, '../..');
+    const raw = execFileSync('npm', ['pack', '--dry-run', '--json'], {
+      cwd: pkgRoot,
+      encoding: 'utf8',
+    });
+    const [{ files }] = JSON.parse(raw) as [{ files: { path: string }[] }];
+    const paths = files.map(f => f.path);
+
+    expect(paths.filter(p => p.includes('node_modules/'))).toEqual([]);
+    expect(paths).toContain('native/package.json');
+    expect(paths).toContain('native/dist/styled-components.native.cjs.js');
+    expect(paths).toContain('native/dist/styled-components.native.esm.js');
+  });
+
+  it('excludes configureServerStyles from the standalone UMD bundle', () => {
+    const standalone = read('styled-components.min.js');
+    expect(standalone).not.toContain('configureServerStyles');
+  });
 });
 
 describe('ESM tree-shakeability', () => {

@@ -6,20 +6,6 @@ allowBuilds:
   unrs-resolver: false
 autoInstallPeers: true
 minimumReleaseAge: 10080 # Wait 7 days before installing new releases
-# next@16.4.0 is the first release with Turbopack's additional roots, which the sandbox needs under
-# the global store (packages/sandbox/next.config.ts). It is under 7 days old (published 2026-10-06),
-# so it and its own @next/* packages are excluded. Remove these entries on 2026-10-14.
-minimumReleaseAgeExclude:
-  - next@16.4.0
-  - '@next/env@16.4.0'
-  - '@next/swc-darwin-arm64@16.4.0'
-  - '@next/swc-darwin-x64@16.4.0'
-  - '@next/swc-linux-arm64-gnu@16.4.0'
-  - '@next/swc-linux-arm64-musl@16.4.0'
-  - '@next/swc-linux-x64-gnu@16.4.0'
-  - '@next/swc-linux-x64-musl@16.4.0'
-  - '@next/swc-win32-arm64-msvc@16.4.0'
-  - '@next/swc-win32-x64-msvc@16.4.0'
 packageExtensions:
   # These packages' bundled types import `react` without declaring @types/react. Under the global
   # store the import resolves to untyped JavaScript: native component types become `never` and

@@ -2090,6 +2090,39 @@ describe('styled RSC mode', () => {
 
       expect(seen).toBe(configured);
     });
+
+    it('keeps throwing on repeated renders of a throwing stylisPlugins array without leaking a prior request stylis', () => {
+      const validPlugin: Middleware = element => {
+        if (element.type === 'decl') element.return = 'color:green;';
+      };
+      const badPlugins: Middleware[] = [() => {}];
+      const Card = styled.div`
+        color: red;
+      `;
+
+      const priorCss = renderRequest(
+        <StyleSheetManager namespace="#other-req" stylisPlugins={[validPlugin]}>
+          <Card />
+        </StyleSheetManager>
+      );
+      expect(priorCss).toBe('#other-req .CLASS{color:green;}');
+
+      expect(() =>
+        renderRequest(
+          <StyleSheetManager stylisPlugins={badPlugins}>
+            <Card />
+          </StyleSheetManager>
+        )
+      ).toThrow(/stylis plugin/i);
+
+      expect(() =>
+        renderRequest(
+          <StyleSheetManager stylisPlugins={badPlugins}>
+            <Card />
+          </StyleSheetManager>
+        )
+      ).toThrow(/stylis plugin/i);
+    });
   });
 
   describe('client reference proxy interpolation', () => {
@@ -2147,6 +2180,56 @@ describe('styled RSC mode', () => {
 
         ReactDOMServer.renderToString(<Parent />);
       }).not.toThrow();
+    });
+
+    it('should check isClientReference before the in operator on Proxy client references', () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        const throwingHasProxy = new Proxy(
+          {},
+          {
+            get(_target, prop) {
+              if (prop === '$$typeof') return Symbol.for('react.client.reference');
+              if (prop === '$$id') return 'app/components/throwing-proxy.tsx';
+              throw new Error(`Unexpected get(${String(prop)}) on client reference proxy`);
+            },
+            has(_target, prop) {
+              throw new Error(`Unexpected has(${String(prop)}) on client reference proxy`);
+            },
+          }
+        );
+
+        const alwaysTrueHasProxy = new Proxy(
+          {},
+          {
+            get(_target, prop) {
+              if (prop === '$$typeof') return Symbol.for('react.client.reference');
+              if (prop === '$$id') return 'app/components/catchall-proxy.tsx';
+              return undefined;
+            },
+            has() {
+              return true;
+            },
+          }
+        );
+
+        const Parent = styled.div`
+          ${throwingHasProxy as any} {
+            font-weight: bold;
+          }
+          ${alwaysTrueHasProxy as any} {
+            color: red;
+          }
+          padding: 8px;
+        `;
+
+        const css = extractStyleContents(ReactDOMServer.renderToString(<Parent />));
+        expect(css).toContain('padding:8px');
+        expect(css).not.toContain('.undefined');
+        expect(warnSpy).toHaveBeenCalledTimes(2);
+      } finally {
+        warnSpy.mockRestore();
+      }
     });
 
     it('should skip client reference interpolation and render remaining CSS', () => {

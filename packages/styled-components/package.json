@@ -45,7 +45,8 @@
     "LICENSE",
     "README.md",
     "dist",
-    "native",
+    "native/dist",
+    "native/package.json",
     "test-utils"
   ],
   "keywords": [

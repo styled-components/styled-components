@@ -92,7 +92,11 @@ export default function flatten<Props extends object>(
     }
 
     // preact/compat's forwardRef and function HOCs both carry the brand on a function.
-    if (hasStyledComponentBrand(chunk)) {
+    if (
+      hasStyledComponentBrand(chunk) &&
+      typeof chunk.styledComponentId === 'string' &&
+      chunk.styledComponentId.length > 0
+    ) {
       result.push(`.${chunk.styledComponentId}`);
       return result;
     }
@@ -129,7 +133,18 @@ export default function flatten<Props extends object>(
     return result;
   }
 
-  if (typeof chunk === 'object' && hasStyledComponentBrand(chunk)) {
+  // Module-level client reference proxies (typeof 'object') may trap `in` and pass isPlainObject - catch first
+  if (isClientReference(chunk)) {
+    if (process.env.NODE_ENV !== 'production') warnClientReference(chunk);
+    return result;
+  }
+
+  if (
+    typeof chunk === 'object' &&
+    hasStyledComponentBrand(chunk) &&
+    typeof chunk.styledComponentId === 'string' &&
+    chunk.styledComponentId.length > 0
+  ) {
     result.push(`.${chunk.styledComponentId}`);
     return result;
   }
@@ -141,12 +156,6 @@ export default function flatten<Props extends object>(
     } else {
       result.push(chunk);
     }
-    return result;
-  }
-
-  // Module-level client reference proxies (typeof 'object') pass isPlainObject - catch before
-  if (isClientReference(chunk)) {
-    if (process.env.NODE_ENV !== 'production') warnClientReference(chunk);
     return result;
   }
 

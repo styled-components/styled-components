@@ -224,13 +224,15 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
         props.namespace !== rscLastNamespace ||
         props.enableVendorPrefixes !== rscLastPrefix
       ) {
-        rscLastPlugins = props.stylisPlugins;
-        rscLastNamespace = props.namespace;
-        rscLastPrefix = props.enableVendorPrefixes;
-        rscCachedStylis = createStylisInstance({
+        const nextStylis = createStylisInstance({
           options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
           plugins: props.stylisPlugins,
         });
+        // Update memo keys last: a throwing plugin must keep throwing on subsequent renders.
+        rscCachedStylis = nextStylis;
+        rscLastPlugins = props.stylisPlugins;
+        rscLastNamespace = props.namespace;
+        rscLastPrefix = props.enableVendorPrefixes;
       }
 
       resolvedStylis = rscCachedStylis;

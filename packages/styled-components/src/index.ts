@@ -1,6 +1,7 @@
 import styled, { LibraryStyled, Styled, StyledInstance } from './constructors/styled';
 
 export * from './base';
+export { configureServerStyles } from './models/StyleSheetManager';
 export { default as stylisPluginRSC } from './utils/stylisPluginRSC';
 export {
   CSSKeyframes,
