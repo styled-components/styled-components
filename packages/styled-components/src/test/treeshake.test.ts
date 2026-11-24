@@ -95,6 +95,13 @@ describe('dead-code elimination: browser build', () => {
     expect(browserCJS).not.toContain('(s)(tyle)');
   });
 
+  it('eliminates configureServerStyles server implementation', () => {
+    const serverESM = read('styled-components.esm.js');
+    expect(serverESM).toContain('styled-components.serverStyles');
+    expect(browserESM).not.toContain('styled-components.serverStyles');
+    expect(browserCJS).not.toContain('styled-components.serverStyles');
+  });
+
   it('exports createTheme', () => {
     expect(browserESM).toContain('createTheme');
   });
@@ -194,6 +201,11 @@ describe('dead-code elimination: standalone production build', () => {
     expect(minified).not.toContain('process.env.NODE_ENV');
     expect(minified).not.toContain('warnTooManyClasses');
     expect(minified).not.toContain('checkDynamicCreation');
+  });
+
+  it('excludes configureServerStyles from standalone UMD bundles', () => {
+    expect(minified).not.toContain('configureServerStyles');
+    expect(read('styled-components.js')).not.toContain('configureServerStyles');
   });
 });
 
@@ -406,6 +418,7 @@ describe('bundle size', () => {
       // Verify unused exports are tree-shaken
       expect(bundle).not.toContain('WithTheme');
       expect(bundle).not.toContain('stylisPluginRSC');
+      expect(bundle).not.toContain('configureServerStyles');
       expect(bundle).not.toContain('rewriteSelector');
       expect(bundle).not.toContain(':not(style[data-styled])');
       expect(bundle).not.toContain('ServerStyleSheet');
@@ -415,6 +428,26 @@ describe('bundle size', () => {
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
+  }, 30000);
+});
+
+describe('published tarball contents', () => {
+  it('excludes any node_modules paths and includes the native subpath entry', () => {
+    const { execFileSync } = require('child_process');
+    const pkgRoot = path.resolve(__dirname, '../..');
+    const raw = execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
+      cwd: pkgRoot,
+      encoding: 'utf8',
+    });
+    const [{ files }] = JSON.parse(raw) as [{ files: { path: string }[] }];
+    const paths = files.map(f => f.path);
+
+    expect(paths.filter(p => p.includes('node_modules/'))).toEqual([]);
+    expect(paths.filter(p => p.startsWith('native/dist/dist/'))).toEqual([]);
+    expect(paths).toContain('native/package.json');
+    expect(paths).toContain('native/dist/styled-components.native.cjs.js');
+    expect(paths).toContain('native/dist/styled-components.native.esm.js');
+    expect(paths).toContain('native/dist/native/index.d.ts');
   }, 30000);
 });
 

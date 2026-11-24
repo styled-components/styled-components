@@ -22,10 +22,10 @@ mapped below.
   branded `Symbol.for()` checks instead of `instanceof`. Verify:
   `grep -c 'document\.' native/dist/styled-components.native.cjs.js` must be 0.
   See [docs/build-architecture.md](docs/build-architecture.md).
-- Server detection needs all three of `__SERVER__`, `IS_RSC` and `styleSheet.server`. Always write
-  `__SERVER__ || IS_RSC || ssc.styleSheet.server`. The one deliberate exception is documented in
-  [docs/build-architecture.md](docs/build-architecture.md), which also explains why each flag exists
-  and when each one lies.
+- Server detection draws on three flags (`__SERVER__`, `IS_RSC`, and `ssc.styleSheet.server`), and
+  they are not interchangeable: each gate picks the smallest subset that covers its cases rather than
+  combining all three. See [docs/build-architecture.md](docs/build-architecture.md) for why each flag
+  exists and when each one lies.
 - NEVER gate paired cleanup (a `useLayoutEffect` and its teardown) on `__SERVER__` alone. Gate on
   `styleSheet.server` or `IS_RSC`.
 - NEVER write `typeof React.useRef === 'function'`; that is a runtime conditional hook. Gate on

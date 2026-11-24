@@ -379,4 +379,19 @@ describe('createGlobalStyle RSC mode', () => {
       warn.mockRestore();
     }
   });
+
+  it('keeps each global style CSS when two function-only globals render in one RSC tree', () => {
+    const First = createGlobalStyle`${() => 'html { --a: 1; }'}`;
+    const Second = createGlobalStyle`${() => 'html { --b: 2; }'}`;
+
+    const html = ReactDOMServer.renderToString(
+      <>
+        <First />
+        <Second />
+      </>
+    );
+
+    expect(html).toContain('--a:1');
+    expect(html).toContain('--b:2');
+  });
 });

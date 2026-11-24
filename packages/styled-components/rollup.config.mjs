@@ -221,12 +221,12 @@ const nativeConfig = {
   ],
   plugins: [
     nativeTypescriptPlugin,
-    ...commonPlugins,
+    ...basePlugins,
     replace({
       delimiters: ['', ''],
       "typeof React.createContext === 'undefined'": JSON.stringify(false),
     }),
-    minifierPlugin
+    minifierPlugin,
   ],
 };
 

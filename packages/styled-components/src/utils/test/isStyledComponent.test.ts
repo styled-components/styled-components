@@ -23,6 +23,15 @@ describe('isStyledComponent(something)', () => {
     expect(isStyledComponent(HOC)).toBe(false);
   });
 
+  it('rejects forwardRef objects with empty or undefined styledComponentId while keeping native boolean brand', () => {
+    const forwardRefType = Symbol.for('react.forward_ref');
+    expect(isStyledComponent({ $$typeof: forwardRefType, styledComponentId: undefined })).toBe(
+      false
+    );
+    expect(isStyledComponent({ $$typeof: forwardRefType, styledComponentId: '' })).toBe(false);
+    expect(isStyledComponent({ $$typeof: forwardRefType, styledComponentId: true })).toBe(true);
+  });
+
   it('returns false for everything else', () => {
     [
       () => {},

@@ -10,24 +10,28 @@ const REACT_FORWARD_REF_TYPE = Symbol.for('react.forward_ref');
  * `$$typeof` is checked alongside the `styledComponentId` brand so that function
  * and `memo` HOCs which hoist the brand from a styled component are not folded
  * into its chain. A `forwardRef` HOC carries both, so it is folded and its own
- * render is skipped.
+ * render is skipped. React Native styled components set `styledComponentId` to
+ * `true` (no CSS class selector), which is accepted here for chain folding.
  */
 export default function isStyledComponent(target: any): target is StyledComponentBrand {
   return (
     target != null &&
     (typeof target === 'object' || typeof target === 'function') &&
     target.$$typeof === REACT_FORWARD_REF_TYPE &&
-    hasStyledComponentBrand(target)
+    (hasStyledComponentBrand(target) || target.styledComponentId === true)
   );
 }
 
 /**
- * True for anything that renders with a styled component's class: the component
- * itself, or an HOC that hoisted its statics. For selectors only; chain folding
- * needs `isStyledComponent`, since an HOC's own render must still run.
+ * True for anything that renders with a web styled component's non-empty string
+ * class id: the component itself, or an HOC that hoisted its statics. Excludes
+ * React Native's boolean `true` brand so CSS selector flattening never emits
+ * `.true`; chain folding needs `isStyledComponent`, since an HOC's own render
+ * must still run.
  */
 export function hasStyledComponentBrand(
   target: object
 ): target is { readonly styledComponentId: string } {
-  return 'styledComponentId' in target;
+  const id = (target as { styledComponentId?: unknown }).styledComponentId;
+  return typeof id === 'string' && id.length > 0;
 }

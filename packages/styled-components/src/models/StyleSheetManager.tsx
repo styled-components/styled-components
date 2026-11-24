@@ -224,26 +224,24 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
         props.namespace !== rscLastNamespace ||
         props.enableVendorPrefixes !== rscLastPrefix
       ) {
-        rscLastPlugins = props.stylisPlugins;
-        rscLastNamespace = props.namespace;
-        rscLastPrefix = props.enableVendorPrefixes;
-        rscCachedStylis = createStylisInstance({
+        const nextStylis = createStylisInstance({
           options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
           plugins: props.stylisPlugins,
         });
+        // Update memo keys last: a throwing plugin must keep throwing on subsequent renders.
+        rscCachedStylis = nextStylis;
+        rscLastPlugins = props.stylisPlugins;
+        rscLastNamespace = props.namespace;
+        rscLastPrefix = props.enableVendorPrefixes;
       }
 
       resolvedStylis = rscCachedStylis;
     } else if (hasStylisOptions) {
-      // Options without plugins of its own: build on the parent's plugins.
-      rscCachedStylis = createStylisInstance({
+      // Options without plugins of its own: build on the parent's plugins without clobbering the plugins memo.
+      resolvedStylis = createStylisInstance({
         options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
         plugins: parentOverride.stylisPlugins,
       });
-      rscLastPlugins = undefined;
-      rscLastNamespace = undefined;
-      rscLastPrefix = undefined;
-      resolvedStylis = rscCachedStylis;
     }
 
     const resolvedShouldForwardProp =

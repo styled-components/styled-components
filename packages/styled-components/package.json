@@ -17,7 +17,7 @@
   "scripts": {
     "generateErrors": "node scripts/generateErrorMap.js",
     "typecheck": "tsc --noEmit",
-    "prebuild": "rimraf dist && pnpm run generateErrors && pnpm run typecheck",
+    "prebuild": "rimraf dist native/dist && pnpm run generateErrors && pnpm run typecheck",
     "build": "rollup -c",
     "postbuild": "pnpm run test:build",
     "test:build": "jest -c jest.config.build.js",
@@ -45,7 +45,8 @@
     "LICENSE",
     "README.md",
     "dist",
-    "native",
+    "native/dist",
+    "native/package.json",
     "test-utils"
   ],
   "keywords": [

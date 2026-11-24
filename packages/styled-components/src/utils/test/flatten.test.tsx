@@ -121,6 +121,15 @@ describe('flatten', () => {
     }
   );
 
+  it('does not treat objects or functions with empty or non-string styledComponentId as selectors', () => {
+    expect(flatten([{ styledComponentId: undefined } as any])).toEqual([]);
+    expect(flatten([{ styledComponentId: '' } as any])).toEqual([]);
+    const fnWithUndefinedBrand = Object.assign(() => 'color: red;', {
+      styledComponentId: undefined,
+    });
+    expect(flatten([fnWithUndefinedBrand as any], { theme: {} })).toEqual(['color: red;']);
+  });
+
   it('flattens subarrays', () => {
     expect(flatten([1, 2, [3, 4, 5], 'come:on;', 'lets:ride;'])).toEqual([
       '1',
