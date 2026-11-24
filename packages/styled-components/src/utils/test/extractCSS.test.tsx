@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import React from 'react';
 import ServerStyleSheet from '../../models/ServerStyleSheet';
+import StyleSheet from '../../sheet';
 import { resetStyled } from '../../test/utils';
 import extractCSS from '../extractCSS';
 
@@ -59,6 +60,25 @@ describe('extractCSS', () => {
     const css = extractCSS();
     expect(css.toLowerCase()).not.toContain('</style');
     expect(css).toContain('\\3C/style');
+  });
+
+  describe('order', () => {
+    it('lists a global defined after a component first, as the sheet positions it', () => {
+      const sheet = new StyleSheet({ isServer: true });
+      sheet.insertRules('component', 'a', ['.component {}']);
+      sheet.insertRules('sc-global-late', 'b', ['.global {}']);
+
+      expect(extractCSS(sheet)).toBe('.global {}/*!sc*/\n.component {}/*!sc*/\n');
+    });
+
+    it('lists an outer after the inner it wraps once the sheet learned the pair', () => {
+      const sheet = new StyleSheet({ isServer: true });
+      sheet.insertRules('outer', 'a', ['.outer {}']);
+      sheet.insertRules('inner', 'b', ['.inner {}']);
+      sheet.learn('outer', 'inner');
+
+      expect(extractCSS(sheet)).toBe('.inner {}/*!sc*/\n.outer {}/*!sc*/\n');
+    });
   });
 
   it('extracts CSS from a custom ServerStyleSheet without rehydration markers', () => {
