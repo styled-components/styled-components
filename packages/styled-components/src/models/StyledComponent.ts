@@ -33,7 +33,7 @@ import { joinStrings, stripSplitter } from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
 import { createRSCCache } from '../utils/rscCache';
 import { setToString } from '../utils/setToString';
-import { styleTagContent } from '../utils/styleTagContent';
+import { createStyleElement } from '../utils/styleTagContent';
 import ComponentStyle, { getCompiledCSSForName } from './ComponentStyle';
 import { useStyleSheetContext } from './StyleSheetManager';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
@@ -407,11 +407,13 @@ function useStyledComponentImpl<Props extends BaseObject>(
     if (!styleElement) {
       const combined = buildRSCStyleCSS(componentStyle, generatedClassName, ssc.styleSheet);
       if (combined) {
-        styleElement = React.createElement('style', {
-          [SC_ATTR]: '',
-          key: 'sc-' + componentStyle.componentId,
-          ...styleTagContent(combined),
-        });
+        styleElement = createStyleElement(
+          {
+            [SC_ATTR]: '',
+            key: 'sc-' + componentStyle.componentId,
+          },
+          combined
+        );
         if (styleElements) styleElements.set(styleKey, styleElement);
       }
     }

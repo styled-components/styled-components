@@ -116,13 +116,17 @@ describe('styled RSC mode', () => {
         &::before {
           content: 'list & more';
         }
+        &::after {
+          content: "quoted's & raw";
+        }
       `;
 
       const css = extractStyleContents(ReactDOMServer.renderToString(<List />));
 
       expect(css).toMatch(/\.\w+>li\{color:red;\}/);
       expect(css).toContain("content:'list & more';");
-      expect(css).not.toMatch(/&(gt|quot|amp);/);
+      expect(css).toContain('content:"quoted\'s & raw";');
+      expect(css).not.toMatch(/&(gt|quot|amp|#x27);/);
     });
 
     it('does not let an interpolated value close the style tag', () => {
@@ -139,7 +143,7 @@ describe('styled RSC mode', () => {
       expect(countStyleTags(html)).toBe(1);
       expect(html.match(/<\/style/gi)).toHaveLength(1);
       expect(extractStyleContents(html)).toContain(
-        "content:'\\3C/style><script>alert(1)</script>';"
+        "content:'</\\73 tyle><script>alert(1)</script>';"
       );
     });
   });
@@ -1420,12 +1424,18 @@ describe('styled RSC mode', () => {
     // as a server component runs, and reads the style element and element it
     // returns; the HTML-level tag count is owned by "RSC per-instance style
     // emission".
-    type StyledOutput = React.ReactElement<{
-      children: [
-        React.ReactElement<{ dangerouslySetInnerHTML: { __html: string } }>,
-        React.ReactElement<{ className: string }>,
-      ];
+    type StyleElement = React.ReactElement<{
+      children?: string;
+      dangerouslySetInnerHTML?: { __html: string };
     }>;
+    type StyledOutput = React.ReactElement<{
+      children: [StyleElement, React.ReactElement<{ className: string }>];
+    }>;
+
+    const styleText = (el: StyleElement) =>
+      el.props.dangerouslySetInnerHTML
+        ? el.props.dangerouslySetInnerHTML.__html
+        : el.props.children;
 
     const renderStyled = (Component: unknown, props: object = {}) => {
       const { render } = Component as {
@@ -1507,7 +1517,7 @@ describe('styled RSC mode', () => {
 
       const renderAlone = (Component: unknown) => {
         mockCacheStore.clear();
-        return renderStyled(Component).styleElement.props.dangerouslySetInnerHTML.__html;
+        return styleText(renderStyled(Component).styleElement);
       };
 
       it.each(['base first', 'extension first'])(
@@ -1529,8 +1539,8 @@ describe('styled RSC mode', () => {
           const [base, ext] =
             order === 'base first' ? [firstOutput, secondOutput] : [secondOutput, firstOutput];
 
-          expect(base.props.dangerouslySetInnerHTML.__html).toBe(baseAlone);
-          expect(ext.props.dangerouslySetInnerHTML.__html).toBe(extAlone);
+          expect(styleText(base)).toBe(baseAlone);
+          expect(styleText(ext)).toBe(extAlone);
           expect(secondOutput).not.toBe(firstOutput);
         }
       );
@@ -1582,8 +1592,8 @@ describe('styled RSC mode', () => {
         expect(a[1].styleElement).toBe(a[0].styleElement);
         expect(b[1].styleElement).toBe(b[0].styleElement);
         expect(b[0].styleElement).not.toBe(a[0].styleElement);
-        expect(a[0].styleElement.props.dangerouslySetInnerHTML.__html).toContain(firstCSS);
-        expect(b[0].styleElement.props.dangerouslySetInnerHTML.__html).toContain(secondCSS);
+        expect(styleText(a[0].styleElement)).toContain(firstCSS);
+        expect(styleText(b[0].styleElement)).toContain(secondCSS);
         expect(b[0].element.props.className).not.toBe(a[0].element.props.className);
       }
     );
