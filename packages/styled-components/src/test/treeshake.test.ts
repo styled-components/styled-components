@@ -85,6 +85,16 @@ describe('dead-code elimination: browser build', () => {
     expect(browserCJS).not.toContain('typeof React.createContext');
   });
 
+  it('eliminates RSC React.version check and style-tag escape', () => {
+    const serverESM = read('styled-components.esm.js');
+    expect(serverESM).toMatch(/parseInt\([^)]*\.version/);
+    expect(serverESM).toContain('(s)(tyle)');
+    expect(browserESM).not.toMatch(/parseInt\([^)]*\.version/);
+    expect(browserCJS).not.toMatch(/parseInt\([^)]*\.version/);
+    expect(browserESM).not.toContain('(s)(tyle)');
+    expect(browserCJS).not.toContain('(s)(tyle)');
+  });
+
   it('exports createTheme', () => {
     expect(browserESM).toContain('createTheme');
   });

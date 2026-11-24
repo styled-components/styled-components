@@ -150,6 +150,35 @@ describe('createGlobalStyle RSC mode', () => {
     expect(resolved).toBe(fallback);
   });
 
+  it('keeps child combinators, quotes and ampersands as written on React before 19 (#5824)', () => {
+    const GlobalStyle = createGlobalStyle`
+      body > main::before {
+        content: "a & b";
+      }
+    `;
+
+    const html = ReactDOMServer.renderToString(<GlobalStyle />);
+
+    expect(html).toContain('body>main::before{content:"a & b";}');
+    expect(html).not.toMatch(/&(gt|quot|amp|#x27);/);
+  });
+
+  it('does not let an interpolated value close the global style tag (#5824)', () => {
+    const GlobalStyle = createGlobalStyle<{ $label: string }>`
+      body::before {
+        content: '${props => props.$label}';
+      }
+    `;
+
+    const html = ReactDOMServer.renderToString(
+      <GlobalStyle $label="</style><script>alert(1)</script>" />
+    );
+
+    expect(html.match(/<style\b/gi)).toHaveLength(1);
+    expect(html.match(/<\/style/gi)).toHaveLength(1);
+    expect(html).toContain("content:'</\\73 tyle><script>alert(1)</script>';");
+  });
+
   describe('shared style element (payload dedup)', () => {
     // The server-component payload writer encodes a repeated element object
     // once, so instances with identical CSS return one element while every
@@ -191,6 +220,13 @@ describe('createGlobalStyle RSC mode', () => {
       expect(renderOnce(GlobalStyle, { $bg: 'red' })).toBe(renderOnce(GlobalStyle, { $bg: 'red' }));
     });
 
+    const styleText = (
+      el: React.ReactElement<{ children?: string; dangerouslySetInnerHTML?: { __html: string } }>
+    ) =>
+      el.props.dangerouslySetInnerHTML
+        ? el.props.dangerouslySetInnerHTML.__html
+        : el.props.children;
+
     it('returns distinct element objects for different CSS, under one fixed key', () => {
       const GlobalStyle = createGlobalStyle<{ $bg: string }>`
         body { background: ${props => props.$bg}; }
@@ -200,8 +236,8 @@ describe('createGlobalStyle RSC mode', () => {
       const blue = renderOnce(GlobalStyle, { $bg: 'blue' });
 
       expect(blue).not.toBe(red);
-      expect(red.props.children).toBe('body{background:red;}');
-      expect(blue.props.children).toBe('body{background:blue;}');
+      expect(styleText(red)).toBe('body{background:red;}');
+      expect(styleText(blue)).toBe('body{background:blue;}');
       expect(red.key).toMatch(/^sc-global-[\w-]+$/);
       expect(red.props['data-styled-global']).toBe(red.key);
       expect(blue.key).toBe(red.key);

@@ -9,6 +9,16 @@ React Float only takes over a `<style>` carrying both `precedence` and `href`; a
 an ordinary host element on the server and the client, attributes intact. The client renders the same
 element from the server-component payload, so it hydrates against the server HTML without a mismatch.
 
+On React before 19 (Next.js 13.5 and 14's bundled React 18.3 canary, or any build whose
+`React.version` major is not `>= 19`), React's server renderer HTML-escapes `<style>` text children
+(`>` to `&gt;`, quotes, and `&`), which breaks CSS because browsers do not decode entities inside
+`<style>`. For those builds, `createStyleElement` in `src/utils/styleTagContent.ts` emits the CSS
+via `dangerouslySetInnerHTML` and escapes `</style` on the `s`/`S` (`</\73 tyle` / `</\53 tyle`) to
+block closing-tag breakout while preserving letter case and preceding backslashes (#5824). On React
+19+ (Next.js 15+), styles stay in plain `children` because React 19 writes `<style>` text raw and
+guards closing tags itself. The version check is gated on `IS_RSC`, so browser, standalone, and
+native builds eliminate it.
+
 Inline body styles land after the registry's `<head>` styles in source order, so a cross-boundary
 extension (an RSC component extending a client component) wins the cascade. This placement is
 load-bearing, and `precedence` breaks it in four ways:
