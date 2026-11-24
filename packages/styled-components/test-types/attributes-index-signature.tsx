@@ -8,7 +8,8 @@
  * `HTMLAttributes` alone misses it and reports TS2590, as in #5796.
  */
 import React from 'react';
-import styled from '../src';
+import styled, { IStyledComponent } from '../src';
+import { FastOmit } from '../src/types';
 
 declare module 'react' {
   interface Attributes {
@@ -25,3 +26,22 @@ const Example = styled.div``;
 
 // @ts-expect-error data attribute values retain the augmented string type
 const invalidAttrs: React.Attributes = { 'data-role': 42 };
+void invalidAttrs;
+
+const Tiny = styled.div``;
+const Wide = styled.div``;
+
+const Conditional = ({ tiny }: { tiny: boolean }) => {
+  const Wrapper = tiny ? Tiny : Wide;
+  return <Wrapper data-role="conditional" style={{ '--accent': 'tomato' }} />;
+};
+
+<Conditional tiny />;
+
+type DivProps = React.JSX.IntrinsicElements['div'];
+
+const Annotated: IStyledComponent<'web', FastOmit<DivProps, never> & { $a?: number }> = styled.div<{
+  $a?: number;
+}>``;
+
+void Annotated;

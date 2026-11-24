@@ -294,19 +294,19 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
       shouldForwardProp === parent.shouldForwardProp &&
       plugins === parent.plugins
     ) {
-      return React.createElement(React.Fragment, null, props.children);
+      return <>{props.children}</>;
     }
 
-    return React.createElement(
-      React.Fragment,
-      null,
-      scopeChildren(props.children, {
-        compiler,
-        namespace,
-        plugins,
-        shouldForwardProp,
-        styleSheet: mainSheet,
-      })
+    return (
+      <>
+        {scopeChildren(props.children, {
+          compiler,
+          namespace,
+          plugins,
+          shouldForwardProp,
+          styleSheet: mainSheet,
+        })}
+      </>
     );
   }
 
