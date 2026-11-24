@@ -56,6 +56,8 @@
         "src/test/types.web-bridge-parity.tsx",
         // Entry of the template-index augmentation project (tsconfig.test-template-index.json).
         "test-types/template-index-signature.tsx",
+        // Entry of the Attributes data-* augmentation project (tsconfig.test-attributes-index.json).
+        "test-types/attributes-index-signature.tsx",
         // Entry of the IntrinsicElements index-signature project (tsconfig.test-intrinsic-index-signature.json).
         "test-types/intrinsic-elements-index-signature.tsx",
         // Consumer fixture compiled against the built dist by scripts/typeCheckDist.mjs.
