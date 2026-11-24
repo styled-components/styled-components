@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { countSheetRuleOccurrences } from './count-badge';
 
 export interface TestCheck {
   /** Readable label for the check */
   label: string;
-  /** CSS selector or data-testid to find the element */
+  /** CSS selector or data-testid to find the element; for `rule-count`, text the counted rules contain */
   ref: string;
-  /** Type of check to perform */
-  type: 'style' | 'style-not' | 'element' | 'attr' | 'attr-absent' | 'count' | 'exists';
+  /** Type of check to perform; `rule-count` counts the rules in styled-components sheets that contain `ref` */
+  type: 'style' | 'style-not' | 'element' | 'attr' | 'attr-absent' | 'rule-count' | 'exists';
   /** CSS property name (for style checks) or attribute name (for attr checks) */
   prop?: string;
   /** Expected value - for style checks, compared case-insensitively; for element checks, compared against tagName */
@@ -32,8 +33,8 @@ function hexToRgb(hex: string): string {
 }
 
 export function runCheck(check: TestCheck): Result {
-  if (check.type === 'count') {
-    const found = document.querySelectorAll(check.ref).length;
+  if (check.type === 'rule-count') {
+    const found = countSheetRuleOccurrences(check.ref);
     const expected = Number(check.expected);
     const pass = found === expected;
     return { label: check.label, pass, detail: 'found ' + found + ' (expected ' + expected + ')' };
@@ -113,6 +114,7 @@ export function TestStatus({ checks }: { checks: TestCheck[] }) {
   return (
     <Indicator
       $pass={allPass}
+      data-check={allPass ? 'pass' : 'fail'}
       title={results
         .map(r => (r.pass ? '\u2713' : '\u2717') + ' ' + r.label + ': ' + r.detail)
         .join('\n')}

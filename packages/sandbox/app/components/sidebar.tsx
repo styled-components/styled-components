@@ -16,6 +16,7 @@ const sections = [
       { href: '/global-style-test', label: 'Global Styles' },
       { href: '/container-queries', label: 'Container Queries' },
       { href: '/view-transitions', label: 'View Transitions' },
+      { href: '/scenarios', label: 'Style Order Scenarios' },
     ],
   },
   {

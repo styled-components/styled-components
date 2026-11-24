@@ -147,7 +147,10 @@ export default function AutopilotClient() {
       {showLock && <BodyLockStyles />}
 
       {done && (
-        <ResultsBox $allPass={passed === results.length}>
+        <ResultsBox
+          $allPass={passed === results.length}
+          data-check={passed === results.length ? 'pass' : 'fail'}
+        >
           <ResultTitle>
             {passed}/{results.length} passing
           </ResultTitle>

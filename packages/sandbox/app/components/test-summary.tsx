@@ -32,7 +32,7 @@ export function TestSummary({ suites }: { suites: { name: string; checks: TestCh
   const allPass = counts.passed === counts.total;
 
   return (
-    <Bar $pass={allPass}>
+    <Bar $pass={allPass} data-check={allPass ? 'pass' : 'fail'}>
       {counts.passed}/{counts.total} passing
     </Bar>
   );
