@@ -443,6 +443,7 @@ describe('published tarball contents', () => {
     const paths = files.map(f => f.path);
 
     expect(paths.filter(p => p.includes('node_modules/'))).toEqual([]);
+    expect(paths.filter(p => p.startsWith('native/dist/dist/'))).toEqual([]);
     expect(paths).toContain('native/package.json');
     expect(paths).toContain('native/dist/styled-components.native.cjs.js');
     expect(paths).toContain('native/dist/styled-components.native.esm.js');
