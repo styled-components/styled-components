@@ -12,7 +12,6 @@ export const CR = 13; // \r
 export const SPACE = 32; // ' '
 export const DOUBLE_QUOTE = 34; // "
 export const HASH = 35; // #
-export const DOLLAR = 36; // $
 export const PERCENT = 37; // %
 export const AMPERSAND = 38; // &
 export const SINGLE_QUOTE = 39; // '
@@ -38,17 +37,16 @@ export const UPPER_Z = 90; // Z
 export const OPEN_BRACKET = 91; // [
 export const BACKSLASH = 92; // \
 export const CLOSE_BRACKET = 93; // ]
-export const CARET = 94; // ^
 export const UNDERSCORE = 95; // _
 export const LOWER_A = 97; // a
 export const LOWER_E = 101; // e
-export const LOWER_F = 102; // f
+const LOWER_F = 102; // f
 export const LOWER_H = 104; // h
 export const LOWER_I = 105; // i
+export const LOWER_L = 108; // l
 export const LOWER_S = 115; // s
 export const LOWER_Z = 122; // z
 export const OPEN_BRACE = 123; // {
-export const PIPE = 124; // |
 export const CLOSE_BRACE = 125; // }
 export const TILDE = 126; // ~
 /** Offset from an ASCII uppercase letter to its lowercase counterpart. */
@@ -60,7 +58,7 @@ export const UPPER_TO_LOWER = 32;
  * so the 4-way OR ships once.
  */
 export function isWS(c: number): boolean {
-  return c === SPACE || c === TAB || c === LF || c === CR;
+  return c <= SPACE && (c === SPACE || c === TAB || c === LF || c === CR);
 }
 
 /** {@link isWS} plus `\f`: every character CSS reads as whitespace. */
@@ -141,7 +139,8 @@ export function urlTokenEnd(s: string, i: number, end: number, escape: number): 
   else if (!unsure && (!spellsUrl || extendsName(before))) return -1;
 
   let j = i + 1;
-  while (isWS(s.charCodeAt(j)) || s.charCodeAt(j) === FF) j++;
+  while (j < end && (isWS(s.charCodeAt(j)) || s.charCodeAt(j) === FF)) j++;
+  if (j >= end) return end;
   const first = s.charCodeAt(j);
   if (first === DOUBLE_QUOTE || first === SINGLE_QUOTE) return -1;
 
@@ -150,15 +149,16 @@ export function urlTokenEnd(s: string, i: number, end: number, escape: number): 
     if (code === BACKSLASH) j++;
     else if (code === CLOSE_PAREN) return j;
     // A backslash after unescaped whitespace makes a bad url, whose end is unsafe to rely on.
-    else if (s.charCodeAt(j + 1) === BACKSLASH && (isWS(code) || code === FF)) return end;
-    else if (
+    else if (j + 1 < end && s.charCodeAt(j + 1) === BACKSLASH && (isWS(code) || code === FF)) {
+      return end;
+    } else if (
       unsure &&
       (code === DOUBLE_QUOTE ||
         code === SINGLE_QUOTE ||
         code === OPEN_PAREN ||
         code === OPEN_BRACKET ||
         code === OPEN_BRACE ||
-        (code === SLASH && s.charCodeAt(j + 1) === ASTERISK))
+        (code === SLASH && j + 1 < end && s.charCodeAt(j + 1) === ASTERISK))
     ) {
       return end;
     }

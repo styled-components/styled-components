@@ -1,9 +1,9 @@
 import { emitWeb } from '../../parser/emit-web';
 import { parse } from '../../parser/parser';
 import { parseSource } from '../../parser/source';
-import createCompiler, { ICreateCompiler, normalize } from '../compiler';
+import prefixPlugin from '../../plugins/prefix';
 import rtl from '../../plugins/rtl';
-import rscPlugin from '../../plugins/rsc';
+import createCompiler, { ICreateCompiler, mainCompiler, normalize } from '../compiler';
 
 function runCssCompile(css: string, options: ICreateCompiler = {}): string[] {
   const compiler = createCompiler(options);
@@ -1074,18 +1074,14 @@ background-color: green;`)
 
     // --- Malformed / tricky combinations ---
 
-    it('strips orphaned */ without opening /* followed by //', () => {
+    it('preserves orphaned */ without opening /* followed by // (consistent with fast path)', () => {
       expect(
         runCssCompile(`
         color: red;
         */ // whatever
         font-size: 20px;
       `)
-      ).toMatchInlineSnapshot(`
-        [
-          ".a{color:red;font-size:20px;}",
-        ]
-      `);
+      ).toEqual(['.a{color:red;*/ \n        font-size:20px;}']);
     });
 
     it('handles block comment with // immediately before closing */', () => {
@@ -1286,13 +1282,79 @@ background-color: green;`)
     });
   });
 
+  /**
+   * CSS Syntax 3 §9 (https://drafts.csswg.org/css-syntax-3/#serialization):
+   * "The only requirement for serialization is that it must 'round-trip' with parsing, that
+   * is, parsing the stylesheet must produce the same data structures as parsing, serializing,
+   * and parsing again, except for consecutive <whitespace-token>s, which may be collapsed
+   * into a single token."
+   */
   describe('normalize block-comment whitespace', () => {
     it('a /* foo */ b collapses surrounding whitespace to a single space', () => {
       expect(normalize('a /* foo */ b { color: red; }')).toEqual('a b { color: red; }');
     });
 
-    it('a/* foo */b strips just the comment when no surrounding whitespace', () => {
-      expect(normalize('a/* foo */b { color: red; }')).toEqual('ab { color: red; }');
+    it.each([
+      ['class compound', 'a/* foo */.b { color: red; }', 'a.b { color: red; }'],
+      ['pseudo-class compound', 'div/*c*/:hover { color: red; }', 'div:hover { color: red; }'],
+      ['attribute compound', '.a/*c*/[x] { color: red; }', '.a[x] { color: red; }'],
+      [
+        'digit class compound',
+        '.col-1/*c*/.active { color: red; }',
+        '.col-1.active { color: red; }',
+      ],
+      [
+        'compound selector inside :is() parens',
+        ':is(.a/*c*/.b) { color: red; }',
+        ':is(.a.b) { color: red; }',
+      ],
+      [
+        'substring attribute selector with comment after *',
+        '[a*/*c*/="b"] { color: red; }',
+        '[a*="b"] { color: red; }',
+      ],
+      ['escaped slash before * followed by */ outside a comment', 'a\\/*c*/b', 'a\\/*c*/b'],
+      [
+        'unclosed block comment at EOF inside parens emits no trailing space',
+        'calc(1px/*c*/',
+        'calc(1px',
+      ],
+    ])('keeps %s unspaced when no surrounding whitespace', (_label, css, expected) => {
+      expect(normalize(css)).toEqual(expected);
+    });
+
+    it.each([
+      ['adjacent dimensions', 'margin: 10px/*x*/20px;', 'margin: 10px 20px;'],
+      ['adjacent idents in value', 'border: 1px/*c*/solid/*c*/red;', 'border: 1px solid red;'],
+      ['media query keywords', '@media screen/*c*/and (color) {}', '@media screen and (color) {}'],
+      ['ident before paren', '@media screen and/*c*/(color) {}', '@media screen and (color) {}'],
+      ['hex escape followed by ident', '.a\\31/*c*/a {}', '.a\\31 a {}'],
+      ['number followed by dot number', 'a: 10/*c*/.5;', 'a: 10 .5;'],
+      ['number followed by percent', 'a: 10/*c*/%;', 'a: 10 %;'],
+      ['hash delim followed by ident', '#/*c*/foo', '# foo'],
+      ['at delim followed by ident', '@/*c*/media', '@ media'],
+      ['dot delim followed by digit', './*c*/5', '. 5'],
+      ['plus delim followed by digit', '+/*c*/5', '+ 5'],
+      ['plus delim followed by dot digit', '+/*c*/.5', '+ .5'],
+      ['hyphen delim followed by dot digit', '-/*c*/.5', '- .5'],
+      ['rgb numbers inside parens', 'rgb(0/**/51)', 'rgb(0 51)'],
+      [
+        'consecutive comments between dimensions',
+        'margin: 10px/*a*//*b*/20px;',
+        'margin: 10px 20px;',
+      ],
+    ])('preserves token boundary for %s', (_label, css, expected) => {
+      expect(normalize(css)).toEqual(expected);
+    });
+
+    it('collapses form-feed whitespace surrounding a block comment', () => {
+      expect(normalize('a\f/*c*/\fb')).toEqual('a\fb');
+    });
+
+    it('does not prepend a leading space when input opens with block comments', () => {
+      expect(normalize('/*c*/color: red;')).toEqual('color: red;');
+      expect(normalize('/*c*/(a)')).toEqual('(a)');
+      expect(normalize('/*a*//*b*/color: red;')).toEqual('color: red;');
     });
 
     it('comment between two declarations leaves only a single space', () => {
@@ -1318,12 +1380,13 @@ background-color: green;`)
   it('strips many block comments in linear time', () => {
     const start = performance.now();
 
-    expect(normalize('a/**/b;'.repeat(80_000))).toBe('ab;'.repeat(80_000));
+    expect(normalize('a/**/b;'.repeat(80_000))).toBe('a b;'.repeat(80_000));
+    expect(normalize('a/**/.b;'.repeat(80_000))).toBe('a.b;'.repeat(80_000));
     expect(performance.now() - start).toBeLessThan(200);
   });
 
   it.each([
-    ['comments inside a function call', 'f(1/**/);'.repeat(80_000), 'f(1 );'.repeat(80_000)],
+    ['comments inside a function call', 'f(1/**/);'.repeat(80_000), 'f(1);'.repeat(80_000)],
     ['unquoted urls', 'url(x/*);'.repeat(80_000), 'url(x/*);'.repeat(80_000)],
     ['urls left open', 'url(a '.repeat(80_000) + '/**/', 'url(a '.repeat(80_000) + '/**/'],
   ])('scans many %s in linear time', (_label, css, expected) => {
@@ -1414,32 +1477,24 @@ background-color: green;`)
       `);
     });
 
-    it('strips orphaned */ when // is also present (full tokenizer)', () => {
+    it('passes orphaned */ through when // is also present (consistent with fast path)', () => {
       expect(
         runCssCompile(`
         color: red;
         */ background: blue; // comment
         font-size: 16px;
       `)
-      ).toMatchInlineSnapshot(`
-        [
-          ".a{color:red;background:blue;font-size:16px;}",
-        ]
-      `);
+      ).toEqual(['.a{color:red;*/ background:blue;font-size:16px;}']);
     });
 
-    it('strips multiple orphaned */ tokens when // triggers full tokenizer', () => {
+    it('passes multiple orphaned */ tokens through when // is also present', () => {
       expect(
         runCssCompile(`
         color: red; // start
         */ font-size: 20px;
         */ background: blue;
       `)
-      ).toMatchInlineSnapshot(`
-        [
-          ".a{color:red;font-size:20px;background:blue;}",
-        ]
-      `);
+      ).toEqual(['.a{color:red;*/ font-size:20px;*/ background:blue;}']);
     });
 
     // Empty / whitespace inputs
@@ -1593,7 +1648,7 @@ background-color: green;`)
       ['a number and a dot number', 'rgb(0/**/.5/**/1)', 'rgb(0 .5 1)'],
       ['a number and a percent sign', 'calc(1/**/%)', 'calc(1 %)'],
       ['an ident and a paren', 'f(a/* c */(b))', 'f(a (b))'],
-      ['a value and an operator', 'calc(1px/* c */+ 2px)', 'calc(1px + 2px)'],
+      ['a dimension and a minus operator', 'calc(1px/* c */- 2px)', 'calc(1px - 2px)'],
       ['two adjacent comments', 'f(a/**//**/b)', 'f(a b)'],
       ['a comment with space around it', 'f(a /* c */ b)', 'f(a b)'],
       ['a comment with space before it', 'f(a /* c */b)', 'f(a b)'],
@@ -1922,6 +1977,109 @@ background-color: green;`)
       `);
     });
 
+    it.each<[string, string, string]>([
+      ['unclosed quote on view-transition', '.app"', '::view-transition { color: red; }'],
+      ['unclosed quote on html root', '.app"', 'html.dark { color: red; }'],
+      ['trailing backslash on view-transition', '.app\\', '::view-transition { color: red; }'],
+      ['trailing backslash on html root', '.app\\', 'html.dark { color: red; }'],
+      ['unclosed paren on view-transition', '.app(', '::view-transition { color: red; }'],
+      ['field stop in namespace on html root', '.app;body{', 'html.dark { color: red; }'],
+    ])('drops rules when namespace has %s', (_label, namespace, css) => {
+      const compiler = createCompiler({ options: { namespace } });
+      expect(compiler.compile(css)).toEqual([]);
+    });
+
+    it('does not join a namespace holding a stray closing paren into :is()', () => {
+      const compiler = createCompiler({ options: { namespace: '.app)' } });
+      expect(compiler.compile('::view-transition { color: red; }')).toEqual([
+        '.app) ::view-transition{color:red;}',
+      ]);
+    });
+
+    it('treats a whitespace-only namespace the same as no namespace', () => {
+      const compiler = createCompiler({ options: { namespace: '   ' } });
+      expect(compiler.hash).toBe('');
+      expect(compiler.compile('color: red;', '.a', undefined, 'a')).toEqual(['.a{color:red;}']);
+      expect(compiler.compile('html.dark { color: red; }')).toEqual(['html.dark{color:red;}']);
+    });
+
+    it.each([false, true])(
+      'runs namespace ahead of a spy rw plugin (__NATIVE_WEB__ = %s)',
+      nativeWeb => {
+        const previous = globalThis.__NATIVE_WEB__;
+        globalThis.__NATIVE_WEB__ = nativeWeb;
+        try {
+          const seen: string[] = [];
+          const compiler = createCompiler({
+            options: { namespace: '#app' },
+            plugins: [
+              {
+                name: 'spy-rw',
+                rw: selector => {
+                  seen.push(selector);
+                  return selector + '.seen';
+                },
+              },
+            ],
+          });
+
+          expect(
+            compiler.compile('color: red; html.dark & { color: blue; }', '.a', undefined, 'a')
+          ).toEqual(['#app .a.seen{color:red;}', 'html#app.dark .a.seen{color:blue;}']);
+          expect(seen).toEqual(['html#app.dark .a', '#app .a']);
+        } finally {
+          globalThis.__NATIVE_WEB__ = previous;
+        }
+      }
+    );
+
+    it.each([false, true])(
+      'composes namespace ahead of an array-returning rw plugin (__NATIVE_WEB__ = %s)',
+      nativeWeb => {
+        const previous = globalThis.__NATIVE_WEB__;
+        globalThis.__NATIVE_WEB__ = nativeWeb;
+        try {
+          const prefixed = createCompiler({
+            options: { namespace: '#app' },
+            plugins: [prefixPlugin],
+          });
+
+          expect(prefixed.compile('&::placeholder { color: gray; }', '.a', undefined, 'a')).toEqual(
+            [
+              '#app .a::-webkit-input-placeholder{color:gray;}',
+              '#app .a::-moz-placeholder{color:gray;}',
+              '#app .a:-ms-input-placeholder{color:gray;}',
+              '#app .a::placeholder{color:gray;}',
+            ]
+          );
+
+          const seen: string[] = [];
+          const custom = createCompiler({
+            options: { namespace: '#app' },
+            plugins: [
+              {
+                name: 'fan-out',
+                rw: selector => {
+                  seen.push(selector);
+                  return [selector + ':hover', selector + ':disabled'];
+                },
+              },
+            ],
+          });
+
+          expect(custom.compile('html.dark & { color: red; }', '.a', undefined, 'a')).toEqual([
+            'html#app.dark .a:hover{color:red;}',
+            nativeWeb
+              ? 'html#app.dark .a:is(:disabled,[aria-disabled=true]){color:red;}'
+              : 'html#app.dark .a:disabled{color:red;}',
+          ]);
+          expect(seen).toEqual(['html#app.dark .a']);
+        } finally {
+          globalThis.__NATIVE_WEB__ = previous;
+        }
+      }
+    );
+
     it('runs decl transform from rtl plugin', () => {
       const compiler = createCompiler({ plugins: [rtl] });
       expect(
@@ -1929,17 +2087,6 @@ background-color: green;`)
       ).toMatchInlineSnapshot(`
         [
           ".a{margin-right:8px;padding-right:4px;}",
-        ]
-      `);
-    });
-
-    it('runs selector rewrite from rscPlugin', () => {
-      const compiler = createCompiler({ plugins: [rscPlugin] });
-      expect(
-        compiler.compile(`color: red;`, '.a:hover:first-child', undefined, 'a')
-      ).toMatchInlineSnapshot(`
-        [
-          ".a:hover:nth-child(1 of :not(style[data-styled])){color:red;}",
         ]
       `);
     });
@@ -2224,5 +2371,86 @@ background-color: green;`)
         '.icon{vertical-align:middle;}',
       ]);
     });
+  });
+});
+
+describe('mainCompiler', () => {
+  afterEach(() => {
+    globalThis.__NATIVE_WEB__ = false;
+  });
+
+  const runs: Array<[string, (compiler: ReturnType<typeof createCompiler>) => string[]]> = [
+    [
+      'a plain compile',
+      compiler => compiler.compile('color: red; &:hover { top: 0; }', '.a', undefined, 'a'),
+    ],
+    ['an at-rule wrapper', compiler => compiler.compile('from{top:0;}', 'k', '@keyframes')],
+    ['an unwrapped compile', compiler => compiler.compile('.g{margin:0;}')],
+    [
+      'an emit',
+      compiler =>
+        compiler.emit(parseSource(['color: red; &:not([x]) { top: 0; }'], []), [], '.a', {
+          componentId: 'a',
+        }),
+    ],
+    [
+      'a bridge-rewritten emit',
+      compiler =>
+        compiler.emit(
+          parseSource(['vertical-align: middle; width: var(--s, 1)px; &:disabled { top: 0; }'], []),
+          [],
+          '.a',
+          { componentId: 'a' }
+        ),
+    ],
+  ];
+
+  it('has no hash, which is the hash of a compiler with no namespace and no plugins', () => {
+    expect(mainCompiler.hash).toBe('');
+    expect(createCompiler().hash).toBe('');
+  });
+
+  it.each(runs)('matches a compiler built with no options on %s', (_name, run) => {
+    expect(run(mainCompiler)).toEqual(run(createCompiler()));
+  });
+
+  it.each(runs)(
+    'matches a compiler built with no options on %s under the rn-web bridge',
+    (_name, run) => {
+      globalThis.__NATIVE_WEB__ = true;
+
+      expect(run(mainCompiler)).toEqual(run(createCompiler()));
+    }
+  );
+
+  it('reads the bridge flag on every call, not when the module loads', () => {
+    const compile = () =>
+      mainCompiler.compile('&:disabled{width:var(--s, 1)px;}', '.a', undefined, 'a');
+
+    expect(compile()).toEqual(['.a:disabled{width:var(--s, 1)px;}']);
+
+    globalThis.__NATIVE_WEB__ = true;
+
+    expect(compile()).toEqual([
+      '.a:is(:disabled,[aria-disabled=true]){width:calc(var(--s, 1) * 1px);}',
+    ]);
+
+    globalThis.__NATIVE_WEB__ = false;
+
+    expect(compile()).toEqual(['.a:disabled{width:var(--s, 1)px;}']);
+  });
+
+  it('wraps the :not() of the component head on a bridge emit, and the align-content companion', () => {
+    globalThis.__NATIVE_WEB__ = true;
+
+    const source = parseSource(['vertical-align: middle; &:not([x]){color:red;}'], []);
+
+    expect(mainCompiler.emit(source, [], '.a', { componentId: 'a' })).toEqual([
+      '.a{align-content:center;vertical-align:middle;}',
+      '.a:where(:not([x])){color:red;}',
+    ]);
+    expect(
+      mainCompiler.emit(parseSource(['.g:not([x]){color:red;}'], []), [], '', { componentId: 'a' })
+    ).toEqual(['.g:not([x]){color:red;}']);
   });
 });

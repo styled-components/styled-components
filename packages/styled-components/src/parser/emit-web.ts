@@ -1,20 +1,25 @@
 import { SC_ATTR, SPLITTER } from '../constants';
-import * as $ from '../utils/charCodes';
-import {
-  NodeKind,
-  StaticAtRuleNode,
-  StaticKeyframeFrame,
-  StaticKeyframesNode,
-  StaticNode,
-  StaticRoot,
-} from './ast';
 import { alignContentFor } from '../utils/bridgeRewrites';
+import * as $ from '../utils/charCodes';
+import type { DeclTransform, SelectorTransform } from '../utils/compiler';
 import { warnOnce } from '../utils/warnOnce';
+import { NodeKind, StaticAtRuleNode, StaticNode, StaticRoot } from './ast';
+import { isKeyframesName } from './atRuleNames';
 import {
+  isCustomProperty,
   NEEDS_FIELD_SCAN,
+  PSEUDO_ELEMENT,
   scanQPB,
   splitTopLevelCommas,
   staysOneField,
+  STOP_COLON,
+  STOP_COMBINATOR,
+  STOP_COMMA,
+  STOP_LBRACE,
+  STOP_RBRACE,
+  STOP_RPAREN,
+  STOP_SEMI,
+  STOP_WS,
   stripCommaSpaces,
   trimRange,
 } from './parser';
@@ -26,82 +31,38 @@ import {
 const MAX_COMPOSED_SIZE = 1 << 22;
 let composedSize = 0;
 
+/** ASCII lowercase letter codes used in declaration scanning. */
+const LOWER_C = 99;
+const LOWER_V = 118;
+
 const GROUP_MARKER = SC_ATTR + '.g';
+const SCOPE_REF = ':where(:scope)';
+const SCOPE_PSEUDO = /:scope(?![\w\\(-]|[^\x00-\x7f])/iy;
 
 /** An HTML parser turns a CR after this into the line feed that ends the separator. */
 const SEPARATOR = SPLITTER.trim();
 
-/**
- * At-rule names whose bodies are direct declarations (no nested selector wrap).
- * Everything NOT in this set treats its body as nested rules that inherit the
- * parent selector.
- */
-const DECL_BODY_AT_RULES = new Set([
-  'font-face',
-  'page',
-  'property',
-  'counter-style',
-  'color-profile',
-  'viewport',
-  'font-feature-values',
-  'font-palette-values',
-  'position-try',
-  'view-transition',
-]);
-
-/**
- * Strip whitespace around selector combinators (`>`, `+`, `~`) outside
- * parens/brackets/strings. Substring-based writes (cheaper than per-char).
- *
- * `& > .foo + .bar`   → `&>.foo+.bar`
- * `:is(& + .x)`       → `:is(& + .x)`  (preserved inside :is parens)
- */
-function stripCombinatorSpaces(sel: string): string {
-  // Measured: on short text this test beats the scan, and most selectors hold no combinator.
-  if (!/[>+~]/.test(sel)) return sel;
-
-  const len = sel.length;
-  let out = '';
-  let segStart = 0;
-  while (segStart < len) {
-    const stop = scanQPB(sel, segStart, len, $.GT, $.PLUS, $.TILDE, -1);
-    if (stop >= len) break;
-
-    let left = stop;
-    while (left > segStart && $.isWS(sel.charCodeAt(left - 1))) left--;
-    out += sel.substring(segStart, left) + sel[stop];
-
-    segStart = stop + 1;
-    while ($.isWS(sel.charCodeAt(segStart))) segStart++;
-  }
-
-  return out + sel.substring(segStart);
+function isWholeDecl(d: { prop: string; value: string }, s = d.prop + ':' + d.value): boolean {
+  return (
+    scanQPB(
+      s,
+      0,
+      s.length,
+      isCustomProperty(d.prop) ? STOP_SEMI | STOP_RBRACE : STOP_LBRACE | STOP_RBRACE
+    ) === s.length
+  );
 }
 
-function formatDecl(
-  prop: string,
-  value: string,
-  transform:
-    | ((
-        p: string,
-        v: string
-      ) => { prop: string; value: string } | { prop: string; value: string }[] | undefined | void)
-    | undefined
-): string {
+function formatDecl(prop: string, value: string, transform: DeclTransform | undefined): string {
   const t = transform && transform(prop, value);
   if (!t) return prop + ':' + value + ';';
 
-  let out: string;
-  if (Array.isArray(t)) {
-    out = t[0].prop + ':' + t[0].value;
-    for (let i = 1; i < t.length; i++) out += ';' + t[i].prop + ':' + t[i].value;
-  } else {
-    out = t.prop + ':' + t.value;
-  }
+  const isArr = Array.isArray(t);
+  const out = isArr ? t.map(d => d.prop + ':' + d.value).join(';') : t.prop + ':' + t.value;
+  if (!out) return '';
 
   // A parsed declaration stays in its block; a plugin's rewrite has not been read.
-  const end = out.length;
-  if (scanQPB(out, 0, end, $.OPEN_BRACE, $.CLOSE_BRACE, -1, -1) === end) return out + ';';
+  if (isArr ? t.every(d => isWholeDecl(d)) : isWholeDecl(t, out)) return out + ';';
 
   if (__DEV__) {
     const text = out.slice(0, 80);
@@ -132,19 +93,13 @@ export interface EmitOptions {
   /** @internal */
   selfRefSelector?: string | undefined;
   /**
-   * Prepended to every emitted rule selector AFTER `&` resolution (namespace
-   * from `StyleSheetManager`), or joined onto a root-anchored item (see
-   * `prependNamespace`). Skipped for @keyframes.
+   * Final-stage selector transform, run after self-reference resolution.
+   * Return a string to replace the selector, or an array to emit one rule
+   * per selector. Short name keeps bundle size down; object keys aren't
+   * mangled by minifiers. A namespace is the first transform of the chain
+   * (`createNamespaceTransform`).
    */
-  namespace?: NamespaceForm | undefined;
-  /**
-   * Final-stage selector transform. Used by RSC's child-selector rewrite so
-   * `:first-child` / `:nth-child()` exclude `<style data-styled>` tags. Runs
-   * after namespace + self-reference resolution. Return a string to replace
-   * the selector, or an array to emit one rule per selector. Short name
-   * keeps bundle size down; object keys aren't mangled by minifiers.
-   */
-  rw?: ((selector: string) => string | string[]) | undefined;
+  rw?: SelectorTransform | undefined;
   /**
    * Declaration transform. Invoked on every emitted `prop: value` pair,
    * including declarations inside @keyframes and decl-body at-rules
@@ -152,12 +107,7 @@ export interface EmitOptions {
    * array to expand one authored declaration into several, or undefined
    * to pass through. Used by first-party plugins like RTL and prefix.
    */
-  decl?:
-    | ((
-        prop: string,
-        value: string
-      ) => { prop: string; value: string } | { prop: string; value: string }[] | undefined | void)
-    | undefined;
+  decl?: DeclTransform | undefined;
 }
 
 /**
@@ -165,7 +115,7 @@ export interface EmitOptions {
  * Shape is stable for a given AST so class-name hashes stay deterministic.
  *
  * @param root         Parsed AST from `parse()`.
- * @param parentSelector  Pre-composed parent selector (namespace + prefix + selector).
+ * @param parentSelector  Parent selector for root declarations and `&` expansion (`''` for global styles).
  */
 export function emitWeb(root: StaticRoot, parentSelector: string, options?: EmitOptions): string[] {
   composedSize = 0;
@@ -182,19 +132,36 @@ export function emitWeb(root: StaticRoot, parentSelector: string, options?: Emit
   return emitNodes(root, parentSelector, options, WalkState.Off);
 }
 
-/**
- * Whether the property's value is a bare name: `${Component}` stringifies as a class selector
- * (`.sc-abc`) and these take the name alone. `@container` preludes get the same treatment in
- * `emitAtRule`. The length test rejects nearly every property before a string compare runs.
- */
-function takesBareName(prop: string): boolean {
-  const length = prop.length;
-  return length === 9
-    ? prop === 'container'
-    : length === 14
-      ? prop === 'container-name'
-      : length === 21 && prop === 'view-transition-class';
+const enum AutoProp {
+  ContainerName = 0,
+  ContainerType = 1,
+  ViewTransitionClass = 2,
+  ViewTransitionName = 3,
+  Container = 4,
 }
+
+/**
+ * Properties participating in automatic naming or bare-name dot stripping.
+ * Order is load-bearing: indices 0..3 map to `foundNames` bits `1 << idx`
+ * (0: own `container-name`, 1: own `container-type` != `normal`,
+ * 2: own `view-transition-class`, 3: element `view-transition-name` != `none`),
+ * and even indices (0, 2, 4) are the properties whose values take bare names.
+ */
+const AUTO_PROPS = [
+  'container-name',
+  'container-type',
+  'view-transition-class',
+  'view-transition-name',
+  'container',
+];
+
+/** At-rules whose body holds direct declarations (no nested selector wrap). */
+const DECL_AT_RULES =
+  /^(?:font-(?:face|(?:feature|palette)-values)|page|property|c(?:ounter-style|olor-profile)|viewport|position-try|view-transition)$/i;
+
+/** True when `value` matches `keyword` (ASCII case-insensitive), ignoring a trailing `!important`. */
+const isKeyword = (value: string, keyword: string): boolean =>
+  value.toLowerCase().replace(/[ \t\n\r\f]*![ \t\n\r\f]*important$/, '') === keyword;
 
 /**
  * Where a declaration sits relative to the component's own element:
@@ -219,19 +186,36 @@ const enum WalkState {
   Root,
 }
 
-/** The ids to name by, and the flags of `ownNameBits` found so far, for the emit in progress. */
+/** The ids to name by, and the flags of `AUTO_PROPS` found so far, for the emit in progress. */
 let autoIds = '';
 let foundNames = 0;
 
 /** The selectors of each rule (`null` for an at-rule) the walk is inside, outermost first. */
 const scanStack: Array<string[] | null> = [];
 
-/** The scan state of the declarations at the current point of the walk. */
+/**
+ * The scan state of the declarations at the current point of the walk. A rule on the element
+ * itself (`&` with only a compound after it, no top-level whitespace or combinator) stays in the
+ * scan; one on `&` alone keeps `ScanState.Own`.
+ */
 function scanState(): ScanState {
   let state = ScanState.Own;
-  for (let i = 0; i < scanStack.length && state; i++) {
+  for (let i = 0; i < scanStack.length; i++) {
     const selectors = scanStack[i];
-    state = selectors ? scanOfRule(selectors, state) : ScanState.Other;
+    if (!selectors || !selectors.length) {
+      state = ScanState.Other;
+      continue;
+    }
+    for (let j = 0; j < selectors.length; j++) {
+      const s = selectors[j];
+      if (
+        s.charCodeAt(0) !== $.AMPERSAND ||
+        scanQPB(s, 1, s.length, STOP_WS | STOP_COMBINATOR) !== s.length
+      ) {
+        return ScanState.Off;
+      }
+      if (state === ScanState.Own && !/^&+$/.test(s)) state = ScanState.Other;
+    }
   }
   return state;
 }
@@ -255,65 +239,13 @@ function holdsPseudoElement(selector: string): boolean {
   const len = selector.length;
   for (
     let from = 0, stop;
-    (stop = scanQPB(selector, from, len, $.COLON, $.SPACE, $.COMMA, $.GT)) < len;
+    (stop = scanQPB(selector, from, len, STOP_COLON)) < len;
     from = stop + 1
   ) {
-    if (selector.charCodeAt(stop) !== $.COLON) continue;
-
     PSEUDO_ELEMENT.lastIndex = stop;
     if (PSEUDO_ELEMENT.test(selector)) return true;
   }
   return false;
-}
-
-/** Records a declaration's flags, classifying it by where it sits only when it has any. */
-function noteNames(prop: string, value: string): void {
-  const bits = ownNameBits(prop, value, ScanState.Own);
-  if (!bits || (foundNames & bits) === bits) return;
-
-  const state = scanState();
-  if (state) foundNames |= ownNameBits(prop, value, state);
-}
-
-/**
- * Flags for one declaration: 1 own `container-name`, 2 own `container-type` other than `normal`,
- * 4 own `view-transition-class`, 8 a `view-transition-name` other than `none` on the element.
- * Only a scan at `ScanState.Own` counts the own flags.
- */
-function ownNameBits(prop: string, value: string, scan: ScanState): number {
-  if (prop === 'view-transition-name') return value !== 'none' ? 8 : 0;
-  if (scan < ScanState.Own) return 0;
-  if (prop === 'container-name') return 1;
-  if (prop === 'container-type') return value !== 'normal' ? 2 : 0;
-  return prop === 'view-transition-class' ? 4 : 0;
-}
-
-/**
- * The scan state for a rule's children, from its parent's: a rule on one element (see
- * `isSameElement`) stays in the scan, and one on `&` alone keeps the own flags.
- */
-function scanOfRule(selectors: string[], scan: ScanState): ScanState {
-  if (!selectors.every(isSameElement)) return ScanState.Off;
-
-  return scan >= ScanState.Own && /^&+$/.test(selectors.join('')) ? ScanState.Own : ScanState.Other;
-}
-
-/**
- * `&` with only a compound after it (`&:hover`, `&:is(.a, .b)`, `&[data-x="a b"]`): no top-level
- * whitespace or combinator to another element; text inside parens, brackets, and strings does not
- * count. A pseudo-element (`&::before`) counts too: the names it adds to the element stay inert,
- * since a pseudo-element's own name or container type never makes the element a participant.
- * The regex answers the common shapes; the token scans (measured at about 20% of an emit) run only
- * when it says no.
- */
-function isSameElement(selector: string): boolean {
-  const len = selector.length;
-  return (
-    /^&[^\s>+~]*$/.test(selector) ||
-    (selector.charCodeAt(0) === $.AMPERSAND &&
-      scanQPB(selector, 1, len, $.SPACE, $.GT, $.PLUS, $.TILDE) === len &&
-      scanQPB(selector, 1, len, $.TAB, $.LF, $.CR, $.FF) === len)
-  );
 }
 
 /**
@@ -357,41 +289,57 @@ function wholeRule(head: string, block: string, unread = block): string {
 
 /**
  * Emits a node list as rules. When `walk` is on (an `emitWeb` call with ids and a parent selector)
- * it also notes the declarations that name the component's own element (`noteNames`), reading the
- * rules and at-rules they sit in (`scanStack`) only when a relevant declaration is found. A
- * component that sets none reads no selectors for it.
+ * it also notes the declarations that name the component's own element, reading the rules and
+ * at-rules they sit in (`scanStack`) only when a relevant declaration is found. A component that
+ * sets none reads no selectors for it.
  */
 function emitNodes(
   nodes: StaticNode[],
   currentSelector: string,
   options: EmitOptions | undefined,
-  walk: WalkState
+  walk: WalkState,
+  inScope = false
 ): string[] {
   let body = '';
   /** Bridge-added declarations; written before the authored ones so an authored declaration wins. */
   let companions = '';
-  const other: string[] = [];
+  let other: string[] | null = null;
 
   const declTransform = options && options.decl;
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
     switch (node.kind) {
       case NodeKind.Decl: {
-        if (walk) noteNames(node.prop, node.value);
-
-        // Post-fillAst invariant: `prop` and `value` are strings (any
-        // TemplateValue was realized by `fillDecl`). The
-        // `string | TemplateValue` AST type covers the parse-time form;
-        // emit-web is only called on filled (or never-templated) ASTs.
-        const authored = formatDecl(
-          node.prop,
-          takesBareName(node.prop) ? stripTokenDots(node.value) : node.value,
-          declTransform
-        );
+        // Post-fillAst invariant: `prop` and `value` are plain strings (realized by `fillNode`).
+        const prop = node.prop;
+        const lower = prop.charCodeAt(0) | $.UPPER_TO_LOWER;
+        let value = node.value;
+        // Every name in `AUTO_PROPS` is nine or more characters long and starts with `c` or `v`.
+        if (prop.length >= 9 && (lower === LOWER_C || lower === LOWER_V)) {
+          const idx = AUTO_PROPS.indexOf(prop.toLowerCase());
+          if (idx !== -1) {
+            if (
+              walk &&
+              idx < AutoProp.Container &&
+              (idx !== AutoProp.ContainerType || !isKeyword(value, 'normal')) &&
+              (idx !== AutoProp.ViewTransitionName || !isKeyword(value, 'none'))
+            ) {
+              const bit = 1 << idx;
+              if (!(foundNames & bit)) {
+                const state = scanState();
+                if (state && (idx === AutoProp.ViewTransitionName || state === ScanState.Own)) {
+                  foundNames |= bit;
+                }
+              }
+            }
+            if ((idx & 1) === 0) value = stripTokenDots(value);
+          }
+        }
+        const authored = formatDecl(prop, value, declTransform);
         body += authored;
 
-        if (__NATIVE_WEB__ && walk && authored && node.prop.length === 14) {
-          const alignContent = alignContentFor(node.prop, node.value);
+        if (__NATIVE_WEB__ && walk && authored && prop.length === 14 && lower === LOWER_V) {
+          const alignContent = alignContentFor(prop, node.value);
           if (alignContent && onElement()) {
             companions += formatDecl('align-content', alignContent, declTransform);
           }
@@ -399,10 +347,12 @@ function emitNodes(
         break;
       }
       case NodeKind.Rule: {
-        let resolved = resolveRuleSelectors(node.selectors, currentSelector);
+        let resolved = inScope
+          ? resolveScopedSelectors(node.selectors, Boolean(options && options.rw))
+          : resolveRuleSelectors(node.selectors, currentSelector);
         if (resolved === null) break;
 
-        if (options && options.selfRefSelector && options.componentId) {
+        if (!inScope && options && options.selfRefSelector && options.componentId) {
           resolved = applySelfReferenceRewrite(
             resolved,
             options.selfRefSelector,
@@ -412,21 +362,19 @@ function emitNodes(
         if (walk) scanStack.push(node.selectors);
         const childResults = emitNodes(node.children, resolved, options, walk && WalkState.On);
         if (walk) scanStack.pop();
-        for (let k = 0; k < childResults.length; k++) other.push(childResults[k]);
+        if (childResults.length) {
+          if (other === null) other = childResults;
+          else for (let k = 0; k < childResults.length; k++) other.push(childResults[k]);
+        }
         break;
       }
       case NodeKind.AtRule:
         // `@charset` has no effect in this pipeline; dropping it keeps emitted CSS stable.
-        if (node.name !== 'charset') {
-          const emitted = emitAtRule(node, currentSelector, options, walk && WalkState.On);
-          if (emitted) other.push(emitted);
+        if (node.name.length !== 7 || node.name.toLowerCase() !== 'charset') {
+          const emitted = emitAtRule(node, currentSelector, options, walk && WalkState.On, inScope);
+          if (emitted) (other || (other = [])).push(emitted);
         }
         break;
-      case NodeKind.Keyframes: {
-        const emitted = emitKeyframes(node, options);
-        if (emitted) other.push(emitted);
-        break;
-      }
     }
   }
 
@@ -436,194 +384,165 @@ function emitNodes(
   // match a `view-transition-name` other than `none` in any state or condition.
   if (walk === WalkState.Root && foundNames) {
     const names = stripTokenDots(autoIds);
-    if ((foundNames & 3) === 2) body += formatDecl('container-name', names, declTransform);
-    if ((foundNames & 12) === 8) body += formatDecl('view-transition-class', names, declTransform);
+    if (
+      (foundNames & ((1 << AutoProp.ContainerName) | (1 << AutoProp.ContainerType))) ===
+      1 << AutoProp.ContainerType
+    ) {
+      body += formatDecl(AUTO_PROPS[AutoProp.ContainerName], names, declTransform);
+    }
+    if (
+      (foundNames & ((1 << AutoProp.ViewTransitionClass) | (1 << AutoProp.ViewTransitionName))) ===
+      1 << AutoProp.ViewTransitionName
+    ) {
+      body += formatDecl(AUTO_PROPS[AutoProp.ViewTransitionClass], names, declTransform);
+    }
   }
 
   if (companions) body = companions + body;
 
+  const declSelector = currentSelector || (inScope ? SCOPE_REF : '');
+  if (!(body && declSelector)) return other || [];
+
   const result: string[] = [];
-  if (body && currentSelector) {
-    const wrappingSelector =
-      options && options.namespace
-        ? prependNamespace(currentSelector, options.namespace)
-        : currentSelector;
-    const block = '{' + body + '}';
-    const rewritten = options && options.rw ? options.rw(wrappingSelector) : wrappingSelector;
-    const heads = Array.isArray(rewritten) ? rewritten : [rewritten];
-    let written = 0;
-    for (let i = 0; i < heads.length; i++) {
-      written += heads[i].length;
-      const rule = wholeRule(heads[i], block);
+  const block = '{' + body + '}';
+  const rewritten = options && options.rw ? options.rw(declSelector) : declSelector;
+  let written: number;
+  if (typeof rewritten === 'string') {
+    written = rewritten.length;
+    const rule = wholeRule(rewritten, block);
+    if (rule) result.push(rule);
+  } else {
+    written = 0;
+    for (let i = 0; i < rewritten.length; i++) {
+      const head = rewritten[i];
+      written += head.length;
+      const rule = wholeRule(head, block);
       if (rule) result.push(rule);
     }
-    // `currentSelector` is already counted; what a namespace or plugin added is not.
-    composedSize += Math.max(written - currentSelector.length, 0);
   }
-  for (let i = 0; i < other.length; i++) result.push(other[i]);
+  // `declSelector` is already counted; what a plugin added is not.
+  composedSize += Math.max(written - declSelector.length, 0);
+  if (other !== null) for (let i = 0; i < other.length; i++) result.push(other[i]);
   return result;
-}
-
-/** A namespace as `prependNamespace` writes it; a compiler derives it once, since it fixes its namespace. */
-export interface NamespaceForm {
-  /** The namespace joined onto a root name: '' when it cannot be joined onto a compound. */
-  join: string;
-  /** The namespace and a descendant combinator. */
-  prefix: string;
-}
-
-/** The form of `namespace` for `EmitOptions.namespace`. */
-export function namespaceForm(namespace: string): NamespaceForm {
-  const trimmed = trimRange(namespace, 0, namespace.length);
-  // Trimming removed the whitespace that ends a trailing hex escape.
-  const written = TRAILING_HEX_ESCAPE.test(trimmed) ? trimmed + ' ' : trimmed;
-  return { join: isOneCompound(trimmed) ? written : '', prefix: written + ' ' };
-}
-
-/**
- * Whether the trimmed namespace is one compound without a pseudo-element. Text left open is not
- * judged: a head holding it is dropped whole, joined or not. Each scan stops at a top-level byte
- * only, and a colon's end restarts it with no state to carry, so every character is read once.
- */
-function isOneCompound(trimmed: string): boolean {
-  const first = trimmed.charCodeAt(0);
-  if (first !== $.HASH && first !== $.DOT && first !== $.OPEN_BRACKET && first !== $.COLON) {
-    return false;
-  }
-
-  const len = trimmed.length;
-  for (
-    let from = 0, stop;
-    (stop = scanQPB(trimmed, from, len, $.COLON, $.SPACE, $.COMMA, $.GT)) < len;
-    from = stop + 1
-  ) {
-    if (trimmed.charCodeAt(stop) !== $.COLON) return false;
-
-    PSEUDO_ELEMENT.lastIndex = stop;
-    if (PSEUDO_ELEMENT.test(trimmed)) return false;
-  }
-
-  return (
-    scanQPB(trimmed, 0, len, $.TAB, $.LF, $.CR, $.FF) >= len &&
-    scanQPB(trimmed, 0, len, $.PLUS, $.TILDE, -1, -1) >= len
-  );
-}
-
-/** A pseudo-element at its colon: `::`, or one of the Level 1 and 2 names a browser still reads after one colon. */
-const PSEUDO_ELEMENT = /:(?::|(?:before|after|first-line|first-letter)(?![\w-]))/iy;
-
-/**
- * A document-level view-transition pseudo, with or without the universal selector. Else `html` or
- * `:root` as a whole name: no name character, escape or `|` (a namespace bar) after it.
- */
-const ROOT_ITEM = /\*?::view-transition|(?:html|:root)(?![\w\\|-]|[^\0-\x7f])/iy;
-
-/**
- * A hex escape (`\31`) closing the text, after an even run of backslashes so `\\31` is not one.
- * The escape takes one whitespace after its digits as its end, so text written right after it
- * would read as part of the code point, or lose its meaning (a space meant as a combinator).
- * Linear: inside a backslash run only the character before the run can start a match.
- */
-const TRAILING_HEX_ESCAPE = /(?:^|[^\\])(?:\\\\)*\\[\da-f]{1,6}$/i;
-
-/**
- * The item with the namespace written for the root it names, else the item behind the prefix.
- * `ROOT_ITEM.lastIndex` is 0 between calls: a miss resets it, and a hit's end is read, then cleared.
- */
-function prefixItem(item: string, namespace: NamespaceForm): string {
-  const { join } = namespace;
-  const first = item.charCodeAt(0);
-  const mayBeRoot =
-    join !== '' &&
-    ((first | $.UPPER_TO_LOWER) === $.LOWER_H || first === $.COLON || first === $.ASTERISK);
-  if (!mayBeRoot || !ROOT_ITEM.test(item)) return namespace.prefix + item;
-
-  const nameEnd = ROOT_ITEM.lastIndex;
-  ROOT_ITEM.lastIndex = 0;
-  if (first === $.ASTERISK || item.charCodeAt(1) === $.COLON) {
-    return ':is(' + join + ',' + join + ' *)' + item.substring(first === $.ASTERISK ? 1 : 0);
-  }
-
-  return item.substring(0, nameEnd) + join + item.substring(nameEnd);
-}
-
-/**
- * Write the namespace in front of every top-level comma-separated selector, e.g. `.a,.b` under
- * `.parent` gives `.parent .a,.parent .b`. Commas inside `:is()`, `[attr]` and strings stay.
- * Each item is placed by `prefixItem`; the placement rules are in docs/namespace.md "Placement
- * model" and their rows in `emit-web.test.ts`.
- */
-function prependNamespace(selector: string, namespace: NamespaceForm): string {
-  if (selector.indexOf(',') === -1) return prefixItem(selector, namespace);
-
-  const parts = splitTopLevelCommas(selector);
-  for (let i = 0; i < parts.length; i++) parts[i] = prefixItem(parts[i], namespace);
-  return parts.join(',');
 }
 
 function emitAtRule(
   node: StaticAtRuleNode,
   currentSelector: string,
   options: EmitOptions | undefined,
-  walk: WalkState.Off | WalkState.On
+  walk: WalkState.Off | WalkState.On,
+  inScope = false
 ): string {
   // Post-fillAst invariant: prelude / name are strings.
+  const lowerName = node.name.toLowerCase();
   let prelude = stripCommaSpaces(node.prelude);
   // `${Component}` interpolation pre-stringifies to a class selector
   // (`.sc-aBcDeF`) for normal selector contexts. In the `@container
   // <name>` slot a bare ident is required by the CSS parser; strip a
   // leading dot from the prelude so cross-component container queries
   // emit valid CSS the browser can match.
-  if (node.name === 'container' && prelude.charCodeAt(0) === $.DOT) {
+  const isScope = lowerName === 'scope';
+  let rawStart = '';
+  if (lowerName === AUTO_PROPS[AutoProp.Container] && prelude.charCodeAt(0) === $.DOT) {
     prelude = prelude.substring(1);
+  } else if (isScope && prelude) {
+    let startPart = '';
+    let endPart = prelude;
+    if (prelude.charCodeAt(0) === $.OPEN_PAREN) {
+      const close = scanQPB(prelude, 1, prelude.length, STOP_RPAREN);
+      if (close < prelude.length) {
+        rawStart = trimRange(prelude, 1, close);
+        endPart = prelude.substring(close + 1);
+        if (rawStart) {
+          const parent = trimRange(currentSelector);
+          if (parent) {
+            const ancestor =
+              scanQPB(parent, 0, parent.length, STOP_COMMA) < parent.length
+                ? ':is(' + parent + ')'
+                : parent;
+            const items = splitTopLevelCommas(rawStart, true);
+            const selfRef = options && options.selfRefSelector;
+            const compId = options && options.componentId;
+            for (let i = 0; i < items.length && composedSize <= MAX_COMPOSED_SIZE; i++) {
+              const item = resolveSingle(items[i], ancestor);
+              items[i] =
+                selfRef && compId ? applySelfReferenceRewrite(item, selfRef, compId) : item;
+            }
+            startPart = '(' + items.join(',') + ')';
+          } else {
+            startPart =
+              '(' + ((inScope && replaceAmpersand(rawStart, SCOPE_REF)) || rawStart) + ')';
+          }
+        } else {
+          startPart = '()';
+        }
+      }
+    }
+    const expandedEnd =
+      composedSize <= MAX_COMPOSED_SIZE && endPart ? replaceAmpersand(endPart, SCOPE_REF) : null;
+    if (composedSize > MAX_COMPOSED_SIZE) {
+      if (__DEV__) warnTooLarge(currentSelector || SCOPE_REF);
+      return '';
+    }
+    prelude = startPart + (expandedEnd ?? endPart);
   }
   const header = '@' + node.name + (prelude ? ' ' + prelude : '');
   if (node.children === null) {
     return wholeRule(header, ';');
   }
 
-  if (DECL_BODY_AT_RULES.has(node.name)) {
-    // Body is bare declarations; emit inline, no selector wrap.
+  if (isKeyframesName(lowerName)) {
+    // Frames take no namespace, no selector rewrite, and no walk: each rule holding a declaration
+    // emits as its stops and those declarations. Anything else has no meaning in a keyframes body.
+    const declTransform = options && options.decl;
+    let frames = '';
+    for (let i = 0; i < node.children.length; i++) {
+      const frame = node.children[i];
+      if (frame.kind !== NodeKind.Rule) continue;
+
+      let body = '';
+      let hasDecl = false;
+      for (let j = 0; j < frame.children.length; j++) {
+        const decl = frame.children[j];
+        if (decl.kind !== NodeKind.Decl) continue;
+        hasDecl = true;
+        body += formatDecl(decl.prop, decl.value, declTransform);
+      }
+      if (hasDecl) frames += frame.selectors.join(',') + '{' + body + '}';
+    }
+    return wholeRule(header, '{' + frames + '}');
+  }
+
+  if (DECL_AT_RULES.test(lowerName)) {
     const body = declBody(node.children, options);
     return body ? wholeRule(header, '{' + body + '}') : '';
   }
 
-  // Body contains rules and/or declarations; inherit the parent selector.
-  composedSize += currentSelector.length;
+  // Body contains rules and/or declarations. Inside `@scope`, selectors and direct declarations
+  // resolve relative to the scoping root rather than inheriting the outer selector.
+  const bodySelector = isScope ? '' : currentSelector;
+  const bodyScope = isScope || (inScope && !currentSelector);
+  const bodyWalk = isScope ? (walk && rawStart === '&' ? WalkState.On : WalkState.Off) : walk;
+  composedSize += bodySelector ? bodySelector.length : bodyScope ? SCOPE_REF.length : 0;
   if (composedSize > MAX_COMPOSED_SIZE) {
-    if (__DEV__) warnTooLarge(currentSelector);
+    if (__DEV__) warnTooLarge(bodySelector || SCOPE_REF);
     return '';
   }
 
-  if (walk) scanStack.push(null);
-  const childStrings = emitNodes(node.children, currentSelector, options, walk);
-  if (walk) scanStack.pop();
-  if (childStrings.length === 0) return '';
-  return wholeRule(header, '{' + childStrings.join('') + '}', '');
-}
-
-function emitKeyframes(node: StaticKeyframesNode, options: EmitOptions | undefined): string {
-  const frames: string[] = [];
-  for (let i = 0; i < node.frames.length; i++) {
-    const frame = node.frames[i];
-    // Empty frames (`from { }`) are omitted (no declarations to emit).
-    if (frame.children.length === 0) continue;
-    frames.push(emitFrame(frame, options));
+  if (bodyWalk) scanStack.push(null);
+  const childStrings = emitNodes(node.children, bodySelector, options, bodyWalk, bodyScope);
+  if (bodyWalk) scanStack.pop();
+  if (childStrings.length === 0) {
+    return lowerName === 'layer' && prelude !== '' ? wholeRule(header, '{}', '') : '';
   }
-  // Post-fillAst invariant: name / prelude are strings.
-  const header = '@' + node.name + (node.prelude ? ' ' + node.prelude : '');
-  return wholeRule(header, '{' + frames.join('') + '}');
-}
-
-function emitFrame(frame: StaticKeyframeFrame, options: EmitOptions | undefined): string {
-  // The body is empty when a plugin rewrite dropped every declaration of the frame.
-  return frame.stops.join(',') + '{' + declBody(frame.children, options) + '}';
+  return wholeRule(header, '{' + childStrings.join('') + '}', '');
 }
 
 /**
  * `prop:value;` per declaration child, joined; '' when there are none. An at-rule nested in a
  * declaration body is a declaration block itself (`@page` margin boxes, `@font-feature-values`
- * blocks), so it is kept with its own declarations.
+ * blocks), so it is kept with its own declarations; a keyframes block has frames, not declarations,
+ * and has no place there.
  */
 function declBody(children: ReadonlyArray<StaticNode>, options: EmitOptions | undefined): string {
   const declTransform = options && options.decl;
@@ -632,7 +551,11 @@ function declBody(children: ReadonlyArray<StaticNode>, options: EmitOptions | un
     const child = children[i];
     if (child.kind === NodeKind.Decl) {
       body += formatDecl(child.prop, child.value, declTransform);
-    } else if (child.kind === NodeKind.AtRule && child.children !== null) {
+    } else if (
+      child.kind === NodeKind.AtRule &&
+      child.children !== null &&
+      !isKeyframesName(child.name)
+    ) {
       const inner = declBody(child.children, options);
       if (inner) {
         body += wholeRule(
@@ -667,11 +590,21 @@ function resolveRuleSelectors(selectors: string[], parent: string): string | nul
     return parent;
   }
 
+  // One selector under one parent is the common shape: nothing to cross or join.
+  if (selectors.length === 1 && parent.indexOf(',') === -1) {
+    const single = resolveSingle(selectors[0], parent);
+    if (composedSize > MAX_COMPOSED_SIZE) {
+      if (__DEV__) warnTooLarge(parent);
+      return null;
+    }
+    return single;
+  }
+
   const parents = parent ? splitTopLevelCommas(parent) : [parent];
   const resolved: string[] = [];
   for (let ci = 0; ci < selectors.length; ci++) {
     for (let pi = 0; pi < parents.length; pi++) {
-      resolved.push(resolveSingle(selectors[ci], trimRange(parents[pi], 0, parents[pi].length)));
+      resolved.push(resolveSingle(selectors[ci], parents[pi]));
       if (composedSize > MAX_COMPOSED_SIZE) {
         if (__DEV__) warnTooLarge(parent);
         return null;
@@ -689,13 +622,16 @@ function warnTooLarge(parent: string): void {
   );
 }
 
-/** An escaped `&` or one in a string is text, so only the rest take the parent. */
-function resolveSingle(selector: string, parent: string): string {
+/**
+ * Replace every unescaped, unquoted `&` in `text` with `parent`, returning `null`
+ * when `text` holds none (or `''` past the composed-size limit).
+ */
+function replaceAmpersand(text: string, parent: string): string | null {
   let expanded = '';
   let from = 0;
   let quote = 0;
-  for (let i = 0; i < selector.length; i++) {
-    const c = selector.charCodeAt(i);
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
     if (c === $.BACKSLASH) i++;
     else if (quote) {
       if (c === quote) quote = 0;
@@ -704,18 +640,114 @@ function resolveSingle(selector: string, parent: string): string {
       composedSize += parent.length;
       if (composedSize > MAX_COMPOSED_SIZE) return '';
 
-      expanded += selector.substring(from, i) + parent;
+      expanded += text.substring(from, i) + parent;
       from = i + 1;
     }
   }
+  return from ? expanded + text.substring(from) : null;
+}
 
+/** Whether `s` holds an unescaped, unquoted `:scope` pseudo-class (not `::scope` or `:scoped`). */
+function containsScopePseudo(s: string): boolean {
+  let quote = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c === $.BACKSLASH) i++;
+    else if (quote) {
+      if (c === quote) quote = 0;
+    } else if (c === $.DOUBLE_QUOTE || c === $.SINGLE_QUOTE) quote = c;
+    else if (c === $.COLON) {
+      if (s.charCodeAt(i + 1) === $.COLON) i++;
+      else {
+        SCOPE_PSEUDO.lastIndex = i;
+        if (SCOPE_PSEUDO.test(s)) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/** Resolve direct child rule selectors inside `@scope`. */
+function resolveScopedSelectors(selectors: string[], hasRw: boolean): string | null {
+  if (selectors.length === 0) {
+    composedSize += SCOPE_REF.length;
+    if (composedSize > MAX_COMPOSED_SIZE) {
+      if (__DEV__) warnTooLarge(SCOPE_REF);
+      return null;
+    }
+    return SCOPE_REF;
+  }
+  let out = '';
+  for (let i = 0; i < selectors.length; i++) {
+    if (i > 0) out += ',';
+    out += resolveScopedSingle(selectors[i], hasRw);
+    if (composedSize > MAX_COMPOSED_SIZE) {
+      if (__DEV__) warnTooLarge(SCOPE_REF);
+      return null;
+    }
+  }
+  return out;
+}
+
+function resolveScopedSingle(selector: string, hasRw: boolean): string {
+  let expanded = replaceAmpersand(selector, SCOPE_REF);
+  if (expanded === '') return '';
   composedSize += selector.length;
-  if (from) expanded += selector.substring(from);
-  else {
+  const first = selector.charCodeAt(0);
+  if (first === $.GT || first === $.PLUS || first === $.TILDE) {
+    composedSize += SCOPE_REF.length;
+    expanded = SCOPE_REF + (expanded ?? selector);
+  } else if (expanded === null) {
+    if (!hasRw || containsScopePseudo(selector)) {
+      expanded = selector;
+    } else {
+      composedSize += SCOPE_REF.length + 1;
+      expanded = SCOPE_REF + ' ' + selector;
+    }
+  }
+  return stripCombinatorSpaces(expanded);
+}
+
+/** An escaped `&` or one in a string is text, so only the rest take the parent. */
+function resolveSingle(selector: string, rawParent: string): string {
+  const parent = trimRange(rawParent);
+  let expanded = replaceAmpersand(selector, parent);
+  if (expanded === '') return '';
+  composedSize += selector.length;
+  if (expanded === null) {
     composedSize += parent.length;
     expanded = parent ? parent + ' ' + selector : selector;
   }
   return stripCombinatorSpaces(expanded);
+}
+
+/** Strip CSS whitespace around selector combinators (`>`, `+`, `~`) outside parens/brackets/strings. */
+function stripCombinatorSpaces(expanded: string): string {
+  // Measured: on short text this test beats the scan, and most selectors hold no combinator.
+  if (!/[>+~]/.test(expanded)) return expanded;
+
+  const len = expanded.length;
+  let out = '';
+  let segStart = 0;
+  while (segStart < len) {
+    const stop = scanQPB(expanded, segStart, len, STOP_COMBINATOR);
+    if (stop >= len) break;
+
+    let left = stop;
+    while (left > segStart && $.isSpace(expanded.charCodeAt(left - 1))) {
+      if (left - 2 >= segStart && expanded.charCodeAt(left - 2) === $.BACKSLASH) {
+        let bs = left - 2;
+        while (bs > segStart && expanded.charCodeAt(bs - 1) === $.BACKSLASH) bs--;
+        if (((left - 1 - bs) & 1) === 1) break;
+      }
+      left--;
+    }
+    out += expanded.substring(segStart, left) + expanded[stop];
+
+    segStart = stop + 1;
+    while ($.isSpace(expanded.charCodeAt(segStart))) segStart++;
+  }
+  return out + expanded.substring(segStart);
 }
 
 /**
@@ -747,10 +779,10 @@ function applySelfReferenceRewrite(
   }
 
   const parts = compiledSelector.split(selfRefSelector);
-  if (parts.join('') === '') return compiledSelector;
+  if (!parts.join('')) return compiledSelector;
 
   const replacement = '.' + componentId;
-  let out = parts[0];
+  let out = '';
   for (let i = 1; i < parts.length; i++) {
     out += ($.isIdentChar(parts[i].charCodeAt(0)) ? selfRefSelector : replacement) + parts[i];
   }
