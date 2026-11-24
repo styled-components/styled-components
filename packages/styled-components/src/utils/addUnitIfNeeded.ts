@@ -2,7 +2,9 @@
  * CSS properties that accept unitless numeric values.
  * Inlined from @emotion/unitless with IE-only entries removed
  * (boxFlex, boxFlexGroup, boxOrdinalGroup, flexPositive, flexNegative,
- * flexOrder, msGridRow, msGridRowSpan, msGridColumn, msGridColumnSpan).
+ * flexOrder, msGridRow, msGridRowSpan, msGridColumn, msGridColumnSpan),
+ * plus fontSizeAdjust, hyphenateLimitChars, initialLetter, mathDepth,
+ * shapeImageThreshold, and the maskBorder* aliases of the borderImage* entries.
  */
 const unitless: Record<string, 1> = {
   animationIterationCount: 1,
@@ -15,6 +17,7 @@ const unitless: Record<string, 1> = {
   flex: 1,
   flexGrow: 1,
   flexShrink: 1,
+  fontSizeAdjust: 1,
   gridRow: 1,
   gridRowEnd: 1,
   gridRowSpan: 1,
@@ -24,11 +27,18 @@ const unitless: Record<string, 1> = {
   gridColumnSpan: 1,
   gridColumnStart: 1,
   fontWeight: 1,
+  hyphenateLimitChars: 1,
+  initialLetter: 1,
   lineHeight: 1,
+  maskBorderOutset: 1,
+  maskBorderSlice: 1,
+  maskBorderWidth: 1,
+  mathDepth: 1,
   opacity: 1,
   order: 1,
   orphans: 1,
   scale: 1,
+  shapeImageThreshold: 1,
   tabSize: 1,
   widows: 1,
   zIndex: 1,
