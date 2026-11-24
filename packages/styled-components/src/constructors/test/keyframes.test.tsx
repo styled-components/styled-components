@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 import React from 'react';
-import rscPlugin from '../../plugins/rsc';
+import prefixPlugin from '../../plugins/prefix';
 import Keyframes from '../../models/Keyframes';
 import { StyleSheetManager } from '../../models/StyleSheetManager';
 import ThemeProvider from '../../models/ThemeProvider';
@@ -484,13 +484,13 @@ describe('keyframes', () => {
       animation: ${animation} 2s linear infinite;
     `;
     render(
-      <StyleSheetManager plugins={[rscPlugin]}>
+      <StyleSheetManager plugins={[prefixPlugin]}>
         <Comp />
       </StyleSheetManager>
     );
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "@keyframes aAxDRB {
+      "@keyframes afPmtev {
         0% {
           left: 0%;
         }
@@ -499,7 +499,7 @@ describe('keyframes', () => {
         }
       }
       .c {
-        animation: aAxDRB 2s linear infinite;
+        animation: afPmtev 2s linear infinite;
       }"
     `);
   });
@@ -524,7 +524,7 @@ describe('keyframes', () => {
     render(
       <>
         <Comp />
-        <StyleSheetManager plugins={[rscPlugin]}>
+        <StyleSheetManager plugins={[prefixPlugin]}>
           <Comp />
         </StyleSheetManager>
       </>
@@ -539,7 +539,7 @@ describe('keyframes', () => {
           left: 100%;
         }
       }
-      @keyframes aAxDRB {
+      @keyframes afPmtev {
         0% {
           left: 0%;
         }
@@ -551,7 +551,7 @@ describe('keyframes', () => {
         animation: a 2s linear infinite;
       }
       .d {
-        animation: aAxDRB 2s linear infinite;
+        animation: afPmtev 2s linear infinite;
       }"
     `);
   });

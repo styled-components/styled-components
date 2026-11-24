@@ -64,6 +64,16 @@ jest.mock('react-native', () => ({
   View: 'View',
 }));
 
+const nativeGlobal = globalThis as { __NATIVE__?: boolean };
+let priorNative: boolean | undefined;
+beforeAll(() => {
+  priorNative = nativeGlobal.__NATIVE__;
+  nativeGlobal.__NATIVE__ = true;
+});
+afterAll(() => {
+  nativeGlobal.__NATIVE__ = priorNative;
+});
+
 const env: MediaQueryEnv = {
   width: 375,
   height: 667,
@@ -207,7 +217,6 @@ describe('styled parent re-render with children', () => {
     // React ships in its development build alone, so load that build here.
     process.env.NODE_ENV = 'development';
     jest.resetModules();
-    (globalThis as any).__NATIVE__ = true;
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     React = require('react');
     TestRenderer = require('react-test-renderer');
@@ -216,7 +225,6 @@ describe('styled parent re-render with children', () => {
 
   afterAll(() => {
     process.env.NODE_ENV = priorNodeEnv;
-    (globalThis as any).__NATIVE__ = false;
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = false;
   });
 

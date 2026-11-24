@@ -97,7 +97,19 @@ const CSS_SAMPLES = {
   })(),
 };
 
+const nativeGlobal = globalThis as { __NATIVE__?: boolean };
+let priorNative: boolean | undefined;
+
 describe('responsive runtime microbenchmarks', () => {
+  beforeAll(() => {
+    priorNative = nativeGlobal.__NATIVE__;
+    nativeGlobal.__NATIVE__ = true;
+  });
+
+  afterAll(() => {
+    nativeGlobal.__NATIVE__ = priorNative;
+  });
+
   beforeEach(() => {
     resetResponsiveCache();
     resetNativeStyleCache();

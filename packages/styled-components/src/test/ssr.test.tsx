@@ -744,6 +744,61 @@ describe('ssr', () => {
     }
   );
 
+  it('keeps an outer component after its inner one when a late boundary mints a new inner name', async () => {
+    const Outer = styled.div`
+      color: red;
+    `;
+    const Inner = styled.div<{ tone: string }>`
+      color: ${p => p.tone};
+    `;
+    let resolveLater: (tone: string) => void = () => {};
+    const later = new Promise<string>(resolve => {
+      resolveLater = resolve;
+    });
+    const Late = () => <Outer as={Inner} tone={React.use(later)} />;
+
+    const sheet = new ServerStyleSheet();
+    const jsx = sheet.collectStyles(
+      <main>
+        <Outer as={Inner} tone="blue" />
+        <React.Suspense fallback={<i />}>
+          <Late />
+        </React.Suspense>
+      </main>
+    );
+    const stream = sheet.interleaveWithNodeStream(renderToPipeableStream(jsx));
+    let received = '';
+
+    await new Promise<void>((resolve, reject) => {
+      stream.on('data', chunk => {
+        // The shell is out; the boundary resolves after it.
+        if (received === '') setTimeout(() => resolveLater('green'), 0);
+        received += chunk;
+      });
+      stream.on('end', resolve);
+      stream.on('error', reject);
+    });
+
+    // Every group of "sc-b" (the inner) precedes "sc-a" (the outer) in each chunk, and the second
+    // chunk repeats the outer in full (`.f`) after the inner's new name. React's own streaming
+    // scripts are not the contract, so they are blanked.
+    const normalized = received.replace(/<script>[^]*?<\/script>/g, '<script></script>');
+
+    expect(normalized).toBe(
+      [
+        '<style data-styled="true" data-styled-version="JEST_MOCK_VERSION">.d{color:blue;}/*!sc*/',
+        'data-styled.g2[id="sc-b"]{content:"d,"}/*!sc*/',
+        '.c{color:red;}/*!sc*/',
+        'data-styled.g1[id="sc-a"]{content:"c,"}/*!sc*/',
+        '</style><main><div tone="blue" class="sc-b d sc-a c"></div><!--$?--><template id="B:0"></template><i></i><!--/$--></main><script></script><style data-styled="true" data-styled-version="JEST_MOCK_VERSION">.e{color:green;}/*!sc*/',
+        'data-styled.g2[id="sc-b"]{content:"d,e,"}/*!sc*/',
+        '.c{color:red;}/*!sc*/',
+        'data-styled.g1[id="sc-a"].f{content:"c,"}/*!sc*/',
+        '</style><div hidden id="S:0"><div tone="green" class="sc-b e sc-a c"></div></div><script></script>',
+      ].join('\n')
+    );
+  });
+
   it('emits a dev warning when a legacy v6 plugin package is passed (v7)', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const Heading = styled.h1`
@@ -790,6 +845,30 @@ describe('ssr', () => {
       </StyleSheetManager>
     );
     expect(serverStyles.getStyleTags().includes(`palevioletred`)).toEqual(true);
+  });
+
+  it('warns about a missing ServerStyleSheet, without reading a document, for a browser-mode sheet rendered on a server', () => {
+    const Title = styled.h1`
+      color: palevioletred;
+    `;
+
+    expect(typeof document).toBe('undefined');
+
+    // The browser build is the one whose sheet buffers writes for an insertion effect.
+    (global as { __SERVER__: boolean }).__SERVER__ = false;
+    try {
+      renderToString(
+        <StyleSheetManager sheet={new StyleSheet({ isServer: false })}>
+          <Title />
+        </StyleSheetManager>
+      );
+    } finally {
+      (global as { __SERVER__: boolean }).__SERVER__ = true;
+    }
+
+    expect((console.warn as jest.Mock).mock.calls.map(call => call[0])).toEqual([
+      '[sc] this tree is rendered with renderToString / renderToStaticMarkup without ServerStyleSheet, so its styles are missing from the output. Wrap the tree in ServerStyleSheet#collectStyles.',
+    ]);
   });
 
   describe('dynamic creation warnings', () => {
@@ -1390,10 +1469,10 @@ describe('ssr', () => {
         <style data-styled="true"
                data-styled-version="JEST_MOCK_VERSION"
         >
-          .c{view-transition-name:match-element;view-transition-class:sc-a;}/*!sc*/
-        data-styled.g1[id="sc-a"]{content:"c,"}/*!sc*/
-        ::view-transition-group(*.sc-a){animation-duration:400ms;}/*!sc*/
+          ::view-transition-group(*.sc-a){animation-duration:400ms;}/*!sc*/
         data-styled.g2[id="sc-global-b"]{content:"sc-global-b,"}/*!sc*/
+        .c{view-transition-name:match-element;view-transition-class:sc-a;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"c,"}/*!sc*/
         </style>
       `);
     });

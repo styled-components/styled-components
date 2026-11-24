@@ -4,8 +4,8 @@
  * Run: pnpm --filter styled-components bench:rsc
  *
  * Measures server-side renderToString performance with IS_RSC=true,
- * including per-instance inline style tag emission, :where() wrapping,
- * and keyframe handling.
+ * including the style component each instance renders, extension chains,
+ * wrapped components, and keyframe handling. Output bytes are in rscBytes.test.tsx.
  */
 
 // Mock React.cache ; scoped per render via manual clear
@@ -32,7 +32,7 @@ import styled, {
   StyleSheetManager,
   configureServerStyles,
 } from '../index';
-import rscPlugin from '../plugins/rsc';
+import rtlPlugin from '../plugins/rtl';
 
 import { bench as _bench } from './bench-utils';
 
@@ -164,6 +164,81 @@ describe('RSC benchmarks', () => {
         )
       );
     });
+  });
+
+  it('pages of 4000 elements (chains, user classes, wrappers)', () => {
+    console.log('\n--- Pages of 4000 elements (20 iterations, median of 5) ---');
+
+    // A render with no style registry warns once; the bench has none.
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const A = styled.div<{ $i: number }>`
+      color: blue;
+      padding: ${p => p.$i % 50}px;
+      &:hover {
+        background: url(x.png);
+      }
+    `;
+    const B = styled(A)`
+      color: green;
+      @media (min-width: 10px) {
+        margin: 1px;
+      }
+    `;
+    const C = styled(B)`
+      color: red;
+    `;
+    const Root = styled.span<{ $i: number }>`
+      width: ${p => p.$i % 50}px;
+    `;
+    const Wrap = (props: object) => <A $i={0} {...props} />;
+    const Wrapper = styled(Wrap)<{ $i: number }>`
+      margin: ${p => p.$i % 50}px;
+    `;
+    const ClientRef = Object.assign((props: object) => <div {...props} />, {
+      $$typeof: Symbol.for('react.client.reference'),
+    });
+    const FromClientRef = styled(ClientRef)`
+      color: teal;
+    `;
+
+    const page = (pair: (i: number) => React.ReactNode[], lead?: React.ReactNode) => () =>
+      ReactDOMServer.renderToString(
+        <main>
+          {lead}
+          {Array.from({ length: 2000 }, (_, i) => pair(i)).flat()}
+        </main>
+      );
+    const withClassName = (i: number) => [
+      <C key={'c' + i} $i={i} className="card x" />,
+      <Root key={'r' + i} $i={i} className="row" />,
+    ];
+
+    bench(
+      'chain: 2000 three-level extensions + 2000 roots',
+      20,
+      page(i => [<C key={'c' + i} $i={i} />, <Root key={'r' + i} $i={i} />])
+    );
+
+    bench(
+      'classname: the same with a user className, one wrapper on the page',
+      20,
+      page(withClassName, <Wrapper key="wrapper" $i={1} />)
+    );
+
+    bench(
+      'wrapped: 2000 wrappers of a styled element + 2000 roots with a className',
+      20,
+      page(i => [<Wrapper key={'o' + i} $i={i} />, <Root key={'r' + i} $i={i} className="row" />])
+    );
+
+    bench(
+      'client reference: one styled client reference + 4000 elements with a className',
+      20,
+      page(withClassName, <FromClientRef key="client" />)
+    );
+
+    warn.mockRestore();
   });
 
   it('repeated instances (per-instance emission)', () => {
@@ -462,11 +537,11 @@ describe('RSC benchmarks', () => {
 
     bench('root StyleSheetManager with a plugin', 200, () => {
       ReactDOMServer.renderToString(
-        <StyleSheetManager plugins={[rscPlugin]}>{page}</StyleSheetManager>
+        <StyleSheetManager plugins={[rtlPlugin]}>{page}</StyleSheetManager>
       );
     });
 
-    configureServerStyles({ plugins: [rscPlugin] });
+    configureServerStyles({ plugins: [rtlPlugin] });
     try {
       bench('configured server plugins, no manager', 200, () => {
         ReactDOMServer.renderToString(page);
@@ -474,48 +549,5 @@ describe('RSC benchmarks', () => {
     } finally {
       configureServerStyles({ plugins: [] });
     }
-  });
-
-  it('output size', () => {
-    console.log('\n--- Output size ---');
-
-    const Card = styled.div`
-      background: white;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 24px;
-    `;
-    const Badge = styled.span<{ $variant: string }>`
-      color: ${p => p.$variant};
-      padding: 4px 8px;
-    `;
-
-    const colors = ['red', 'blue', 'green', 'orange', 'purple'];
-
-    mockCacheStore.clear();
-    const children = [];
-    for (let j = 0; j < 50; j++) {
-      children.push(
-        React.createElement(
-          Card,
-          { key: j },
-          React.createElement(Badge, { $variant: colors[j % colors.length] }, 'tag')
-        )
-      );
-    }
-    const html = ReactDOMServer.renderToString(React.createElement('div', null, ...children));
-
-    const styleTags = (html.match(/<style[^>]*>/g) || []).length;
-    const styleBytes = (html.match(/<style[^>]*>.*?<\/style>/gs) || []).reduce(
-      (sum, tag) => sum + tag.length,
-      0
-    );
-    const totalBytes = html.length;
-
-    console.log(`  50 cards with 5 badge variants:`);
-    console.log(`    Style tags: ${styleTags}`);
-    console.log(`    Style bytes: ${styleBytes}`);
-    console.log(`    Total HTML: ${totalBytes}`);
-    console.log(`    Style overhead: ${((styleBytes / totalBytes) * 100).toFixed(1)}%`);
   });
 });

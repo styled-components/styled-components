@@ -7,7 +7,12 @@
 // `react-server` export condition, so IS_RSC is true without mocking and
 // Flight's own task order (size-deferred elements, async resumption) decides
 // when each component renders. See docs/react.md "StyleSheetManager and
-// configureServerStyles in server components".
+// configureServerStyles in server components". The style components of the shim are client
+// references, as a host's bundler makes them, and a test reads the rules from their props.
+jest.mock('styled-components/server-styles', () =>
+  jest.requireActual('../../test/flight').serverStylesAsClientReferences()
+);
+
 import React, { Fragment, Suspense, forwardRef, lazy, memo, type ReactNode } from 'react';
 import styled, {
   StyleSheetConsumer,
@@ -17,6 +22,8 @@ import styled, {
   type IStyleSheetContext,
 } from '../../index';
 import {
+  FILLER_PARAGRAPHS,
+  Filler,
   clientComponent,
   renderFlight,
   temporaryReference,
@@ -87,15 +94,6 @@ const tick = () => new Promise<void>(resolve => setTimeout(resolve, 0));
 
 /** A node React accepts but the types do not list (a lazy child). */
 const asNode = (value: unknown): ReactNode => value as ReactNode;
-
-/** Renders far more than the 3200 bytes after which Flight defers the remaining elements of a row. */
-const Filler = () => (
-  <div>
-    {Array.from({ length: 150 }, (_, index) => (
-      <p key={index}>Filler paragraph number {index} of lorem ipsum dolor sit amet</p>
-    ))}
-  </div>
-);
 
 const Frame = clientComponent<{ children?: ReactNode; data?: unknown; slot?: ReactNode }>('Frame');
 
@@ -268,8 +266,9 @@ describe('StyleSheetManager scope by position', () => {
     );
 
     expectScopes(result, { after: { tag: 'outer' }, before: { tag: 'outer' }, outside: {} });
-    // The case only means something when Flight really moved the later probe to its own row.
-    expect(result.probes.after.row).not.toBe(result.probes.before.row);
+    // The case only means something when Flight deferred the filler's paragraphs, each into its own
+    // row, so the later probe's row is numbered past them (rows are hex ids).
+    expect(parseInt(result.probes.after.row, 16)).toBeGreaterThan(FILLER_PARAGRAPHS);
   });
 
   it('scopes the output of an async component that resumes in a later task', async () => {
@@ -554,7 +553,7 @@ describe('StyleSheetManager scope by position', () => {
   });
 
   describe('iterables in a children position', () => {
-    // Two items of one component share a rule, so the second carries no style tag; the scope is read through the consumer instead.
+    // Items of one component share a name, so the sheet writes its rules once; the scope is read through the consumer instead.
     const seen: Record<string, string[] | undefined> = {};
     const Reader = ({ id }: { id: string }) => (
       <StyleSheetConsumer>
@@ -742,7 +741,7 @@ describe('StyleSheetManager scope across a client component', () => {
     );
 
     expectScopes(result, { 'proto-key': { tag: 'outer' } });
-    const [props] = result.clientProps;
+    const [props] = result.clientProps.filter(sent => 'data' in sent);
     expect(Object.keys(Object(props.data))).toEqual(['__proto__', 'probe']);
     expect(Reflect.get(Object(props.data), '__proto__')).toEqual({ polluted: true });
   });
@@ -766,7 +765,11 @@ describe('StyleSheetManager scope across a client component', () => {
     );
 
     expectScopes(result, { outside: {}, reads: { tag: 'outer' } });
-    expect(result.clientProps.map(props => String(props.data).startsWith('$@'))).toEqual([true]);
+    expect(
+      result.clientProps
+        .filter(props => 'data' in props)
+        .map(props => String(props.data).startsWith('$@'))
+    ).toEqual([true]);
   });
 
   it('scopes a server element resolved inside a promise prop', async () => {

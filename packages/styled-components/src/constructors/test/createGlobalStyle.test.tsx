@@ -2011,6 +2011,28 @@ describe('WebGlobalStyle.renderStyles (unit)', () => {
     expect(sheet.toString()).toBe('');
   });
 
+  it('deleteInstance returns surviving instance map until the last instance is removed', () => {
+    const rules = css`
+      body {
+        color: ${(p: { theme: { color: string } }) => p.theme.color};
+      }
+    `;
+    const gs = new WebGlobalStyle(rules, 'sc-global-delete-return-test');
+
+    expect(deleteInstance(sheet, gs.componentId, 'missing')).toBeUndefined();
+
+    renderInto(gs, '1', { theme: { color: 'red' } }, sheet);
+    renderInto(gs, '2', { theme: { color: 'blue' } }, sheet);
+
+    const remaining = deleteInstance(sheet, gs.componentId, '1');
+    expect(remaining).toBeInstanceOf(Map);
+    expect(remaining?.size).toBe(1);
+    expect(remaining?.has('2')).toBe(true);
+
+    expect(deleteInstance(sheet, gs.componentId, '2')).toBeUndefined();
+    expect(deleteInstance(sheet, gs.componentId, '2')).toBeUndefined();
+  });
+
   it('does not accumulate style rules across render/unmount cycles (#5674)', () => {
     const rules = css`
       .perf-a {
