@@ -1,6 +1,9 @@
 import styled, { LibraryStyled, Styled, StyledInstance } from './constructors/styled';
 
 export * from './base';
+
+/** @internal */
+export { ScGlobalStyle, ScStyle } from './models/ScStyle';
 export {
   CompiledAst,
   CSSKeyframes,

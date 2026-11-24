@@ -2,13 +2,14 @@ import React from 'react';
 import { SC_VERSION } from '../constants';
 import { IS_RSC } from '../utils/isRsc';
 import StyleSheet from '../sheet';
+import { reconstructSheet } from '../sheet/reconstructSheet';
 import { currentScope, scopeChildren } from './serverScope';
 import { Compiler, InsertionTarget, ShouldForwardProp } from '../types';
-import createCompiler, { SCPlugin } from '../utils/compiler';
+import createCompiler, { mainCompiler, SCPlugin } from '../utils/compiler';
 import { warnOnce } from '../utils/warnOnce';
 
 export const mainSheet: StyleSheet = new StyleSheet();
-export const mainCompiler: Compiler = createCompiler();
+export { mainCompiler };
 
 // Minimum viable gate: warn only when a plugin can never be invoked. Legacy
 // stylis middleware is a function, and a plugin with neither hook has nothing
@@ -113,7 +114,7 @@ let lastNamespace: string | undefined;
 let lastPlugins: SCPlugin[] | undefined;
 let lastCompiler: Compiler | undefined;
 
-/** Item by item, so an inline `plugins={[rscPlugin]}` (a new array on every render) still matches the last one. */
+/** Item by item, so an inline `plugins={[rtlPlugin]}` (a new array on every render) still matches the last one. */
 function samePlugins(a: SCPlugin[] | undefined, b: SCPlugin[] | undefined): boolean {
   if (a === b) return true;
   if (!a || !b || a.length !== b.length) return false;
@@ -247,7 +248,7 @@ export type IStyleSheetManager = React.PropsWithChildren<{
   /**
    * Plugins to apply during CSS emission. First-party plugins and the
    * `SCPlugin` / `DeclResult` / `DeclTransform` / `SelectorTransform` types
-   * ship only via `styled-components/plugins` (`prefixPlugin`, `rscPlugin`,
+   * ship only via `styled-components/plugins` (`prefixPlugin`,
    * `rtlPlugin`); they are not re-exported from the package root. Other
    * plugins must implement `{ name, rw?, decl? }`.
    *
@@ -314,22 +315,24 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
   const { styleSheet } = parentContext;
 
   const resolvedStyleSheet = React.useMemo(() => {
-    let sheet = styleSheet;
+    if (props.sheet) return props.sheet;
 
-    if (props.sheet) {
-      sheet = props.sheet;
-    } else if (props.target) {
-      sheet = sheet.reconstructWithOptions(
+    // One response has one nonce and one flushed tag, and a target names a node only the browser has.
+    if (styleSheet.server) return styleSheet;
+
+    if (props.target) {
+      return reconstructSheet(
+        styleSheet,
         props.nonce !== undefined
           ? { target: props.target, nonce: props.nonce }
           : { target: props.target },
         false
       );
-    } else if (props.nonce !== undefined) {
-      sheet = sheet.reconstructWithOptions({ nonce: props.nonce });
     }
 
-    return sheet;
+    if (props.nonce !== undefined) return reconstructSheet(styleSheet, { nonce: props.nonce });
+
+    return styleSheet;
   }, [props.nonce, props.sheet, props.target, styleSheet]);
 
   // Setting one of `namespace` and `plugins` inherits the other from the

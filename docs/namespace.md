@@ -13,6 +13,7 @@
 - Only an item whose text starts with `html`, `:root` or a bare `::view-transition*` joins. A root name inside a group (`:where(html.dark) &`, `:is(:root) &`), at any specificity, keeps the plain prefix and matches nothing in the root placement.
 - `:host` forms under a shadow-root `target` keep the plain prefix.
 - Judging a namespace and reading each item stay linear in their length.
+- Placement lives in `utils/namespace.ts` as the first selector transform of a compiler built with a namespace (`createCompiler`), ahead of every plugin's. `mainCompiler` has none, so a browser bundle that never imports `StyleSheetManager` ships none of it (`treeshake.test.ts` "namespace tree-shaking"). Keyframes and declaration-body at-rules never reach a selector transform, so they take no namespace.
 - Test rows: `emit-web.test.ts`.
 
 ## Inheritance

@@ -1,8 +1,21 @@
-import makeNativeStyleClass from '../NativeStyle';
+import { InterpolationKind } from '../../parser/ast';
+import makeNativeStyleClass, { substituteThemeSlots } from '../NativeStyle';
 import {
   extractBaseDeclPairs as parseCSSDeclarations,
   resetNativeStyleCache,
 } from '../compileNative';
+
+// These suites run under the web jest config, where `__NATIVE__` is false; the native branches
+// they exercise (values keep their comma spaces, dynamic decls carry `dyn`) need it true.
+const nativeGlobal = globalThis as { __NATIVE__?: boolean };
+let priorNative: boolean | undefined;
+beforeAll(() => {
+  priorNative = nativeGlobal.__NATIVE__;
+  nativeGlobal.__NATIVE__ = true;
+});
+afterAll(() => {
+  nativeGlobal.__NATIVE__ = priorNative;
+});
 
 describe('parseCSSDeclarations', () => {
   it('parses a single declaration', () => {
@@ -841,7 +854,7 @@ describe('parseCSSDeclarations', () => {
       ).toMatchInlineSnapshot(`
         [
           [
-            "visible  color",
+            "visible */ color",
             "red",
           ],
         ]
@@ -941,7 +954,7 @@ describe('parseCSSDeclarations', () => {
       expect(parseCSSDeclarations('col/* x */or: red;')).toMatchInlineSnapshot(`
         [
           [
-            "color",
+            "col or",
             "red",
           ],
         ]
@@ -1182,21 +1195,21 @@ describe('parseCSSDeclarations', () => {
       expect(
         parseCSSDeclarations('color: red;\x0cfont-size: 12px;\x0bmargin: 0;')
       ).toMatchInlineSnapshot(`
-        [
-          [
-            "color",
-            "red",
-          ],
-          [
-            "font-size",
-            "12px",
-          ],
-          [
-            "margin",
-            "0",
-          ],
-        ]
-      `);
+[
+  [
+    "color",
+    "red",
+  ],
+  [
+    "font-size",
+    "12px",
+  ],
+  [
+    "margin",
+    "0",
+  ],
+]
+`);
     });
 
     it('multiple brace blocks interleaved with declarations', () => {
@@ -1433,6 +1446,7 @@ describe('NativeStyle class;compile() fast-paths', () => {
     it('classifies array-with-function rules as dynamic', () => {
       const fn = () => 'blue';
       const inline = new NativeStyle([['color: ', fn, ';']] as any);
+      expect(inline.staticCompiled).toBeNull();
       const a = inline.compile({} as any);
       expect(a.base).toEqual({ color: 'blue' });
     });
@@ -1572,6 +1586,89 @@ describe('NativeStyle class;compile() fast-paths', () => {
 
       expect(a).toBe(b);
       expect(calls).toBe(2);
+    });
+  });
+
+  describe('single-pass rule scan', () => {
+    it('joins nested css fragments with no separator for static CSS', () => {
+      const inline = new NativeStyle(['col', ['or: red;', ['opacity: 0.5;']]] as any);
+      expect(inline.compile({} as any)).toEqual(
+        new NativeStyle(['color: red;opacity: 0.5;'] as any).compile({} as any)
+      );
+      expect(inline.staticEligible).toBe(true);
+    });
+
+    it('does not let adjacent strings fuse across the anchor and env gates', () => {
+      expect(new NativeStyle(['x: anc', 'hor(--a);'] as any).usesAnchorFunctions).toBe(false);
+      expect(
+        new NativeStyle(['x: en', 'v(safe-area-inset-top);'] as any).usesSafeAreaInsetsStatically
+      ).toBe(false);
+    });
+
+    it('detects env(safe-area-inset-*) when the inset name is interpolated across chunks', () => {
+      const staticInterp = new NativeStyle([
+        'padding-top: env(',
+        'safe-area-inset-top',
+        ');',
+      ] as any);
+      expect(staticInterp.usesSafeAreaInsets).toBe(true);
+      expect(staticInterp.usesSafeAreaInsetsStatically).toBe(true);
+
+      const withPrimitive = new NativeStyle([
+        'opacity: ',
+        1,
+        '; padding-top: env(',
+        'safe-area-inset-top',
+        ');',
+      ] as any);
+      expect(withPrimitive.usesSafeAreaInsets).toBe(true);
+      expect(withPrimitive.usesSafeAreaInsetsStatically).toBe(true);
+
+      const nestedFragment = new NativeStyle([
+        'padding-top: env(',
+        ['safe-area-inset-top'],
+        ');',
+      ] as any);
+      expect(nestedFragment.usesSafeAreaInsets).toBe(true);
+      expect(nestedFragment.usesSafeAreaInsetsStatically).toBe(true);
+
+      const withWhitespace = new NativeStyle([
+        'padding-top: env(',
+        '  ',
+        'safe-area-inset-bottom',
+        ');',
+      ] as any);
+      expect(withWhitespace.usesSafeAreaInsets).toBe(true);
+      expect(withWhitespace.usesSafeAreaInsetsStatically).toBe(true);
+
+      const interruptedByNonString = new NativeStyle([
+        'padding-top: env(',
+        1,
+        'safe-area-inset-top',
+        ');',
+      ] as any);
+      expect(interruptedByNonString.usesSafeAreaInsets).toBe(false);
+      expect(interruptedByNonString.usesSafeAreaInsetsStatically).toBe(false);
+    });
+  });
+
+  describe('substituteThemeSlots', () => {
+    const slot = '\0sc:space.sm:8px';
+    const theme = { space: { sm: 12 } } as any;
+
+    it('treats a Static slot as a whole boundary with the Standalone flag set', () => {
+      for (const kind of [
+        InterpolationKind.Static,
+        InterpolationKind.Static | InterpolationKind.Standalone,
+      ]) {
+        const filled = [slot];
+        substituteThemeSlots(filled, [kind], null, theme);
+        expect(filled).toEqual(['12']);
+      }
+
+      const joined = [slot];
+      substituteThemeSlots(joined, [InterpolationKind.StatelessFn], null, theme);
+      expect(joined).toEqual(['12px']);
     });
   });
 });

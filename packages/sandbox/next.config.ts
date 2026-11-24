@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
   compiler: {
     styledComponents: true,
   },
+  devIndicators: false,
   experimental: {
     // Turbopack only compiles files under its root. With pnpm's global virtual
     // store the installed packages live outside the repository, so the store is

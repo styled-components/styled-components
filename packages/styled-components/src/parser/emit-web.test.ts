@@ -1,11 +1,19 @@
 import type { EmitOptions } from './emit-web';
-import { emitWeb, namespaceForm } from './emit-web';
+import { NodeKind } from './ast';
+import { emitWeb } from './emit-web';
 import { parse, wrapAst } from './parser';
 import { normalize } from '../utils/compiler';
+import { createNamespaceTransform, namespaceForm } from '../utils/namespace';
 import { resetWarnOnce } from '../utils/warnOnce';
 
 function emit(css: string, selector = '.a'): string[] {
   return emitWeb(parse(normalize(css)), selector);
+}
+
+function nsTransform(namespace: string) {
+  const form = namespaceForm(namespace);
+  if (!form) throw new Error(`expected namespace form for ${JSON.stringify(namespace)}`);
+  return createNamespaceTransform(form);
 }
 
 describe('web emitter', () => {
@@ -54,6 +62,89 @@ describe('web emitter', () => {
         "@keyframes spin{from{transform:rotate(0);}to{transform:rotate(360deg);}}",
       ]
     `);
+  });
+
+  describe('@keyframes as an at-rule', () => {
+    it.each<[string, string, string[]]>([
+      ['an empty frame', '@keyframes k { from { } to { top: 0; } }', ['@keyframes k{to{top:0;}}']],
+      ['an empty keyframes block', '@keyframes fade { }', ['@keyframes fade{}']],
+      [
+        'a frame holding only a nested rule',
+        '@keyframes k { from { a { color: red; } } to { top: 0; } }',
+        ['@keyframes k{to{top:0;}}'],
+      ],
+      [
+        'a nested at-rule inside a frame, which a declaration block would keep',
+        '@keyframes k { from { top: 0; @page { margin: 0; } } }',
+        ['@keyframes k{from{top:0;}}'],
+      ],
+      [
+        'a bare declaration and an at-rule beside the frames',
+        '@keyframes k { top: 0; @media print { to { top: 1px; } } to { left: 0; } }',
+        ['@keyframes k{to{left:0;}}'],
+      ],
+      [
+        'a stop list',
+        '@keyframes k { 0%, 50% , 100% { opacity: 1; } }',
+        ['@keyframes k{0%,50%,100%{opacity:1;}}'],
+      ],
+      [
+        'a vendor prefix',
+        '@-webkit-keyframes k { from { top: 0; } }',
+        ['@-webkit-keyframes k{from{top:0;}}'],
+      ],
+      ['a bodiless statement', '@keyframes k;', ['@keyframes k;']],
+      [
+        'one inside a declaration-only at-rule',
+        '@page { top: 0; @keyframes k { to { top: 1px; } } }',
+        ['@page{top:0;}'],
+      ],
+    ])('emits %s', (_label, css, expected) => {
+      expect(emit(css)).toEqual(expected);
+    });
+
+    it('takes no namespace and no selector rewrite', () => {
+      const namespace = nsTransform('#ns');
+      const options: EmitOptions = {
+        rw: selector => `${namespace(selector)}.rw`,
+      };
+      expect(
+        emitWeb(parse('@keyframes k { from { top: 0; } } color: red;'), '.a', options)
+      ).toEqual(['#ns .a.rw{color:red;}', '@keyframes k{from{top:0;}}']);
+    });
+
+    it('takes no namespace nested in an at-rule', () => {
+      const options: EmitOptions = { rw: nsTransform('#ns') };
+      expect(
+        emitWeb(parse('@media print { @keyframes k { from { top: 0; } } }'), '.a', options)
+      ).toEqual(['@media print{@keyframes k{from{top:0;}}}']);
+    });
+
+    it('drops a keyframes block whose stop holds the server-rendering separator', () => {
+      jest.spyOn(console, 'warn').mockImplementation(() => {});
+      resetWarnOnce();
+      const ast = parse('@keyframes k { from { top: 0; } }');
+      const block = ast[0];
+      if (block.kind !== NodeKind.AtRule || block.children === null) throw new Error('no block');
+      const frame = block.children[0];
+      if (frame.kind !== NodeKind.Rule) throw new Error('no frame');
+      frame.selectors = [`a/*!sc*/b`];
+      expect(emitWeb(ast, '.a')).toEqual([]);
+    });
+
+    it('drops a keyframes block whose declaration holds the server-rendering separator', () => {
+      jest.spyOn(console, 'warn').mockImplementation(() => {});
+      resetWarnOnce();
+      const ast = parse('@keyframes k { from { top: 0; } }');
+      const block = ast[0];
+      if (block.kind !== NodeKind.AtRule || block.children === null) throw new Error('no block');
+      const frame = block.children[0];
+      if (frame.kind !== NodeKind.Rule) throw new Error('no frame');
+      const decl = frame.children[0];
+      if (decl.kind !== NodeKind.Decl) throw new Error('no declaration');
+      decl.value = '0/*!sc*/';
+      expect(emitWeb(ast, '.a')).toEqual([]);
+    });
   });
 
   it('prepends parent-space for bare (non-&) nested selectors', () => {
@@ -184,6 +275,28 @@ describe('web emitter', () => {
     `);
   });
 
+  it.each<[string, string, string[]]>([
+    [
+      '@keyframes with an adjacent quoted name',
+      '@keyframes"fade"{from{opacity:0}}',
+      ['@keyframes "fade"{from{opacity:0;}}'],
+    ],
+    ['@import with an adjacent string', '@import"a;b";', ['@import "a;b";']],
+    ['@charset with an adjacent string (dropped)', '@charset"utf-8";', []],
+    [
+      '@media with an adjacent condition',
+      '@media(min-width: 600px){color:red}',
+      ['@media (min-width: 600px){.a{color:red;}}'],
+    ],
+    [
+      '@supports with an adjacent condition',
+      '@supports(content:";"){color:red}',
+      ['@supports (content:";"){.a{color:red;}}'],
+    ],
+  ])('emits %s', (_label, css, expected) => {
+    expect(emit(css)).toEqual(expected);
+  });
+
   it('preserves quoted content values', () => {
     expect(emit(`content: "}"; color: red;`)).toMatchInlineSnapshot(`
       [
@@ -218,6 +331,348 @@ describe('web emitter', () => {
     `);
   });
 
+  /**
+   * CSS Cascade 5 §6.4.3 (https://drafts.csswg.org/css-cascade-5/#layer-ordering):
+   * "Cascade layers are sorted by the order in which they first are declared, with nested
+   * layers grouped within their parent layer."
+   * CSS Cascade 5 §6.4.4.1 (https://drafts.csswg.org/css-cascade-5/#layer-block):
+   * "@layer <layer-name>? { <rule-list> }"
+   */
+  describe('empty @layer blocks', () => {
+    it.each<[string, string, string[]]>([
+      ['an empty named layer', '@layer empty {}', ['@layer empty{}']],
+      ['a nested empty named layer', '@layer a { @layer b {} }', ['@layer a{@layer b{}}']],
+      ['an uppercase empty named layer', '@LAYER empty {}', ['@LAYER empty{}']],
+      ['an empty anonymous layer (dropped)', '@layer {}', []],
+      ['an anonymous empty layer inside a named layer', '@layer a { @layer {} }', ['@layer a{}']],
+    ])('emits %s', (_label, css, expected) => {
+      expect(emit(css)).toEqual(expected);
+    });
+  });
+
+  /**
+   * CSS Nesting 1 §3.3.1 (https://drafts.csswg.org/css-nesting-1/#nesting-at-scope):
+   * "When the @scope rule is a nested group rule, an & in the <scope-start> selector refers to
+   * the elements matched by the nearest ancestor style rule."
+   * "The & selector behaves like :where(:scope) in @scope rules."
+   *
+   * CSS Cascade 6 §3.5.3 (https://drafts.csswg.org/css-cascade-6/#scoped-rules):
+   * "They accept a <relative-selector-list> as their prelude (rather than just a
+   * <selector-list>). Such relative selectors are relative to :scope. Any selector in the
+   * <relative-selector-list> that does not start with a combinator but does contain the nesting
+   * selector or the :scope selector, is interpreted as a non-relative selector (but the subject
+   * must still be in scope to match)."
+   *
+   * CSS Cascade 6 §3.5.4 (https://drafts.csswg.org/css-cascade-6/#scope-limits):
+   * "Any :scope or & selectors in <scope-start> are interpreted as defined for its outer context."
+   * "For each scope created by a scoping root, its scoping limits are set to all elements that are
+   * descendants of the scoping root and that match <scope-end>, interpreting :scope and & exactly
+   * as in scoped style rules."
+   *
+   * CSS Cascade 6 §3.5.5 (https://drafts.csswg.org/css-cascade-6/#scope-scope):
+   * "When nesting @scope rules inside other @scope rules, or inside other selectors, the
+   * <scope-start> selector is relative to the nesting context, while the <scope-end> and any
+   * scoped style rules are relative to the scoping root"
+   *
+   * CSS Cascade 6 §3.5.6 (https://drafts.csswg.org/css-cascade-6/#scoped-declarations):
+   * "Declarations may be used directly with the body of a @scope rule. Contiguous runs of
+   * declarations are wrapped in nested declarations rules, which match the scoping root with zero
+   * specificity."
+   */
+  describe('@scope spec-faithful prelude and body', () => {
+    it.each<[string, string, string, string[]]>([
+      [
+        'parent selector in start boundary with plain relative child rule',
+        '@scope (&) to (.limit) { p { color: red; } }',
+        '.sc',
+        ['@scope (.sc) to (.limit){p{color:red;}}'],
+      ],
+      [
+        'narrowed start boundary with `&` in end boundary and nested rule (CSS Nesting §3.3.1)',
+        '@scope (& > .scope) to (& .limit) { & .content { color: red; } }',
+        '.parent',
+        ['@scope (.parent>.scope) to (:where(:scope) .limit){:where(:scope) .content{color:red;}}'],
+      ],
+      [
+        'uppercase @SCOPE with `&` in both boundaries',
+        '@SCOPE (&) to (& .limit) { p { color: red; } }',
+        '.sc',
+        ['@SCOPE (.sc) to (:where(:scope) .limit){p{color:red;}}'],
+      ],
+      [
+        'comma-separated parent selector list wraps in `:is()` in start boundary',
+        '@scope (&) to (& .limit) { & .content { color: red; } }',
+        '.a:hover,.a:focus',
+        [
+          '@scope (:is(.a:hover,.a:focus)) to (:where(:scope) .limit){:where(:scope) .content{color:red;}}',
+        ],
+      ],
+      [
+        'comma-separated parent selector list with non-`&` start boundary',
+        '@scope (.card) { p { color: red; } }',
+        '.a:hover,.a:focus',
+        ['@scope (:is(.a:hover,.a:focus) .card){p{color:red;}}'],
+      ],
+      [
+        'non-`&` start boundary resolves relative to parent and scopes direct decls to `:where(:scope)`',
+        '@scope (.card) to (& .limit) { color: red; }',
+        '.sc',
+        ['@scope (.sc .card) to (:where(:scope) .limit){:where(:scope){color:red;}}'],
+      ],
+      [
+        'direct declarations and child rules mixed in component @scope',
+        '@scope (.card) { color: red; p { color: blue; } }',
+        '.sc',
+        ['@scope (.sc .card){:where(:scope){color:red;}p{color:blue;}}'],
+      ],
+      [
+        'direct declarations in global @scope',
+        '@scope (.card) { color: red; }',
+        '',
+        ['@scope (.card){:where(:scope){color:red;}}'],
+      ],
+      [
+        'selector list in <scope-start> mixing bare selector and `&`',
+        '@scope (.a, &) { p { color: red; } }',
+        '.sc',
+        ['@scope (.sc .a,.sc){p{color:red;}}'],
+      ],
+      [
+        'prelude-less @scope in a component',
+        '@scope { color: red; p { color: blue; } }',
+        '.sc',
+        ['@scope{:where(:scope){color:red;}p{color:blue;}}'],
+      ],
+      [
+        'prelude-less @scope in global style',
+        '@scope { color: red; p { color: blue; } }',
+        '',
+        ['@scope{:where(:scope){color:red;}p{color:blue;}}'],
+      ],
+      [
+        '@scope with only a limit in a component',
+        '@scope to (& .limit) { p { color: red; } }',
+        '.sc',
+        ['@scope to (:where(:scope) .limit){p{color:red;}}'],
+      ],
+      [
+        '@scope with only a limit in global style expands `&` in end boundary',
+        '@scope to (& .limit) { p { color: red; } }',
+        '',
+        ['@scope to (:where(:scope) .limit){p{color:red;}}'],
+      ],
+      [
+        'explicit :scope selector inside @scope',
+        '@scope (.card) { :scope { border: 1px solid; } }',
+        '.sc',
+        ['@scope (.sc .card){:scope{border:1px solid;}}'],
+      ],
+      [
+        ':scope:hover inside @scope',
+        '@scope (.card) { :scope:hover { color: red; } }',
+        '.sc',
+        ['@scope (.sc .card){:scope:hover{color:red;}}'],
+      ],
+      [
+        'main :scope p inside @scope',
+        '@scope (.card) { main :scope p { color: red; } }',
+        '.sc',
+        ['@scope (.sc .card){main :scope p{color:red;}}'],
+      ],
+      [
+        ':not(:scope) inside @scope',
+        '@scope (.card) { :not(:scope) { color: red; } }',
+        '.sc',
+        ['@scope (.sc .card){:not(:scope){color:red;}}'],
+      ],
+      [
+        'leading combinator selectors inside @scope',
+        '@scope (.card) { > p { color: red; } + div { color: blue; } ~ span { color: green; } }',
+        '.sc',
+        [
+          '@scope (.sc .card){:where(:scope)>p{color:red;}:where(:scope)+div{color:blue;}:where(:scope)~span{color:green;}}',
+        ],
+      ],
+      [
+        'nested rules inside a scoped child rule resume normal nesting',
+        '@scope (.card) { p { span { color: blue; } &:hover { color: red; } } }',
+        '.sc',
+        ['@scope (.sc .card){p span{color:blue;}p:hover{color:red;}}'],
+      ],
+      [
+        'nested @scope inside @scope expands `&` in inner start and end to `:where(:scope)`',
+        '@scope (.outer) { @scope (& > .inner) to (& .limit) { color: red; p { color: blue; } } }',
+        '.sc',
+        [
+          '@scope (.sc .outer){@scope (:where(:scope) > .inner) to (:where(:scope) .limit){:where(:scope){color:red;}p{color:blue;}}}',
+        ],
+      ],
+      [
+        'nested @scope inside a style rule inside @scope resolves against that rule',
+        '@scope (.outer) { .box { @scope (.inner) { color: red; } } }',
+        '.sc',
+        ['@scope (.sc .outer){@scope (.box .inner){:where(:scope){color:red;}}}'],
+      ],
+      [
+        '@media inside @scope forwards scope context for declarations and child rules',
+        '@scope (.card) { @media (min-width: 500px) { color: red; p { color: blue; } > span { color: green; } } }',
+        '.sc',
+        [
+          '@scope (.sc .card){@media (min-width: 500px){:where(:scope){color:red;}p{color:blue;}:where(:scope)>span{color:green;}}}',
+        ],
+      ],
+      [
+        'empty @scope () preserves empty parens instead of turning into parent selector',
+        '@scope () { p { color: red; } }',
+        '.sc',
+        ['@scope (){p{color:red;}}'],
+      ],
+      [
+        'empty @scope () with limit preserves () and expands `&` in limit',
+        '@scope () to (& .limit) { p { color: red; } }',
+        '.sc',
+        ['@scope () to (:where(:scope) .limit){p{color:red;}}'],
+      ],
+      [
+        'whitespace-only currentSelector treated as global',
+        '@scope (.card) { p { color: red; } }',
+        '   ',
+        ['@scope (.card){p{color:red;}}'],
+      ],
+      [
+        'quoted and escaped `&` preserved in prelude',
+        '@scope (&[data-x="&"]) to (.\\&) { p { color: red; } }',
+        '.sc',
+        ['@scope (.sc[data-x="&"]) to (.\\&){p{color:red;}}'],
+      ],
+      [
+        'global style with no parent selector keeps `&` in start untouched',
+        '@scope (&) { p { color: red; } }',
+        '',
+        ['@scope (&){p{color:red;}}'],
+      ],
+    ])('handles %s', (_label, css, selector, expected) => {
+      expect(emit(css, selector)).toEqual(expected);
+    });
+
+    it('rewrites self-reference selector in @scope (& + &)', () => {
+      expect(
+        emitWeb(parse('@scope (& + &) { p { color: red; } }'), '.a', {
+          selfRefSelector: '.a',
+          componentId: 'sc-id',
+        })
+      ).toEqual(['@scope (.sc-id+.sc-id){p{color:red;}}']);
+    });
+
+    it.each<[string, string, string[]]>([
+      [
+        'plain relative selector',
+        '@scope (.card) { p { color: red; } }',
+        ['@scope (.sc .card){#app :where(:scope) p{color:red;}}'],
+      ],
+      [
+        'leading combinator selector',
+        '@scope (.card) { > p { color: red; } }',
+        ['@scope (.sc .card){#app :where(:scope)>p{color:red;}}'],
+      ],
+      [
+        'explicit :scope selector',
+        '@scope (.card) { :scope { color: red; } }',
+        ['@scope (.sc .card){#app :scope{color:red;}}'],
+      ],
+      [
+        'uppercase :SCOPE selector',
+        '@scope (.card) { :SCOPE:hover { color: red; } }',
+        ['@scope (.sc .card){#app :SCOPE:hover{color:red;}}'],
+      ],
+      [
+        'direct declarations',
+        '@scope (.card) { color: red; }',
+        ['@scope (.sc .card){#app :where(:scope){color:red;}}'],
+      ],
+      [
+        'pseudo-class merely starting with :scope (like :scoped) gets :where(:scope) prefix',
+        '@scope (.card) { :scoped { color: red; } }',
+        ['@scope (.sc .card){#app :where(:scope) :scoped{color:red;}}'],
+      ],
+      [
+        'quoted ":scope" in attribute selector is not treated as :scope pseudo-class',
+        '@scope (.card) { [data-x=":scope"] { color: red; } }',
+        ['@scope (.sc .card){#app :where(:scope) [data-x=":scope"]{color:red;}}'],
+      ],
+      [
+        'escaped \\:scope is not treated as :scope pseudo-class',
+        '@scope (.card) { .a\\:scope { color: red; } }',
+        ['@scope (.sc .card){#app :where(:scope) .a\\:scope{color:red;}}'],
+      ],
+      [
+        'leading combinator also containing `&` keeps :where(:scope) before the combinator',
+        '@scope (.card) { > p:has(&) { color: red; } }',
+        ['@scope (.sc .card){#app :where(:scope)>p:has(:where(:scope)){color:red;}}'],
+      ],
+      [
+        'pseudo-element ::scope is not treated as :scope pseudo-class',
+        '@scope (.card) { ::scope { color: red; } }',
+        ['@scope (.sc .card){#app :where(:scope) ::scope{color:red;}}'],
+      ],
+    ])('applies namespace="#app" inside @scope for %s', (_label, css, expected) => {
+      expect(emitWeb(parse(css), '.sc', { rw: nsTransform('#app') })).toEqual(expected);
+    });
+
+    it('emits view-transition-class auto-prop for @scope (&) but not @scope (.card)', () => {
+      const options: EmitOptions = { componentId: 'sc-id' };
+      expect(
+        emitWeb(parse('@scope (.card) { view-transition-name: hero; }'), '.sc', options)
+      ).toEqual(['@scope (.sc .card){:where(:scope){view-transition-name:hero;}}']);
+      expect(emitWeb(parse('@scope (&) { view-transition-name: hero; }'), '.sc', options)).toEqual([
+        '.sc{view-transition-class:sc-id;}',
+        '@scope (.sc){:where(:scope){view-transition-name:hero;}}',
+      ]);
+    });
+  });
+
+  /**
+   * CSS Syntax 3 §4 (https://drafts.csswg.org/css-syntax-3/): at-rule names are matched
+   * ASCII case-insensitively.
+   */
+  describe('case-insensitive at-rule classification', () => {
+    it.each<[string, string, string[]]>([
+      [
+        '@KEYFRAMES',
+        '@KEYFRAMES spin { from { opacity: 0; } to { opacity: 1; } }',
+        ['@KEYFRAMES spin{from{opacity:0;}to{opacity:1;}}'],
+      ],
+      [
+        '@-WEBKIT-KEYFRAMES',
+        '@-WEBKIT-KEYFRAMES spin { from { opacity: 0; } }',
+        ['@-WEBKIT-KEYFRAMES spin{from{opacity:0;}}'],
+      ],
+      [
+        '@FONT-FACE',
+        "@FONT-FACE { font-family: 'Foo'; src: url(foo.woff2); }",
+        ["@FONT-FACE{font-family:'Foo';src:url(foo.woff2);}"],
+      ],
+      [
+        '@PROPERTY',
+        '@PROPERTY --x { syntax: "<color>"; inherits: false; initial-value: red; }',
+        ['@PROPERTY --x{syntax:"<color>";inherits:false;initial-value:red;}'],
+      ],
+      ['@CHARSET (dropped)', '@CHARSET "utf-8";', []],
+      [
+        '@CONTAINER leading-dot stripping',
+        '@CONTAINER .sc-foo (min-width: 400px) { color: red; }',
+        ['@CONTAINER sc-foo (min-width: 400px){.a{color:red;}}'],
+      ],
+      [
+        'nested @KEYFRAMES inside @PAGE (dropped)',
+        '@PAGE { top: 0; @KEYFRAMES k { to { top: 1px; } } }',
+        ['@PAGE{top:0;}'],
+      ],
+    ])('classifies %s case-insensitively', (_label, css, expected) => {
+      expect(emit(css)).toEqual(expected);
+    });
+  });
+
   // CSS Nesting: "A selector is said to contain the nesting selector if, when it was
   // parsed as any type of selector, a <delim-token> with the value "&" (U+0026
   // AMPERSAND) was encountered." An escaped `&` or one in a string is no delim-token.
@@ -244,6 +699,39 @@ describe('web emitter', () => {
         ".a+.a{margin-left:8px;}",
       ]
     `);
+  });
+
+  // CSS Syntax, "Consume an escaped code point": a backslash escapes the following
+  // code point, so an odd run of backslashes escapes a space before a combinator while
+  // an even run escapes the preceding backslash and leaves the space unescaped.
+  it.each([
+    ['an escaped space before >', '.a\\ > .b { color: red; }', '.a\\ >.b{color:red;}'],
+    [
+      'an escaped space and trailing space before +',
+      '.a\\  + .b { color: red; }',
+      '.a\\ +.b{color:red;}',
+    ],
+    [
+      'three backslashes before a space and >',
+      '.a\\\\\\ > .b { color: red; }',
+      '.a\\\\\\ >.b{color:red;}',
+    ],
+    [
+      'an escaped backslash before an unescaped space and >',
+      '.a\\\\ > .b { color: red; }',
+      '.a\\\\>.b{color:red;}',
+    ],
+    [
+      'an escaped space immediately after a prior combinator',
+      '.x > \\  + .b { color: red; }',
+      '.x>\\ +.b{color:red;}',
+    ],
+  ])('handles backslash parity before a combinator for %s', (_label, css, expected) => {
+    expect(emit(css, '')).toEqual([expected]);
+  });
+
+  it('strips form-feed whitespace around combinators', () => {
+    expect(emit('.a\f>\f.b { color: red; }', '')).toEqual(['.a>.b{color:red;}']);
   });
 
   it('rewrites & + & to a withConfig componentId verbatim, even one holding replacement patterns', () => {
@@ -371,7 +859,48 @@ describe('web emitter', () => {
         '.a{container-type:size;container-name:normal;}',
       ],
       ['the normal type', 'container-type: normal;', '.a{container-type:normal;}'],
+      ['uppercase normal type', 'container-type: NORMAL;', '.a{container-type:NORMAL;}'],
+      [
+        'normal type with !important',
+        'container-type: normal !important;',
+        '.a{container-type:normal !important;}',
+      ],
+      [
+        'uppercase property and normal !IMPORTANT',
+        'CONTAINER-TYPE: NORMAL ! IMPORTANT;',
+        '.a{CONTAINER-TYPE:NORMAL ! IMPORTANT;}',
+      ],
+      [
+        'form-feed whitespace around !important',
+        'container-type: normal\f!\fimportant;',
+        '.a{container-type:normal\f!\fimportant;}',
+      ],
+      [
+        'uppercase explicit container-name',
+        'CONTAINER-TYPE: size; CONTAINER-NAME: x;',
+        '.a{CONTAINER-TYPE:size;CONTAINER-NAME:x;}',
+      ],
     ])('adds nothing beside %s', (_label, css, expected) => {
+      expect(emitWeb(parse(css), '.a', options)).toEqual([expected]);
+    });
+
+    it.each([
+      [
+        'uppercase property name',
+        'CONTAINER-TYPE: size;',
+        '.a{CONTAINER-TYPE:size;container-name:sc-id;}',
+      ],
+      [
+        'size with !important',
+        'container-type: size !important;',
+        '.a{container-type:size !important;container-name:sc-id;}',
+      ],
+      [
+        'normal with non-CSS whitespace (NBSP) before !important',
+        'container-type: normal\u00a0!important;',
+        '.a{container-type:normal\u00a0!important;container-name:sc-id;}',
+      ],
+    ])('names the container for %s', (_label, css, expected) => {
       expect(emitWeb(parse(css), '.a', options)).toEqual([expected]);
     });
 
@@ -506,6 +1035,17 @@ describe('web emitter', () => {
 
     it.each([
       ['the none keyword', 'view-transition-name: none;', '.a{view-transition-name:none;}'],
+      ['uppercase none keyword', 'view-transition-name: NONE;', '.a{view-transition-name:NONE;}'],
+      [
+        'none with !important',
+        'view-transition-name: none !important;',
+        '.a{view-transition-name:none !important;}',
+      ],
+      [
+        'uppercase property and none !IMPORTANT',
+        'VIEW-TRANSITION-NAME: NONE !IMPORTANT;',
+        '.a{VIEW-TRANSITION-NAME:NONE !IMPORTANT;}',
+      ],
       [
         'none in a state rule',
         '&:hover { view-transition-name: none; }',
@@ -569,11 +1109,31 @@ describe('web emitter', () => {
         ['.a{view-transition-name:card;view-transition-class:mine;}'],
       ],
       [
+        'uppercase property names',
+        'VIEW-TRANSITION-NAME: card; VIEW-TRANSITION-CLASS: mine;',
+        ['.a{VIEW-TRANSITION-NAME:card;VIEW-TRANSITION-CLASS:mine;}'],
+      ],
+      [
         '`&`',
         'view-transition-name: card; & { view-transition-class: mine; }',
         ['.a{view-transition-name:card;}', '.a{view-transition-class:mine;}'],
       ],
     ])('keeps an authored class on %s and adds none', (_label, css, rules) => {
+      expect(emitWeb(parse(css), '.a', options)).toEqual(rules);
+    });
+
+    it.each([
+      [
+        'uppercase property name',
+        'VIEW-TRANSITION-NAME: card;',
+        ['.a{VIEW-TRANSITION-NAME:card;view-transition-class:sc-id;}'],
+      ],
+      [
+        'card with !important',
+        'view-transition-name: card !important;',
+        ['.a{view-transition-name:card !important;view-transition-class:sc-id;}'],
+      ],
+    ])('adds the class for %s', (_label, css, rules) => {
       expect(emitWeb(parse(css), '.a', options)).toEqual(rules);
     });
 
@@ -694,6 +1254,11 @@ describe('web emitter', () => {
         ['.a{align-content:center;color:red;vertical-align:middle;top:0;}'],
       ],
       ['`&`', '& { vertical-align: bottom; }', ['.a{align-content:end;vertical-align:bottom;}']],
+      [
+        'an uppercase property name',
+        'VERTICAL-ALIGN: top;',
+        ['.a{align-content:start;VERTICAL-ALIGN:top;}'],
+      ],
       ['`&&`', '&& { vertical-align: top; }', ['.a.a{align-content:start;vertical-align:top;}']],
       [
         '`&` inside `&`',
@@ -917,6 +1482,16 @@ describe('web emitter', () => {
         'container-name: ".x" .sc-a;',
         '.a{container-name:".x" sc-a;}',
       ],
+      [
+        'an uppercase container-name property',
+        'CONTAINER-NAME: .sc-a;',
+        '.a{CONTAINER-NAME:sc-a;}',
+      ],
+      [
+        'an uppercase view-transition-class property',
+        'VIEW-TRANSITION-CLASS: .sc-a;',
+        '.a{VIEW-TRANSITION-CLASS:sc-a;}',
+      ],
     ])('drops the leading dot of %s', (_label, css, expected) => {
       expect(emitWeb(parse(css), '.a')).toEqual([expected]);
     });
@@ -959,6 +1534,26 @@ describe('web emitter', () => {
       ).toEqual([
         '.a{view-transition-name:card;container-type:size;container-name:sc-x;view-transition-class:sc-id;}',
       ]);
+    });
+  });
+
+  describe('a nested rule with one selector under one parent', () => {
+    it.each<[string, string, string[]]>([
+      ['a parent padded with whitespace', ' .a ', ['.a .b{top:0;}']],
+      ['a parent that is whitespace alone', '  ', ['.b{top:0;}']],
+      ['no parent', '', ['.b{top:0;}']],
+      ['a parent with a bare comma list', '.a, .c', ['.a .b,.c .b{top:0;}']],
+      ['a comma inside a group', ':is(.a,.c)', [':is(.a,.c) .b{top:0;}']],
+    ])('resolves it under %s', (_label, parent, expected) => {
+      expect(emitWeb(parse('.b{top:0;}'), parent)).toEqual(expected);
+    });
+
+    it('keeps the size limit on the single-selector path', () => {
+      jest.spyOn(console, 'warn').mockImplementation(() => {});
+      resetWarnOnce();
+      const ast = parse('&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&{top:0;}');
+
+      expect(emitWeb(ast, '.a'.repeat(1 << 20))).toEqual([]);
     });
   });
 
@@ -1096,12 +1691,69 @@ describe('web emitter', () => {
         { rw: selector => [selector, selector + '{}html'] },
         ['.a{color:red;}'],
       ],
+      [
+        'a custom property rewrite with an unmatched opening brace',
+        '--obj: { color: red; }; top: 0;',
+        {
+          decl: (prop, value) => (prop === '--obj' ? { prop, value: '{ color: blue;' } : undefined),
+        },
+        ['.a{top:0;}'],
+      ],
+      [
+        'a custom property rewrite with an unmatched closing brace',
+        '--obj: { color: red; }; top: 0;',
+        { decl: (prop, value) => (prop === '--obj' ? { prop, value: 'red }' } : undefined) },
+        ['.a{top:0;}'],
+      ],
+      [
+        'a custom property rewrite injecting a semicolon and nested rule block',
+        '--obj: 1; top: 0;',
+        {
+          decl: prop =>
+            prop === '--obj' ? { prop, value: '1; :not(&) { color: red }' } : undefined,
+        },
+        ['.a{top:0;}'],
+      ],
+      [
+        'a multi-declaration rewrite mixing a valid custom property block and an invalid standard brace',
+        '--obj: { color: red; }; top: 0;',
+        {
+          decl: prop =>
+            prop === '--obj'
+              ? [
+                  { prop: '--a', value: '{ x: 1 }' },
+                  { prop: 'color', value: '{ b: 2 }' },
+                ]
+              : undefined,
+        },
+        ['.a{top:0;}'],
+      ],
     ])('drops what %s leaves', (_label, css, options, expected) => {
       resetWarnOnce();
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       expect(emitWeb(parse(normalize(css)), '.a', options)).toEqual(expected);
       expect(warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps a plugin rewrite of a custom property holding a balanced `{...}` block', () => {
+      expect(
+        emitWeb(parse('--obj: { color: red; };'), '.a', {
+          decl: (prop, value) =>
+            prop === '--obj' ? { prop, value: '{ color: blue; }' } : undefined,
+        })
+      ).toEqual(['.a{--obj:{ color: blue; };}']);
+      expect(
+        emitWeb(parse('--obj: { color: red; };'), '.a', {
+          decl: prop =>
+            prop === '--obj'
+              ? [
+                  { prop: '--a', value: '{ x: 1 }' },
+                  { prop: 'color', value: 'red' },
+                ]
+              : undefined,
+        })
+      ).toEqual(['.a{--a:{ x: 1 };color:red;}']);
     });
 
     it.each<[string, string, string[]]>([
@@ -1197,7 +1849,7 @@ describe('web emitter', () => {
       [
         'a namespace',
         `${'a,'.repeat(30000)}a{${'.y{top:0;}'.repeat(2000)}}`,
-        { namespace: namespaceForm(`.${'n'.repeat(100)}`) },
+        { rw: nsTransform(`.${'n'.repeat(100)}`) },
       ],
       [
         'a plugin that returns several selectors',
@@ -1249,10 +1901,10 @@ describe('web emitter', () => {
     it('joins a long list of root-anchored items within budget', () => {
       const indexes = Array.from({ length: 20000 }, (_, i) => i);
       const ast = parse(normalize(`${indexes.map(i => `html.a${i} &`).join(',')}{top:0;}`));
-      const namespace = namespaceForm('#app');
+      const rw = nsTransform('#app');
 
       const start = performance.now();
-      const rules = emitWeb(ast, '.c', { namespace });
+      const rules = emitWeb(ast, '.c', { rw });
       const elapsedMs = performance.now() - start;
 
       expect(rules).toEqual([`${indexes.map(i => `html#app.a${i} .c`).join(',')}{top:0;}`]);
@@ -1297,8 +1949,9 @@ describe('namespace on root-anchored items', () => {
   /** Bare selectors emit as globals (no parent); anything with `&` emits under the component class. */
   function namespaced(source: string, namespace: string): string {
     const css = source.includes('{') ? source : source + block;
+    const form = namespace ? namespaceForm(namespace) : undefined;
     return emitWeb(parse(normalize(css)), source.includes('&') ? '.c' : '', {
-      namespace: namespace ? namespaceForm(namespace) : undefined,
+      rw: form ? createNamespaceTransform(form) : undefined,
     }).join('');
   }
 
@@ -1414,11 +2067,11 @@ describe('namespace on root-anchored items', () => {
     ['html.dark &', '#app:after', '#app:after html.dark .c' + block],
     ['::view-transition-group(x)', '#a .b', '#a .b ::view-transition-group(x)' + block],
 
-    // Padding is trimmed before the namespace is written; whitespace alone leaves one combinator.
+    // Padding is trimmed before the namespace is written; whitespace alone leaves no namespace.
     ['.x', ' #app ', '#app .x' + block],
     ['.x', ' .a\\31 ', '.a\\31  .x' + block],
-    ['html.dark &', '   ', ' html.dark .c' + block],
-    ['.x', '   ', ' .x' + block],
+    ['html.dark &', '   ', 'html.dark .c' + block],
+    ['.x', '   ', '.x' + block],
 
     // No namespace, no change.
     ['html.dark &', '', 'html.dark .c' + block],

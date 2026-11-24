@@ -2,8 +2,33 @@ export const enum NodeKind {
   Decl = 1,
   Rule = 2,
   AtRule = 3,
-  Keyframes = 4,
-  Interpolation = 5,
+  Interpolation = 4,
+}
+
+/**
+ * Pre-classified slot shape so the fast path skips typeof checks. Order
+ * matches hot-path likelihood (`StatelessFn` first). A `Source` packs the kind
+ * in the bits of `Mask` and flags a block-position slot with `Standalone`.
+ *
+ * - `StatelessFn`: `(p) => …`; call and coerce.
+ * - `Static`: primitive baked at construction (`${10}px`); also styled-
+ *   component refs (pre-stringified to `.${styledComponentId}`) and, in a
+ *   server build, client and temporary references (their marker text).
+ * - `General`: arrays, plain objects, and `${kf}` refs; full walk, bail on
+ *   shapes the fast emitter doesn't cover. A keyframes ref resolves here at
+ *   fill time since its hashed name varies per StyleSheetManager.
+ * - `Fragment`: `${mixin}` ref; resolved recursively into FastPathFragment.
+ * - `Standalone`: set by the parser on a slot that is a whole statement (lifted to an
+ *   `InterpolationNode` and spliced as siblings at fill time); other slots are embedded in
+ *   a value, selector, or prelude.
+ */
+export const enum InterpolationKind {
+  StatelessFn = 1,
+  Static = 2,
+  General = 3,
+  Fragment = 4,
+  Mask = 7,
+  Standalone = 8,
 }
 
 /**
@@ -22,33 +47,6 @@ export interface TemplateValue {
   /** @internal */
   slots: number[];
 }
-
-/**
- * Parse-time eager flag set by `markDynamic` in `source.ts`: `true` when
- * the node, or any descendant, depends on a runtime interpolation slot.
- * Falsy means the subtree is structurally fixed across renders, so
- * consumers can return it by reference and skip the per-render fill walk.
- *
- * Symbol-keyed and set via `Object.defineProperty(..., { enumerable: false })`
- * so the flag is invisible to `Jest.toEqual` (which walks both
- * `Object.keys` and `Object.getOwnPropertySymbols`), `JSON.stringify`,
- * `Object.keys`, and `for..in`. V8 still inline-caches the hidden-class
- * slot for the read.
- */
-export const DYN: unique symbol = Symbol();
-
-/**
- * Parse-time native-plan classification slots, stamped by
- * `attachNativeClassifications` (`parser/nativePlan.ts`). Same Symbol-keyed
- * non-enumerable pattern as `DYN`: invisible to test fixtures, JSON
- * serialization, and `for..in`, but inline-cached by V8.
- *
- * Defined here (rather than in `nativePlan.ts`) so `RuleNode` /
- * `AtRuleNode` can reference them as field keys without nativePlan.ts
- * importing back from ast.ts.
- */
-export const NATIVE_RULE_CLASS: unique symbol = Symbol('nativeRuleClass');
-export const NATIVE_AT_CLASS: unique symbol = Symbol('nativeAtClass');
 
 export type PseudoState =
   | 'hover'
@@ -128,12 +126,20 @@ export type NthOfBranch =
  */
 export type NativeRuleClass =
   | NativeSelectorClass
-  | { kind: 'list'; members: NativeSelectorClass[] };
+  | {
+      kind: 'list';
+      /** @internal */
+      members: NativeSelectorClass[];
+    };
 
 /** The classification of one selector (a list member, or a rule's only selector). */
 export type NativeSelectorClass =
   | { and?: PseudoTerm[]; kind: 'pseudo'; negate?: boolean; pseudo: PseudoState }
-  | { kind: 'pseudoFanOut'; pseudos: PseudoState[] }
+  | {
+      kind: 'pseudoFanOut';
+      /** @internal */
+      pseudos: PseudoState[];
+    }
   | {
       kind: 'attr';
       /** @internal */
@@ -153,6 +159,7 @@ export type NativeSelectorClass =
        */
       kind: 'combinator';
       combinator: 'descendant' | 'child' | 'adjacent-sibling' | 'general-sibling';
+      /** @internal */
       ancestorId: string;
       /** Optional `:hover` / `:focus` / etc. carried on `&`. */
       pseudo?: PseudoState;
@@ -166,6 +173,7 @@ export type NativeSelectorClass =
        * siblingIndexOfType per `spec`.
        */
       kind: 'nthChild';
+      /** @internal */
       spec: NthSpec;
       /** The pseudo-class terms after `pseudo` (`&:first-child:hover:not(:disabled)`). */
       and?: PseudoTerm[];
@@ -199,7 +207,7 @@ export type NativeAtClass =
   | {
       kind: 'media' | 'container' | 'supports';
       containerName: string | undefined;
-      condition: string | null;
+      condition: string;
     }
   | { kind: 'starting-style' }
   | { kind: 'keyframes' }
@@ -220,56 +228,38 @@ export type NativeAtClass =
  * `fillAst` is the bridge: input `Root`, output `StaticRoot`.
  */
 export interface DeclNode<F = string | TemplateValue> {
+  /**
+   * `true` when the node or a descendant depends on a runtime interpolation slot; omitted on a
+   * static subtree, which consumers return by reference and skip filling.
+   * @internal
+   */
+  dyn?: true;
   kind: NodeKind.Decl;
   prop: F;
   value: F;
-  [DYN]?: boolean;
 }
 
 export interface RuleNode<F = string | TemplateValue> {
+  children: Node<F>[];
+  /** @internal */
+  dyn?: true;
   kind: NodeKind.Rule;
   /** @internal */
   selectors: F[];
-  children: Node<F>[];
-  [DYN]?: boolean;
-  /**
-   * Parse-time native-plan classification. Stamped by `stampRuleClass`
-   * (parser/nativePlan.ts) on native builds at construction time.
-   * Symbol-keyed and non-enumerable so test fixtures and JSON
-   * serialization see the original AST shape. Absent when any selector
-   * is a TemplateValue at construction time; the render path then
-   * re-classifies on the filled selectors.
-   */
-  [NATIVE_RULE_CLASS]?: NativeRuleClass;
 }
 
+/**
+ * `@keyframes` is an at-rule like any other: its `children` are the frames, each a
+ * {@link RuleNode} whose `selectors` are the stops and whose `children` are the declarations.
+ */
 export interface AtRuleNode<F = string | TemplateValue> {
+  children: Node<F>[] | null;
+  /** @internal */
+  dyn?: true;
   kind: NodeKind.AtRule;
   name: F;
   /** @internal */
   prelude: F;
-  children: Node<F>[] | null;
-  [DYN]?: boolean;
-  /**
-   * Parse-time native-plan classification. Stamped by `stampAtClass`
-   * on native builds at construction time. `condition` inside the
-   * value is `null` when the prelude is a TemplateValue.
-   */
-  [NATIVE_AT_CLASS]?: NativeAtClass;
-}
-
-export interface KeyframeFrame<F = string | TemplateValue> {
-  stops: F[];
-  children: DeclNode<F>[];
-}
-
-export interface KeyframesNode<F = string | TemplateValue> {
-  kind: NodeKind.Keyframes;
-  name: F;
-  /** @internal */
-  prelude: F;
-  frames: KeyframeFrame<F>[];
-  [DYN]?: boolean;
 }
 
 /**
@@ -280,27 +270,28 @@ export interface KeyframesNode<F = string | TemplateValue> {
  * inside decls become {@link TemplateValue} on the parent's `value` field.
  */
 export interface InterpolationNode {
+  /**
+   * Always set: a slot reads `filled` at render time.
+   * @internal
+   */
+  dyn: true;
   /** A `;` follows the slot in the template, so it cannot start the rule after it. */
   ended?: true;
   index: number;
   kind: NodeKind.Interpolation;
-  [DYN]?: boolean;
 }
 
 export type Node<F = string | TemplateValue> =
   | DeclNode<F>
   | RuleNode<F>
   | AtRuleNode<F>
-  | KeyframesNode<F>
-  | InterpolationNode;
+  | ([F] extends [string] ? never : InterpolationNode);
 
 export type Root<F = string | TemplateValue> = Node<F>[];
 
-/** Post-fillAst AST: every string field is a plain string. */
+/** Post-fillAst AST: every string field is a plain string, with no interpolation nodes. */
 export type StaticRoot = Root<string>;
-export type StaticNode = Node<string>;
+export type StaticNode = DeclNode<string> | RuleNode<string> | AtRuleNode<string>;
 export type StaticDeclNode = DeclNode<string>;
 export type StaticRuleNode = RuleNode<string>;
 export type StaticAtRuleNode = AtRuleNode<string>;
-export type StaticKeyframesNode = KeyframesNode<string>;
-export type StaticKeyframeFrame = KeyframeFrame<string>;

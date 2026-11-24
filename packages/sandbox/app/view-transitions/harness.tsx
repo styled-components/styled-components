@@ -25,6 +25,11 @@ const INITIAL_ITEMS: Item[] = [
   { featured: true, id: 5, label: 'Echo' },
 ];
 
+const INITIAL_ENTER_ITEMS: { id: number; label: string }[] = [
+  { id: 1, label: 'Item 1' },
+  { id: 2, label: 'Item 2' },
+];
+
 const INITIAL_CHIPS = ['One', 'Two', 'Three'];
 
 type CheckStatus = 'fail' | 'pass' | 'unsupported';
@@ -67,19 +72,20 @@ const supportSnapshot = () =>
 export function ViewTransitionsHarness() {
   const supported = useSyncExternalStore(subscribeNever, supportSnapshot, () => null);
   const [items, setItems] = useState(INITIAL_ITEMS);
+  const [enterItems, setEnterItems] = useState(INITIAL_ENTER_ITEMS);
   const [chips, setChips] = useState(INITIAL_CHIPS);
   const [results, setResults] = useState<DynamicResult[] | null>(null);
-  const nextId = useRef(INITIAL_ITEMS.length + 1);
+  const nextId = useRef(INITIAL_ENTER_ITEMS.length + 1);
 
   const reverse = () => transition(() => setItems(prev => prev.slice().reverse()));
   const shuffle = () => transition(() => setItems(prev => shuffled(prev)));
 
   const add = () => {
     const id = nextId.current++;
-    transition(() => setItems(prev => prev.concat({ featured: false, id, label: `New ${id}` })));
+    transition(() => setEnterItems(prev => prev.concat({ id, label: `Item ${id}` })));
   };
 
-  const remove = () => transition(() => setItems(prev => prev.slice(0, -1)));
+  const remove = () => transition(() => setEnterItems(prev => prev.slice(0, -1)));
 
   const runChecks = async () => {
     if (!supported) {
@@ -217,17 +223,24 @@ export function ViewTransitionsHarness() {
         </DemoTitle>
         <DemoNote>
           Add grows a new Card in with a scale and fade; Remove shrinks the last one out. Both use{' '}
-          <code>:only-child</code> on the new and old pseudo-elements. Use the list in section 1.
+          <code>:only-child</code> on the new and old pseudo-elements.
         </DemoNote>
         <Snippet>{ENTER_SNIPPET}</Snippet>
         <Controls>
           <Button type="button" onClick={add}>
             Add
           </Button>
-          <Button type="button" onClick={remove} disabled={items.length === 0}>
+          <Button type="button" onClick={remove} disabled={enterItems.length === 0}>
             Remove
           </Button>
         </Controls>
+        <CardList data-testid="vt-enter-list">
+          {enterItems.map(item => (
+            <Card key={item.id}>
+              {item.label} <Tag>Card, 600ms enter / exit</Tag>
+            </Card>
+          ))}
+        </CardList>
       </Demo>
 
       <Demo>

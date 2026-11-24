@@ -369,6 +369,33 @@ describe('buffered style injection (useInsertionEffect)', () => {
     }
   });
 
+  it('hydrating server-rendered styles does not warn about ServerStyleSheet', () => {
+    const { resetWarnOnce } = require('../../utils/warnOnce');
+    resetWarnOnce();
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const Box = styled.div`
+        color: rgb(23, 23, 23);
+      `;
+      const serverSheet = new ServerStyleSheet();
+      const html = renderToString(serverSheet.collectStyles(<Box />));
+      const tags = serverSheet.getStyleTags();
+      serverSheet.seal();
+
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      container.innerHTML = html;
+      document.head.insertAdjacentHTML('beforeend', tags);
+
+      render(<Box />, { container, hydrate: true });
+
+      expect(warnSpy.mock.calls.map(args => args[0])).toEqual([]);
+    } finally {
+      warnSpy.mockRestore();
+      resetWarnOnce();
+    }
+  });
+
   it('createRoot mount does not warn about ServerStyleSheet', () => {
     const { resetWarnOnce } = require('../../utils/warnOnce');
     resetWarnOnce();

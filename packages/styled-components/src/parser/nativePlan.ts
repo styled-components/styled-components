@@ -1,11 +1,9 @@
 import { KNOWN_PSEUDOS } from '../native/pseudoBits';
 import * as $ from '../utils/charCodes';
 import {
-  AtRuleNode,
+  AttrOperator,
   AttrSelector,
   ConditionalAttr,
-  NATIVE_AT_CLASS,
-  NATIVE_RULE_CLASS,
   NativeAtClass,
   NativeRuleClass,
   NativeSelectorClass,
@@ -13,70 +11,13 @@ import {
   NthSpec,
   PseudoState,
   PseudoTerm,
-  RuleNode,
 } from './ast';
 import { isKeyframesName } from './atRuleNames';
-
-export type {
-  AttrSelector,
-  ConditionalAttr,
-  NativeAtClass,
-  NativeRuleClass,
-  NativeSelectorClass,
-  NthOfBranch,
-  NthSpec,
-  PseudoState,
-};
+import { scanQPB, STOP_RBRACKET, STOP_RPAREN } from './parser';
 
 /**
- * Parse-time-classified selector/at-rule metadata for the native runtime.
- * Lives on the AST node directly via Symbol-keyed non-enumerable
- * properties (same pattern as `[DYN]`), so:
- *
- * - `Object.keys` / `for..in` / `JSON.stringify` ignore it.
- * - Jest `toEqual` equality (which walks both keys and own symbols filtered
- *   by enumerable) skips it.
- * - V8 still inline-caches the property as a hidden-class slot read.
- *
- * The classification is computed once per AST and survives across every
- * cache-miss render. `fillAst` returns static subtrees by
- * reference, so static Rule / AtRule nodes carry the same classification
- * through to `astToNativeStyles`. Dynamic-selector nodes (those whose
- * selectors carry `\0I` interpolation sentinels) skip classification at
- * parse time; the render path falls through to the legacy inline classifier
- * once values are filled in (rare in practice).
- */
-
-/**
- * Stamp a freshly-constructed RuleNode with parse-time native
- * classification. Called by the parser at Rule construction sites; web
- * builds skip these calls entirely via the `__NATIVE__` build constant
- * (rollup tree-shakes the import after dead-code elimination).
- *
- * Selectors carrying interpolations (TemplateValue) skip classification;
- * the render path retries via {@link classifyRuleNow} on the filled
- * (now-string) selectors. This is the rare path; `&:hover` /
- * `&[aria-pressed]` style selectors don't typically interpolate.
- */
-export function stampRuleClass(node: RuleNode): void {
-  const selectors = node.selectors;
-  for (let i = 0; i < selectors.length; i++) {
-    if (typeof selectors[i] !== 'string') return;
-  }
-  Object.defineProperty(node, NATIVE_RULE_CLASS, {
-    value: classifyRuleNow(selectors as string[]),
-    enumerable: false,
-    configurable: true,
-  });
-}
-
-/**
- * Compute (without stamping) the native classification for an AtRule by
- * its `name` + `prelude` (both strings; callers handle the
- * TemplateValue case before invoking this). Used by {@link stampAtClass}
- * at parser construction time on static-name+prelude at-rules, and by
- * the render-time fallback in `compileNative.ts` (where `fillAst` has
- * already substituted any TemplateValue back to strings).
+ * Compute the native classification for an AtRule by its `name` + `prelude`.
+ * Cached lazily per static AtRuleNode inside `compileNative.ts`.
  */
 export function classifyAtRuleNow(name: string, prelude: string): NativeAtClass {
   if (name === 'starting-style') return { kind: 'starting-style' };
@@ -105,27 +46,9 @@ export function classifyAtRuleNow(name: string, prelude: string): NativeAtClass 
 }
 
 /**
- * Stamp a freshly-constructed AtRuleNode with parse-time native
- * classification. Skipped when `name` or `prelude` is a TemplateValue
- * (dynamic at parse time); the render path's lazy fallback re-classifies
- * once `fillAst` has substituted them to strings. Most at-rules are
- * fully static so the stamp covers the common case.
- */
-export function stampAtClass(node: AtRuleNode): void {
-  if (typeof node.name !== 'string' || typeof node.prelude !== 'string') return;
-  Object.defineProperty(node, NATIVE_AT_CLASS, {
-    value: classifyAtRuleNow(node.name, node.prelude),
-    enumerable: false,
-    configurable: true,
-  });
-}
-
-/**
- * Render-time fallback when parse-time classification was skipped because
- * the selectors contained interpolation sentinels. Operates on the
- * (filled) selectors string array; never mutates the node. A selector
- * list is classified member by member, so one unsupported member leaves
- * the others usable.
+ * Classify a rule's filled selectors string array. Cached lazily per static
+ * RuleNode inside `compileNative.ts`. A selector list is classified member by
+ * member, so one unsupported member leaves the others usable.
  */
 export function classifyRuleNow(selectors: string[]): NativeRuleClass {
   if (selectors.length === 1) return classifySelector(selectors[0]);
@@ -135,30 +58,24 @@ export function classifyRuleNow(selectors: string[]): NativeRuleClass {
 }
 
 function classifySelector(sel: string): NativeSelectorClass {
+  const c0 = sel.charCodeAt(0);
+  if (c0 === $.DOT) {
+    // `${Foo} &` / `${Foo} > &` / `+ &` / `~ &`: `.sc-FooId` after `${StyledComponent}.toString()`.
+    return detectCombinator(sel) ?? { kind: 'unsupported' };
+  }
+  if (c0 !== $.AMPERSAND) return { kind: 'unsupported' };
+  const c1 = sel.charCodeAt(1);
+  if (c1 === $.OPEN_BRACKET) {
+    const attrSel = parseAttrChain(sel);
+    return attrSel === null ? { kind: 'unsupported' } : { kind: 'attr', selectors: [attrSel] };
+  }
+  if (c1 !== $.COLON) return { kind: 'unsupported' };
   const pseudoCls = detectPseudoTerms(sel);
   if (pseudoCls !== null) return pseudoCls;
   const fanOut = detectIsWhereStates(sel);
   if (fanOut) return { kind: 'pseudoFanOut', pseudos: fanOut };
-  const attrSel = parseAttrChain(sel);
-  if (attrSel !== null) return { kind: 'attr', selectors: [attrSel] };
-  // Descendant / child / adjacent-sibling / general-sibling combinator
-  // against an interpolated styled component reference. `${Foo} &` /
-  // `> &` / `+ &` / `~ &` compile to `.sc-FooId &` / `.sc-FooId > &` /
-  // `.sc-FooId + &` / `.sc-FooId ~ &` after
-  // `${StyledComponent}.toString()`.
-  const combinator = detectCombinator(sel);
-  if (combinator !== null) return combinator;
-  // Tree-structural pseudo-classes that match by sibling position.
-  // `&:first-child`, `&:last-child`, `&:only-child`,
-  // `&:nth-child(an+b)`, `&:nth-last-child(...)`, `&:nth-of-type(...)`,
-  // `&:nth-last-of-type(...)`.
-  const nth = detectNthChild(sel);
-  if (nth !== null) return nth;
-  // `&:has(<simple>)`. Inner restricted to a single class selector
-  // (`${Component}`) or a single attribute selector; anything else is unsupported.
-  const has = detectHas(sel);
-  if (has !== null) return has;
-  return { kind: 'unsupported' };
+  // Sibling-position pseudo-classes, then `&:has(<simple>)`.
+  return detectNthChild(sel) ?? detectHas(sel) ?? { kind: 'unsupported' };
 }
 
 /**
@@ -183,7 +100,7 @@ function parseSimpleInner(inner: string): NthOfBranch | null {
 
   // Attribute selector: `[attr]`, `[attr=value]`, `[attr='value']`.
   if (inner.charCodeAt(0) === $.OPEN_BRACKET) {
-    const end = findClosingBracket(inner, 0);
+    const end = findClosing(inner, 0, STOP_RBRACKET);
     if (end !== inner.length - 1) return null;
     const attr = parseAttrInner(inner.substring(1, end));
     if (attr === null) return null;
@@ -215,41 +132,19 @@ function detectHas(sel: string): NativeSelectorClass | null {
  * keyword shortcuts (`odd`, `even`), and the full `[+-]?(\d*)n([+-]\d+)?`
  * grammar with whitespace tolerance.
  */
+/** Anchored with no overlapping quantifiers, so matching is linear. Groups: integer | sign, digits, `n`, b sign, b digits. */
+const AN_PLUS_B_RE = /^(?:([+-]?\d+)|([+-]?)(\d*)\s*n\s*(?:([+-])\s*(\d+))?)$/;
+
 function parseAnPlusB(raw: string): { a: number; b: number } | null {
   const s = raw.trim().toLowerCase();
-  if (s.length === 0) return null;
   if (s === 'odd') return { a: 2, b: 1 };
   if (s === 'even') return { a: 2, b: 0 };
-  // No `n` → bare integer.
-  const nIdx = s.indexOf('n');
-  if (nIdx === -1) {
-    const n = parseInt(s, 10);
-    if (Number.isNaN(n) || String(n) !== s.replace(/^\+/, '')) {
-      // Also accept signed integer forms (`+3`, `-3`).
-      const m = s.match(/^[+-]?\d+$/);
-      if (!m) return null;
-    }
-    return { a: 0, b: parseInt(s, 10) };
-  }
-  // `n` present. Split into a-coefficient and b-offset.
-  const aRaw = s.substring(0, nIdx).trim();
-  const bRaw = s.substring(nIdx + 1).trim();
-  let a: number;
-  if (aRaw === '' || aRaw === '+') a = 1;
-  else if (aRaw === '-') a = -1;
-  else {
-    const am = aRaw.match(/^[+-]?\d+$/);
-    if (!am) return null;
-    a = parseInt(aRaw, 10);
-  }
-  let b: number;
-  if (bRaw === '') b = 0;
-  else {
-    const bm = bRaw.match(/^[+-]\s*\d+$/);
-    if (!bm) return null;
-    b = parseInt(bRaw.replace(/\s+/g, ''), 10);
-  }
-  return { a, b };
+  const m = AN_PLUS_B_RE.exec(s);
+  if (m === null) return null;
+  if (m[1] !== undefined) return { a: 0, b: parseInt(m[1], 10) };
+  const sign = m[2];
+  const a = m[3] === '' ? (sign === '-' ? -1 : 1) : parseInt(sign + m[3], 10);
+  return { a, b: m[4] === undefined ? 0 : parseInt(m[4] + m[5], 10) };
 }
 
 /**
@@ -308,29 +203,46 @@ function parseNthInner(
   return { a: ab.a, b: ab.b, of };
 }
 
+const NTH_KEYWORDS: ReadonlySet<string> = new Set([
+  'first-child',
+  'last-child',
+  'only-child',
+  'first-of-type',
+  'last-of-type',
+  'only-of-type',
+]);
+const NTH_FUNCTIONS: ReadonlySet<string> = new Set([
+  'nth-child',
+  'nth-last-child',
+  'nth-of-type',
+  'nth-last-of-type',
+]);
+
 /**
  * `&:first-child` / `&:last-child` / `&:only-child` / `&:nth-child(...)`
  * / `&:nth-last-child(...)` / `&:nth-of-type(...)` /
  * `&:nth-last-of-type(...)` and optional trailing pseudo-state.
  */
 function detectNthChild(sel: string): NativeSelectorClass | null {
-  if (sel.length < 3 || sel.charCodeAt(0) !== $.AMPERSAND || sel.charCodeAt(1) !== $.COLON) {
-    return null;
-  }
-  // The nth pseudo ends at its closing paren, or at the next `:` when it takes no argument; whatever
-  // follows is the run of trailing pseudo-classes (`&:first-child:hover:not(:disabled)`).
-  let headEnd = 2;
-  while (headEnd < sel.length) {
-    const c = sel.charCodeAt(headEnd);
+  // Caller verified `&:`. The nth pseudo ends at its closing paren, or at the next `:` when it
+  // takes no argument; whatever follows is the run of trailing pseudo-classes (`&:first-child:hover:not(:disabled)`).
+  let nameEnd = 2;
+  while (nameEnd < sel.length) {
+    const c = sel.charCodeAt(nameEnd);
     if (c === $.COLON || c === $.OPEN_PAREN) break;
-    headEnd++;
+    nameEnd++;
   }
-  if (sel.charCodeAt(headEnd) === $.OPEN_PAREN) {
-    const closeParen = findClosingParen(sel, headEnd);
+  const name = sel.substring(2, nameEnd);
+  const hasParen = sel.charCodeAt(nameEnd) === $.OPEN_PAREN;
+  if (!(hasParen ? NTH_FUNCTIONS : NTH_KEYWORDS).has(name)) return null;
+
+  let headEnd = nameEnd;
+  if (hasParen) {
+    const closeParen = findClosing(sel, nameEnd, STOP_RPAREN);
     if (closeParen === -1) return null;
     headEnd = closeParen + 1;
   }
-  const head = sel.substring(2, headEnd);
+
   let tailTerms: PseudoTerm[] | null = null;
   if (headEnd < sel.length) {
     const tailAttrs: ConditionalAttr[] = [];
@@ -339,40 +251,17 @@ function detectNthChild(sel: string): NativeSelectorClass | null {
     if (tailTerms === null || tailAttrs.length > 0 || tailTerms.length === 0) return null;
   }
 
-  let spec: NthSpec | null = null;
-  if (head === 'first-child') spec = { a: 0, b: 1, fromEnd: false, ofType: false };
-  else if (head === 'last-child') spec = { a: 0, b: 1, fromEnd: true, ofType: false };
-  else if (head === 'only-child')
-    spec = { a: 0, b: 1, fromEnd: false, ofType: false, onlyChild: true };
-  else if (head === 'first-of-type') spec = { a: 0, b: 1, fromEnd: false, ofType: true };
-  else if (head === 'last-of-type') spec = { a: 0, b: 1, fromEnd: true, ofType: true };
-  else if (head === 'only-of-type')
-    spec = { a: 0, b: 1, fromEnd: false, ofType: true, onlyChild: true };
-  else if (head.startsWith('nth-child(') && head.endsWith(')')) {
-    const inner = head.substring('nth-child('.length, head.length - 1);
-    const parsed = parseNthInner(inner, true);
+  const ofType = name.endsWith('type');
+  const spec: NthSpec = { a: 0, b: 1, fromEnd: name.indexOf('last') !== -1, ofType };
+  if (!hasParen) {
+    if (name.startsWith('only')) spec.onlyChild = true;
+  } else {
+    const parsed = parseNthInner(sel.substring(nameEnd + 1, headEnd - 1), !ofType);
     if (parsed === null) return null;
-    spec = { a: parsed.a, b: parsed.b, fromEnd: false, ofType: false };
+    spec.a = parsed.a;
+    spec.b = parsed.b;
     if (parsed.of !== undefined) spec.of = parsed.of;
-  } else if (head.startsWith('nth-last-child(') && head.endsWith(')')) {
-    const inner = head.substring('nth-last-child('.length, head.length - 1);
-    const parsed = parseNthInner(inner, true);
-    if (parsed === null) return null;
-    spec = { a: parsed.a, b: parsed.b, fromEnd: true, ofType: false };
-    if (parsed.of !== undefined) spec.of = parsed.of;
-  } else if (head.startsWith('nth-of-type(') && head.endsWith(')')) {
-    const inner = head.substring('nth-of-type('.length, head.length - 1);
-    const parsed = parseNthInner(inner, false);
-    if (parsed === null) return null;
-    spec = { a: parsed.a, b: parsed.b, fromEnd: false, ofType: true };
-  } else if (head.startsWith('nth-last-of-type(') && head.endsWith(')')) {
-    const inner = head.substring('nth-last-of-type('.length, head.length - 1);
-    const parsed = parseNthInner(inner, false);
-    if (parsed === null) return null;
-    spec = { a: parsed.a, b: parsed.b, fromEnd: true, ofType: true };
   }
-
-  if (spec === null) return null;
   const cls: Extract<NativeSelectorClass, { kind: 'nthChild' }> = { kind: 'nthChild', spec };
   if (tailTerms !== null) attachPseudoTerms(cls, tailTerms);
   return cls;
@@ -391,17 +280,10 @@ function attachPseudoTerms(
   if (terms.length > 1) target.and = terms.slice(1);
 }
 
-function findClosingParen(s: string, openIdx: number): number {
-  let depth = 0;
-  for (let i = openIdx; i < s.length; i++) {
-    const c = s.charCodeAt(i);
-    if (c === $.OPEN_PAREN) depth++;
-    else if (c === $.CLOSE_PAREN) {
-      depth--;
-      if (depth === 0) return i;
-    }
-  }
-  return -1;
+/** Find the matching closing delimiter for the opener at `start`; quote- and escape-aware. */
+function findClosing(s: string, start: number, stopMask: number): number {
+  const end = scanQPB(s, start + 1, s.length, stopMask);
+  return end < s.length ? end : -1;
 }
 
 /**
@@ -412,7 +294,6 @@ function findClosingParen(s: string, openIdx: number): number {
  * null too.
  */
 function detectPseudoTerms(sel: string): NativeSelectorClass | null {
-  if (sel.charCodeAt(0) !== $.AMPERSAND || sel.charCodeAt(1) !== $.COLON) return null;
   const attrs: ConditionalAttr[] = [];
   const terms = parsePseudoRun(sel, 1, attrs);
   if (terms === null) return null;
@@ -444,12 +325,12 @@ function parsePseudoRun(sel: string, start: number, attrs: ConditionalAttr[]): P
     const negate = sel.startsWith(':not(', i);
     let name: string;
     if (negate) {
-      const close = findClosingParen(sel, i + 4);
+      const close = findClosing(sel, i + 4, STOP_RPAREN);
       if (close === -1) return null;
       const inner = sel.substring(i + 5, close).trim();
       i = close + 1;
       if (inner.charCodeAt(0) === $.OPEN_BRACKET) {
-        if (findClosingBracket(inner, 0) !== inner.length - 1) return null;
+        if (findClosing(inner, 0, STOP_RBRACKET) !== inner.length - 1) return null;
         const attr = parseAttrInner(inner.substring(1, inner.length - 1));
         if (attr === null) return null;
         attr.negate = true;
@@ -486,8 +367,7 @@ function parsePseudoRun(sel: string, start: number, attrs: ConditionalAttr[]): P
  * stays visible to the chain as an ancestor.
  */
 function detectCombinator(sel: string): NativeSelectorClass | null {
-  if (sel.charCodeAt(0) !== $.DOT) return null;
-  // Walk the styled-component id (`sc-` + ident chars + digits).
+  // Caller verified leading `.`. Walk the styled-component id (`sc-` + ident chars + digits).
   let i = 1;
   while (i < sel.length) {
     if (!$.isIdentChar(sel.charCodeAt(i))) break;
@@ -549,20 +429,14 @@ function detectCombinator(sel: string): NativeSelectorClass | null {
  * semantically equivalent (union-of-states in the state-predicate sense).
  */
 function detectIsWhereStates(sel: string): PseudoState[] | null {
-  if (sel.charCodeAt(0) !== $.AMPERSAND || sel.charCodeAt(1) !== $.COLON) {
-    return null;
-  }
-  const rest = sel.substring(2);
-  let fnName: string;
-  if (rest.startsWith('is(')) fnName = 'is';
-  else if (rest.startsWith('where(')) fnName = 'where';
+  let innerStart: number;
+  if (sel.startsWith('is(', 2)) innerStart = 5;
+  else if (sel.startsWith('where(', 2)) innerStart = 8;
   else return null;
 
-  const openParen = fnName.length;
-  if (sel.charCodeAt(2 + openParen) !== $.OPEN_PAREN) return null;
-  const closeParen = sel.lastIndexOf(')');
-  if (closeParen === -1) return null;
-  const inner = sel.substring(2 + openParen + 1, closeParen);
+  const closeParen = findClosing(sel, innerStart - 1, STOP_RPAREN);
+  if (closeParen !== sel.length - 1) return null;
+  const inner = sel.substring(innerStart, closeParen);
 
   const states: PseudoState[] = [];
   const parts = inner.split(',');
@@ -590,20 +464,16 @@ function detectIsWhereStates(sel: string): PseudoState[] | null {
  * partially-parseable rule.
  */
 function parseAttrChain(sel: string): AttrSelector | null {
-  if (sel.length < 4 || sel.charCodeAt(0) !== $.AMPERSAND || sel.charCodeAt(1) !== $.OPEN_BRACKET) {
-    return null;
-  }
   const attrs: ConditionalAttr[] = [];
   let i = 1;
   while (i < sel.length && sel.charCodeAt(i) === $.OPEN_BRACKET) {
-    const end = findClosingBracket(sel, i);
+    const end = findClosing(sel, i, STOP_RBRACKET);
     if (end === -1) return null;
     const attr = parseAttrInner(sel.substring(i + 1, end));
     if (attr === null) return null;
     attrs.push(attr);
     i = end + 1;
   }
-  if (attrs.length === 0) return null;
   if (i === sel.length) return { attrs };
   const terms = parsePseudoRun(sel, i, attrs);
   if (terms === null) return null;
@@ -612,32 +482,13 @@ function parseAttrChain(sel: string): AttrSelector | null {
   return selector;
 }
 
-/**
- * Find the matching `]` for the `[` at `start`. Skips brackets inside
- * single- or double-quoted attribute values so `&[a='[]']` doesn't
- * trip on the embedded `]`.
- */
-function findClosingBracket(sel: string, start: number): number {
-  let i = start + 1;
-  let inSingle = false;
-  let inDouble = false;
-  while (i < sel.length) {
-    const c = sel.charCodeAt(i);
-    if (inSingle) {
-      if (c === $.SINGLE_QUOTE) inSingle = false;
-    } else if (inDouble) {
-      if (c === $.DOUBLE_QUOTE) inDouble = false;
-    } else if (c === $.SINGLE_QUOTE) {
-      inSingle = true;
-    } else if (c === $.DOUBLE_QUOTE) {
-      inDouble = true;
-    } else if (c === $.CLOSE_BRACKET) {
-      return i;
-    }
-    i++;
-  }
-  return -1;
-}
+const ATTR_OPERATORS: Record<string, AttrOperator | undefined> = {
+  '~': '~=',
+  '|': '|=',
+  '^': '^=',
+  $: '$=',
+  '*': '*=',
+};
 
 function parseAttrInner(inner: string): ConditionalAttr | null {
   const eqIdx = inner.indexOf('=');
@@ -647,25 +498,13 @@ function parseAttrInner(inner: string): ConditionalAttr | null {
   }
   // Operator detection. The operator char sits immediately before `=`.
   // `=` alone is the default exact-match.
-  let operator: '=' | '~=' | '|=' | '^=' | '$=' | '*=' = '=';
+  let operator: AttrOperator = '=';
   let nameEnd = eqIdx;
   if (eqIdx > 0) {
-    const before = inner.charCodeAt(eqIdx - 1);
-    if (before === $.TILDE) {
-      operator = '~=';
+    const op = ATTR_OPERATORS[inner[eqIdx - 1]];
+    if (op !== undefined) {
       nameEnd = eqIdx - 1;
-    } else if (before === $.PIPE) {
-      operator = '|=';
-      nameEnd = eqIdx - 1;
-    } else if (before === $.CARET) {
-      operator = '^=';
-      nameEnd = eqIdx - 1;
-    } else if (before === $.DOLLAR) {
-      operator = '$=';
-      nameEnd = eqIdx - 1;
-    } else if (before === $.ASTERISK) {
-      operator = '*=';
-      nameEnd = eqIdx - 1;
+      operator = op;
     }
   }
   const name = inner.substring(0, nameEnd).trim();
@@ -705,14 +544,7 @@ function isAttrName(name: string): boolean {
   if (name.length === 0) return false;
   for (let i = 0; i < name.length; i++) {
     const c = name.charCodeAt(i);
-    const ok =
-      (c >= $.LOWER_A && c <= $.LOWER_Z) ||
-      (c >= $.UPPER_A && c <= $.UPPER_Z) ||
-      (c >= $.DIGIT_0 && c <= $.DIGIT_9) ||
-      c === $.HYPHEN ||
-      c === $.UNDERSCORE ||
-      c === $.COLON;
-    if (!ok) return false;
+    if (!$.isIdentChar(c) && c !== $.COLON) return false;
   }
   return true;
 }

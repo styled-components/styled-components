@@ -15,31 +15,30 @@ import {
   referenceText,
 } from '../utils/serverReference';
 import { warnOnce } from '../utils/warnOnce';
-import { AT, COMMA } from '../utils/charCodes';
+import { AT } from '../utils/charCodes';
 import {
-  DeclNode,
-  DYN,
+  InterpolationKind,
   Node,
   NodeKind,
   Root,
+  StaticAtRuleNode,
   StaticDeclNode,
-  StaticKeyframeFrame,
-  StaticKeyframesNode,
   StaticNode,
   StaticRoot,
+  StaticRuleNode,
   TemplateValue,
 } from './ast';
 import { emitWeb, EmitOptions } from './emit-web';
 import {
   isCustomProperty,
   parse,
-  rulesToFrames,
   staysOneField,
+  STOP_COMMA,
   stripCommaSpaces,
   trimRange,
   wholeStatements,
 } from './parser';
-import { getSource, InterpolationKind, isCssProduct, Source } from './source';
+import { getSource, isCssProduct, Source } from './source';
 
 /**
  * Resolved `${mixin}` fragment. Carried via a parallel side table so
@@ -88,16 +87,20 @@ export function evaluateForFastPath(
 ): string[] | null {
   const interps = source.interpolations;
   const n = interps.length;
-  if (n === 0) return EMPTY_FILLED;
+  if (n === 0) {
+    outFragments.length = 0;
+    return EMPTY_FILLED;
+  }
   const kinds = source.kinds;
   const statics = source.staticValues;
-  const filled = outBuffer || new Array<string>(n);
-  if (filled.length !== n) filled.length = n;
-  if (outFragments.length !== n) outFragments.length = n;
+  const filled = outBuffer || [];
+  if (filled.length > n) filled.length = n;
+  if (outFragments.length > n) outFragments.length = n;
   let hasText = true;
   for (let i = 0; i < n; i++) {
     outFragments[i] = null;
-    const kind = kinds[i];
+    const rawKind = kinds[i];
+    const kind = rawKind & InterpolationKind.Mask;
     if (kind === InterpolationKind.Static) {
       filled[i] = statics[i];
       continue;
@@ -128,10 +131,11 @@ export function evaluateForFastPath(
           name
         );
       }
+      filled[i] = '';
       hasText = false;
     } else if (typeof resolved === 'string') {
       filled[i] = resolved;
-    } else if (source.slotIsStandalone[i]) {
+    } else if ((rawKind & InterpolationKind.Standalone) !== 0) {
       // Block-position: splice the child's AST as parent siblings via the
       // fragments side table.
       outFragments[i] = resolved;
@@ -176,7 +180,7 @@ function resolveFragment(
   // skip the per-slot consult.
   return {
     source: childSource,
-    filled: childFilled === EMPTY_FILLED ? [] : childFilled,
+    filled: childFilled,
     fragments: hasAnyFragment(childFragments) ? childFragments : null,
   };
 }
@@ -193,13 +197,10 @@ export function buildHashCSS(
 ): string {
   let out = strings[0] || '';
   for (let i = 0; i < filled.length; i++) {
-    const frag = fragments ? fragments[i] : null;
-    if (frag) {
-      out += buildHashCSS(frag.source.strings, frag.filled, frag.fragments);
-    } else {
-      out += filled[i];
-    }
-    out += strings[i + 1] || '';
+    const frag = fragments?.[i];
+    out +=
+      (frag ? buildHashCSS(frag.source.strings, frag.filled, frag.fragments) : filled[i]) +
+      (strings[i + 1] || '');
   }
   return out;
 }
@@ -208,11 +209,11 @@ export function buildHashCSS(
  * Stringify a fragment for embedded substitution. Trims outer whitespace
  * so multi-line fragment templates flow correctly in mid-value position
  * (e.g. `animation: ${frag} linear`); whole-value position already trims
- * in `fillDecl`. Internal whitespace is preserved; users may write
+ * in `fillNode`. Internal whitespace is preserved; users may write
  * meaningful runs inside fragments.
  */
 function stringifyEmbeddedFragment(frag: FastPathFragment): string {
-  return trimWhitespace(buildHashCSS(frag.source.strings, frag.filled, frag.fragments));
+  return trimRange(buildHashCSS(frag.source.strings, frag.filled, frag.fragments));
 }
 
 /**
@@ -230,16 +231,12 @@ export function buildInterpKey(
   fragments: ReadonlyArray<FastPathFragment | null> | null | undefined,
   prefix: string = ''
 ): string {
-  if (
-    prefix === '' &&
-    filled.length === 1 &&
-    (fragments === null || fragments === undefined || fragments[0] === null)
-  ) {
+  if (!prefix && filled.length === 1 && !fragments?.[0]) {
     return filled[0];
   }
   let key = prefix;
   for (let i = 0; i < filled.length; i++) {
-    const frag = fragments ? fragments[i] : null;
+    const frag = fragments?.[i];
     if (frag) {
       key += '\0F';
       for (let j = 0; j < frag.source.strings.length; j++) {
@@ -293,9 +290,9 @@ function holdsMarker(
 
 /**
  * A copy of `nodes` without each smallest node holding the reference marker: a selector-list
- * item (the rule once none is left), an at-rule or keyframes block whose name or prelude holds
- * it, a keyframes stop (the frame once none is left), or a declaration. A node left empty
- * emits nothing. The input is shared with the parse cache, so it is never changed.
+ * item (the rule once none is left; a keyframes stop is one), an at-rule whose name or prelude
+ * holds it, or a declaration. A node left empty emits nothing. The input is shared with the
+ * parse cache, so it is never changed.
  */
 export function dropMarked(nodes: StaticRoot): StaticRoot {
   const out: StaticNode[] = [];
@@ -322,26 +319,6 @@ export function dropMarked(nodes: StaticRoot): StaticRoot {
           });
         }
         break;
-      case NodeKind.Keyframes:
-        if (!hasReferenceMarker(node.name) && !hasReferenceMarker(node.prelude)) {
-          const frames: StaticKeyframeFrame[] = [];
-          for (let j = 0; j < node.frames.length; j++) {
-            const frame = node.frames[j];
-            const stops = frame.stops.filter(stop => !hasReferenceMarker(stop));
-            if (stops.length > 0) {
-              frames.push({
-                stops,
-                children: frame.children.filter(
-                  decl => !hasReferenceMarker(decl.prop) && !hasReferenceMarker(decl.value)
-                ),
-              });
-            }
-          }
-          out.push({ kind: NodeKind.Keyframes, name: node.name, prelude: node.prelude, frames });
-        }
-        break;
-      default:
-        out.push(node);
     }
   }
   return out;
@@ -404,10 +381,10 @@ function resolveInterpolation(
   compiler?: Compiler,
   outKeyframes?: CompiledKeyframes[]
 ): string | FastPathFragment | null {
-  if (typeof slot === 'string') return slot;
-  if (typeof slot === 'number' || typeof slot === 'bigint') return String(slot);
-  if (slot === null || slot === undefined || typeof slot === 'boolean') return '';
   const t = typeof slot;
+  if (t === 'string') return slot as string;
+  if (t === 'number' || t === 'bigint') return String(slot);
+  if (slot === null || slot === undefined || t === 'boolean') return '';
   if (t !== 'function' && t !== 'object') return null;
 
   // A reference has no class and throws on most reads, so it is checked before any is made.
@@ -415,15 +392,13 @@ function resolveInterpolation(
 
   // Styled-component reference (`function` in React 19, `object` for
   // forwardRef-based components from older callers).
-  if ((slot as { styledComponentId?: string }).styledComponentId !== undefined) {
-    return '.' + (slot as { styledComponentId: string }).styledComponentId;
-  }
+  const id = (slot as { styledComponentId?: string }).styledComponentId;
+  if (id !== undefined) return '.' + id;
   // Keyframes reference. Caller's `outKeyframes` carries the compiled
   // payload through their own generate→inject pipeline; bail when missing.
-  if (t === 'object' && KEYFRAMES_SYMBOL in (slot as object)) {
+  if (KEYFRAMES_SYMBOL in (slot as object)) {
     if (compiler === undefined || outKeyframes === undefined) return null;
-    const kf = slot as KeyframesClass;
-    const compiled = kf.compile(compiler);
+    const compiled = (slot as KeyframesClass).compile(compiler);
     outKeyframes.push(compiled);
     return compiled.name;
   }
@@ -486,7 +461,7 @@ export function fillAst(
   // type witness differs.
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
-    if (out !== null && head !== '' && node.kind === NodeKind.Rule) {
+    if (out && head && node.kind === NodeKind.Rule) {
       const selectors = joinSelectors(node.selectors, filled);
       if (!atRuleEnds(head, selectors)) {
         out.length = headStart;
@@ -511,8 +486,8 @@ export function fillAst(
       );
       if (text === null) {
         head = '';
-      } else if (text !== '') {
-        if (head === '') headStart = out.length;
+      } else if (text) {
+        if (!head) headStart = out.length;
         head += text + ' ';
       }
     }
@@ -534,7 +509,7 @@ export function fillAst(
  * it a selector, anything else a declaration.
  */
 function slotHeadText(value: string, next: Node): string | null {
-  const text = trimWhitespace(value);
+  const text = trimRange(value);
   if (holdsNothing(text)) return '';
 
   const first = next.kind === NodeKind.Rule ? next.selectors[0] : '';
@@ -561,29 +536,54 @@ function fillNode(
   fragments: ReadonlyArray<FastPathFragment | null> | null | undefined
 ): StaticNode | StaticNode[] | undefined {
   // Static subtree: no descendant reads `filled`, no TemplateValue fields
-  // anywhere in this subtree (`markDynamic` sets `DYN` on every other node,
+  // anywhere in this subtree (the parser sets `dyn` on every other node,
   // including every interpolation), so the existing node serves unchanged. The
   // widening cast is sound: an unmarked node is exactly `Root<string>` shape.
-  if (!node[DYN]) return node as StaticNode;
+  if (!node.dyn) return node as StaticNode;
 
   switch (node.kind) {
-    case NodeKind.Decl:
-      return fillDecl(node, filled);
+    case NodeKind.Decl: {
+      // Both prop and value can be TemplateValue for templates like
+      // `${theme.vars.colors.bg}: #111;` (createTheme.vars overrides).
+      const propRaw = realize(node.prop, filled);
+      const valueRaw = realize(node.value, filled);
+      if (propRaw === null || valueRaw === null) {
+        return parseValue(fieldText(node.prop, filled) + ':' + fieldText(node.value, filled));
+      }
+
+      const prop = typeof node.prop !== 'string' ? trimRange(propRaw) : propRaw;
+      if (!prop) return undefined;
+      const custom = isCustomProperty(prop);
+      // Re-normalize substituted values to match the parser's comma stripping so output bytes
+      // match authored text; skip it on custom properties and the static-decl warm path.
+      const value =
+        __NATIVE__ || custom
+          ? typeof node.value === 'string'
+            ? valueRaw
+            : trimRange(valueRaw)
+          : typeof node.value === 'string' && typeof node.prop === 'string'
+            ? valueRaw
+            : stripCommaSpaces(trimRange(valueRaw));
+      if (!value && !custom) return undefined;
+      const decl: StaticDeclNode = { kind: NodeKind.Decl, prop, value };
+      if (__NATIVE__) decl.dyn = true;
+      return decl;
+    }
     case NodeKind.Rule: {
       const children = fillAst(node.children, filled, fragments);
       const filledSelectors: string[] = [];
       for (let i = 0; i < node.selectors.length; i++) {
         const field = node.selectors[i];
-        const sel = realize(field, filled, COMMA);
+        const sel = realize(field, filled, STOP_COMMA);
         // The parser picks the rule kind before a slot has a value, so a slot holding an
         // at-rule (`${media.md} {`) is read on its own too.
-        const bare = sel === null || typeof field === 'string' ? null : trimWhitespace(sel);
+        const bare = sel === null || typeof field === 'string' ? null : trimRange(sel);
         if (sel === null || bare?.charCodeAt(0) === AT) {
           // A value opening the head and ending a statement reads ahead of it, leaving only
           // authored text in the head: `${mixin} &:hover {`.
           const first = node.selectors[0];
           const opening =
-            typeof first !== 'string' && first.chunks[0] === '' ? filled[first.slots[0]] : '';
+            typeof first !== 'string' && !first.chunks[0] ? filled[first.slots[0]] : '';
           const headText = joinSelectors(node.selectors, filled);
           const lead =
             /[;}]\s*$/.test(normalize(opening)) ||
@@ -597,89 +597,40 @@ function fillNode(
           filledSelectors.push(bare ?? sel);
         }
       }
-      if (filledSelectors.length === 0) return undefined;
-      return { kind: NodeKind.Rule, selectors: filledSelectors, children };
+      if (!filledSelectors.length) return undefined;
+      const rule: StaticRuleNode = { kind: NodeKind.Rule, selectors: filledSelectors, children };
+      // The native compiler keys its caches on a node only while the node is static.
+      if (__NATIVE__) rule.dyn = true;
+      return rule;
     }
     case NodeKind.AtRule: {
       const children = node.children === null ? null : fillAst(node.children, filled, fragments);
       const prelude = realize(node.prelude, filled);
       // A name holding a value can change what the at-rule is (`@${'-webkit-'}keyframes`).
       if (typeof node.name !== 'string' || prelude === null) {
-        const head = atRuleHead(node.name, node.prelude, filled);
+        const head = '@' + fieldText(node.name, filled) + ' ' + fieldText(node.prelude, filled);
         return children === null ? parseValue(head + ';') : fillHead(head, children);
       }
-      return { kind: NodeKind.AtRule, name: node.name, prelude, children };
-    }
-    case NodeKind.Keyframes: {
-      const frames: StaticKeyframeFrame[] = [];
-      for (let i = 0; i < node.frames.length; i++) {
-        const frame = node.frames[i];
-        const decls = frame.children
-          .flatMap(child => fillDecl(child, filled) ?? [])
-          .filter((child): child is StaticDeclNode => child.kind === NodeKind.Decl);
-        const stops = frame.stops.map(stop => fieldText(stop, filled));
-        const stopText = stops.join(',');
-        if (staysOneField(stopText)) {
-          frames.push({ stops, children: decls });
-        } else {
-          const read = rulesToFrames(fillHead(stopText, decls));
-          for (let k = 0; k < read.length; k++) frames.push(read[k]);
-        }
-      }
-      const prelude = realize(node.prelude, filled);
-      if (typeof node.name !== 'string' || prelude === null) {
-        return fillHead(atRuleHead(node.name, node.prelude, filled), [], frames);
-      }
-      const kf: StaticKeyframesNode = {
-        kind: NodeKind.Keyframes,
+      const atRule: StaticAtRuleNode = {
+        kind: NodeKind.AtRule,
         name: node.name,
         prelude,
-        frames,
+        children,
       };
-      return kf;
+      if (__NATIVE__) atRule.dyn = true;
+      return atRule;
     }
     case NodeKind.Interpolation: {
       // Fragment slot: splice the child's filled AST as siblings. The child's
       // splices resolve in its own index space.
-      const frag = fragments ? fragments[node.index] : null;
-      if (frag) {
-        return fillAst(frag.source.ast, frag.filled, frag.fragments);
-      }
-      const fragment = filled[node.index];
-      if (!fragment) return undefined;
-      // String fragment: parse the substituted text and splice. The cache
-      // amortizes the round-trip across repeated dynamic strings.
-      return parseValue(fragment);
+      const frag = fragments?.[node.index];
+      return frag
+        ? fillAst(frag.source.ast, frag.filled, frag.fragments)
+        : filled[node.index]
+          ? parseValue(filled[node.index])
+          : undefined;
     }
   }
-}
-
-function fillDecl(
-  node: DeclNode,
-  filled: ReadonlyArray<string>
-): StaticDeclNode | StaticNode[] | undefined {
-  // Both prop and value can be TemplateValue for templates like
-  // `${theme.vars.colors.bg}: #111;` (createTheme.vars overrides).
-  const propRaw = realize(node.prop, filled);
-  const valueRaw = realize(node.value, filled);
-  if (propRaw === null || valueRaw === null) {
-    return parseValue(fieldText(node.prop, filled) + ':' + fieldText(node.value, filled));
-  }
-
-  const prop = typeof node.prop !== 'string' ? trimWhitespace(propRaw) : propRaw;
-  if (prop === '') return undefined;
-  // Re-normalize substituted values to match the parser's normalizeValue
-  // (trim, then strip spaces after top-level commas) so output bytes match
-  // authored text; skip it on the static-decl warm path. Custom
-  // properties preserve empty values (`--x: ;` is spec-legal).
-  const value =
-    typeof node.value === 'string'
-      ? valueRaw
-      : __NATIVE__
-        ? trimWhitespace(valueRaw)
-        : stripCommaSpaces(trimWhitespace(valueRaw));
-  if (value === '' && !isCustomProperty(prop)) return undefined;
-  return { kind: NodeKind.Decl, prop, value };
 }
 
 /**
@@ -688,26 +639,18 @@ function fillDecl(
  * A head that does not read as one statement, or that opens no named block, leaves the rule
  * and its children out; rules the value wrote whole ahead of the head stay.
  */
-function fillHead(
-  head: string,
-  children: StaticRoot,
-  frames?: StaticKeyframeFrame[]
-): StaticNode[] {
+function fillHead(head: string, children: StaticRoot): StaticNode[] {
   const nodes = parseValue(head + '{}');
   const block = staysOneField(normalize(head)) ? nodes[nodes.length - 1] : undefined;
-  const opened: StaticNode | null =
-    block === undefined
-      ? null
-      : block.kind === NodeKind.Rule &&
-          block.children.length === 0 &&
-          block.selectors.join('') !== ''
-        ? { ...block, children }
-        : block.kind === NodeKind.AtRule && block.children?.length === 0
-          ? { ...block, children }
-          : block.kind === NodeKind.Keyframes && block.frames.length === 0
-            ? { ...block, frames: frames ?? rulesToFrames(children) }
-            : null;
-  if (opened !== null) return nodes.slice(0, -1).concat(opened);
+  if (
+    block &&
+    ((block.kind === NodeKind.Rule && !block.children.length && block.selectors.join('')) ||
+      (block.kind === NodeKind.AtRule && block.children?.length === 0))
+  ) {
+    return nodes
+      .slice(0, -1)
+      .concat(__NATIVE__ ? { ...block, children, dyn: true } : { ...block, children });
+  }
 
   if (__DEV__) {
     const shown = head.slice(0, 80);
@@ -720,23 +663,11 @@ function fillHead(
   return nodes.filter(node => node.kind !== NodeKind.AtRule || node.children !== null);
 }
 
-function atRuleHead(
-  name: string | TemplateValue,
-  prelude: string | TemplateValue,
-  filled: ReadonlyArray<string>
-): string {
-  return '@' + fieldText(name, filled) + ' ' + fieldText(prelude, filled);
-}
-
 function joinSelectors(
   selectors: ReadonlyArray<string | TemplateValue>,
   filled: ReadonlyArray<string>
 ): string {
-  let out = '';
-  for (let i = 0; i < selectors.length; i++) {
-    out += (i > 0 ? ',' : '') + fieldText(selectors[i], filled);
-  }
-  return out;
+  return selectors.map(s => fieldText(s, filled)).join(',');
 }
 
 /** Splice the filled values between a field's pre-extracted chunks. */
@@ -745,8 +676,7 @@ export function fieldText(field: string | TemplateValue, filled: ReadonlyArray<s
   const { chunks, slots } = field;
   let out = chunks[0];
   for (let i = 0; i < slots.length; i++) {
-    out += filled[slots[i]];
-    out += chunks[i + 1];
+    out += filled[slots[i]] + chunks[i + 1];
   }
   return out;
 }
@@ -762,26 +692,21 @@ function realize(
   return staysOneField(out, stop) ? out : null;
 }
 
-function trimWhitespace(s: string): string {
-  return trimRange(s, 0, s.length);
-}
-
 /**
  * Per-string AST cache for text a value reads on its own.
  * Bounded so streaming unique strings can't leak.
  *
- * `parse` runs without `templates`, so a `\0I` inside the text stays plain text and the
+ * `parse` runs without `slotKinds`, so a `\0<n>\0` inside the text stays plain text and the
  * AST is fully static; a value cannot read another value through a sentinel.
  */
 const valueCache = new Map<string, StaticRoot>();
-const VALUE_CACHE_LIMIT = 200;
 
 /** Parse a value on its own, so all it can hold is declarations and whole rules. */
 function parseValue(s: string): StaticRoot {
   const cached = valueCache.get(s);
   if (cached !== undefined) return cached;
 
-  const parsed = parse(wholeStatements(s), { keepCommaSpaces: __NATIVE__ });
-  fifoSet(valueCache, s, parsed, VALUE_CACHE_LIMIT);
+  const parsed = parse(wholeStatements(s));
+  fifoSet(valueCache, s, parsed, 200);
   return parsed;
 }

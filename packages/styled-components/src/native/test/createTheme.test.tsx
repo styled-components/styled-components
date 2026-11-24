@@ -3,6 +3,7 @@ import TestRenderer from 'react-test-renderer';
 import { Animated, Platform, View } from 'react-native';
 
 import createTheme from '../../constructors/createTheme';
+import { resetNativeStyleCache } from '../../models/compileNative';
 import ThemeProvider, { ThemeContext } from '../../models/ThemeProvider';
 import styled, { css, toStyleSheet } from '..';
 
@@ -1284,6 +1285,7 @@ describe('createTheme;native theme values read as authored CSS', () => {
     });
 
     it('names the default, not the placeholder, in the iOS filter warning', () => {
+      resetNativeStyleCache();
       const platform = jest.replaceProperty(Platform, 'OS', 'ios');
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
       const Shadowed = styled(View)`

@@ -462,6 +462,53 @@ describe('memoization correctness', () => {
   });
 
   /**
+   * A styled component up the tree puts its id in the `className` a styled component below it
+   * receives, and the lower one learns that edge from the scan of that string. The scan must not
+   * add or drop a hook: the sequence a mount, a cache miss and a cache hit record is the same
+   * with and without a registered outer id in `className`. The cut at the first
+   * `useSyncExternalStore` assumes the component under test never calls that hook itself, only
+   * `StyleInjector` does.
+   */
+  it('runs the same hooks with or without an outer component in className, on a miss and a hit', () => {
+    withHookRecorder(({ record: recordAll }) => {
+      /** The hooks one render calls, up to the injector's first hook (the component's own). */
+      const record = (renderFn: () => void): string[] => {
+        const [, calls] = recordAll(renderFn);
+        const injectorStart = calls.indexOf('useSyncExternalStore');
+
+        return injectorStart === -1 ? calls : calls.slice(0, injectorStart);
+      };
+
+      const Outer = styled.div``;
+      const Inner = styled.div<{ $color: string }>`
+        color: ${p => p.$color};
+      `;
+
+      const sequences = [undefined, Outer.styledComponentId].map(className => {
+        let view: ReturnType<typeof render> | undefined;
+        const mount = record(() => {
+          view = render(<Inner $color="red" className={className} />);
+        });
+        const miss = record(() => view?.rerender(<Inner $color="blue" className={className} />));
+        // The memo around a styled component skips an equal-props render, so an unrelated prop
+        // changes to render again with the CSS unchanged.
+        const hit = record(() =>
+          view?.rerender(<Inner $color="blue" className={className} data-render="again" />)
+        );
+        view?.unmount();
+
+        return { hit, miss, mount };
+      });
+      const [plain, wrapped] = sequences;
+
+      expect(plain.mount).not.toEqual([]);
+      expect(plain.miss).toEqual(plain.mount);
+      expect(plain.hit).toEqual(plain.mount);
+      expect(wrapped).toEqual(plain);
+    });
+  });
+
+  /**
    * An interpolation may read a value the props and theme do not capture (here a
    * React context). When that value changes, the component re-renders with
    * unchanged props; the class name must follow the new value rather than a

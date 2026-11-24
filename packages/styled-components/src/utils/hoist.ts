@@ -1,59 +1,55 @@
 import React from 'react';
 import type { AnyComponent } from '../types';
 
-// copied from react-is
-const REACT_MEMO_TYPE = Symbol.for('react.memo');
-const REACT_FORWARD_REF_TYPE = Symbol.for('react.forward_ref');
-
 /**
  * Adapted from hoist-non-react-statics to avoid the react-is dependency.
+ * Plain objects (not null-prototype) so `key in KNOWN_STATICS` also filters
+ * `Object.prototype` keys like `toString` without coercing symbols.
  */
-const REACT_STATICS = {
-  contextType: true,
+const COMMON_STATICS = {
   defaultProps: true,
   displayName: true,
+  propTypes: true,
+};
+
+const REACT_STATICS = {
+  ...COMMON_STATICS,
+  contextType: true,
   getDerivedStateFromError: true,
   getDerivedStateFromProps: true,
-  propTypes: true,
   type: true,
 };
 
 const KNOWN_STATICS = {
-  name: true,
-  length: true,
-  prototype: true,
-  caller: true,
-  callee: true,
-  arguments: true,
-  arity: true,
   // React identity markers; hoisting from an RSC reference target makes
   // the wrapper look like the reference and React skips its body (#5672).
-  $$typeof: true,
-  $$id: true,
   $$async: true,
   $$bound: true,
+  $$id: true,
+  $$typeof: true,
+  arguments: true,
+  arity: true,
+  callee: true,
+  caller: true,
+  length: true,
+  name: true,
+  prototype: true,
 };
 
 const FORWARD_REF_STATICS = {
-  $$typeof: true,
+  ...COMMON_STATICS,
   render: true,
-  defaultProps: true,
-  displayName: true,
-  propTypes: true,
 };
 
 const MEMO_STATICS = {
-  $$typeof: true,
+  ...COMMON_STATICS,
   compare: true,
-  defaultProps: true,
-  displayName: true,
-  propTypes: true,
   type: true,
 };
 
 const TYPE_STATICS: Record<symbol, Record<string, boolean>> = {
-  [REACT_FORWARD_REF_TYPE]: FORWARD_REF_STATICS,
-  [REACT_MEMO_TYPE]: MEMO_STATICS,
+  [Symbol.for('react.forward_ref')]: FORWARD_REF_STATICS,
+  [Symbol.for('react.memo')]: MEMO_STATICS,
 };
 
 type OmniComponent = AnyComponent;
@@ -61,14 +57,6 @@ type OmniComponent = AnyComponent;
 function getStatics(component: OmniComponent) {
   return '$$typeof' in component ? TYPE_STATICS[component.$$typeof] : REACT_STATICS;
 }
-
-const defineProperty = Object.defineProperty;
-const getOwnPropertyNames = Object.getOwnPropertyNames;
-const getOwnPropertySymbols = Object.getOwnPropertySymbols;
-const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
-const getPrototypeOf = Object.getPrototypeOf;
-const objectPrototype = Object.prototype;
-const functionPrototype = Function.prototype;
 
 type ExcludeList = {
   [key: string]: true;
@@ -79,10 +67,10 @@ export type NonReactStatics<S extends OmniComponent, C extends ExcludeList = {}>
     keyof S,
     // biome-ignore lint/suspicious/noExplicitAny: public through `withTheme`'s return type; `MemoExoticComponent<ComponentType<never>>` fails with "Type 'ComponentType<never>' does not satisfy the constraint 'ComponentType<any>'"
     S extends React.MemoExoticComponent<any>
-      ? keyof typeof MEMO_STATICS | keyof C
+      ? keyof typeof MEMO_STATICS | '$$typeof' | keyof C
       : // biome-ignore lint/suspicious/noExplicitAny: same probe as above for forwardRef components; `never` compiles but changes the emitted .d.ts of the public `NonReactStatics`
         S extends React.ForwardRefExoticComponent<any>
-        ? keyof typeof FORWARD_REF_STATICS | keyof C
+        ? keyof typeof FORWARD_REF_STATICS | '$$typeof' | keyof C
         : keyof typeof REACT_STATICS | keyof typeof KNOWN_STATICS | keyof C
   >]: S[key];
 };
@@ -99,37 +87,34 @@ export default function hoistNonReactStatics<
     // `getPrototypeOf(fn)` returns Function.prototype, which has no statics
     // worth hoisting (`length`/`name`/`apply`/`bind`/…). Skipping it avoids
     // an extra pass through KNOWN_STATICS per styled-component creation.
-    const inheritedComponent = getPrototypeOf(sourceComponent);
+    const inheritedComponent = Object.getPrototypeOf(sourceComponent);
     if (
       inheritedComponent &&
-      inheritedComponent !== objectPrototype &&
-      inheritedComponent !== functionPrototype
+      inheritedComponent !== Object.prototype &&
+      inheritedComponent !== Function.prototype
     ) {
       hoistNonReactStatics(targetComponent, inheritedComponent, excludelist);
     }
 
-    const keys: (string | symbol)[] = (
-      getOwnPropertyNames(sourceComponent) as (string | symbol)[]
-    ).concat(getOwnPropertySymbols(sourceComponent));
+    const keys = Reflect.ownKeys(sourceComponent);
 
     const targetStatics = getStatics(targetComponent);
     const sourceStatics = getStatics(sourceComponent);
 
     for (let i = 0; i < keys.length; ++i) {
-      const key = keys[i] as string;
+      const key = keys[i];
       if (
         !(key in KNOWN_STATICS) &&
-        !(excludelist && excludelist[key]) &&
+        !(excludelist && typeof key === 'string' && excludelist[key]) &&
         !(sourceStatics && key in sourceStatics) &&
         !(targetStatics && key in targetStatics)
       ) {
-        // Key came from `getOwnPropertyNames` above, so the descriptor exists.
-        const descriptor = getOwnPropertyDescriptor(sourceComponent, key);
+        const descriptor = Object.getOwnPropertyDescriptor(sourceComponent, key);
 
         if (descriptor !== undefined) {
           try {
             // Avoid failures from read-only properties
-            defineProperty(targetComponent, key, descriptor);
+            Object.defineProperty(targetComponent, key, descriptor);
           } catch (e) {
             /* ignore */
           }

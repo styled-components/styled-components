@@ -5,7 +5,7 @@ import StyleSheet from '../sheet';
 import createCompiler from '../utils/compiler';
 import { resetWarnOnce } from '../utils/warnOnce';
 import { REFERENCE_MARKER } from '../utils/serverReference';
-import { compileWeb, dropMarked } from './compile';
+import { compileWeb, dropMarked, evaluateForFastPath, type FastPathFragment } from './compile';
 import { parse } from './parser';
 import { getSource, parseSource } from './source';
 
@@ -1135,10 +1135,10 @@ describe('compileWeb', () => {
       it.each([
         [
           'cannot read another value through text shaped like a slot',
-          { left: (p: { c: string }) => p.c, top: '\0I0\0' },
-          '.a{left:red;top:\0I0\0;}',
+          { left: (p: { c: string }) => p.c, top: '\x000\x00' },
+          '.a{left:red;top:\x000\x00;}',
         ],
-        ['keeps text shaped like a missing slot', { top: '\0I5\0' }, '.a{top:\0I5\0;}'],
+        ['keeps text shaped like a missing slot', { top: '\x005\x00' }, '.a{top:\x005\x00;}'],
         [
           'keeps `//` from hiding what follows',
           { top: 'x //y', left: '1' },
@@ -1328,7 +1328,6 @@ describe('compileWeb', () => {
         ['a media query with `and not`', '@media screen', ' and not (color)'],
         ['a value ending in `and`', '@media screen and', ' not (color)'],
         ['a supports query with a function', '@supports not', ' selector(:has(a))'],
-        ['a scope limit', '@scope (.a)', ' to (.b)'],
         ['a container style query', '@container side', ' style(--x: 1)'],
         ['a container scroll-state query', '@container side', ' scroll-state(stuck: top)'],
         ['a container query with `not`', '@container side', ' not (min-width: 1px)'],
@@ -1340,6 +1339,19 @@ describe('compileWeb', () => {
         expect(
           compileWeb(parseSource(['.x { ', `${rest} { top: 0; } }`], [value]), {}, '.a')
         ).toEqual([`${value}${rest}{.a .x{top:0;}}`]);
+      });
+
+      it('keeps a scope limit split across a value and its template', () => {
+        const strings = ['', ' to (.b) { top: 0; }'];
+        expect(compileWeb(parseSource(strings, ['@scope (.a)']), {}, '.a')).toEqual([
+          '@scope (.a .a) to (.b){:where(:scope){top:0;}}',
+        ]);
+        expect(compileWeb(parseSource(strings, [() => '@scope (.a)']), {}, '.a')).toEqual([
+          '@scope (.a .a) to (.b){:where(:scope){top:0;}}',
+        ]);
+        expect(
+          compileWeb(parseSource(['.x { ', ' to (.b) { top: 0; } }'], ['@scope (.a)']), {}, '.a')
+        ).toEqual(['@scope (.a .x .a) to (.b){:where(:scope){top:0;}}']);
       });
 
       it('keeps a media query split across two values', () => {
@@ -1517,6 +1529,36 @@ describe('compileWeb', () => {
         ]);
       });
 
+      it('splices a block-position value inside a keyframe, and a whole frame between frames', () => {
+        const options = { selfRefSelector: '.a', componentId: 'a' };
+        expect(
+          compileWeb(
+            tagged`@keyframes k { from { ${'top: 0;'} } to { top: 1px; } }`,
+            {},
+            '.a',
+            options
+          )
+        ).toEqual(['@keyframes k{from{top:0;}to{top:1px;}}']);
+        expect(
+          compileWeb(
+            tagged`@keyframes k { from { top: 0; } ${'50% { left: 1px; }'} to { top: 1px; } }`,
+            {},
+            '.a',
+            options
+          )
+        ).toEqual(['@keyframes k{from{top:0;}50%{left:1px;}to{top:1px;}}']);
+      });
+
+      it('splices a css fragment inside a keyframe', () => {
+        const frame = css`
+          top: 0;
+        `;
+        const src = tagged`@keyframes k { from { ${frame} } }`;
+        expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
+          '@keyframes k{from{top:0;}}',
+        ]);
+      });
+
       it('drops keyframes whose name a value leaves unreadable', () => {
         const src = tagged`@keyframes ${'a } x'} { to { top: 0; } }`;
         expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([]);
@@ -1547,11 +1589,61 @@ describe('compileWeb', () => {
       ['a value after a semicolon in a bracket', tagged`--a: [b; ${'c'}];`, '.a{--a:[b; c];}'],
       ['a value in a brace in a bracket', tagged`--a: [{${'c'}}];`, '.a{--a:[{c}];}'],
       ['a value in a brace in a function', tagged`--a: f({${'c'}});`, '.a{--a:f({c});}'],
+      [
+        'a custom property block with an interpolated value',
+        tagged`--obj: { color: ${'red'}; }; background: blue;`,
+        '.a{--obj:{ color: red; };background:blue;}',
+      ],
+      [
+        'an interpolated custom property value with commas',
+        tagged`--list: ${'a, b, c'}; font-family: ${'a, b, c'};`,
+        '.a{--list:a, b, c;font-family:a,b,c;}',
+      ],
+      [
+        'a partially interpolated custom property value with commas',
+        tagged`--list: a, ${'b'}, c;`,
+        '.a{--list:a, b, c;}',
+      ],
+      [
+        'a dynamic custom property name with static comma-spaced value',
+        tagged`${'--list'}: a, b, c;`,
+        '.a{--list:a, b, c;}',
+      ],
+      ['a dynamic custom property name with empty value', tagged`${'--x'}: ;`, '.a{--x:;}'],
+      [
+        'a dashed dynamic custom property name with static comma-spaced value and empty value',
+        tagged`--${'list'}: a, b, c; --${'x'}: ;`,
+        '.a{--list:a, b, c;--x:;}',
+      ],
+      [
+        'a dashed dynamic custom property name holding a balanced `{...}` block',
+        tagged`--${'obj'}: { color: red; };`,
+        '.a{--obj:{ color: red; };}',
+      ],
+      [
+        'a compound selector with a block comment before an interpolated class',
+        tagged`.x/*c*/${'.child'} { color: red; }`,
+        '.a .x.child{color:red;}',
+      ],
+      [
+        'a compound selector with a block comment before an interpolated pseudo-class',
+        tagged`.y/*c*/${':hover'} { color: blue; }`,
+        '.a .y:hover{color:blue;}',
+      ],
+      [
+        'a dynamic standard property name still strips comma spaces',
+        tagged`${'font-family'}: a, b, c;`,
+        '.a{font-family:a,b,c;}',
+      ],
       ['a value after a semicolon in a string', tagged`content: "a;${'c'}";`, '.a{content:"a;c";}'],
     ])('emits %s', (_label, src, rule) => {
       expect(compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a' })).toEqual([
         rule,
       ]);
+    });
+
+    it('drops a dynamic standard property name with an empty value', () => {
+      expect(compileWeb(tagged`${'color'}: ;`, {}, '.a')).toEqual([]);
     });
 
     it.each([
@@ -1669,6 +1761,43 @@ describe('compileWeb', () => {
         compileWeb(src, {}, '.a', { selfRefSelector: '.a', componentId: 'a', rw: multi })
       ).toEqual(['.a::-webkit-input-placeholder{color:gray;}', '.a::placeholder{color:gray;}']);
     });
+  });
+});
+
+describe('evaluateForFastPath buffers', () => {
+  const three = tagged`a: ${'1'}; b: ${'2'}; c: ${'3'};`;
+  const one = tagged`a: ${'x'};`;
+  const run = (
+    src: ReturnType<typeof tagged>,
+    buf: string[] | undefined,
+    frags: (FastPathFragment | null)[]
+  ) => evaluateForFastPath(src, {}, buf, undefined, frags);
+
+  it.each([
+    ['shorter than the slot count', ['q']],
+    ['equal to the slot count', ['q', 'r', 's']],
+    ['longer than the slot count', ['q', 'r', 's', 't', 'u']],
+    ['empty', []],
+  ])('fills a reused buffer %s', (_label, seed) => {
+    const frags: (FastPathFragment | null)[] = seed.map(() => null);
+    const out = run(three, seed, frags);
+    expect(out).toBe(seed);
+    expect(out).toEqual(['1', '2', '3']);
+    expect(frags).toEqual([null, null, null]);
+  });
+
+  it('shrinks and regrows one buffer across slot counts', () => {
+    const buf: string[] = [];
+    const frags: (FastPathFragment | null)[] = [];
+    expect(run(three, buf, frags)).toEqual(['1', '2', '3']);
+    expect(run(one, buf, frags)).toEqual(['x']);
+    expect(frags).toHaveLength(1);
+    expect(run(three, buf, frags)).toEqual(['1', '2', '3']);
+    expect(frags).toHaveLength(3);
+  });
+
+  it('allocates a buffer when none is given', () => {
+    expect(run(three, undefined, [])).toEqual(['1', '2', '3']);
   });
 });
 

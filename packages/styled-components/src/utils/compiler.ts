@@ -1,4 +1,4 @@
-import { emitWeb, namespaceForm } from '../parser/emit-web';
+import { emitWeb } from '../parser/emit-web';
 import { parse, wrapAst } from '../parser/parser';
 import { compileWebFilled, dropMarked } from '../parser/compile';
 import type { Compiler } from '../types';
@@ -6,6 +6,7 @@ import { rewriteBridgeValue, rewriteDisabledTokens, wrapComponentNots } from './
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
 import { SEED, phash } from './hash';
+import { createNamespaceTransform, namespaceForm } from './namespace';
 import { normalize } from './normalize';
 import { CAN_HOLD_REFERENCE, hasReferenceMarker } from './serverReference';
 import { warnOnce } from './warnOnce';
@@ -135,6 +136,76 @@ function composeRw(prev: SelectorTransform, next: SelectorTransform): SelectorTr
   };
 }
 
+/**
+ * The string-input pipeline both compilers share. The author's CSS parses as the root block, so
+ * the parser's brace repair keeps a stray `}` inside it; the wrapper is added as an AST node.
+ */
+function compileCss(
+  css: string,
+  selector: string,
+  prefix: string,
+  componentId: string,
+  rw: SelectorTransform | undefined,
+  decl: DeclTransform | undefined
+): string[] {
+  const wrapSelector = prefix && selector ? prefix + ' ' + selector : prefix || selector;
+  const body = parse(normalize(css));
+  const wrapped = wrapSelector ? wrapAst(body, wrapSelector) : body;
+  const ast = CAN_HOLD_REFERENCE && hasReferenceMarker(css) ? dropMarked(wrapped) : wrapped;
+  return emitWeb(ast, '', { selfRefSelector: selector, componentId, rw, decl });
+}
+
+/**
+ * The selector rewrite behind the rn-web bridge: `base` with the `:not()` runs behind a
+ * component head (the component as selectors spell it, `''` for none) wrapped as well.
+ */
+function bridgeHeadRw(base: SelectorTransform, head: string): SelectorTransform {
+  if (head === '') return base;
+
+  // One closure rather than `composeRw(base, wrap)`: measured 7-8% faster per emit.
+  return selector => {
+    const first = base(selector);
+    if (typeof first === 'string') return wrapComponentNots(first, head);
+
+    const out: string[] = [];
+    for (let i = 0; i < first.length; i++) out.push(wrapComponentNots(first[i], head));
+    return out.length === 1 ? out[0] : out;
+  };
+}
+
+/**
+ * The compiler with no namespace and no plugins. It is a plain object defined apart from
+ * `createCompiler`, so a bundle that never builds a configured compiler drops `createCompiler`
+ * and the namespace code. `__NATIVE_WEB__` is read on every call, since a test flips it after
+ * this module loads.
+ */
+export const mainCompiler: Compiler = {
+  hash: '',
+  compile: (css, selector = '', prefix = '', componentId = '&') =>
+    compileCss(
+      css,
+      selector,
+      prefix,
+      componentId,
+      __NATIVE_WEB__ ? rewriteDisabledTokens : undefined,
+      __NATIVE_WEB__ ? rewriteBridgeValue : undefined
+    ),
+  emit: (source, filled, parentSelector, { componentId, fragments, ids }) =>
+    compileWebFilled(
+      source,
+      filled,
+      parentSelector,
+      {
+        selfRefSelector: parentSelector,
+        componentId,
+        ids,
+        rw: __NATIVE_WEB__ ? bridgeHeadRw(rewriteDisabledTokens, parentSelector) : undefined,
+        decl: __NATIVE_WEB__ ? rewriteBridgeValue : undefined,
+      },
+      fragments
+    ),
+};
+
 export default function createCompiler({
   options = EMPTY_OBJECT,
   plugins = EMPTY_ARRAY,
@@ -142,14 +213,19 @@ export default function createCompiler({
   // Multiple plugins compose left-to-right. The hash includes plugin names
   // and the namespace so different configs produce different class names
   // and cache keys.
-  let postProcessSelector: SelectorTransform | undefined;
+  // A namespace is the first selector transform, ahead of every plugin's.
+  const namespace = options.namespace ? namespaceForm(options.namespace) : undefined;
+  const namespaceKey = namespace ? options.namespace : undefined;
+  let postProcessSelector: SelectorTransform | undefined = namespace
+    ? createNamespaceTransform(namespace)
+    : undefined;
   let postProcessDecl: DeclTransform | undefined;
   let h = SEED;
   for (let i = 0; i < plugins.length; i++) {
     const plugin = plugins[i];
     const name = plugin?.name;
     if (!name) throw throwStyledError(15);
-    if (__DEV__) notePluginName(plugin, options.namespace);
+    if (__DEV__) notePluginName(plugin, namespaceKey);
     h = phash(h, name);
     const rw = plugin.rw;
     if (rw) {
@@ -170,18 +246,7 @@ export default function createCompiler({
         ? composeRw(postProcessSelector, rewriteDisabledTokens)
         : rewriteDisabledTokens;
     }
-    const base = bridgeSelector;
-    if (head === '') return base;
-
-    // One closure rather than `composeRw(base, wrap)`: measured 7-8% faster per emit.
-    return selector => {
-      const first = base(selector);
-      if (typeof first === 'string') return wrapComponentNots(first, head);
-
-      const out: string[] = [];
-      for (let i = 0; i < first.length; i++) out.push(wrapComponentNots(first[i], head));
-      return out.length === 1 ? out[0] : out;
-    };
+    return bridgeHeadRw(bridgeSelector, head);
   };
 
   let bridgeDeclTransform: DeclTransform | undefined;
@@ -194,26 +259,19 @@ export default function createCompiler({
     return bridgeDeclTransform;
   };
 
-  const namespace = options.namespace ? namespaceForm(options.namespace) : undefined;
   const headPrefix = namespace ? namespace.prefix : '';
 
-  const compileString = (css: string, selector = '', prefix = '', componentId = '&'): string[] => {
-    // The author's CSS parses as the root block, so the parser's brace repair
-    // keeps a stray `}` inside it; the wrapper is added as an AST node.
-    const wrapSelector = prefix && selector ? prefix + ' ' + selector : prefix || selector;
-    const body = parse(normalize(css));
-    const wrapped = wrapSelector ? wrapAst(body, wrapSelector) : body;
-    const ast = CAN_HOLD_REFERENCE && hasReferenceMarker(css) ? dropMarked(wrapped) : wrapped;
-    return emitWeb(ast, '', {
-      selfRefSelector: selector,
+  const compileString = (css: string, selector = '', prefix = '', componentId = '&'): string[] =>
+    compileCss(
+      css,
+      selector,
+      prefix,
       componentId,
-      namespace,
-      rw: __NATIVE_WEB__ ? bridgeRw('') : postProcessSelector,
-      decl: __NATIVE_WEB__ ? bridgeDecl() : postProcessDecl,
-    });
-  };
+      __NATIVE_WEB__ ? bridgeRw('') : postProcessSelector,
+      __NATIVE_WEB__ ? bridgeDecl() : postProcessDecl
+    );
 
-  if (options.namespace) h = phash(h, options.namespace);
+  if (namespaceKey) h = phash(h, namespaceKey);
 
   const compiler: Compiler = {
     hash: h !== SEED ? h.toString() : '',
@@ -227,7 +285,6 @@ export default function createCompiler({
           selfRefSelector: parentSelector,
           componentId,
           ids,
-          namespace,
           rw: __NATIVE_WEB__
             ? bridgeRw(parentSelector ? headPrefix + parentSelector : '')
             : postProcessSelector,

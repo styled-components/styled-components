@@ -10,7 +10,29 @@ import {
   resetCssPropertiesForTest,
 } from '../../native/propertyRegistry';
 import { resetWarningsForTest } from '../../native/transform/dev';
-import { toNativeStyles, NativeStyles, resetNativeStyleCache } from '../compileNative';
+import { fillAst } from '../../parser/compile';
+import * as nativePlan from '../../parser/nativePlan';
+import { parse } from '../../parser/parser';
+import { parseSource } from '../../parser/source';
+import * as transform from '../../native/transform';
+import {
+  astToNativeStyles,
+  toNativeStyles,
+  NativeStyles,
+  resetNativeStyleCache,
+} from '../compileNative';
+
+// These suites run under the web jest config, where `__NATIVE__` is false; the native branches
+// they exercise (values keep their comma spaces, dynamic decls carry `dyn`) need it true.
+const nativeGlobal = globalThis as { __NATIVE__?: boolean };
+let priorNative: boolean | undefined;
+beforeAll(() => {
+  priorNative = nativeGlobal.__NATIVE__;
+  nativeGlobal.__NATIVE__ = true;
+});
+afterAll(() => {
+  nativeGlobal.__NATIVE__ = priorNative;
+});
 
 const stubStyleSheet = {
   create: <T extends object>(styles: T) => styles,
@@ -811,6 +833,34 @@ describe('toNativeStyles', () => {
       `);
       expect(r2.keyframes[0].frames.find(f => f.stops.includes('to'))!.easing).toBeUndefined();
     });
+
+    it('compiles the frames of a keyframes at-rule and skips a bodiless one', () => {
+      const r = compile(
+        '@keyframes fade { from { opacity: 0; top: 1px; @media x { top: 2px; } } to { opacity: 1; } } @keyframes gone;'
+      );
+      expect(r.keyframes).toEqual([
+        {
+          name: 'fade',
+          frames: [
+            { stops: ['from'], decls: { opacity: 0, top: 1 } },
+            { stops: ['to'], decls: { opacity: 1 } },
+          ],
+        },
+      ]);
+    });
+
+    it('keeps a frame with no declarations and ignores a bare declaration in the body', () => {
+      const r = compile('@keyframes k { top: 0; from { } to { opacity: 1; } }');
+      expect(r.keyframes).toEqual([
+        {
+          name: 'k',
+          frames: [
+            { stops: ['from'], decls: {} },
+            { stops: ['to'], decls: { opacity: 1 } },
+          ],
+        },
+      ]);
+    });
   });
 
   describe('web-only at-rules', () => {
@@ -1166,23 +1216,117 @@ describe('toNativeStyles', () => {
     // from the `NativeStyle.compile` fallback after a fast-path bail, where
     // the `rawCSS` is `buildHashCSS`'s output (template strings + filled
     // user values verbatim). Sentinel detection in `parse()` is gated on
-    // `options.templates`, so user-supplied values that happen to contain
-    // `\0I<n>\0` / `\0J<n>\0` byte patterns cannot lift to a TemplateValue
+    // `slotKinds`, so user-supplied values that happen to contain
+    // `\0<n>\0` byte patterns cannot lift to a TemplateValue
     // / Interpolation node and crash downstream string-only consumers.
 
-    it('treats `\\0I<n>\\0` in a value as opaque text (no TemplateValue lift)', () => {
-      const r = compile('color: red\0I0\0blue;');
-      expect(r.base).toEqual({ color: 'red\0I0\0blue' });
+    it('treats `\\0<n>\\0` in a value as opaque text (no TemplateValue lift)', () => {
+      const r = compile('color: red\x000\x00blue;');
+      expect(r.base).toEqual({ color: 'red\x000\x00blue' });
     });
 
-    it('treats `\\0J<n>\\0` inside a value as opaque text (no Interpolation node)', () => {
-      // With the gate closed, the J-marker doesn't trigger the standalone-
-      // sentinel fast dispatch. The bytes ride inside the value string.
+    it('treats `\\0<n>\\0` as a whole statement as opaque text (no Interpolation node)', () => {
+      // With the gate closed, a slot-shaped statement drops like any text of no meaning.
       // Critical: NO TemplateValue lift and NO Interpolation node;
       // downstream consumers (transformDecl, the StyleSheet writer) see a
       // plain string field exactly as they expect.
-      const r = compile('color: red\0J0\0blue;');
-      expect(r.base).toEqual({ color: 'red\0J0\0blue' });
+      const r = compile('\x000\x00; color: red;');
+      expect(r.base).toEqual({ color: 'red' });
     });
+  });
+});
+
+describe('compiling a filled AST', () => {
+  beforeEach(() => {
+    resetNativeStyleCache();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  /** Parses one Source once and fills its AST per render, matching production renders. */
+  function makeTemplate(strings: string[]) {
+    const source = parseSource(
+      strings,
+      Array.from({ length: strings.length - 1 }, () => () => '')
+    );
+    return (values: string[]) => astToNativeStyles(fillAst(source.ast, values), stubStyleSheet);
+  }
+
+  it('keeps a dynamic declaration out of the static-declaration cache, so equal renders share a transform', () => {
+    const transformDecl = jest.spyOn(transform, 'transformDecl');
+    const render = makeTemplate(['width: ', ';']);
+
+    expect(render(['913px']).base).toEqual({ width: 913 });
+    const afterFirst = transformDecl.mock.calls.length;
+    expect(afterFirst).toBeGreaterThan(0);
+
+    // A new filled AST with the same value hits the (prop, value) cache.
+    expect(render(['913px']).base).toEqual({ width: 913 });
+    expect(transformDecl).toHaveBeenCalledTimes(afterFirst);
+
+    // A different value is a miss.
+    expect(render(['914px']).base).toEqual({ width: 914 });
+    expect(transformDecl.mock.calls.length).toBeGreaterThan(afterFirst);
+  });
+
+  it('keeps a static declaration cached on its node across renders', () => {
+    const transformDecl = jest.spyOn(transform, 'transformDecl');
+    const ast = parse('width: 917px;');
+
+    astToNativeStyles(ast, stubStyleSheet);
+    const afterFirst = transformDecl.mock.calls.length;
+    resetNativeStyleCache();
+    astToNativeStyles(ast, stubStyleSheet);
+
+    expect(transformDecl).toHaveBeenCalledTimes(afterFirst);
+  });
+
+  it('classifies a rebuilt rule from its filled selector on every render', () => {
+    const render = makeTemplate(['&', ' { color: red; }']);
+    expect(render([':hover']).conditional).toEqual([
+      expect.objectContaining({ type: 'pseudo', condition: 'hover' }),
+    ]);
+    expect(render([':focus']).conditional).toEqual([
+      expect.objectContaining({ type: 'pseudo', condition: 'focus' }),
+    ]);
+  });
+
+  it('reads a filled media prelude into its condition', () => {
+    const render = makeTemplate(['@media (min-width: ', 'px) { color: red; }']);
+    expect(render(['600']).conditional).toEqual([
+      expect.objectContaining({ type: 'media', condition: '(min-width: 600px)' }),
+    ]);
+    expect(render(['900']).conditional).toEqual([
+      expect.objectContaining({ type: 'media', condition: '(min-width: 900px)' }),
+    ]);
+  });
+
+  it('reuses cached classifications for static RuleNode and AtRuleNode across renders', () => {
+    const classifyRuleNow = jest.spyOn(nativePlan, 'classifyRuleNow');
+    const classifyAtRuleNow = jest.spyOn(nativePlan, 'classifyAtRuleNow');
+    const render = makeTemplate([
+      'width: ',
+      '; &:hover { color: red; } @media (min-width: 600px) { opacity: 0.5; }',
+    ]);
+
+    const first = render(['10px']);
+    expect(first.base).toEqual({ width: 10 });
+    expect(first.conditional).toEqual([
+      expect.objectContaining({ type: 'pseudo', condition: 'hover' }),
+      expect.objectContaining({ type: 'media', condition: '(min-width: 600px)' }),
+    ]);
+    expect(classifyRuleNow).toHaveBeenCalledTimes(1);
+    expect(classifyAtRuleNow).toHaveBeenCalledTimes(1);
+
+    const second = render(['20px']);
+    expect(second.base).toEqual({ width: 20 });
+    expect(second.conditional).toEqual([
+      expect.objectContaining({ type: 'pseudo', condition: 'hover' }),
+      expect.objectContaining({ type: 'media', condition: '(min-width: 600px)' }),
+    ]);
+    expect(classifyRuleNow).toHaveBeenCalledTimes(1);
+    expect(classifyAtRuleNow).toHaveBeenCalledTimes(1);
   });
 });

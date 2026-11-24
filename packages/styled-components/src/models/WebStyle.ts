@@ -33,10 +33,15 @@ const EMPTY_KEYFRAMES: CompiledKeyframes[] = [];
 const MAX_DYNAMIC_NAME_CACHE = TOO_MANY_CLASSES_LIMIT;
 
 /** Per-level output of `generate()`; one entry per link in the inheritance chain. */
-type GeneratedLevel = {
+export type GeneratedLevel = {
   componentId: string;
-  name: string;
-  rules: string[];
+  /**
+   * Deferred RSC emitter for a name already registered on the sheet whose
+   * compiled rules were evicted from the bounded cache; `rscStyleElement`
+   * hits skip invoking it, while misses compile from the evaluated values.
+   * @internal
+   */
+  emit?: (() => string[]) | undefined;
   /**
    * True when this generate call won the name claim and produced `rules`.
    * A later claimant sees false but still receives the winner's `rules` so
@@ -44,6 +49,8 @@ type GeneratedLevel = {
    * @internal
    */
   isNew: boolean;
+  name: string;
+  rules: string[];
 };
 
 export type GeneratedStyle = {
@@ -116,25 +123,22 @@ export default class WebStyle {
     this.ids = baseStyle ? baseStyle.ids + ' ' + componentId : componentId;
     this.baseHash = phash(SEED, componentId);
     this.baseStyle = baseStyle;
-    StyleSheet.registerId(componentId);
+    StyleSheet.registerId(componentId, baseStyle?.componentId);
   }
 
   /**
    * Produce per-level compiled CSS without writing any rules to the tag.
    * Claims each level's name on the sheet for the current turn so a sibling
    * generating the same class skips recompilation; the CSSOM write happens
-   * in {@link inject}. `options.recompile` (server components only) compiles
-   * every level even when its name is already registered or cached.
+   * in {@link inject}.
    */
   generate(
     executionContext: ExecutionContext,
     styleSheet: StyleSheet,
-    compiler: Compiler,
-    options?: { recompile?: boolean }
+    compiler: Compiler
   ): GeneratedStyle {
-    const recompile = options !== undefined && options.recompile === true;
     const baseGenerated = this.baseStyle
-      ? this.baseStyle.generate(executionContext, styleSheet, compiler, options)
+      ? this.baseStyle.generate(executionContext, styleSheet, compiler)
       : null;
 
     if (this.resolvedSource === undefined) {
@@ -154,23 +158,9 @@ export default class WebStyle {
 
     let fastFragments: (FastPathFragment | null)[] | null = null;
     if (source !== null) {
-      let filledBuffer = this.filledBuffer;
-      let fragmentsBuffer = this.fragmentsBuffer;
-      if (filledBuffer === undefined || fragmentsBuffer === undefined) {
-        // Pre-fill via push so V8 keeps these PACKED_ELEMENTS. `new Array(n)`
-        // stays HOLEY_ELEMENTS even after every slot is overwritten, which
-        // infects the IC for the per-slot reads in `evaluateForFastPath` and
-        // the fragments scan below. See NativeStyle.ts for the same pattern.
-        const n = source.interpolations.length;
-        filledBuffer = [];
-        fragmentsBuffer = [];
-        for (let i = 0; i < n; i++) {
-          filledBuffer.push('');
-          fragmentsBuffer.push(null);
-        }
-        this.filledBuffer = filledBuffer;
-        this.fragmentsBuffer = fragmentsBuffer;
-      }
+      // `evaluateForFastPath` writes slots 0..n-1 sequentially, keeping these PACKED_ELEMENTS.
+      const filledBuffer = this.filledBuffer ?? (this.filledBuffer = []);
+      const fragmentsBuffer = this.fragmentsBuffer ?? (this.fragmentsBuffer = []);
       if (this.keyframesBuffer === undefined) {
         this.keyframesBuffer = [];
       } else {
@@ -244,20 +234,38 @@ export default class WebStyle {
     // rules already exist, so skip compilation. Followers still receive the
     // winner's bytes so a discarded claimer cannot leave them empty-handed.
     // The server-component path registers each name as soon as `generate`
-    // returns and recalls rules from the process-wide cache, so it needs no
-    // turn-scoped claim.
+    // returns and reads `rules` from the process-wide cache; on an eviction
+    // miss for an already-registered name it defers `compiler.emit` so
+    // `rscStyleElement` cache hits skip recompiling while misses compile from
+    // `fastFilled` without re-evaluating interpolations.
     const claimed = IS_RSC
       ? !styleSheet.hasNameForId(this.componentId, name)
       : styleSheet.claimNameForId(this.componentId, name);
-    // A name an earlier request already compiled keeps its rules.
-    const known = IS_RSC && claimed && !recompile ? recallRscRules(this, name) : undefined;
+    const known = IS_RSC ? recallRscRules(this, name) : undefined;
     let rules: string[];
+    let emit: (() => string[]) | undefined;
     if (known !== undefined) {
       rules = known;
-    } else if (!claimed && !recompile) {
-      rules = IS_RSC
-        ? EMPTY_RULES
-        : (styleSheet.getProvisionalRules(this.componentId, name) ?? EMPTY_RULES);
+    } else if (!claimed) {
+      if (IS_RSC) {
+        rules = EMPTY_RULES;
+        const capturedFilled = fastFilled.slice();
+        const capturedFragments = fastFragments ? fastFragments.slice() : null;
+        const className = name;
+        emit = () => {
+          const emitted = compiler.emit(source, capturedFilled, '.' + className, {
+            componentId: this.componentId,
+            fragments: capturedFragments,
+            ids: this.ids,
+          });
+          rememberRscRules(this, className, emitted);
+          level.rules = emitted;
+          level.emit = undefined;
+          return emitted;
+        };
+      } else {
+        rules = styleSheet.getProvisionalRules(this.componentId, name) ?? EMPTY_RULES;
+      }
     } else {
       rules = compiler.emit(source, fastFilled, '.' + name, {
         componentId: this.componentId,
@@ -269,8 +277,15 @@ export default class WebStyle {
       else styleSheet.stashProvisionalRules(this.componentId, name, rules);
     }
 
+    const level: GeneratedLevel = {
+      componentId: this.componentId,
+      emit,
+      isNew: claimed,
+      name,
+      rules,
+    };
     const levels = baseGenerated ? baseGenerated.levels.slice() : [];
-    levels.push({ componentId: this.componentId, name, rules, isNew: claimed });
+    levels.push(level);
 
     return {
       className: joinStrings(baseGenerated ? baseGenerated.className : '', name),

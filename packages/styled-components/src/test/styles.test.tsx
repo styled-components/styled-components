@@ -1830,4 +1830,37 @@ describe('with styles', () => {
       `);
     });
   });
+
+  describe('static hoisting invariants', () => {
+    it('does not let a target own toString clobber the styled component selector toString', () => {
+      const ComponentWithOwnToString = Object.assign(
+        (props: React.HTMLAttributes<HTMLDivElement>) => <div {...props} />,
+        {
+          toString: () => 'custom-target-toString',
+        }
+      );
+
+      const Styled = styled(ComponentWithOwnToString)`
+        color: red;
+      `;
+
+      expect(Styled.toString()).toBe('.' + Styled.styledComponentId);
+    });
+
+    it('hoists Symbol static properties cleanly without throwing', () => {
+      const CUSTOM_SYMBOL = Symbol('customStatic');
+      const ComponentWithSymbol = Object.assign(
+        (props: React.HTMLAttributes<HTMLDivElement>) => <div {...props} />,
+        {
+          [CUSTOM_SYMBOL]: 'symbol-value',
+        }
+      );
+
+      const Styled = styled(ComponentWithSymbol)`
+        color: blue;
+      `;
+
+      expect((Styled as unknown as Record<symbol, unknown>)[CUSTOM_SYMBOL]).toBe('symbol-value');
+    });
+  });
 });

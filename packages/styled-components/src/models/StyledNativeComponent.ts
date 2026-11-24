@@ -94,6 +94,7 @@ import {
   findBaseDecl,
   hasPostAttrs,
   isPostAttr,
+  type PostAttrsPlan,
 } from '../utils/postAttrs';
 import escape from '../utils/escape';
 import generateComponentId from '../utils/generateComponentId';
@@ -120,7 +121,6 @@ const HOIST_EXCLUDE = {
   attrs: true,
   nativeStyle: true,
   displayName: true,
-  postAttrsPlans: true,
   shouldForwardProp: true,
   styledComponentId: true,
   target: true,
@@ -754,7 +754,8 @@ function applyPolyfillsWithLayerSlot(
 function useDynamicImpl<Props extends StyledComponentImplProps>(
   forwardedComponent: IStyledComponent<'native', Props>,
   ownProps: Props,
-  forwardedRef: Ref<unknown> | undefined
+  forwardedRef: Ref<unknown> | undefined,
+  postAttrsPlans: ReadonlyArray<PostAttrsPlan | null> | undefined
 ) {
   const slotValue = ownProps[PARENT_SLOT_PROP];
   const props = slotValue === undefined ? ownProps : withoutParentSlot(ownProps);
@@ -837,7 +838,6 @@ function useDynamicImpl<Props extends StyledComponentImplProps>(
   // construction) or invokes its callback at runtime via the `ast` accessor.
   // Skipped entirely when no arity-2 attrs are present.
   let effectiveBase: Dict<unknown>;
-  const postAttrsPlans = forwardedComponent.postAttrsPlans;
   if (postAttrsPlans !== undefined) {
     const base = { ...compiled.base };
     effectiveBase = base;
@@ -1820,7 +1820,13 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
       finalAttrs.length === 0 &&
       shouldForwardProp === undefined &&
       nativeStyleInstance.staticEligible;
-    const impl = canUseStatic ? useStaticImpl : useDynamicImpl;
+    const chainHasPostAttrs = hasPostAttrs(finalAttrs);
+    const postAttrsSource = chainHasPostAttrs ? getSource(finalRules) : undefined;
+    const postAttrsPlans = chainHasPostAttrs
+      ? buildPostAttrsPlans(finalAttrs, prop =>
+          postAttrsSource === undefined ? null : findNativeBaseDecl(postAttrsSource.ast, prop)
+        )
+      : undefined;
 
     // React 19 ref-as-prop; no forwardRef wrapper. Wrapping in `React.memo`
     // means the parent's re-render skips this component entirely when its props
@@ -1832,7 +1838,10 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
     const RenderInner: {
       (props: ExecutionProps & OuterProps & { ref?: React.Ref<unknown> }): React.JSX.Element;
       displayName?: string;
-    } = props => impl<OuterProps>(WrappedStyledComponent, props, props.ref);
+    } = canUseStatic
+      ? props => useStaticImpl<OuterProps>(WrappedStyledComponent, props, props.ref)
+      : props =>
+          useDynamicImpl<OuterProps>(WrappedStyledComponent, props, props.ref, postAttrsPlans);
     RenderInner.displayName = displayName;
     const MemoizedRenderInner = React.memo(RenderInner);
     // displayName must live on the memo wrapper, not the inner: React DevTools
@@ -1873,13 +1882,6 @@ export default (NativeStyle: INativeStyleConstructor<any>) => {
     WrappedStyledComponent.nativeStyle = nativeStyleInstance;
     WrappedStyledComponent.displayName = displayName;
     WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
-    const chainHasPostAttrs = hasPostAttrs(finalAttrs);
-    const postAttrsSource = chainHasPostAttrs ? getSource(finalRules) : undefined;
-    WrappedStyledComponent.postAttrsPlans = chainHasPostAttrs
-      ? buildPostAttrsPlans(finalAttrs, prop =>
-          postAttrsSource === undefined ? null : findNativeBaseDecl(postAttrsSource.ast, prop)
-        )
-      : undefined;
 
     WrappedStyledComponent.styledComponentId = styledComponentId;
 

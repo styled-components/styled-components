@@ -1,3 +1,4 @@
+import { InterpolationKind } from '../parser/ast';
 import {
   buildInterpKey,
   evaluateForFastPath,
@@ -6,7 +7,7 @@ import {
   hasAnyFragment,
 } from '../parser/compile';
 import type { Source } from '../parser/source';
-import { getSource, InterpolationKind, synthesizeSourceForRuleSet } from '../parser/source';
+import { getSource, synthesizeSourceForRuleSet } from '../parser/source';
 import {
   ExecutionContext,
   INativeStyle,
@@ -54,27 +55,34 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
     constructor(rules: RuleSet<Props>) {
       this.rules = rules;
       synthesizeSourceForRuleSet(rules);
-      this.staticCSS = isAllStaticStrings(rules) ? joinStringRules(rules) : null;
-      const joined = joinStringRules(rules, '\n');
-      const hasFn = hasFunctionInterpolation(rules);
+      const scan: RuleScan = {
+        allStatic: true,
+        anchor: false,
+        fn: false,
+        pendingEnvOpen: false,
+        plain: '',
+        safeArea: false,
+      };
+      scanRules(rules, scan);
+      this.staticCSS = scan.allStatic ? scan.plain : null;
+      const hasFn = scan.fn;
       // Gates the anchor-registry subscription in the dynamic render
       // path; lifetime-constant so the hook branch is stable. Function
       // interpolations are opaque at construction time and may return an
       // anchor() value, so they conservatively enable the subscription;
       // otherwise such a component would never re-resolve when an anchor
       // rect moves.
-      if (ANCHOR_FN_RE.test(joined) || hasFn) {
+      if (scan.anchor || hasFn) {
         this.usesAnchorFunctions = true;
       }
       // Gates the SafeAreaProvider subscription for env(safe-area-inset-*).
       // Same lifetime-constant rule as usesAnchorFunctions: opaque function
       // interpolations may emit env(), so they opt in conservatively.
-      const hasStaticSafeAreaEnv = SAFE_AREA_ENV_RE.test(joined);
-      this.usesSafeAreaInsets = hasStaticSafeAreaEnv || hasFn;
+      this.usesSafeAreaInsets = scan.safeArea || hasFn;
       // Certain usage: a static env(safe-area-inset-*) literal. Gates the dev
       // "no inset source" warning so a function interpolation that never emits
       // env() does not trigger a false "install the peer" nudge.
-      this.usesSafeAreaInsetsStatically = hasStaticSafeAreaEnv;
+      this.usesSafeAreaInsetsStatically = scan.safeArea;
       // A template of only text and createTheme values: no user code runs, so the theme object alone decides the output.
       this.holdsThemeText =
         this.staticCSS !== null &&
@@ -138,29 +146,19 @@ export default function makeNativeStyleClass<Props extends object>(styleSheet: S
       const source = this.resolvedSource;
       if (source === null) return toNativeStyles('', styleSheet);
 
-      // Pre-fill via push so V8 keeps these PACKED_ELEMENTS (docs/performance.md).
-      if (this.filledBuffer === undefined) {
-        const n = source.interpolations.length;
-        const buf: string[] = [];
-        for (let i = 0; i < n; i++) buf.push('');
-        this.filledBuffer = buf;
-      }
-      if (this.fragmentsBuffer === undefined) {
-        const n = source.interpolations.length;
-        const buf: (FastPathFragment | null)[] = [];
-        for (let i = 0; i < n; i++) buf.push(null);
-        this.fragmentsBuffer = buf;
-      }
+      // `evaluateForFastPath` writes slots 0..n-1 sequentially, keeping these PACKED_ELEMENTS.
+      const filledBuffer = this.filledBuffer ?? (this.filledBuffer = []);
+      const fragmentsBuffer = this.fragmentsBuffer ?? (this.fragmentsBuffer = []);
       const filled = evaluateForFastPath(
         source,
         executionContext,
-        this.filledBuffer,
+        filledBuffer,
         undefined,
-        this.fragmentsBuffer
+        fragmentsBuffer
       );
       if (filled === null) return toNativeStyles('', styleSheet);
 
-      const fragments = hasAnyFragment(this.fragmentsBuffer) ? this.fragmentsBuffer : null;
+      const fragments = hasAnyFragment(fragmentsBuffer) ? fragmentsBuffer : null;
       const interpKey = buildInterpKey(filled, fragments);
       const cached = this.interpKeyCache && this.interpKeyCache.get(interpKey);
       if (cached !== undefined) return cached;
@@ -271,14 +269,18 @@ function holdsPlaceholder(
  */
 export function substituteThemeSlots(
   filled: string[],
-  kinds: ReadonlyArray<InterpolationKind>,
+  kinds: ReadonlyArray<number>,
   fragments: ReadonlyArray<FastPathFragment | null> | null,
   theme: ExecutionContext['theme'] | undefined
 ): void {
   for (let i = 0; i < filled.length; i++) {
     const text = filled[i];
     if (text.indexOf('\0') !== -1) {
-      filled[i] = substituteThemeText(text, theme, kinds[i] !== InterpolationKind.Static);
+      filled[i] = substituteThemeText(
+        text,
+        theme,
+        (kinds[i] & InterpolationKind.Mask) !== InterpolationKind.Static
+      );
     }
   }
   if (fragments === null) return;
@@ -292,33 +294,43 @@ export function substituteThemeSlots(
   }
 }
 
-function isAllStaticStrings(rules: ReadonlyArray<unknown>): boolean {
-  for (let i = 0; i < rules.length; i++) {
-    const r = rules[i];
-    if (typeof r === 'string') continue;
-    if (Array.isArray(r) && isAllStaticStrings(r)) continue;
-    return false;
-  }
-  return true;
+interface RuleScan {
+  /** Whether every rule is a string or a nested array of them. */
+  allStatic: boolean;
+  /** Whether any string rule holds an `anchor()` or `anchor-size()` call. */
+  anchor: boolean;
+  /** Whether any function interpolation is present. */
+  fn: boolean;
+  /** Whether the last non-whitespace string chunk ended with an open `env(` call. */
+  pendingEnvOpen: boolean;
+  /** String rules joined with no separator. */
+  plain: string;
+  /** Whether any string rule holds an `env(safe-area-inset-*)` call. */
+  safeArea: boolean;
 }
 
-function hasFunctionInterpolation(rules: ReadonlyArray<unknown>): boolean {
+/** One recursive pass over `rules` (nested `css` fragments included). */
+function scanRules(rules: ReadonlyArray<unknown>, out: RuleScan): void {
   for (let i = 0; i < rules.length; i++) {
     const r = rules[i];
-    if (typeof r === 'function') return true;
-    if (Array.isArray(r) && hasFunctionInterpolation(r)) return true;
+    if (typeof r === 'string') {
+      if (out.allStatic) out.plain += r;
+      if (!out.anchor && ANCHOR_FN_RE.test(r)) out.anchor = true;
+      if (!out.safeArea) {
+        if (SAFE_AREA_ENV_RE.test(r) || (out.pendingEnvOpen && SAFE_AREA_INSET_HEAD_RE.test(r))) {
+          out.safeArea = true;
+        } else if (r.trim().length > 0) {
+          out.pendingEnvOpen = ENV_OPEN_TAIL_RE.test(r);
+        }
+      }
+    } else if (Array.isArray(r)) {
+      scanRules(r, out);
+    } else {
+      out.allStatic = false;
+      out.pendingEnvOpen = false;
+      if (typeof r === 'function') out.fn = true;
+    }
   }
-  return false;
-}
-
-function joinStringRules(rules: ReadonlyArray<unknown>, separator = ''): string {
-  let css = '';
-  for (let i = 0; i < rules.length; i++) {
-    const r = rules[i];
-    if (typeof r === 'string') css += separator === '' ? r : r + separator;
-    else if (Array.isArray(r)) css += joinStringRules(r, separator);
-  }
-  return css;
 }
 
 // Syntactic gate for anchor() / anchor-size() usage (CSS Anchor
@@ -329,3 +341,5 @@ const ANCHOR_FN_RE = /\banchor(?:-size)?\(/;
 
 /** Syntactic gate for env(safe-area-inset-*). */
 const SAFE_AREA_ENV_RE = /\benv\(\s*safe-area-inset-(?:top|right|bottom|left)\b/;
+const ENV_OPEN_TAIL_RE = /\benv\(\s*$/;
+const SAFE_AREA_INSET_HEAD_RE = /^\s*safe-area-inset-(?:top|right|bottom|left)\b/;

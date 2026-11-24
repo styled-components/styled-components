@@ -37,7 +37,8 @@
     "@changesets/read": "0.6.7",
     "husky": "9.1.7",
     "knip": "6.29.0",
-    "lint-staged": "^15.4.3"
+    "lint-staged": "^15.4.3",
+    "styled-components": "workspace:*"
   },
   "lint-staged": {
     "*": "biome check --write --no-errors-on-unmatched"

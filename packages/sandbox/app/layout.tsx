@@ -1,12 +1,9 @@
 import type { Metadata, Viewport } from 'next';
-import styled, { configureServerStyles } from 'styled-components';
-import { rscPlugin } from 'styled-components/plugins';
+import styled from 'styled-components';
 import StyledComponentsRegistry from './lib/registry';
 import { CustomThemeProvider } from './components/theme-provider';
 import { Sidebar } from './components/sidebar';
 import theme from './lib/theme';
-
-configureServerStyles({ plugins: [rscPlugin] });
 
 export const metadata: Metadata = {
   title: 'styled-components RSC Test',

@@ -1,17 +1,33 @@
 import {
   ASTERISK,
+  AT,
   BACKSLASH,
   CLOSE_PAREN,
   COLON,
+  DIGIT_0,
+  DIGIT_9,
+  DOT,
   DOUBLE_QUOTE,
-  isWS,
+  HASH,
+  HYPHEN,
+  isIdentChar,
+  isSpace,
+  LOWER_L,
+  NUL,
   OPEN_PAREN,
+  PERCENT,
+  PLUS,
   SINGLE_QUOTE,
   SLASH,
   SPACE,
   TAB,
+  UPPER_TO_LOWER,
   urlTokenEnd,
 } from './charCodes';
+
+function isTokenChar(c: number, allowNul = false): boolean {
+  return isIdentChar(c) || c >= 0x80 || c === BACKSLASH || (allowNul && c === NUL);
+}
 
 /**
  * Check if a quote at position i is escaped. A quote is escaped when preceded
@@ -54,8 +70,8 @@ export function normalize(css: string): string {
   let inString = 0;
   let parenDepth = 0;
   let escape = -1;
-  /** Last char appended to `out`; reading `out` itself would flatten the concat rope per comment. */
-  let lastOutCh = 0;
+  /** Last char appended to `out`; -1 before any output (distinct from `NUL = 0`). */
+  let lastOutCh = -1;
 
   while (i < len) {
     const code = css.charCodeAt(i);
@@ -82,7 +98,11 @@ export function normalize(css: string): string {
     }
 
     if (code === OPEN_PAREN) {
-      const urlEnd = urlTokenEnd(css, i, len, escape);
+      // Same guard as `scanQPB`: only an escape or a trailing `l` can make this a url token.
+      const urlEnd =
+        escape === -1 && (css.charCodeAt(i - 1) | UPPER_TO_LOWER) !== LOWER_L
+          ? -1
+          : urlTokenEnd(css, i, len, escape);
       if (urlEnd === -1) parenDepth++;
       else i = urlEnd;
       i++;
@@ -95,13 +115,13 @@ export function normalize(css: string): string {
       continue;
     }
 
-    if (code !== SLASH && code !== ASTERISK) {
+    if (code !== SLASH) {
       i++;
       continue;
     }
 
     const next = css.charCodeAt(i + 1);
-    const isBlockComment = code === SLASH && next === ASTERISK;
+    const isBlockComment = next === ASTERISK;
     if (!isBlockComment && (parenDepth > 0 || next !== SLASH)) {
       i++;
       continue;
@@ -111,7 +131,7 @@ export function normalize(css: string): string {
     if (isBlockComment) {
       end = css.indexOf('*/', end);
       end = end === -1 ? len : end + 2;
-    } else if (code === SLASH) {
+    } else {
       // URL guard: `https://` and a protocol-relative `: //host` value are NOT
       // line comments. A `:` before the `//` (past any whitespace) means the
       // sequence belongs to a value, so skip the line-comment strip.
@@ -130,16 +150,32 @@ export function normalize(css: string): string {
     i = end;
 
     if (isBlockComment) {
-      const nextIsWS = isWS(css.charCodeAt(i));
+      const nextCh = css.charCodeAt(i);
+      const nextIsSpace = isSpace(nextCh);
       // When the comment is bordered by whitespace on both sides, collapse the
       // pair to a single space so selector templates with annotative comments
       // (`a /* foo */ b`) hash consistently.
-      if (isWS(lastOutCh)) {
-        if (nextIsWS) while (isWS(css.charCodeAt(i))) i++;
-      } else if (parenDepth > 0 && !nextIsWS) {
-        // A comment ends the token before it, so `rgb(0/**/51)` holds two numbers.
-        out += ' ';
-        lastOutCh = SPACE;
+      if (isSpace(lastOutCh)) {
+        if (nextIsSpace) while (isSpace(css.charCodeAt(i))) i++;
+      } else if (i < len && !nextIsSpace) {
+        const allowNul = parenDepth > 0;
+        const nextIsDigit = nextCh >= DIGIT_0 && nextCh <= DIGIT_9;
+        const nextIsDotDigit =
+          nextCh === DOT && css.charCodeAt(i + 1) >= DIGIT_0 && css.charCodeAt(i + 1) <= DIGIT_9;
+        if (
+          (isTokenChar(lastOutCh, allowNul) &&
+            (isTokenChar(nextCh, allowNul) || nextCh === OPEN_PAREN)) ||
+          (lastOutCh === SLASH && nextCh === ASTERISK) ||
+          ((lastOutCh === HASH || lastOutCh === AT) && isTokenChar(nextCh, allowNul)) ||
+          (lastOutCh === DOT && nextIsDigit) ||
+          (lastOutCh === PLUS && (nextIsDigit || nextIsDotDigit)) ||
+          (lastOutCh === HYPHEN && nextIsDotDigit) ||
+          (lastOutCh >= DIGIT_0 && lastOutCh <= DIGIT_9 && (nextCh === PERCENT || nextIsDotDigit))
+        ) {
+          // A comment ends the token before it, so adjacent tokens cannot merge.
+          out += ' ';
+          lastOutCh = SPACE;
+        }
       }
     }
     start = i;

@@ -1,5 +1,5 @@
 import type { Dict } from '../../../types';
-import { MediaQueryEnv } from '../../responsive';
+import type { ResolveEnv, Resolver, SafeAreaInsets } from '../../resolverTypes';
 import * as $ from '../../../utils/charCodes';
 import { warnOnce } from '../dev';
 import { isSafeThemePath } from '../sanitize';
@@ -20,77 +20,7 @@ import {
   unifyUnits,
 } from './mathFns';
 
-/**
- * Environment passed to each {@link Resolver} at render time. Composes
- * everything needed to finish any deferred CSS evaluation.
- */
-/** The four safe-area insets `env(safe-area-inset-*)` resolves against (CSS top/right/bottom/left order). */
-export interface SafeAreaInsets {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
-}
-
-export interface ResolveEnv {
-  media: MediaQueryEnv;
-  /** Nearest named / unnamed container dimensions. */
-  container: { width: number; height: number } | null;
-  /** Current theme object (deep-merged from ThemeProvider stack on native). */
-  // biome-ignore lint/suspicious/noExplicitAny: public adapter contract (AnimatedStyleInput.env is reachable from the reanimatedAdapter export). With `unknown`, an adapter reading `input.env.theme.colors.primary` fails with TS18046: 'input.env.theme.colors' is of type 'unknown'.
-  theme: Record<string, any>;
-  /** Safe-area insets for `env(safe-area-inset-*)`, supplied by the native render path. */
-  insets: SafeAreaInsets;
-  /** Root font-size for `rem` resolution (defaults to 16). */
-  rootFontSize: number;
-  /**
-   * Parent's resolved font-size in px. Anchors `em` resolution at
-   * render time. Sourced from NativeStyleContext.cascade.fontSize.
-   */
-  fontSize: number;
-  /**
-   * Parent's resolved line-height in px. Anchors `lh` resolution.
-   * Sourced from NativeStyleContext.cascade.lineHeight.
-   */
-  lineHeight: number;
-  /**
-   * Inherited writing direction. Anchors `text-align: start | end`.
-   * Sourced from NativeStyleContext.cascade.direction.
-   */
-  direction: 'ltr' | 'rtl';
-  /**
-   * Cascade-published CSS custom properties keyed by their `--name`.
-   * Sourced from NativeStyleContext.cascade.customProperties. `null` when
-   * no ancestor has declared any.
-   */
-  customProperties: ReadonlyMap<string, string> | null;
-  /**
-   * 1-based position among the parent's children, for `sibling-index()`.
-   * Sourced from ParentContext. `undefined` (untracked) resolves as 1
-   * (only child).
-   */
-  siblingIndex?: number;
-  /** Total children of the parent, for `sibling-count()`. Defaults to 1. */
-  siblingCount?: number;
-  /**
-   * The styled component's props: the attribute source for `attr()`.
-   * Same bag the attribute-selector matcher ([data-x="y"]) reads.
-   */
-  props?: Record<string, unknown> | null;
-  /**
-   * The component's declared `position-anchor` name; the implicit
-   * target for `anchor()` / `anchor-size()` without an explicit name.
-   */
-  positionAnchor?: string;
-}
-
-/**
- * A function that resolves a single style-prop value at render time
- * against the current {@link ResolveEnv}. Returns the resolved value
- * to write into the merged style object; number, string, or null
- * (drop the key).
- */
-export type Resolver = (env: ResolveEnv) => number | string | null;
+export type { ResolveEnv, Resolver, SafeAreaInsets };
 
 /**
  * Escape a string so it can ride a sentinel fallback unmolested by the

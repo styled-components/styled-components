@@ -75,9 +75,9 @@ Two traps produce a tree-shaking test that passes while proving nothing:
 ## Bundle size and property mangling
 
 - The size metric is the consumer bundle defined once in `scripts/consumerBundle.js` (webpack, production mode, a typical import of the browser ESM). The "production bundle size with real bundler tree-shaking" test and `pnpm --filter styled-components size` both measure it; `size --attribute` charges its bytes to source files through the composed source maps.
-- Terser renames only the property names listed in `scripts/internalPropertyNames.cjs`; every other property name ships verbatim at each occurrence. Keep frequently accessed internal keys short or list them. The list's doc comment states which names qualify.
+- Terser renames only the property names listed in `packages/styled-components/scripts/internalPropertyNames.cjs`; every other property name ships verbatim at each occurrence. Keep frequently accessed internal keys short or list them. The list's doc comment states which names qualify.
 - Each bundle gets its own mapping, so a listed field must never cross a bundle boundary, and a sheet handed between the CommonJS and ES module copies of the library has differently named members (mixing the two copies is unsupported).
-- The source suites cannot see mangling. `src/test/dist-behavior.test.js`, run by `test:build`, exercises the built bundles and is the guard for a list change: its "published type declarations" block fails on a listed name declared in the emitted `.d.ts` or used by the reanimated bundle's sources.
+- The source suites cannot see mangling. `src/test/dist-behavior.test.js`, run by `test:build`, exercises the built bundles and is the guard for a list change: its "published type declarations" block fails on a listed name declared in the emitted `.d.ts` or used by the reanimated bundle's sources, and its "mangled property name boundaries" block scans `src/native/transform/` property names and JavaScript built-in prototypes against the mangle list.
 
 ## d.ts bundling and TS2742
 
@@ -109,6 +109,19 @@ Server rendering on an edge runtime is unsupported. Next.js applies the `browser
 - A client component renders unstyled HTML with no error, as it does on any runtime without a style registry, because client styles inject through `useInsertionEffect`, which never runs on the server. With a `ServerStyleSheet` registry (the documented Next.js setup), the first `<style>` creation fails at request time. Error 20 reports this, thrown from a `typeof document` guard at the top of `makeStyleTag` in `src/sheet/dom.ts`.
 
 Both messages tell the reader to use the Node.js runtime. Guard 1 is gated `!__SERVER__ && !__NATIVE__`, so only the bundles where it can fire carry it. Neither guard spells `typeof React.createContext === 'undefined'`, which every non-server bundle replaces with `false`.
+
+## Server component shim
+
+`styled-components/server-styles` is the client-component module a server component host loads for `ScStyle` and `ScGlobalStyle` (see [react.md](react.md) "Server component styles"). The rules that keep it working:
+
+- The shim re-exports both elements from the package's own name, which stays external, so the host's client graph resolves its own copy of the main entry (the browser build in a browser) and no second copy ships.
+- `'use client';` is terser's `format.preamble`: rollup drops a source directive and terser drops a banner, and a preamble keeps sourcemap columns correct.
+- Only the server build imports the shim, by name. `treeshake.moduleSideEffects` marks it side-effect free, so a build whose binding tree-shakes away keeps no bare `import 'styled-components/server-styles'`; the standalone UMD lists it as external for the same reason.
+- The shim and the server and browser builds are minified apart, so both element names and their wire props stay out of the mangle list (`packages/styled-components/scripts/internalPropertyNames.cjs`).
+- The native TypeScript plugin excludes the shim source, so no shim declaration ships under `native/`.
+- Inside the repo the package's own name resolves to source for the type checker and Jest (`tsconfig.json` `paths`, the Jest base `moduleNameMapper`), and to `dist` for `test:build` through the root `workspace:*` link.
+
+The "server component shim" blocks in `treeshake.test.ts` and `dist-behavior.test.js` lock each rule against the built files.
 
 ## Published files
 
