@@ -24,6 +24,12 @@ const jsFiles = (dir: string) =>
     .filter(file => file.endsWith('.js'))
     .sort();
 
+let defaultConsumerBundle: Promise<{ bundle: string; map: string }> | undefined;
+const getDefaultConsumerBundle = () => {
+  defaultConsumerBundle ??= buildConsumerBundle({ distDir, sourceMap: true });
+  return defaultConsumerBundle;
+};
+
 describe('dead-code elimination: browser build', () => {
   let browserESM: string;
   let browserCJS: string;
@@ -456,21 +462,78 @@ describe('native subpath platform-extension entries', () => {
   });
 });
 
-describe('rscPlugin tree-shaking', () => {
-  it('is excluded from the standalone UMD bundle', () => {
-    const minified = read('styled-components.min.js');
-    expect(minified).not.toContain('rscPlugin');
-    expect(minified).not.toContain('rewriteSelector');
-    expect(minified).not.toContain(':not(style[data-styled])');
+/**
+ * `styled-components/server-styles` is a client-component module: a server component host
+ * imports it by name, so the server build keeps it external, and no other build ever
+ * reaches it.
+ */
+describe('server component shim', () => {
+  const shimFiles = ['server-styles.cjs.js', 'server-styles.esm.js'];
+  const shimName = 'styled-components/server-styles';
+  const shimPackageDir = path.resolve(distDir, '../server-styles');
+
+  it.each(shimFiles)('%s starts with the client directive', file => {
+    expect(read(file).split('\n')[0]).toBe("'use client';");
   });
 
+  it('is imported by name from the server build only', () => {
+    expect(read('styled-components.cjs.js')).toContain(shimName);
+    expect(read('styled-components.esm.js')).toContain(shimName);
+  });
+
+  it.each([
+    'styled-components.browser.cjs.js',
+    'styled-components.browser.esm.js',
+    'styled-components.js',
+    'styled-components.min.js',
+    'plugins.cjs.js',
+    'plugins.esm.js',
+  ])('%s never reaches the shim', file => {
+    expect(read(file)).not.toContain(shimName);
+  });
+
+  it.each(jsFiles(nativeDistDir))('native/%s never reaches the shim', file => {
+    expect(readNative(file)).not.toContain(shimName);
+  });
+
+  it.each(['styled-components.js', 'styled-components.min.js'])(
+    '%s carries neither server component element',
+    file => {
+      const standalone = read(file);
+
+      expect(standalone).not.toContain('ScStyle');
+      expect(standalone).not.toContain('ScGlobalStyle');
+    }
+  );
+
+  it('declares no internal element in the shim declaration', () => {
+    const declaration = read('server-styles.d.ts');
+
+    expect(declaration).not.toContain('ScStyle');
+    expect(declaration).not.toContain('ScGlobalStyle');
+  });
+
+  it('subpath package.json resolves main/module/types to real files', () => {
+    const shimPackage = JSON.parse(
+      fs.readFileSync(path.join(shimPackageDir, 'package.json'), 'utf8')
+    );
+
+    for (const field of ['main', 'module', 'types'] as const) {
+      const target = path.resolve(shimPackageDir, shimPackage[field]);
+
+      expect(`${field}=${shimPackage[field]} resolves=${fs.existsSync(target)}`).toBe(
+        `${field}=${shimPackage[field]} resolves=true`
+      );
+    }
+  });
+});
+
+describe('plugins tree-shaking', () => {
   it('is available in the plugins subpath bundles for downstream tree-shaking', () => {
     // First-party plugins live in the dedicated `styled-components/plugins`
     // subpath, so they should be present in those bundles and only those.
     const pluginsESM = read('plugins.esm.js');
     const pluginsCJS = read('plugins.cjs.js');
-    expect(pluginsESM).toContain('rscPlugin');
-    expect(pluginsCJS).toContain('rscPlugin');
     expect(pluginsESM).toContain('prefixPlugin');
     expect(pluginsCJS).toContain('prefixPlugin');
     expect(pluginsESM).toContain('rtlPlugin');
@@ -483,9 +546,6 @@ describe('rscPlugin tree-shaking', () => {
       entrySource: `import styled from '${distDir}/styled-components.browser.esm.js';\nconsole.log(styled.div);\n`,
     });
 
-    expect(bundle).not.toContain('rewriteSelector');
-    expect(bundle).not.toContain('rscPlugin');
-    expect(bundle).not.toContain(':not(style[data-styled])');
     expect(bundle).not.toContain('prefixPlugin');
     expect(bundle).not.toContain('::-webkit-input-placeholder');
     expect(bundle).not.toContain('backdrop-filter');
@@ -501,9 +561,6 @@ describe('per-plugin DCE from plugins subpath', () => {
   const PREFIX_NEEDLE = '::-webkit-input-placeholder';
   const PREFIX_NEEDLE_B = 'backdrop-filter';
   const RTL_NEEDLE = 'border-top-left-radius';
-  // Minifiers keep the template as `:not(style[${attr}])`, so assert on the
-  // rewrite shape rather than the fully interpolated selector string.
-  const RSC_NEEDLE = 'nth-child(1 of';
 
   async function webpackBundle(entrySource: string): Promise<string> {
     const { bundle } = await buildConsumerBundle({ distDir, entrySource });
@@ -511,7 +568,7 @@ describe('per-plugin DCE from plugins subpath', () => {
     return bundle;
   }
 
-  it('keeps rtlPlugin and drops prefix/rsc when only rtl is imported', async () => {
+  it('keeps rtlPlugin and drops prefix when only rtl is imported', async () => {
     const bundle = await webpackBundle(
       [
         `import { rtlPlugin } from '${distDir}/plugins.esm.js';`,
@@ -521,10 +578,9 @@ describe('per-plugin DCE from plugins subpath', () => {
     expect(bundle).toContain(RTL_NEEDLE);
     expect(bundle).not.toContain(PREFIX_NEEDLE);
     expect(bundle).not.toContain(PREFIX_NEEDLE_B);
-    expect(bundle).not.toContain(RSC_NEEDLE);
   }, 30000);
 
-  it('keeps prefixPlugin and drops rtl/rsc when only prefix is imported', async () => {
+  it('keeps prefixPlugin and drops rtl when only prefix is imported', async () => {
     const bundle = await webpackBundle(
       [
         `import { prefixPlugin } from '${distDir}/plugins.esm.js';`,
@@ -534,20 +590,121 @@ describe('per-plugin DCE from plugins subpath', () => {
     expect(bundle).toContain(PREFIX_NEEDLE);
     expect(bundle).toContain(PREFIX_NEEDLE_B);
     expect(bundle).not.toContain(RTL_NEEDLE);
-    expect(bundle).not.toContain(RSC_NEEDLE);
+  }, 30000);
+});
+
+/**
+ * The namespace placement code (`utils/namespace.ts`) is reachable only through a configured
+ * compiler, which only `StyleSheetManager` builds. The needles are single regex literals in
+ * source, so a minifier cannot rename or split them.
+ */
+describe('namespace tree-shaking', () => {
+  const ROOT_ITEM_NEEDLE = '::view-transition';
+  const PSEUDO_ELEMENT_NEEDLE = 'first-letter';
+
+  it('is eliminated by webpack from a bundle that never imports StyleSheetManager', async () => {
+    const { bundle } = await getDefaultConsumerBundle();
+
+    expect(bundle).not.toContain(ROOT_ITEM_NEEDLE);
+    expect(bundle).not.toContain(PSEUDO_ELEMENT_NEEDLE);
+    // Control: the bundle still compiles styles.
+    expect(bundle).toContain('sc-');
   }, 30000);
 
-  it('keeps rscPlugin and drops rtl/prefix when only rsc is imported', async () => {
-    const bundle = await webpackBundle(
+  it('is kept by webpack in a bundle that renders StyleSheetManager with a namespace', async () => {
+    const { bundle } = await buildConsumerBundle({
+      distDir,
+      entrySource: [
+        `import React from 'react';`,
+        `import { StyleSheetManager } from '${distDir}/styled-components.browser.esm.js';`,
+        `console.log(React.createElement(StyleSheetManager, { namespace: '#app' }));`,
+      ].join('\n'),
+    });
+
+    expect(bundle).toContain(ROOT_ITEM_NEEDLE);
+    expect(bundle).toContain(PSEUDO_ELEMENT_NEEDLE);
+  }, 30000);
+});
+
+/**
+ * Streaming SSR flush bookkeeping (`sheet/serverOrder.ts`), sheet reconstruction
+ * (`sheet/reconstructSheet.ts`), `ServerStyleSheet` (`models/ServerStyleSheet.tsx`),
+ * and the server-component style elements (`models/ScStyle.ts`) are reachable only
+ * through their dedicated entry points. Composing the webpack and Rollup sourcemaps
+ * verifies their exact mapped bytes survive only when those entry points are imported.
+ */
+describe('sheet streaming and reconstruction tree-shaking', () => {
+  const { SourceMapConsumer } = require('source-map');
+  const createEsmMap = () =>
+    new SourceMapConsumer(
+      JSON.parse(
+        fs.readFileSync(path.join(distDir, 'styled-components.browser.esm.js.map'), 'utf8')
+      )
+    );
+  let esmMap: ReturnType<typeof createEsmMap> | undefined;
+  const getEsmMap = () => {
+    esmMap ??= createEsmMap();
+    return esmMap;
+  };
+
+  const mappedSources = async (entrySource?: string): Promise<Set<string>> => {
+    const { map } =
+      entrySource === undefined
+        ? await getDefaultConsumerBundle()
+        : await buildConsumerBundle({ distDir, entrySource, sourceMap: true });
+    const bundleMap = new SourceMapConsumer(JSON.parse(map));
+    const browserMap = getEsmMap();
+    const sources = new Set<string>();
+
+    bundleMap.eachMapping(
+      (mapping: { originalColumn: number; originalLine: number; source: string | null }) => {
+        if (!mapping.source || !mapping.source.includes('styled-components.browser.esm.js')) return;
+        const orig = browserMap.originalPositionFor({
+          column: mapping.originalColumn,
+          line: mapping.originalLine,
+        });
+        if (orig.source) sources.add(orig.source.replace(/^.*\/src\//, 'src/'));
+      }
+    );
+
+    return sources;
+  };
+
+  it('drops serverOrder.ts, reconstructSheet.ts, ScStyle.ts, and ServerStyleSheet.tsx from a default consumer bundle', async () => {
+    const sources = await mappedSources();
+
+    expect(sources.has('src/sheet/Order.ts')).toBe(true);
+    expect(sources.has('src/sheet/serverOrder.ts')).toBe(false);
+    expect(sources.has('src/sheet/reconstructSheet.ts')).toBe(false);
+    expect(sources.has('src/models/ScStyle.ts')).toBe(false);
+    expect(sources.has('src/models/ServerStyleSheet.tsx')).toBe(false);
+  }, 30000);
+
+  it('retains serverOrder.ts, reconstructSheet.ts, and ServerStyleSheet.tsx when ServerStyleSheet and StyleSheetManager are imported', async () => {
+    const sources = await mappedSources(
       [
-        `import { rscPlugin } from '${distDir}/plugins.esm.js';`,
-        `console.log(rscPlugin.name, rscPlugin.rw && rscPlugin.rw(':first-child'));`,
+        `import React from 'react';`,
+        `import { ServerStyleSheet, StyleSheetManager } from '${distDir}/styled-components.browser.esm.js';`,
+        `const sheet = new ServerStyleSheet();`,
+        `console.log(sheet, React.createElement(StyleSheetManager, { nonce: 'abc' }));`,
       ].join('\n')
     );
-    expect(bundle).toContain(RSC_NEEDLE);
-    expect(bundle).not.toContain(RTL_NEEDLE);
-    expect(bundle).not.toContain(PREFIX_NEEDLE);
-    expect(bundle).not.toContain(PREFIX_NEEDLE_B);
+
+    expect(sources.has('src/sheet/serverOrder.ts')).toBe(true);
+    expect(sources.has('src/sheet/reconstructSheet.ts')).toBe(true);
+    expect(sources.has('src/models/ServerStyleSheet.tsx')).toBe(true);
+  }, 30000);
+
+  it('retains ScStyle.ts when ScStyle and ScGlobalStyle are imported', async () => {
+    const sources = await mappedSources(
+      [
+        `import React from 'react';`,
+        `import { ScGlobalStyle, ScStyle } from '${distDir}/styled-components.browser.esm.js';`,
+        `console.log(React.createElement(ScStyle, { chain: [], keyframes: [], outers: [] }), React.createElement(ScGlobalStyle, { id: 'g', keyframes: [], rules: [], seq: 1 }));`,
+      ].join('\n')
+    );
+
+    expect(sources.has('src/models/ScStyle.ts')).toBe(true);
   }, 30000);
 });
 
@@ -566,6 +723,14 @@ describe('built bundles reach only declared packages', () => {
     ...Object.keys(pkg.peerDependencies ?? {}),
     ...builtinModules,
   ]);
+  /** The package's own name, which only the server build and the server component shim reach (the shim's `export ... from 'styled-components'`, the server build's import of `styled-components/server-styles`). */
+  const ownName = 'styled-components';
+  const mayReachOwnName = new Set([
+    'server-styles.cjs.js',
+    'server-styles.esm.js',
+    'styled-components.cjs.js',
+    'styled-components.esm.js',
+  ]);
   const bareSpecifier =
     /\brequire\(["']([^"'./][^"']*)["']\)|(?:^|;)(?:import|export)\b[^;]*?\bfrom\s*["']([^"'./][^"']*)["']|(?:^|;)import\s*["']([^"'./][^"']*)["']/gm;
   const packageName = (id: string) =>
@@ -580,6 +745,10 @@ describe('built bundles reach only declared packages', () => {
   const mustReach: Record<string, string[]> = {
     'plugins.cjs.js': [],
     'plugins.esm.js': [],
+    'server-styles.cjs.js': [ownName],
+    'server-styles.esm.js': [ownName],
+    'styled-components.cjs.js': ['react', ownName],
+    'styled-components.esm.js': ['react', ownName],
     'native/styled-components.js': ['react', 'react-native', 'react-native-web'],
     'native/styled-components.native.esm.js': ['react', 'react-native'],
     'native/styled-components.native.js': ['react', 'react-native'],
@@ -598,8 +767,11 @@ describe('built bundles reach only declared packages', () => {
 
   it.each(bundles)('$file', ({ file, source }) => {
     const used = reached(source());
+    const undeclared = [...used].filter(
+      name => !allowed.has(name) && !(name === ownName && mayReachOwnName.has(file))
+    );
 
-    expect([...used].filter(name => !allowed.has(name))).toEqual([]);
+    expect(undeclared).toEqual([]);
     expect([...used]).toEqual(expect.arrayContaining(mustReach[file] ?? ['react']));
   });
 });
@@ -626,14 +798,15 @@ describe('bundle size', () => {
     // malformed CSS inside its statement, `createGlobalStyle` interpolations in render,
     // at-rules whose bodies are declaration blocks (`@view-transition`, `@page` margin boxes),
     // the automatic `view-transition-class` and chain-wide `container-name`, a namespace
-    // joined onto root-anchored selectors, and `keyframes` reading fragments and style objects the
-    // way a styled template does.
-    expect(sizeKB).toBeLessThan(16.1);
+    // joined onto root-anchored selectors, `keyframes` reading fragments and style objects the
+    // way a styled template does, and the sheet's cascade order (wrappers after what they wrap,
+    // tiers, contested pairs).
+    expect(sizeKB).toBeLessThan(20.3);
   });
   it('production bundle size with real bundler tree-shaking', async () => {
     const zlib = require('zlib');
 
-    const { bundle } = await buildConsumerBundle({ distDir });
+    const { bundle } = await getDefaultConsumerBundle();
     const gzipped = zlib.gzipSync(bundle.replaceAll(version, '0.0.0'));
     const sizeKB = gzipped.length / 1024;
 
@@ -641,12 +814,10 @@ describe('bundle size', () => {
 
     expect(bundle).toContain(version);
 
-    // Verify unused exports are tree-shaken
+    // Verify unused exports are tree-shaken (`ServerStyleSheet`, `ScStyle`, and
+    // `ScGlobalStyle` are verified through composed sourcemaps in the suite above,
+    // since minified identifiers disappear whether retained or dropped).
     expect(bundle).not.toContain('WithTheme');
-    expect(bundle).not.toContain('rscPlugin');
-    expect(bundle).not.toContain('rewriteSelector');
-    expect(bundle).not.toContain(':not(style[data-styled])');
-    expect(bundle).not.toContain('ServerStyleSheet');
     expect(bundle).not.toContain('isStyledComponent');
     // Plugins live on the `styled-components/plugins` subpath;no plugin
     // module code should leak into a main-entry import.
@@ -670,10 +841,10 @@ describe('bundle size', () => {
     // v6.4.1 for this same entry is 11.44kB gzip. Holds the security fix that keeps
     // malformed CSS inside its statement, `createGlobalStyle` interpolations in render,
     // at-rules whose bodies are declaration blocks (`@view-transition`, `@page` margin boxes),
-    // the automatic `view-transition-class` and chain-wide `container-name`, a namespace
-    // joined onto root-anchored selectors, and `keyframes` reading fragments and style objects the
-    // way a styled template does.
-    expect(sizeKB).toBeLessThan(14.9);
+    // the automatic `view-transition-class` and chain-wide `container-name`, `keyframes`
+    // reading fragments and style objects the way a styled template does, and the sheet's
+    // cascade order, which every client sheet runs.
+    expect(sizeKB).toBeLessThan(17.8);
   }, 30000);
 });
 
@@ -844,6 +1015,23 @@ describe('published package contents', () => {
 
   it('packs no repo-only test helpers', () => {
     expect(packed.filter(file => file.startsWith('test-utils/'))).toEqual([]);
+  });
+
+  it('packs the server component shim and its subpath redirector', () => {
+    expect(packed).toEqual(
+      expect.arrayContaining([
+        'dist/server-styles.cjs.js',
+        'dist/server-styles.d.ts',
+        'dist/server-styles.esm.js',
+        'server-styles/package.json',
+      ])
+    );
+  });
+
+  it('packs no shim declaration in the native package', () => {
+    expect(
+      packed.filter(file => file.startsWith('native/') && file.includes('server-styles'))
+    ).toEqual([]);
   });
 
   it('still packs the native entry points', () => {

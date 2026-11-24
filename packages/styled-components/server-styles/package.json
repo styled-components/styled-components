@@ -1,0 +1,7 @@
+{
+  "name": "styled-components-server-styles",
+  "private": true,
+  "types": "../dist/server-styles.d.ts",
+  "main": "../dist/server-styles.cjs.js",
+  "module": "../dist/server-styles.esm.js"
+}

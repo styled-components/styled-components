@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "styled-components": ["./src/index.ts"],
+      "styled-components/server-styles": ["./src/models/ScStyle.ts"]
+    }
+  },
+  "exclude": [
+    "dist",
+    ".rollup.cache",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "src/server-styles.ts",
+    "src/test",
+    "src/bench",
+    "src/parser/profile-harness.ts",
+    "src/native/profile-pipeline.ts",
+    "src/native/bunProfileGlobals.ts"
+  ]
+}

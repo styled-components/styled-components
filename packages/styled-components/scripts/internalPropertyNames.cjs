@@ -12,32 +12,38 @@
  * reanimated adapter bundle, and jest-styled-components resets
  * `mainSheet.names` and calls `.clearTag()` and `.toString()` (the
  * ecosystem-contract tests in `src/test/dist-behavior.test.js` replay it).
+ * The server component props `chain`, `id`, `keyframes`, `outers`, `rules` and `seq` cross
+ * Flight from the server bundle to the browser bundle, which minify separately, so none is ever
+ * listed. The shim (`styled-components/server-styles`) reads `ScStyle` and `ScGlobalStyle` from the
+ * main entry by their export names, so those names stay out as well.
  *
  * `rollup.config.mjs` builds the mangle regex from this list;
  * `src/test/dist-behavior.test.js` checks the published declarations and the
  * reanimated sources against it.
  */
 const INTERNAL_PROPERTY_NAMES = [
-  // parser AST + Source
+  // parser AST + Source + native plan
+  'ancestorId',
   'ast',
   'chunks',
+  'dyn',
   'filled',
   'fragments',
+  'interpolations',
   'kinds',
+  'members',
   'prelude',
+  'pseudos',
   'selectors',
-  'slotIsStandalone',
   'slots',
+  'spec',
   'staticValues',
   'strings',
-  'interpolations',
   // parse context + emit options
   'depth',
-  'keepCommaSpaces',
+  'dyns',
   'len',
   'selfRefSelector',
-  'slotLeftOpen',
-  'templates',
   // WebStyle / generated style
   'baseHash',
   'baseStyle',
@@ -51,14 +57,51 @@ const INTERNAL_PROPERTY_NAMES = [
   'keyframesBuffer',
   'levels',
   'resolvedSource',
-  // sheet internals
+  // sheet, order, and streaming flush internals
   '_cGroup',
   '_cIndex',
+  'adoptGroup',
+  'adoptedThisTurn',
+  'afterMove',
+  'attachGroups',
+  'beforeMove',
+  'claimNameForId',
   'clearGroup',
+  'contested',
+  'detachGroups',
+  'detachedRules',
+  'edgeSeeds',
+  'floorAfter',
+  'flushed',
   'getGroup',
+  'getProvisionalRules',
+  'globals',
   'groupSizes',
+  'hasGroup',
+  'hasKey',
   'indexOfGroup',
+  'isSettled',
+  'keyMap',
+  'keyOf',
+  'layerGroups',
+  'learn',
+  'moveListener',
+  'moveToEnd',
+  'onEdge',
+  'outerMap',
+  'pinned',
+  'place',
+  'posList',
+  'posMap',
+  'positionOf',
   'provisionalRules',
+  'recordFlush',
+  'recordKind',
+  'reemitFor',
+  'refused',
+  'rehydrated',
+  'stashProvisionalRules',
+  'streamFlush',
   // global style + post-attrs plans
   'computeRules',
   'isStatic',
@@ -67,8 +110,8 @@ const INTERNAL_PROPERTY_NAMES = [
   'onPop',
   'output',
   'popped',
-  'postAttrsPlans',
-  'rebuildGroup',
+  'removeStyles',
+  'renderStyles',
 ];
 
 module.exports = { INTERNAL_PROPERTY_NAMES };

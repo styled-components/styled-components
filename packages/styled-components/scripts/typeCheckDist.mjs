@@ -16,6 +16,12 @@
  * copy, and the newest. `skipLibCheck: true` is NOT a valid gate here -- it
  * suppresses the very declaration errors this catches.
  *
+ * Each target runs twice: once across every published entry point (web +
+ * native), and once web-only (`dist/index.d.ts`, `dist/plugins/index.d.ts`,
+ * `dist/server-styles.d.ts`, and the consumer fixture) with `react-native` and
+ * the other optional native peer packages blocked from module resolution so any
+ * transitive native import in web declarations fails immediately.
+ *
  * The program loads no `@types/node` (`types: []`): a consumer without it must
  * still compile, so a `NodeJS.*` reference in `dist` is an error here.
  *
@@ -59,11 +65,32 @@ const nativeDistDir = join(pkgRoot, 'native', 'dist');
 const workDir = join(pkgRoot, '.type-check-dist');
 const consumerFixture = join(pkgRoot, 'test-types', 'published-types-consumer.tsx');
 
-const entryFiles = [
+const webEntryFiles = [
   join(distDir, 'index.d.ts'),
   join(distDir, 'plugins', 'index.d.ts'),
-  join(nativeDistDir, 'native', 'index.d.ts'),
+  join(distDir, 'server-styles.d.ts'),
 ];
+
+const entryFiles = [...webEntryFiles, join(nativeDistDir, 'native', 'index.d.ts')];
+
+/**
+ * Optional native peer packages that a web-only consumer does not install. The
+ * web-only pass refuses to resolve them and asserts none were loaded into the
+ * program, catching any transitive native import in web `.d.ts` immediately.
+ */
+const BLOCKED_WEB_MODULES = [
+  'react-native',
+  'react-native-reanimated',
+  'react-native-safe-area-context',
+  'react-native-web',
+];
+
+const isBlockedWebModule = spec =>
+  BLOCKED_WEB_MODULES.some(pkg => spec === pkg || spec.startsWith(`${pkg}/`));
+
+const BLOCKED_WEB_PATH_RE = new RegExp(
+  `[\\\\/]node_modules[\\\\/](?:${BLOCKED_WEB_MODULES.map(pkg => pkg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})[\\\\/]`
+);
 
 const missing = entryFiles.filter(file => !existsSync(file));
 if (missing.length) {
@@ -146,7 +173,21 @@ function isolatedInstall(kind, { react, reactDom }) {
  * the React in scope is purely what `paths` names and a consumer without
  * `@types/node` is what gets checked.
  */
-function configFor({ react, reactDom }) {
+function configFor({ react, reactDom }, { webOnly = false } = {}) {
+  const paths = {
+    react: [react],
+    'react/jsx-dev-runtime': [join(react, 'jsx-dev-runtime')],
+    'react/jsx-runtime': [join(react, 'jsx-runtime')],
+    'react-dom': [reactDom],
+    'react-dom/client': [join(reactDom, 'client')],
+    'react-dom/server': [join(reactDom, 'server')],
+    'styled-components': [join(distDir, 'index.d.ts')],
+    'styled-components/plugins': [join(distDir, 'plugins', 'index.d.ts')],
+    'styled-components/server-styles': [join(distDir, 'server-styles.d.ts')],
+  };
+  if (!webOnly) {
+    paths['styled-components/native'] = [join(nativeDistDir, 'native', 'index.d.ts')];
+  }
   return {
     compilerOptions: {
       jsx: 'react-jsx',
@@ -154,26 +195,58 @@ function configFor({ react, reactDom }) {
       module: 'ESNext',
       moduleResolution: 'bundler',
       noEmit: true,
-      paths: {
-        react: [react],
-        'react/jsx-runtime': [join(react, 'jsx-runtime')],
-        'react/jsx-dev-runtime': [join(react, 'jsx-dev-runtime')],
-        'react-dom': [reactDom],
-        'react-dom/server': [join(reactDom, 'server')],
-        'react-dom/client': [join(reactDom, 'client')],
-        'styled-components': [join(distDir, 'index.d.ts')],
-        'styled-components/native': [join(nativeDistDir, 'native', 'index.d.ts')],
-        'styled-components/plugins': [join(distDir, 'plugins', 'index.d.ts')],
-      },
+      paths,
       skipLibCheck: false,
       strict: true,
       target: 'ES2020',
       types: [],
     },
-    // Every published entry point (the native one pulls react-native in), plus
-    // the consumer fixture.
-    files: [...entryFiles, consumerFixture],
+    // Full mode checks every published entry point (the native one pulls
+    // react-native in); web-only mode checks only the web entries plus the
+    // consumer fixture.
+    files: [...(webOnly ? webEntryFiles : entryFiles), consumerFixture],
   };
+}
+
+/**
+ * Compiler host for the web-only pass: resolves modules normally except the
+ * native-only optional peer packages, which behave as uninstalled.
+ */
+function createWebOnlyHost(options) {
+  const host = ts.createCompilerHost(options);
+  const cache = ts.createModuleResolutionCache(
+    host.getCurrentDirectory(),
+    fileName => host.getCanonicalFileName(fileName),
+    options
+  );
+  host.resolveModuleNameLiterals = (
+    moduleLiterals,
+    containingFile,
+    redirectedReference,
+    compilerOptions
+  ) =>
+    moduleLiterals.map(literal => {
+      if (isBlockedWebModule(literal.text)) {
+        return { resolvedModule: undefined };
+      }
+      return ts.resolveModuleName(
+        literal.text,
+        containingFile,
+        compilerOptions,
+        host,
+        cache,
+        redirectedReference
+      );
+    });
+  return host;
+}
+
+function leakedNativeFiles(program) {
+  return program
+    .getSourceFiles()
+    .map(file => resolve(file.fileName))
+    .filter(file => BLOCKED_WEB_PATH_RE.test(file))
+    .map(file => relative(pkgRoot, file));
 }
 
 const isOwnFile = fileName => {
@@ -226,43 +299,53 @@ const targets = [
 
 let failed = false;
 for (const target of targets) {
-  const label = `@types/react ${versionAt(target.react)} + @types/react-dom ${versionAt(target.reactDom)}`;
-  const parsed = ts.parseJsonConfigFileContent(configFor(target), ts.sys, workDir);
-  const program = ts.createProgram({
-    configFileParsingDiagnostics: parsed.errors,
-    options: parsed.options,
-    rootNames: parsed.fileNames,
-  });
-  const diagnostics = ts.getPreEmitDiagnostics(program);
+  const baseLabel = `@types/react ${versionAt(target.react)} + @types/react-dom ${versionAt(target.reactDom)}`;
+  for (const webOnly of [false, true]) {
+    const label = webOnly ? `${baseLabel} (web-only, no react-native)` : baseLabel;
+    const parsed = ts.parseJsonConfigFileContent(configFor(target, { webOnly }), ts.sys, workDir);
+    const program = ts.createProgram({
+      configFileParsingDiagnostics: parsed.errors,
+      host: webOnly ? createWebOnlyHost(parsed.options) : undefined,
+      options: parsed.options,
+      rootNames: parsed.fileNames,
+    });
+    const diagnostics = ts.getPreEmitDiagnostics(program);
 
-  const unattributed = diagnostics.filter(d => !d.file);
-  const own = diagnostics.filter(d => d.file && isOwnFile(d.file.fileName));
-  const foreign = foreignReactFiles(program, target);
-  const noRoots = parsed.fileNames.length === 0;
+    const unattributed = diagnostics.filter(d => !d.file);
+    const own = diagnostics.filter(d => d.file && isOwnFile(d.file.fileName));
+    const foreign = foreignReactFiles(program, target);
+    const leaked = webOnly ? leakedNativeFiles(program) : [];
+    const noRoots = parsed.fileNames.length === 0;
 
-  if (!unattributed.length && !own.length && !foreign.length && !noRoots) {
-    console.log(
-      `type-check-dist: ${label} -- dist declarations and consumer fixture compile clean (${parsed.fileNames.length} root files)`
-    );
-    continue;
-  }
+    if (!unattributed.length && !own.length && !foreign.length && !leaked.length && !noRoots) {
+      console.log(
+        `type-check-dist: ${label} -- dist declarations and consumer fixture compile clean (${parsed.fileNames.length} root files)`
+      );
+      continue;
+    }
 
-  failed = true;
-  console.error(`type-check-dist: ${label} -- FAILED`);
-  if (noRoots) console.error('  zero root files were resolved (the check itself is misconfigured)');
-  if (unattributed.length) {
-    console.error(
-      `  ${unattributed.length} diagnostic(s) with no file (the check itself is misconfigured):`
-    );
-    console.error(unattributed.map(format).join('\n'));
-  }
-  if (own.length) {
-    console.error(`  ${own.length} error(s) in dist/ or the consumer fixture:`);
-    console.error(own.map(format).join('\n'));
-  }
-  if (foreign.length) {
-    console.error(`  React type files from outside this target's folder:`);
-    console.error(foreign.map(file => `    ${file}`).join('\n'));
+    failed = true;
+    console.error(`type-check-dist: ${label} -- FAILED`);
+    if (noRoots)
+      console.error('  zero root files were resolved (the check itself is misconfigured)');
+    if (unattributed.length) {
+      console.error(
+        `  ${unattributed.length} diagnostic(s) with no file (the check itself is misconfigured):`
+      );
+      console.error(unattributed.map(format).join('\n'));
+    }
+    if (own.length) {
+      console.error(`  ${own.length} error(s) in dist/ or the consumer fixture:`);
+      console.error(own.map(format).join('\n'));
+    }
+    if (foreign.length) {
+      console.error(`  React type files from outside this target's folder:`);
+      console.error(foreign.map(file => `    ${file}`).join('\n'));
+    }
+    if (leaked.length) {
+      console.error(`  Native peer type files loaded into the web-only program:`);
+      console.error(leaked.map(file => `    ${file}`).join('\n'));
+    }
   }
 }
 

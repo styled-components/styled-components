@@ -153,6 +153,31 @@ describe.each([
     expect(el.style.color).toBe('unset');
   });
 
+  it('extending a styled component with arity-2 attrs keeps child plans and target own toString stays excluded', () => {
+    const lib = load(bundles);
+    const { browser, React } = lib;
+    const styled = browser.default;
+    const Base = styled.div.attrs((props, ast) => ({
+      'data-base': ast.peek('color', 'none'),
+    }))`
+      color: red;
+    `;
+    const Child = styled(Base)`
+      color: blue;
+    `;
+    const WithOwnToString = Object.assign(props => React.createElement('div', props), {
+      toString: () => 'custom-target',
+    });
+    const Wrapped = styled(WithOwnToString)`
+      color: green;
+    `;
+
+    const container = mount(lib, React.createElement(Child, { id: 'c' }));
+
+    expect(container.querySelector('#c').getAttribute('data-base')).toBe('blue');
+    expect(Wrapped.toString()).toBe('.' + Wrapped.styledComponentId);
+  });
+
   it('emits keyframes, global style, css objects, theme values and nested wrappers', () => {
     const lib = load(bundles);
     const { browser, React } = lib;
@@ -273,6 +298,105 @@ describe.each([
     expect(rulesOf(String(browser.__PRIVATE__.mainSheet))).toEqual(['.c1 {color: red;}']);
     expect(rulesOf(browser.extractCSS())).toEqual(['.c1 {color: red;}']);
   });
+
+  it('exposes only public statics on styled components and preserves short user statics', () => {
+    const lib = load(bundles);
+    const { browser } = lib;
+    const styled = browser.default;
+    const Bare = styled(() => null)`color: red;`;
+
+    expect(Object.keys(Bare).sort()).toEqual([
+      '$$typeof',
+      'attrs',
+      'compare',
+      'displayName',
+      'foldedComponentIds',
+      'shouldForwardProp',
+      'styledComponentId',
+      'target',
+      'toString',
+      'type',
+      ...(process.env.NODE_ENV !== 'production' ? ['warnTooManyClasses'] : []),
+      'webStyle',
+    ]);
+
+    const shortStatics = {
+      Dt: 'keep',
+      Et: 'keep',
+      H: 'keep',
+      Wt: 'keep',
+      qt: 'keep',
+    };
+    const Target = Object.assign(() => null, shortStatics);
+    const Wrapped = styled(Target)`color: red;`;
+
+    expect({
+      Dt: Wrapped.Dt,
+      Et: Wrapped.Et,
+      H: Wrapped.H,
+      Wt: Wrapped.Wt,
+      qt: Wrapped.qt,
+    }).toEqual(shortStatics);
+  });
+
+  it('moves an earlier-defined outer group after its inner group in CSSOM order', () => {
+    const lib = load(bundles);
+    const { browser, React } = lib;
+    const styled = browser.default;
+    const Outer = styled.div`color: red;`;
+    const Inner = styled.div`color: blue;`;
+
+    mount(
+      lib,
+      React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(Outer),
+        React.createElement(Inner)
+      )
+    );
+    expect(rulesOf(browser.extractCSS())).toEqual(['.c1 {color: red;}', '.c2 {color: blue;}']);
+
+    mount(lib, React.createElement(Outer, { as: Inner }));
+    expect(rulesOf(browser.extractCSS())).toEqual(['.c1 {color: blue;}', '.c2 {color: red;}']);
+  });
+
+  it('removes a createGlobalStyle rule on unmount', () => {
+    const lib = load(bundles);
+    const { browser, createRoot, React } = lib;
+    const Global = browser.createGlobalStyle`body { margin: 7px; }`;
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    React.act(() => root.render(React.createElement(Global)));
+    expect(rulesOf(browser.extractCSS())).toEqual(['body {margin: 7px;}']);
+
+    React.act(() => root.unmount());
+    expect(rulesOf(browser.extractCSS())).toEqual([]);
+  });
+
+  it('reconstructs the sheet for StyleSheetManager target and nonce', () => {
+    const lib = load(bundles);
+    const { browser, React } = lib;
+    const Box = browser.default.div`color: green;`;
+    const customDiv = document.createElement('div');
+    document.body.appendChild(customDiv);
+
+    mount(
+      lib,
+      React.createElement(
+        browser.StyleSheetManager,
+        { nonce: 'test-nonce', target: customDiv },
+        React.createElement(Box)
+      )
+    );
+
+    const styleEl = customDiv.querySelector('style[nonce="test-nonce"]');
+    expect(styleEl).not.toBeNull();
+    const rules = [...(styleEl.sheet?.cssRules ?? [])].map(rule => rule.cssText);
+    expect(rulesOf(rules.join('/*!sc*/'))).toEqual(['.c1 {color: green;}']);
+  });
 });
 
 describe('server build (minified)', () => {
@@ -318,6 +442,35 @@ describe('server build (minified)', () => {
       '.c1:-ms-input-placeholder{color:red;}',
       '.c1::placeholder{color:red;}',
     ]);
+  });
+
+  it('re-emits a moved outer group with the .f marker across streaming flushes', () => {
+    const { React, renderToString, server } = load();
+    const sheet = new server.ServerStyleSheet();
+    const styled = server.default;
+    const Outer = styled.div`color: red;`;
+    const Inner = styled.div`color: blue;`;
+
+    renderToString(
+      sheet.collectStyles(
+        React.createElement(
+          React.Fragment,
+          null,
+          React.createElement(Outer),
+          React.createElement(Inner)
+        )
+      )
+    );
+    const [, firstBody] = sheet.getStyleTags().match(/^<style[^>]*>([^<]*)<\/style>$/) ?? [];
+    expect(rulesOf(firstBody ?? '')).toEqual(['.c1{color:red;}', '.c2{color:blue;}']);
+
+    sheet.instance.clearTag();
+
+    renderToString(sheet.collectStyles(React.createElement(Outer, { as: Inner })));
+    const secondTags = sheet.getStyleTags();
+    const [, secondBody] = secondTags.match(/^<style[^>]*>([^<]*)<\/style>$/) ?? [];
+    expect(secondBody).toContain(`[id="${Outer.styledComponentId}"].f{content:`);
+    expect(rulesOf(secondBody ?? '')).toEqual(['.c1{color:red;}']);
   });
 });
 
@@ -435,7 +588,7 @@ describe('styled() over foreign component shapes (minified)', () => {
 
   // A static counts as hoisted when the wrapper has a key that a wrapper over an
   // empty component lacks. React's own statics for the target's shape stay
-  // behind, and the wrapper's own keys (some mangled) cancel out of the diff.
+  // behind, and the wrapper's own keys cancel out of the diff.
   test.each([
     ['forwardRef', ['contextType', 'foo']],
     ['lazy', ['_payload', 'contextType', 'foo']],
@@ -453,61 +606,73 @@ describe('styled() over foreign component shapes (minified)', () => {
   });
 });
 
-describe('published type declarations', () => {
-  const fs = require('fs');
-  const packageDir = path.resolve(__dirname, '../..');
+const mangleCheckFs = require('fs');
+const mangleCheckTs = require('typescript');
+const mangleCheckPackageDir = path.resolve(__dirname, '../..');
 
-  const ts = require('typescript');
+const DECLARED_MEMBER_KINDS = [
+  mangleCheckTs.SyntaxKind.GetAccessor,
+  mangleCheckTs.SyntaxKind.MethodDeclaration,
+  mangleCheckTs.SyntaxKind.MethodSignature,
+  mangleCheckTs.SyntaxKind.PropertyDeclaration,
+  mangleCheckTs.SyntaxKind.PropertySignature,
+  mangleCheckTs.SyntaxKind.SetAccessor,
+];
 
-  const DECLARED_MEMBER_KINDS = [
-    ts.SyntaxKind.GetAccessor,
-    ts.SyntaxKind.MethodDeclaration,
-    ts.SyntaxKind.MethodSignature,
-    ts.SyntaxKind.PropertyDeclaration,
-    ts.SyntaxKind.PropertySignature,
-    ts.SyntaxKind.SetAccessor,
-  ];
+const USED_PROPERTY_KINDS = [
+  ...DECLARED_MEMBER_KINDS,
+  mangleCheckTs.SyntaxKind.BindingElement,
+  mangleCheckTs.SyntaxKind.PropertyAccessExpression,
+  mangleCheckTs.SyntaxKind.PropertyAssignment,
+  mangleCheckTs.SyntaxKind.ShorthandPropertyAssignment,
+];
 
-  const USED_PROPERTY_KINDS = [
-    ...DECLARED_MEMBER_KINDS,
-    ts.SyntaxKind.BindingElement,
-    ts.SyntaxKind.PropertyAccessExpression,
-    ts.SyntaxKind.PropertyAssignment,
-    ts.SyntaxKind.ShorthandPropertyAssignment,
-  ];
+/** Names of every node of the given kinds in one file, found by parsing rather than by text matching. */
+const propertyNames = (file, kinds) => {
+  const found = new Set();
+  const visit = node => {
+    if (kinds.includes(node.kind)) {
+      const name =
+        node.kind === mangleCheckTs.SyntaxKind.BindingElement
+          ? (node.propertyName ?? node.name)
+          : node.name;
 
-  /** Names of every node of the given kinds in one file, found by parsing rather than by text matching. */
-  const propertyNames = (file, kinds) => {
-    const found = new Set();
-    const visit = node => {
-      if (kinds.includes(node.kind)) {
-        const name = node.kind === ts.SyntaxKind.BindingElement ? node.propertyName : node.name;
-
-        if (name && (ts.isIdentifier(name) || ts.isStringLiteral(name))) found.add(name.text);
+      if (name && (mangleCheckTs.isIdentifier(name) || mangleCheckTs.isStringLiteral(name))) {
+        found.add(name.text);
       }
+    }
 
-      ts.forEachChild(node, visit);
-    };
-
-    visit(ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true));
-
-    return found;
+    mangleCheckTs.forEachChild(node, visit);
   };
 
-  const declarationFiles = dir =>
-    fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
-      const file = path.join(dir, entry.name);
+  visit(
+    mangleCheckTs.createSourceFile(
+      file,
+      mangleCheckFs.readFileSync(file, 'utf8'),
+      mangleCheckTs.ScriptTarget.Latest,
+      true
+    )
+  );
 
-      if (entry.isDirectory()) return declarationFiles(file);
+  return found;
+};
 
-      return file.endsWith('.d.ts') ? [file] : [];
-    });
+const walkFiles = (dir, match, skipDir) =>
+  mangleCheckFs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+    const file = path.join(dir, entry.name);
 
+    if (entry.isDirectory()) return entry.name === skipDir ? [] : walkFiles(file, match, skipDir);
+
+    return match(file) ? [file] : [];
+  });
+
+describe('published type declarations', () => {
   it('declare no mangled property name as a member or field', () => {
     const names = mangledNames;
+    const isDeclaration = file => file.endsWith('.d.ts');
     const files = [
-      ...declarationFiles(distDir),
-      ...declarationFiles(path.join(packageDir, 'native/dist')),
+      ...walkFiles(distDir, isDeclaration),
+      ...walkFiles(path.join(mangleCheckPackageDir, 'native/dist'), isDeclaration),
     ];
     const offenders = [];
 
@@ -517,7 +682,9 @@ describe('published type declarations', () => {
 
     for (const file of files) {
       for (const name of propertyNames(file, DECLARED_MEMBER_KINDS)) {
-        if (names.includes(name)) offenders.push(`${path.relative(packageDir, file)}: ${name}`);
+        if (names.includes(name)) {
+          offenders.push(`${path.relative(mangleCheckPackageDir, file)}: ${name}`);
+        }
       }
     }
 
@@ -529,8 +696,11 @@ describe('published type declarations', () => {
   it('reanimated bundle sources use no mangled property name', () => {
     const names = mangledNames;
     const map = JSON.parse(
-      fs.readFileSync(
-        path.join(packageDir, 'native/dist/styled-components.native.reanimated.cjs.js.map'),
+      mangleCheckFs.readFileSync(
+        path.join(
+          mangleCheckPackageDir,
+          'native/dist/styled-components.native.reanimated.cjs.js.map'
+        ),
         'utf8'
       )
     );
@@ -539,14 +709,83 @@ describe('published type declarations', () => {
     expect(map.sources.length).toBeGreaterThan(0);
 
     for (const source of map.sources) {
-      const file = path.join(packageDir, source.slice(source.indexOf('src/')));
+      const file = path.join(mangleCheckPackageDir, source.slice(source.indexOf('src/')));
 
       for (const name of propertyNames(file, USED_PROPERTY_KINDS)) {
-        if (names.includes(name)) offenders.push(`${path.relative(packageDir, file)}: ${name}`);
+        if (names.includes(name)) {
+          offenders.push(`${path.relative(mangleCheckPackageDir, file)}: ${name}`);
+        }
       }
     }
 
     expect(offenders.sort()).toEqual([]);
+  });
+});
+
+describe('mangled property name boundaries', () => {
+  // React Native host style objects emitted by `src/native/transform/` (such as gradient
+  // `{ color, positions }`) and `src/native/web-bridge/` are typed `Dict<unknown>`, so
+  // `.d.ts` scans cannot see them.
+  it('native transform and web-bridge sources use no mangled property name', () => {
+    const names = mangledNames;
+    const isSource = file => file.endsWith('.ts') || file.endsWith('.tsx');
+    const files = [
+      ...walkFiles(path.join(mangleCheckPackageDir, 'src/native/transform'), isSource, 'test'),
+      ...walkFiles(path.join(mangleCheckPackageDir, 'src/native/web-bridge'), isSource, 'test'),
+    ];
+    const offenders = [];
+
+    expect(files.length).toBeGreaterThan(0);
+
+    for (const file of files) {
+      for (const name of propertyNames(file, USED_PROPERTY_KINDS)) {
+        if (names.includes(name)) {
+          offenders.push(`${path.relative(mangleCheckPackageDir, file)}: ${name}`);
+        }
+      }
+    }
+
+    expect(offenders.sort()).toEqual([]);
+  });
+
+  it('mangled names do not collide with JavaScript or DOM/CSSOM prototype builtins', () => {
+    const protos = [
+      Object,
+      Function,
+      Map,
+      Set,
+      Array,
+      String,
+      Number,
+      Boolean,
+      Symbol,
+      RegExp,
+      Date,
+      Error,
+      Promise,
+      WeakMap,
+      WeakSet,
+      ArrayBuffer,
+      Uint8Array,
+      Node,
+      Element,
+      HTMLElement,
+      HTMLStyleElement,
+      Document,
+      ShadowRoot,
+      CSSStyleSheet,
+      CSSRule,
+      CSSStyleDeclaration,
+    ];
+    const offenders = [];
+
+    for (const name of mangledNames) {
+      for (const Ctor of protos) {
+        if (name in Ctor.prototype) offenders.push(`${name} in ${Ctor.name}.prototype`);
+      }
+    }
+
+    expect(offenders).toEqual([]);
   });
 });
 
@@ -604,7 +843,6 @@ describe('plugin API boundary (minified)', () => {
 
     expect(Object.keys(plugins.prefixPlugin).sort()).toEqual(['decl', 'name', 'rw']);
     expect(Object.keys(plugins.rtlPlugin).sort()).toEqual(['decl', 'name']);
-    expect(Object.keys(plugins.rscPlugin).sort()).toEqual(['name', 'rw']);
     expect(plugins.prefixPlugin.decl('user-select', 'none')).toEqual([
       { prop: '-webkit-user-select', value: 'none' },
       { prop: '-moz-user-select', value: 'none' },
@@ -664,5 +902,133 @@ describe('web bridge build (minified)', () => {
       .filter(cssText => /padding-(left|right)/.test(cssText));
 
     expect(rulesOf(ownRules.join('/*!sc*/'))).toEqual(['.c1 {padding-right: 1px;}']);
+  });
+});
+
+// The server build renders `ScStyle` and `ScGlobalStyle`, which a server component host only
+// reaches through the `'use client'` shim. Each bundle is minified apart, so the shim, the
+// server build and the browser build must agree on every name and wire prop by source spelling.
+describe('server component shim (minified)', () => {
+  /** Props of `ScStyle` and `ScGlobalStyle` as the server component payload carries them (docs/react.md). */
+  const WIRE_PROPS = ['chain', 'id', 'keyframes', 'outers', 'rules', 'seq'];
+
+  /** The server build serves the RSC graph, the browser build the browser graph. */
+  const loadBuilt = graph =>
+    require(path.join(distDir, graph === 'browser' ? CJS_BUNDLES.browser : CJS_BUNDLES.server));
+
+  beforeEach(() => {
+    document.head.replaceChildren();
+    document.body.replaceChildren();
+  });
+
+  test.each([
+    ['CommonJS', 'server-styles.cjs.js'],
+    ['ES module', 'server-styles.esm.js'],
+  ])('%s shim re-exports the package entry elements by identity', (_, file) => {
+    let loaded;
+
+    jest.isolateModules(() => {
+      loaded = {
+        main: require('styled-components'),
+        shim: require(path.join(distDir, file)),
+      };
+    });
+
+    expect(typeof loaded.main.ScStyle).toBe('function');
+    expect(typeof loaded.main.ScGlobalStyle).toBe('function');
+    expect(loaded.shim.ScStyle).toBe(loaded.main.ScStyle);
+    expect(loaded.shim.ScGlobalStyle).toBe(loaded.main.ScGlobalStyle);
+  });
+
+  it('resolves the package name and the subpath to the built files', () => {
+    expect(require.resolve('styled-components')).toBe(
+      path.join(distDir, 'styled-components.cjs.js')
+    );
+    expect(require.resolve('styled-components/server-styles')).toBe(
+      path.join(distDir, 'server-styles.cjs.js')
+    );
+  });
+
+  it('keeps the elements and their wire props out of the mangle list', () => {
+    const { browser, server } = load();
+
+    expect(typeof server.ScStyle).toBe('function');
+    expect(typeof browser.ScStyle).toBe('function');
+    expect(typeof server.ScGlobalStyle).toBe('function');
+    expect(typeof browser.ScGlobalStyle).toBe('function');
+    expect(WIRE_PROPS.filter(name => mangledNames.includes(name))).toEqual([]);
+  });
+
+  it('renders a server component page into the browser sheet in cascade order', async () => {
+    const { renderInBrowser } = require('./rscStream');
+
+    const { container, flight, graph } = await renderInBrowser({
+      loadLibrary: loadBuilt,
+      server: ({ library, react }) => {
+        const Base = library.default.div`color: blue;`;
+        const Extended = library.default(Base)`color: red;`;
+
+        return react.createElement(Extended, { id: 'probe' });
+      },
+    });
+
+    expect(flight.errors).toEqual([]);
+    expect(container.querySelector('#probe')).not.toBeNull();
+    expect(rulesOf(graph.library.extractCSS())).toEqual([
+      '.c1 {color: blue;}',
+      '.c2 {color: red;}',
+    ]);
+  });
+
+  it('orders server global, keyframes, and wrapped components across minified bundles and clears global rules on unmount', async () => {
+    const { renderInBrowser } = require('./rscStream');
+    let hideGlobal;
+
+    const { container, flight, graph } = await renderInBrowser({
+      clients: ({ react }) => ({
+        Toggle({ children }) {
+          const [shown, setShown] = react.useState(true);
+          hideGlobal = () => setShown(false);
+
+          return shown ? children : null;
+        },
+      }),
+      loadLibrary: loadBuilt,
+      server: ({ clients, library, react }) => {
+        const Global = library.createGlobalStyle`body { margin: 0; }`;
+        const fade = library.keyframes`from { opacity: 0; } to { opacity: 1; }`;
+        const Outer = library.default.div`
+          animation: ${fade} 1s;
+          color: red;
+        `;
+        const Inner = library.default.div`color: blue;`;
+
+        return react.createElement(
+          react.Fragment,
+          null,
+          react.createElement(clients.Toggle, null, react.createElement(Global)),
+          react.createElement(Outer, { as: Inner, id: 'probe' })
+        );
+      },
+    });
+
+    expect(flight.errors).toEqual([]);
+    expect(container.querySelector('#probe')).not.toBeNull();
+    expect(rulesOf(graph.library.extractCSS())).toEqual([
+      'body {margin: 0;}',
+      '@keyframes c1 { from {opacity: 0;} to {opacity: 1;} }',
+      '.c2 {color: blue;}',
+      '.c3 {animation: c1 1s; color: red;}',
+    ]);
+
+    await graph.react.act(() => {
+      hideGlobal();
+    });
+
+    expect(rulesOf(graph.library.extractCSS())).toEqual([
+      '@keyframes c1 { from {opacity: 0;} to {opacity: 1;} }',
+      '.c2 {color: blue;}',
+      '.c3 {animation: c1 1s; color: red;}',
+    ]);
   });
 });
