@@ -2,11 +2,9 @@
 
 ### Does styled-components work with React Server Components?
 
-Yes! styled-components fully supports React Server Components (RSC) with automatic style injection in React 19+.
+Yes, in React 19 and later. Server components use styled components directly, and a style registry in the root layout writes their styles, and those of client components, into the server-rendered HTML.
 
 **For Server Components (no 'use client'):**
-
-With React 19, styled-components works out of the box in Server Components with no wrapper needed:
 
 ```tsx
 // app/page.tsx - Server Component
@@ -22,11 +20,11 @@ export default function Page() {
 }
 ```
 
-RSC environments are detected automatically; no configuration required. Styles are emitted alongside each component's markup.
+RSC environments are detected automatically. Server component styles need the style registry below.
 
-**For Next.js App Router (SSR Style Extraction):**
+**For Next.js App Router (the style registry):**
 
-You need to add a registry in your root layout to extract styles during server rendering. This ensures styles work even without JavaScript enabled:
+Add a registry to your root layout. It collects the styles of server and client components during server rendering, so pages are fully styled on first paint, even without JavaScript:
 
 ```tsx
 // app/lib/registry.tsx
@@ -59,43 +57,28 @@ import StyledComponentsRegistry from './lib/registry';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html>
-      <body>
-        <StyledComponentsRegistry>{children}</StyledComponentsRegistry>
-      </body>
-    </html>
+    <StyledComponentsRegistry>
+      <html>
+        <body>{children}</body>
+      </html>
+    </StyledComponentsRegistry>
   );
 }
 ```
 
-The registry collects styles from client components during SSR so pages are fully styled on first paint (no FOUC, works with JavaScript disabled). Server components don't need it.
+The registry wraps `<html>` so that every server styled component renders inside it, a styled `<html>` or `<body>` included.
+
+If you pass `plugins` or `namespace` to `<StyleSheetManager>` for client components, render that manager in the browser as well, not behind the `if (typeof window !== 'undefined')` guard (pass `sheet={typeof window === 'undefined' ? styledComponentsStyleSheet.instance : undefined}` or wrap the registry in a separate client `<StyleSheetManager>`), otherwise SSR and client hydration hash with different compilers and mismatch.
+
+**Server component styles need the registry:**
+
+A server styled component rendered without the registry above it, whether the app has no registry or the component sits outside it (a styled `<html>` or `<body>` around it, a sibling of it), gets no styles in the server-rendered HTML. Its styles apply after hydration, and development warns once. `global-error.tsx` renders only in the browser, so its styles always apply after hydration, registry or not.
 
 **Requirements:**
 
 - React 19+
 - The Node.js runtime for any route that renders styled-components on the server. The edge runtime (`export const runtime = 'edge'`) is not supported; remove that line, or set it to `'nodejs'`
-
-**Why is there a `<style>` tag before every server-rendered element?**
-
-Each server component instance carries its own copy of its styles, so the styles survive React swapping a loading fallback for the finished content. The repeated tags cost little: the browser handles them quickly, compression shrinks identical copies to almost nothing, and the data React sends for server components includes each distinct style once. For a very long list, style the items from one styled parent so the whole list emits a single tag:
-
-```tsx
-const Slides = styled.ul`
-  & > li {
-    scroll-snap-align: center;
-  }
-`;
-
-export default function Carousel({ slides }) {
-  return (
-    <Slides>
-      {slides.map(slide => (
-        <li key={slide.id}>{slide.title}</li>
-      ))}
-    </Slides>
-  );
-}
-```
+- Next.js with webpack or Turbopack, or Vite with `@vitejs/plugin-rsc` with the registry in the SSR entry. Listing `styled-components` in Next.js `serverExternalPackages` is not supported
 
 **For traditional SSR (Next.js Pages Router, custom SSR):**
 
@@ -167,7 +150,7 @@ When possible, define all style variants ahead-of-time using CSS selectors rathe
 
 **Referencing a client component from server styles:**
 
-A styled component defined in a `'use client'` module has no class a server component can read. When a server component's styles interpolate one (`${ClientCard}:hover &`, `@container ${ClientCard} (...)`), the selector, at-rule, or declaration holding it is left out of the server's CSS, and a development warning names the component. Everything else in the template still applies. To target it from server styles, define the styled component in a module without `'use client'`; a server component can render it and a client component can import it.
+A styled component defined in a `'use client'` module has no class a server component can read. When a server component's styles interpolate one (`${ClientCard}:hover &`, `@container ${ClientCard} (...)`), the selector, at-rule, or declaration holding it is left out of the server's CSS, and a development warning names the component. Everything else in the template still applies. To target it from server styles, define the styled component in a module without `'use client'`; a server component can render it and a client component can import it. When a client component renders that shared styled component, targeting it from server styles also requires the build plugin (such as Next.js `compiler: { styledComponents: true }`) so the server and client graphs share one component id.
 
 ### My styles are being repeated multiple times
 

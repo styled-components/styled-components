@@ -12,8 +12,6 @@ A rule whose selector or condition does not read as one once it is joined to its
 
 A plugin that rewrites a declaration into one holding a brace or a comment, or leaving a string, paren, or bracket open, loses that declaration, and development builds warn about it. With the `rtl` plugin, a four-value shorthand holding a string or an escape keeps its order, and one written across several lines flips the same as one written on a single line.
 
-In React Server Components, extending a component leaves the text of a `url()` as written, and a selector with a very long run of `+` combinators is adjusted for inline style tags only up to a limit.
-
 When a text value nests blocks thousands of levels deep, the over-deep block is dropped and the rest of the component's styles apply.
 
 Templates with a very large number of comments are processed in time proportional to their length.
