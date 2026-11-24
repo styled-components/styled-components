@@ -50,3 +50,8 @@ it('does not add a px prefix to properties whose grammar takes a bare number', (
   expect(addUnitIfNeeded('maskBorderWidth', 2)).toEqual('2');
   expect(addUnitIfNeeded('maskBorderOutset', 1)).toEqual('1');
 });
+
+it('treats an Object.prototype key as a property that takes a unit', () => {
+  // No prototype key is a CSS property, so only the listed names are unitless.
+  expect(addUnitIfNeeded('constructor', 5)).toEqual('5px');
+});
