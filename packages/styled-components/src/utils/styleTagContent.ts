@@ -16,11 +16,7 @@ import { IS_RSC } from '../constants';
  */
 const REACT_ESCAPES_STYLE_TEXT = IS_RSC && !(parseInt(React.version, 10) >= 19);
 
-type StyleElementProps = {
-  children?: string;
-  dangerouslySetInnerHTML?: { __html: string };
-  [key: string]: unknown;
-};
+type StyleElementProps = React.StyleHTMLAttributes<HTMLStyleElement> & Record<string, string>;
 
 const escapeStyleTagClose = (_match: string, s: string, rest: string) =>
   (s === 'S' ? '</\\53 ' : '</\\73 ') + rest;
