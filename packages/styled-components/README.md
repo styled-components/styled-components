@@ -365,21 +365,13 @@ This project exists thanks to all the people who contribute.
 
 <a href="https://github.com/styled-components/styled-components/graphs/contributors"><img src="https://opencollective.com/styled-components/contributors.svg?width=890" /></a>
 
-## Backers
+## Fundraising
 
-Thank you to all our backers! [[Become a backer](https://opencollective.com/styled-components#backer)]
-
-<a href="https://opencollective.com/styled-components#backers" target="_blank"><img src="https://opencollective.com/styled-components/backers.svg?width=890"></a>
-
-## Sponsors
-
-Support this project by becoming a sponsor. [[Become a sponsor](https://opencollective.com/styled-components#sponsor)]
-
-<a href="https://opencollective.com/styled-components#sponsors" target="_blank"><img src="https://opencollective.com/styled-components/sponsors.svg?width=890"></a>
+Thank you to all past sponsors of the library. At this time our fundraising has largely collapsed and we are [seeking new backers](https://opencollective.com/styled-component) to help support the continued development of styled-components. If you love what we're doing and want to help, please chip in whatever you can and ideally ask your employer to sponsor.
 
 ## Acknowledgements
 
-This project builds on earlier work by Charlie Somerville, Nik Graf, Sunil Pai, Michael Chan, Andrey Popp, Jed Watson, and Andrey Sitnik. Special thanks to [@okonet](https://github.com/okonet) for the logo.
+This project builds on earlier work by Charlie Somerville, Nik Graf, Sunil Pai, Michael Chan, Andrey Popp, Jed Watson, and Andrey Sitnik. Special thanks to [@okonet](https://github.com/okonet) for the original logo.
 
 ## License
 
