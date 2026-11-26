@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://styled-components.com">
-    <img alt="styled-components" src="https://raw.githubusercontent.com/styled-components/brand/master/styled-components.png" height="150px" />
+    <img alt="styled-components" src="https://avatars.githubusercontent.com/u/20658825?s=400&u=e386117d62848eae15917bd2d0b85685953356c3&v=4" height="150px" />
   </a>
 </div>
 
@@ -13,7 +13,7 @@
   <br />
   <br />
   <a href="https://www.npmjs.com/package/styled-components"><img src="https://img.shields.io/npm/dm/styled-components.svg" alt="npm downloads"></a>
-  <a href="https://bundlephobia.com/result?p=styled-components" title="styled-components latest minified+gzip size"><img src="https://badgen.net/bundlephobia/minzip/styled-components" alt="gzip size"></a>
+  <a href="https://bundlephobia.com/result?p=styled-components" title="styled-components latest minified+gzip size"><img src="https://img.shields.io/bundlejs/size/styled-components" alt="gzip size"></a>
 </div>
 
 ---
